@@ -2,10 +2,6 @@
 
 namespace slang {
 
-struct Trivia;
-class Token;
-class Allocator;
-
 // TODO:
 // - string escape sequences
 // - track errors
@@ -67,8 +63,8 @@ private:
         OtherDirective
     };
 
-    std::vector<Trivia> triviaBuffer;
-    std::string stringBuilder;
+    Buffer<Trivia> triviaBuffer;
+    Buffer<char> stringBuffer;
     Allocator& pool;
     const char* sourceBuffer;
     const char* marker;

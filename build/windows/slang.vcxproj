@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\ArrayRef.h" />
     <ClInclude Include="..\..\include\BitVector.h" />
+    <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
     <ClInclude Include="..\..\include\Lexer.h" />
     <ClInclude Include="..\..\include\Allocator.h" />

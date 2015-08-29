@@ -61,7 +61,10 @@ T* copyArray(slang::Allocator& pool, T* source, uint32_t count) {
 namespace slang {
 
 Lexer::Lexer(const char* sourceBuffer, Allocator& pool)
-    : pool(pool), sourceBuffer(sourceBuffer) {
+    : triviaBuffer(32),
+      stringBuffer(1024),
+      pool(pool),
+      sourceBuffer(sourceBuffer) {
 }
 
 Token* Lexer::Lex() {
@@ -69,11 +72,10 @@ Token* Lexer::Lex() {
     triviaBuffer.clear();
     bool eod = LexTrivia();
 
-    // copy any lexed trivia into a standalone buffer
+    // copy any lexed trivia into standalone memory
     Trivia* trivia = nullptr;
-    if (triviaBuffer.size()) {
-        trivia = copyArray<Trivia>(pool, triviaBuffer.data(), triviaBuffer.size());
-    }
+    if (!triviaBuffer.empty())
+        trivia = copyArray<Trivia>(pool, triviaBuffer.begin(), triviaBuffer.count());
     
     {
         // newline in directive mode: issue an EndOfDirective token
@@ -86,7 +88,7 @@ Token* Lexer::Lex() {
     void* data = nullptr;
     TokenKind kind = LexToken(&data);
 
-    return pool.emplace<Token>(kind, false, data, trivia, triviaBuffer.size());
+    return pool.emplace<Token>(kind, false, data, trivia, triviaBuffer.count());
 }
 
 TokenKind Lexer::LexToken(void** extraData) {
@@ -357,7 +359,7 @@ TokenKind Lexer::LexToken(void** extraData) {
 }
 
 void Lexer::ScanStringLiteral(void** extraData) {
-    stringBuilder.clear();
+    stringBuffer.clear();
 
     while (true) {
         char c = Peek();
@@ -366,13 +368,13 @@ void Lexer::ScanStringLiteral(void** extraData) {
             c = Next();
             switch (c) {
                 // simple escape codes
-                case 'n': stringBuilder += '\n'; break;
-                case 't': stringBuilder += '\t'; break;
-                case '\\': stringBuilder += '\\'; break;
-                case '"': stringBuilder += '"'; break;
-                case 'v': stringBuilder += '\v'; break;
-                case 'f': stringBuilder += '\f'; break;
-                case 'a': stringBuilder += '\a'; break;
+                case 'n': stringBuffer.append('\n'); break;
+                case 't': stringBuffer.append('\t'); break;
+                case '\\': stringBuffer.append('\\'); break;
+                case '"': stringBuffer.append('"'); break;
+                case 'v': stringBuffer.append('\v'); break;
+                case 'f': stringBuffer.append('\f'); break;
+                case 'a': stringBuffer.append('\a'); break;
 
                 // newlines are escaped (and ignored) by backslash
                 case '\n': break;
@@ -396,15 +398,15 @@ void Lexer::ScanStringLiteral(void** extraData) {
         }
         else {
             Advance();
-            stringBuilder += c;
+            stringBuffer.append(c);
         }
     }
 
-    const char* niceText = copyString(pool, stringBuilder.data(), stringBuilder.size());
+    const char* niceText = copyString(pool, stringBuffer.begin(), stringBuffer.count());
 
     auto info = pool.emplace<StringLiteralInfo>();
     info->rawText = GetCurrentLexeme();
-    info->niceText = StringRef(niceText, stringBuilder.size());
+    info->niceText = StringRef(niceText, stringBuffer.count());
 
     *extraData = info;
 }
@@ -690,7 +692,7 @@ bool Lexer::ScanBlockComment() {
 }
 
 void Lexer::AddTrivia(TriviaKind kind) {
-    triviaBuffer.emplace_back(kind, GetCurrentLexeme());
+    triviaBuffer.emplace(kind, GetCurrentLexeme());
 }
 
 void Lexer::AddError(DiagCode code) {

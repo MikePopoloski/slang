@@ -12,6 +12,7 @@
 #include "Allocator.h"
 #include "ArrayRef.h"
 #include "StringRef.h"
+#include "Buffer.h"
 #include "BitVector.h"
 #include "Diagnostics.h"
 #include "Trivia.h"

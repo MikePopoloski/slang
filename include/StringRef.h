@@ -1,5 +1,7 @@
 #pragma once
 
+// Wrapper around a {pointer, length} pair to a string on the heap.
+
 namespace slang {
 
 class StringRef {
