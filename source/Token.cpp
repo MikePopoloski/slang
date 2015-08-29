@@ -2,14 +2,10 @@
 
 namespace slang {
 
-void Trivia::WriteTo(std::string& buffer) const {
-    rawText.CopyTo(buffer);
-}
-
 void Token::WriteTo(std::string& buffer, bool includeTrivia) const {
     if (includeTrivia) {
         for (const auto& t : trivia)
-            t.WriteTo(buffer);
+            t.rawText.copyTo(buffer);
     }
 
     const char* text = GetTokenKindText(kind);
@@ -22,10 +18,10 @@ void Token::WriteTo(std::string& buffer, bool includeTrivia) const {
     switch (kind) {
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
-            identifier->text.CopyTo(buffer);
+            identifier->text.copyTo(buffer);
             break;
         case TokenKind::StringLiteral:
-            string->rawText.CopyTo(buffer);
+            string->rawText.copyTo(buffer);
             break;
     }
 }

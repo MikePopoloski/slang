@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include <memory>
+#include <algorithm>
 #include <type_traits>
 
 #define ASSERT(x) do { if (!(x)) __debugbreak(); } while(0) 

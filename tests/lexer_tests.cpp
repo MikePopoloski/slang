@@ -19,7 +19,7 @@ TEST_CASE("Line Comment", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.ToFullString() == text);
-    CHECK(token.trivia.Count() == 1);
+    CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::LineComment);
 }
 
@@ -29,7 +29,7 @@ TEST_CASE("Block Comment (one line)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.ToFullString() == text);
-    CHECK(token.trivia.Count() == 1);
+    CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
 }
 
@@ -43,7 +43,7 @@ multiple lines
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.ToFullString() == text);
-    CHECK(token.trivia.Count() == 1);
+    CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
 }
 
@@ -53,7 +53,7 @@ TEST_CASE("Whitespace", "[lexer]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.ToFullString() == text);
-    CHECK(token.trivia.Count() == 1);
+    CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::Whitespace);
 }
 
@@ -62,21 +62,21 @@ TEST_CASE("Newlines", "[lexer]") {
     auto token = LexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.ToFullString() == text);
-    CHECK(token.trivia.Count() == 1);
+    CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
 
     text = "\r\n";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.ToFullString() == text);
-    CHECK(token.trivia.Count() == 1);
+    CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
 
     text = "\n";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.ToFullString() == text);
-    CHECK(token.trivia.Count() == 1);
+    CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
 }
 

@@ -5,27 +5,57 @@ namespace slang {
 class StringRef {
 public:
     StringRef() 
-        : ptr(nullptr), length(0) {
+        : ptr(nullptr), len(0) {
     }
 
     StringRef(const char* ptr, uint32_t length)
-        : ptr(ptr), length(length) {
+        : ptr(ptr), len(length) {
     }
 
-    void CopyTo(std::string& buffer) const {
-        buffer.append(ptr, length);
+    const char* begin() const { return ptr; }
+    const char* end() const { return ptr + len; }
+
+    uint32_t length() const { return len; }
+    bool empty() const { return len == 0; }
+
+    void copyTo(std::string& buffer) const {
+        buffer.append(ptr, len);
     }
 
-    const char* Ptr() const { return ptr; }
-    uint32_t Length() const { return length; }
-
-    inline friend bool operator ==(const StringRef& lhs, const std::string& rhs) {
-        return rhs.compare(0, rhs.size(), lhs.Ptr(), lhs.Length()) == 0;
+    StringRef subString(uint32_t startIndex, uint32_t length) const {
+        ASSERT(startIndex + length <= len);
+        return StringRef(ptr + startIndex, length);
     }
+
+    char operator[](uint32_t index) const {
+        ASSERT(index < len);
+        return ptr[index];
+    }
+
+    friend bool operator==(const StringRef& lhs, const std::string& rhs) {
+        return rhs.compare(0, rhs.length(), lhs.ptr, lhs.len) == 0;
+    }
+
+    friend bool operator==(const StringRef& lhs, const char* rhs) {
+        return strncmp(lhs.ptr, rhs, lhs.len) == 0;
+    }
+
+    friend bool operator==(const StringRef& lhs, const StringRef& rhs) {
+        return strncmp(lhs.ptr, rhs.ptr, std::min(lhs.len, rhs.len)) == 0;
+    }
+
+    friend bool operator==(const std::string& lhs, const StringRef& rhs) { return operator==(rhs, lhs); }
+    friend bool operator==(const char* lhs, const StringRef& rhs) { return operator==(rhs, lhs); }
+
+    friend bool operator!=(const StringRef& lhs, const std::string& rhs) { return !operator==(lhs, rhs); }
+    friend bool operator!=(const std::string& lhs, const StringRef& rhs) { return !operator==(lhs, rhs); }
+    friend bool operator!=(const StringRef& lhs, const char* rhs) { return !operator==(lhs, rhs); }
+    friend bool operator!=(const char* lhs, const StringRef& rhs) { return !operator==(lhs, rhs); }
+    friend bool operator!=(const StringRef& lhs, const StringRef& rhs) { return !operator==(lhs, rhs); }
 
 private:
     const char* ptr;
-    uint32_t length;
+    uint32_t len;
 };
 
 }
