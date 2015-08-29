@@ -368,7 +368,9 @@ void Lexer::ScanStringLiteral(void** extraData) {
         }
     }
 
-
+    auto info = pool.Allocate<StringLiteralInfo>();
+    info->rawText = GetCurrentLexeme();
+    *extraData = info;
 }
 
 void Lexer::ScanUnsizedNumericLiteral(void** extraData) {

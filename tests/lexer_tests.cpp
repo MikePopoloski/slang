@@ -52,7 +52,7 @@ TEST_CASE("Whitespace", "[lexer]") {
     auto token = LexToken(text);
 
     CHECK(token.kind == TokenKind::Identifier);
-    //CHECK(token.ToFullString() == text);
+    CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::Whitespace);
 }
@@ -60,7 +60,6 @@ TEST_CASE("Whitespace", "[lexer]") {
 TEST_CASE("Newlines", "[lexer]") {
     auto text = "\r";
     auto token = LexToken(text);
-
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
@@ -85,47 +84,58 @@ TEST_CASE("Simple Identifiers", "[lexer]") {
     auto text = "a";
     auto token = LexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.ToFullString() == text);
 
     text = "abc";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.ToFullString() == text);
 }
 
 TEST_CASE("Mixed Identifiers", "[lexer]") {
     auto text = "a92837asdf358";
     auto token = LexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.ToFullString() == text);
 
     text = "__a$$asdf213$";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.ToFullString() == text);
 }
 
 TEST_CASE("Escaped Identifiers", "[lexer]") {
     auto text = "\\98\\#$%)(*lkjsd__09...asdf345";
     auto token = LexToken(text);
+
     CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.ToFullString() == text);
 }
 
 TEST_CASE("System Identifiers", "[lexer]") {
     auto text = "$hello";
     auto token = LexToken(text);
     CHECK(token.kind == TokenKind::SystemIdentifier);
+    CHECK(token.ToFullString() == text);
 
     text = "$45__hello";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::SystemIdentifier);
+    CHECK(token.ToFullString() == text);
 }
 
 TEST_CASE("String Literal", "[lexer]") {
     auto text = "\"literal  #@$asdf\"";
     auto token = LexToken(text);
+
     CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
 }
 
 void TestPunctuation(TokenKind kind) {
     auto text = GetTokenKindText(kind);
     auto token = LexToken(text);
+
     CHECK(token.kind == kind);
     CHECK(token.ToFullString() == text);
 }

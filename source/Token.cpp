@@ -19,6 +19,15 @@ void Token::WriteTo(std::string& buffer, bool includeTrivia) const {
     }
 
     // not a simple token, so extract info from our data pointer
+    switch (kind) {
+        case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
+            identifier->text.CopyTo(buffer);
+            break;
+        case TokenKind::StringLiteral:
+            string->rawText.CopyTo(buffer);
+            break;
+    }
 }
 
 std::string Token::ToString() const {
