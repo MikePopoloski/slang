@@ -348,7 +348,25 @@ void Lexer::ScanStringLiteral(void** extraData) {
     while (true) {
         char c = Peek();
         if (c == '\\') {
+            Advance();
+            c = Next();
+            switch (c) {
+                // simple escape codes
+                case 'n': stringBuilder += '\n'; break;
+                case 't': stringBuilder += '\t'; break;
+                case '\\': stringBuilder += '\\'; break;
+                case '"': stringBuilder += '"'; break;
+                case 'v': stringBuilder += '\v'; break;
+                case 'f': stringBuilder += '\f'; break;
+                case 'a': stringBuilder += '\a'; break;
 
+                // newlines are escaped (and ignored) by backslash
+                case '\n': break;
+                case '\r': Consume('\n'); break;
+                    
+                // TODO: digit codes
+                // TODO: error handling
+            }
         }
         else if (c == '"') {
             Advance();
@@ -368,8 +386,13 @@ void Lexer::ScanStringLiteral(void** extraData) {
         }
     }
 
+    char* str = pool.AllocateArray<char>(stringBuilder.size());
+    memcpy(str, stringBuilder.data(), stringBuilder.size());
+
     auto info = pool.Allocate<StringLiteralInfo>();
     info->rawText = GetCurrentLexeme();
+    info->niceText = StringRef(str, stringBuilder.size());
+
     *extraData = info;
 }
 

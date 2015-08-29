@@ -70,6 +70,7 @@ public:
     }
 
     void WriteTo(std::string& buffer, bool includeTrivia) const;
+    StringRef GetValueText() const;
 
     // convenience methods that wrap WriteTo
     std::string ToString() const;

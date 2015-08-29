@@ -30,6 +30,15 @@ void Token::WriteTo(std::string& buffer, bool includeTrivia) const {
     }
 }
 
+StringRef Token::GetValueText() const {
+    switch (kind) {
+        case TokenKind::StringLiteral:
+            return string->niceText;
+        default:
+            return StringRef();
+    }
+}
+
 std::string Token::ToString() const {
     std::string buffer;
     WriteTo(buffer, false);

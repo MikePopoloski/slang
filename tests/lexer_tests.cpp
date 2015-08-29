@@ -130,6 +130,7 @@ TEST_CASE("String Literal", "[lexer]") {
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literal  #@$asdf");
 }
 
 void TestPunctuation(TokenKind kind) {
