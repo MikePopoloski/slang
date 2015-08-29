@@ -1,2 +1,61 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" />
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="lexing">
+      <UniqueIdentifier>{d68f3e45-3a64-4a0d-880a-feac4c466cef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="parsing">
+      <UniqueIdentifier>{4b25f07e-8c59-4b08-bdc3-7f8186f47a2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{802f3eb7-6e0d-46c0-9237-cb9b1949b6e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="diagnostics">
+      <UniqueIdentifier>{8f199817-7db9-449f-bd06-9f9efcea78a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="numeric">
+      <UniqueIdentifier>{92c36059-cdc7-4ae5-9806-bf921f712548}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\slang.h" />
+    <ClInclude Include="..\..\include\Lexer.h">
+      <Filter>lexing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Token.h">
+      <Filter>lexing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\StringRef.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Diagnostics.h">
+      <Filter>diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\BitVector.h">
+      <Filter>numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Trivia.h">
+      <Filter>lexing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Preprocessor.h">
+      <Filter>lexing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Allocator.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ArrayRef.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SyntaxFacts.h">
+      <Filter>parsing</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\source\Lexer.cpp">
+      <Filter>lexing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\SyntaxFacts.cpp">
+      <Filter>parsing</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
