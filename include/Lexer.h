@@ -11,46 +11,45 @@ namespace slang {
 
 class Lexer {
 public:
-    Lexer(const char* sourceBuffer, Allocator& pool);
+    Lexer(const char* sourceBuffer, Allocator& pool, Diagnostics& diagnostics);
 
-    Token* Lex();
+    Token* lex();
 
 private:
-    TokenKind LexToken(void** extraData);
-    void ScanIdentifier();
-    void ScanExponent();
-    void ScanStringLiteral(void** extraData);
-    void ScanUnsizedNumericLiteral(void** extraData);
-    void ScanVectorLiteral(void** extraData);
-    TokenKind ScanNumericLiteral(void** extraData);
-    TokenKind ScanEscapeSequence(void** extraData);
-    TokenKind ScanDollarSign(void** extraData);
-    TokenKind ScanDirective(void** extraData);
+    TokenKind lexToken(void** extraData);
+    TokenKind lexNumericLiteral(void** extraData);
+    TokenKind lexEscapeSequence(void** extraData);
+    TokenKind lexDollarSign(void** extraData);
+    TokenKind lexDirective(void** extraData);
+    void scanStringLiteral(void** extraData);
+    void scanUnsizedNumericLiteral(void** extraData);
+    void scanVectorLiteral(void** extraData);
+    void scanIdentifier();
+    void scanExponent();
+    
 
-    bool LexTrivia();
-    bool ScanBlockComment();
-    void ScanWhitespace();
-    void ScanLineComment();
+    bool lexTrivia();
+    bool scanBlockComment();
+    void scanWhitespace();
+    void scanLineComment();
 
     // factory helper methods
-    void AddTrivia(TriviaKind kind);
-    void AddError(DiagCode code);
+    void addTrivia(TriviaKind kind);
+    void addError(DiagCode code);
 
     // source pointer manipulation
-    void Mark() { marker = sourceBuffer; }
-    void Advance() { sourceBuffer++; }
-    void Advance(int count) { sourceBuffer += count; }
-    void Back() { sourceBuffer--; }
-    char Next() { return *sourceBuffer++; }
-    char Peek() { return *sourceBuffer; }
-    char Peek(int offset) { return sourceBuffer[offset]; }
+    void mark() { marker = sourceBuffer; }
+    void advance() { sourceBuffer++; }
+    void advance(int count) { sourceBuffer += count; }
+    char peek() { return *sourceBuffer; }
+    char peek(int offset) { return sourceBuffer[offset]; }
 
-    uint32_t GetCurrentLexemeLength() const { return (uint32_t)(sourceBuffer - marker); }
-    StringRef GetCurrentLexeme();
+    uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
+    StringRef lexeme();
     
-    bool Consume(char c) {
-        if (Peek() == c) {
-            Advance();
+    bool consume(char c) {
+        if (peek() == c) {
+            advance();
             return true;
         }
         return false;
@@ -63,9 +62,10 @@ private:
         OtherDirective
     };
 
-    Buffer<Trivia> triviaBuffer;
     Buffer<char> stringBuffer;
+    Buffer<Trivia> triviaBuffer;
     Allocator& pool;
+    Diagnostics& diagnostics;
     const char* sourceBuffer;
     const char* marker;
     LexingMode mode;

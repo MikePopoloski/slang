@@ -2,15 +2,15 @@
 
 namespace {
 
-bool IsASCII(char c) {
+bool isASCII(char c) {
     return c < 128;
 }
 
-bool IsPrintable(char c) {
+bool isPrintable(char c) {
     return c >= 33 && c <= 126;
 }
 
-bool IsWhitespace(char c) {
+bool isWhitespace(char c) {
     switch (c) {
         case ' ':
         case '\t':
@@ -23,7 +23,7 @@ bool IsWhitespace(char c) {
     return false;
 }
 
-bool IsHorizontalWhitespace(char c) {
+bool isHorizontalWhitespace(char c) {
     switch (c) {
         case ' ':
         case '\t':
@@ -34,11 +34,11 @@ bool IsHorizontalWhitespace(char c) {
     return false;
 }
 
-bool IsNewline(char c) {
+bool isNewline(char c) {
     return c == '\r' || c == '\n';
 }
 
-bool IsDecimalDigit(char c) {
+bool isDecimalDigit(char c) {
     return (c >= '0' && c <= '9') || c == '_';
 }
 
@@ -60,23 +60,24 @@ T* copyArray(slang::Allocator& pool, T* source, uint32_t count) {
 
 namespace slang {
 
-Lexer::Lexer(const char* sourceBuffer, Allocator& pool)
-    : triviaBuffer(32),
-      stringBuffer(1024),
-      pool(pool),
-      sourceBuffer(sourceBuffer) {
+Lexer::Lexer(const char* sourceBuffer, Allocator& pool, Diagnostics& diagnostics) :
+    triviaBuffer(32),
+    stringBuffer(1024),
+    pool(pool),
+    diagnostics(diagnostics),
+    sourceBuffer(sourceBuffer) {
 }
 
-Token* Lexer::Lex() {
+Token* Lexer::lex() {
     // lex leading trivia
     triviaBuffer.clear();
-    bool eod = LexTrivia();
+    bool eod = lexTrivia();
 
     // copy any lexed trivia into standalone memory
     Trivia* trivia = nullptr;
     if (!triviaBuffer.empty())
         trivia = copyArray<Trivia>(pool, triviaBuffer.begin(), triviaBuffer.count());
-    
+
     {
         // newline in directive mode: issue an EndOfDirective token
         //Token* token = pool.Allocate<Token>(TokenKind::EndOfDirective, false, nullptr);
@@ -84,195 +85,199 @@ Token* Lexer::Lex() {
     }
 
     // lex the next token
-    Mark();
+    mark();
     void* data = nullptr;
-    TokenKind kind = LexToken(&data);
+    TokenKind kind = lexToken(&data);
+
+    // grab any errors
+
 
     return pool.emplace<Token>(kind, false, data, trivia, triviaBuffer.count());
 }
 
-TokenKind Lexer::LexToken(void** extraData) {
-    char c = Next();
+TokenKind Lexer::lexToken(void** extraData) {
+    char c = peek();
+    advance();
     switch (c) {
         case 0: return TokenKind::EndOfFile;
         case '!':
-            if (Consume('=')) {
-                switch (Peek()) {
-                    case '=': Advance(); return TokenKind::ExclamationDoubleEquals;
-                    case '?': Advance(); return TokenKind::ExclamationEqualsQuestion;
+            if (consume('=')) {
+                switch (peek()) {
+                    case '=': advance(); return TokenKind::ExclamationDoubleEquals;
+                    case '?': advance(); return TokenKind::ExclamationEqualsQuestion;
                     default: return TokenKind::ExclamationEquals;
                 }
             }
             return TokenKind::Exclamation;
         case '"':
-            ScanStringLiteral(extraData);
+            scanStringLiteral(extraData);
             return TokenKind::StringLiteral;
         case '#':
-            switch (Peek()) {
-                case '#': Advance(); return TokenKind::DoubleHash;
+            switch (peek()) {
+                case '#': advance(); return TokenKind::DoubleHash;
                 case '-':
-                    if (Peek(1) == '#') {
-                        Advance(2);
+                    if (peek(1) == '#') {
+                        advance(2);
                         return TokenKind::HashMinusHash;
                     }
                     // #- isn't a token, so just return a hash
                     return TokenKind::Hash;
                 case '=':
-                    if (Peek(1) == '#') {
-                        Advance(2);
+                    if (peek(1) == '#') {
+                        advance(2);
                         return TokenKind::HashEqualsHash;
                     }
                     // #= isn't a token, so just return a hash
                     return TokenKind::Hash;
             }
             return TokenKind::Hash;
-        case '$': return ScanDollarSign(extraData);
+        case '$': return lexDollarSign(extraData);
         case '%':
-            if (Consume('='))
+            if (consume('='))
                 return TokenKind::PercentEqual;
             return TokenKind::Percent;
         case '&':
-            switch (Peek()) {
+            switch (peek()) {
                 case '&':
-                    Advance();
-                    if (Consume('&'))
+                    advance();
+                    if (consume('&'))
                         return TokenKind::TripleAnd;
                     else
                         return TokenKind::DoubleAnd;
-                case '=': Advance(); return TokenKind::AndEqual;
+                case '=': advance(); return TokenKind::AndEqual;
             }
             return TokenKind::And;
         case '\'':
             // either an unsized numeric literal, or a '{ range open sequence
-            if (Consume('{'))
+            if (consume('{'))
                 return TokenKind::ApostropheOpenBrace;
 
-            ScanUnsizedNumericLiteral(extraData);
+            scanUnsizedNumericLiteral(extraData);
             return TokenKind::IntegerLiteral;
         case '(':
-            if (Consume('*'))
+            if (consume('*'))
                 return TokenKind::OpenParenthesisStar;
             else
                 return TokenKind::OpenParenthesis;
         case ')': return TokenKind::CloseParenthesis;
         case '*':
-            switch (Peek()) {
-                case '*': Advance(); return TokenKind::DoubleStar;
-                case '=': Advance(); return TokenKind::StarEqual;
-                case '>': Advance(); return TokenKind::StarArrow;
-                case ')': Advance(); return TokenKind::StarCloseParenthesis;
+            switch (peek()) {
+                case '*': advance(); return TokenKind::DoubleStar;
+                case '=': advance(); return TokenKind::StarEqual;
+                case '>': advance(); return TokenKind::StarArrow;
+                case ')': advance(); return TokenKind::StarCloseParenthesis;
                 case ':':
-                    if (Peek(1) == ':' && Peek(2) == '*') {
-                        Advance(3);
+                    if (peek(1) == ':' && peek(2) == '*') {
+                        advance(3);
                         return TokenKind::StarDoubleColonStar;
                     }
                     return TokenKind::Star;
             }
             return TokenKind::Star;
         case '+':
-            switch (Peek()) {
-                case '+': Advance(); return TokenKind::DoublePlus;
-                case '=': Advance(); return TokenKind::PlusEqual;
-                case ':': Advance(); return TokenKind::PlusColon;
+            switch (peek()) {
+                case '+': advance(); return TokenKind::DoublePlus;
+                case '=': advance(); return TokenKind::PlusEqual;
+                case ':': advance(); return TokenKind::PlusColon;
             }
             return TokenKind::Plus;
         case ',': return TokenKind::Comma;
         case '-':
-            switch (Peek()) {
-                case '-': Advance(); return TokenKind::DoubleMinus;
-                case '=': Advance(); return TokenKind::MinusEqual;
-                case ':': Advance(); return TokenKind::MinusColon;
+            switch (peek()) {
+                case '-': advance(); return TokenKind::DoubleMinus;
+                case '=': advance(); return TokenKind::MinusEqual;
+                case ':': advance(); return TokenKind::MinusColon;
                 case '>':
-                    Advance();
-                    if (Consume('>'))
+                    advance();
+                    if (consume('>'))
                         return TokenKind::MinusDoubleArrow;
                     else
                         return TokenKind::MinusArrow;
             }
             return TokenKind::Minus;
         case '.':
-            if (Consume('*'))
+            if (consume('*'))
                 return TokenKind::DotStar;
             else
                 return TokenKind::Dot;
         case '/':
-            if (Consume('='))
+            if (consume('='))
                 return TokenKind::SlashEqual;
             else
                 return TokenKind::Slash;
         case '0': case '1': case '2': case '3':
         case '4': case '5': case '6': case '7':
         case '8': case '9':
-            return ScanNumericLiteral(extraData);
+            return lexNumericLiteral(extraData);
         case ':':
-            switch (Peek()) {
-                case '=': Advance(); return TokenKind::ColonEquals;
-                case '/': Advance(); return TokenKind::ColonSlash;
-                case ':': Advance(); return TokenKind::DoubleColon;
+            switch (peek()) {
+                case '=': advance(); return TokenKind::ColonEquals;
+                case '/': advance(); return TokenKind::ColonSlash;
+                case ':': advance(); return TokenKind::DoubleColon;
             }
             return TokenKind::Colon;
         case ';': return TokenKind::Semicolon;
         case '<':
-            switch (Peek()) {
-                case '=': Advance(); return TokenKind::LessThanEquals;
+            switch (peek()) {
+                case '=': advance(); return TokenKind::LessThanEquals;
                 case '-':
-                    if (Peek(1) == '>') {
-                        Advance(2);
+                    if (peek(1) == '>') {
+                        advance(2);
                         return TokenKind::LessThanMinusArrow;
                     }
                     return TokenKind::LessThan;
                 case '<':
-                    Advance();
-                    switch (Peek()) {
+                    advance();
+                    switch (peek()) {
                         case '<':
-                            if (Peek(1) == '=') {
-                                Advance(2);
+                            if (peek(1) == '=') {
+                                advance(2);
                                 return TokenKind::TripleLeftShiftEqual;
                             }
                             else {
-                                Advance();
+                                advance();
                                 return TokenKind::TripleLeftShift;
                             }
-                        case '=': Advance(); return TokenKind::LeftShiftEqual;
+                        case '=': advance(); return TokenKind::LeftShiftEqual;
                     }
                     return TokenKind::LeftShift;
             }
             return TokenKind::LessThan;
         case '=':
-            switch (Peek()) {
+            switch (peek()) {
                 case '=':
-                    Advance();
-                    switch (Peek()) {
-                        case '=': Advance(); return TokenKind::TripleEquals;
-                        case '?': Advance(); return TokenKind::DoubleEqualsQuestion;
+                    advance();
+                    switch (peek()) {
+                        case '=': advance(); return TokenKind::TripleEquals;
+                        case '?': advance(); return TokenKind::DoubleEqualsQuestion;
                     }
                     return TokenKind::DoubleEquals;
-                case '>': Advance(); return TokenKind::EqualsArrow;
+                case '>': advance(); return TokenKind::EqualsArrow;
             }
             return TokenKind::Equals;
         case '>':
-            switch (Peek()) {
-                case '=': Advance(); return TokenKind::GreaterThanEquals;
+            switch (peek()) {
+                case '=': advance(); return TokenKind::GreaterThanEquals;
                 case '>':
-                    Advance();
-                    switch (Peek()) {
+                    advance();
+                    switch (peek()) {
                         case '>':
-                            if (Peek(1) == '=') {
-                                Advance(2);
+                            if (peek(1) == '=') {
+                                advance(2);
                                 return TokenKind::TripleRightShiftEqual;
                             }
                             else {
-                                Advance();
+                                advance();
                                 return TokenKind::TripleRightShift;
                             }
-                        case '=': Advance(); return TokenKind::RightShiftEqual;
+                        case '=': advance(); return TokenKind::RightShiftEqual;
                     }
                     return TokenKind::RightShift;
             }
             return TokenKind::GreaterThan;
         case '?': return TokenKind::Question;
         case '@':
-            if (Consume('@'))
+            if (consume('@'))
                 return TokenKind::DoubleAt;
             else
                 return TokenKind::At;
@@ -291,66 +296,66 @@ TokenKind Lexer::LexToken(void** extraData) {
         case 'u': case 'v': case 'w': case 'x':
         case 'y': case 'z':
         case '_': {
-            ScanIdentifier();
+            scanIdentifier();
             auto info = pool.emplace<IdentifierInfo>();
-            info->text = GetCurrentLexeme();
+            info->text = lexeme();
             info->type = IdentifierInfo::Normal;
             *extraData = info;
             return TokenKind::Identifier;
         }
         case '[': return TokenKind::OpenBracket;
-        case '\\': return ScanEscapeSequence(extraData);
+        case '\\': return lexEscapeSequence(extraData);
         case ']': return TokenKind::CloseBracket;
         case '^':
-            switch (Peek()) {
-                case '~': Advance(); return TokenKind::XorTilde;
-                case '=': Advance(); return TokenKind::XorEqual;
+            switch (peek()) {
+                case '~': advance(); return TokenKind::XorTilde;
+                case '=': advance(); return TokenKind::XorEqual;
             }
             return TokenKind::Xor;
         case '`':
-            switch (Peek()) {
-                case '"': Advance(); return TokenKind::MacroQuote;
-                case '`': Advance(); return TokenKind::MacroPaste;
+            switch (peek()) {
+                case '"': advance(); return TokenKind::MacroQuote;
+                case '`': advance(); return TokenKind::MacroPaste;
                 case '\\':
-                    if (Peek(1) == '`' && Peek(2) == '"') {
-                        Advance(3);
+                    if (peek(1) == '`' && peek(2) == '"') {
+                        advance(3);
                         return TokenKind::MacroEscapedQuote;
                     }
-                    return ScanDirective(extraData);
+                    return lexDirective(extraData);
             }
-            return ScanDirective(extraData);
+            return lexDirective(extraData);
         case '{': return TokenKind::OpenBrace;
         case '|':
-            switch (Peek()) {
-                case '|': Advance(); return TokenKind::DoubleOr;
+            switch (peek()) {
+                case '|': advance(); return TokenKind::DoubleOr;
                 case '-':
-                    if (Peek(1) == '>') {
-                        Advance(2);
+                    if (peek(1) == '>') {
+                        advance(2);
                         return TokenKind::OrMinusArrow;
                     }
                     return TokenKind::Or;
                 case '=':
-                    if (Peek(1) == '>') {
-                        Advance(2);
+                    if (peek(1) == '>') {
+                        advance(2);
                         return TokenKind::OrEqualsArrow;
                     }
                     else {
-                        Advance();
+                        advance();
                         return TokenKind::OrEqual;
                     }
             }
             return TokenKind::Or;
         case '}': return TokenKind::CloseBrace;
         case '~':
-            switch (Peek()) {
-                case '&': Advance(); return TokenKind::TildeAnd;
-                case '|': Advance(); return TokenKind::TildeOr;
-                case '^': Advance(); return TokenKind::TildeXor;
+            switch (peek()) {
+                case '&': advance(); return TokenKind::TildeAnd;
+                case '|': advance(); return TokenKind::TildeOr;
+                case '^': advance(); return TokenKind::TildeXor;
             }
             return TokenKind::Tilde;
         default:
-            if (IsASCII(c))
-                AddError(DiagCode::NonPrintableChar);
+            if (isASCII(c))
+                addError(DiagCode::NonPrintableChar);
             else {
                 // TODO: skip over UTF-8 sequences
             }
@@ -358,14 +363,15 @@ TokenKind Lexer::LexToken(void** extraData) {
     }
 }
 
-void Lexer::ScanStringLiteral(void** extraData) {
+void Lexer::scanStringLiteral(void** extraData) {
     stringBuffer.clear();
 
     while (true) {
-        char c = Peek();
+        char c = peek();
         if (c == '\\') {
-            Advance();
-            c = Next();
+            advance();
+            c = peek();
+            advance();
             switch (c) {
                 // simple escape codes
                 case 'n': stringBuffer.append('\n'); break;
@@ -376,28 +382,28 @@ void Lexer::ScanStringLiteral(void** extraData) {
                 case 'f': stringBuffer.append('\f'); break;
                 case 'a': stringBuffer.append('\a'); break;
 
-                // newlines are escaped (and ignored) by backslash
+                    // newlines are escaped (and ignored) by backslash
                 case '\n': break;
-                case '\r': Consume('\n'); break;
-                    
-                // TODO: digit codes
-                // TODO: error handling
+                case '\r': consume('\n'); break;
+
+                    // TODO: digit codes
+                    // TODO: error handling
             }
         }
         else if (c == '"') {
-            Advance();
+            advance();
             break;
         }
-        else if (IsNewline(c)) {
-            AddError(DiagCode::NewlineInStringLiteral);
+        else if (isNewline(c)) {
+            addError(DiagCode::NewlineInStringLiteral);
             break;
         }
         else if (c == 0) {
-            AddError(DiagCode::UnterminatedStringLiteral);
+            addError(DiagCode::UnterminatedStringLiteral);
             break;
         }
         else {
-            Advance();
+            advance();
             stringBuffer.append(c);
         }
     }
@@ -405,20 +411,20 @@ void Lexer::ScanStringLiteral(void** extraData) {
     const char* niceText = copyString(pool, stringBuffer.begin(), stringBuffer.count());
 
     auto info = pool.emplace<StringLiteralInfo>();
-    info->rawText = GetCurrentLexeme();
+    info->rawText = lexeme();
     info->niceText = StringRef(niceText, stringBuffer.count());
 
     *extraData = info;
 }
 
-void Lexer::ScanUnsizedNumericLiteral(void** extraData) {
+void Lexer::scanUnsizedNumericLiteral(void** extraData) {
     // should be one four-state digit here
 
 }
 
-void Lexer::ScanIdentifier() {
+void Lexer::scanIdentifier() {
     while (true) {
-        switch (Peek()) {
+        switch (peek()) {
             case '0': case '1': case '2': case '3':
             case '4': case '5': case '6': case '7':
             case '8': case '9':
@@ -437,7 +443,7 @@ void Lexer::ScanIdentifier() {
             case 'u': case 'v': case 'w': case 'x':
             case 'y': case 'z':
             case '_': case '$':
-                Advance();
+                advance();
                 break;
             default:
                 return;
@@ -445,48 +451,48 @@ void Lexer::ScanIdentifier() {
     }
 }
 
-TokenKind Lexer::ScanEscapeSequence(void** extraData) {
-    char c = Peek();
-    if (IsWhitespace(c)) {
-        AddError(DiagCode::EscapedWhitespace);
+TokenKind Lexer::lexEscapeSequence(void** extraData) {
+    char c = peek();
+    if (isWhitespace(c)) {
+        addError(DiagCode::EscapedWhitespace);
         return TokenKind::Unknown;
     }
 
-    while (IsPrintable(c)) {
-        Advance();
-        c = Peek();
-        if (IsWhitespace(c))
+    while (isPrintable(c)) {
+        advance();
+        c = peek();
+        if (isWhitespace(c))
             break;
     }
 
     auto info = pool.emplace<IdentifierInfo>();
-    info->text = GetCurrentLexeme();
+    info->text = lexeme();
     info->type = IdentifierInfo::Escaped;
     *extraData = info;
     return TokenKind::Identifier;
 }
 
-TokenKind Lexer::ScanDollarSign(void** extraData) {
-    ScanIdentifier();
+TokenKind Lexer::lexDollarSign(void** extraData) {
+    scanIdentifier();
 
     // if length is 1, we just have a dollar sign operator
-    if (GetCurrentLexemeLength() == 1)
+    if (lexemeLength() == 1)
         return TokenKind::Dollar;
 
     // otherwise, we have a system identifier
     auto info = pool.emplace<IdentifierInfo>();
-    info->text = GetCurrentLexeme();
+    info->text = lexeme();
     info->type = IdentifierInfo::System;
     *extraData = info;
     return TokenKind::SystemIdentifier;
 }
 
-TokenKind Lexer::ScanDirective(void** extraData) {
-    ScanIdentifier();
+TokenKind Lexer::lexDirective(void** extraData) {
+    scanIdentifier();
 
     // if length is 1, we just have a grave character on its own, which is an error
-    if (GetCurrentLexemeLength() == 1) {
-        AddError(DiagCode::MisplacedDirectiveChar);
+    if (lexemeLength() == 1) {
+        addError(DiagCode::MisplacedDirectiveChar);
         return TokenKind::Unknown;
     }
 
@@ -510,24 +516,24 @@ TokenKind Lexer::ScanDirective(void** extraData) {
     return TokenKind::Directive;
 }
 
-TokenKind Lexer::ScanNumericLiteral(void** extraData) {
+TokenKind Lexer::lexNumericLiteral(void** extraData) {
     // scan past leading decimal digits; these might be the first part of
     // a fractional number, the size of a vector, or a plain unsigned integer
-    while (IsDecimalDigit(Peek()))
-        Advance();
+    while (isDecimalDigit(peek()))
+        advance();
 
-    char c = Peek();
-    if (IsHorizontalWhitespace(c)) {
+    char c = peek();
+    if (isHorizontalWhitespace(c)) {
         // whitespace normally ends a numeric literal, but it's allowed between
         // the size and the base specifier in vector literals, so check if that's what we have here
         int lookahead = 1;
         while (true) {
-            char c = Peek(lookahead);
-            if (IsHorizontalWhitespace(c))
+            char c = peek(lookahead);
+            if (isHorizontalWhitespace(c))
                 lookahead++;
             else if (c == '\'') {
-                Advance(lookahead);
-                ScanVectorLiteral(extraData);
+                advance(lookahead);
+                scanVectorLiteral(extraData);
                 return TokenKind::IntegerLiteral;
             }
             else
@@ -535,72 +541,72 @@ TokenKind Lexer::ScanNumericLiteral(void** extraData) {
         }
     }
 
-    switch (Peek()) {
+    switch (peek()) {
         case '\'':
-            ScanVectorLiteral(extraData);
+            scanVectorLiteral(extraData);
             return TokenKind::IntegerLiteral;
         case '.':
             // fractional digits
             do {
-                Advance();
-            } while (IsDecimalDigit(Peek()));
+                advance();
+            } while (isDecimalDigit(peek()));
 
             // optional exponent
-            c = Peek();
+            c = peek();
             return TokenKind::RealLiteral;
         case 'e':
         case 'E':
-            Advance();
-            ScanExponent();
+            advance();
+            scanExponent();
             return TokenKind::RealLiteral;
         default:
             return TokenKind::IntegerLiteral;
     }
 }
 
-void Lexer::ScanVectorLiteral(void** extraData) {
+void Lexer::scanVectorLiteral(void** extraData) {
 
 }
 
-void Lexer::ScanExponent() {
-    char c = Peek();
+void Lexer::scanExponent() {
+    char c = peek();
     if (c == '+' || c == '-') {
-        Advance();
-        c = Peek();
+        advance();
+        c = peek();
     }
 
-    if (!IsDecimalDigit(c))
-        AddError(DiagCode::MissingExponentDigits);
+    if (!isDecimalDigit(c))
+        addError(DiagCode::MissingExponentDigits);
     else {
         do {
-            Advance();
-        } while (IsDecimalDigit(Peek()));
+            advance();
+        } while (isDecimalDigit(peek()));
     }
 }
 
-bool Lexer::LexTrivia() {
+bool Lexer::lexTrivia() {
     // this function returns true and stops lexing trivia if we find a newline while
     // in directive mode, since that requires an EndOfDirective token to be issued
     while (true) {
-        Mark();
+        mark();
 
-        switch (Peek()) {
+        switch (peek()) {
             case ' ':
             case '\t':
             case '\v':
             case '\f':
-                Advance();
-                ScanWhitespace();
+                advance();
+                scanWhitespace();
                 break;
             case '/':
-                switch (Peek(1)) {
+                switch (peek(1)) {
                     case '/':
-                        Advance(2);
-                        ScanLineComment();
+                        advance(2);
+                        scanLineComment();
                         break;
                     case '*':
-                        Advance(2);
-                        if (ScanBlockComment())
+                        advance(2);
+                        if (scanBlockComment())
                             return true;
                         break;
                     default:
@@ -608,23 +614,23 @@ bool Lexer::LexTrivia() {
                 }
                 break;
             case '\r':
-                Advance();
-                Consume('\n');
-                AddTrivia(TriviaKind::EndOfLine);
+                advance();
+                consume('\n');
+                addTrivia(TriviaKind::EndOfLine);
                 if (mode != LexingMode::Normal)
                     return true;
                 break;
             case '\n':
-                Advance();
-                AddTrivia(TriviaKind::EndOfLine);
+                advance();
+                addTrivia(TriviaKind::EndOfLine);
                 if (mode != LexingMode::Normal)
                     return true;
                 break;
             case '\\':
                 // if we're lexing a directive, this might escape a newline
-                if (mode == LexingMode::Normal || !IsNewline(Peek()))
+                if (mode == LexingMode::Normal || !isNewline(peek()))
                     return false;
-                Advance();
+                advance();
                 break;
             default:
                 return false;
@@ -632,15 +638,15 @@ bool Lexer::LexTrivia() {
     }
 }
 
-void Lexer::ScanWhitespace() {
+void Lexer::scanWhitespace() {
     bool done = false;
     while (!done) {
-        switch (Peek()) {
+        switch (peek()) {
             case ' ':
             case '\t':
             case '\v':
             case '\f':
-                Advance();
+                advance();
                 break;
             default:
                 done = true;
@@ -648,59 +654,59 @@ void Lexer::ScanWhitespace() {
         }
     }
 
-    AddTrivia(TriviaKind::Whitespace);
+    addTrivia(TriviaKind::Whitespace);
 }
 
-void Lexer::ScanLineComment() {
+void Lexer::scanLineComment() {
     while (true) {
-        char c = Peek();
-        if (c == 0 || IsNewline(c))
+        char c = peek();
+        if (c == 0 || isNewline(c))
             break;
 
-        Advance();
+        advance();
     }
 
-    AddTrivia(TriviaKind::LineComment);
+    addTrivia(TriviaKind::LineComment);
 }
 
-bool Lexer::ScanBlockComment() {
+bool Lexer::scanBlockComment() {
     bool eod = false;
     while (true) {
-        char c = Peek();
+        char c = peek();
         if (c == 0) {
-            AddError(DiagCode::UnterminatedBlockComment);
+            addError(DiagCode::UnterminatedBlockComment);
             break;
         }
-        else if (c == '*' && Peek(1) == '/') {
-            Advance(2);
+        else if (c == '*' && peek(1) == '/') {
+            advance(2);
             break;
         }
         else {
-            Advance();
-            if (mode != LexingMode::Normal && IsNewline(c)) {
+            advance();
+            if (mode != LexingMode::Normal && isNewline(c)) {
                 // found a newline in a block comment inside a directive; this is not allowed
                 // we need to stop lexing trivia and issue an EndOfDirective token after this comment
-                AddError(DiagCode::SplitBlockCommentInDirective);
+                addError(DiagCode::SplitBlockCommentInDirective);
                 mode = LexingMode::Normal;
                 eod = true;
             }
         }
     }
 
-    AddTrivia(TriviaKind::BlockComment);
+    addTrivia(TriviaKind::BlockComment);
     return eod;
 }
 
-void Lexer::AddTrivia(TriviaKind kind) {
-    triviaBuffer.emplace(kind, GetCurrentLexeme());
+void Lexer::addTrivia(TriviaKind kind) {
+    triviaBuffer.emplace(kind, lexeme());
 }
 
-void Lexer::AddError(DiagCode code) {
-    // TODO:
+void Lexer::addError(DiagCode code) {
+    diagnostics.add(SyntaxError(code, 0, 0));
 }
 
-StringRef Lexer::GetCurrentLexeme() {
-    uint32_t length = GetCurrentLexemeLength();
+StringRef Lexer::lexeme() {
+    uint32_t length = lexemeLength();
     char* str = copyString(pool, marker, length);
     return StringRef(str, length);
 }

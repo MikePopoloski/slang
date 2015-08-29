@@ -5,10 +5,11 @@ using namespace std::literals::string_literals;
 using namespace slang;
 
 Allocator pool;
+Diagnostics diagnostics;
 
 const Token& LexToken(const std::string& text) {
-    Lexer lexer(text.c_str(), pool);
-    Token* token = lexer.Lex();
+    Lexer lexer(text.c_str(), pool, diagnostics);
+    Token* token = lexer.lex();
     REQUIRE(token != nullptr);
     return *token;
 }

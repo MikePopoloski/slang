@@ -63,5 +63,8 @@
     <ClCompile Include="..\..\source\Token.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\Diagnostics.cpp">
+      <Filter>diagnostics</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
