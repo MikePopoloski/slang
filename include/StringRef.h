@@ -35,15 +35,28 @@ public:
     }
 
     friend bool operator==(const StringRef& lhs, const std::string& rhs) {
+        if (lhs.len != rhs.length())
+            return false;
+
         return rhs.compare(0, rhs.length(), lhs.ptr, lhs.len) == 0;
     }
 
-    friend bool operator==(const StringRef& lhs, const char* rhs) {
-        return strncmp(lhs.ptr, rhs, lhs.len) == 0;
+    friend bool operator==(const StringRef& lhs, const StringRef& rhs) {
+        if (lhs.len != rhs.len)
+            return false;
+
+        return strncmp(lhs.ptr, rhs.ptr, std::min(lhs.len, rhs.len)) == 0;
     }
 
-    friend bool operator==(const StringRef& lhs, const StringRef& rhs) {
-        return strncmp(lhs.ptr, rhs.ptr, std::min(lhs.len, rhs.len)) == 0;
+    friend bool operator==(const StringRef& lhs, const char* rhs) {
+        const char* ptr = lhs.ptr;
+        for (uint32_t i = 0; i < lhs.len; i++) {
+            if (*ptr++ != *rhs++)
+                return false;
+        }
+
+        // rhs should be null now, otherwise the lengths differ
+        return *rhs == 0;
     }
 
     friend bool operator==(const std::string& lhs, const StringRef& rhs) { return operator==(rhs, lhs); }

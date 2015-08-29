@@ -38,8 +38,24 @@ bool isNewline(char c) {
     return c == '\r' || c == '\n';
 }
 
-bool isDecimalDigit(char c) {
+bool isDecimalDigitOrUnderscore(char c) {
     return (c >= '0' && c <= '9') || c == '_';
+}
+
+bool isOctalDigit(char c) {
+    return c >= '0' && c <= '7';
+}
+
+bool isHexDigit(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+uint32_t getHexDigitValue(char c) {
+    if (c <= '9')
+        return c - '0';
+    if (c <= 'F')
+        return 10 + c - 'A';
+    return 10 + c - 'a';
 }
 
 char* copyString(slang::Allocator& pool, const char* source, uint32_t length) {
@@ -88,9 +104,6 @@ Token* Lexer::lex() {
     mark();
     void* data = nullptr;
     TokenKind kind = lexToken(&data);
-
-    // grab any errors
-
 
     return pool.emplace<Token>(kind, false, data, trivia, triviaBuffer.count());
 }
@@ -372,8 +385,9 @@ void Lexer::scanStringLiteral(void** extraData) {
             advance();
             c = peek();
             advance();
+
+            uint32_t charCode;
             switch (c) {
-                // simple escape codes
                 case 'n': stringBuffer.append('\n'); break;
                 case 't': stringBuffer.append('\t'); break;
                 case '\\': stringBuffer.append('\\'); break;
@@ -381,13 +395,46 @@ void Lexer::scanStringLiteral(void** extraData) {
                 case 'v': stringBuffer.append('\v'); break;
                 case 'f': stringBuffer.append('\f'); break;
                 case 'a': stringBuffer.append('\a'); break;
-
-                    // newlines are escaped (and ignored) by backslash
                 case '\n': break;
                 case '\r': consume('\n'); break;
-
-                    // TODO: digit codes
-                    // TODO: error handling
+                case '0': case '1': case '2': case '3':
+                case '4': case '5': case '6': case '7':
+                    // octal character code
+                    charCode = c - '0';
+                    if (isOctalDigit(c = peek())) {
+                        advance();
+                        charCode = (charCode * 8) + c - '0';
+                        if (isOctalDigit(c = peek())) {
+                            advance();
+                            charCode = (charCode * 8) + c - '0';
+                            if (charCode > 255) {
+                                addError(DiagCode::OctalEscapeCodeTooBig);
+                                break;
+                            }
+                        }
+                    }
+                    stringBuffer.append(charCode);
+                    break;
+                case 'x':
+                    c = peek();
+                    advance();
+                    if (!isHexDigit(c)) {
+                        addError(DiagCode::InvalidHexEscapeCode);
+                        stringBuffer.append(c);
+                    }
+                    else {
+                        charCode = getHexDigitValue(c);
+                        if (isHexDigit(c = peek())) {
+                            advance();
+                            charCode = (charCode * 16) + getHexDigitValue(c);
+                        }
+                        stringBuffer.append(charCode);
+                    }
+                    break;
+                default:
+                    addError(DiagCode::UnknownEscapeCode);
+                    stringBuffer.append(c);
+                    break;
             }
         }
         else if (c == '"') {
@@ -519,7 +566,7 @@ TokenKind Lexer::lexDirective(void** extraData) {
 TokenKind Lexer::lexNumericLiteral(void** extraData) {
     // scan past leading decimal digits; these might be the first part of
     // a fractional number, the size of a vector, or a plain unsigned integer
-    while (isDecimalDigit(peek()))
+    while (isDecimalDigitOrUnderscore(peek()))
         advance();
 
     char c = peek();
@@ -549,7 +596,7 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
             // fractional digits
             do {
                 advance();
-            } while (isDecimalDigit(peek()));
+            } while (isDecimalDigitOrUnderscore(peek()));
 
             // optional exponent
             c = peek();
@@ -575,12 +622,12 @@ void Lexer::scanExponent() {
         c = peek();
     }
 
-    if (!isDecimalDigit(c))
+    if (!isDecimalDigitOrUnderscore(c))
         addError(DiagCode::MissingExponentDigits);
     else {
         do {
             advance();
-        } while (isDecimalDigit(peek()));
+        } while (isDecimalDigitOrUnderscore(peek()));
     }
 }
 

@@ -3,9 +3,6 @@
 namespace slang {
 
 // TODO:
-// - string escape sequences
-// - track errors
-// - populate token
 // - scan directives
 // - numeric literals
 
@@ -26,7 +23,6 @@ private:
     void scanVectorLiteral(void** extraData);
     void scanIdentifier();
     void scanExponent();
-    
 
     bool lexTrivia();
     bool scanBlockComment();
@@ -46,7 +42,7 @@ private:
 
     uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
     StringRef lexeme();
-    
+
     bool consume(char c) {
         if (peek() == c) {
             advance();

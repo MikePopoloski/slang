@@ -8,7 +8,9 @@ Allocator pool;
 Diagnostics diagnostics;
 
 const Token& LexToken(const std::string& text) {
+    diagnostics.clear();
     Lexer lexer(text.c_str(), pool, diagnostics);
+
     Token* token = lexer.lex();
     REQUIRE(token != nullptr);
     return *token;
@@ -22,6 +24,7 @@ TEST_CASE("Line Comment", "[lexer]") {
     CHECK(token.ToFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::LineComment);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Block Comment (one line)", "[lexer]") {
@@ -32,6 +35,7 @@ TEST_CASE("Block Comment (one line)", "[lexer]") {
     CHECK(token.ToFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Block Comment (multiple lines)", "[lexer]") {
@@ -46,6 +50,7 @@ multiple lines
     CHECK(token.ToFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Whitespace", "[lexer]") {
@@ -56,6 +61,7 @@ TEST_CASE("Whitespace", "[lexer]") {
     CHECK(token.ToFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::Whitespace);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Newlines", "[lexer]") {
@@ -65,6 +71,7 @@ TEST_CASE("Newlines", "[lexer]") {
     CHECK(token.ToFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(diagnostics.empty());
 
     text = "\r\n";
     token = LexToken(text);
@@ -72,6 +79,7 @@ TEST_CASE("Newlines", "[lexer]") {
     CHECK(token.ToFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(diagnostics.empty());
 
     text = "\n";
     token = LexToken(text);
@@ -79,6 +87,7 @@ TEST_CASE("Newlines", "[lexer]") {
     CHECK(token.ToFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Simple Identifiers", "[lexer]") {
@@ -86,11 +95,13 @@ TEST_CASE("Simple Identifiers", "[lexer]") {
     auto token = LexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.ToFullString() == text);
+    CHECK(diagnostics.empty());
 
     text = "abc";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.ToFullString() == text);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Mixed Identifiers", "[lexer]") {
@@ -98,11 +109,13 @@ TEST_CASE("Mixed Identifiers", "[lexer]") {
     auto token = LexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.ToFullString() == text);
+    CHECK(diagnostics.empty());
 
     text = "__a$$asdf213$";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.ToFullString() == text);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Escaped Identifiers", "[lexer]") {
@@ -111,6 +124,7 @@ TEST_CASE("Escaped Identifiers", "[lexer]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.ToFullString() == text);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("System Identifiers", "[lexer]") {
@@ -118,20 +132,120 @@ TEST_CASE("System Identifiers", "[lexer]") {
     auto token = LexToken(text);
     CHECK(token.kind == TokenKind::SystemIdentifier);
     CHECK(token.ToFullString() == text);
+    CHECK(diagnostics.empty());
 
     text = "$45__hello";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::SystemIdentifier);
     CHECK(token.ToFullString() == text);
+    CHECK(diagnostics.empty());
 }
 
-TEST_CASE("String Literal", "[lexer]") {
+TEST_CASE("String literal", "[lexer]") {
     auto text = "\"literal  #@$asdf\"";
     auto token = LexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.ToFullString() == text);
     CHECK(token.GetValueText() == "literal  #@$asdf");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("String literal (newline)", "[lexer]") {
+    auto text = "\"literal\r\nwith new line\"";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() != text);
+    CHECK(token.GetValueText() == "literal");
+
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::NewlineInStringLiteral);
+}
+
+TEST_CASE("String literal (escaped newline)", "[lexer]") {
+    auto text = "\"literal\\\r\nwith new line\"";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literalwith new line");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("String literal (unterminated)", "[lexer]") {
+    auto text = "\"literal";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literal");
+
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::UnterminatedStringLiteral);
+}
+
+TEST_CASE("String literal (escapes)", "[lexer]") {
+    auto text = "\"literal\\n\\t\\v\\f\\a \\\\ \\\" \"";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literal\n\t\v\f\a \\ \" ");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("String literal (octal escape)", "[lexer]") {
+    auto text = "\"literal\\377\"";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literal\377");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("String literal (bad octal escape)", "[lexer]") {
+    auto text = "\"literal\\400\"";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literal");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::OctalEscapeCodeTooBig);
+}
+
+TEST_CASE("String literal with hex escape", "[lexer]") {
+    auto text = "\"literal\\xFa\"";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literal\xFa");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("String literal (bad hex escape)", "[lexer]") {
+    auto text = "\"literal\\xz\"";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literalz");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::InvalidHexEscapeCode);
+}
+
+TEST_CASE("String literal (unknown escape)", "[lexer]") {
+    auto text = "\"literal\\i\"";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.ToFullString() == text);
+    CHECK(token.GetValueText() == "literali");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::UnknownEscapeCode);
 }
 
 void TestPunctuation(TokenKind kind) {
@@ -140,6 +254,7 @@ void TestPunctuation(TokenKind kind) {
 
     CHECK(token.kind == kind);
     CHECK(token.ToFullString() == text);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("All Punctuation", "[lexer]") {

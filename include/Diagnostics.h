@@ -10,7 +10,10 @@ enum class DiagCode : uint8_t {
     NewlineInStringLiteral,
     UnterminatedStringLiteral,
     SplitBlockCommentInDirective,
-    MissingExponentDigits
+    MissingExponentDigits,
+    OctalEscapeCodeTooBig,
+    InvalidHexEscapeCode,
+    UnknownEscapeCode
 };
 
 class SyntaxError {
@@ -28,7 +31,13 @@ class Diagnostics {
 public:
     Diagnostics();
 
+    bool empty() const { return syntaxErrors.empty(); }
+
+    void clear() { syntaxErrors.clear(); }
     void add(const SyntaxError& error);
+
+    // TODO: this is temporary
+    const SyntaxError& last() { return *(syntaxErrors.end() - 1); }
 
 private:
     Buffer<SyntaxError> syntaxErrors;
