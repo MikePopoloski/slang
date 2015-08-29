@@ -42,6 +42,20 @@ bool IsDecimalDigit(char c) {
     return (c >= '0' && c <= '9') || c == '_';
 }
 
+char* copyString(slang::Allocator& pool, const char* source, uint32_t length) {
+    char* dest = reinterpret_cast<char*>(pool.allocate(length));
+    memcpy(dest, source, length);
+    return dest;
+}
+
+template<typename T>
+T* copyArray(slang::Allocator& pool, T* source, uint32_t count) {
+    T* dest = reinterpret_cast<T*>(pool.allocate(count * sizeof(T)));
+    for (uint32_t i = 0; i < count; i++)
+        new (&dest[i]) T(*source++);
+    return dest;
+}
+
 } // anonymous namespace
 
 namespace slang {
@@ -58,7 +72,7 @@ Token* Lexer::Lex() {
     // copy any lexed trivia into a standalone buffer
     Trivia* trivia = nullptr;
     if (triviaBuffer.size()) {
-        trivia = pool.Copy(triviaBuffer.data(), triviaBuffer.size());
+        trivia = copyArray<Trivia>(pool, triviaBuffer.data(), triviaBuffer.size());
     }
     
     {
@@ -72,7 +86,7 @@ Token* Lexer::Lex() {
     void* data = nullptr;
     TokenKind kind = LexToken(&data);
 
-    return pool.Allocate<Token>(kind, false, data, trivia, triviaBuffer.size());
+    return pool.emplace<Token>(kind, false, data, trivia, triviaBuffer.size());
 }
 
 TokenKind Lexer::LexToken(void** extraData) {
@@ -276,7 +290,7 @@ TokenKind Lexer::LexToken(void** extraData) {
         case 'y': case 'z':
         case '_': {
             ScanIdentifier();
-            auto info = pool.Allocate<IdentifierInfo>();
+            auto info = pool.emplace<IdentifierInfo>();
             info->text = GetCurrentLexeme();
             info->type = IdentifierInfo::Normal;
             *extraData = info;
@@ -386,12 +400,11 @@ void Lexer::ScanStringLiteral(void** extraData) {
         }
     }
 
-    char* str = pool.AllocateArray<char>(stringBuilder.size());
-    memcpy(str, stringBuilder.data(), stringBuilder.size());
+    const char* niceText = copyString(pool, stringBuilder.data(), stringBuilder.size());
 
-    auto info = pool.Allocate<StringLiteralInfo>();
+    auto info = pool.emplace<StringLiteralInfo>();
     info->rawText = GetCurrentLexeme();
-    info->niceText = StringRef(str, stringBuilder.size());
+    info->niceText = StringRef(niceText, stringBuilder.size());
 
     *extraData = info;
 }
@@ -444,7 +457,7 @@ TokenKind Lexer::ScanEscapeSequence(void** extraData) {
             break;
     }
 
-    auto info = pool.Allocate<IdentifierInfo>();
+    auto info = pool.emplace<IdentifierInfo>();
     info->text = GetCurrentLexeme();
     info->type = IdentifierInfo::Escaped;
     *extraData = info;
@@ -459,7 +472,7 @@ TokenKind Lexer::ScanDollarSign(void** extraData) {
         return TokenKind::Dollar;
 
     // otherwise, we have a system identifier
-    auto info = pool.Allocate<IdentifierInfo>();
+    auto info = pool.emplace<IdentifierInfo>();
     info->text = GetCurrentLexeme();
     info->type = IdentifierInfo::System;
     *extraData = info;
@@ -685,10 +698,8 @@ void Lexer::AddError(DiagCode code) {
 }
 
 StringRef Lexer::GetCurrentLexeme() {
-    uint32_t length = (uint32_t)(sourceBuffer - marker);
-    char* str = pool.AllocateArray<char>(length);
-
-    memcpy(str, marker, length);
+    uint32_t length = GetCurrentLexemeLength();
+    char* str = copyString(pool, marker, length);
     return StringRef(str, length);
 }
 
