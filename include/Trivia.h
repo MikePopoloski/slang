@@ -40,6 +40,8 @@ struct Trivia {
     Trivia(TriviaKind kind, StringRef rawText)
         : rawText(rawText), kind(kind) {
     }
+
+    void WriteTo(std::string& buffer) const;
 };
 
 }

@@ -16,6 +16,9 @@ public:
         return ptr[index];
     }
 
+    const T* begin() const { return ptr; }
+    const T* end() const { return ptr + length; }
+
 private:
     const T* ptr;
     uint32_t length;

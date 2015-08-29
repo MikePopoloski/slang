@@ -12,6 +12,10 @@ public:
         : ptr(ptr), length(length) {
     }
 
+    void CopyTo(std::string& buffer) const {
+        buffer.append(ptr, length);
+    }
+
 private:
     const char* ptr;
     uint32_t length;

@@ -49,8 +49,8 @@ private:
     char Peek() { return *sourceBuffer; }
     char Peek(int offset) { return sourceBuffer[offset]; }
 
-    uint32_t GetCurrentLexemeLength() { return (uint32_t)(sourceBuffer - marker); }
-    StringRef GetCurrentLexeme() { return StringRef(marker, GetCurrentLexemeLength()); }
+    uint32_t GetCurrentLexemeLength() const { return (uint32_t)(sourceBuffer - marker); }
+    StringRef GetCurrentLexeme();
     
     bool Consume(char c) {
         if (Peek() == c) {

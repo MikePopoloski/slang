@@ -659,4 +659,12 @@ void Lexer::AddError(DiagCode code) {
     // TODO:
 }
 
+StringRef Lexer::GetCurrentLexeme() {
+    uint32_t length = (uint32_t)(sourceBuffer - marker);
+    char* str = pool.AllocateArray<char>(length);
+
+    memcpy(str, marker, length);
+    return StringRef(str, length);
+}
+
 } // namespace slang

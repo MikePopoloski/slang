@@ -69,6 +69,12 @@ public:
           trivia(trivia, triviaCount) {
     }
 
+    void WriteTo(std::string& buffer, bool includeTrivia) const;
+
+    // convenience methods that wrap WriteTo
+    std::string ToString() const;
+    std::string ToFullString() const;
+
 private:
     union {
         void* data;

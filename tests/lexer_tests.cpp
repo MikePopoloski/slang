@@ -16,7 +16,9 @@ const Token& LexToken(const std::string& text) {
 TEST_CASE("Line Comment", "[lexer]") {
     auto text = "// comment";
     auto token = LexToken(text);
+
     CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::LineComment);
 }
@@ -24,7 +26,9 @@ TEST_CASE("Line Comment", "[lexer]") {
 TEST_CASE("Block Comment (one line)", "[lexer]") {
     auto text = "/* comment */";
     auto token = LexToken(text);
+
     CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
 }
@@ -36,7 +40,9 @@ comment on
 multiple lines
 */)";
     auto token = LexToken(text);
+
     CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
 }
@@ -46,6 +52,7 @@ TEST_CASE("Whitespace", "[lexer]") {
     auto token = LexToken(text);
 
     CHECK(token.kind == TokenKind::Identifier);
+    //CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::Whitespace);
 }
@@ -53,19 +60,23 @@ TEST_CASE("Whitespace", "[lexer]") {
 TEST_CASE("Newlines", "[lexer]") {
     auto text = "\r";
     auto token = LexToken(text);
+
     CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
 
     text = "\r\n";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
 
     text = "\n";
     token = LexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.ToFullString() == text);
     CHECK(token.trivia.Count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
 }
@@ -107,7 +118,7 @@ TEST_CASE("System Identifiers", "[lexer]") {
 }
 
 TEST_CASE("String Literal", "[lexer]") {
-    auto text = "\"literal\"";
+    auto text = "\"literal  #@$asdf\"";
     auto token = LexToken(text);
     CHECK(token.kind == TokenKind::StringLiteral);
 }
@@ -116,6 +127,7 @@ void TestPunctuation(TokenKind kind) {
     auto text = GetTokenKindText(kind);
     auto token = LexToken(text);
     CHECK(token.kind == kind);
+    CHECK(token.ToFullString() == text);
 }
 
 TEST_CASE("All Punctuation", "[lexer]") {

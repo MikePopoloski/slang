@@ -36,6 +36,12 @@ public:
         return newArray;
     }
 
+    template<typename T>
+    T* AllocateArray(uint32_t count) {
+        static_assert(std::is_pod<T>::value, "Array type must be POD");
+        return reinterpret_cast<T*>(Allocate(count * sizeof(T)));
+    }
+
     uint8_t* Allocate(uint32_t size) {
         // simple case: we have room in the current block
         uint8_t* result = head->current;
