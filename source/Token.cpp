@@ -8,7 +8,7 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
             buffer.appendRange(t.rawText);
     }
 
-    StringRef text = GetTokenKindText(kind);
+    StringRef text = getTokenKindText(kind);
     if (text) {
         buffer.appendRange(text);
         return;
@@ -28,11 +28,15 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
         case TokenKind::RealLiteral:
             buffer.appendRange(numeric->rawText);
             break;
+        case TokenKind::Directive:
+        case TokenKind::MacroUsage:
+            buffer.appendRange(directive->rawText);
+            break;
     }
 }
 
 StringRef Token::valueText() const {
-    StringRef text = GetTokenKindText(kind);
+    StringRef text = getTokenKindText(kind);
     if (text)
         return text;
 
@@ -53,6 +57,9 @@ StringRef Token::valueText() const {
             return identifier->rawText;
         case TokenKind::StringLiteral:
             return string->niceText;
+        case TokenKind::Directive:
+        case TokenKind::MacroUsage:
+            return directive->rawText;
         default:
             return nullptr;
     }
@@ -79,6 +86,11 @@ IdentifierType Token::identifierType() const {
     if (kind == TokenKind::Identifier || kind == TokenKind::SystemIdentifier)
         return identifier->type;
     return IdentifierType::Unknown;
+}
+
+TriviaKind Token::directiveKind() const {
+    ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
+    return directive->kind;
 }
 
 }

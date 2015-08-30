@@ -2,6 +2,7 @@
 
 namespace slang {
 
-StringRef GetTokenKindText(TokenKind kind);
+StringRef getTokenKindText(TokenKind kind);
+TriviaKind getDirectiveKind(StringRef directive);
 
 }

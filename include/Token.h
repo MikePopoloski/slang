@@ -2,6 +2,8 @@
 
 namespace slang {
 
+enum class TokenKind : uint16_t;
+
 enum class IdentifierType : uint8_t {
     Unknown,
     Normal,
@@ -57,7 +59,14 @@ struct NumericLiteralInfo {
     }
 };
 
-enum class TokenKind : uint16_t;
+struct DirectiveInfo {
+    StringRef rawText;
+    TriviaKind kind;
+
+    DirectiveInfo(StringRef rawText, TriviaKind kind) :
+        rawText(rawText), kind(kind) {
+    }
+};
 
 class Token {
 public:
@@ -82,11 +91,11 @@ public:
     // copy string representation to the given buffer
     void writeTo(Buffer<char>& buffer, bool includeTrivia) const;
 
-    // for numeric literals, gets the value; otherwise asserts
+    // data accessors for specific kinds of tokens
+    // these will generally assert if the kind is wrong
     const NumericValue& numericValue() const;
-
-    // for identifiers, gets the type
     IdentifierType identifierType() const;
+    TriviaKind directiveKind() const;
 
 private:
     union {
@@ -94,6 +103,7 @@ private:
         IdentifierInfo* identifier;
         StringLiteralInfo* string;
         NumericLiteralInfo* numeric;
+        DirectiveInfo* directive;
     };
 
     enum {

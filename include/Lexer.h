@@ -4,7 +4,7 @@ namespace slang {
 
 // TODO:
 // - directives
-// - integer / vector literals
+// - vector values
 // - unsized literals
 // - token locations
 // - diagnostic locations

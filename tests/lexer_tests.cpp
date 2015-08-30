@@ -694,7 +694,7 @@ TEST_CASE("Binary vector literal (missing digits)", "[lexer]") {
 }
 
 void testPunctuation(TokenKind kind) {
-    auto text = GetTokenKindText(kind);
+    auto text = getTokenKindText(kind);
     auto token = lexToken(std::string(text.begin(), text.end()));
 
     CHECK(token.kind == kind);

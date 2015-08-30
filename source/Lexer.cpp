@@ -638,16 +638,18 @@ TokenKind Lexer::lexDirective(void** extraData) {
         return TokenKind::Unknown;
     }
 
+    auto directive = lexeme();
+    TriviaKind type = getDirectiveKind(directive);
+    *extraData = pool.emplace<DirectiveInfo>(lexeme(), type);
+
     // lexing behavior changes slightly depending on directives we see
-    // TODO:
-    DirectiveType type = DirectiveType::Unknown;
     switch (type) {
-        case DirectiveType::Unknown:
+        case TriviaKind::MacroUsage:
             return TokenKind::MacroUsage;
-        case DirectiveType::Define:
+        case TriviaKind::DefineDirective:
             mode = LexingMode::MacroDefine;
             break;
-        case DirectiveType::Include:
+        case TriviaKind::IncludeDirective:
             mode = LexingMode::Include;
             break;
         default:

@@ -2,7 +2,7 @@
 
 namespace slang {
 
-StringRef GetTokenKindText(TokenKind kind) {
+StringRef getTokenKindText(TokenKind kind) {
     switch (kind) {
         // punctuation
         case TokenKind::ApostropheOpenBrace: return "'{";
@@ -349,6 +349,10 @@ StringRef GetTokenKindText(TokenKind kind) {
 
         default: return nullptr;
     }
+}
+
+TriviaKind getDirectiveKind(StringRef directive) {
+    return TriviaKind::MacroUsage;
 }
 
 }
