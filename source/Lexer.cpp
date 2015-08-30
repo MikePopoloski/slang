@@ -50,6 +50,14 @@ bool isHexDigit(char c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
+bool isAlphaNumeric(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+uint32_t getDigitValue(char c) {
+    return c - '0';
+}
+
 uint32_t getHexDigitValue(char c) {
     if (c <= '9')
         return c - '0';
@@ -221,7 +229,7 @@ TokenKind Lexer::lexToken(void** extraData) {
         case '0': case '1': case '2': case '3':
         case '4': case '5': case '6': case '7':
         case '8': case '9':
-            return lexNumericLiteral(extraData);
+            return lexNumericLiteral(c, extraData);
         case ':':
             switch (peek()) {
                 case '=': advance(); return TokenKind::ColonEquals;
@@ -400,13 +408,13 @@ void Lexer::scanStringLiteral(void** extraData) {
                 case '0': case '1': case '2': case '3':
                 case '4': case '5': case '6': case '7':
                     // octal character code
-                    charCode = c - '0';
+                    charCode = getDigitValue(c);
                     if (isOctalDigit(c = peek())) {
                         advance();
-                        charCode = (charCode * 8) + c - '0';
+                        charCode = (charCode * 8) + getDigitValue(c);
                         if (isOctalDigit(c = peek())) {
                             advance();
-                            charCode = (charCode * 8) + c - '0';
+                            charCode = (charCode * 8) + getDigitValue(c);
                             if (charCode > 255) {
                                 addError(DiagCode::OctalEscapeCodeTooBig);
                                 break;
@@ -471,30 +479,11 @@ void Lexer::scanUnsizedNumericLiteral(void** extraData) {
 
 void Lexer::scanIdentifier() {
     while (true) {
-        switch (peek()) {
-            case '0': case '1': case '2': case '3':
-            case '4': case '5': case '6': case '7':
-            case '8': case '9':
-            case 'A': case 'B': case 'C': case 'D':
-            case 'E': case 'F': case 'G': case 'H':
-            case 'I': case 'J': case 'L': case 'K':
-            case 'M': case 'N': case 'O': case 'P':
-            case 'Q': case 'R': case 'S': case 'T':
-            case 'U': case 'V': case 'W': case 'X':
-            case 'Y': case 'Z':
-            case 'a': case 'b': case 'c': case 'd':
-            case 'e': case 'f': case 'g': case 'h':
-            case 'i': case 'j': case 'k': case 'l':
-            case 'm': case 'n': case 'o': case 'p':
-            case 'q': case 'r': case 's': case 't':
-            case 'u': case 'v': case 'w': case 'x':
-            case 'y': case 'z':
-            case '_': case '$':
-                advance();
-                break;
-            default:
-                return;
-        }
+        char c = peek();
+        if (isAlphaNumeric(c) || c == '_' || c == '$')
+            advance();
+        else
+            return;
     }
 }
 
@@ -563,13 +552,14 @@ TokenKind Lexer::lexDirective(void** extraData) {
     return TokenKind::Directive;
 }
 
-TokenKind Lexer::lexNumericLiteral(void** extraData) {
+TokenKind Lexer::lexNumericLiteral(char c, void** extraData) {
     // scan past leading decimal digits; these might be the first part of
     // a fractional number, the size of a vector, or a plain unsigned integer
+    uint64_t unsignedVal = getDigitValue(c);
     while (isDecimalDigitOrUnderscore(peek()))
         advance();
 
-    char c = peek();
+    c = peek();
     if (isHorizontalWhitespace(c)) {
         // whitespace normally ends a numeric literal, but it's allowed between
         // the size and the base specifier in vector literals, so check if that's what we have here

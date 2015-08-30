@@ -20,10 +20,6 @@ public:
     uint32_t length() const { return len; }
     bool empty() const { return len == 0; }
 
-    void copyTo(std::string& buffer) const {
-        buffer.append(ptr, len);
-    }
-
     StringRef subString(uint32_t startIndex, uint32_t length) const {
         ASSERT(startIndex + length <= len);
         return StringRef(ptr + startIndex, length);

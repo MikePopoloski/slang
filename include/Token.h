@@ -60,8 +60,8 @@ enum class TokenKind : uint16_t;
 
 class Token {
 public:
-    TokenKind kind;
     ArrayRef<Trivia> trivia;
+    TokenKind kind;
 
     Token(TokenKind kind, bool startOfLine, void* data, Trivia* trivia, uint32_t triviaCount)
         : kind(kind),
@@ -69,12 +69,19 @@ public:
           trivia(trivia, triviaCount) {
     }
 
-    void WriteTo(std::string& buffer, bool includeTrivia) const;
-    StringRef GetValueText() const;
+    // value text is the "nice" lexed version of certain tokens;
+    // for example, in string literals, escape sequences are converted appropriately
+    StringRef valueText() const;
 
-    // convenience methods that wrap WriteTo
-    std::string ToString() const;
-    std::string ToFullString() const;
+    // convenience methods that wrap writeTo
+    // toFullString() includes trivia, toString() does not
+    std::string toString() const;
+    std::string toFullString() const;
+
+    // copy string representation to the given buffer
+    void writeTo(Buffer<char>& buffer, bool includeTrivia) const;
+
+    
 
 private:
     union {
@@ -442,7 +449,6 @@ enum class TokenKind : uint16_t {
     // directives (these get consumed by the preprocessor and don't make it downstream to the parser)
     Directive,
     EndOfDirective,
-    DirectiveContinuation,
     MacroUsage,
     MacroQuote,
     MacroEscapedQuote,

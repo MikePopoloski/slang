@@ -2,15 +2,15 @@
 
 namespace slang {
 
-void Token::WriteTo(std::string& buffer, bool includeTrivia) const {
+void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
     if (includeTrivia) {
         for (const auto& t : trivia)
-            t.rawText.copyTo(buffer);
+            buffer.appendRange(t.rawText);
     }
 
     const char* text = GetTokenKindText(kind);
     if (text != nullptr) {
-        buffer.append(text);
+        buffer.appendRange(text, text + strlen(text));
         return;
     }
 
@@ -18,15 +18,15 @@ void Token::WriteTo(std::string& buffer, bool includeTrivia) const {
     switch (kind) {
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
-            identifier->text.copyTo(buffer);
+            buffer.appendRange(identifier->text);
             break;
         case TokenKind::StringLiteral:
-            string->rawText.copyTo(buffer);
+            buffer.appendRange(string->rawText);
             break;
     }
 }
 
-StringRef Token::GetValueText() const {
+StringRef Token::valueText() const {
     switch (kind) {
         case TokenKind::StringLiteral:
             return string->niceText;
@@ -35,16 +35,16 @@ StringRef Token::GetValueText() const {
     }
 }
 
-std::string Token::ToString() const {
-    std::string buffer;
-    WriteTo(buffer, false);
-    return buffer;
+std::string Token::toString() const {
+    Buffer<char> buffer;
+    writeTo(buffer, false);
+    return std::string(buffer.begin(), buffer.end());
 }
 
-std::string Token::ToFullString() const {
-    std::string buffer;
-    WriteTo(buffer, true);
-    return buffer;
+std::string Token::toFullString() const {
+    Buffer<char> buffer;
+    writeTo(buffer, true);
+    return std::string(buffer.begin(), buffer.end());
 }
 
 }

@@ -10,7 +10,7 @@ namespace slang {
 template<typename T>
 class Buffer {
 public:
-    explicit Buffer(uint32_t capacity)
+    explicit Buffer(uint32_t capacity = 16)
         : len(0), capacity(capacity) {
         
         ASSERT(capacity > 0);
@@ -42,6 +42,23 @@ public:
             grow();
 
         new (&data[len++]) T(item);
+    }
+
+    template<typename Container>
+    void appendRange(const Container& container) {
+        appendRange(std::begin(container), std::end(container));
+    }
+
+    void appendRange(const T* begin, const T* end) {
+        uint32_t newLen = len + (uint32_t)(end - begin);
+        while (newLen > capacity)
+            grow();
+
+        T* ptr = data + len;
+        while (begin != end)
+            new (ptr++) T(*begin++);
+
+        len = newLen;
     }
 
     template<typename... Args>

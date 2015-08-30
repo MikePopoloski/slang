@@ -14,7 +14,7 @@ public:
 
 private:
     TokenKind lexToken(void** extraData);
-    TokenKind lexNumericLiteral(void** extraData);
+    TokenKind lexNumericLiteral(char c, void** extraData);
     TokenKind lexEscapeSequence(void** extraData);
     TokenKind lexDollarSign(void** extraData);
     TokenKind lexDirective(void** extraData);
