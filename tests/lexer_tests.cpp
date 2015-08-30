@@ -98,12 +98,16 @@ TEST_CASE("Simple Identifiers", "[lexer]") {
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
+    CHECK(token.identifierType() == IdentifierType::Normal);
     CHECK(diagnostics.empty());
 
     text = "abc";
     token = lexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
+    CHECK(token.identifierType() == IdentifierType::Normal);
     CHECK(diagnostics.empty());
 }
 
@@ -112,12 +116,16 @@ TEST_CASE("Mixed Identifiers", "[lexer]") {
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
+    CHECK(token.identifierType() == IdentifierType::Normal);
     CHECK(diagnostics.empty());
 
     text = "__a$$asdf213$";
     token = lexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
+    CHECK(token.identifierType() == IdentifierType::Normal);
     CHECK(diagnostics.empty());
 }
 
@@ -127,6 +135,8 @@ TEST_CASE("Escaped Identifiers", "[lexer]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == "98\\#$%)(*lkjsd__09...asdf345");
+    CHECK(token.identifierType() == IdentifierType::Escaped);
     CHECK(diagnostics.empty());
 }
 
@@ -135,12 +145,16 @@ TEST_CASE("System Identifiers", "[lexer]") {
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::SystemIdentifier);
     CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
+    CHECK(token.identifierType() == IdentifierType::System);
     CHECK(diagnostics.empty());
 
     text = "$45__hello";
     token = lexToken(text);
     CHECK(token.kind == TokenKind::SystemIdentifier);
     CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
+    CHECK(token.identifierType() == IdentifierType::System);
     CHECK(diagnostics.empty());
 }
 
@@ -403,10 +417,11 @@ TEST_CASE("Real literal (digit overflow)", "[lexer]") {
 
 void testPunctuation(TokenKind kind) {
     auto text = GetTokenKindText(kind);
-    auto token = lexToken(text);
+    auto token = lexToken(std::string(text.begin(), text.end()));
 
     CHECK(token.kind == kind);
     CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
     CHECK(diagnostics.empty());
 }
 

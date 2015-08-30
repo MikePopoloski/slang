@@ -2,15 +2,19 @@
 
 namespace slang {
 
-struct IdentifierInfo {
-    StringRef text;
-    uint8_t type;
+enum class IdentifierType : uint8_t {
+    Normal,
+    Escaped,
+    System
+};
 
-    enum {
-        Normal,
-        Escaped,
-        System
-    };
+struct IdentifierInfo {
+    StringRef rawText;
+    IdentifierType type;
+
+    IdentifierInfo(StringRef rawText, IdentifierType type) :
+        rawText(rawText), type(type) {
+    }
 };
 
 struct StringLiteralInfo {
@@ -102,6 +106,9 @@ public:
 
     // for numeric literals, gets the value; otherwise asserts
     const NumericValue& numericValue() const;
+
+    // for identifiers, gets the type
+    IdentifierType identifierType() const;
 
 private:
     union {

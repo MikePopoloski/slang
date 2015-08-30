@@ -360,10 +360,7 @@ TokenKind Lexer::lexToken(void** extraData) {
         case 'y': case 'z':
         case '_': {
             scanIdentifier();
-            auto info = pool.emplace<IdentifierInfo>();
-            info->text = lexeme();
-            info->type = IdentifierInfo::Normal;
-            *extraData = info;
+            *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Normal);
             return TokenKind::Identifier;
         }
         case '[': return TokenKind::OpenBracket;
@@ -538,10 +535,7 @@ TokenKind Lexer::lexEscapeSequence(void** extraData) {
             break;
     }
 
-    auto info = pool.emplace<IdentifierInfo>();
-    info->text = lexeme();
-    info->type = IdentifierInfo::Escaped;
-    *extraData = info;
+    *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Escaped);
     return TokenKind::Identifier;
 }
 
@@ -553,10 +547,7 @@ TokenKind Lexer::lexDollarSign(void** extraData) {
         return TokenKind::Dollar;
 
     // otherwise, we have a system identifier
-    auto info = pool.emplace<IdentifierInfo>();
-    info->text = lexeme();
-    info->type = IdentifierInfo::System;
-    *extraData = info;
+    *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::System);
     return TokenKind::SystemIdentifier;
 }
 

@@ -10,8 +10,18 @@ public:
         : ptr(nullptr), len(0) {
     }
 
+    StringRef(std::nullptr_t)
+        : ptr(nullptr), len(0) {
+    }
+
     StringRef(const char* ptr, uint32_t length)
         : ptr(ptr), len(length) {
+    }
+
+    // this constructor is meant for string literals
+    template<size_t N>
+    StringRef(const char (&str)[N])
+        : ptr(str), len(N) {
     }
 
     const char* begin() const { return ptr; }
@@ -19,6 +29,11 @@ public:
 
     uint32_t length() const { return len; }
     bool empty() const { return len == 0; }
+
+    StringRef subString(uint32_t startIndex) const {
+        ASSERT(startIndex <= len);
+        return subString(startIndex, len - startIndex);
+    }
 
     StringRef subString(uint32_t startIndex, uint32_t length) const {
         ASSERT(startIndex + length <= len);
@@ -28,6 +43,10 @@ public:
     char operator[](uint32_t index) const {
         ASSERT(index < len);
         return ptr[index];
+    }
+
+    explicit operator bool() const {
+        return !empty();
     }
 
     friend bool operator==(const StringRef& lhs, const std::string& rhs) {

@@ -2,7 +2,7 @@
 
 namespace slang {
 
-const char* GetTokenKindText(TokenKind kind) {
+StringRef GetTokenKindText(TokenKind kind) {
     switch (kind) {
         // punctuation
         case TokenKind::ApostropheOpenBrace: return "'{";

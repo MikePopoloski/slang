@@ -8,9 +8,9 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
             buffer.appendRange(t.rawText);
     }
 
-    const char* text = GetTokenKindText(kind);
-    if (text != nullptr) {
-        buffer.appendRange(text, text + strlen(text));
+    StringRef text = GetTokenKindText(kind);
+    if (text) {
+        buffer.appendRange(text);
         return;
     }
 
@@ -18,7 +18,7 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
     switch (kind) {
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
-            buffer.appendRange(identifier->text);
+            buffer.appendRange(identifier->rawText);
             break;
         case TokenKind::StringLiteral:
             buffer.appendRange(string->rawText);
@@ -31,7 +31,18 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
 }
 
 StringRef Token::valueText() const {
+    StringRef text = GetTokenKindText(kind);
+    if (text)
+        return text;
+
     switch (kind) {
+        case TokenKind::Identifier:
+            if (identifier->type == IdentifierType::Escaped)
+                return identifier->rawText.subString(1); // strip off leading backslash
+            else
+                return identifier->rawText;
+        case TokenKind::SystemIdentifier:
+            return identifier->rawText;
         case TokenKind::StringLiteral:
             return string->niceText;
         default:
@@ -54,6 +65,11 @@ std::string Token::toFullString() const {
 const NumericValue& Token::numericValue() const {
     ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::RealLiteral);
     return numeric->value;
+}
+
+IdentifierType Token::identifierType() const {
+    ASSERT(kind == TokenKind::Identifier || kind == TokenKind::SystemIdentifier);
+    return identifier->type;
 }
 
 }
