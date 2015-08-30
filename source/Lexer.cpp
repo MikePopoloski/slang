@@ -172,6 +172,10 @@ Lexer::Lexer(const char* sourceBuffer, uint32_t sourceLength, Allocator& pool, D
 }
 
 Token* Lexer::lex() {
+    // don't do anything if we've lexed the entire buffer already
+    if (reallyAtEnd())
+        return nullptr;
+
     // lex leading trivia
     triviaBuffer.clear();
     bool eod = lexTrivia();
@@ -946,6 +950,11 @@ bool Lexer::scanBlockComment() {
         else if (c == '*' && peek(1) == '/') {
             advance(2);
             break;
+        }
+        else if (c == '/' && peek(1) == '*') {
+            // nested block comments disallowed by the standard; ignore and continue
+            advance(2);
+            addError(DiagCode::NestedBlockComment);
         }
         else {
             advance();

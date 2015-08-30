@@ -12,6 +12,7 @@ enum class DiagCode : uint8_t {
     NewlineInStringLiteral,
     UnterminatedStringLiteral,
     UnterminatedBlockComment,
+    NestedBlockComment,
     SplitBlockCommentInDirective,
     MissingExponentDigits,
     MissingFractionalDigits,

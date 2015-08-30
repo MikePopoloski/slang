@@ -40,17 +40,17 @@ TEST_CASE("UTF8 chars", "[lexer]") {
 }
 
 TEST_CASE("Unicode BOMs", "[lexer]") {
-    auto text = "\xEF\xBB\xBF";
+    auto text = "\xEF\xBB\xBF ";
     lexToken(text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
 
-    text = "\xFE\xFF";
+    text = "\xFE\xFF ";
     lexToken(text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
 
-    text = "\xFF\xFE";
+    text = "\xFF\xFE ";
     lexToken(text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
@@ -102,6 +102,30 @@ multiple lines
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
     CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Block Comment (unterminated)", "[lexer]") {
+    auto text = "/* comment";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toFullString() == text);
+    CHECK(token.trivia.count() == 1);
+    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::UnterminatedBlockComment);
+}
+
+TEST_CASE("Block Comment (nested)", "[lexer]") {
+    auto text = "/* comment /* stuff */";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toFullString() == text);
+    CHECK(token.trivia.count() == 1);
+    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::NestedBlockComment);
 }
 
 TEST_CASE("Whitespace", "[lexer]") {
@@ -415,7 +439,7 @@ TEST_CASE("Real literal (exponent)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (plus exponent)", "[lexer]") {
-    auto text = "0000032e+00057";
+    auto text = "0000032E+00057";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -451,6 +475,20 @@ TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
     auto& value = token.numericValue();
     CHECK(value.type == NumericValue::Real);
     CHECK(value.real == 32.3456e57);
+}
+
+TEST_CASE("Real literal (bad exponent)", "[lexer]") {
+    auto text = "32ez";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == "32e");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::MissingExponentDigits);
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(value.real == 32);
 }
 
 TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
