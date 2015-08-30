@@ -14,15 +14,16 @@ public:
 
 private:
     TokenKind lexToken(void** extraData);
-    TokenKind lexNumericLiteral(char c, void** extraData);
+    TokenKind lexNumericLiteral(void** extraData);
     TokenKind lexEscapeSequence(void** extraData);
     TokenKind lexDollarSign(void** extraData);
     TokenKind lexDirective(void** extraData);
     void scanStringLiteral(void** extraData);
+    char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
+    void scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent, void** extraData);
     void scanUnsizedNumericLiteral(void** extraData);
     void scanVectorLiteral(void** extraData);
     void scanIdentifier();
-    void scanExponent();
 
     bool lexTrivia();
     bool scanBlockComment();

@@ -2,6 +2,21 @@
 
 namespace {
 
+const int MaxMantissaDigits = 18;
+const int MaxExponent = 511;
+
+const double powersOf10[] = {
+    10.0,
+    100.0,
+    1.0e4,
+    1.0e8,
+    1.0e16,
+    1.0e32,
+    1.0e64,
+    1.0e128,
+    1.0e256
+};
+
 bool isASCII(char c) {
     return c < 128;
 }
@@ -38,8 +53,8 @@ bool isNewline(char c) {
     return c == '\r' || c == '\n';
 }
 
-bool isDecimalDigitOrUnderscore(char c) {
-    return (c >= '0' && c <= '9') || c == '_';
+bool isDecimalDigit(char c) {
+    return c >= '0' && c <= '9';
 }
 
 bool isOctalDigit(char c) {
@@ -78,6 +93,31 @@ T* copyArray(slang::Allocator& pool, T* source, uint32_t count) {
     for (uint32_t i = 0; i < count; i++)
         new (&dest[i]) T(*source++);
     return dest;
+}
+
+bool composeDouble(double fraction, int exp, double& result) {
+    bool neg = false;
+    if (exp < 0) {
+        neg = true;
+        exp = -exp;
+    }
+
+    if (exp > MaxExponent)
+        exp = MaxExponent;
+
+    double dblExp = 1.0;
+    for (auto d = powersOf10; exp != 0; exp >>= 1, d++) {
+        if (exp & 0x1)
+            dblExp *= *d;
+    }
+
+    if (neg)
+        fraction /= dblExp;
+    else
+        fraction *= dblExp;
+
+    result = fraction;
+    return std::isfinite(result);
 }
 
 } // anonymous namespace
@@ -229,7 +269,9 @@ TokenKind Lexer::lexToken(void** extraData) {
         case '0': case '1': case '2': case '3':
         case '4': case '5': case '6': case '7':
         case '8': case '9':
-            return lexNumericLiteral(c, extraData);
+            // back up so that lexNumericLiteral can look at this digit again
+            sourceBuffer--;
+            return lexNumericLiteral(extraData);
         case ':':
             switch (peek()) {
                 case '=': advance(); return TokenKind::ColonEquals;
@@ -552,14 +594,18 @@ TokenKind Lexer::lexDirective(void** extraData) {
     return TokenKind::Directive;
 }
 
-TokenKind Lexer::lexNumericLiteral(char c, void** extraData) {
-    // scan past leading decimal digits; these might be the first part of
-    // a fractional number, the size of a vector, or a plain unsigned integer
-    uint64_t unsignedVal = getDigitValue(c);
-    while (isDecimalDigitOrUnderscore(peek()))
+TokenKind Lexer::lexNumericLiteral(void** extraData) {
+    // skip over leading zeros
+    char c;
+    while ((c = peek()) == '0')
         advance();
 
-    c = peek();
+    // scan past leading decimal digits; these might be the first part of
+    // a fractional number, the size of a vector, or a plain unsigned integer
+    uint64_t unsignedVal = 0;
+    int digits = 0;
+    c = scanUnsignedNumber(c, unsignedVal, digits);
+
     if (isHorizontalWhitespace(c)) {
         // whitespace normally ends a numeric literal, but it's allowed between
         // the size and the base specifier in vector literals, so check if that's what we have here
@@ -582,43 +628,96 @@ TokenKind Lexer::lexNumericLiteral(char c, void** extraData) {
         case '\'':
             scanVectorLiteral(extraData);
             return TokenKind::IntegerLiteral;
-        case '.':
+        case '.': {
             // fractional digits
-            do {
-                advance();
-            } while (isDecimalDigitOrUnderscore(peek()));
-
-            // optional exponent
+            int decPoint = digits;
+            advance();
             c = peek();
+            if (!isDecimalDigit(c))
+                addError(DiagCode::MissingFractionalDigits);
+
+            c = scanUnsignedNumber(peek(), unsignedVal, digits);
+            scanRealLiteral(
+                unsignedVal,
+                decPoint,
+                digits,
+                c == 'e' || c == 'E',
+                extraData
+            );
             return TokenKind::RealLiteral;
+        }
         case 'e':
         case 'E':
-            advance();
-            scanExponent();
+            scanRealLiteral(
+                unsignedVal,
+                digits,     // decimal point is after all digits
+                digits,
+                true,       // yep, we have an exponent
+                extraData
+            );
             return TokenKind::RealLiteral;
         default:
             return TokenKind::IntegerLiteral;
     }
 }
 
-void Lexer::scanVectorLiteral(void** extraData) {
+char Lexer::scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits) {
+    while (true) {
+        if (isDecimalDigit(c)) {
+            // After 18 digits, stop caring. For normal integers, we're going to truncate
+            // to 32-bits anyway. For reals, later digits won't have any effect on the result.
+            if (digits < MaxMantissaDigits)
+                unsignedVal = (unsignedVal * 10) + getDigitValue(c);
+            digits++;
+        }
+        else if (c != '_')
+            break;
 
-}
-
-void Lexer::scanExponent() {
-    char c = peek();
-    if (c == '+' || c == '-') {
         advance();
         c = peek();
     }
+    return c;
+}
 
-    if (!isDecimalDigitOrUnderscore(c))
-        addError(DiagCode::MissingExponentDigits);
-    else {
-        do {
+void Lexer::scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent, void** extraData) {
+    bool neg = false;
+    uint64_t expVal = 0;
+
+    if (exponent) {
+        advance();
+        char c = peek();
+        if (c == '+')
             advance();
-        } while (isDecimalDigitOrUnderscore(peek()));
+        else if (c == '-') {
+            neg = true;
+            advance();
+        }
+
+        c = peek();
+        if (!isDecimalDigit(c))
+            addError(DiagCode::MissingExponentDigits);
+        else {
+            int unusedDigits = 0;
+            scanUnsignedNumber(c, expVal, unusedDigits);
+        }
     }
+
+    int fracExp = decPoint - std::min(digits, MaxMantissaDigits);
+    int exp;
+    if (neg)
+        exp = fracExp - int(expVal);
+    else
+        exp = fracExp + int(expVal);
+
+    double result;
+    if (!composeDouble(double(value), exp, result))
+        addError(DiagCode::RealExponentTooLarge);
+
+    *extraData = pool.emplace<NumericLiteralInfo>(lexeme(), result);
+}
+
+void Lexer::scanVectorLiteral(void** extraData) {
+
 }
 
 bool Lexer::lexTrivia() {

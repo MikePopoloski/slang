@@ -23,6 +23,9 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
         case TokenKind::StringLiteral:
             buffer.appendRange(string->rawText);
             break;
+        case TokenKind::RealLiteral:
+            buffer.appendRange(numeric->rawText);
+            break;
     }
 }
 
@@ -45,6 +48,11 @@ std::string Token::toFullString() const {
     Buffer<char> buffer;
     writeTo(buffer, true);
     return std::string(buffer.begin(), buffer.end());
+}
+
+const NumericValue& Token::numericValue() const {
+    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::RealLiteral);
+    return numeric->value;
 }
 
 }

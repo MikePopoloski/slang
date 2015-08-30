@@ -1,11 +1,14 @@
 #include "catch.hpp"
 #include "slang.h"
 
-using namespace std::literals::string_literals;
 using namespace slang;
 
 Allocator pool;
 Diagnostics diagnostics;
+
+bool withinUlp(double a, double b) {
+    return std::abs(((int64_t)a - (int64_t)b)) <= 1;
+}
 
 const Token& LexToken(const std::string& text) {
     diagnostics.clear();
@@ -246,6 +249,114 @@ TEST_CASE("String literal (unknown escape)", "[lexer]") {
     CHECK(token.valueText() == "literali");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::UnknownEscapeCode);
+}
+
+TEST_CASE("Real literal (fraction)", "[lexer]") {
+    auto text = "32.57";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(value.real == 32.57);
+}
+
+TEST_CASE("Real literal (missing fraction)", "[lexer]") {
+    auto text = "32.";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::MissingFractionalDigits);
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(value.real == 32);
+}
+
+TEST_CASE("Real literal (exponent)", "[lexer]") {
+    auto text = "32e57";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    double a = 32e57;
+    CHECK(withinUlp(value.real, 32e57));
+}
+
+TEST_CASE("Real literal (plus exponent)", "[lexer]") {
+    auto text = "32e+57";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(withinUlp(value.real, 32e+57));
+}
+
+TEST_CASE("Real literal (minus exponent)", "[lexer]") {
+    auto text = "32e-57";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(withinUlp(value.real, 32e-57));
+}
+
+TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
+    auto text = "32.3456e57";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(value.real == 32.3456e57);
+}
+
+TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
+    auto text = "32e9000";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::RealExponentTooLarge);
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(std::isinf(value.real));
+}
+
+TEST_CASE("Real literal (digit overflow)", "[lexer]") {
+    auto text = std::string(400, '9') + ".0";
+    auto token = LexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::RealExponentTooLarge);
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(std::isinf(value.real));
 }
 
 void TestPunctuation(TokenKind kind) {

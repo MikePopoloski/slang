@@ -11,9 +11,11 @@ enum class DiagCode : uint8_t {
     UnterminatedStringLiteral,
     SplitBlockCommentInDirective,
     MissingExponentDigits,
+    MissingFractionalDigits,
     OctalEscapeCodeTooBig,
     InvalidHexEscapeCode,
-    UnknownEscapeCode
+    UnknownEscapeCode,
+    RealExponentTooLarge
 };
 
 class SyntaxError {

@@ -18,11 +18,7 @@ struct StringLiteralInfo {
     StringRef niceText;
 };
 
-struct NumericLiteralInfo {
-    StringRef rawText;
-    uint32_t sizeInBits;
-    uint8_t typeAndFlags;
-
+struct NumericValue {
     union {
         double real;
         logic_t bit;
@@ -30,6 +26,25 @@ struct NumericLiteralInfo {
         BitVector<bit_t> bitVector;
         BitVector<logic_t> logicVector;
     };
+
+    uint8_t type;
+
+    NumericValue(double real) :
+        type(Real), real(real) {
+    }
+
+    enum {
+        Real
+    };
+};
+
+struct NumericLiteralInfo {
+    StringRef rawText;
+    NumericValue value;
+
+    NumericLiteralInfo(StringRef rawText, double real) :
+        rawText(rawText), value(real) {
+    }
 
     enum {
         // first 3 bits of typeAndFlags
@@ -81,7 +96,8 @@ public:
     // copy string representation to the given buffer
     void writeTo(Buffer<char>& buffer, bool includeTrivia) const;
 
-    
+    // for numeric literals, gets the value; otherwise asserts
+    const NumericValue& numericValue() const;
 
 private:
     union {
