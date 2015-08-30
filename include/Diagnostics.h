@@ -16,7 +16,11 @@ enum class DiagCode : uint8_t {
     InvalidHexEscapeCode,
     UnknownEscapeCode,
     RealExponentTooLarge,
-    SignedLiteralTooLarge
+    SignedLiteralTooLarge,
+    IntegerSizeZero,
+    IntegerSizeTooLarge,
+    MissingVectorBase,
+    MissingVectorDigits
 };
 
 class SyntaxError {

@@ -16,6 +16,10 @@ struct IdentifierInfo {
 struct StringLiteralInfo {
     StringRef rawText;
     StringRef niceText;
+
+    StringLiteralInfo(StringRef rawText, StringRef niceText) :
+        rawText(rawText), niceText(niceText) {
+    }
 };
 
 struct NumericValue {

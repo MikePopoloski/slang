@@ -23,17 +23,24 @@ private:
     TokenKind lexEscapeSequence(void** extraData);
     TokenKind lexDollarSign(void** extraData);
     TokenKind lexDirective(void** extraData);
-    void scanStringLiteral(void** extraData);
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
-    void scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent, void** extraData);
     void scanUnsizedNumericLiteral(void** extraData);
-    void scanVectorLiteral(void** extraData);
     void scanIdentifier();
+
+    StringLiteralInfo* scanStringLiteral();
+    NumericLiteralInfo* scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent);
+    NumericLiteralInfo* scanVectorLiteral(uint64_t size);
+    NumericLiteralInfo* scanDecimalVector(uint32_t size);
+    NumericLiteralInfo* scanOctalVector(uint32_t size);
+    NumericLiteralInfo* scanHexVector(uint32_t size);
+    NumericLiteralInfo* scanBinaryVector(uint32_t size);
 
     bool lexTrivia();
     bool scanBlockComment();
     void scanWhitespace();
     void scanLineComment();
+
+    int findNextNonWhitespace();
 
     // factory helper methods
     void addTrivia(TriviaKind kind);

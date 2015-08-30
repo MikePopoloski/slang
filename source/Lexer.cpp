@@ -4,7 +4,6 @@ namespace {
 
 const int MaxMantissaDigits = 18;
 const int MaxExponent = 511;
-const int Int32Max = std::numeric_limits<int32_t>::max();
 
 const double powersOf10[] = {
     10.0,
@@ -172,7 +171,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             }
             return TokenKind::Exclamation;
         case '"':
-            scanStringLiteral(extraData);
+            *extraData = scanStringLiteral();
             return TokenKind::StringLiteral;
         case '#':
             switch (peek()) {
@@ -427,7 +426,17 @@ TokenKind Lexer::lexToken(void** extraData) {
     }
 }
 
-void Lexer::scanStringLiteral(void** extraData) {
+void Lexer::scanIdentifier() {
+    while (true) {
+        char c = peek();
+        if (isAlphaNumeric(c) || c == '_' || c == '$')
+            advance();
+        else
+            return;
+    }
+}
+
+StringLiteralInfo* Lexer::scanStringLiteral() {
     stringBuffer.clear();
 
     while (true) {
@@ -507,27 +516,12 @@ void Lexer::scanStringLiteral(void** extraData) {
     }
 
     const char* niceText = copyString(pool, stringBuffer.begin(), stringBuffer.count());
-
-    auto info = pool.emplace<StringLiteralInfo>();
-    info->rawText = lexeme();
-    info->niceText = StringRef(niceText, stringBuffer.count());
-
-    *extraData = info;
+    return pool.emplace<StringLiteralInfo>(lexeme(), StringRef(niceText, stringBuffer.count()));
 }
 
 void Lexer::scanUnsizedNumericLiteral(void** extraData) {
     // should be one four-state digit here
 
-}
-
-void Lexer::scanIdentifier() {
-    while (true) {
-        char c = peek();
-        if (isAlphaNumeric(c) || c == '_' || c == '$')
-            advance();
-        else
-            return;
-    }
 }
 
 TokenKind Lexer::lexEscapeSequence(void** extraData) {
@@ -607,27 +601,20 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
     int digits = 0;
     c = scanUnsignedNumber(c, unsignedVal, digits);
 
-    if (isHorizontalWhitespace(c)) {
-        // whitespace normally ends a numeric literal, but it's allowed between
-        // the size and the base specifier in vector literals, so check if that's what we have here
-        int lookahead = 1;
-        while (true) {
-            char c = peek(lookahead);
-            if (isHorizontalWhitespace(c))
-                lookahead++;
-            else if (c == '\'') {
-                advance(lookahead);
-                scanVectorLiteral(extraData);
-                return TokenKind::IntegerLiteral;
-            }
-            else
-                break;
-        }
+    // whitespace normally ends a numeric literal, but it's allowed between
+    // the size and the base specifier in vector literals, so check if that's what we have here
+    int lookahead = findNextNonWhitespace();
+    if (lookahead > 0 && peek(lookahead) == '\'') {
+        // TODO: +1 is a bug
+        advance(lookahead + 1);
+        *extraData = scanVectorLiteral(unsignedVal);
+        return TokenKind::IntegerLiteral;
     }
 
     switch (peek()) {
         case '\'':
-            scanVectorLiteral(extraData);
+            advance();
+            *extraData = scanVectorLiteral(unsignedVal);
             return TokenKind::IntegerLiteral;
         case '.': {
             // fractional digits
@@ -638,29 +625,27 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
                 addError(DiagCode::MissingFractionalDigits);
 
             c = scanUnsignedNumber(peek(), unsignedVal, digits);
-            scanRealLiteral(
+            *extraData = scanRealLiteral(
                 unsignedVal,
                 decPoint,
                 digits,
-                c == 'e' || c == 'E',
-                extraData
+                c == 'e' || c == 'E'
             );
             return TokenKind::RealLiteral;
         }
         case 'e':
         case 'E':
-            scanRealLiteral(
+            *extraData = scanRealLiteral(
                 unsignedVal,
                 digits,     // decimal point is after all digits
                 digits,
-                true,       // yep, we have an exponent
-                extraData
+                true        // yep, we have an exponent
             );
             return TokenKind::RealLiteral;
         default:
             // normal signed numeric literal; check for 32-bit overflow
-            if (unsignedVal > Int32Max) {
-                unsignedVal = Int32Max;
+            if (unsignedVal > INT32_MAX) {
+                unsignedVal = INT32_MAX;
                 addError(DiagCode::SignedLiteralTooLarge);
             }
             *extraData = pool.emplace<NumericLiteralInfo>(lexeme(), (int32_t)unsignedVal);
@@ -686,7 +671,7 @@ char Lexer::scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits) {
     return c;
 }
 
-void Lexer::scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent, void** extraData) {
+NumericLiteralInfo* Lexer::scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent) {
     bool neg = false;
     uint64_t expVal = 0;
 
@@ -725,11 +710,84 @@ void Lexer::scanRealLiteral(uint64_t value, int decPoint, int digits, bool expon
     if (!composeDouble(double(value), exp, result))
         addError(DiagCode::RealExponentTooLarge);
 
-    *extraData = pool.emplace<NumericLiteralInfo>(lexeme(), result);
+    return pool.emplace<NumericLiteralInfo>(lexeme(), result);
 }
 
-void Lexer::scanVectorLiteral(void** extraData) {
+NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
+    // error checking on the size, plus coerce to 32-bit
+    uint32_t size32 = 0;
+    if (size64 == 0)
+        addError(DiagCode::IntegerSizeZero);
+    else {
+        if (size64 > UINT32_MAX) {
+            size64 = UINT32_MAX;
+            addError(DiagCode::IntegerSizeTooLarge);
+        }
+        size32 = (uint32_t)size64;
+    }
 
+    // check for signed specifier
+    bool isSigned = false;
+    char c = peek();
+    if (c == 's' || c == 'S') {
+        isSigned = true;
+        advance();
+        c = peek();
+    }
+
+    // next character needs to be the base
+    switch (c) {
+        case 'd':
+        case 'D':
+            return scanDecimalVector(size32);
+        case 'o':
+        case 'O':
+            return scanOctalVector(size32);
+        case 'h':
+        case 'H':
+            return scanHexVector(size32);
+        case 'b':
+        case 'B':
+            return scanBinaryVector(size32);
+        default:
+            // error case
+            addError(DiagCode::MissingVectorBase);
+            return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+    }
+}
+
+NumericLiteralInfo* Lexer::scanDecimalVector(uint32_t size) {
+    // skip leading whitespace
+    int lookahead = findNextNonWhitespace();
+    if (lookahead > 0) {
+        if (!isDecimalDigit(peek(lookahead))) {
+            addError(DiagCode::MissingVectorDigits);
+            return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+        }
+        advance(lookahead);
+    }
+
+    while (true) {
+        char c = peek();
+        if (isDecimalDigit(c))
+            continue;
+        else if (c != '_')
+            break;
+    }
+
+    return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+}
+
+NumericLiteralInfo* Lexer::scanOctalVector(uint32_t size) {
+    return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+}
+
+NumericLiteralInfo* Lexer::scanHexVector(uint32_t size) {
+    return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+}
+
+NumericLiteralInfo* Lexer::scanBinaryVector(uint32_t size) {
+    return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
 }
 
 bool Lexer::lexTrivia() {
@@ -843,6 +901,14 @@ bool Lexer::scanBlockComment() {
 
     addTrivia(TriviaKind::BlockComment);
     return eod;
+}
+
+int Lexer::findNextNonWhitespace() {
+    int lookahead = 0;
+    char c;
+    while (isHorizontalWhitespace(c = peek(lookahead)))
+        lookahead++;
+    return lookahead;
 }
 
 void Lexer::addTrivia(TriviaKind kind) {
