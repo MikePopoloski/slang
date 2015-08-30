@@ -22,19 +22,19 @@ struct NumericValue {
     union {
         double real;
         logic_t bit;
-        uint64_t integer;
+        int32_t integer;
         BitVector<bit_t> bitVector;
         BitVector<logic_t> logicVector;
     };
 
     uint8_t type;
 
-    NumericValue(double real) :
-        type(Real), real(real) {
-    }
+    NumericValue(double real) : type(Real), real(real) {}
+    NumericValue(int32_t integer) : type(SignedInteger), integer(integer) {}
 
     enum {
-        Real
+        Real,
+        SignedInteger
     };
 };
 
@@ -42,8 +42,8 @@ struct NumericLiteralInfo {
     StringRef rawText;
     NumericValue value;
 
-    NumericLiteralInfo(StringRef rawText, double real) :
-        rawText(rawText), value(real) {
+    NumericLiteralInfo(StringRef rawText, NumericValue value) :
+        rawText(rawText), value(value) {
     }
 
     enum {

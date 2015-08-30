@@ -23,6 +23,7 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
         case TokenKind::StringLiteral:
             buffer.appendRange(string->rawText);
             break;
+        case TokenKind::IntegerLiteral:
         case TokenKind::RealLiteral:
             buffer.appendRange(numeric->rawText);
             break;

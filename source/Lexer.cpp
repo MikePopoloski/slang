@@ -4,6 +4,7 @@ namespace {
 
 const int MaxMantissaDigits = 18;
 const int MaxExponent = 511;
+const int Int32Max = std::numeric_limits<int32_t>::max();
 
 const double powersOf10[] = {
     10.0,
@@ -657,6 +658,12 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
             );
             return TokenKind::RealLiteral;
         default:
+            // normal signed numeric literal; check for 32-bit overflow
+            if (unsignedVal > Int32Max) {
+                unsignedVal = Int32Max;
+                addError(DiagCode::SignedLiteralTooLarge);
+            }
+            *extraData = pool.emplace<NumericLiteralInfo>(lexeme(), (int32_t)unsignedVal);
             return TokenKind::IntegerLiteral;
     }
 }
@@ -685,7 +692,12 @@ void Lexer::scanRealLiteral(uint64_t value, int decPoint, int digits, bool expon
 
     if (exponent) {
         advance();
+
+        // skip over leading zeros
         char c = peek();
+        while ((c = peek()) == '0')
+            advance();
+
         if (c == '+')
             advance();
         else if (c == '-') {

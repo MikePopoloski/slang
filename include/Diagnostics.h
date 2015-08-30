@@ -15,7 +15,8 @@ enum class DiagCode : uint8_t {
     OctalEscapeCodeTooBig,
     InvalidHexEscapeCode,
     UnknownEscapeCode,
-    RealExponentTooLarge
+    RealExponentTooLarge,
+    SignedLiteralTooLarge
 };
 
 class SyntaxError {

@@ -3,8 +3,13 @@
 namespace slang {
 
 // TODO:
-// - scan directives
-// - numeric literals
+// - directives
+// - integer / vector literals
+// - unit tests for all error cases
+// - identifiers nice text
+// - unsized literals
+// - token locations
+// - diagnostic locations
 
 class Lexer {
 public:
