@@ -541,7 +541,7 @@ StringLiteralInfo* Lexer::scanStringLiteral() {
                             }
                         }
                     }
-                    stringBuffer.append(charCode);
+                    stringBuffer.append((char)charCode);
                     break;
                 case 'x':
                     c = peek();
@@ -556,7 +556,7 @@ StringLiteralInfo* Lexer::scanStringLiteral() {
                             advance();
                             charCode = (charCode * 16) + getHexDigitValue(c);
                         }
-                        stringBuffer.append(charCode);
+                        stringBuffer.append((char)charCode);
                     }
                     break;
                 default:
@@ -857,7 +857,7 @@ NumericLiteralInfo* Lexer::scanDecimalVector() {
                 break;
             default:
                 if (isDecimalDigit(c))
-                    vectorBuilder.addDigit(getDigitValue(c));
+                    vectorBuilder.addDigit((char)getDigitValue(c));
                 else
                     return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }
@@ -892,7 +892,7 @@ NumericLiteralInfo* Lexer::scanOctalVector() {
                 break;
             default:
                 if (isOctalDigit(c))
-                    vectorBuilder.addDigit(getDigitValue(c));
+                    vectorBuilder.addDigit((char)getDigitValue(c));
                 else
                     return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }
@@ -927,7 +927,7 @@ NumericLiteralInfo* Lexer::scanHexVector() {
                 break;
             default:
                 if (isHexDigit(c))
-                    vectorBuilder.addDigit(getHexDigitValue(c));
+                    vectorBuilder.addDigit((char)getHexDigitValue(c));
                 else
                     return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }
@@ -962,7 +962,7 @@ NumericLiteralInfo* Lexer::scanBinaryVector() {
                 break;
             default:
                 if (isBinaryDigit(c))
-                    vectorBuilder.addDigit(getDigitValue(c));
+                    vectorBuilder.addDigit((char)getDigitValue(c));
                 else
                     return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }
