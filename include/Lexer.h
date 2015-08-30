@@ -5,15 +5,13 @@ namespace slang {
 // TODO:
 // - directives
 // - integer / vector literals
-// - unit tests for all error cases
-// - identifiers nice text
 // - unsized literals
 // - token locations
 // - diagnostic locations
 
 class Lexer {
 public:
-    Lexer(const char* sourceBuffer, uint32_t sourceLength, Allocator& pool, Diagnostics& diagnostics);
+    Lexer(const char* sourceBuffer, size_t sourceLength, Allocator& pool, Diagnostics& diagnostics);
 
     Token* lex();
 
@@ -30,10 +28,10 @@ private:
     StringLiteralInfo* scanStringLiteral();
     NumericLiteralInfo* scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent);
     NumericLiteralInfo* scanVectorLiteral(uint64_t size);
-    NumericLiteralInfo* scanDecimalVector(uint32_t size);
-    NumericLiteralInfo* scanOctalVector(uint32_t size);
-    NumericLiteralInfo* scanHexVector(uint32_t size);
-    NumericLiteralInfo* scanBinaryVector(uint32_t size);
+    NumericLiteralInfo* scanDecimalVector();
+    NumericLiteralInfo* scanOctalVector();
+    NumericLiteralInfo* scanHexVector();
+    NumericLiteralInfo* scanBinaryVector();
 
     bool lexTrivia();
     bool scanBlockComment();
@@ -77,6 +75,7 @@ private:
 
     Buffer<char> stringBuffer;
     Buffer<Trivia> triviaBuffer;
+    VectorBuilder vectorBuilder;
     Allocator& pool;
     Diagnostics& diagnostics;
     const char* sourceBuffer;

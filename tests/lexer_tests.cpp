@@ -371,7 +371,7 @@ TEST_CASE("Signed integer literal", "[lexer]") {
 TEST_CASE("Signed integer literal (trailing whitespace)", "[lexer]") {
     // based numeric literals can have whitespace between them and the base,
     // token so the literal lexer needs to handle that speculatively
-    auto text = "19248         \v\t ";
+    auto text = "192__48         \v\t ";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -517,6 +517,180 @@ TEST_CASE("Real literal (digit overflow)", "[lexer]") {
     auto& value = token.numericValue();
     CHECK(value.type == NumericValue::Real);
     CHECK(std::isinf(value.real));
+}
+
+TEST_CASE("Vector literal (zero size)", "[lexer]") {
+    auto text = "0'd34";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::IntegerSizeZero);
+}
+
+TEST_CASE("Vector literal (size overflow)", "[lexer]") {
+    auto text = "9999999999999999999'd34";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::IntegerSizeTooLarge);
+}
+
+TEST_CASE("Vector literal (missing base)", "[lexer]") {
+    auto text = "12'34";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == "12'");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::MissingVectorBase);
+}
+
+TEST_CASE("Decimal vector literal", "[lexer]") {
+    auto text = "123'd34_562xXz??";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Vector);
+    //CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Decimal vector literal (with whitespace)", "[lexer]") {
+    auto text = "123   'D   34_562xXz??";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Vector);
+    //CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Decimal vector literal (missing digits)", "[lexer]") {
+    auto text = "4'dggg";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == "4'd");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
+}
+
+TEST_CASE("Octal vector literal", "[lexer]") {
+    auto text = "123'o34_562xXz??";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Vector);
+    //CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Octal vector literal (with whitespace)", "[lexer]") {
+    auto text = "123   'O   34_562xXz??";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Vector);
+    //CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Octal vector literal (missing digits)", "[lexer]") {
+    auto text = "4'o9";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == "4'o");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
+}
+
+TEST_CASE("Hex vector literal", "[lexer]") {
+    auto text = "123'h3f4_56aA02xXz??";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Vector);
+    //CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Hex vector literal (with whitespace)", "[lexer]") {
+    auto text = "123   'H   ffF_a562xXz??";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Vector);
+    //CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Hex vector literal (missing digits)", "[lexer]") {
+    auto text = "4'hG";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == "4'h");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
+}
+
+TEST_CASE("Binary vector literal", "[lexer]") {
+    auto text = "123'b1101_xX?zZ";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Vector);
+    //CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Binary vector literal (with whitespace)", "[lexer]") {
+    auto text = "123   'B   1101_xX??zZ";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Vector);
+    //CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Binary vector literal (missing digits)", "[lexer]") {
+    auto text = "4'b2";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toFullString() == "4'b");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
 }
 
 void testPunctuation(TokenKind kind) {

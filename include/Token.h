@@ -29,21 +29,22 @@ struct StringLiteralInfo {
 
 struct NumericValue {
     union {
-        double real;
         logic_t bit;
         int32_t integer;
-        BitVector<bit_t> bitVector;
-        BitVector<logic_t> logicVector;
+        double real;
+        LogicVector vector;
     };
 
     uint8_t type;
 
     NumericValue(double real) : type(Real), real(real) {}
     NumericValue(int32_t integer) : type(SignedInteger), integer(integer) {}
+    NumericValue(LogicVector vector) : type(Vector), vector(vector) {}
 
     enum {
         Real,
-        SignedInteger
+        SignedInteger,
+        Vector
     };
 };
 
@@ -54,30 +55,6 @@ struct NumericLiteralInfo {
     NumericLiteralInfo(StringRef rawText, NumericValue value) :
         rawText(rawText), value(value) {
     }
-
-    enum {
-        // first 3 bits of typeAndFlags
-        IntegerSmall,
-        IntegerLarge,
-        TwoBitVectorSmall,
-        TwoBitVectorLarge,
-        FourBitVectorSmall,
-        FourBitVectorLarge,
-        UnbasedUnsized,
-        Real,
-        TypeMask = 0x7,
-
-        // next 2 bits of typeAndFlags
-        Decimal = 0,
-        Octal = 1 << 3,
-        Binary = 2 << 3,
-        Hex = 3 << 3,
-        BaseMask = 0x3 << 3,
-
-        // bit flags
-        Signed = 1 << 5,
-        HasSize = 1 << 6
-    };
 };
 
 enum class TokenKind : uint16_t;

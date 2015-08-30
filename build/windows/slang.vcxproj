@@ -33,6 +33,7 @@
     <ClInclude Include="..\..\include\Trivia.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\source\BitVector.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
     <ClCompile Include="..\..\source\SyntaxFacts.cpp" />

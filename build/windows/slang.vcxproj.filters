@@ -66,5 +66,8 @@
     <ClCompile Include="..\..\source\Diagnostics.cpp">
       <Filter>diagnostics</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\BitVector.cpp">
+      <Filter>numeric</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

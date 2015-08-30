@@ -65,8 +65,25 @@ bool isHexDigit(char c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
+bool isBinaryDigit(char c) {
+    return c == '0' || c == '1';
+}
+
 bool isAlphaNumeric(char c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+bool isLogicDigit(char c) {
+    switch (c) {
+        case 'z':
+        case 'Z':
+        case '?':
+        case 'x':
+        case 'X':
+            return true;
+        default:
+            return false;
+    }
 }
 
 uint32_t getDigitValue(char c) {
@@ -140,7 +157,7 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(const char* sourceBuffer, uint32_t sourceLength, Allocator& pool, Diagnostics& diagnostics) :
+Lexer::Lexer(const char* sourceBuffer, size_t sourceLength, Allocator& pool, Diagnostics& diagnostics) :
     triviaBuffer(32),
     stringBuffer(1024),
     pool(pool),
@@ -657,7 +674,6 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
     // the size and the base specifier in vector literals, so check if that's what we have here
     int lookahead = findNextNonWhitespace();
     if (lookahead > 0 && peek(lookahead) == '\'') {
-        // TODO: +1 is a bug
         advance(lookahead + 1);
         *extraData = scanVectorLiteral(unsignedVal);
         return TokenKind::IntegerLiteral;
@@ -787,20 +803,26 @@ NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
         c = peek();
     }
 
+    vectorBuilder.start(size32, isSigned);
+
     // next character needs to be the base
     switch (c) {
         case 'd':
         case 'D':
-            return scanDecimalVector(size32);
+            advance();
+            return scanDecimalVector();
         case 'o':
         case 'O':
-            return scanOctalVector(size32);
+            advance();
+            return scanOctalVector();
         case 'h':
         case 'H':
-            return scanHexVector(size32);
+            advance();
+            return scanHexVector();
         case 'b':
         case 'B':
-            return scanBinaryVector(size32);
+            advance();
+            return scanBinaryVector();
         default:
             // error case
             addError(DiagCode::MissingVectorBase);
@@ -808,38 +830,144 @@ NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
     }
 }
 
-NumericLiteralInfo* Lexer::scanDecimalVector(uint32_t size) {
+NumericLiteralInfo* Lexer::scanDecimalVector() {
     // skip leading whitespace
     int lookahead = findNextNonWhitespace();
-    if (lookahead > 0) {
-        if (!isDecimalDigit(peek(lookahead))) {
-            addError(DiagCode::MissingVectorDigits);
-            return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
-        }
-        advance(lookahead);
+    char c = peek(lookahead);
+    if (!isDecimalDigit(c) && !isLogicDigit(c)) {
+        addError(DiagCode::MissingVectorDigits);
+        return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 
+    advance(lookahead);
+    
     while (true) {
-        char c = peek();
-        if (isDecimalDigit(c))
-            continue;
-        else if (c != '_')
-            break;
+        c = peek();
+        switch (c) {
+            case '_':
+                break;
+            case 'z':
+            case 'Z':
+            case '?':
+                vectorBuilder.addDigit(logic_t::z);
+                break;
+            case 'x':
+            case 'X':
+                vectorBuilder.addDigit(logic_t::x);
+                break;
+            default:
+                if (isDecimalDigit(c))
+                    vectorBuilder.addDigit(getDigitValue(c));
+                else
+                    return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+        }
+        advance();
+    }
+}
+
+NumericLiteralInfo* Lexer::scanOctalVector() {
+    // skip leading whitespace
+    int lookahead = findNextNonWhitespace();
+    char c = peek(lookahead);
+    if (!isOctalDigit(c) && !isLogicDigit(c)) {
+        addError(DiagCode::MissingVectorDigits);
+        return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 
-    return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+    advance(lookahead);
+    
+    while (true) {
+        c = peek();
+        switch (c) {
+            case '_':
+                break;
+            case 'z':
+            case 'Z':
+            case '?':
+                vectorBuilder.addDigit(logic_t::z);
+                break;
+            case 'x':
+            case 'X':
+                vectorBuilder.addDigit(logic_t::x);
+                break;
+            default:
+                if (isOctalDigit(c))
+                    vectorBuilder.addDigit(getDigitValue(c));
+                else
+                    return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+        }
+        advance();
+    }
 }
 
-NumericLiteralInfo* Lexer::scanOctalVector(uint32_t size) {
-    return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+NumericLiteralInfo* Lexer::scanHexVector() {
+    // skip leading whitespace
+    int lookahead = findNextNonWhitespace();
+    char c = peek(lookahead);
+    if (!isHexDigit(c) && !isLogicDigit(c)) {
+        addError(DiagCode::MissingVectorDigits);
+        return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+    }
+
+    advance(lookahead);
+    
+    while (true) {
+        c = peek();
+        switch (c) {
+            case '_':
+                break;
+            case 'z':
+            case 'Z':
+            case '?':
+                vectorBuilder.addDigit(logic_t::z);
+                break;
+            case 'x':
+            case 'X':
+                vectorBuilder.addDigit(logic_t::x);
+                break;
+            default:
+                if (isHexDigit(c))
+                    vectorBuilder.addDigit(getHexDigitValue(c));
+                else
+                    return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+        }
+        advance();
+    }
 }
 
-NumericLiteralInfo* Lexer::scanHexVector(uint32_t size) {
-    return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
-}
+NumericLiteralInfo* Lexer::scanBinaryVector() {
+    // skip leading whitespace
+    int lookahead = findNextNonWhitespace();
+    char c = peek(lookahead);
+    if (!isBinaryDigit(c) && !isLogicDigit(c)) {
+        addError(DiagCode::MissingVectorDigits);
+        return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+    }
 
-NumericLiteralInfo* Lexer::scanBinaryVector(uint32_t size) {
-    return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+    advance(lookahead);
+    
+    while (true) {
+        c = peek();
+        switch (c) {
+            case '_':
+                break;
+            case 'z':
+            case 'Z':
+            case '?':
+                vectorBuilder.addDigit(logic_t::z);
+                break;
+            case 'x':
+            case 'X':
+                vectorBuilder.addDigit(logic_t::x);
+                break;
+            default:
+                if (isBinaryDigit(c))
+                    vectorBuilder.addDigit(getDigitValue(c));
+                else
+                    return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+        }
+        advance();
+    }
 }
 
 bool Lexer::lexTrivia() {
