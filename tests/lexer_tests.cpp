@@ -12,11 +12,59 @@ bool withinUlp(double a, double b) {
 
 const Token& lexToken(const std::string& text) {
     diagnostics.clear();
-    Lexer lexer(text.c_str(), pool, diagnostics);
+    Lexer lexer(text.c_str(), text.length(), pool, diagnostics);
 
     Token* token = lexer.lex();
     REQUIRE(token != nullptr);
     return *token;
+}
+
+TEST_CASE("Invalid chars", "[lexer]") {
+    auto text = "\x04";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::Unknown);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::NonPrintableChar);
+}
+
+TEST_CASE("UTF8 chars", "[lexer]") {
+    auto text = u8"\U0001f34c";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::Unknown);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::UTF8Char);
+}
+
+TEST_CASE("Unicode BOMs", "[lexer]") {
+    auto text = "\xEF\xBB\xBF";
+    lexToken(text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
+
+    text = "\xFE\xFF";
+    lexToken(text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
+
+    text = "\xFF\xFE";
+    lexToken(text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
+}
+
+TEST_CASE("Embedded null", "[lexer]") {
+    const char text[] = "\0";
+    auto str = std::string(text, text + sizeof(text) - 1);
+    auto token = lexToken(str);
+
+    CHECK(token.kind == TokenKind::Unknown);
+    CHECK(token.toFullString() == str);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::EmbeddedNull);
 }
 
 TEST_CASE("Line Comment", "[lexer]") {
@@ -156,6 +204,24 @@ TEST_CASE("System Identifiers", "[lexer]") {
     CHECK(token.valueText() == text);
     CHECK(token.identifierType() == IdentifierType::System);
     CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Invalid escapes", "[lexer]") {
+    auto text = "\\";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::Unknown);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::EscapedWhitespace);
+
+    text = "\\  ";
+    token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::Unknown);
+    CHECK(token.toFullString() == "\\");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::EscapedWhitespace);
 }
 
 TEST_CASE("String literal", "[lexer]") {

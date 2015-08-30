@@ -3,12 +3,15 @@
 namespace slang {
 
 enum class DiagCode : uint8_t {
-    UnterminatedBlockComment,
     NonPrintableChar,
+    UTF8Char,
+    UnicodeBOM,
+    EmbeddedNull,
     MisplacedDirectiveChar,
     EscapedWhitespace,
     NewlineInStringLiteral,
     UnterminatedStringLiteral,
+    UnterminatedBlockComment,
     SplitBlockCommentInDirective,
     MissingExponentDigits,
     MissingFractionalDigits,

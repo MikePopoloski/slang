@@ -13,7 +13,7 @@ namespace slang {
 
 class Lexer {
 public:
-    Lexer(const char* sourceBuffer, Allocator& pool, Diagnostics& diagnostics);
+    Lexer(const char* sourceBuffer, uint32_t sourceLength, Allocator& pool, Diagnostics& diagnostics);
 
     Token* lex();
 
@@ -53,6 +53,10 @@ private:
     char peek() { return *sourceBuffer; }
     char peek(int offset) { return sourceBuffer[offset]; }
 
+    // in order to detect embedded nulls gracefully, we call this whenever we
+    // encounter a null to check whether we really are at the end of the buffer
+    bool reallyAtEnd() { return sourceBuffer >= sourceEnd; }
+
     uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
     StringRef lexeme();
 
@@ -76,6 +80,7 @@ private:
     Allocator& pool;
     Diagnostics& diagnostics;
     const char* sourceBuffer;
+    const char* sourceEnd;
     const char* marker;
     LexingMode mode;
 };

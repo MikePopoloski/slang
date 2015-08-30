@@ -3,6 +3,7 @@
 namespace slang {
 
 enum class IdentifierType : uint8_t {
+    Unknown,
     Normal,
     Escaped,
     System

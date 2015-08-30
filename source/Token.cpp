@@ -16,6 +16,7 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
 
     // not a simple token, so extract info from our data pointer
     switch (kind) {
+        case TokenKind::Unknown:
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
             buffer.appendRange(identifier->rawText);
@@ -37,16 +38,23 @@ StringRef Token::valueText() const {
 
     switch (kind) {
         case TokenKind::Identifier:
-            if (identifier->type == IdentifierType::Escaped)
-                return identifier->rawText.subString(1); // strip off leading backslash
-            else
-                return identifier->rawText;
+            switch (identifier->type) {
+                case IdentifierType::Escaped:
+                    // strip off leading backslash
+                    return identifier->rawText.subString(1);
+                case IdentifierType::Unknown:
+                    // unknown tokens don't have value text
+                    return nullptr;
+                default:
+                    return identifier->rawText;
+            }
+            break;
         case TokenKind::SystemIdentifier:
             return identifier->rawText;
         case TokenKind::StringLiteral:
             return string->niceText;
         default:
-            return StringRef();
+            return nullptr;
     }
 }
 
@@ -68,8 +76,9 @@ const NumericValue& Token::numericValue() const {
 }
 
 IdentifierType Token::identifierType() const {
-    ASSERT(kind == TokenKind::Identifier || kind == TokenKind::SystemIdentifier);
-    return identifier->type;
+    if (kind == TokenKind::Identifier || kind == TokenKind::SystemIdentifier)
+        return identifier->type;
+    return IdentifierType::Unknown;
 }
 
 }

@@ -18,7 +18,7 @@ const double powersOf10[] = {
 };
 
 bool isASCII(char c) {
-    return c < 128;
+    return static_cast<unsigned char>(c) < 128;
 }
 
 bool isPrintable(char c) {
@@ -81,6 +81,22 @@ uint32_t getHexDigitValue(char c) {
     return 10 + c - 'a';
 }
 
+// returns the number of bytes to skip after reading a UTF-8 char
+int utf8SeqBytes(char c) {
+    unsigned char uc = static_cast<unsigned char>(c);
+    if ((uc & (3 << 6)) == 0)
+        return 0;
+    if ((uc & (1 << 5)) == 0)
+        return 1;
+    if ((uc & (1 << 4)) == 0)
+        return 2;
+    if ((uc & (1 << 3)) == 0)
+        return 3;
+
+    // 5 and 6 byte sequences are disallowed by the UTF-8 spec
+    return 0;
+}
+
 char* copyString(slang::Allocator& pool, const char* source, uint32_t length) {
     char* dest = reinterpret_cast<char*>(pool.allocate(length));
     memcpy(dest, source, length);
@@ -124,12 +140,35 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(const char* sourceBuffer, Allocator& pool, Diagnostics& diagnostics) :
+Lexer::Lexer(const char* sourceBuffer, uint32_t sourceLength, Allocator& pool, Diagnostics& diagnostics) :
     triviaBuffer(32),
     stringBuffer(1024),
     pool(pool),
     diagnostics(diagnostics),
-    sourceBuffer(sourceBuffer) {
+    sourceBuffer(sourceBuffer),
+    sourceEnd(sourceBuffer + sourceLength) {
+
+    // string needs to be non-null and null terminated
+    ASSERT(sourceBuffer);
+    ASSERT(sourceBuffer[sourceLength] == '\0');
+
+    // detect BOMs so we can give nice errors for invaild encoding
+    if (sourceLength >= 2) {
+        const unsigned char* ubuf = reinterpret_cast<const unsigned char*>(sourceBuffer);
+        if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) ||
+            (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
+            addError(DiagCode::UnicodeBOM);
+            advance(2);
+        }
+        else if (sourceLength >= 3) {
+            if (ubuf[0] == 0xEF &&
+                ubuf[1] == 0xBB &&
+                ubuf[2] == 0xBF) {
+                addError(DiagCode::UnicodeBOM);
+                advance(3);
+            }
+        }
+    }
 }
 
 Token* Lexer::lex() {
@@ -160,7 +199,15 @@ TokenKind Lexer::lexToken(void** extraData) {
     char c = peek();
     advance();
     switch (c) {
-        case 0: return TokenKind::EndOfFile;
+        case '\0':
+            // check if we're not really at the end; can't use reallyAtEnd() here because
+            // we've already advanced()
+            if (sourceBuffer <= sourceEnd) {
+                addError(DiagCode::EmbeddedNull);
+                *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
+                return TokenKind::Unknown;
+            }
+            return TokenKind::EndOfFile;
         case '!':
             if (consume('=')) {
                 switch (peek()) {
@@ -417,8 +464,11 @@ TokenKind Lexer::lexToken(void** extraData) {
             if (isASCII(c))
                 addError(DiagCode::NonPrintableChar);
             else {
-                // TODO: skip over UTF-8 sequences
+                // skip over UTF-8 sequences
+                advance(utf8SeqBytes(c));
+                addError(DiagCode::UTF8Char);
             }
+            *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
             return TokenKind::Unknown;
     }
 }
@@ -502,9 +552,14 @@ StringLiteralInfo* Lexer::scanStringLiteral() {
             addError(DiagCode::NewlineInStringLiteral);
             break;
         }
-        else if (c == 0) {
-            addError(DiagCode::UnterminatedStringLiteral);
-            break;
+        else if (c == '\0') {
+            if (reallyAtEnd()) {
+                addError(DiagCode::UnterminatedStringLiteral);
+                break;
+            }
+
+            // otherwise just error and ignore
+            addError(DiagCode::EmbeddedNull);
         }
         else {
             advance();
@@ -523,8 +578,9 @@ void Lexer::scanUnsizedNumericLiteral(void** extraData) {
 
 TokenKind Lexer::lexEscapeSequence(void** extraData) {
     char c = peek();
-    if (isWhitespace(c)) {
+    if (isWhitespace(c) || c == '\0') {
         addError(DiagCode::EscapedWhitespace);
+        *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
         return TokenKind::Unknown;
     }
 
@@ -557,6 +613,7 @@ TokenKind Lexer::lexDirective(void** extraData) {
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
         addError(DiagCode::MisplacedDirectiveChar);
+        *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
         return TokenKind::Unknown;
     }
 
@@ -857,9 +914,16 @@ void Lexer::scanWhitespace() {
 void Lexer::scanLineComment() {
     while (true) {
         char c = peek();
-        if (c == 0 || isNewline(c))
+        if (isNewline(c))
             break;
 
+        if (c == '\0') {
+            if (reallyAtEnd())
+                break;
+            
+            // otherwise just error and ignore
+            addError(DiagCode::EmbeddedNull);
+        }
         advance();
     }
 
@@ -870,9 +934,14 @@ bool Lexer::scanBlockComment() {
     bool eod = false;
     while (true) {
         char c = peek();
-        if (c == 0) {
-            addError(DiagCode::UnterminatedBlockComment);
-            break;
+        if (c == '\0') {
+            if (reallyAtEnd()) {
+                addError(DiagCode::UnterminatedBlockComment);
+                break;
+            }
+
+            // otherwise just error and ignore
+            addError(DiagCode::EmbeddedNull);
         }
         else if (c == '*' && peek(1) == '/') {
             advance(2);
