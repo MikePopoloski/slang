@@ -52,6 +52,12 @@
     <ClInclude Include="..\..\include\Buffer.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\StringTable.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Hash.h">
+      <Filter>util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -68,6 +74,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\BitVector.cpp">
       <Filter>numeric</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\Hash.cpp">
+      <Filter>util</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

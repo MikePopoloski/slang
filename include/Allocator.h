@@ -48,6 +48,7 @@ public:
 
         // otherwise, allocate a new block
         head = allocSegment(head, segmentSize);
+        endPtr = (uint8_t*)head + segmentSize;
         return allocate(size);
     }
 

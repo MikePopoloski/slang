@@ -9,9 +9,11 @@
 
 #define ASSERT(x) do { if (!(x)) __debugbreak(); } while(0) 
 
+#include "Hash.h"
 #include "Allocator.h"
 #include "ArrayRef.h"
 #include "StringRef.h"
+#include "StringTable.h"
 #include "Buffer.h"
 #include "BitVector.h"
 #include "Diagnostics.h"

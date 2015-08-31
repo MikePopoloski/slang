@@ -640,7 +640,7 @@ TokenKind Lexer::lexDirective(void** extraData) {
 
     auto directive = lexeme();
     TriviaKind type = getDirectiveKind(directive);
-    *extraData = pool.emplace<DirectiveInfo>(lexeme(), type);
+    *extraData = pool.emplace<DirectiveInfo>(directive, type);
 
     // lexing behavior changes slightly depending on directives we see
     switch (type) {
@@ -656,7 +656,6 @@ TokenKind Lexer::lexDirective(void** extraData) {
             mode = LexingMode::OtherDirective;
             break;
     }
-
     return TokenKind::Directive;
 }
 

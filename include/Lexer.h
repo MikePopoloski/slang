@@ -3,7 +3,6 @@
 namespace slang {
 
 // TODO:
-// - directives
 // - vector values
 // - unsized literals
 // - token locations

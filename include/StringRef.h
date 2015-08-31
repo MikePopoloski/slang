@@ -21,7 +21,7 @@ public:
     // this constructor is meant for string literals
     template<size_t N>
     StringRef(const char (&str)[N])
-        : ptr(str), len(N) {
+        : ptr(str), len(N - 1) {
     }
 
     const char* begin() const { return ptr; }

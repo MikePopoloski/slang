@@ -2,6 +2,29 @@
 
 namespace slang {
 
+const static StringTable<TriviaKind> directiveTable = {
+    { "`begin_keywords", TriviaKind::BeginKeywordsDirective },
+    { "`celldefine", TriviaKind::CellDefineDirective },
+    { "`default_nettype", TriviaKind::DefaultNetTypeDirective },
+    { "`define", TriviaKind::DefineDirective },
+    { "`else", TriviaKind::ElseDirective },
+    { "`elseif", TriviaKind::ElseIfDirective },
+    { "`end_keywords", TriviaKind::EndKeywordsDirective },
+    { "`endcelldefine", TriviaKind::EndCellDefineDirective },
+    { "`endif", TriviaKind::EndIfDirective },
+    { "`ifdef", TriviaKind::IfDefDirective },
+    { "`ifndef", TriviaKind::IfNDefDirective },
+    { "`include", TriviaKind::IncludeDirective },
+    { "`line", TriviaKind::LineDirective },
+    { "`nounconnected_drive", TriviaKind::NoUnconnectedDriveDirective },
+    { "`pragma", TriviaKind::PragmaDirective },
+    { "`resetall", TriviaKind::ResetAllDirective },
+    { "`timescale", TriviaKind::TimescaleDirective },
+    { "`unconnected_drive", TriviaKind::UnconnectedDriveDirective },
+    { "`undef", TriviaKind::UndefDirective },
+    { "`undefineall", TriviaKind::UndefineAllDirective }
+};
+
 StringRef getTokenKindText(TokenKind kind) {
     switch (kind) {
         // punctuation
@@ -351,7 +374,36 @@ StringRef getTokenKindText(TokenKind kind) {
     }
 }
 
+StringRef getTriviaKindText(TriviaKind kind) {
+    switch (kind) {
+        case TriviaKind::BeginKeywordsDirective: return "`begin_keywords";
+        case TriviaKind::CellDefineDirective: return "`celldefine";
+        case TriviaKind::DefaultNetTypeDirective: return "`default_nettype";
+        case TriviaKind::DefineDirective: return "`define";
+        case TriviaKind::ElseDirective: return "`else";
+        case TriviaKind::ElseIfDirective: return "`elseif";
+        case TriviaKind::EndKeywordsDirective: return "`end_keywords";
+        case TriviaKind::EndCellDefineDirective: return "`endcelldefine";
+        case TriviaKind::EndIfDirective: return "`endif";
+        case TriviaKind::IfDefDirective: return "`ifdef";
+        case TriviaKind::IfNDefDirective: return "`ifndef";
+        case TriviaKind::IncludeDirective: return "`include";
+        case TriviaKind::LineDirective: return "`line";
+        case TriviaKind::NoUnconnectedDriveDirective: return "`nounconnected_drive";
+        case TriviaKind::PragmaDirective: return "`pragma";
+        case TriviaKind::ResetAllDirective: return "`resetall";
+        case TriviaKind::TimescaleDirective: return "`timescale";
+        case TriviaKind::UnconnectedDriveDirective: return "`unconnected_drive";
+        case TriviaKind::UndefDirective: return "`undef";
+        case TriviaKind::UndefineAllDirective: return "`undefineall";
+        default: return nullptr;
+    }
+}
+
 TriviaKind getDirectiveKind(StringRef directive) {
+    TriviaKind kind;
+    if (directiveTable.lookup(directive, kind))
+        return kind;
     return TriviaKind::MacroUsage;
 }
 

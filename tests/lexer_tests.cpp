@@ -693,6 +693,59 @@ TEST_CASE("Binary vector literal (missing digits)", "[lexer]") {
     CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
 }
 
+void testDirective(TriviaKind kind) {
+    auto text = getTriviaKindText(kind);
+    auto token = lexToken(std::string(text.begin(), text.end()));
+
+    CHECK(token.kind == TokenKind::Directive);
+    CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Directives", "[lexer]") {
+    testDirective(TriviaKind::BeginKeywordsDirective);
+    testDirective(TriviaKind::CellDefineDirective);
+    testDirective(TriviaKind::DefaultNetTypeDirective);
+    testDirective(TriviaKind::DefineDirective);
+    testDirective(TriviaKind::ElseDirective);
+    testDirective(TriviaKind::ElseIfDirective);
+    testDirective(TriviaKind::EndKeywordsDirective);
+    testDirective(TriviaKind::EndCellDefineDirective);
+    testDirective(TriviaKind::EndIfDirective);
+    testDirective(TriviaKind::IfDefDirective);
+    testDirective(TriviaKind::IfNDefDirective);
+    testDirective(TriviaKind::IncludeDirective);
+    testDirective(TriviaKind::LineDirective);
+    testDirective(TriviaKind::NoUnconnectedDriveDirective);
+    testDirective(TriviaKind::PragmaDirective);
+    testDirective(TriviaKind::ResetAllDirective);
+    testDirective(TriviaKind::TimescaleDirective);
+    testDirective(TriviaKind::UnconnectedDriveDirective);
+    testDirective(TriviaKind::UndefDirective);
+    testDirective(TriviaKind::UndefineAllDirective);
+}
+
+TEST_CASE("Misplaced directive char", "[lexer]") {
+    auto text = "`";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::Unknown);
+    CHECK(token.toFullString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::MisplacedDirectiveChar);
+}
+
+TEST_CASE("Macro usage", "[lexer]") {
+    auto text = "`something";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::MacroUsage);
+    CHECK(token.toFullString() == text);
+    CHECK(token.valueText() == text);
+    CHECK(diagnostics.empty());
+}
+
 void testPunctuation(TokenKind kind) {
     auto text = getTokenKindText(kind);
     auto token = lexToken(std::string(text.begin(), text.end()));
@@ -786,4 +839,8 @@ TEST_CASE("All Punctuation", "[lexer]") {
     testPunctuation(TokenKind::And);
     testPunctuation(TokenKind::DoubleAnd);
     testPunctuation(TokenKind::TripleAnd);
+    
+    testPunctuation(TokenKind::MacroQuote);
+    testPunctuation(TokenKind::MacroEscapedQuote);
+    testPunctuation(TokenKind::MacroPaste);
 }
