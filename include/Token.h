@@ -41,12 +41,14 @@ struct NumericValue {
 
     NumericValue(double real) : type(Real), real(real) {}
     NumericValue(int32_t integer) : type(SignedInteger), integer(integer) {}
+    NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
     NumericValue(LogicVector vector) : type(Vector), vector(vector) {}
 
     enum {
         Real,
         SignedInteger,
-        Vector
+        Vector,
+        UnsizedBit
     };
 };
 

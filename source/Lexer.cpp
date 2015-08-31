@@ -281,7 +281,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             if (consume('{'))
                 return TokenKind::ApostropheOpenBrace;
 
-            scanUnsizedNumericLiteral(extraData);
+            *extraData = scanUnsizedNumericLiteral();
             return TokenKind::IntegerLiteral;
         case '(':
             if (consume('*'))
@@ -592,11 +592,6 @@ StringLiteralInfo* Lexer::scanStringLiteral() {
     return pool.emplace<StringLiteralInfo>(lexeme(), StringRef(niceText, stringBuffer.count()));
 }
 
-void Lexer::scanUnsizedNumericLiteral(void** extraData) {
-    // should be one four-state digit here
-
-}
-
 TokenKind Lexer::lexEscapeSequence(void** extraData) {
     char c = peek();
     if (isWhitespace(c) || c == '\0') {
@@ -827,6 +822,45 @@ NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
         default:
             // error case
             addError(DiagCode::MissingVectorBase);
+            return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+    }
+}
+
+NumericLiteralInfo* Lexer::scanUnsizedNumericLiteral() {
+    vectorBuilder.startUnsized();
+    char c = peek();
+    switch (c) {
+        case 'd':
+        case 'D':
+            advance();
+            return scanDecimalVector();
+        case 'o':
+        case 'O':
+            advance();
+            return scanOctalVector();
+        case 'h':
+        case 'H':
+            advance();
+            return scanHexVector();
+        case 'b':
+        case 'B':
+            advance();
+            return scanBinaryVector();
+        case '0':
+        case '1':
+            advance();
+            return pool.emplace<NumericLiteralInfo>(lexeme(), (logic_t)getDigitValue(c));
+        case 'x':
+        case 'X':
+            advance();
+            return pool.emplace<NumericLiteralInfo>(lexeme(), logic_t::x);
+        case 'Z':
+        case 'z':
+            advance();
+            return pool.emplace<NumericLiteralInfo>(lexeme(), logic_t::z);
+        default:
+            // error case
+            addError(DiagCode::InvalidUnsizedLiteral);
             return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 }

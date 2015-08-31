@@ -1,6 +1,7 @@
 #pragma once
 
 // Fixed-sized hash of string to value
+// TODO: write a tool to find the best seed for given sets of elements
 
 namespace slang {
 

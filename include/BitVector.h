@@ -22,6 +22,7 @@ public:
 class VectorBuilder {
 public:
     void start(uint32_t size, bool isSigned) {}
+    void startUnsized() {}
     void addDigit(logic_t digit) {}
 
     LogicVector toVector() const { return LogicVector(); }

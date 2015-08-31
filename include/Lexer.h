@@ -4,9 +4,9 @@ namespace slang {
 
 // TODO:
 // - vector values
-// - unsized literals
 // - token locations
 // - diagnostic locations
+// - start of line / flags
 
 class Lexer {
 public:
@@ -21,12 +21,12 @@ private:
     TokenKind lexDollarSign(void** extraData);
     TokenKind lexDirective(void** extraData);
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
-    void scanUnsizedNumericLiteral(void** extraData);
     void scanIdentifier();
 
     StringLiteralInfo* scanStringLiteral();
     NumericLiteralInfo* scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent);
     NumericLiteralInfo* scanVectorLiteral(uint64_t size);
+    NumericLiteralInfo* scanUnsizedNumericLiteral();
     NumericLiteralInfo* scanDecimalVector();
     NumericLiteralInfo* scanOctalVector();
     NumericLiteralInfo* scanHexVector();
