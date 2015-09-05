@@ -45,11 +45,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define XXH_rotl32(x,r) _rotl(x,r)
 #define XXH_rotl64(x,r) _rotl64(x,r)
 
-uint32_t xxhash32(const void* input, size_t len, uint32_t seed) {
-    // we assume at least 4-byte alignment of input, which should
-    // always be true for the systems we're running on
-    ASSERT(((size_t)input & 3) == 0);
+size_t xxhash(const void* input, size_t len, size_t seed) {
+#ifdef PLATFORM_X64
+    return xxhash64(input, len, seed);
+#else
+    return xxhash32(input, len, seed);
+#endif
+}
 
+uint32_t xxhash32(const void* input, size_t len, uint32_t seed) {
     const uint8_t* p = (const uint8_t*)input;
     const uint8_t* bEnd = p + len;
     uint32_t h32;
@@ -109,10 +113,6 @@ uint32_t xxhash32(const void* input, size_t len, uint32_t seed) {
 }
 
 uint64_t xxhash64(const void* input, size_t len, uint64_t seed) {
-    // we assume at least 8-byte alignment of input, which should
-    // always be true for the systems we're running on
-    ASSERT(((size_t)input & 7) == 0);
-
     const uint8_t* p = (const uint8_t*)input;
     const uint8_t* bEnd = p + len;
     uint64_t h64;

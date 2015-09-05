@@ -6,7 +6,7 @@ namespace slang {
 
 class StringRef {
 public:
-    StringRef() 
+    StringRef()
         : ptr(nullptr), len(0) {
     }
 
@@ -20,7 +20,7 @@ public:
 
     // this constructor is meant for string literals
     template<size_t N>
-    StringRef(const char (&str)[N])
+    StringRef(const char(&str)[N])
         : ptr(str), len(N - 1) {
     }
 
@@ -38,6 +38,12 @@ public:
     StringRef subString(uint32_t startIndex, uint32_t length) const {
         ASSERT(startIndex + length <= len);
         return StringRef(ptr + startIndex, length);
+    }
+
+    size_t hash(size_t seed = Seed) const {
+        if (empty())
+            return 0;
+        return slang::xxhash(ptr, len, seed);
     }
 
     char operator[](uint32_t index) const {
@@ -84,8 +90,21 @@ public:
     friend bool operator!=(const StringRef& lhs, const StringRef& rhs) { return !operator==(lhs, rhs); }
 
 private:
+    static const uint64_t Seed = 0x3765936aa9a6c480; // chosen by fair dice roll
+
     const char* ptr;
     uint32_t len;
+};
+
+}
+
+namespace std {
+
+template<>
+struct hash<slang::StringRef> {
+    size_t operator()(const slang::StringRef& str) const {
+        return str.hash();
+    }
 };
 
 }

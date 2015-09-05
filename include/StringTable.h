@@ -15,7 +15,7 @@ public:
         table = new Entry[capacity];
 
         for (auto& entry : entries) {
-            uint32_t hc = hash(entry.first);
+            uint32_t hc = entry.first.hash();
             uint32_t index = hc & (capacity - 1);
             while (table[index].hashCode != 0)
                 index = (index + 1) & (capacity - 1);
@@ -27,7 +27,7 @@ public:
     }
 
     bool lookup(StringRef key, T& value) const {
-        uint32_t hc = hash(key);
+        uint32_t hc = key.hash();
         uint32_t index = hc & (capacity - 1);
         do {
             if (table[index].hashCode == hc &&
@@ -49,11 +49,6 @@ private:
     };
     Entry* table;
     uint32_t capacity;
-
-    static uint32_t hash(StringRef str) {
-        const static uint32_t Seed = 1331238292; // oh yeah, great number right there
-        return xxhash32(str.begin() + 1, str.length(), Seed);
-    }
 
     static uint32_t roundUpToPow2(uint32_t n) {
         n--;
