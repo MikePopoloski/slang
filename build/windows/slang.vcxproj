@@ -23,7 +23,11 @@
     <ClInclude Include="..\..\include\BitVector.h" />
     <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
+    <ClInclude Include="..\..\include\FileSystem.h" />
+    <ClInclude Include="..\..\include\FileTracker.h" />
+    <ClInclude Include="..\..\include\Handle.h" />
     <ClInclude Include="..\..\include\Hash.h" />
+    <ClInclude Include="..\..\include\HeaderSearch.h" />
     <ClInclude Include="..\..\include\Lexer.h" />
     <ClInclude Include="..\..\include\Allocator.h" />
     <ClInclude Include="..\..\include\Preprocessor.h" />
@@ -37,6 +41,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\BitVector.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
+    <ClCompile Include="..\..\source\FileTracker.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
     <ClCompile Include="..\..\source\Preprocessor.cpp" />

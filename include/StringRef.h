@@ -46,6 +46,17 @@ public:
         return slang::xxhash(ptr, len, seed);
     }
 
+    StringRef intern(Allocator& alloc) const {
+        if (empty())
+            return StringRef();
+
+        // +1 for trailing zero, which we might as well add here since we're allocating anyway
+        char* dest = reinterpret_cast<char*>(alloc.allocate(len + 1));
+        memcpy(dest, ptr, len);
+        dest[len] = '\0';
+        return StringRef(dest, len);
+    }
+
     char operator[](uint32_t index) const {
         ASSERT(index < len);
         return ptr[index];
