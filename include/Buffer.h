@@ -1,28 +1,49 @@
 #pragma once
 
 // Simple resizable buffer that can only be appended and cleared.
-// Some caveats:
-// - Explicitly doesn't try to be exception safe.
-// - Clearing doesn't destruct the entries. 
+// It makes no attempt at being exception safe.
 
 namespace slang {
 
 template<typename T>
 class Buffer {
 public:
-    explicit Buffer(uint32_t capacity = 16)
-        : len(0), capacity(capacity) {
+    explicit Buffer(uint32_t capacity = 16) :
+        len(0), capacity(capacity) {
         
         ASSERT(capacity > 0);
         data = (T*)malloc(capacity * sizeof(T));
     }
 
+    Buffer(Buffer&& other) :
+        data(other.data), len(other.len), capacity(other.capacity) {
+
+        other.data = nullptr;
+        other.len = 0;
+        other.capacity = 0;
+    }
+
     ~Buffer() {
-        free(data);
+        cleanup();
     }
 
     Buffer(const Buffer&) = delete;
     Buffer& operator=(const Buffer&) = delete;
+
+    Buffer& operator=(Buffer&& other) {
+        if (this != &other) {
+            cleanup();
+
+            data = other.data;
+            len = other.len;
+            capacity = other.capacity;
+
+            other.data = nullptr;
+            other.len = 0;
+            other.capacity = 0;
+        }
+        return *this;
+    }
 
     T* begin() { return data; }
     T* end() { return data + len; }
@@ -34,12 +55,18 @@ public:
     bool empty() const { return len == 0; }
 
     void clear() {
+        if (!std::is_trivially_destructible<T>()) {
+            for (uint32_t i = 0; i < len; i++)
+                data[i].~T();
+        }
         len = 0;
     }
 
     void append(const T& item) {
-        if (len == capacity)
-            grow();
+        if (len == capacity) {
+            capacity = (uint32_t)(capacity * 1.5);
+            resize();
+        }
 
         new (&data[len++]) T(item);
     }
@@ -50,23 +77,35 @@ public:
     }
 
     void appendRange(const T* begin, const T* end) {
-        uint32_t newLen = len + (uint32_t)(end - begin);
-        while (newLen > capacity)
-            grow();
+        uint32_t count = (uint32_t)(end - begin);
+        uint32_t newLen = len + count;
+        if (newLen > capacity)
+            grow(newLen - capacity);
 
         T* ptr = data + len;
-        while (begin != end)
-            new (ptr++) T(*begin++);
+        if (std::is_trivially_copyable<T>())
+            memcpy(ptr, begin, count * sizeof(T));
+        else {
+            while (begin != end)
+                new (ptr++) T(*begin++);
+        }
 
         len = newLen;
     }
 
     template<typename... Args>
     void emplace(Args&&... args) {
-        if (len == capacity)
-            grow();
+        if (len == capacity) {
+            capacity = (uint32_t)(capacity * 1.5);
+            resize();
+        }
 
         new (&data[len++]) T(std::forward<Args>(args)...);
+    }
+
+    void grow(uint32_t amount) {
+        capacity += amount;
+        resize();
     }
 
 private:
@@ -74,14 +113,22 @@ private:
     uint32_t len;
     uint32_t capacity;
 
-    void grow() {
-        capacity = (uint32_t)(capacity * 1.5);
+    void resize() {
         T* newData = (T*)malloc(capacity * sizeof(T));
-        for (uint32_t i = 0; i < len; i++)
-            new (&newData[i]) T(std::move(data[i]));
+        if (std::is_trivially_copyable<T>())
+            memcpy(newData, data, len * sizeof(T));
+        else {
+            for (uint32_t i = 0; i < len; i++)
+                new (&newData[i]) T(std::move(data[i]));
+        }
 
-        delete[] data;
+        cleanup();
         data = newData;
+    }
+
+    void cleanup() {
+        clear();
+        free(data);
     }
 };
 
