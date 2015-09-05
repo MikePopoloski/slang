@@ -1,27 +1,37 @@
 #pragma once
 
-// Wrapper around a {pointer, length} pair to a string on the heap.
+// Immutable wrapper around a {pointer, length} pair to a string.
+// This class does not own the string memory; it's up to the user
+// to make sure it remains valid.
 
 namespace slang {
 
 class StringRef {
 public:
-    StringRef()
-        : ptr(nullptr), len(0) {
+    StringRef() :
+        ptr(nullptr), len(0) {
     }
 
-    StringRef(std::nullptr_t)
-        : ptr(nullptr), len(0) {
+    StringRef(std::nullptr_t) :
+        ptr(nullptr), len(0) {
     }
 
-    StringRef(const char* ptr, uint32_t length)
-        : ptr(ptr), len(length) {
+    StringRef(const char* ptr, uint32_t length) :
+        ptr(ptr), len(length) {
+    }
+
+    StringRef(const std::string& str) :
+        ptr(str.c_str()), len(str.length()) {
+    }
+
+    StringRef(const Buffer<char>& buffer) :
+        ptr(buffer.cbegin()), len(buffer.count()) {
     }
 
     // this constructor is meant for string literals
     template<size_t N>
-    StringRef(const char(&str)[N])
-        : ptr(str), len(N - 1) {
+    StringRef(const char(&str)[N]) :
+        ptr(str), len(N - 1) {
     }
 
     const char* begin() const { return ptr; }
@@ -29,6 +39,7 @@ public:
 
     uint32_t length() const { return len; }
     bool empty() const { return len == 0; }
+    bool isNullTerminated() const { return ptr != nullptr && ptr[len] == '\0'; }
 
     StringRef subString(uint32_t startIndex) const {
         ASSERT(startIndex <= len);

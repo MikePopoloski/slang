@@ -114,15 +114,9 @@ int utf8SeqBytes(char c) {
     return 0;
 }
 
-char* copyString(slang::Allocator& pool, const char* source, uint32_t length) {
-    char* dest = reinterpret_cast<char*>(pool.allocate(length));
-    memcpy(dest, source, length);
-    return dest;
-}
-
 template<typename T>
-T* copyArray(slang::Allocator& pool, T* source, uint32_t count) {
-    T* dest = reinterpret_cast<T*>(pool.allocate(count * sizeof(T)));
+T* copyArray(slang::Allocator& alloc, T* source, uint32_t count) {
+    T* dest = reinterpret_cast<T*>(alloc.allocate(count * sizeof(T)));
     for (uint32_t i = 0; i < count; i++)
         new (&dest[i]) T(*source++);
     return dest;
@@ -157,28 +151,28 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(const char* sourceBuffer, size_t sourceLength, Allocator& pool, Preprocessor& preprocessor, Diagnostics& diagnostics) :
+Lexer::Lexer(FileID file, StringRef source, Allocator& alloc, Preprocessor& preprocessor, Diagnostics& diagnostics) :
     triviaBuffer(32),
     stringBuffer(1024),
-    pool(pool),
+    alloc(alloc),
     preprocessor(preprocessor),
     diagnostics(diagnostics),
-    sourceBuffer(sourceBuffer),
-    sourceEnd(sourceBuffer + sourceLength) {
+    sourceBuffer(source.begin()),
+    sourceEnd(source.end()) {
 
     // string needs to be non-null and null terminated
-    ASSERT(sourceBuffer);
-    ASSERT(sourceBuffer[sourceLength] == '\0');
+    ASSERT(source);
+    ASSERT(source.isNullTerminated());
 
     // detect BOMs so we can give nice errors for invaild encoding
-    if (sourceLength >= 2) {
+    if (source.length() >= 2) {
         const unsigned char* ubuf = reinterpret_cast<const unsigned char*>(sourceBuffer);
         if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) ||
             (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
             addError(DiagCode::UnicodeBOM);
             advance(2);
         }
-        else if (sourceLength >= 3) {
+        else if (source.length() >= 3) {
             if (ubuf[0] == 0xEF &&
                 ubuf[1] == 0xBB &&
                 ubuf[2] == 0xBF) {
@@ -201,11 +195,11 @@ Token* Lexer::lex() {
     // copy any lexed trivia into standalone memory
     Trivia* trivia = nullptr;
     if (!triviaBuffer.empty())
-        trivia = copyArray<Trivia>(pool, triviaBuffer.begin(), triviaBuffer.count());
+        trivia = copyArray<Trivia>(alloc, triviaBuffer.begin(), triviaBuffer.count());
 
     {
         // newline in directive mode: issue an EndOfDirective token
-        //Token* token = pool.Allocate<Token>(TokenKind::EndOfDirective, false, nullptr);
+        //Token* token = alloc.Allocate<Token>(TokenKind::EndOfDirective, false, nullptr);
 
     }
 
@@ -214,7 +208,7 @@ Token* Lexer::lex() {
     void* data = nullptr;
     TokenKind kind = lexToken(&data);
 
-    return pool.emplace<Token>(kind, false, data, trivia, triviaBuffer.count());
+    return alloc.emplace<Token>(kind, false, data, trivia, triviaBuffer.count());
 }
 
 TokenKind Lexer::lexToken(void** extraData) {
@@ -226,7 +220,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             // we've already advanced()
             if (sourceBuffer <= sourceEnd) {
                 addError(DiagCode::EmbeddedNull);
-                *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
+                *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
                 return TokenKind::Unknown;
             }
             return TokenKind::EndOfFile;
@@ -429,7 +423,7 @@ TokenKind Lexer::lexToken(void** extraData) {
         case 'y': case 'z':
         case '_': {
             scanIdentifier();
-            *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Normal);
+            *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Normal);
             return TokenKind::Identifier;
         }
         case '[': return TokenKind::OpenBracket;
@@ -490,7 +484,7 @@ TokenKind Lexer::lexToken(void** extraData) {
                 advance(utf8SeqBytes(c));
                 addError(DiagCode::UTF8Char);
             }
-            *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
+            *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
             return TokenKind::Unknown;
     }
 }
@@ -589,15 +583,15 @@ StringLiteralInfo* Lexer::scanStringLiteral() {
         }
     }
 
-    const char* niceText = copyString(pool, stringBuffer.begin(), stringBuffer.count());
-    return pool.emplace<StringLiteralInfo>(lexeme(), StringRef(niceText, stringBuffer.count()));
+    StringRef niceText = StringRef(stringBuffer).intern(alloc);
+    return alloc.emplace<StringLiteralInfo>(lexeme(), niceText);
 }
 
 TokenKind Lexer::lexEscapeSequence(void** extraData) {
     char c = peek();
     if (isWhitespace(c) || c == '\0') {
         addError(DiagCode::EscapedWhitespace);
-        *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
+        *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
         return TokenKind::Unknown;
     }
 
@@ -608,7 +602,7 @@ TokenKind Lexer::lexEscapeSequence(void** extraData) {
             break;
     }
 
-    *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Escaped);
+    *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Escaped);
     return TokenKind::Identifier;
 }
 
@@ -620,7 +614,7 @@ TokenKind Lexer::lexDollarSign(void** extraData) {
         return TokenKind::Dollar;
 
     // otherwise, we have a system identifier
-    *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::System);
+    *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::System);
     return TokenKind::SystemIdentifier;
 }
 
@@ -630,13 +624,13 @@ TokenKind Lexer::lexDirective(void** extraData) {
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
         addError(DiagCode::MisplacedDirectiveChar);
-        *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
+        *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
         return TokenKind::Unknown;
     }
 
     auto directive = lexeme();
     TriviaKind type = getDirectiveKind(directive);
-    *extraData = pool.emplace<DirectiveInfo>(directive, type);
+    *extraData = alloc.emplace<DirectiveInfo>(directive, type);
 
     // lexing behavior changes slightly depending on directives we see
     switch (type) {
@@ -713,7 +707,7 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
                 unsignedVal = INT32_MAX;
                 addError(DiagCode::SignedLiteralTooLarge);
             }
-            *extraData = pool.emplace<NumericLiteralInfo>(lexeme(), (int32_t)unsignedVal);
+            *extraData = alloc.emplace<NumericLiteralInfo>(lexeme(), (int32_t)unsignedVal);
             return TokenKind::IntegerLiteral;
     }
 }
@@ -775,7 +769,7 @@ NumericLiteralInfo* Lexer::scanRealLiteral(uint64_t value, int decPoint, int dig
     if (!composeDouble(double(value), exp, result))
         addError(DiagCode::RealExponentTooLarge);
 
-    return pool.emplace<NumericLiteralInfo>(lexeme(), result);
+    return alloc.emplace<NumericLiteralInfo>(lexeme(), result);
 }
 
 NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
@@ -823,7 +817,7 @@ NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
         default:
             // error case
             addError(DiagCode::MissingVectorBase);
-            return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+            return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 }
 
@@ -850,19 +844,19 @@ NumericLiteralInfo* Lexer::scanUnsizedNumericLiteral() {
         case '0':
         case '1':
             advance();
-            return pool.emplace<NumericLiteralInfo>(lexeme(), (logic_t)getDigitValue(c));
+            return alloc.emplace<NumericLiteralInfo>(lexeme(), (logic_t)getDigitValue(c));
         case 'x':
         case 'X':
             advance();
-            return pool.emplace<NumericLiteralInfo>(lexeme(), logic_t::x);
+            return alloc.emplace<NumericLiteralInfo>(lexeme(), logic_t::x);
         case 'Z':
         case 'z':
             advance();
-            return pool.emplace<NumericLiteralInfo>(lexeme(), logic_t::z);
+            return alloc.emplace<NumericLiteralInfo>(lexeme(), logic_t::z);
         default:
             // error case
             addError(DiagCode::InvalidUnsizedLiteral);
-            return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+            return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 }
 
@@ -872,7 +866,7 @@ NumericLiteralInfo* Lexer::scanDecimalVector() {
     char c = peek(lookahead);
     if (!isDecimalDigit(c) && !isLogicDigit(c)) {
         addError(DiagCode::MissingVectorDigits);
-        return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+        return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 
     advance(lookahead);
@@ -895,7 +889,7 @@ NumericLiteralInfo* Lexer::scanDecimalVector() {
                 if (isDecimalDigit(c))
                     vectorBuilder.addDigit((char)getDigitValue(c));
                 else
-                    return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+                    return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }
         advance();
     }
@@ -907,7 +901,7 @@ NumericLiteralInfo* Lexer::scanOctalVector() {
     char c = peek(lookahead);
     if (!isOctalDigit(c) && !isLogicDigit(c)) {
         addError(DiagCode::MissingVectorDigits);
-        return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+        return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 
     advance(lookahead);
@@ -930,7 +924,7 @@ NumericLiteralInfo* Lexer::scanOctalVector() {
                 if (isOctalDigit(c))
                     vectorBuilder.addDigit((char)getDigitValue(c));
                 else
-                    return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+                    return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }
         advance();
     }
@@ -942,7 +936,7 @@ NumericLiteralInfo* Lexer::scanHexVector() {
     char c = peek(lookahead);
     if (!isHexDigit(c) && !isLogicDigit(c)) {
         addError(DiagCode::MissingVectorDigits);
-        return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+        return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 
     advance(lookahead);
@@ -965,7 +959,7 @@ NumericLiteralInfo* Lexer::scanHexVector() {
                 if (isHexDigit(c))
                     vectorBuilder.addDigit((char)getHexDigitValue(c));
                 else
-                    return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+                    return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }
         advance();
     }
@@ -977,7 +971,7 @@ NumericLiteralInfo* Lexer::scanBinaryVector() {
     char c = peek(lookahead);
     if (!isBinaryDigit(c) && !isLogicDigit(c)) {
         addError(DiagCode::MissingVectorDigits);
-        return pool.emplace<NumericLiteralInfo>(lexeme(), 0);
+        return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 
     advance(lookahead);
@@ -1000,7 +994,7 @@ NumericLiteralInfo* Lexer::scanBinaryVector() {
                 if (isBinaryDigit(c))
                     vectorBuilder.addDigit((char)getDigitValue(c));
                 else
-                    return pool.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+                    return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }
         advance();
     }
@@ -1146,7 +1140,7 @@ void Lexer::lexDirectiveTrivia() {
     uint32_t length = lexemeLength();
     if (lexemeLength() == 1) {
        /* addError(DiagCode::MisplacedDirectiveChar);
-        *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
+        *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
         return TokenKind::Unknown;*/
     }
 
@@ -1214,8 +1208,7 @@ void Lexer::addError(DiagCode code) {
 
 StringRef Lexer::lexeme() {
     uint32_t length = lexemeLength();
-    char* str = copyString(pool, marker, length);
-    return StringRef(str, length);
+    return StringRef(marker, length).intern(alloc);
 }
 
 } // namespace slang

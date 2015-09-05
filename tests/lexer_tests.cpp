@@ -13,7 +13,7 @@ bool withinUlp(double a, double b) {
 
 const Token& lexToken(const std::string& text) {
     diagnostics.clear();
-    Lexer lexer(text.c_str(), text.length(), pool, preprocessor, diagnostics);
+    Lexer lexer(FileID(), text, pool, preprocessor, diagnostics);
 
     Token* token = lexer.lex();
     REQUIRE(token != nullptr);
