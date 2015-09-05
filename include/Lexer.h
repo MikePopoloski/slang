@@ -10,7 +10,7 @@ namespace slang {
 
 class Lexer {
 public:
-    Lexer(FileID file, StringRef source, Allocator& alloc, Preprocessor& preprocessor, Diagnostics& diagnostics);
+    Lexer(FileID file, StringRef source, BumpAllocator& alloc, Preprocessor& preprocessor, Diagnostics& diagnostics);
 
     Token* lex();
 
@@ -78,7 +78,7 @@ private:
     Buffer<char> stringBuffer;
     Buffer<Trivia> triviaBuffer;
     VectorBuilder vectorBuilder;
-    Allocator& alloc;
+    BumpAllocator& alloc;
     Preprocessor& preprocessor;
     Diagnostics& diagnostics;
     const char* sourceBuffer;

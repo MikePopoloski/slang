@@ -43,9 +43,6 @@
     <ClInclude Include="..\..\include\Preprocessor.h">
       <Filter>lexing</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\Allocator.h">
-      <Filter>util</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\ArrayRef.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -71,6 +68,9 @@
       <Filter>files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\Handle.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\BumpAllocator.h">
       <Filter>util</Filter>
     </ClInclude>
   </ItemGroup>

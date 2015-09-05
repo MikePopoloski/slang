@@ -15,7 +15,7 @@
 
 #include "Hash.h"
 #include "Handle.h"
-#include "Allocator.h"
+#include "BumpAllocator.h"
 #include "ArrayRef.h"
 #include "Buffer.h"
 #include "StringRef.h"

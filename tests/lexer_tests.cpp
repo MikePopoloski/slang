@@ -3,7 +3,7 @@
 
 using namespace slang;
 
-Allocator pool;
+BumpAllocator pool;
 Preprocessor preprocessor;
 Diagnostics diagnostics;
 

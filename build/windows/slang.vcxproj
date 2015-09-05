@@ -29,7 +29,7 @@
     <ClInclude Include="..\..\include\Hash.h" />
     <ClInclude Include="..\..\include\HeaderSearch.h" />
     <ClInclude Include="..\..\include\Lexer.h" />
-    <ClInclude Include="..\..\include\Allocator.h" />
+    <ClInclude Include="..\..\include\BumpAllocator.h" />
     <ClInclude Include="..\..\include\Preprocessor.h" />
     <ClInclude Include="..\..\include\slang.h" />
     <ClInclude Include="..\..\include\StringRef.h" />

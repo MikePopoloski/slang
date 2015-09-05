@@ -31,7 +31,7 @@ public:
     DirectoryID getDirectory(FileID file) const;
 
 private:
-    Allocator alloc;
+    BumpAllocator alloc;
     std::unordered_map<StringRef, FileID> pathMap;
     std::deque<DirectoryID> fileToDirectoryIndex;
     uint32_t nextFileID = 1;

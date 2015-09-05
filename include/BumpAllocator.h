@@ -1,20 +1,20 @@
 #pragma once
 
-// Simple block allocator that can't deallocate individual items.
+// Simple bump allocator that can't deallocate individual items.
 // When none of the memory is needed anymore, the whole thing can be freed.
 
 namespace slang {
 
-class Allocator {
+class BumpAllocator {
 public:
-    explicit Allocator(uint32_t segmentSize = 8192)
+    explicit BumpAllocator(uint32_t segmentSize = 8192)
         : segmentSize(segmentSize + sizeof(Segment)) {
 
         head = allocSegment(nullptr, this->segmentSize);
         endPtr = (uint8_t*)head + this->segmentSize;
     }
 
-    ~Allocator() {
+    ~BumpAllocator() {
         Segment* seg = head;
         while (seg) {
             Segment* prev = seg->prev;
@@ -23,8 +23,8 @@ public:
         }
     }
 
-    Allocator(const Allocator&) = delete;
-    Allocator& operator=(const Allocator&) = delete;
+    BumpAllocator(const BumpAllocator&) = delete;
+    BumpAllocator& operator=(const BumpAllocator&) = delete;
 
     template<typename T, typename... Args>
     T* emplace(Args&&... args) {

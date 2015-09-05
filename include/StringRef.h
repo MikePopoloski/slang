@@ -57,7 +57,7 @@ public:
         return slang::xxhash(ptr, len, seed);
     }
 
-    StringRef intern(Allocator& alloc) const {
+    StringRef intern(BumpAllocator& alloc) const {
         if (empty())
             return StringRef();
 

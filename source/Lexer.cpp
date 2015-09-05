@@ -115,7 +115,7 @@ int utf8SeqBytes(char c) {
 }
 
 template<typename T>
-T* copyArray(slang::Allocator& alloc, T* source, uint32_t count) {
+T* copyArray(slang::BumpAllocator& alloc, T* source, uint32_t count) {
     T* dest = reinterpret_cast<T*>(alloc.allocate(count * sizeof(T)));
     for (uint32_t i = 0; i < count; i++)
         new (&dest[i]) T(*source++);
@@ -151,7 +151,7 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(FileID file, StringRef source, Allocator& alloc, Preprocessor& preprocessor, Diagnostics& diagnostics) :
+Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Preprocessor& preprocessor, Diagnostics& diagnostics) :
     triviaBuffer(32),
     stringBuffer(1024),
     alloc(alloc),
