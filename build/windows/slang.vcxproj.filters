@@ -16,6 +16,9 @@
     <Filter Include="numeric">
       <UniqueIdentifier>{92c36059-cdc7-4ae5-9806-bf921f712548}</UniqueIdentifier>
     </Filter>
+    <Filter Include="io">
+      <UniqueIdentifier>{ab93ec87-1911-4a72-840e-eaa7003c9d55}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\slang.h" />
@@ -77,6 +80,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\Hash.cpp">
       <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\Preprocessor.cpp">
+      <Filter>lexing</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -157,10 +157,11 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(const char* sourceBuffer, size_t sourceLength, Allocator& pool, Diagnostics& diagnostics) :
+Lexer::Lexer(const char* sourceBuffer, size_t sourceLength, Allocator& pool, Preprocessor& preprocessor, Diagnostics& diagnostics) :
     triviaBuffer(32),
     stringBuffer(1024),
     pool(pool),
+    preprocessor(preprocessor),
     diagnostics(diagnostics),
     sourceBuffer(sourceBuffer),
     sourceEnd(sourceBuffer + sourceLength) {
@@ -1034,6 +1035,9 @@ bool Lexer::lexTrivia() {
                         return false;
                 }
                 break;
+            case '`':
+                lexDirectiveTrivia();
+                break;
             case '\r':
                 advance();
                 consume('\n');
@@ -1133,6 +1137,63 @@ bool Lexer::scanBlockComment() {
 
     addTrivia(TriviaKind::BlockComment);
     return eod;
+}
+
+void Lexer::lexDirectiveTrivia() {
+    scanIdentifier();
+
+    // if length is 1, we just have a grave character on its own, which is an error
+    uint32_t length = lexemeLength();
+    if (lexemeLength() == 1) {
+       /* addError(DiagCode::MisplacedDirectiveChar);
+        *extraData = pool.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
+        return TokenKind::Unknown;*/
+    }
+
+    // figure out what kind of directive we're looking at
+    TriviaKind type = getDirectiveKind(StringRef(marker, length));
+    switch (type) {
+        case TriviaKind::ResetAllDirective:
+           // preprocessor.resetAll();
+            return;
+        case TriviaKind::IncludeDirective:
+            lexIncludeDirective();
+            return;
+    }
+}
+
+void Lexer::lexIncludeDirective() {
+    bool systemPath = false;
+    char delim;
+
+    // next non-whitespace character needs to be " or <
+    int lookahead = findNextNonWhitespace();
+    switch (delim = peek(lookahead)) {
+        case '"': break;
+        case '<': systemPath = true;
+        default:
+            addError(DiagCode::ExpectedIncludeFileName);
+            return;
+    }
+
+    advance(lookahead + 1);
+    const char* startOfFileName = sourceBuffer;
+
+    while (true) {
+        char c = peek();
+        if (c == delim)
+            break;
+
+        if (c == '\0' || isNewline(c)) {
+            addError(DiagCode::ExpectedEndOfIncludeFileName);
+            return;
+        }
+
+        advance();
+    }
+
+    // inform the preprocessor about this include
+    preprocessor.include(StringRef(startOfFileName, (uint32_t)(sourceBuffer - startOfFileName)), systemPath);
 }
 
 int Lexer::findNextNonWhitespace() {

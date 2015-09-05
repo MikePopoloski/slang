@@ -52,7 +52,7 @@ private:
 
     static uint32_t hash(StringRef str) {
         const static uint32_t Seed = 1331238292; // oh yeah, great number right there
-        return xxhash32(str.begin() + 1, str.length() - 1, Seed);
+        return xxhash32(str.begin() + 1, str.length(), Seed);
     }
 
     static uint32_t roundUpToPow2(uint32_t n) {

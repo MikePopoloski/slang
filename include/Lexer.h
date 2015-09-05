@@ -10,7 +10,7 @@ namespace slang {
 
 class Lexer {
 public:
-    Lexer(const char* sourceBuffer, size_t sourceLength, Allocator& pool, Diagnostics& diagnostics);
+    Lexer(const char* sourceBuffer, size_t sourceLength, Allocator& pool, Preprocessor& preprocessor, Diagnostics& diagnostics);
 
     Token* lex();
 
@@ -36,6 +36,9 @@ private:
     bool scanBlockComment();
     void scanWhitespace();
     void scanLineComment();
+
+    void lexDirectiveTrivia();
+    void lexIncludeDirective();
 
     int findNextNonWhitespace();
 
@@ -76,6 +79,7 @@ private:
     Buffer<Trivia> triviaBuffer;
     VectorBuilder vectorBuilder;
     Allocator& pool;
+    Preprocessor& preprocessor;
     Diagnostics& diagnostics;
     const char* sourceBuffer;
     const char* sourceEnd;

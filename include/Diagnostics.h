@@ -25,7 +25,10 @@ enum class DiagCode : uint8_t {
     IntegerSizeTooLarge,
     MissingVectorBase,
     MissingVectorDigits,
-    InvalidUnsizedLiteral
+    InvalidUnsizedLiteral,
+
+    ExpectedIncludeFileName,
+    ExpectedEndOfIncludeFileName
 };
 
 class SyntaxError {
