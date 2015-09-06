@@ -41,8 +41,10 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\BitVector.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
+    <ClCompile Include="..\..\source\FileSystem.cpp" />
     <ClCompile Include="..\..\source\FileTracker.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
+    <ClCompile Include="..\..\source\HeaderSearch.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
     <ClCompile Include="..\..\source\Preprocessor.cpp" />
     <ClCompile Include="..\..\source\SyntaxFacts.cpp" />

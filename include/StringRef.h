@@ -21,7 +21,7 @@ public:
     }
 
     StringRef(const std::string& str) :
-        ptr(str.c_str()), len(str.length()) {
+        ptr(str.c_str()), len((uint32_t)str.length()) {
     }
 
     StringRef(const Buffer<char>& buffer) :

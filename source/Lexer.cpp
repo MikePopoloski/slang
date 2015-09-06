@@ -151,12 +151,12 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Preprocessor& preprocessor, Diagnostics& diagnostics) :
+Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics) :
     triviaBuffer(32),
     stringBuffer(1024),
     alloc(alloc),
-    preprocessor(preprocessor),
     diagnostics(diagnostics),
+    preprocessor(nullptr),
     sourceBuffer(source.begin()),
     sourceEnd(source.end()) {
 
@@ -1187,7 +1187,7 @@ void Lexer::lexIncludeDirective() {
     }
 
     // inform the preprocessor about this include
-    preprocessor.include(StringRef(startOfFileName, (uint32_t)(sourceBuffer - startOfFileName)), systemPath);
+    preprocessor->include(StringRef(startOfFileName, (uint32_t)(sourceBuffer - startOfFileName)), systemPath);
 }
 
 int Lexer::findNextNonWhitespace() {

@@ -15,7 +15,7 @@ public:
         table = new Entry[capacity];
 
         for (auto& entry : entries) {
-            uint32_t hc = entry.first.hash();
+            size_t hc = entry.first.hash();
             uint32_t index = hc & (capacity - 1);
             while (table[index].hashCode != 0)
                 index = (index + 1) & (capacity - 1);
@@ -27,7 +27,7 @@ public:
     }
 
     bool lookup(StringRef key, T& value) const {
-        uint32_t hc = key.hash();
+        size_t hc = key.hash();
         uint32_t index = hc & (capacity - 1);
         do {
             if (table[index].hashCode == hc &&
@@ -44,7 +44,7 @@ public:
 private:
     struct Entry {
         StringRef key;
-        uint32_t hashCode = 0;
+        size_t hashCode = 0;
         T value;
     };
     Entry* table;

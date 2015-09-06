@@ -2,7 +2,11 @@
 
 namespace slang {
 
-struct DirectoryID : public HandleBase<DirectoryID> {};
+class IFileSystem;
+
+struct DirectoryID : public HandleBase<DirectoryID> {
+    friend class IFileSystem;
+};
 
 class IFileSystem {
 public:
@@ -16,7 +20,7 @@ public:
     virtual bool readFile(DirectoryID directory, StringRef fileName, Buffer<char>& buffer) = 0;
 
     // check whether the path is absolute or relative
-    virtual bool isAbsolute(StringRef path) = 0;
+    virtual bool isPathAbsolute(StringRef path) = 0;
 
     // get the first directory in a given path
     // the path is modified to strip off that leading directory name
@@ -34,6 +38,13 @@ public:
             last = next;
         }
     }
+
+protected:
+    static uint32_t getValue(DirectoryID directory) {
+        return directory.getValue();
+    }
 };
+
+IFileSystem& getOSFileSystem();
 
 }

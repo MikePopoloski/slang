@@ -8,11 +8,22 @@ namespace slang {
 // - diagnostic locations
 // - start of line / flags
 
+class Preprocessor;
+
 class Lexer {
 public:
-    Lexer(FileID file, StringRef source, BumpAllocator& alloc, Preprocessor& preprocessor, Diagnostics& diagnostics);
+    Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
+
+    Lexer(const Lexer&) = delete;
+    Lexer& operator=(const Lexer&) = delete;
 
     Token* lex();
+
+    void setPreprocessor(Preprocessor* value) { preprocessor = value; }
+
+    FileID getFile() const { return file; }
+    BumpAllocator& getAllocator() const { return alloc; }
+    Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
     TokenKind lexToken(void** extraData);
@@ -79,8 +90,8 @@ private:
     Buffer<Trivia> triviaBuffer;
     VectorBuilder vectorBuilder;
     BumpAllocator& alloc;
-    Preprocessor& preprocessor;
     Diagnostics& diagnostics;
+    Preprocessor* preprocessor;
     const char* sourceBuffer;
     const char* sourceEnd;
     const char* marker;

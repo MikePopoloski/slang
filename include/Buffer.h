@@ -79,8 +79,7 @@ public:
     void appendRange(const T* begin, const T* end) {
         uint32_t count = (uint32_t)(end - begin);
         uint32_t newLen = len + count;
-        if (newLen > capacity)
-            grow(newLen - capacity);
+        ensureSize(newLen);
 
         T* ptr = data + len;
         if (std::is_trivially_copyable<T>())
@@ -101,6 +100,13 @@ public:
         }
 
         new (&data[len++]) T(std::forward<Args>(args)...);
+    }
+
+    void ensureSize(uint32_t size) {
+        if (size > capacity) {
+            capacity = size;
+            resize();
+        }
     }
 
     void grow(uint32_t amount) {

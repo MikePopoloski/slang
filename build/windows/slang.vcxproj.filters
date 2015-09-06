@@ -99,5 +99,11 @@
     <ClCompile Include="..\..\source\FileTracker.cpp">
       <Filter>files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\FileSystem.cpp">
+      <Filter>files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\HeaderSearch.cpp">
+      <Filter>files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

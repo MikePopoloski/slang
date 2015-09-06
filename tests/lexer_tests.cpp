@@ -4,7 +4,6 @@
 using namespace slang;
 
 BumpAllocator pool;
-Preprocessor preprocessor;
 Diagnostics diagnostics;
 
 bool withinUlp(double a, double b) {
@@ -13,7 +12,7 @@ bool withinUlp(double a, double b) {
 
 const Token& lexToken(const std::string& text) {
     diagnostics.clear();
-    Lexer lexer(FileID(), text, pool, preprocessor, diagnostics);
+    Lexer lexer(FileID(), text, pool, diagnostics);
 
     Token* token = lexer.lex();
     REQUIRE(token != nullptr);

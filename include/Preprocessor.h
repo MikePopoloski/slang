@@ -4,8 +4,10 @@ namespace slang {
 
 class Preprocessor {
 public:
+    Preprocessor(Lexer& lexer, HeaderSearch& headerSearch);
+
     void resetAll();
-    void include(StringRef fileName, bool systemPath);
+    void include(StringRef path, bool systemPath);
     void define();
     void undefine();
     void undefineAll();
@@ -16,6 +18,15 @@ public:
     void endCellTag();
     void beginKeywords();
     void endKeywords();
+
+    FileID getMainFile() const { return mainLexer.getFile(); }
+    FileID getCurrentFile() const { return currentLexer ? currentLexer->getFile() : getMainFile(); }
+
+private:
+    std::deque<Lexer> lexerStack;
+    Lexer& mainLexer;
+    Lexer* currentLexer;
+    HeaderSearch& headerSearch;
 };
 
 }

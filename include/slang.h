@@ -27,6 +27,6 @@
 #include "Diagnostics.h"
 #include "Trivia.h"
 #include "Token.h"
-#include "Preprocessor.h"
 #include "Lexer.h"
+#include "Preprocessor.h"
 #include "SyntaxFacts.h"
