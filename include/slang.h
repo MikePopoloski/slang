@@ -19,7 +19,6 @@
 #include "ArrayRef.h"
 #include "Buffer.h"
 #include "StringRef.h"
-#include "StringTable.h"
 #include "FileSystem.h"
 #include "FileTracker.h"
 #include "HeaderSearch.h"

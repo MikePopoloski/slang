@@ -1,4 +1,5 @@
 #include "slang.h"
+#include "StringTable.h"
 
 namespace slang {
 

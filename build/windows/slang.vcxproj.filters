@@ -52,9 +52,6 @@
     <ClInclude Include="..\..\include\Buffer.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\StringTable.h">
-      <Filter>util</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\Hash.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -71,6 +68,9 @@
       <Filter>util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\BumpAllocator.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\StringTable.h">
       <Filter>util</Filter>
     </ClInclude>
   </ItemGroup>
