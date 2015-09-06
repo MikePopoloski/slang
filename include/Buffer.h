@@ -11,7 +11,6 @@ public:
     explicit Buffer(uint32_t capacity = 16) :
         len(0), capacity(capacity) {
         
-        ASSERT(capacity > 0);
         data = (T*)malloc(capacity * sizeof(T));
     }
 

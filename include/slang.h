@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <deque>
 #include <unordered_map>
+#include <set>
 #include <filesystem>
 
 #define PLATFORM_WINDOWS

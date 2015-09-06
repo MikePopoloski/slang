@@ -2,6 +2,10 @@
 
 namespace slang {
 
+size_t hash_combine(size_t lhs, size_t rhs) {
+    return lhs ^ (rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2));
+}
+
 /*
 pulled from the xxHash project: https://github.com/Cyan4973/xxHash
 xxHash Library
