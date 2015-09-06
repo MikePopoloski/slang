@@ -76,7 +76,7 @@ TEST_CASE("Read header (include dirs)", "[files]") {
     tracker.addSystemDirectory(tracker.makeAbsolutePath("../../../tests/data/"));
 
     SourceFile* file = tracker.readHeader(FileID(), "include.svh", true);
-    CHECK(file);
+    REQUIRE(file);
 
     tracker.addUserDirectory(tracker.makeAbsolutePath("../../../tests/data/nested"));
     file = tracker.readHeader(file->id, "../infinite_chain.svh", false);

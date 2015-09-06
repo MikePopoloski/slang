@@ -12,14 +12,13 @@ class Preprocessor;
 
 class Lexer {
 public:
-    Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(FileID file, StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
 
     Token* lex();
-
-    void setPreprocessor(Preprocessor* value) { preprocessor = value; }
 
     FileID getFile() const { return file; }
     BumpAllocator& getAllocator() const { return alloc; }
@@ -91,7 +90,7 @@ private:
     VectorBuilder vectorBuilder;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
-    Preprocessor* preprocessor;
+    Preprocessor& preprocessor;
     const char* sourceBuffer;
     const char* sourceEnd;
     const char* marker;

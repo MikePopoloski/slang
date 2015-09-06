@@ -43,11 +43,13 @@ std::string FileTracker::makeAbsolutePath(StringRef path) const {
 }
 
 void FileTracker::addSystemDirectory(StringRef path) {
-    systemDirectories.emplace_back(path.begin(), path.end());
+    path_type p = fs::absolute(path_type(path.begin(), path.end()), workingDir);
+    systemDirectories.push_back(canonicalWorkaround(p));
 }
 
 void FileTracker::addUserDirectory(StringRef path) {
-    userDirectories.emplace_back(path.begin(), path.end());
+    path_type p = fs::absolute(path_type(path.begin(), path.end()), workingDir);
+    userDirectories.push_back(canonicalWorkaround(p));
 }
 
 FileID FileTracker::track(StringRef path) {
@@ -98,16 +100,15 @@ SourceFile* FileTracker::readHeader(FileID currentSource, StringRef path, bool s
 
     // search relative to the current file
     const path_type* dir = fileToDirectory[currentSource.getValue()];
-    if (!dir)
-        return nullptr;
-    
-    SourceFile* result = openCached((*dir) / p);
-    if (result)
-        return result;
+    if (dir) {
+        SourceFile* result = openCached((*dir) / p);
+        if (result)
+            return result;
+    }
 
     // search additional include directories
     for (auto& d : userDirectories) {
-        result = openCached(d / p);
+        SourceFile* result = openCached(d / p);
         if (result)
             return result;
     }
@@ -144,11 +145,14 @@ bool FileTracker::openFile(const path_type& path, Buffer<char>& buffer) {
     if (ec || size > INT32_MAX)
         return false;
 
-    buffer.extend((uint32_t)size);
-    std::ifstream stream(path);
+    // null-terminate the buffer while we're at it
+    buffer.extend((uint32_t)size + 1);
+    std::ifstream stream(path, std::ios::binary);
     stream.read(buffer.begin(), size);
 
-    return true;
+    buffer.begin()[(uint32_t)size] = '\0';
+
+    return stream.good();
 }
 
 void FileTracker::cacheDirectory(path_type path, FileID file) {

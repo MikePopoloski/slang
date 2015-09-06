@@ -3,8 +3,10 @@
 
 using namespace slang;
 
-BumpAllocator pool;
-Diagnostics diagnostics;
+static BumpAllocator alloc;
+static Diagnostics diagnostics;
+static FileTracker fileTracker;
+static Preprocessor preprocessor(fileTracker);
 
 bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;
@@ -12,7 +14,7 @@ bool withinUlp(double a, double b) {
 
 const Token& lexToken(const std::string& text) {
     diagnostics.clear();
-    Lexer lexer(FileID(), text, pool, diagnostics);
+    Lexer lexer(text, preprocessor, alloc, diagnostics);
 
     Token* token = lexer.lex();
     REQUIRE(token != nullptr);

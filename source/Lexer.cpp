@@ -151,14 +151,17 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    triviaBuffer(32),
+Lexer::Lexer(FileID file, StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc, Diagnostics& diagnostics) :
     stringBuffer(1024),
+    triviaBuffer(32),
     alloc(alloc),
     diagnostics(diagnostics),
-    preprocessor(nullptr),
+    preprocessor(preprocessor),
     sourceBuffer(source.begin()),
-    sourceEnd(source.end()) {
+    sourceEnd(source.end()),
+    marker(nullptr),
+    file(file),
+    mode(LexingMode::Normal) {
 
     // string needs to be non-null and null terminated
     ASSERT(source);
@@ -181,6 +184,10 @@ Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& d
             }
         }
     }
+}
+
+Lexer::Lexer(StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc, Diagnostics& diagnostics) :
+    Lexer(preprocessor.getFileTracker().track("unnamed_buffer"), source, preprocessor, alloc, diagnostics) {
 }
 
 Token* Lexer::lex() {
@@ -1030,6 +1037,7 @@ bool Lexer::lexTrivia() {
                 }
                 break;
             case '`':
+                advance();
                 lexDirectiveTrivia();
                 break;
             case '\r':
@@ -1187,7 +1195,7 @@ void Lexer::lexIncludeDirective() {
     }
 
     // inform the preprocessor about this include
-    preprocessor->include(StringRef(startOfFileName, (uint32_t)(sourceBuffer - startOfFileName)), systemPath);
+    preprocessor.include(StringRef(startOfFileName, (uint32_t)(sourceBuffer - startOfFileName)), systemPath);
 }
 
 int Lexer::findNextNonWhitespace() {

@@ -2,27 +2,31 @@
 
 namespace slang {
 
-Preprocessor::Preprocessor(Lexer& lexer, FileTracker& fileTracker) :
-    mainLexer(lexer), fileTracker(fileTracker) {
+Preprocessor::Preprocessor(FileTracker& fileTracker) :
+    fileTracker(fileTracker) {
+}
 
-    mainLexer.setPreprocessor(this);
+void Preprocessor::enterSourceFile(Lexer* lexer) {
+    mainLexer = lexer;
 }
 
 void Preprocessor::include(StringRef path, bool systemPath) {
+    ASSERT(mainLexer);
+
     SourceFile* sourceFile = fileTracker.readHeader(getCurrentFile(), path, systemPath);
     if (!sourceFile) {
-        // error
+        return;
     }
 
     // create a new lexer for this include file and push it onto the stack
     lexerStack.emplace_back(
         sourceFile->id,
         sourceFile->buffer,
-        mainLexer.getAllocator(),
-        mainLexer.getDiagnostics()
+        *this,
+        mainLexer->getAllocator(),
+        mainLexer->getDiagnostics()
     );
     currentLexer = &lexerStack.back();
-    currentLexer->setPreprocessor(this);
 }
 
 }
