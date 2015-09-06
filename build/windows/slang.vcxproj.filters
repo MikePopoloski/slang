@@ -58,12 +58,6 @@
     <ClInclude Include="..\..\include\FileTracker.h">
       <Filter>files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\HeaderSearch.h">
-      <Filter>files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\FileSystem.h">
-      <Filter>files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\Handle.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -97,12 +91,6 @@
       <Filter>lexing</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\FileTracker.cpp">
-      <Filter>files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\FileSystem.cpp">
-      <Filter>files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\HeaderSearch.cpp">
       <Filter>files</Filter>
     </ClCompile>
   </ItemGroup>

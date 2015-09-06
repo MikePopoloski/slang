@@ -4,7 +4,7 @@ namespace slang {
 
 class Preprocessor {
 public:
-    Preprocessor(Lexer& lexer, HeaderSearch& headerSearch);
+    Preprocessor(Lexer& lexer, FileTracker& fileTracker);
 
     void resetAll();
     void include(StringRef path, bool systemPath);
@@ -26,7 +26,7 @@ private:
     std::deque<Lexer> lexerStack;
     Lexer& mainLexer;
     Lexer* currentLexer;
-    HeaderSearch& headerSearch;
+    FileTracker& fileTracker;
 };
 
 }

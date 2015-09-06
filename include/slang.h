@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <deque>
 #include <unordered_map>
+#include <filesystem>
 
 #define PLATFORM_WINDOWS
 #define PLATFORM_X64
@@ -19,9 +20,7 @@
 #include "ArrayRef.h"
 #include "Buffer.h"
 #include "StringRef.h"
-#include "FileSystem.h"
 #include "FileTracker.h"
-#include "HeaderSearch.h"
 #include "BitVector.h"
 #include "Diagnostics.h"
 #include "Trivia.h"
