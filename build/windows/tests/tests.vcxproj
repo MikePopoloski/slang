@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\tests\FileTests.cpp" />
     <ClCompile Include="..\..\..\tests\LexerTests.cpp" />
     <ClCompile Include="..\..\..\tests\main.cpp" />
   </ItemGroup>

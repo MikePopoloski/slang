@@ -16,8 +16,6 @@ struct SourceFile {
 
 class FileTracker {
 public:
-    IFileSystem& fileSystem;
-
     FileTracker(IFileSystem& fileSystem);
 
     // tracks a file with the given name, without doing any work to actually open it
@@ -30,10 +28,13 @@ public:
     // get the directory ID for the given file ID
     DirectoryID getDirectory(FileID file) const;
 
+    IFileSystem& getFileSystem() const { return fileSystem; }
+
 private:
     BumpAllocator alloc;
     std::unordered_map<StringRef, FileID> pathMap;
     std::deque<DirectoryID> fileToDirectoryIndex;
+    IFileSystem& fileSystem;
     uint32_t nextFileID = 1;
 };
 

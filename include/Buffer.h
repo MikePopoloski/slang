@@ -102,16 +102,9 @@ public:
         new (&data[len++]) T(std::forward<Args>(args)...);
     }
 
-    void ensureSize(uint32_t size) {
-        if (size > capacity) {
-            capacity = size;
-            resize();
-        }
-    }
-
-    void grow(uint32_t amount) {
-        capacity += amount;
-        resize();
+    void extend(uint32_t size) {
+        ensureSize(len + size);
+        len += size;
     }
 
 private:
@@ -130,6 +123,13 @@ private:
 
         cleanup();
         data = newData;
+    }
+
+    void ensureSize(uint32_t size) {
+        if (size > capacity) {
+            capacity = size;
+            resize();
+        }
     }
 
     void cleanup() {

@@ -25,7 +25,7 @@ SourceFile FileTracker::open(StringRef fileName) {
     result.file = track(fileName);
     result.directory = getDirectory(result.file);
 
-    fileSystem.readFile(fileName, result.buffer);
+    fileSystem.readFileAbsolute(fileName, result.buffer);
     return result;
 }
 

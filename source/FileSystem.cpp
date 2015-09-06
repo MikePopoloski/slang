@@ -13,9 +13,14 @@ public:
         directories.push_back(DirectoryEntry());
     }
 
-    bool readFile(StringRef path, Buffer<char>& buffer) override final {
-        if (path.empty() || path.length() >= MAX_PATH)
-            return false;
+    DirectoryID workingDir() override final {
+        return DirectoryID();
+    }
+
+    bool readFileAbsolute(StringRef path, Buffer<char>& buffer) override final {
+        ASSERT(path);
+        ASSERT(path.length() < MAX_PATH);
+        ASSERT(isPathAbsolute(path));
 
         char pathBuffer[MAX_PATH];
         memcpy(pathBuffer, path.begin(), path.length());
@@ -24,9 +29,10 @@ public:
         return readFileInternal(pathBuffer, buffer);
     }
 
-    bool readFile(DirectoryID directory, StringRef fileName, Buffer<char>& buffer) override final {
-        if (!directory.valid() || fileName.empty())
-            return false;
+    bool readFileRelative(DirectoryID directory, StringRef fileName, Buffer<char>& buffer) override final {
+        ASSERT(directory);
+        ASSERT(fileName);
+        ASSERT(!isPathAbsolute(fileName));
 
         DirectoryEntry& entry = directories[getValue(directory)];
 
@@ -42,12 +48,14 @@ public:
     }
 
     bool isPathAbsolute(StringRef path) override final {
-        ASSERT(!path.empty());
+        ASSERT(path);
 
+        // check for a UNC path
         const char* str = path.begin();
-        char first = *str++;
-        if (first == '/' || first == '\\')
-            return false;
+        if (path.length() >= 2) {
+            if (str[0] == '\\' && str[1] == '\\')
+                return true;
+        }
 
         // keep walking the string until we find:
         // 1) a ':', which is a drive separator
@@ -104,7 +112,7 @@ private:
         }
 
         uint32_t size = (uint32_t)largeInt.QuadPart;
-        buffer.ensureSize(size);
+        buffer.extend(size);
 
         DWORD read;
         BOOL result = ReadFile(handle, buffer.begin(), size, &read, NULL);

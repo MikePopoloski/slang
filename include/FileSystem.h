@@ -12,12 +12,15 @@ class IFileSystem {
 public:
     virtual ~IFileSystem() {}
 
+    // gets the working directory
+    virtual DirectoryID workingDir() = 0;
+
     // open the given file and read its entire contents into buffer
     // returns false if file not found
-    virtual bool readFile(StringRef path, Buffer<char>& buffer) = 0;
+    virtual bool readFileAbsolute(StringRef path, Buffer<char>& buffer) = 0;
 
     // reads a file relative to the given directory
-    virtual bool readFile(DirectoryID directory, StringRef fileName, Buffer<char>& buffer) = 0;
+    virtual bool readFileRelative(DirectoryID directory, StringRef fileName, Buffer<char>& buffer) = 0;
 
     // check whether the path is absolute or relative
     virtual bool isPathAbsolute(StringRef path) = 0;
