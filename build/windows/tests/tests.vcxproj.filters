@@ -2,6 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\..\tests\main.cpp" />
-    <ClCompile Include="..\..\..\tests\lexer_tests.cpp" />
+    <ClCompile Include="..\..\..\tests\LexerTests.cpp" />
   </ItemGroup>
 </Project>

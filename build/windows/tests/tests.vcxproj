@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\tests\lexer_tests.cpp" />
+    <ClCompile Include="..\..\..\tests\LexerTests.cpp" />
     <ClCompile Include="..\..\..\tests\main.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
