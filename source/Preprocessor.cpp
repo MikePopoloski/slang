@@ -1,4 +1,20 @@
-#include "slang.h"
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <filesystem>
+#include <unordered_map>
+#include <deque>
+#include <set>
+
+#include "BumpAllocator.h"
+#include "Buffer.h"
+#include "StringRef.h"
+#include "Diagnostics.h"
+#include "FileTracker.h"
+#include "Token.h"
+#include "Lexer.h"
+#include "TokenConsumer.h"
+#include "Preprocessor.h"
 
 namespace slang {
 

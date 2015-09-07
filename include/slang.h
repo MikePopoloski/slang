@@ -1,20 +1,13 @@
 #pragma once
 
-#pragma warning(disable:4127)   // conditional expression is constant
-
-#include <string>
 #include <cstdint>
 #include <memory>
-#include <algorithm>
+#include <string>
 #include <deque>
 #include <unordered_map>
-#include <set>
 #include <filesystem>
 
-#define PLATFORM_WINDOWS
-#define PLATFORM_X64
-#define ASSERT(x) do { if (!(x)) __debugbreak(); } while(0) 
-
+#include "Debug.h"
 #include "Hash.h"
 #include "Handle.h"
 #include "BumpAllocator.h"

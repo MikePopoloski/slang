@@ -1,5 +1,12 @@
-#include "slang.h"
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <algorithm>
+
+#include "BumpAllocator.h"
 #include "StringTable.h"
+#include "Token.h"
+#include "Trivia.h"
 
 namespace slang {
 

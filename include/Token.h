@@ -1,5 +1,10 @@
 #pragma once
 
+#include "ArrayRef.h"
+#include "Buffer.h"
+#include "BitVector.h"
+#include "Trivia.h"
+
 namespace slang {
 
 enum class TokenKind : uint16_t;

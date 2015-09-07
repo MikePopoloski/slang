@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Debug.h"
+#include "Hash.h"
+
 // Immutable wrapper around a {pointer, length} pair to a string.
 // This class does not own the string memory; it's up to the user
 // to make sure it remains valid.
@@ -24,12 +27,6 @@ public:
 
     StringRef(const std::string& str) :
         ptr(str.c_str()), count((uint32_t)str.length() + 1) {
-
-        checkNullTerminator();
-    }
-
-    StringRef(const Buffer<char>& buffer) :
-        ptr(buffer.cbegin()), count(buffer.count()) {
 
         checkNullTerminator();
     }

@@ -1,4 +1,8 @@
-#include "slang.h"
+#include <cstdint>
+#include <memory>
+
+#include "Buffer.h"
+#include "Diagnostics.h"
 
 namespace slang {
 

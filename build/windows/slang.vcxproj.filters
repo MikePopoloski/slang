@@ -73,6 +73,9 @@
     <ClInclude Include="..\..\include\TokenConsumer.h">
       <Filter>lexing</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\Debug.h">
+      <Filter>util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">

@@ -1,5 +1,20 @@
-#include "slang.h"
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <filesystem>
+#include <unordered_map>
+#include <deque>
+#include <set>
+
+#include "BumpAllocator.h"
+#include "Buffer.h"
+#include "StringRef.h"
+#include "Diagnostics.h"
+#include "FileTracker.h"
+#include "Token.h"
+#include "Lexer.h"
 #include "CharInfo.h"
+#include "SyntaxFacts.h"
 
 namespace {
 
@@ -499,7 +514,7 @@ StringLiteralInfo* Lexer::lexStringLiteral() {
         }
     }
 
-    StringRef niceText = StringRef(stringBuffer).intern(alloc);
+    StringRef niceText = StringRef(stringBuffer.begin(), stringBuffer.count()).intern(alloc);
     return alloc.emplace<StringLiteralInfo>(lexeme(), niceText);
 }
 

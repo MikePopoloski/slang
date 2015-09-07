@@ -1,4 +1,7 @@
-#include "slang.h"
+#include <cstdint>
+#include <cstdlib>
+
+#include "Hash.h"
 
 namespace slang {
 
