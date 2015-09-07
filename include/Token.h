@@ -477,6 +477,7 @@ enum class TokenKind : uint16_t {
     // directives (these get consumed by the preprocessor and don't make it downstream to the parser)
     Directive,
     EndOfDirective,
+    IncludeFileName,
     MacroUsage,
     MacroQuote,
     MacroEscapedQuote,

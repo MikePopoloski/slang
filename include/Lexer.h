@@ -2,12 +2,6 @@
 
 namespace slang {
 
-// TODO:
-// - vector values
-// - token locations
-// - diagnostic locations
-// - start of line / flags
-
 class Lexer {
 public:
     Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
@@ -31,6 +25,7 @@ private:
     void scanIdentifier();
 
     StringLiteralInfo* lexStringLiteral();
+    StringLiteralInfo* lexIncludeFileName(char delim);
     NumericLiteralInfo* lexRealLiteral(uint64_t value, int decPoint, int digits, bool exponent);
     NumericLiteralInfo* lexVectorLiteral(uint64_t size);
     NumericLiteralInfo* lexUnsizedNumericLiteral();

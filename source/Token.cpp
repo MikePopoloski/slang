@@ -29,6 +29,7 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
         case TokenKind::SystemIdentifier:
             buffer.appendRange(identifier->rawText);
             break;
+        case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
             buffer.appendRange(string->rawText);
             break;
@@ -63,6 +64,7 @@ StringRef Token::valueText() const {
             break;
         case TokenKind::SystemIdentifier:
             return identifier->rawText;
+        case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
             return string->niceText;
         case TokenKind::Directive:
@@ -482,6 +484,7 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         case TokenKind::RootSystemName: os << "RootSystemName"; break;
         case TokenKind::Directive: os << "Directive"; break;
         case TokenKind::EndOfDirective: os << "EndOfDirective"; break;
+        case TokenKind::IncludeFileName: os << "IncludeFileName"; break;
         case TokenKind::MacroUsage: os << "MacroUsage"; break;
         case TokenKind::MacroQuote: os << "MacroQuote"; break;
         case TokenKind::MacroEscapedQuote: os << "MacroEscapedQuote"; break;

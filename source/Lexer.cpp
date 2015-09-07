@@ -166,6 +166,12 @@ TokenKind Lexer::lexToken(void** extraData) {
             }
             return TokenKind::Exclamation;
         case '"':
+            // special case: for an `include directive, this is a filename
+            if (mode == LexingMode::Include) {
+                *extraData = lexIncludeFileName('"');
+                return TokenKind::IncludeFileName;
+            }
+
             *extraData = lexStringLiteral();
             return TokenKind::StringLiteral;
         case '#':
@@ -276,6 +282,12 @@ TokenKind Lexer::lexToken(void** extraData) {
             return TokenKind::Colon;
         case ';': return TokenKind::Semicolon;
         case '<':
+            // special case: for an `include directive, this starts a system-path filename
+            if (mode == LexingMode::Include) {
+                *extraData = lexIncludeFileName('<');
+                return TokenKind::IncludeFileName;
+            }
+
             switch (peek()) {
                 case '=': advance(); return TokenKind::LessThanEquals;
                 case '-':
@@ -955,39 +967,27 @@ bool Lexer::scanBlockComment() {
     return eod;
 }
 
-//void Lexer::lexIncludeFileName() {
-//    bool systemPath = false;
-//    char delim;
-//
-//    // next non-whitespace character needs to be " or <
-//    int lookahead = findNextNonWhitespace();
-//    switch (delim = peek(lookahead)) {
-//        case '"': break;
-//        case '<': systemPath = true;
-//        default:
-//            addError(DiagCode::ExpectedIncludeFileName);
-//            return;
-//    }
-//
-//    advance(lookahead + 1);
-//    const char* startOfFileName = sourceBuffer;
-//
-//    while (true) {
-//        char c = peek();
-//        if (c == delim)
-//            break;
-//
-//        if (c == '\0' || isNewline(c)) {
-//            addError(DiagCode::ExpectedEndOfIncludeFileName);
-//            return;
-//        }
-//
-//        advance();
-//    }
-//
-//    // inform the preprocessor about this include
-//   // preprocessor.include(StringRef(startOfFileName, (uint32_t)(sourceBuffer - startOfFileName)), systemPath);
-//}
+StringLiteralInfo* Lexer::lexIncludeFileName(char delim) {
+    // switch out of specialized Include lexing mode
+    mode = LexingMode::Directive;
+
+    char c;
+    do {
+        c = peek();
+        if (c == '\0' || isNewline(c)) {
+            addError(DiagCode::ExpectedEndOfIncludeFileName);
+            break;
+        }
+        advance();
+    } while (c != delim);
+
+    uint32_t len = lexemeLength() - 1;
+    if (c == delim)
+        len--;
+
+    StringRef rawText = lexeme();
+    return alloc.emplace<StringLiteralInfo>(rawText, rawText.subString(1, len));
+}
 
 int Lexer::findNextNonWhitespace() {
     int lookahead = 0;
