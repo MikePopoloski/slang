@@ -17,13 +17,14 @@ public:
 
 private:
     Token* handleInclude();
-    Token* handleIdentifier();
+    Token* handleIdentifier(Token* token);
 
     FileTracker& fileTracker;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
 
     std::deque<Lexer> lexerStack;
+    const StringTable<TokenKind>* keywordTable;
 };
 
 }

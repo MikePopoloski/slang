@@ -3,6 +3,8 @@
 
 using namespace slang;
 
+namespace {
+
 static const char RelativeTestPath[] = "../../../tests/data/include.svh";
 
 TEST_CASE("File tracking", "[files]") {
@@ -81,4 +83,6 @@ TEST_CASE("Read header (include dirs)", "[files]") {
     tracker.addUserDirectory(tracker.makeAbsolutePath("../../../tests/data/nested"));
     file = tracker.readHeader(file->id, "../infinite_chain.svh", false);
     CHECK(file);
+}
+
 }

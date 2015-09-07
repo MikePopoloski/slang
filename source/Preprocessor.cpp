@@ -14,12 +14,16 @@
 #include "Token.h"
 #include "Lexer.h"
 #include "TokenConsumer.h"
+#include "StringTable.h"
+#include "SyntaxFacts.h"
 #include "Preprocessor.h"
 
 namespace slang {
 
 Preprocessor::Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics) :
     fileTracker(fileTracker), alloc(alloc), diagnostics(diagnostics) {
+
+    keywordTable = getKeywordTable();
 }
 
 void Preprocessor::enterFile(StringRef source) {
@@ -39,7 +43,7 @@ Token* Preprocessor::lex() {
         Token* token = consume();
         switch (token->kind) {
             case TokenKind::Identifier:
-                return handleIdentifier();
+                return handleIdentifier(token);
             case TokenKind::EndOfFile:
                 lexerStack.pop_back();
                 if (lexerStack.empty())
@@ -57,6 +61,17 @@ Token* Preprocessor::lex() {
                 return token;
         }
     }
+}
+
+Token* Preprocessor::handleIdentifier(Token* token) {
+    // this identifier might actually be a keyword token
+    if (token->identifierType() != IdentifierType::Escaped) {
+        TokenKind keywordKind;
+        if (keywordTable->lookup(token->valueText(), keywordKind))
+            return alloc.emplace<Token>(keywordKind, nullptr, token->trivia);
+    }
+
+    return token;
 }
 
 Token* Preprocessor::handleInclude() {

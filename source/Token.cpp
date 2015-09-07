@@ -5,6 +5,7 @@
 #include "BumpAllocator.h"
 #include "StringRef.h"
 #include "Token.h"
+#include "StringTable.h"
 #include "SyntaxFacts.h"
 
 namespace slang {

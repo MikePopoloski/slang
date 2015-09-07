@@ -3,9 +3,11 @@
 
 using namespace slang;
 
-static BumpAllocator alloc;
-static Diagnostics diagnostics;
-static FileTracker fileTracker;
+namespace {
+
+BumpAllocator alloc;
+Diagnostics diagnostics;
+FileTracker fileTracker;
 
 bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;
@@ -92,7 +94,7 @@ TEST_CASE("Block Comment (one line)", "[lexer]") {
 
 TEST_CASE("Block Comment (multiple lines)", "[lexer]") {
     auto text =
-R"(/*
+        R"(/*
 comment on
 multiple lines
 */)";
@@ -915,8 +917,10 @@ TEST_CASE("All Punctuation", "[lexer]") {
     testPunctuation(TokenKind::And);
     testPunctuation(TokenKind::DoubleAnd);
     testPunctuation(TokenKind::TripleAnd);
-    
+
     testPunctuation(TokenKind::MacroQuote);
     testPunctuation(TokenKind::MacroEscapedQuote);
     testPunctuation(TokenKind::MacroPaste);
+}
+
 }

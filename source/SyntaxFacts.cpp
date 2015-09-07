@@ -7,6 +7,7 @@
 #include "StringTable.h"
 #include "Token.h"
 #include "Trivia.h"
+#include "StringTable.h"
 
 namespace slang {
 
@@ -503,7 +504,7 @@ StringRef getTokenKindText(TokenKind kind) {
         case TokenKind::NextTimeKeyword: return "nexttime";
         case TokenKind::NmosKeyword: return "nmos";
         case TokenKind::NorKeyword: return "nor";
-        case TokenKind::NoShowCancelledKeyword: return "noshowacncelled";
+        case TokenKind::NoShowCancelledKeyword: return "noshowcancelled";
         case TokenKind::NotKeyword: return "not";
         case TokenKind::NotIf0Keyword: return "notif0";
         case TokenKind::NotIf1Keyword: return "notif1";
@@ -536,7 +537,7 @@ StringRef getTokenKindText(TokenKind kind) {
         case TokenKind::RealTimeKeyword: return "realtime";
         case TokenKind::RefKeyword: return "ref";
         case TokenKind::RegKeyword: return "reg";
-        case TokenKind::RejectOnKeyword: return "reject";
+        case TokenKind::RejectOnKeyword: return "reject_on";
         case TokenKind::ReleaseKeyword: return "release";
         case TokenKind::RepeatKeyword: return "repeat";
         case TokenKind::RestrictKeyword: return "restrict";
@@ -664,6 +665,10 @@ TriviaKind getDirectiveKind(StringRef directive) {
     if (directiveTable.lookup(directive, kind))
         return kind;
     return TriviaKind::MacroUsage;
+}
+
+const StringTable<TokenKind>* getKeywordTable() {
+    return &allKeywords;
 }
 
 }

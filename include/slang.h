@@ -14,6 +14,7 @@
 #include "ArrayRef.h"
 #include "Buffer.h"
 #include "StringRef.h"
+#include "StringTable.h"
 #include "FileTracker.h"
 #include "BitVector.h"
 #include "Diagnostics.h"
