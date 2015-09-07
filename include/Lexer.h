@@ -30,14 +30,13 @@ private:
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
     void scanIdentifier();
 
-    StringLiteralInfo* scanStringLiteral();
-    NumericLiteralInfo* scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent);
-    NumericLiteralInfo* scanVectorLiteral(uint64_t size);
-    NumericLiteralInfo* scanUnsizedNumericLiteral();
-    NumericLiteralInfo* scanDecimalVector();
-    NumericLiteralInfo* scanOctalVector();
-    NumericLiteralInfo* scanHexVector();
-    NumericLiteralInfo* scanBinaryVector();
+    StringLiteralInfo* lexStringLiteral();
+    NumericLiteralInfo* lexRealLiteral(uint64_t value, int decPoint, int digits, bool exponent);
+    NumericLiteralInfo* lexVectorLiteral(uint64_t size);
+    NumericLiteralInfo* lexUnsizedNumericLiteral();
+
+    template<bool (*IsDigitFunc)(char), uint32_t (*ValueFunc)(char)>
+    NumericLiteralInfo* lexVectorDigits();
 
     bool lexTrivia();
     bool scanBlockComment();

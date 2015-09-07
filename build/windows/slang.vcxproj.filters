@@ -67,6 +67,9 @@
     <ClInclude Include="..\..\source\StringTable.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\source\CharInfo.h">
+      <Filter>lexing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -80,9 +83,6 @@
     </ClCompile>
     <ClCompile Include="..\..\source\Diagnostics.cpp">
       <Filter>diagnostics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\BitVector.cpp">
-      <Filter>numeric</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\Hash.cpp">
       <Filter>util</Filter>

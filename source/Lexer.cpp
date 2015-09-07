@@ -1,4 +1,5 @@
 #include "slang.h"
+#include "CharInfo.h"
 
 namespace {
 
@@ -16,103 +17,6 @@ const double powersOf10[] = {
     1.0e128,
     1.0e256
 };
-
-bool isASCII(char c) {
-    return static_cast<unsigned char>(c) < 128;
-}
-
-bool isPrintable(char c) {
-    return c >= 33 && c <= 126;
-}
-
-bool isWhitespace(char c) {
-    switch (c) {
-        case ' ':
-        case '\t':
-        case '\v':
-        case '\f':
-        case '\r':
-        case '\n':
-            return true;
-    }
-    return false;
-}
-
-bool isHorizontalWhitespace(char c) {
-    switch (c) {
-        case ' ':
-        case '\t':
-        case '\v':
-        case '\f':
-            return true;
-    }
-    return false;
-}
-
-bool isNewline(char c) {
-    return c == '\r' || c == '\n';
-}
-
-bool isDecimalDigit(char c) {
-    return c >= '0' && c <= '9';
-}
-
-bool isOctalDigit(char c) {
-    return c >= '0' && c <= '7';
-}
-
-bool isHexDigit(char c) {
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-}
-
-bool isBinaryDigit(char c) {
-    return c == '0' || c == '1';
-}
-
-bool isAlphaNumeric(char c) {
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-bool isLogicDigit(char c) {
-    switch (c) {
-        case 'z':
-        case 'Z':
-        case '?':
-        case 'x':
-        case 'X':
-            return true;
-        default:
-            return false;
-    }
-}
-
-uint32_t getDigitValue(char c) {
-    return c - '0';
-}
-
-uint32_t getHexDigitValue(char c) {
-    if (c <= '9')
-        return c - '0';
-    if (c <= 'F')
-        return 10 + c - 'A';
-    return 10 + c - 'a';
-}
-
-// returns the number of bytes to skip after reading a UTF-8 char
-int utf8SeqBytes(char c) {
-    unsigned char uc = static_cast<unsigned char>(c);
-    if ((uc & (3 << 6)) == 0)
-        return 0;
-    if ((uc & (1 << 5)) == 0)
-        return 1;
-    if ((uc & (1 << 4)) == 0)
-        return 2;
-    if ((uc & (1 << 3)) == 0)
-        return 3;
-
-    // 5 and 6 byte sequences are disallowed by the UTF-8 spec
-    return 0;
-}
 
 template<typename T>
 slang::ArrayRef<T> copyArray(slang::BumpAllocator& alloc, const slang::Buffer<T>& buffer) {
@@ -246,7 +150,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             }
             return TokenKind::Exclamation;
         case '"':
-            *extraData = scanStringLiteral();
+            *extraData = lexStringLiteral();
             return TokenKind::StringLiteral;
         case '#':
             switch (peek()) {
@@ -288,7 +192,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             if (consume('{'))
                 return TokenKind::ApostropheOpenBrace;
 
-            *extraData = scanUnsizedNumericLiteral();
+            *extraData = lexUnsizedNumericLiteral();
             return TokenKind::IntegerLiteral;
         case '(':
             if (consume('*'))
@@ -511,7 +415,7 @@ void Lexer::scanIdentifier() {
     }
 }
 
-StringLiteralInfo* Lexer::scanStringLiteral() {
+StringLiteralInfo* Lexer::lexStringLiteral() {
     stringBuffer.clear();
 
     while (true) {
@@ -678,14 +582,14 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
     int lookahead = findNextNonWhitespace();
     if (lookahead > 0 && peek(lookahead) == '\'') {
         advance(lookahead + 1);
-        *extraData = scanVectorLiteral(unsignedVal);
+        *extraData = lexVectorLiteral(unsignedVal);
         return TokenKind::IntegerLiteral;
     }
 
     switch (peek()) {
         case '\'':
             advance();
-            *extraData = scanVectorLiteral(unsignedVal);
+            *extraData = lexVectorLiteral(unsignedVal);
             return TokenKind::IntegerLiteral;
         case '.': {
             // fractional digits
@@ -696,7 +600,7 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
                 addError(DiagCode::MissingFractionalDigits);
 
             c = scanUnsignedNumber(peek(), unsignedVal, digits);
-            *extraData = scanRealLiteral(
+            *extraData = lexRealLiteral(
                 unsignedVal,
                 decPoint,
                 digits,
@@ -706,7 +610,7 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
         }
         case 'e':
         case 'E':
-            *extraData = scanRealLiteral(
+            *extraData = lexRealLiteral(
                 unsignedVal,
                 digits,     // decimal point is after all digits
                 digits,
@@ -742,7 +646,7 @@ char Lexer::scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits) {
     return c;
 }
 
-NumericLiteralInfo* Lexer::scanRealLiteral(uint64_t value, int decPoint, int digits, bool exponent) {
+NumericLiteralInfo* Lexer::lexRealLiteral(uint64_t value, int decPoint, int digits, bool exponent) {
     bool neg = false;
     uint64_t expVal = 0;
 
@@ -784,7 +688,7 @@ NumericLiteralInfo* Lexer::scanRealLiteral(uint64_t value, int decPoint, int dig
     return alloc.emplace<NumericLiteralInfo>(lexeme(), result);
 }
 
-NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
+NumericLiteralInfo* Lexer::lexVectorLiteral(uint64_t size64) {
     // error checking on the size, plus coerce to 32-bit
     uint32_t size32 = 0;
     if (size64 == 0)
@@ -813,19 +717,19 @@ NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
         case 'd':
         case 'D':
             advance();
-            return scanDecimalVector();
+            return lexVectorDigits<isDecimalDigit, getDigitValue>();
         case 'o':
         case 'O':
             advance();
-            return scanOctalVector();
+            return lexVectorDigits<isOctalDigit, getDigitValue>();
         case 'h':
         case 'H':
             advance();
-            return scanHexVector();
+            return lexVectorDigits<isHexDigit, getHexDigitValue>();
         case 'b':
         case 'B':
             advance();
-            return scanBinaryVector();
+            return lexVectorDigits<isBinaryDigit, getDigitValue>();
         default:
             // error case
             addError(DiagCode::MissingVectorBase);
@@ -833,26 +737,26 @@ NumericLiteralInfo* Lexer::scanVectorLiteral(uint64_t size64) {
     }
 }
 
-NumericLiteralInfo* Lexer::scanUnsizedNumericLiteral() {
+NumericLiteralInfo* Lexer::lexUnsizedNumericLiteral() {
     vectorBuilder.startUnsized();
     char c = peek();
     switch (c) {
         case 'd':
         case 'D':
             advance();
-            return scanDecimalVector();
+            return lexVectorDigits<isDecimalDigit, getDigitValue>();
         case 'o':
         case 'O':
             advance();
-            return scanOctalVector();
+            return lexVectorDigits<isOctalDigit, getDigitValue>();
         case 'h':
         case 'H':
             advance();
-            return scanHexVector();
+            return lexVectorDigits<isHexDigit, getHexDigitValue>();
         case 'b':
         case 'B':
             advance();
-            return scanBinaryVector();
+            return lexVectorDigits<isBinaryDigit, getDigitValue>();
         case '0':
         case '1':
             advance();
@@ -872,17 +776,18 @@ NumericLiteralInfo* Lexer::scanUnsizedNumericLiteral() {
     }
 }
 
-NumericLiteralInfo* Lexer::scanDecimalVector() {
+template<bool(*IsDigitFunc)(char), uint32_t(*ValueFunc)(char)>
+NumericLiteralInfo* Lexer::lexVectorDigits() {
     // skip leading whitespace
     int lookahead = findNextNonWhitespace();
     char c = peek(lookahead);
-    if (!isDecimalDigit(c) && !isLogicDigit(c)) {
+    if (!IsDigitFunc(c) && !isLogicDigit(c)) {
         addError(DiagCode::MissingVectorDigits);
         return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
     }
 
     advance(lookahead);
-    
+
     while (true) {
         c = peek();
         switch (c) {
@@ -898,113 +803,8 @@ NumericLiteralInfo* Lexer::scanDecimalVector() {
                 vectorBuilder.addDigit(logic_t::x);
                 break;
             default:
-                if (isDecimalDigit(c))
-                    vectorBuilder.addDigit((char)getDigitValue(c));
-                else
-                    return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
-        }
-        advance();
-    }
-}
-
-NumericLiteralInfo* Lexer::scanOctalVector() {
-    // skip leading whitespace
-    int lookahead = findNextNonWhitespace();
-    char c = peek(lookahead);
-    if (!isOctalDigit(c) && !isLogicDigit(c)) {
-        addError(DiagCode::MissingVectorDigits);
-        return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
-    }
-
-    advance(lookahead);
-    
-    while (true) {
-        c = peek();
-        switch (c) {
-            case '_':
-                break;
-            case 'z':
-            case 'Z':
-            case '?':
-                vectorBuilder.addDigit(logic_t::z);
-                break;
-            case 'x':
-            case 'X':
-                vectorBuilder.addDigit(logic_t::x);
-                break;
-            default:
-                if (isOctalDigit(c))
-                    vectorBuilder.addDigit((char)getDigitValue(c));
-                else
-                    return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
-        }
-        advance();
-    }
-}
-
-NumericLiteralInfo* Lexer::scanHexVector() {
-    // skip leading whitespace
-    int lookahead = findNextNonWhitespace();
-    char c = peek(lookahead);
-    if (!isHexDigit(c) && !isLogicDigit(c)) {
-        addError(DiagCode::MissingVectorDigits);
-        return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
-    }
-
-    advance(lookahead);
-    
-    while (true) {
-        c = peek();
-        switch (c) {
-            case '_':
-                break;
-            case 'z':
-            case 'Z':
-            case '?':
-                vectorBuilder.addDigit(logic_t::z);
-                break;
-            case 'x':
-            case 'X':
-                vectorBuilder.addDigit(logic_t::x);
-                break;
-            default:
-                if (isHexDigit(c))
-                    vectorBuilder.addDigit((char)getHexDigitValue(c));
-                else
-                    return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
-        }
-        advance();
-    }
-}
-
-NumericLiteralInfo* Lexer::scanBinaryVector() {
-    // skip leading whitespace
-    int lookahead = findNextNonWhitespace();
-    char c = peek(lookahead);
-    if (!isBinaryDigit(c) && !isLogicDigit(c)) {
-        addError(DiagCode::MissingVectorDigits);
-        return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
-    }
-
-    advance(lookahead);
-    
-    while (true) {
-        c = peek();
-        switch (c) {
-            case '_':
-                break;
-            case 'z':
-            case 'Z':
-            case '?':
-                vectorBuilder.addDigit(logic_t::z);
-                break;
-            case 'x':
-            case 'X':
-                vectorBuilder.addDigit(logic_t::x);
-                break;
-            default:
-                if (isBinaryDigit(c))
-                    vectorBuilder.addDigit((char)getDigitValue(c));
+                if (IsDigitFunc(c))
+                    vectorBuilder.addDigit((char)ValueFunc(c));
                 else
                     return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
         }

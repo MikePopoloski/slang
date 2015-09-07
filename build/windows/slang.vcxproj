@@ -34,10 +34,10 @@
     <ClInclude Include="..\..\include\SyntaxFacts.h" />
     <ClInclude Include="..\..\include\Token.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
+    <ClInclude Include="..\..\source\CharInfo.h" />
     <ClInclude Include="..\..\source\StringTable.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\source\BitVector.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\FileTracker.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
