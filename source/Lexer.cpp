@@ -156,12 +156,11 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(FileID file, StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc, Diagnostics& diagnostics) :
+Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics) :
     stringBuffer(1024),
     triviaBuffer(32),
     alloc(alloc),
     diagnostics(diagnostics),
-    preprocessor(preprocessor),
     sourceBuffer(source.begin()),
     sourceEnd(source.end()),
     marker(nullptr),
@@ -191,22 +190,14 @@ Lexer::Lexer(FileID file, StringRef source, Preprocessor& preprocessor, BumpAllo
     }
 }
 
-Lexer::Lexer(StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    Lexer(preprocessor.getFileTracker().track("unnamed_buffer"), source, preprocessor, alloc, diagnostics) {
-}
-
 Token* Lexer::lex() {
-    // if the preprocessor has more tokens, drain those before moving on to our own file
-    if (preprocessor.hasTokens())
-        return preprocessor.next();
-
-    // don't do anything if we've lexed the entire buffer already
-    if (reallyAtEnd())
-        return nullptr;
+    ASSERT(!reallyAtEnd());
 
     // lex leading trivia
     triviaBuffer.clear();
-    if (lexTrivia()) {
+    lexTrivia();
+
+    /*if (lexTrivia()) {
         // we found a directive that requires some kind of expansion (`include, macro usage)
         // let the preprocessor figure out the next token and attach all of our trivia to it
         Token* token = preprocessor.next();
@@ -222,7 +213,7 @@ Token* Lexer::lex() {
             // build a merged token with the correct trivia
             return alloc.emplace<Token>(token->kind, token->getDataPtr(), copyArray(alloc, triviaBuffer));
         }
-    }
+    }*/
 
     // lex the next token
     mark();
@@ -1050,11 +1041,6 @@ bool Lexer::lexTrivia() {
                         return false;
                 }
                 break;
-            case '`':
-                advance();
-                if (lexDirectiveTrivia())
-                    return true;
-                break;
             case '\r':
                 advance();
                 consume('\n');
@@ -1156,64 +1142,39 @@ bool Lexer::scanBlockComment() {
     return eod;
 }
 
-bool Lexer::lexDirectiveTrivia() {
-    scanIdentifier();
-
-    // if length is 1, we just have a grave character on its own, which is an error
-    uint32_t length = lexemeLength();
-    if (lexemeLength() == 1) {
-       /* addError(DiagCode::MisplacedDirectiveChar);
-        *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
-        return TokenKind::Unknown;*/
-    }
-
-    // figure out what kind of directive we're looking at
-    TriviaKind type = getDirectiveKind(StringRef(marker, length));
-    switch (type) {
-        case TriviaKind::ResetAllDirective:
-           // preprocessor.resetAll();
-            return false;
-        case TriviaKind::IncludeDirective:
-            lexIncludeDirective();
-            return true;
-    }
-
-    return false;
-}
-
-void Lexer::lexIncludeDirective() {
-    bool systemPath = false;
-    char delim;
-
-    // next non-whitespace character needs to be " or <
-    int lookahead = findNextNonWhitespace();
-    switch (delim = peek(lookahead)) {
-        case '"': break;
-        case '<': systemPath = true;
-        default:
-            addError(DiagCode::ExpectedIncludeFileName);
-            return;
-    }
-
-    advance(lookahead + 1);
-    const char* startOfFileName = sourceBuffer;
-
-    while (true) {
-        char c = peek();
-        if (c == delim)
-            break;
-
-        if (c == '\0' || isNewline(c)) {
-            addError(DiagCode::ExpectedEndOfIncludeFileName);
-            return;
-        }
-
-        advance();
-    }
-
-    // inform the preprocessor about this include
-    preprocessor.include(StringRef(startOfFileName, (uint32_t)(sourceBuffer - startOfFileName)), systemPath);
-}
+//void Lexer::lexIncludeFileName() {
+//    bool systemPath = false;
+//    char delim;
+//
+//    // next non-whitespace character needs to be " or <
+//    int lookahead = findNextNonWhitespace();
+//    switch (delim = peek(lookahead)) {
+//        case '"': break;
+//        case '<': systemPath = true;
+//        default:
+//            addError(DiagCode::ExpectedIncludeFileName);
+//            return;
+//    }
+//
+//    advance(lookahead + 1);
+//    const char* startOfFileName = sourceBuffer;
+//
+//    while (true) {
+//        char c = peek();
+//        if (c == delim)
+//            break;
+//
+//        if (c == '\0' || isNewline(c)) {
+//            addError(DiagCode::ExpectedEndOfIncludeFileName);
+//            return;
+//        }
+//
+//        advance();
+//    }
+//
+//    // inform the preprocessor about this include
+//   // preprocessor.include(StringRef(startOfFileName, (uint32_t)(sourceBuffer - startOfFileName)), systemPath);
+//}
 
 int Lexer::findNextNonWhitespace() {
     int lookahead = 0;

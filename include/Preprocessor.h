@@ -4,34 +4,24 @@ namespace slang {
 
 class Preprocessor {
 public:
-    Preprocessor(FileTracker& fileTracker);
+    Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-    void resetAll();
-    void include(StringRef path, bool systemPath);
-    void define();
-    void undefine();
-    void undefineAll();
-    bool isDefined();
-    void setTimescale();
-    void setDefaultNetType();
-    void startCellTag();
-    void endCellTag();
-    void beginKeywords();
-    void endKeywords();
+    void enterFile(StringRef source);
+    void enterFile(FileID file, StringRef source);
 
-    void enterSourceFile(Lexer* lexer);
-    Token* next();
+    Token* lex();
 
-    bool hasTokens() const { return currentLexer != nullptr; }
     FileTracker& getFileTracker() const { return fileTracker; }
-    FileID getMainFile() const { return mainLexer->getFile(); }
-    FileID getCurrentFile() const { return currentLexer ? currentLexer->getFile() : getMainFile(); }
+    BumpAllocator& getAllocator() const { return alloc; }
+    Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-    std::deque<Lexer> lexerStack;
-    Lexer* mainLexer;
-    Lexer* currentLexer;
     FileTracker& fileTracker;
+    BumpAllocator& alloc;
+    Diagnostics& diagnostics;
+
+    std::deque<Lexer> lexerStack;
+    Lexer* currentLexer;
 };
 
 }

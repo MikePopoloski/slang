@@ -8,12 +8,9 @@ namespace slang {
 // - diagnostic locations
 // - start of line / flags
 
-class Preprocessor;
-
 class Lexer {
 public:
-    Lexer(StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc, Diagnostics& diagnostics);
-    Lexer(FileID file, StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
@@ -46,9 +43,6 @@ private:
     bool scanBlockComment();
     void scanWhitespace();
     void scanLineComment();
-
-    bool lexDirectiveTrivia();
-    void lexIncludeDirective();
 
     int findNextNonWhitespace();
 
@@ -90,7 +84,6 @@ private:
     VectorBuilder vectorBuilder;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
-    Preprocessor& preprocessor;
     const char* sourceBuffer;
     const char* sourceEnd;
     const char* marker;

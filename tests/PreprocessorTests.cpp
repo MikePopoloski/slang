@@ -15,19 +15,19 @@ FileTracker& getTracker() {
     return *tracker;
 }
 
-const Token& lexToken(Preprocessor& preprocessor, const std::string& text) {
-    diagnostics.clear();
-    Lexer lexer(text, preprocessor, alloc, diagnostics);
-    preprocessor.enterSourceFile(&lexer);
-
-    Token* token = lexer.lex();
-    REQUIRE(token != nullptr);
-    return *token;
-}
-
-TEST_CASE("Include directive", "[preprocessor]") {
-    Preprocessor pp(getTracker());
-
-    auto text = "`include \"include.svh\"";
-    auto token = lexToken(pp, text);
-}
+//const Token& lexToken(Preprocessor& preprocessor, const std::string& text) {
+//    diagnostics.clear();
+//    Lexer lexer(text, preprocessor, alloc, diagnostics);
+//    preprocessor.enterSourceFile(&lexer);
+//
+//    Token* token = lexer.lex();
+//    REQUIRE(token != nullptr);
+//    return *token;
+//}
+//
+//TEST_CASE("Include directive", "[preprocessor]") {
+//    Preprocessor pp(getTracker());
+//
+//    auto text = "`include \"include.svh\"";
+//    auto token = lexToken(pp, text);
+//}

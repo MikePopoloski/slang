@@ -2,14 +2,29 @@
 
 namespace slang {
 
-Preprocessor::Preprocessor(FileTracker& fileTracker) :
-    fileTracker(fileTracker) {
+Preprocessor::Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics) :
+    fileTracker(fileTracker), alloc(alloc), diagnostics(diagnostics), currentLexer(nullptr) {
 }
 
-void Preprocessor::enterSourceFile(Lexer* lexer) {
-    mainLexer = lexer;
+void Preprocessor::enterFile(StringRef source) {
+    // TODO: expand this a bit
+    enterFile(fileTracker.track("unnamed"), source);
 }
 
+void Preprocessor::enterFile(FileID file, StringRef source) {
+    // TODO: max include depth
+    // create a new lexer for this file and push it onto the stack
+    lexerStack.emplace_back(file, source, alloc, diagnostics);
+    currentLexer = &lexerStack.back();
+}
+
+Token* Preprocessor::lex() {
+    // TODO: preprocessing
+    ASSERT(currentLexer);
+    return currentLexer->lex();
+}
+
+/*
 void Preprocessor::include(StringRef path, bool systemPath) {
     ASSERT(mainLexer);
 
@@ -43,6 +58,6 @@ Token* Preprocessor::next() {
     }
 
     return token;
-}
+}*/
 
 }
