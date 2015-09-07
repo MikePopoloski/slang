@@ -75,10 +75,10 @@ public:
     ArrayRef<Trivia> trivia;
     TokenKind kind;
 
-    Token(TokenKind kind, bool startOfLine, void* data, Trivia* trivia, uint32_t triviaCount)
+    Token(TokenKind kind, void* data, ArrayRef<Trivia> trivia)
         : kind(kind),
           data(data),
-          trivia(trivia, triviaCount) {
+          trivia(trivia) {
     }
 
     // value text is the "nice" lexed version of certain tokens;
@@ -98,6 +98,10 @@ public:
     const NumericValue& numericValue() const;
     IdentifierType identifierType() const;
     TriviaKind directiveKind() const;
+
+    // gets the opaque extended data pointer
+    // should only be used to pass to a new Token
+    void* getDataPtr() const { return data; }
 
 private:
     union {

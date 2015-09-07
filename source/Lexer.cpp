@@ -115,11 +115,16 @@ int utf8SeqBytes(char c) {
 }
 
 template<typename T>
-T* copyArray(slang::BumpAllocator& alloc, T* source, uint32_t count) {
+slang::ArrayRef<T> copyArray(slang::BumpAllocator& alloc, const slang::Buffer<T>& buffer) {
+    uint32_t count = buffer.count();
+    if (count == 0)
+        return slang::ArrayRef<T>(nullptr, 0);
+
+    const T* source = buffer.cbegin();
     T* dest = reinterpret_cast<T*>(alloc.allocate(count * sizeof(T)));
     for (uint32_t i = 0; i < count; i++)
         new (&dest[i]) T(*source++);
-    return dest;
+    return slang::ArrayRef<T>(dest, count);
 }
 
 bool composeDouble(double fraction, int exp, double& result) {
@@ -191,23 +196,32 @@ Lexer::Lexer(StringRef source, Preprocessor& preprocessor, BumpAllocator& alloc,
 }
 
 Token* Lexer::lex() {
+    // if the preprocessor has more tokens, drain those before moving on to our own file
+    if (preprocessor.hasTokens())
+        return preprocessor.next();
+
     // don't do anything if we've lexed the entire buffer already
     if (reallyAtEnd())
         return nullptr;
 
     // lex leading trivia
     triviaBuffer.clear();
-    bool eod = lexTrivia();
+    if (lexTrivia()) {
+        // we found a directive that requires some kind of expansion (`include, macro usage)
+        // let the preprocessor figure out the next token and attach all of our trivia to it
+        Token* token = preprocessor.next();
+        ASSERT(token);
 
-    // copy any lexed trivia into standalone memory
-    Trivia* trivia = nullptr;
-    if (!triviaBuffer.empty())
-        trivia = copyArray<Trivia>(alloc, triviaBuffer.begin(), triviaBuffer.count());
+        // stitch together our trivia with the token from the other buffer
+        for (auto& tr : token->trivia)
+            triviaBuffer.append(tr);
 
-    {
-        // newline in directive mode: issue an EndOfDirective token
-        //Token* token = alloc.Allocate<Token>(TokenKind::EndOfDirective, false, nullptr);
-
+        // end of file is a special case; it means the `include or macro was empty, so just
+        // fall through in that case and lex the next token in our own file
+        if (token->kind != TokenKind::EndOfFile) {
+            // build a merged token with the correct trivia
+            return alloc.emplace<Token>(token->kind, token->getDataPtr(), copyArray(alloc, triviaBuffer));
+        }
     }
 
     // lex the next token
@@ -215,7 +229,7 @@ Token* Lexer::lex() {
     void* data = nullptr;
     TokenKind kind = lexToken(&data);
 
-    return alloc.emplace<Token>(kind, false, data, trivia, triviaBuffer.count());
+    return alloc.emplace<Token>(kind, data, copyArray(alloc, triviaBuffer));
 }
 
 TokenKind Lexer::lexToken(void** extraData) {
@@ -851,7 +865,7 @@ NumericLiteralInfo* Lexer::scanUnsizedNumericLiteral() {
         case '0':
         case '1':
             advance();
-            return alloc.emplace<NumericLiteralInfo>(lexeme(), (logic_t)getDigitValue(c));
+            return alloc.emplace<NumericLiteralInfo>(lexeme(), (logic_t)(uint8_t)getDigitValue(c));
         case 'x':
         case 'X':
             advance();
@@ -1038,7 +1052,8 @@ bool Lexer::lexTrivia() {
                 break;
             case '`':
                 advance();
-                lexDirectiveTrivia();
+                if (lexDirectiveTrivia())
+                    return true;
                 break;
             case '\r':
                 advance();
@@ -1141,7 +1156,7 @@ bool Lexer::scanBlockComment() {
     return eod;
 }
 
-void Lexer::lexDirectiveTrivia() {
+bool Lexer::lexDirectiveTrivia() {
     scanIdentifier();
 
     // if length is 1, we just have a grave character on its own, which is an error
@@ -1157,11 +1172,13 @@ void Lexer::lexDirectiveTrivia() {
     switch (type) {
         case TriviaKind::ResetAllDirective:
            // preprocessor.resetAll();
-            return;
+            return false;
         case TriviaKind::IncludeDirective:
             lexIncludeDirective();
-            return;
+            return true;
     }
+
+    return false;
 }
 
 void Lexer::lexIncludeDirective() {

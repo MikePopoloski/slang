@@ -29,4 +29,20 @@ void Preprocessor::include(StringRef path, bool systemPath) {
     currentLexer = &lexerStack.back();
 }
 
+Token* Preprocessor::next() {
+    ASSERT(currentLexer);
+    Token* token = currentLexer->lex();
+    ASSERT(token);
+
+    if (token->kind == TokenKind::EndOfFile) {
+        lexerStack.pop_back();
+        if (lexerStack.empty())
+            currentLexer = nullptr;
+        else
+            currentLexer = &lexerStack.back();
+    }
+
+    return token;
+}
+
 }

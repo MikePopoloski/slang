@@ -47,7 +47,7 @@ private:
     void scanWhitespace();
     void scanLineComment();
 
-    void lexDirectiveTrivia();
+    bool lexDirectiveTrivia();
     void lexIncludeDirective();
 
     int findNextNonWhitespace();

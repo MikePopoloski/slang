@@ -20,7 +20,9 @@ public:
     void endKeywords();
 
     void enterSourceFile(Lexer* lexer);
+    Token* next();
 
+    bool hasTokens() const { return currentLexer != nullptr; }
     FileTracker& getFileTracker() const { return fileTracker; }
     FileID getMainFile() const { return mainLexer->getFile(); }
     FileID getCurrentFile() const { return currentLexer ? currentLexer->getFile() : getMainFile(); }
