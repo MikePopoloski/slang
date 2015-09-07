@@ -33,6 +33,8 @@ enum class TriviaKind : uint8_t {
     UndefineAllDirective
 };
 
+std::ostream& operator<<(std::ostream& os, TriviaKind kind);
+
 struct Trivia {
     StringRef rawText;
     TriviaKind kind;

@@ -83,6 +83,12 @@ public:
         return !empty();
     }
 
+    std::ostream& operator<<(std::ostream& os) {
+        if (!empty())
+            os << std::string(ptr, length());
+        return os;
+    }
+
     friend bool operator==(const StringRef& lhs, const std::string& rhs) {
         if (lhs.length() != rhs.length())
             return false;

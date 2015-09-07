@@ -123,6 +123,8 @@ private:
     };
 };
 
+std::ostream& operator<<(std::ostream& os, TokenKind kind);
+
 enum class TokenKind : uint16_t {
     // general
     Unknown,
