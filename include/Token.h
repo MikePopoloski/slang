@@ -105,7 +105,7 @@ public:
     TriviaKind directiveKind() const;
 
     // gets the opaque extended data pointer
-    // should only be used to pass to a new Token
+    // should only be used to copy to a new Token
     void* getDataPtr() const { return data; }
 
 private:
@@ -477,7 +477,8 @@ enum class TokenKind : uint16_t {
     // directives (these get consumed by the preprocessor and don't make it downstream to the parser)
     Directive,
     EndOfDirective,
-    IncludeFileName,
+    UserIncludeFileName,
+    SystemIncludeFileName,
     MacroUsage,
     MacroQuote,
     MacroEscapedQuote,

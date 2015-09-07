@@ -46,7 +46,8 @@ public:
 
     T* begin() { return data; }
     T* end() { return data + len; }
-
+    const T* begin() const { return data; }
+    const T* end() const { return data + len; }
     const T* cbegin() const { return data; }
     const T* cend() const { return data + len; }
 

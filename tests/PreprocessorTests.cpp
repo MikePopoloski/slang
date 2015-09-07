@@ -27,6 +27,13 @@ const Token& lexToken(const std::string& text) {
     return *token;
 }
 
+TEST_CASE("Include File", "[preprocessor]") {
+    auto text = "`include \"include.svh\"";
+    auto token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+}
+
 void testKeyword(TokenKind kind) {
     auto text = getTokenKindText(kind);
     auto token = lexToken(std::string(text.begin(), text.end()));

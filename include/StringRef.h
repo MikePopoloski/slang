@@ -31,6 +31,13 @@ public:
         checkNullTerminator();
     }
 
+    template<typename Container>
+    StringRef(const Container& container) {
+        ptr = container.begin();
+        count = (uint32_t)(container.end() - ptr);
+        checkNullTerminator();
+    }
+
     // this constructor is meant for string literals
     template<size_t N>
     StringRef(const char(&str)[N]) :
@@ -84,8 +91,12 @@ public:
     }
 
     std::ostream& operator<<(std::ostream& os) {
-        if (!empty())
-            os << std::string(ptr, length());
+        if (!empty()) {
+            if (isNullTerminated())
+                os << ptr;
+            else
+                os << std::string(ptr, length());
+        }
         return os;
     }
 

@@ -169,7 +169,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             // special case: for an `include directive, this is a filename
             if (mode == LexingMode::Include) {
                 *extraData = lexIncludeFileName('"');
-                return TokenKind::IncludeFileName;
+                return TokenKind::UserIncludeFileName;
             }
 
             *extraData = lexStringLiteral();
@@ -285,7 +285,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             // special case: for an `include directive, this starts a system-path filename
             if (mode == LexingMode::Include) {
                 *extraData = lexIncludeFileName('<');
-                return TokenKind::IncludeFileName;
+                return TokenKind::SystemIncludeFileName;
             }
 
             switch (peek()) {
@@ -527,7 +527,7 @@ StringLiteralInfo* Lexer::lexStringLiteral() {
         }
     }
 
-    StringRef niceText = StringRef(stringBuffer.begin(), stringBuffer.count()).intern(alloc);
+    StringRef niceText = StringRef(stringBuffer).intern(alloc);
     return alloc.emplace<StringLiteralInfo>(lexeme(), niceText);
 }
 

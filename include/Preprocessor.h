@@ -16,7 +16,7 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-    Token* handleInclude();
+    void handleInclude(Token* directiveToken);
     Token* handleIdentifier(Token* token);
 
     FileTracker& fileTracker;

@@ -53,7 +53,9 @@ Token* Preprocessor::lex() {
                 return token;
             case TokenKind::Directive:
                 switch (token->directiveKind()) {
-                    case TriviaKind::IncludeDirective: return handleInclude();
+                    case TriviaKind::IncludeDirective:
+                        handleInclude(token);
+                        break;
                 }
                 break;
             default:
@@ -74,8 +76,24 @@ Token* Preprocessor::handleIdentifier(Token* token) {
     return token;
 }
 
-Token* Preprocessor::handleInclude() {
-    return nullptr;
+void Preprocessor::handleInclude(Token* directiveToken) {
+    // next token needs to be the filename
+    Token* fileName = consume();
+    bool systemPath;
+    switch (fileName->kind) {
+        case TokenKind::UserIncludeFileName: systemPath = false; break;
+        case TokenKind::SystemIncludeFileName: systemPath = true; break;
+        default:
+            return;
+    }
+
+    SourceFile* file = fileTracker.readHeader(getSource()->getFile(), fileName->valueText(), systemPath);
+    if (!file)
+        return;
+
+    // TODO: attach trivia
+
+    enterFile(file->id, StringRef(file->buffer));
 }
 
 }

@@ -8,6 +8,7 @@ class TokenConsumer {
 
 protected:
     void setSource(T* source) { tokenSource = source; }
+    T* getSource() const { return tokenSource; }
 
     Token* peek() {
         ensureSlot(0);
