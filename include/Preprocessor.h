@@ -2,7 +2,7 @@
 
 namespace slang {
 
-class Preprocessor {
+class Preprocessor : TokenConsumer<Lexer, 32> {
 public:
     Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
 
@@ -16,12 +16,14 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
+    Token* handleInclude();
+    Token* handleIdentifier();
+
     FileTracker& fileTracker;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
 
     std::deque<Lexer> lexerStack;
-    Lexer* currentLexer;
 };
 
 }

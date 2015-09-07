@@ -3,7 +3,7 @@
 namespace slang {
 
 Preprocessor::Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    fileTracker(fileTracker), alloc(alloc), diagnostics(diagnostics), currentLexer(nullptr) {
+    fileTracker(fileTracker), alloc(alloc), diagnostics(diagnostics) {
 }
 
 void Preprocessor::enterFile(StringRef source) {
@@ -15,49 +15,36 @@ void Preprocessor::enterFile(FileID file, StringRef source) {
     // TODO: max include depth
     // create a new lexer for this file and push it onto the stack
     lexerStack.emplace_back(file, source, alloc, diagnostics);
-    currentLexer = &lexerStack.back();
+    setSource(&lexerStack.back());
 }
 
 Token* Preprocessor::lex() {
-    // TODO: preprocessing
-    ASSERT(currentLexer);
-    return currentLexer->lex();
+    while (true) {
+        Token* token = consume();
+        switch (token->kind) {
+            case TokenKind::Identifier:
+                return handleIdentifier();
+            case TokenKind::EndOfFile:
+                lexerStack.pop_back();
+                if (lexerStack.empty())
+                    setSource(nullptr);
+                else
+                    setSource(&lexerStack.back());
+                return token;
+            case TokenKind::Directive:
+                switch (token->directiveKind()) {
+                    case TriviaKind::IncludeDirective: return handleInclude();
+                }
+                break;
+            default:
+                // pass through to the caller
+                return token;
+        }
+    }
 }
 
-/*
-void Preprocessor::include(StringRef path, bool systemPath) {
-    ASSERT(mainLexer);
-
-    SourceFile* sourceFile = fileTracker.readHeader(getCurrentFile(), path, systemPath);
-    if (!sourceFile) {
-        return;
-    }
-
-    // create a new lexer for this include file and push it onto the stack
-    lexerStack.emplace_back(
-        sourceFile->id,
-        sourceFile->buffer,
-        *this,
-        mainLexer->getAllocator(),
-        mainLexer->getDiagnostics()
-    );
-    currentLexer = &lexerStack.back();
+Token* Preprocessor::handleInclude() {
+    return nullptr;
 }
-
-Token* Preprocessor::next() {
-    ASSERT(currentLexer);
-    Token* token = currentLexer->lex();
-    ASSERT(token);
-
-    if (token->kind == TokenKind::EndOfFile) {
-        lexerStack.pop_back();
-        if (lexerStack.empty())
-            currentLexer = nullptr;
-        else
-            currentLexer = &lexerStack.back();
-    }
-
-    return token;
-}*/
 
 }

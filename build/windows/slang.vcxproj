@@ -33,6 +33,7 @@
     <ClInclude Include="..\..\include\StringRef.h" />
     <ClInclude Include="..\..\include\SyntaxFacts.h" />
     <ClInclude Include="..\..\include\Token.h" />
+    <ClInclude Include="..\..\include\TokenConsumer.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />
     <ClInclude Include="..\..\source\StringTable.h" />

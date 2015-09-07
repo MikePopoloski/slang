@@ -27,5 +27,6 @@
 #include "Trivia.h"
 #include "Token.h"
 #include "Lexer.h"
+#include "TokenConsumer.h"
 #include "Preprocessor.h"
 #include "SyntaxFacts.h"

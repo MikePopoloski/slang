@@ -74,13 +74,13 @@ private:
     enum class LexingMode {
         Normal,
         Include,
-        MacroDefine,
-        OtherDirective
+        Directive
     };
 
     Buffer<char> stringBuffer;
     Buffer<Trivia> triviaBuffer;
     VectorBuilder vectorBuilder;
+
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
     const char* sourceBuffer;

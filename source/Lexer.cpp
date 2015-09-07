@@ -552,14 +552,11 @@ TokenKind Lexer::lexDirective(void** extraData) {
     switch (type) {
         case TriviaKind::MacroUsage:
             return TokenKind::MacroUsage;
-        case TriviaKind::DefineDirective:
-            mode = LexingMode::MacroDefine;
-            break;
         case TriviaKind::IncludeDirective:
             mode = LexingMode::Include;
             break;
         default:
-            mode = LexingMode::OtherDirective;
+            mode = LexingMode::Directive;
             break;
     }
     return TokenKind::Directive;
