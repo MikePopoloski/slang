@@ -2,14 +2,22 @@
 
 namespace slang {
 
+struct SourceBuffer;
+
 class Lexer {
 public:
-    Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(FileID file, const SourceBuffer& source, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
 
+    // lex the next token from the source code
+    // will never return a null pointer; at the end of the buffer,
+    // an infinite stream of EndOfFile tokens will be generated
     Token* lex();
+
+    // scans the rest of the current line into trivia
+    Trivia scanToEndOfLine();
 
     FileID getFile() const { return file; }
     BumpAllocator& getAllocator() const { return alloc; }
@@ -53,7 +61,7 @@ private:
 
     // in order to detect embedded nulls gracefully, we call this whenever we
     // encounter a null to check whether we really are at the end of the buffer
-    bool reallyAtEnd() { return sourceBuffer >= sourceEnd; }
+    bool reallyAtEnd() { return sourceBuffer >= sourceEnd - 1; }
 
     uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
     StringRef lexeme();
@@ -83,6 +91,42 @@ private:
     const char* marker;
     FileID file;
     LexingMode mode;
+};
+
+// lightweight wrapper around text data that serves as input to the lexer
+// this exists to ensure that the input is null-terminated
+
+struct SourceBuffer {
+    SourceBuffer(const std::string& source) :
+        ptr(source.c_str()), len((uint32_t)source.length() + 1) {
+        checkErrors();
+    }
+
+    SourceBuffer(const Buffer<char>& source) :
+        ptr(source.begin()), len(source.count()) {
+        checkErrors();
+    }
+
+    template<size_t N>
+    SourceBuffer(const char(&str)[N]) :
+        ptr(str), len(N) {
+        static_assert(N > 0, "String literal array must have at least one element");
+        checkErrors();
+    }
+
+    const char* begin() const { return ptr; }
+    const char* end() const { return ptr + len; }
+    uint32_t length() const { return len; }
+
+private:
+    const char* ptr;
+    uint32_t len;
+
+    void checkErrors() {
+        ASSERT(ptr);
+        ASSERT(len);
+        ASSERT(ptr[len - 1] == '\0');
+    }
 };
 
 }

@@ -12,77 +12,66 @@ namespace slang {
 class StringRef {
 public:
     StringRef() :
-        ptr(nullptr), count(0) {
+        ptr(nullptr), len(0) {
     }
 
     StringRef(std::nullptr_t) :
-        ptr(nullptr), count(0) {
+        ptr(nullptr), len(0) {
     }
 
     StringRef(const char* ptr, uint32_t length) :
-        ptr(ptr), count(length) {
-
-        ASSERT((count & NullMask) == 0);
+        ptr(ptr), len(length) {
     }
 
     StringRef(const std::string& str) :
-        ptr(str.c_str()), count((uint32_t)str.length() + 1) {
-
-        checkNullTerminator();
+        ptr(str.c_str()), len((uint32_t)str.length()) {
     }
 
     template<typename Container>
     StringRef(const Container& container) {
         ptr = container.begin();
-        count = (uint32_t)(container.end() - ptr);
-        checkNullTerminator();
+        len = (uint32_t)(container.end() - ptr);
     }
 
-    // this constructor is meant for string literals
     template<size_t N>
     StringRef(const char(&str)[N]) :
-        ptr(str), count(N) {
-
-        checkNullTerminator();
+        ptr(str), len(N-1) {
+        static_assert(N > 0, "String literal array must have at least one element");
     }
 
     const char* begin() const { return ptr; }
-    const char* end() const { return ptr + length(); }
+    const char* end() const { return ptr + len; }
 
-    uint32_t length() const { return count & ~NullMask; }
-    bool empty() const { return length() == 0; }
-    bool isNullTerminated() const { return (count & NullMask) != 0; }
+    uint32_t length() const { return len; }
+    bool empty() const { return len == 0; }
 
     StringRef subString(uint32_t startIndex) const {
-        ASSERT(startIndex <= length());
-        return subString(startIndex, length() - startIndex);
+        ASSERT(startIndex <= len);
+        return subString(startIndex, len - startIndex);
     }
 
     StringRef subString(uint32_t startIndex, uint32_t subStringLength) const {
-        ASSERT(startIndex + subStringLength <= length());
+        ASSERT(startIndex + subStringLength <= len);
         return StringRef(ptr + startIndex, subStringLength);
     }
 
     size_t hash(size_t seed = Seed) const {
         if (empty())
             return 0;
-        return slang::xxhash(ptr, length(), seed);
+        return slang::xxhash(ptr, len, seed);
     }
 
     StringRef intern(BumpAllocator& alloc) const {
         if (empty())
             return StringRef();
 
-        // +1 for trailing zero, which we might as well add here since we're allocating anyway
-        uint32_t l = length();
-        char* dest = reinterpret_cast<char*>(alloc.allocate(l + 1));
-        memcpy(dest, ptr, l);
-        dest[l] = '\0';
-        return StringRef(dest, l);
+        char* dest = reinterpret_cast<char*>(alloc.allocate(len));
+        memcpy(dest, ptr, len);
+        return StringRef(dest, len);
     }
 
     char operator[](uint32_t index) const {
-        ASSERT(index < length());
+        ASSERT(index < len);
         return ptr[index];
     }
 
@@ -91,33 +80,31 @@ public:
     }
 
     std::ostream& operator<<(std::ostream& os) {
-        if (!empty()) {
-            if (isNullTerminated())
-                os << ptr;
-            else
-                os << std::string(ptr, length());
-        }
+        if (!empty())
+            os << std::string(ptr, len);
         return os;
     }
 
     friend bool operator==(const StringRef& lhs, const std::string& rhs) {
-        if (lhs.length() != rhs.length())
+        if (lhs.len != rhs.length())
             return false;
 
-        return rhs.compare(0, rhs.length(), lhs.ptr, lhs.length()) == 0;
+        return rhs.compare(0, rhs.length(), lhs.ptr, lhs.len) == 0;
     }
 
     friend bool operator==(const StringRef& lhs, const StringRef& rhs) {
-        if (lhs.length() != rhs.length())
+        if (lhs.len != rhs.len)
             return false;
 
-        return strncmp(lhs.ptr, rhs.ptr, std::min(lhs.length(), rhs.length())) == 0;
+        return strncmp(lhs.ptr, rhs.ptr, std::min(lhs.len, rhs.len)) == 0;
     }
 
     friend bool operator==(const StringRef& lhs, const char* rhs) {
+        if (!rhs)
+            return lhs.empty();
+        
         const char* ptr = lhs.ptr;
-        uint32_t l = lhs.length();
-        for (uint32_t i = 0; i < l; i++) {
+        for (uint32_t i = 0; i < lhs.len; i++) {
             if (*ptr++ != *rhs++)
                 return false;
         }
@@ -136,19 +123,10 @@ public:
     friend bool operator!=(const StringRef& lhs, const StringRef& rhs) { return !operator==(lhs, rhs); }
 
 private:
-    static const uint32_t NullMask = 1u << 31;
     static const uint64_t Seed = 0x3765936aa9a6c480; // chosen by fair dice roll
 
     const char* ptr;
-    uint32_t count;
-
-    void checkNullTerminator() {
-        ASSERT((count & NullMask) == 0);
-        if (count > 0 && ptr[count - 1] == '\0') {
-            count--;
-            count |= NullMask;
-        }
-    }
+    uint32_t len;
 };
 
 }

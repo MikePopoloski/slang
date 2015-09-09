@@ -18,6 +18,24 @@
 #include "SyntaxFacts.h"
 #include "Preprocessor.h"
 
+namespace {
+
+// TODO: copied from Lexer.cpp
+template<typename T>
+slang::ArrayRef<T> copyArray(slang::BumpAllocator& alloc, const slang::Buffer<T>& buffer) {
+    uint32_t count = buffer.count();
+    if (count == 0)
+        return slang::ArrayRef<T>(nullptr, 0);
+
+    const T* source = buffer.cbegin();
+    T* dest = reinterpret_cast<T*>(alloc.allocate(count * sizeof(T)));
+    for (uint32_t i = 0; i < count; i++)
+        new (&dest[i]) T(*source++);
+    return slang::ArrayRef<T>(dest, count);
+}
+
+}
+
 namespace slang {
 
 Preprocessor::Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics) :
@@ -26,12 +44,12 @@ Preprocessor::Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagn
     keywordTable = getKeywordTable();
 }
 
-void Preprocessor::enterFile(StringRef source) {
+void Preprocessor::enterFile(SourceBuffer source) {
     // TODO: expand this a bit
     enterFile(fileTracker.track("unnamed"), source);
 }
 
-void Preprocessor::enterFile(FileID file, StringRef source) {
+void Preprocessor::enterFile(FileID file, SourceBuffer source) {
     // TODO: max include depth
     // create a new lexer for this file and push it onto the stack
     lexerStack.emplace_back(file, source, alloc, diagnostics);
@@ -54,7 +72,9 @@ Token* Preprocessor::lex() {
             case TokenKind::Directive:
                 switch (token->directiveKind()) {
                     case TriviaKind::IncludeDirective:
-                        handleInclude(token);
+                        token = handleInclude(token);
+                        if (token)
+                            return token;
                         break;
                 }
                 break;
@@ -76,24 +96,48 @@ Token* Preprocessor::handleIdentifier(Token* token) {
     return token;
 }
 
-void Preprocessor::handleInclude(Token* directiveToken) {
+Token* Preprocessor::handleInclude(Token* directiveToken) {
     // next token needs to be the filename
-    Token* fileName = consume();
+    Token* token = consume();
     bool systemPath;
-    switch (fileName->kind) {
+    switch (token->kind) {
         case TokenKind::UserIncludeFileName: systemPath = false; break;
         case TokenKind::SystemIncludeFileName: systemPath = true; break;
+        case TokenKind::EndOfDirective:
+            // end of the line (or file) without finding the filename
+            // issue an error and be on our merry way
+            addError(DiagCode::ExpectedIncludeFileName);
+
+            triviaBuffer.appendRange(directiveToken->trivia);
+            triviaBuffer.append(Trivia(directiveToken->directiveKind(), StringRef()));
+
+        case TokenKind::EndOfFile:
+            addError(DiagCode::ExpectedIncludeFileName);
+            convertDirectiveToTrivia(directiveToken);
+            triviaBuffer.appendRange(token->trivia);
+            return alloc.emplace<Token>(TokenKind::EndOfFile, nullptr, copyArray(alloc, triviaBuffer));
         default:
-            return;
+            // we have junk here; scan the rest of the line and move on
+
+            return nullptr;
     }
 
-    SourceFile* file = fileTracker.readHeader(getSource()->getFile(), fileName->valueText(), systemPath);
+    SourceFile* file = fileTracker.readHeader(getSource()->getFile(), token->valueText(), systemPath);
     if (!file)
-        return;
+        return nullptr;
 
     // TODO: attach trivia
 
-    enterFile(file->id, StringRef(file->buffer));
+    enterFile(file->id, file->buffer);
+}
+
+void Preprocessor::convertDirectiveToTrivia(Token* directive) {
+    triviaBuffer.appendRange(directive->trivia);
+    triviaBuffer.append(Trivia(directive->directiveKind(), StringRef()));
+}
+
+void Preprocessor::addError(DiagCode code) {
+    diagnostics.add(SyntaxError(code, 0, 0));
 }
 
 }

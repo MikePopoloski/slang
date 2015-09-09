@@ -111,6 +111,7 @@ std::ostream& operator<<(std::ostream& os, TriviaKind kind) {
         case TriviaKind::Unknown: os << "Unknown"; break;
         case TriviaKind::Whitespace: os << "Whitespace"; break;
         case TriviaKind::EndOfLine: os << "EndOfLine"; break;
+        case TriviaKind::LineContinuation: os << "LineContinuation"; break;
         case TriviaKind::LineComment: os << "LineComment"; break;
         case TriviaKind::BlockComment: os << "BlockComment"; break;
         case TriviaKind::DisabledText: os << "DisabledText"; break;

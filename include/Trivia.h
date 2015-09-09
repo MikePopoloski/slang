@@ -6,6 +6,7 @@ enum class TriviaKind : uint8_t {
     Unknown,
     Whitespace,
     EndOfLine,
+    LineContinuation,
     LineComment,
     BlockComment,
     DisabledText,
@@ -39,8 +40,8 @@ struct Trivia {
     StringRef rawText;
     TriviaKind kind;
 
-    Trivia(TriviaKind kind, StringRef rawText)
-        : rawText(rawText), kind(kind) {
+    Trivia(TriviaKind kind, StringRef rawText) :
+        rawText(rawText), kind(kind) {
     }
 };
 

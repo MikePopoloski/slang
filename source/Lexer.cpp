@@ -76,9 +76,7 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    stringBuffer(1024),
-    triviaBuffer(32),
+Lexer::Lexer(FileID file, const SourceBuffer& source, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
     diagnostics(diagnostics),
     sourceBuffer(source.begin()),
@@ -86,10 +84,6 @@ Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& d
     marker(nullptr),
     file(file),
     mode(LexingMode::Normal) {
-
-    // string needs to be non-null and null terminated
-    ASSERT(source);
-    ASSERT(source.isNullTerminated());
 
     // detect BOMs so we can give nice errors for invaild encoding
     if (source.length() >= 2) {
@@ -111,29 +105,13 @@ Lexer::Lexer(FileID file, StringRef source, BumpAllocator& alloc, Diagnostics& d
 }
 
 Token* Lexer::lex() {
-    ASSERT(!reallyAtEnd());
-
     // lex leading trivia
     triviaBuffer.clear();
-    lexTrivia();
-
-    /*if (lexTrivia()) {
-        // we found a directive that requires some kind of expansion (`include, macro usage)
-        // let the preprocessor figure out the next token and attach all of our trivia to it
-        Token* token = preprocessor.next();
-        ASSERT(token);
-
-        // stitch together our trivia with the token from the other buffer
-        for (auto& tr : token->trivia)
-            triviaBuffer.append(tr);
-
-        // end of file is a special case; it means the `include or macro was empty, so just
-        // fall through in that case and lex the next token in our own file
-        if (token->kind != TokenKind::EndOfFile) {
-            // build a merged token with the correct trivia
-            return alloc.emplace<Token>(token->kind, token->getDataPtr(), copyArray(alloc, triviaBuffer));
-        }
-    }*/
+    if (lexTrivia()) {
+        // need to issue an EndOfDirective token here
+        mode = LexingMode::Normal;
+        return alloc.emplace<Token>(TokenKind::EndOfDirective, nullptr, copyArray(alloc, triviaBuffer));
+    }
 
     // lex the next token
     mark();
@@ -143,18 +121,48 @@ Token* Lexer::lex() {
     return alloc.emplace<Token>(kind, data, copyArray(alloc, triviaBuffer));
 }
 
+Trivia Lexer::scanToEndOfLine() {
+    // this drops us out of directive mode
+    mode = LexingMode::Normal;
+
+    if (reallyAtEnd())
+        return Trivia(TriviaKind::SkippedTokens, StringRef());
+
+    mark();
+    while (true) {
+        char c = peek();
+        if (isNewline(c) || (c == '\0' && reallyAtEnd()))
+            break;
+
+        advance();
+    }
+
+    return Trivia(TriviaKind::SkippedTokens, lexeme());
+}
+
 TokenKind Lexer::lexToken(void** extraData) {
     char c = peek();
     advance();
     switch (c) {
         case '\0':
-            // check if we're not really at the end; can't use reallyAtEnd() here because
-            // we've already advanced()
-            if (sourceBuffer <= sourceEnd) {
+            // check if we're not really at the end
+            // we back up one character here so that if the user calls lex() again and again,
+            // he'll just keep getting back EndOfFile tokens over and over
+            sourceBuffer--;
+            if (!reallyAtEnd()) {
+                advance();
                 addError(DiagCode::EmbeddedNull);
                 *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
                 return TokenKind::Unknown;
             }
+
+            // if we're lexing a directive, issue an EndOfDirective before the EndOfFile
+            if (mode != LexingMode::Normal) {
+                mode = LexingMode::Normal;
+                return TokenKind::EndOfDirective;
+            }
+
+            // otherwise, end of file
             return TokenKind::EndOfFile;
         case '!':
             if (consume('=')) {
@@ -884,6 +892,7 @@ bool Lexer::lexTrivia() {
                 if (mode == LexingMode::Normal || !isNewline(peek()))
                     return false;
                 advance();
+                addTrivia(TriviaKind::LineContinuation);
                 break;
             default:
                 return false;

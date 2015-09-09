@@ -55,10 +55,7 @@ public:
     bool empty() const { return len == 0; }
 
     void clear() {
-        if (!std::is_trivially_destructible<T>()) {
-            for (uint32_t i = 0; i < len; i++)
-                data[i].~T();
-        }
+        destructElements();
         len = 0;
     }
 
@@ -132,8 +129,15 @@ private:
         }
     }
 
+    void destructElements() {
+        if (!std::is_trivially_destructible<T>()) {
+            for (uint32_t i = 0; i < len; i++)
+                data[i].~T();
+        }
+    }
+
     void cleanup() {
-        clear();
+        destructElements();
         free(data);
     }
 };

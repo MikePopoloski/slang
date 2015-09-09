@@ -6,8 +6,8 @@ class Preprocessor : TokenConsumer<Lexer, 32> {
 public:
     Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-    void enterFile(StringRef source);
-    void enterFile(FileID file, StringRef source);
+    void enterFile(SourceBuffer source);
+    void enterFile(FileID file, SourceBuffer source);
 
     Token* lex();
 
@@ -16,14 +16,19 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-    void handleInclude(Token* directiveToken);
+    Token* handleInclude(Token* directiveToken);
     Token* handleIdentifier(Token* token);
+
+    void addError(DiagCode code);
+    void convertDirectiveToTrivia(Token* directive);
 
     FileTracker& fileTracker;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
 
     std::deque<Lexer> lexerStack;
+    Buffer<Trivia> triviaBuffer;
+
     const StringTable<TokenKind>* keywordTable;
 };
 

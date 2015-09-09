@@ -3,6 +3,7 @@
 namespace slang {
 
 enum class DiagCode : uint8_t {
+    // lexer
     NonPrintableChar,
     UTF8Char,
     UnicodeBOM,
@@ -26,9 +27,10 @@ enum class DiagCode : uint8_t {
     MissingVectorBase,
     MissingVectorDigits,
     InvalidUnsizedLiteral,
+    ExpectedEndOfIncludeFileName,
 
-    ExpectedIncludeFileName,
-    ExpectedEndOfIncludeFileName
+    // preprocessor
+    ExpectedIncludeFileName
 };
 
 class SyntaxError {
