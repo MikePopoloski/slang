@@ -44,12 +44,12 @@ Preprocessor::Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, D
     keywordTable = getKeywordTable();
 }
 
-void Preprocessor::enterFile(SourceBuffer source) {
+void Preprocessor::enterFile(SourceText source) {
     // TODO: expand this a bit
     enterFile(sourceTracker.track("unnamed"), source);
 }
 
-void Preprocessor::enterFile(FileID file, SourceBuffer source) {
+void Preprocessor::enterFile(FileID file, SourceText source) {
     // TODO: max include depth
     // create a new lexer for this file and push it onto the stack
     lexerStack.emplace_back(file, source, alloc, diagnostics);

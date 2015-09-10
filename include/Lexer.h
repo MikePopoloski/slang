@@ -2,11 +2,11 @@
 
 namespace slang {
 
-struct SourceBuffer;
+struct SourceText;
 
 class Lexer {
 public:
-    Lexer(FileID file, const SourceBuffer& source, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(FileID file, const SourceText& source, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
@@ -96,22 +96,32 @@ private:
 // lightweight wrapper around text data that serves as input to the lexer
 // this exists to ensure that the input is null-terminated
 
-struct SourceBuffer {
-    SourceBuffer(const std::string& source) :
-        ptr(source.c_str()), len((uint32_t)source.length() + 1) {
+struct SourceText {
+    SourceText(const char* begin, const char* end) :
+        ptr(begin), len((uint32_t)(end - begin)) {
         checkErrors();
     }
 
-    SourceBuffer(const Buffer<char>& source) :
+    SourceText(const Buffer<char>& source) :
         ptr(source.begin()), len(source.count()) {
         checkErrors();
     }
 
     template<size_t N>
-    SourceBuffer(const char(&str)[N]) :
+    SourceText(const char(&str)[N]) :
         ptr(str), len(N) {
         static_assert(N > 0, "String literal array must have at least one element");
         checkErrors();
+    }
+
+    SourceText(const std::string& source) :
+        ptr(source.c_str()), len((uint32_t)source.length() + 1) {
+        checkErrors();
+    }
+
+    // if you use this, you're guaranteeing that the StringRef points to data that is null terminated
+    static SourceText fromNullTerminated(StringRef str) {
+        return SourceText(str.begin(), str.end() + 1);
     }
 
     const char* begin() const { return ptr; }

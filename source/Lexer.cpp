@@ -76,7 +76,7 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(FileID file, const SourceBuffer& source, BumpAllocator& alloc, Diagnostics& diagnostics) :
+Lexer::Lexer(FileID file, const SourceText& source, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
     diagnostics(diagnostics),
     sourceBuffer(source.begin()),

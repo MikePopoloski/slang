@@ -6,8 +6,8 @@ class Preprocessor : TokenConsumer<Lexer, 32> {
 public:
     Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-    void enterFile(SourceBuffer source);
-    void enterFile(FileID file, SourceBuffer source);
+    void enterFile(SourceText source);
+    void enterFile(FileID file, SourceText source);
 
     Token* lex();
 

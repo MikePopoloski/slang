@@ -17,7 +17,7 @@ SourceTracker& getTracker() {
     return *tracker;
 }
 
-const Token& lexToken(const std::string& text) {
+const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
     Preprocessor preprocessor(getTracker(), alloc, diagnostics);
     preprocessor.enterFile(text);
@@ -28,7 +28,7 @@ const Token& lexToken(const std::string& text) {
 }
 
 TEST_CASE("Include File", "[preprocessor]") {
-    auto text = "`include \"include.svh\"";
+    auto& text = "`include \"include.svh\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -36,7 +36,7 @@ TEST_CASE("Include File", "[preprocessor]") {
 
 void testKeyword(TokenKind kind) {
     auto text = getTokenKindText(kind);
-    auto token = lexToken(std::string(text.begin(), text.end()));
+    auto token = lexToken(SourceText::fromNullTerminated(text));
 
     CHECK(token.kind == kind);
     CHECK(token.toFullString() == text);

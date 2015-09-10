@@ -12,7 +12,7 @@ bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;
 }
 
-const Token& lexToken(const std::string& text) {
+const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
     Lexer lexer(FileID(), text, alloc, diagnostics);
 
@@ -22,7 +22,7 @@ const Token& lexToken(const std::string& text) {
 }
 
 TEST_CASE("Invalid chars", "[lexer]") {
-    auto text = "\x04";
+    auto& text = "\x04";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Unknown);
@@ -32,7 +32,7 @@ TEST_CASE("Invalid chars", "[lexer]") {
 }
 
 TEST_CASE("UTF8 chars", "[lexer]") {
-    auto text = u8"\U0001f34c";
+    auto& text = u8"\U0001f34c";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Unknown);
@@ -42,18 +42,15 @@ TEST_CASE("UTF8 chars", "[lexer]") {
 }
 
 TEST_CASE("Unicode BOMs", "[lexer]") {
-    auto text = "\xEF\xBB\xBF ";
-    lexToken(text);
+    lexToken("\xEF\xBB\xBF ");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
 
-    text = "\xFE\xFF ";
-    lexToken(text);
+    lexToken("\xFE\xFF ");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
 
-    text = "\xFF\xFE ";
-    lexToken(text);
+    lexToken("\xFF\xFE ");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
 }
@@ -70,7 +67,7 @@ TEST_CASE("Embedded null", "[lexer]") {
 }
 
 TEST_CASE("Line Comment", "[lexer]") {
-    auto text = "// comment";
+    auto& text = "// comment";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
@@ -81,7 +78,7 @@ TEST_CASE("Line Comment", "[lexer]") {
 }
 
 TEST_CASE("Block Comment (one line)", "[lexer]") {
-    auto text = "/* comment */";
+    auto& text = "/* comment */";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
@@ -92,7 +89,7 @@ TEST_CASE("Block Comment (one line)", "[lexer]") {
 }
 
 TEST_CASE("Block Comment (multiple lines)", "[lexer]") {
-    auto text =
+    auto& text =
         R"(/*
 comment on
 multiple lines
@@ -107,7 +104,7 @@ multiple lines
 }
 
 TEST_CASE("Block Comment (unterminated)", "[lexer]") {
-    auto text = "/* comment";
+    auto& text = "/* comment";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
@@ -119,7 +116,7 @@ TEST_CASE("Block Comment (unterminated)", "[lexer]") {
 }
 
 TEST_CASE("Block Comment (nested)", "[lexer]") {
-    auto text = "/* comment /* stuff */";
+    auto& text = "/* comment /* stuff */";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
@@ -131,7 +128,7 @@ TEST_CASE("Block Comment (nested)", "[lexer]") {
 }
 
 TEST_CASE("Whitespace", "[lexer]") {
-    auto text = " \t\v\f token";
+    auto& text = " \t\v\f token";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Identifier);
@@ -141,25 +138,29 @@ TEST_CASE("Whitespace", "[lexer]") {
     CHECK(diagnostics.empty());
 }
 
-TEST_CASE("Newlines", "[lexer]") {
-    auto text = "\r";
+TEST_CASE("Newlines (CR)", "[lexer]") {
+    auto& text = "\r";
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
     CHECK(diagnostics.empty());
+}
 
-    text = "\r\n";
-    token = lexToken(text);
+TEST_CASE("Newlines (CR/LF)", "[lexer]") {
+    auto& text = "\r\n";
+    auto token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
     CHECK(diagnostics.empty());
+}
 
-    text = "\n";
-    token = lexToken(text);
+TEST_CASE("Newlines (LF)", "[lexer]") {
+    auto& text = "\n";
+    auto token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
     CHECK(token.trivia.count() == 1);
@@ -168,16 +169,8 @@ TEST_CASE("Newlines", "[lexer]") {
 }
 
 TEST_CASE("Simple Identifiers", "[lexer]") {
-    auto text = "a";
+    auto& text = "abc";
     auto token = lexToken(text);
-    CHECK(token.kind == TokenKind::Identifier);
-    CHECK(token.toFullString() == text);
-    CHECK(token.valueText() == text);
-    CHECK(token.identifierType() == IdentifierType::Normal);
-    CHECK(diagnostics.empty());
-
-    text = "abc";
-    token = lexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toFullString() == text);
     CHECK(token.valueText() == text);
@@ -186,7 +179,7 @@ TEST_CASE("Simple Identifiers", "[lexer]") {
 }
 
 TEST_CASE("Mixed Identifiers", "[lexer]") {
-    auto text = "a92837asdf358";
+    auto& text = "a92837asdf358";
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toFullString() == text);
@@ -194,17 +187,17 @@ TEST_CASE("Mixed Identifiers", "[lexer]") {
     CHECK(token.identifierType() == IdentifierType::Normal);
     CHECK(diagnostics.empty());
 
-    text = "__a$$asdf213$";
-    token = lexToken(text);
+    auto& text2 = "__a$$asdf213$";
+    token = lexToken(text2);
     CHECK(token.kind == TokenKind::Identifier);
-    CHECK(token.toFullString() == text);
-    CHECK(token.valueText() == text);
+    CHECK(token.toFullString() == text2);
+    CHECK(token.valueText() == text2);
     CHECK(token.identifierType() == IdentifierType::Normal);
     CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Escaped Identifiers", "[lexer]") {
-    auto text = "\\98\\#$%)(*lkjsd__09...asdf345";
+    auto& text = "\\98\\#$%)(*lkjsd__09...asdf345";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Identifier);
@@ -215,7 +208,7 @@ TEST_CASE("Escaped Identifiers", "[lexer]") {
 }
 
 TEST_CASE("System Identifiers", "[lexer]") {
-    auto text = "$hello";
+    auto& text = "$hello";
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::SystemIdentifier);
     CHECK(token.toFullString() == text);
@@ -223,27 +216,24 @@ TEST_CASE("System Identifiers", "[lexer]") {
     CHECK(token.identifierType() == IdentifierType::System);
     CHECK(diagnostics.empty());
 
-    text = "$45__hello";
-    token = lexToken(text);
+    auto& text2 = "$45__hello";
+    token = lexToken(text2);
     CHECK(token.kind == TokenKind::SystemIdentifier);
-    CHECK(token.toFullString() == text);
-    CHECK(token.valueText() == text);
+    CHECK(token.toFullString() == text2);
+    CHECK(token.valueText() == text2);
     CHECK(token.identifierType() == IdentifierType::System);
     CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Invalid escapes", "[lexer]") {
-    auto text = "\\";
+    auto& text = "\\";
     auto token = lexToken(text);
-
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toFullString() == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::EscapedWhitespace);
 
-    text = "\\  ";
-    token = lexToken(text);
-
+    token = lexToken("\\  ");
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toFullString() == "\\");
     REQUIRE(!diagnostics.empty());
@@ -251,7 +241,7 @@ TEST_CASE("Invalid escapes", "[lexer]") {
 }
 
 TEST_CASE("String literal", "[lexer]") {
-    auto text = "\"literal  #@$asdf\"";
+    auto& text = "\"literal  #@$asdf\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -261,7 +251,7 @@ TEST_CASE("String literal", "[lexer]") {
 }
 
 TEST_CASE("String literal (newline)", "[lexer]") {
-    auto text = "\"literal\r\nwith new line\"";
+    auto& text = "\"literal\r\nwith new line\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -273,7 +263,7 @@ TEST_CASE("String literal (newline)", "[lexer]") {
 }
 
 TEST_CASE("String literal (escaped newline)", "[lexer]") {
-    auto text = "\"literal\\\r\nwith new line\"";
+    auto& text = "\"literal\\\r\nwith new line\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -283,7 +273,7 @@ TEST_CASE("String literal (escaped newline)", "[lexer]") {
 }
 
 TEST_CASE("String literal (unterminated)", "[lexer]") {
-    auto text = "\"literal";
+    auto& text = "\"literal";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -295,7 +285,7 @@ TEST_CASE("String literal (unterminated)", "[lexer]") {
 }
 
 TEST_CASE("String literal (escapes)", "[lexer]") {
-    auto text = "\"literal\\n\\t\\v\\f\\a \\\\ \\\" \"";
+    auto& text = "\"literal\\n\\t\\v\\f\\a \\\\ \\\" \"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -305,7 +295,7 @@ TEST_CASE("String literal (escapes)", "[lexer]") {
 }
 
 TEST_CASE("String literal (octal escape)", "[lexer]") {
-    auto text = "\"literal\\377\"";
+    auto& text = "\"literal\\377\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -315,7 +305,7 @@ TEST_CASE("String literal (octal escape)", "[lexer]") {
 }
 
 TEST_CASE("String literal (bad octal escape)", "[lexer]") {
-    auto text = "\"literal\\400\"";
+    auto& text = "\"literal\\400\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -326,7 +316,7 @@ TEST_CASE("String literal (bad octal escape)", "[lexer]") {
 }
 
 TEST_CASE("String literal with hex escape", "[lexer]") {
-    auto text = "\"literal\\xFa\"";
+    auto& text = "\"literal\\xFa\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -336,7 +326,7 @@ TEST_CASE("String literal with hex escape", "[lexer]") {
 }
 
 TEST_CASE("String literal (bad hex escape)", "[lexer]") {
-    auto text = "\"literal\\xz\"";
+    auto& text = "\"literal\\xz\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -347,7 +337,7 @@ TEST_CASE("String literal (bad hex escape)", "[lexer]") {
 }
 
 TEST_CASE("String literal (unknown escape)", "[lexer]") {
-    auto text = "\"literal\\i\"";
+    auto& text = "\"literal\\i\"";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
@@ -358,7 +348,7 @@ TEST_CASE("String literal (unknown escape)", "[lexer]") {
 }
 
 TEST_CASE("Signed integer literal", "[lexer]") {
-    auto text = "19248";
+    auto& text = "19248";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -373,7 +363,7 @@ TEST_CASE("Signed integer literal", "[lexer]") {
 TEST_CASE("Signed integer literal (trailing whitespace)", "[lexer]") {
     // based numeric literals can have whitespace between them and the base,
     // token so the literal lexer needs to handle that speculatively
-    auto text = "192__48         \v\t ";
+    auto& text = "192__48         \v\t ";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -386,7 +376,7 @@ TEST_CASE("Signed integer literal (trailing whitespace)", "[lexer]") {
 }
 
 TEST_CASE("Signed integer literal (overflow)", "[lexer]") {
-    auto text = "9999999999";
+    auto& text = "9999999999";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -400,7 +390,7 @@ TEST_CASE("Signed integer literal (overflow)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (fraction)", "[lexer]") {
-    auto text = "32.57";
+    auto& text = "32.57";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -413,7 +403,7 @@ TEST_CASE("Real literal (fraction)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (missing fraction)", "[lexer]") {
-    auto text = "32.";
+    auto& text = "32.";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -427,7 +417,7 @@ TEST_CASE("Real literal (missing fraction)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (exponent)", "[lexer]") {
-    auto text = "32e57";
+    auto& text = "32e57";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -441,7 +431,7 @@ TEST_CASE("Real literal (exponent)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (plus exponent)", "[lexer]") {
-    auto text = "0000032E+00057";
+    auto& text = "0000032E+00057";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -454,7 +444,7 @@ TEST_CASE("Real literal (plus exponent)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (minus exponent)", "[lexer]") {
-    auto text = "32e-57";
+    auto& text = "32e-57";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -467,7 +457,7 @@ TEST_CASE("Real literal (minus exponent)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
-    auto text = "32.3456e57";
+    auto& text = "32.3456e57";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -480,7 +470,7 @@ TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (bad exponent)", "[lexer]") {
-    auto text = "32ez";
+    auto& text = "32ez";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -494,7 +484,7 @@ TEST_CASE("Real literal (bad exponent)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
-    auto text = "32e9000";
+    auto& text = "32e9000";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -508,7 +498,7 @@ TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
 }
 
 TEST_CASE("Real literal (digit overflow)", "[lexer]") {
-    auto text = std::string(400, '9') + ".0";
+    auto& text = std::string(400, '9') + ".0";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::RealLiteral);
@@ -522,7 +512,7 @@ TEST_CASE("Real literal (digit overflow)", "[lexer]") {
 }
 
 TEST_CASE("Vector literal (zero size)", "[lexer]") {
-    auto text = "0'd34";
+    auto& text = "0'd34";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -532,7 +522,7 @@ TEST_CASE("Vector literal (zero size)", "[lexer]") {
 }
 
 TEST_CASE("Vector literal (size overflow)", "[lexer]") {
-    auto text = "9999999999999999999'd34";
+    auto& text = "9999999999999999999'd34";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -542,7 +532,7 @@ TEST_CASE("Vector literal (size overflow)", "[lexer]") {
 }
 
 TEST_CASE("Vector literal (missing base)", "[lexer]") {
-    auto text = "12'34";
+    auto& text = "12'34";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -552,7 +542,7 @@ TEST_CASE("Vector literal (missing base)", "[lexer]") {
 }
 
 TEST_CASE("Decimal vector literal", "[lexer]") {
-    auto text = "123'd34_562xXz??";
+    auto& text = "123'd34_562xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -565,7 +555,7 @@ TEST_CASE("Decimal vector literal", "[lexer]") {
 }
 
 TEST_CASE("Decimal vector literal (with whitespace)", "[lexer]") {
-    auto text = "123   'D   34_562xXz??";
+    auto& text = "123   'D   34_562xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -578,7 +568,7 @@ TEST_CASE("Decimal vector literal (with whitespace)", "[lexer]") {
 }
 
 TEST_CASE("Decimal vector literal (missing digits)", "[lexer]") {
-    auto text = "4'dggg";
+    auto& text = "4'dggg";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -588,7 +578,7 @@ TEST_CASE("Decimal vector literal (missing digits)", "[lexer]") {
 }
 
 TEST_CASE("Decimal vector literal (unsized)", "[lexer]") {
-    auto text = "'d34_562xXz??";
+    auto& text = "'d34_562xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -601,7 +591,7 @@ TEST_CASE("Decimal vector literal (unsized)", "[lexer]") {
 }
 
 TEST_CASE("Octal vector literal", "[lexer]") {
-    auto text = "123'o34_562xXz??";
+    auto& text = "123'o34_562xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -614,7 +604,7 @@ TEST_CASE("Octal vector literal", "[lexer]") {
 }
 
 TEST_CASE("Octal vector literal (with whitespace)", "[lexer]") {
-    auto text = "123   'O   34_562xXz??";
+    auto& text = "123   'O   34_562xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -627,7 +617,7 @@ TEST_CASE("Octal vector literal (with whitespace)", "[lexer]") {
 }
 
 TEST_CASE("Octal vector literal (missing digits)", "[lexer]") {
-    auto text = "4'o9";
+    auto& text = "4'o9";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -637,7 +627,7 @@ TEST_CASE("Octal vector literal (missing digits)", "[lexer]") {
 }
 
 TEST_CASE("Octal vector literal (unsized)", "[lexer]") {
-    auto text = "'o34_562xXz??";
+    auto& text = "'o34_562xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -650,7 +640,7 @@ TEST_CASE("Octal vector literal (unsized)", "[lexer]") {
 }
 
 TEST_CASE("Hex vector literal", "[lexer]") {
-    auto text = "123'h3f4_56aA02xXz??";
+    auto& text = "123'h3f4_56aA02xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -663,7 +653,7 @@ TEST_CASE("Hex vector literal", "[lexer]") {
 }
 
 TEST_CASE("Hex vector literal (with whitespace)", "[lexer]") {
-    auto text = "123   'H   ffF_a562xXz??";
+    auto& text = "123   'H   ffF_a562xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -676,7 +666,7 @@ TEST_CASE("Hex vector literal (with whitespace)", "[lexer]") {
 }
 
 TEST_CASE("Hex vector literal (missing digits)", "[lexer]") {
-    auto text = "4'hG";
+    auto& text = "4'hG";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -686,7 +676,7 @@ TEST_CASE("Hex vector literal (missing digits)", "[lexer]") {
 }
 
 TEST_CASE("Hex vector literal (unsized)", "[lexer]") {
-    auto text = "'h3f4_56aA02xXz??";
+    auto& text = "'h3f4_56aA02xXz??";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -699,7 +689,7 @@ TEST_CASE("Hex vector literal (unsized)", "[lexer]") {
 }
 
 TEST_CASE("Binary vector literal", "[lexer]") {
-    auto text = "123'b1101_xX?zZ";
+    auto& text = "123'b1101_xX?zZ";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -712,7 +702,7 @@ TEST_CASE("Binary vector literal", "[lexer]") {
 }
 
 TEST_CASE("Binary vector literal (with whitespace)", "[lexer]") {
-    auto text = "123   'B   1101_xX??zZ";
+    auto& text = "123   'B   1101_xX??zZ";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -725,7 +715,7 @@ TEST_CASE("Binary vector literal (with whitespace)", "[lexer]") {
 }
 
 TEST_CASE("Binary vector literal (missing digits)", "[lexer]") {
-    auto text = "4'b2";
+    auto& text = "4'b2";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -735,7 +725,7 @@ TEST_CASE("Binary vector literal (missing digits)", "[lexer]") {
 }
 
 TEST_CASE("Binary vector literal (unsized)", "[lexer]") {
-    auto text = "'b1101_xX?zZ";
+    auto& text = "'b1101_xX?zZ";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -748,7 +738,7 @@ TEST_CASE("Binary vector literal (unsized)", "[lexer]") {
 }
 
 TEST_CASE("Unsized unbased literal", "[lexer]") {
-    auto text = "'1";
+    auto& text = "'1";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -761,7 +751,7 @@ TEST_CASE("Unsized unbased literal", "[lexer]") {
 }
 
 TEST_CASE("Unsized literal (invalid)", "[lexer]") {
-    auto text = "'f";
+    auto& text = "'f";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -771,8 +761,8 @@ TEST_CASE("Unsized literal (invalid)", "[lexer]") {
 }
 
 void testDirective(TriviaKind kind) {
-    auto text = getTriviaKindText(kind);
-    auto token = lexToken(std::string(text.begin(), text.end()));
+    auto& text = getTriviaKindText(kind);
+    auto token = lexToken(SourceText::fromNullTerminated(text));
 
     CHECK(token.kind == TokenKind::Directive);
     CHECK(token.toFullString() == text);
@@ -804,7 +794,7 @@ TEST_CASE("Directives", "[lexer]") {
 }
 
 TEST_CASE("Misplaced directive char", "[lexer]") {
-    auto text = "`";
+    auto& text = "`";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Unknown);
@@ -814,7 +804,7 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
 }
 
 TEST_CASE("Macro usage", "[lexer]") {
-    auto text = "`something";
+    auto& text = "`something";
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::MacroUsage);
@@ -824,8 +814,8 @@ TEST_CASE("Macro usage", "[lexer]") {
 }
 
 void testPunctuation(TokenKind kind) {
-    auto text = getTokenKindText(kind);
-    auto token = lexToken(std::string(text.begin(), text.end()));
+    auto& text = getTokenKindText(kind);
+    auto token = lexToken(SourceText::fromNullTerminated(text));
 
     CHECK(token.kind == kind);
     CHECK(token.toFullString() == text);
