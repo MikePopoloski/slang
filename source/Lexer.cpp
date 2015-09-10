@@ -10,7 +10,7 @@
 #include "Buffer.h"
 #include "StringRef.h"
 #include "Diagnostics.h"
-#include "FileTracker.h"
+#include "SourceTracker.h"
 #include "Token.h"
 #include "Lexer.h"
 #include "CharInfo.h"

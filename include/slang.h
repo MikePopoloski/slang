@@ -15,7 +15,7 @@
 #include "Buffer.h"
 #include "StringRef.h"
 #include "StringTable.h"
-#include "FileTracker.h"
+#include "SourceTracker.h"
 #include "BitVector.h"
 #include "Diagnostics.h"
 #include "Trivia.h"

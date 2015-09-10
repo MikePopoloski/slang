@@ -10,7 +10,7 @@
 #include "Buffer.h"
 #include "StringRef.h"
 #include "Diagnostics.h"
-#include "FileTracker.h"
+#include "SourceTracker.h"
 #include "Token.h"
 #include "Lexer.h"
 #include "TokenConsumer.h"
@@ -38,15 +38,15 @@ slang::ArrayRef<T> copyArray(slang::BumpAllocator& alloc, const slang::Buffer<T>
 
 namespace slang {
 
-Preprocessor::Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    fileTracker(fileTracker), alloc(alloc), diagnostics(diagnostics) {
+Preprocessor::Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics) :
+    sourceTracker(sourceTracker), alloc(alloc), diagnostics(diagnostics) {
 
     keywordTable = getKeywordTable();
 }
 
 void Preprocessor::enterFile(SourceBuffer source) {
     // TODO: expand this a bit
-    enterFile(fileTracker.track("unnamed"), source);
+    enterFile(sourceTracker.track("unnamed"), source);
 }
 
 void Preprocessor::enterFile(FileID file, SourceBuffer source) {
@@ -122,7 +122,7 @@ Token* Preprocessor::handleInclude(Token* directiveToken) {
             return nullptr;
     }
 
-    SourceFile* file = fileTracker.readHeader(getSource()->getFile(), token->valueText(), systemPath);
+    SourceFile* file = sourceTracker.readHeader(getSource()->getFile(), token->valueText(), systemPath);
     if (!file)
         return nullptr;
 

@@ -8,7 +8,7 @@ namespace {
 static const char RelativeTestPath[] = "../../../tests/data/include.svh";
 
 TEST_CASE("File tracking", "[files]") {
-    FileTracker tracker;
+    SourceTracker tracker;
     FileID id1 = tracker.track("stuff.txt");
     FileID id2 = tracker.track("otherstuff.txt");
     FileID id3 = tracker.track("stuff.txt");
@@ -18,7 +18,7 @@ TEST_CASE("File tracking", "[files]") {
 }
 
 TEST_CASE("Read source", "[files]") {
-    FileTracker tracker;
+    SourceTracker tracker;
     std::string testPath = tracker.makeAbsolutePath(RelativeTestPath);
 
     SourceFile file;
@@ -28,7 +28,7 @@ TEST_CASE("Read source", "[files]") {
 }
 
 TEST_CASE("Read header (absolute)", "[files]") {
-    FileTracker tracker;
+    SourceTracker tracker;
     std::string testPath = tracker.makeAbsolutePath(RelativeTestPath);
 
     // check load failure
@@ -49,7 +49,7 @@ TEST_CASE("Read header (absolute)", "[files]") {
 }
 
 TEST_CASE("Read header (relative)", "[files]") {
-    FileTracker tracker;
+    SourceTracker tracker;
 
     // relative to nothing should never return anything
     CHECK(!tracker.readHeader(FileID(), "relative", false));
@@ -74,7 +74,7 @@ TEST_CASE("Read header (relative)", "[files]") {
 }
 
 TEST_CASE("Read header (include dirs)", "[files]") {
-    FileTracker tracker;
+    SourceTracker tracker;
     tracker.addSystemDirectory(tracker.makeAbsolutePath("../../../tests/data/"));
 
     SourceFile* file = tracker.readHeader(FileID(), "include.svh", true);

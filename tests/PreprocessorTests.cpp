@@ -8,10 +8,10 @@ namespace {
 BumpAllocator alloc;
 Diagnostics diagnostics;
 
-FileTracker& getTracker() {
-    static FileTracker* tracker = nullptr;
+SourceTracker& getTracker() {
+    static SourceTracker* tracker = nullptr;
     if (!tracker) {
-        tracker = new FileTracker();
+        tracker = new SourceTracker();
         tracker->addUserDirectory("../../../tests/data/");
     }
     return *tracker;

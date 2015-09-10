@@ -16,9 +16,6 @@
     <Filter Include="numeric">
       <UniqueIdentifier>{92c36059-cdc7-4ae5-9806-bf921f712548}</UniqueIdentifier>
     </Filter>
-    <Filter Include="files">
-      <UniqueIdentifier>{c17df108-efd5-4e87-a2f1-02ade38578e6}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\slang.h" />
@@ -55,9 +52,6 @@
     <ClInclude Include="..\..\include\Hash.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\FileTracker.h">
-      <Filter>files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\Handle.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -75,6 +69,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\StringTable.h">
       <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SourceTracker.h">
+      <Filter>lexing</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -96,8 +93,8 @@
     <ClCompile Include="..\..\source\Preprocessor.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\FileTracker.cpp">
-      <Filter>files</Filter>
+    <ClCompile Include="..\..\source\SourceTracker.cpp">
+      <Filter>lexing</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

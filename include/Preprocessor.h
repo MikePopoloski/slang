@@ -4,14 +4,14 @@ namespace slang {
 
 class Preprocessor : TokenConsumer<Lexer, 32> {
 public:
-    Preprocessor(FileTracker& fileTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     void enterFile(SourceBuffer source);
     void enterFile(FileID file, SourceBuffer source);
 
     Token* lex();
 
-    FileTracker& getFileTracker() const { return fileTracker; }
+    SourceTracker& getSourceTracker() const { return sourceTracker; }
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
@@ -22,7 +22,7 @@ private:
     void addError(DiagCode code);
     void convertDirectiveToTrivia(Token* directive);
 
-    FileTracker& fileTracker;
+    SourceTracker& sourceTracker;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
 
