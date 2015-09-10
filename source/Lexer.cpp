@@ -1014,9 +1014,4 @@ void Lexer::addError(DiagCode code) {
     diagnostics.add(SyntaxError(code, 0, 0));
 }
 
-StringRef Lexer::lexeme() {
-    uint32_t length = lexemeLength();
-    return StringRef(marker, length).intern(alloc);
-}
-
 } // namespace slang

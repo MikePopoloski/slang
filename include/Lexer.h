@@ -64,7 +64,7 @@ private:
     bool reallyAtEnd() { return sourceBuffer >= sourceEnd - 1; }
 
     uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
-    StringRef lexeme();
+    StringRef lexeme() { return StringRef(marker, lexemeLength()); }
 
     bool consume(char c) {
         if (peek() == c) {
