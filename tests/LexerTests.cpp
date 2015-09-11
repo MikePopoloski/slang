@@ -7,6 +7,8 @@ namespace {
 
 BumpAllocator alloc;
 Diagnostics diagnostics;
+SourceTracker sourceTracker;
+Preprocessor preprocessor(sourceTracker, alloc, diagnostics);
 
 bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;
@@ -14,7 +16,7 @@ bool withinUlp(double a, double b) {
 
 const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
-    Lexer lexer(FileID(), text, alloc, diagnostics);
+    Lexer lexer(FileID(), text, preprocessor);
 
     Token* token = lexer.lex();
     REQUIRE(token != nullptr);
@@ -72,8 +74,8 @@ TEST_CASE("Line Comment", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::LineComment);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::LineComment);
     CHECK(diagnostics.empty());
 }
 
@@ -83,8 +85,8 @@ TEST_CASE("Block Comment (one line)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::BlockComment);
     CHECK(diagnostics.empty());
 }
 
@@ -98,8 +100,8 @@ multiple lines
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::BlockComment);
     CHECK(diagnostics.empty());
 }
 
@@ -109,8 +111,8 @@ TEST_CASE("Block Comment (unterminated)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::UnterminatedBlockComment);
 }
@@ -121,8 +123,8 @@ TEST_CASE("Block Comment (nested)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::NestedBlockComment);
 }
@@ -133,8 +135,8 @@ TEST_CASE("Whitespace", "[lexer]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::Whitespace);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::Whitespace);
     CHECK(diagnostics.empty());
 }
 
@@ -143,8 +145,8 @@ TEST_CASE("Newlines (CR)", "[lexer]") {
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::EndOfLine);
     CHECK(diagnostics.empty());
 }
 
@@ -153,8 +155,8 @@ TEST_CASE("Newlines (CR/LF)", "[lexer]") {
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::EndOfLine);
     CHECK(diagnostics.empty());
 }
 
@@ -163,8 +165,8 @@ TEST_CASE("Newlines (LF)", "[lexer]") {
     auto token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(token.leadingTrivia.count() == 1);
+    CHECK(token.leadingTrivia[0].kind == TriviaKind::EndOfLine);
     CHECK(diagnostics.empty());
 }
 
@@ -235,7 +237,7 @@ TEST_CASE("Invalid escapes", "[lexer]") {
 
     token = lexToken("\\  ");
     CHECK(token.kind == TokenKind::Unknown);
-    CHECK(token.toFullString() == "\\");
+    CHECK(token.toString() == "\\");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::EscapedWhitespace);
 }
@@ -367,7 +369,7 @@ TEST_CASE("Signed integer literal (trailing whitespace)", "[lexer]") {
     auto token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toFullString() != text);
+    CHECK(token.toString() != text);
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();

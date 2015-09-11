@@ -77,13 +77,15 @@ struct DirectiveInfo {
 
 class Token {
 public:
-    ArrayRef<Trivia> trivia;
+    ArrayRef<Trivia> leadingTrivia;
+    ArrayRef<Trivia> trailingTrivia;
     TokenKind kind;
 
-    Token(TokenKind kind, void* data, ArrayRef<Trivia> trivia)
-        : kind(kind),
-          data(data),
-          trivia(trivia) {
+    Token(TokenKind kind, void* data, ArrayRef<Trivia> leadingTrivia, ArrayRef<Trivia> trailingTrivia) :
+        kind(kind),
+        data(data),
+        leadingTrivia(leadingTrivia),
+        trailingTrivia(trailingTrivia) {
     }
 
     // value text is the "nice" lexed version of certain tokens;

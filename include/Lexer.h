@@ -3,10 +3,11 @@
 namespace slang {
 
 struct SourceText;
+class Preprocessor;
 
 class Lexer {
 public:
-    Lexer(FileID file, const SourceText& source, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(FileID file, const SourceText& source, Preprocessor& preprocessor);
 
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
@@ -20,8 +21,7 @@ public:
     Trivia scanToEndOfLine();
 
     FileID getFile() const { return file; }
-    BumpAllocator& getAllocator() const { return alloc; }
-    Diagnostics& getDiagnostics() const { return diagnostics; }
+    Preprocessor& getPreprocessor() const { return preprocessor; }
 
 private:
     TokenKind lexToken(void** extraData);
@@ -41,15 +41,15 @@ private:
     template<bool (*IsDigitFunc)(char), uint32_t (*ValueFunc)(char)>
     NumericLiteralInfo* lexVectorDigits();
 
-    bool lexTrivia();
-    bool scanBlockComment();
+    void lexTrivia(bool isTrailing, Buffer<Trivia>& buffer);
+    void scanBlockComment();
     void scanWhitespace();
     void scanLineComment();
 
     int findNextNonWhitespace();
 
     // factory helper methods
-    void addTrivia(TriviaKind kind);
+    Token* createToken(TokenKind kind, void* extraData);
     void addError(DiagCode code);
 
     // source pointer manipulation
@@ -81,11 +81,12 @@ private:
     };
 
     Buffer<char> stringBuffer;
-    Buffer<Trivia> triviaBuffer;
+    Buffer<Trivia> leadingTriviaBuffer;
+    Buffer<Trivia> trailingTriviaBuffer;
     VectorBuilder vectorBuilder;
 
+    Preprocessor& preprocessor;
     BumpAllocator& alloc;
-    Diagnostics& diagnostics;
     const char* sourceBuffer;
     const char* sourceEnd;
     const char* marker;

@@ -12,36 +12,40 @@ namespace slang {
 
 void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
     if (includeTrivia) {
-        for (const auto& t : trivia)
+        for (const auto& t : leadingTrivia)
             buffer.appendRange(t.rawText);
     }
 
     StringRef text = getTokenKindText(kind);
-    if (text) {
+    if (text)
         buffer.appendRange(text);
-        return;
+    else {
+        // not a simple token, so extract info from our data pointer
+        switch (kind) {
+            case TokenKind::Unknown:
+            case TokenKind::Identifier:
+            case TokenKind::SystemIdentifier:
+                buffer.appendRange(identifier->rawText);
+                break;
+            case TokenKind::UserIncludeFileName:
+            case TokenKind::SystemIncludeFileName:
+            case TokenKind::StringLiteral:
+                buffer.appendRange(string->rawText);
+                break;
+            case TokenKind::IntegerLiteral:
+            case TokenKind::RealLiteral:
+                buffer.appendRange(numeric->rawText);
+                break;
+            case TokenKind::Directive:
+            case TokenKind::MacroUsage:
+                buffer.appendRange(directive->rawText);
+                break;
+        }
     }
 
-    // not a simple token, so extract info from our data pointer
-    switch (kind) {
-        case TokenKind::Unknown:
-        case TokenKind::Identifier:
-        case TokenKind::SystemIdentifier:
-            buffer.appendRange(identifier->rawText);
-            break;
-        case TokenKind::UserIncludeFileName:
-        case TokenKind::SystemIncludeFileName:
-        case TokenKind::StringLiteral:
-            buffer.appendRange(string->rawText);
-            break;
-        case TokenKind::IntegerLiteral:
-        case TokenKind::RealLiteral:
-            buffer.appendRange(numeric->rawText);
-            break;
-        case TokenKind::Directive:
-        case TokenKind::MacroUsage:
-            buffer.appendRange(directive->rawText);
-            break;
+    if (includeTrivia) {
+        for (const auto& t : trailingTrivia)
+            buffer.appendRange(t.rawText);
     }
 }
 

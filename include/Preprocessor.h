@@ -11,6 +11,8 @@ public:
 
     Token* lex();
 
+    TokenKind lookupKeyword(StringRef identifier);
+
     SourceTracker& getSourceTracker() const { return sourceTracker; }
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }

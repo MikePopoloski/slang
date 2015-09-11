@@ -52,7 +52,7 @@ void Preprocessor::enterFile(SourceText source) {
 void Preprocessor::enterFile(FileID file, SourceText source) {
     // TODO: max include depth
     // create a new lexer for this file and push it onto the stack
-    lexerStack.emplace_back(file, source, alloc, diagnostics);
+    lexerStack.emplace_back(file, source, *this);
     setSource(&lexerStack.back());
 }
 
@@ -85,13 +85,21 @@ Token* Preprocessor::lex() {
     }
 }
 
+TokenKind Preprocessor::lookupKeyword(StringRef identifier) {
+    // TODO: different tables based on state
+    TokenKind kind;
+    if (keywordTable->lookup(identifier, kind))
+        return kind;
+    return TokenKind::Unknown;
+}
+
 Token* Preprocessor::handleIdentifier(Token* token) {
     // this identifier might actually be a keyword token
-    if (token->identifierType() != IdentifierType::Escaped) {
+    /*if (token->identifierType() != IdentifierType::Escaped) {
         TokenKind keywordKind;
         if (keywordTable->lookup(token->valueText(), keywordKind))
             return alloc.emplace<Token>(keywordKind, nullptr, token->trivia);
-    }
+    }*/
 
     return token;
 }
@@ -108,14 +116,14 @@ Token* Preprocessor::handleInclude(Token* directiveToken) {
             // issue an error and be on our merry way
             addError(DiagCode::ExpectedIncludeFileName);
 
-            triviaBuffer.appendRange(directiveToken->trivia);
-            triviaBuffer.append(Trivia(directiveToken->directiveKind(), StringRef()));
+            /*triviaBuffer.appendRange(directiveToken->trivia);
+            triviaBuffer.append(Trivia(directiveToken->directiveKind(), StringRef()));*/
 
         case TokenKind::EndOfFile:
             addError(DiagCode::ExpectedIncludeFileName);
             convertDirectiveToTrivia(directiveToken);
-            triviaBuffer.appendRange(token->trivia);
-            return alloc.emplace<Token>(TokenKind::EndOfFile, nullptr, copyArray(alloc, triviaBuffer));
+            //triviaBuffer.appendRange(token->trivia);
+//            return alloc.emplace<Token>(TokenKind::EndOfFile, nullptr, copyArray(alloc, triviaBuffer));
         default:
             // we have junk here; scan the rest of the line and move on
 
@@ -132,8 +140,8 @@ Token* Preprocessor::handleInclude(Token* directiveToken) {
 }
 
 void Preprocessor::convertDirectiveToTrivia(Token* directive) {
-    triviaBuffer.appendRange(directive->trivia);
-    triviaBuffer.append(Trivia(directive->directiveKind(), StringRef()));
+//    triviaBuffer.appendRange(directive->trivia);
+  //  triviaBuffer.append(Trivia(directive->directiveKind(), StringRef()));
 }
 
 void Preprocessor::addError(DiagCode code) {
