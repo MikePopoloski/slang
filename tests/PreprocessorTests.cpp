@@ -29,14 +29,14 @@ const Token& lexToken(const SourceText& text) {
 
 TEST_CASE("Include File", "[preprocessor]") {
     auto& text = "`include \"include.svh\"";
-    auto token = lexToken(text);
+    auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
 }
 
 void testKeyword(TokenKind kind) {
     auto text = getTokenKindText(kind);
-    auto token = lexToken(SourceText::fromNullTerminated(text));
+    auto& token = lexToken(SourceText::fromNullTerminated(text));
 
     CHECK(token.kind == kind);
     CHECK(token.toFullString() == text);

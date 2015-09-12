@@ -109,41 +109,33 @@ Lexer::Lexer(FileID file, const SourceText& source, Preprocessor& preprocessor) 
 
 Token* Lexer::lex() {
     // lex leading trivia
-    leadingTriviaBuffer.clear();
-    lexTrivia(false, leadingTriviaBuffer);
+    triviaBuffer.clear();
+    lexTrivia(triviaBuffer);
+    ArrayRef<Trivia> trivia = copyArray(alloc, triviaBuffer);
 
     // lex the next token
     mark();
-    void* data = nullptr;
-    TokenKind kind = lexToken(&data);
-
-    // lex trailing trivia
-    trailingTriviaBuffer.clear();
-    lexTrivia(true, trailingTriviaBuffer);
-
-    return createToken(kind, data);
-}
-
-Trivia Lexer::scanToEndOfLine() {
-    // this drops us out of directive mode
-    mode = LexingMode::Normal;
-
-    if (reallyAtEnd())
-        return Trivia(TriviaKind::SkippedTokens, StringRef());
-
-    mark();
-    while (true) {
-        char c = peek();
-        if (isNewline(c) || (c == '\0' && reallyAtEnd()))
-            break;
-
-        advance();
+    TokenInfo info;
+    TokenKind kind = lexToken(info);
+    switch (kind) {
+        case TokenKind::Unknown:
+            return Token::createUnknown(alloc, trivia, lexeme());
+        case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
+            return Token::createIdentifier(alloc, kind, trivia, lexeme(), info.identifierType);
+        case TokenKind::IntegerLiteral:
+        case TokenKind::RealLiteral:
+            return Token::createNumericLiteral(alloc, kind, trivia, lexeme(), info.numericValue);
+        case TokenKind::StringLiteral:
+            return Token::createStringLiteral(alloc, kind, trivia, lexeme(), info.niceText);
+        case TokenKind::Directive:
+            return Token::createDirective(alloc, kind, trivia, lexeme(), info.directiveKind);
+        default:
+            return Token::createSimple(alloc, kind, trivia);
     }
-
-    return Trivia(TriviaKind::SkippedTokens, lexeme());
 }
 
-TokenKind Lexer::lexToken(void** extraData) {
+TokenKind Lexer::lexToken(TokenInfo& info) {
     char c = peek();
     advance();
     switch (c) {
@@ -155,7 +147,6 @@ TokenKind Lexer::lexToken(void** extraData) {
             if (!reallyAtEnd()) {
                 advance();
                 addError(DiagCode::EmbeddedNull);
-                *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
                 return TokenKind::Unknown;
             }
 
@@ -177,13 +168,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             }
             return TokenKind::Exclamation;
         case '"':
-            // special case: for an `include directive, this is a filename
-            if (mode == LexingMode::Include) {
-                *extraData = lexIncludeFileName('"');
-                return TokenKind::UserIncludeFileName;
-            }
-
-            *extraData = lexStringLiteral();
+            lexStringLiteral(info);
             return TokenKind::StringLiteral;
         case '#':
             switch (peek()) {
@@ -204,7 +189,7 @@ TokenKind Lexer::lexToken(void** extraData) {
                     return TokenKind::Hash;
             }
             return TokenKind::Hash;
-        case '$': return lexDollarSign(extraData);
+        case '$': return lexDollarSign(info);
         case '%':
             if (consume('='))
                 return TokenKind::PercentEqual;
@@ -225,7 +210,7 @@ TokenKind Lexer::lexToken(void** extraData) {
             if (consume('{'))
                 return TokenKind::ApostropheOpenBrace;
 
-            *extraData = lexUnsizedNumericLiteral();
+            lexUnsizedNumericLiteral(info);
             return TokenKind::IntegerLiteral;
         case '(':
             if (consume('*'))
@@ -283,7 +268,7 @@ TokenKind Lexer::lexToken(void** extraData) {
         case '8': case '9':
             // back up so that lexNumericLiteral can look at this digit again
             sourceBuffer--;
-            return lexNumericLiteral(extraData);
+            return lexNumericLiteral(info);
         case ':':
             switch (peek()) {
                 case '=': advance(); return TokenKind::ColonEquals;
@@ -293,12 +278,6 @@ TokenKind Lexer::lexToken(void** extraData) {
             return TokenKind::Colon;
         case ';': return TokenKind::Semicolon;
         case '<':
-            // special case: for an `include directive, this starts a system-path filename
-            if (mode == LexingMode::Include) {
-                *extraData = lexIncludeFileName('<');
-                return TokenKind::SystemIncludeFileName;
-            }
-
             switch (peek()) {
                 case '=': advance(); return TokenKind::LessThanEquals;
                 case '-':
@@ -384,11 +363,11 @@ TokenKind Lexer::lexToken(void** extraData) {
             if (kind != TokenKind::Unknown)
                 return kind;
 
-            *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Normal);
+            info.identifierType = IdentifierType::Normal;
             return TokenKind::Identifier;
         }
         case '[': return TokenKind::OpenBracket;
-        case '\\': return lexEscapeSequence(extraData);
+        case '\\': return lexEscapeSequence(info);
         case ']': return TokenKind::CloseBracket;
         case '^':
             switch (peek()) {
@@ -405,9 +384,9 @@ TokenKind Lexer::lexToken(void** extraData) {
                         advance(3);
                         return TokenKind::MacroEscapedQuote;
                     }
-                    return lexDirective(extraData);
+                    return lexDirective(info);
             }
-            return lexDirective(extraData);
+            return lexDirective(info);
         case '{': return TokenKind::OpenBrace;
         case '|':
             switch (peek()) {
@@ -445,22 +424,11 @@ TokenKind Lexer::lexToken(void** extraData) {
                 advance(utf8SeqBytes(c));
                 addError(DiagCode::UTF8Char);
             }
-            *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
             return TokenKind::Unknown;
     }
 }
 
-void Lexer::scanIdentifier() {
-    while (true) {
-        char c = peek();
-        if (isAlphaNumeric(c) || c == '_' || c == '$')
-            advance();
-        else
-            return;
-    }
-}
-
-StringLiteralInfo* Lexer::lexStringLiteral() {
+void Lexer::lexStringLiteral(TokenInfo& info) {
     stringBuffer.clear();
 
     while (true) {
@@ -544,15 +512,13 @@ StringLiteralInfo* Lexer::lexStringLiteral() {
         }
     }
 
-    StringRef niceText = StringRef(stringBuffer).intern(alloc);
-    return alloc.emplace<StringLiteralInfo>(lexeme(), niceText);
+    info.niceText = StringRef(stringBuffer).intern(alloc);
 }
 
-TokenKind Lexer::lexEscapeSequence(void** extraData) {
+TokenKind Lexer::lexEscapeSequence(TokenInfo& info) {
     char c = peek();
     if (isWhitespace(c) || c == '\0') {
         addError(DiagCode::EscapedWhitespace);
-        *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
         return TokenKind::Unknown;
     }
 
@@ -563,11 +529,11 @@ TokenKind Lexer::lexEscapeSequence(void** extraData) {
             break;
     }
 
-    *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Escaped);
+    info.identifierType = IdentifierType::Escaped;
     return TokenKind::Identifier;
 }
 
-TokenKind Lexer::lexDollarSign(void** extraData) {
+TokenKind Lexer::lexDollarSign(TokenInfo& info) {
     scanIdentifier();
 
     // if length is 1, we just have a dollar sign operator
@@ -575,23 +541,24 @@ TokenKind Lexer::lexDollarSign(void** extraData) {
         return TokenKind::Dollar;
 
     // otherwise, we have a system identifier
-    *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::System);
+    info.identifierType = IdentifierType::System;
     return TokenKind::SystemIdentifier;
 }
 
-TokenKind Lexer::lexDirective(void** extraData) {
+TokenKind Lexer::lexDirective(TokenInfo& info) {
     scanIdentifier();
 
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
         addError(DiagCode::MisplacedDirectiveChar);
-        *extraData = alloc.emplace<IdentifierInfo>(lexeme(), IdentifierType::Unknown);
         return TokenKind::Unknown;
     }
 
     auto directive = lexeme();
     TriviaKind type = getDirectiveKind(directive);
-    *extraData = alloc.emplace<DirectiveInfo>(directive, type);
+    // TODO:
+    //info.directiveKind = 
+    //*extraData = alloc.emplace<DirectiveInfo>(directive, type);
 
     // lexing behavior changes slightly depending on directives we see
     switch (type) {
@@ -607,7 +574,7 @@ TokenKind Lexer::lexDirective(void** extraData) {
     return TokenKind::Directive;
 }
 
-TokenKind Lexer::lexNumericLiteral(void** extraData) {
+TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     // skip over leading zeros
     char c;
     while ((c = peek()) == '0')
@@ -624,14 +591,14 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
     int lookahead = findNextNonWhitespace();
     if (lookahead > 0 && peek(lookahead) == '\'') {
         advance(lookahead + 1);
-        *extraData = lexVectorLiteral(unsignedVal);
+        lexVectorLiteral(info, unsignedVal);
         return TokenKind::IntegerLiteral;
     }
 
     switch (peek()) {
         case '\'':
             advance();
-            *extraData = lexVectorLiteral(unsignedVal);
+            lexVectorLiteral(info, unsignedVal);
             return TokenKind::IntegerLiteral;
         case '.': {
             // fractional digits
@@ -642,7 +609,8 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
                 addError(DiagCode::MissingFractionalDigits);
 
             c = scanUnsignedNumber(peek(), unsignedVal, digits);
-            *extraData = lexRealLiteral(
+            lexRealLiteral(
+                info,
                 unsignedVal,
                 decPoint,
                 digits,
@@ -652,7 +620,8 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
         }
         case 'e':
         case 'E':
-            *extraData = lexRealLiteral(
+            lexRealLiteral(
+                info,
                 unsignedVal,
                 digits,     // decimal point is after all digits
                 digits,
@@ -665,30 +634,12 @@ TokenKind Lexer::lexNumericLiteral(void** extraData) {
                 unsignedVal = INT32_MAX;
                 addError(DiagCode::SignedLiteralTooLarge);
             }
-            *extraData = alloc.emplace<NumericLiteralInfo>(lexeme(), (int32_t)unsignedVal);
+            info.numericValue = (int32_t)unsignedVal;
             return TokenKind::IntegerLiteral;
     }
 }
 
-char Lexer::scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits) {
-    while (true) {
-        if (isDecimalDigit(c)) {
-            // After 18 digits, stop caring. For normal integers, we're going to truncate
-            // to 32-bits anyway. For reals, later digits won't have any effect on the result.
-            if (digits < MaxMantissaDigits)
-                unsignedVal = (unsignedVal * 10) + getDigitValue(c);
-            digits++;
-        }
-        else if (c != '_')
-            break;
-
-        advance();
-        c = peek();
-    }
-    return c;
-}
-
-NumericLiteralInfo* Lexer::lexRealLiteral(uint64_t value, int decPoint, int digits, bool exponent) {
+void Lexer::lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent) {
     bool neg = false;
     uint64_t expVal = 0;
 
@@ -727,10 +678,10 @@ NumericLiteralInfo* Lexer::lexRealLiteral(uint64_t value, int decPoint, int digi
     if (!composeDouble(double(value), exp, result))
         addError(DiagCode::RealExponentTooLarge);
 
-    return alloc.emplace<NumericLiteralInfo>(lexeme(), result);
+    info.numericValue = result;
 }
 
-NumericLiteralInfo* Lexer::lexVectorLiteral(uint64_t size64) {
+void Lexer::lexVectorLiteral(TokenInfo& info, uint64_t size64) {
     // error checking on the size, plus coerce to 32-bit
     uint32_t size32 = 0;
     if (size64 == 0)
@@ -759,73 +710,87 @@ NumericLiteralInfo* Lexer::lexVectorLiteral(uint64_t size64) {
         case 'd':
         case 'D':
             advance();
-            return lexVectorDigits<isDecimalDigit, getDigitValue>();
+            lexVectorDigits<isDecimalDigit, getDigitValue>(info);
+            break;
         case 'o':
         case 'O':
             advance();
-            return lexVectorDigits<isOctalDigit, getDigitValue>();
+            lexVectorDigits<isOctalDigit, getDigitValue>(info);
+            break;
         case 'h':
         case 'H':
             advance();
-            return lexVectorDigits<isHexDigit, getHexDigitValue>();
+            lexVectorDigits<isHexDigit, getHexDigitValue>(info);
+            break;
         case 'b':
         case 'B':
             advance();
-            return lexVectorDigits<isBinaryDigit, getDigitValue>();
+            lexVectorDigits<isBinaryDigit, getDigitValue>(info);
+            break;
         default:
             // error case
             addError(DiagCode::MissingVectorBase);
-            return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
+            info.numericValue = 0;
+            break;
     }
 }
 
-NumericLiteralInfo* Lexer::lexUnsizedNumericLiteral() {
+void Lexer::lexUnsizedNumericLiteral(TokenInfo& info) {
     vectorBuilder.startUnsized();
     char c = peek();
     switch (c) {
         case 'd':
         case 'D':
             advance();
-            return lexVectorDigits<isDecimalDigit, getDigitValue>();
+            lexVectorDigits<isDecimalDigit, getDigitValue>(info);
+            break;
         case 'o':
         case 'O':
             advance();
-            return lexVectorDigits<isOctalDigit, getDigitValue>();
+            lexVectorDigits<isOctalDigit, getDigitValue>(info);
+            break;
         case 'h':
         case 'H':
             advance();
-            return lexVectorDigits<isHexDigit, getHexDigitValue>();
+            lexVectorDigits<isHexDigit, getHexDigitValue>(info);
+            break;
         case 'b':
         case 'B':
             advance();
-            return lexVectorDigits<isBinaryDigit, getDigitValue>();
+            lexVectorDigits<isBinaryDigit, getDigitValue>(info);
+            break;
         case '0':
         case '1':
             advance();
-            return alloc.emplace<NumericLiteralInfo>(lexeme(), (logic_t)(uint8_t)getDigitValue(c));
+            info.numericValue = (logic_t)(uint8_t)getDigitValue(c);
+            break;
         case 'x':
         case 'X':
             advance();
-            return alloc.emplace<NumericLiteralInfo>(lexeme(), logic_t::x);
+            info.numericValue = logic_t::x;
+            break;
         case 'Z':
         case 'z':
             advance();
-            return alloc.emplace<NumericLiteralInfo>(lexeme(), logic_t::z);
+            info.numericValue = logic_t::z;
+            break;
         default:
             // error case
             addError(DiagCode::InvalidUnsizedLiteral);
-            return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
+            info.numericValue = 0;
+            break;
     }
 }
 
 template<bool(*IsDigitFunc)(char), uint32_t(*ValueFunc)(char)>
-NumericLiteralInfo* Lexer::lexVectorDigits() {
+void Lexer::lexVectorDigits(TokenInfo& info) {
     // skip leading whitespace
     int lookahead = findNextNonWhitespace();
     char c = peek(lookahead);
     if (!IsDigitFunc(c) && !isLogicDigit(c)) {
         addError(DiagCode::MissingVectorDigits);
-        return alloc.emplace<NumericLiteralInfo>(lexeme(), 0);
+        info.numericValue = 0;
+        return;
     }
 
     advance(lookahead);
@@ -847,14 +812,16 @@ NumericLiteralInfo* Lexer::lexVectorDigits() {
             default:
                 if (IsDigitFunc(c))
                     vectorBuilder.addDigit((char)ValueFunc(c));
-                else
-                    return alloc.emplace<NumericLiteralInfo>(lexeme(), vectorBuilder.toVector());
+                else {
+                    info.numericValue = vectorBuilder.toVector();
+                    return;
+                }
         }
         advance();
     }
 }
 
-void Lexer::lexTrivia(bool isTrailing, Buffer<Trivia>& buffer) {
+void Lexer::lexTrivia(Buffer<Trivia>& buffer) {
     while (true) {
         mark();
 
@@ -887,14 +854,10 @@ void Lexer::lexTrivia(bool isTrailing, Buffer<Trivia>& buffer) {
                 advance();
                 consume('\n');
                 buffer.emplace(TriviaKind::EndOfLine, lexeme());
-                if (isTrailing)
-                    return;
                 break;
             case '\n':
                 advance();
                 buffer.emplace(TriviaKind::EndOfLine, lexeme());
-                if (isTrailing)
-                    return;
                 break;
             //case '\\':
             //    // if we're lexing a directive, this might escape a newline
@@ -907,6 +870,34 @@ void Lexer::lexTrivia(bool isTrailing, Buffer<Trivia>& buffer) {
                 return;
         }
     }
+}
+
+void Lexer::scanIdentifier() {
+    while (true) {
+        char c = peek();
+        if (isAlphaNumeric(c) || c == '_' || c == '$')
+            advance();
+        else
+            return;
+    }
+}
+
+char Lexer::scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits) {
+    while (true) {
+        if (isDecimalDigit(c)) {
+            // After 18 digits, stop caring. For normal integers, we're going to truncate
+            // to 32-bits anyway. For reals, later digits won't have any effect on the result.
+            if (digits < MaxMantissaDigits)
+                unsignedVal = (unsignedVal * 10) + getDigitValue(c);
+            digits++;
+        }
+        else if (c != '_')
+            break;
+
+        advance();
+        c = peek();
+    }
+    return c;
 }
 
 void Lexer::scanWhitespace() {
@@ -969,28 +960,28 @@ void Lexer::scanBlockComment() {
         }
     }
 }
-
-StringLiteralInfo* Lexer::lexIncludeFileName(char delim) {
-    // switch out of specialized Include lexing mode
-    mode = LexingMode::Directive;
-
-    char c;
-    do {
-        c = peek();
-        if (c == '\0' || isNewline(c)) {
-            addError(DiagCode::ExpectedEndOfIncludeFileName);
-            break;
-        }
-        advance();
-    } while (c != delim);
-
-    uint32_t len = lexemeLength() - 1;
-    if (c == delim)
-        len--;
-
-    StringRef rawText = lexeme();
-    return alloc.emplace<StringLiteralInfo>(rawText, rawText.subString(1, len));
-}
+//
+//StringLiteralInfo* Lexer::lexIncludeFileName(char delim) {
+//    // switch out of specialized Include lexing mode
+//    mode = LexingMode::Directive;
+//
+//    char c;
+//    do {
+//        c = peek();
+//        if (c == '\0' || isNewline(c)) {
+//            addError(DiagCode::ExpectedEndOfIncludeFileName);
+//            break;
+//        }
+//        advance();
+//    } while (c != delim);
+//
+//    uint32_t len = lexemeLength() - 1;
+//    if (c == delim)
+//        len--;
+//
+//    StringRef rawText = lexeme();
+//    return alloc.emplace<StringLiteralInfo>(rawText, rawText.subString(1, len));
+//}
 
 int Lexer::findNextNonWhitespace() {
     int lookahead = 0;
@@ -998,15 +989,6 @@ int Lexer::findNextNonWhitespace() {
     while (isHorizontalWhitespace(c = peek(lookahead)))
         lookahead++;
     return lookahead;
-}
-
-Token* Lexer::createToken(TokenKind kind, void* extraData) {
-    return alloc.emplace<Token>(
-        kind,
-        extraData,
-        copyArray(alloc, leadingTriviaBuffer),
-        copyArray(alloc, trailingTriviaBuffer)
-    );
 }
 
 void Lexer::addError(DiagCode code) {

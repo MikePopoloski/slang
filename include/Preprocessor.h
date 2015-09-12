@@ -13,6 +13,8 @@ public:
 
     TokenKind lookupKeyword(StringRef identifier);
 
+    void parseDirective(Lexer* lexer);
+
     SourceTracker& getSourceTracker() const { return sourceTracker; }
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
@@ -20,6 +22,9 @@ public:
 private:
     Token* handleInclude(Token* directiveToken);
     Token* handleIdentifier(Token* token);
+
+    void parseIncludeDirective();
+    Token* parseEndOfDirective();
 
     void addError(DiagCode code);
     void convertDirectiveToTrivia(Token* directive);

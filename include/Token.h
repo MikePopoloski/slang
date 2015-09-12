@@ -16,24 +16,6 @@ enum class IdentifierType : uint8_t {
     System
 };
 
-struct IdentifierInfo {
-    StringRef rawText;
-    IdentifierType type;
-
-    IdentifierInfo(StringRef rawText, IdentifierType type) :
-        rawText(rawText), type(type) {
-    }
-};
-
-struct StringLiteralInfo {
-    StringRef rawText;
-    StringRef niceText;
-
-    StringLiteralInfo(StringRef rawText, StringRef niceText) :
-        rawText(rawText), niceText(niceText) {
-    }
-};
-
 struct NumericValue {
     union {
         logic_t bit;
@@ -44,12 +26,14 @@ struct NumericValue {
 
     uint8_t type;
 
+    NumericValue() : type(Unknown), bit(0) {}
     NumericValue(double real) : type(Real), real(real) {}
     NumericValue(int32_t integer) : type(SignedInteger), integer(integer) {}
     NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
     NumericValue(LogicVector vector) : type(Vector), vector(vector) {}
 
     enum {
+        Unknown,
         Real,
         SignedInteger,
         Vector,
@@ -57,36 +41,10 @@ struct NumericValue {
     };
 };
 
-struct NumericLiteralInfo {
-    StringRef rawText;
-    NumericValue value;
-
-    NumericLiteralInfo(StringRef rawText, NumericValue value) :
-        rawText(rawText), value(value) {
-    }
-};
-
-struct DirectiveInfo {
-    StringRef rawText;
-    TriviaKind kind;
-
-    DirectiveInfo(StringRef rawText, TriviaKind kind) :
-        rawText(rawText), kind(kind) {
-    }
-};
-
 class Token {
 public:
-    ArrayRef<Trivia> leadingTrivia;
-    ArrayRef<Trivia> trailingTrivia;
+    ArrayRef<Trivia> trivia;
     TokenKind kind;
-
-    Token(TokenKind kind, void* data, ArrayRef<Trivia> leadingTrivia, ArrayRef<Trivia> trailingTrivia) :
-        kind(kind),
-        data(data),
-        leadingTrivia(leadingTrivia),
-        trailingTrivia(trailingTrivia) {
-    }
 
     // value text is the "nice" lexed version of certain tokens;
     // for example, in string literals, escape sequences are converted appropriately
@@ -106,22 +64,36 @@ public:
     IdentifierType identifierType() const;
     TriviaKind directiveKind() const;
 
-    // gets the opaque extended data pointer
-    // should only be used to copy to a new Token
-    void* getDataPtr() const { return data; }
+    static Token* createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText);
+    static Token* createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia);
+    static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type);
+    static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText);
+    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value);
+    static Token* createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, TriviaKind directiveKind);
 
 private:
-    union {
-        void* data;
-        IdentifierInfo* identifier;
-        StringLiteralInfo* string;
-        NumericLiteralInfo* numeric;
-        DirectiveInfo* directive;
+    Token(TokenKind kind, ArrayRef<Trivia> trivia);
+    Token(const Token&) = delete;
+    Token& operator=(const Token&) = delete;
+
+    struct IdentifierInfo {
+        StringRef rawText;
+        IdentifierType type;
     };
 
-    enum {
-        StartOfLine,
-        IsMissing
+    struct StringLiteralInfo {
+        StringRef rawText;
+        StringRef niceText;
+    };
+
+    struct NumericLiteralInfo {
+        StringRef rawText;
+        NumericValue value;
+    };
+
+    struct DirectiveInfo {
+        StringRef rawText;
+        TriviaKind kind;
     };
 };
 

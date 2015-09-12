@@ -17,39 +17,42 @@ public:
     // an infinite stream of EndOfFile tokens will be generated
     Token* lex();
 
-    // scans the rest of the current line into trivia
-    Trivia scanToEndOfLine();
+    //Token* lexIncludeFileName();
 
     FileID getFile() const { return file; }
     Preprocessor& getPreprocessor() const { return preprocessor; }
 
 private:
-    TokenKind lexToken(void** extraData);
-    TokenKind lexNumericLiteral(void** extraData);
-    TokenKind lexEscapeSequence(void** extraData);
-    TokenKind lexDollarSign(void** extraData);
-    TokenKind lexDirective(void** extraData);
-    char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
-    void scanIdentifier();
+    struct TokenInfo {
+        StringRef niceText;
+        NumericValue numericValue;
+        IdentifierType identifierType;
+        TriviaKind directiveKind;
+    };
 
-    StringLiteralInfo* lexStringLiteral();
-    StringLiteralInfo* lexIncludeFileName(char delim);
-    NumericLiteralInfo* lexRealLiteral(uint64_t value, int decPoint, int digits, bool exponent);
-    NumericLiteralInfo* lexVectorLiteral(uint64_t size);
-    NumericLiteralInfo* lexUnsizedNumericLiteral();
+    TokenKind lexToken(TokenInfo& info);
+    TokenKind lexNumericLiteral(TokenInfo& info);
+    TokenKind lexEscapeSequence(TokenInfo& info);
+    TokenKind lexDollarSign(TokenInfo& info);
+    TokenKind lexDirective(TokenInfo& info);
+
+    void lexStringLiteral(TokenInfo& info);
+    void lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent);
+    void lexVectorLiteral(TokenInfo& info, uint64_t size);
+    void lexUnsizedNumericLiteral(TokenInfo& info);
 
     template<bool (*IsDigitFunc)(char), uint32_t (*ValueFunc)(char)>
-    NumericLiteralInfo* lexVectorDigits();
+    void lexVectorDigits(TokenInfo& info);
 
-    void lexTrivia(bool isTrailing, Buffer<Trivia>& buffer);
+    void lexTrivia(Buffer<Trivia>& buffer);
+    char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
+    void scanIdentifier();
     void scanBlockComment();
     void scanWhitespace();
     void scanLineComment();
 
     int findNextNonWhitespace();
 
-    // factory helper methods
-    Token* createToken(TokenKind kind, void* extraData);
     void addError(DiagCode code);
 
     // source pointer manipulation
@@ -81,10 +84,8 @@ private:
     };
 
     Buffer<char> stringBuffer;
-    Buffer<Trivia> leadingTriviaBuffer;
-    Buffer<Trivia> trailingTriviaBuffer;
+    Buffer<Trivia> triviaBuffer;
     VectorBuilder vectorBuilder;
-
     Preprocessor& preprocessor;
     BumpAllocator& alloc;
     const char* sourceBuffer;

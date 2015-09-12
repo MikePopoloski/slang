@@ -93,6 +93,27 @@ TokenKind Preprocessor::lookupKeyword(StringRef identifier) {
     return TokenKind::Unknown;
 }
 
+void Preprocessor::parseDirective(Lexer* lexer) {
+    setSource(lexer);
+
+    Token* directive = expect(TokenKind::Directive);
+    switch (getDirectiveKind(directive->valueText())) {
+        case TriviaKind::IncludeDirective:
+            parseIncludeDirective();
+            break;
+    }
+}
+
+void Preprocessor::parseIncludeDirective() {
+    // next token should be a filename; lex that manually
+//    Token* fileName = getSource()->lexIncludeFileName();
+    Token* end = parseEndOfDirective();
+}
+
+Token* Preprocessor::parseEndOfDirective() {
+    return nullptr;
+}
+
 Token* Preprocessor::handleIdentifier(Token* token) {
     // this identifier might actually be a keyword token
     /*if (token->identifierType() != IdentifierType::Escaped) {

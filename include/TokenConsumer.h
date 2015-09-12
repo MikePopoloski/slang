@@ -20,6 +20,15 @@ protected:
         return window[(readPtr + offset) & (WindowSize - 1)];
     }
 
+    Token* expect(TokenKind kind) {
+        Token* result = peek();
+        if (result->kind == kind)
+            return result;
+
+        // TODO: return "missing"
+        return nullptr;
+    }
+
     Token* consume() {
         Token* token = peek();
         readPtr = (readPtr + 1) & (WindowSize - 1);

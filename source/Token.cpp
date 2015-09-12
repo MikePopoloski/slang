@@ -10,9 +10,13 @@
 
 namespace slang {
 
+Token::Token(TokenKind kind, ArrayRef<Trivia> trivia) :
+    kind(kind), trivia(trivia) {
+}
+
 void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
     if (includeTrivia) {
-        for (const auto& t : leadingTrivia)
+        for (const auto& t : trivia)
             buffer.appendRange(t.rawText);
     }
 
@@ -25,27 +29,22 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
             case TokenKind::Unknown:
             case TokenKind::Identifier:
             case TokenKind::SystemIdentifier:
-                buffer.appendRange(identifier->rawText);
+                buffer.appendRange(((IdentifierInfo*)(this + 1))->rawText);
                 break;
             case TokenKind::UserIncludeFileName:
             case TokenKind::SystemIncludeFileName:
             case TokenKind::StringLiteral:
-                buffer.appendRange(string->rawText);
+                buffer.appendRange(((StringLiteralInfo*)(this + 1))->rawText);
                 break;
             case TokenKind::IntegerLiteral:
             case TokenKind::RealLiteral:
-                buffer.appendRange(numeric->rawText);
+                buffer.appendRange(((NumericLiteralInfo*)(this + 1))->rawText);
                 break;
             case TokenKind::Directive:
             case TokenKind::MacroUsage:
-                buffer.appendRange(directive->rawText);
+                buffer.appendRange(((DirectiveInfo*)(this + 1))->rawText);
                 break;
         }
-    }
-
-    if (includeTrivia) {
-        for (const auto& t : trailingTrivia)
-            buffer.appendRange(t.rawText);
     }
 }
 
@@ -56,26 +55,26 @@ StringRef Token::valueText() const {
 
     switch (kind) {
         case TokenKind::Identifier:
-            switch (identifier->type) {
+            switch (identifierType()) {
                 case IdentifierType::Escaped:
                     // strip off leading backslash
-                    return identifier->rawText.subString(1);
+                    return ((IdentifierInfo*)(this + 1))->rawText.subString(1);
                 case IdentifierType::Unknown:
                     // unknown tokens don't have value text
                     return nullptr;
                 default:
-                    return identifier->rawText;
+                    return ((IdentifierInfo*)(this + 1))->rawText;
             }
             break;
         case TokenKind::SystemIdentifier:
-            return identifier->rawText;
+            return ((IdentifierInfo*)(this + 1))->rawText;
         case TokenKind::UserIncludeFileName:
         case TokenKind::SystemIncludeFileName:
         case TokenKind::StringLiteral:
-            return string->niceText;
+            return ((StringLiteralInfo*)(this + 1))->niceText;
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
-            return directive->rawText;
+            return ((DirectiveInfo*)(this + 1))->rawText;
         default:
             return nullptr;
     }
@@ -95,18 +94,79 @@ std::string Token::toFullString() const {
 
 const NumericValue& Token::numericValue() const {
     ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::RealLiteral);
-    return numeric->value;
+    return ((NumericLiteralInfo*)(this + 1))->value;
 }
 
 IdentifierType Token::identifierType() const {
     if (kind == TokenKind::Identifier || kind == TokenKind::SystemIdentifier)
-        return identifier->type;
+        return ((IdentifierInfo*)(this + 1))->type;
     return IdentifierType::Unknown;
 }
 
 TriviaKind Token::directiveKind() const {
     ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
-    return directive->kind;
+    return ((DirectiveInfo*)(this + 1))->kind;
+}
+
+Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText) {
+    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
+    new (token) Token(TokenKind::Unknown, trivia);
+
+    IdentifierInfo* info = (IdentifierInfo*)(token + 1);
+    info->rawText = rawText;
+    info->type = IdentifierType::Unknown;
+
+    return token;
+}
+
+Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia) {
+    Token* token = (Token*)alloc.allocate(sizeof(Token));
+    new (token) Token(kind, trivia);
+    return token;
+}
+
+Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type) {
+    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
+    new (token) Token(kind, trivia);
+
+    IdentifierInfo* info = (IdentifierInfo*)(token + 1);
+    info->rawText = rawText;
+    info->type = type;
+
+    return token;
+}
+
+Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText) {
+    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(StringLiteralInfo));
+    new (token) Token(kind, trivia);
+
+    StringLiteralInfo* info = (StringLiteralInfo*)(token + 1);
+    info->rawText = rawText;
+    info->niceText = niceText;
+
+    return token;
+}
+
+Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value) {
+    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(StringLiteralInfo));
+    new (token) Token(kind, trivia);
+
+    NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
+    info->rawText = rawText;
+    info->value = value;
+
+    return token;
+}
+
+Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, TriviaKind directiveKind) {
+    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(DirectiveInfo));
+    new (token) Token(kind, trivia);
+
+    DirectiveInfo* info = (DirectiveInfo*)(token + 1);
+    info->rawText = rawText;
+    info->kind = directiveKind;
+
+    return token;
 }
 
 std::ostream& operator<<(std::ostream& os, TriviaKind kind) {
