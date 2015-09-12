@@ -70,6 +70,7 @@ public:
     static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText);
     static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value);
     static Token* createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, TriviaKind directiveKind);
+    static Token* missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia = nullptr);
 
 private:
     Token(TokenKind kind, ArrayRef<Trivia> trivia);
@@ -451,8 +452,7 @@ enum class TokenKind : uint16_t {
     // directives (these get consumed by the preprocessor and don't make it downstream to the parser)
     Directive,
     EndOfDirective,
-    UserIncludeFileName,
-    SystemIncludeFileName,
+    IncludeFileName,
     MacroUsage,
     MacroQuote,
     MacroEscapedQuote,

@@ -135,6 +135,33 @@ Token* Lexer::lex() {
     }
 }
 
+Token* Lexer::lexIncludeFileName() {
+    // TODO: trivia
+
+    char delim = peek();
+    if (delim != '"' && delim != '<') {
+        addError(DiagCode::ExpectedIncludeFileName);
+        return Token::missing(alloc, TokenKind::IncludeFileName);
+    }
+
+    char c;
+    do {
+        c = peek();
+        if (c == '\0' || isNewline(c)) {
+            addError(DiagCode::ExpectedEndOfIncludeFileName);
+            break;
+        }
+        advance();
+    } while (c != delim);
+
+    uint32_t len = lexemeLength() - 1;
+    if (c == delim)
+        len--;
+
+    StringRef rawText = lexeme();
+    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, nullptr, rawText, rawText.subString(1, len));
+}
+
 TokenKind Lexer::lexToken(TokenInfo& info) {
     char c = peek();
     advance();
@@ -859,6 +886,10 @@ void Lexer::lexTrivia(Buffer<Trivia>& buffer) {
                 advance();
                 buffer.emplace(TriviaKind::EndOfLine, lexeme());
                 break;
+            case '`':
+                advance();
+                lexDirectiveTrivia(buffer);
+                break;
             //case '\\':
             //    // if we're lexing a directive, this might escape a newline
             //    if (mode == LexingMode::Normal || !isNewline(peek()))
@@ -870,6 +901,36 @@ void Lexer::lexTrivia(Buffer<Trivia>& buffer) {
                 return;
         }
     }
+}
+
+void Lexer::lexDirectiveTrivia(Buffer<Trivia>& buffer) {
+    // TODO:
+    //scanIdentifier();
+
+    //// if length is 1, we just have a grave character on its own, which is an error
+    //if (lexemeLength() == 1) {
+    //    addError(DiagCode::MisplacedDirectiveChar);
+    //    return TokenKind::Unknown;
+    //}
+
+    //auto directive = lexeme();
+    //TriviaKind type = getDirectiveKind(directive);
+    //// TODO:
+    ////info.directiveKind = 
+    ////*extraData = alloc.emplace<DirectiveInfo>(directive, type);
+
+    //// lexing behavior changes slightly depending on directives we see
+    //switch (type) {
+    //    case TriviaKind::MacroUsage:
+    //        return TokenKind::MacroUsage;
+    //    case TriviaKind::IncludeDirective:
+    //        mode = LexingMode::Include;
+    //        break;
+    //    default:
+    //        mode = LexingMode::Directive;
+    //        break;
+    //}
+    //return TokenKind::Directive;
 }
 
 void Lexer::scanIdentifier() {
@@ -960,28 +1021,6 @@ void Lexer::scanBlockComment() {
         }
     }
 }
-//
-//StringLiteralInfo* Lexer::lexIncludeFileName(char delim) {
-//    // switch out of specialized Include lexing mode
-//    mode = LexingMode::Directive;
-//
-//    char c;
-//    do {
-//        c = peek();
-//        if (c == '\0' || isNewline(c)) {
-//            addError(DiagCode::ExpectedEndOfIncludeFileName);
-//            break;
-//        }
-//        advance();
-//    } while (c != delim);
-//
-//    uint32_t len = lexemeLength() - 1;
-//    if (c == delim)
-//        len--;
-//
-//    StringRef rawText = lexeme();
-//    return alloc.emplace<StringLiteralInfo>(rawText, rawText.subString(1, len));
-//}
 
 int Lexer::findNextNonWhitespace() {
     int lookahead = 0;

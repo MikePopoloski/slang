@@ -7,8 +7,12 @@ namespace slang {
 template<typename T>
 class ArrayRef {
 public:
-    ArrayRef(const T* ptr, uint32_t length)
-        : ptr(ptr), length(length) {
+    ArrayRef(std::nullptr_t) :
+        ptr(nullptr), length(0) {
+    }
+
+    ArrayRef(const T* ptr, uint32_t length) :
+        ptr(ptr), length(length) {
     }
 
     const T* begin() const { return ptr; }

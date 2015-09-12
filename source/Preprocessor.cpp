@@ -106,7 +106,7 @@ void Preprocessor::parseDirective(Lexer* lexer) {
 
 void Preprocessor::parseIncludeDirective() {
     // next token should be a filename; lex that manually
-//    Token* fileName = getSource()->lexIncludeFileName();
+    Token* fileName = getSource()->lexIncludeFileName();
     Token* end = parseEndOfDirective();
 }
 
@@ -130,8 +130,7 @@ Token* Preprocessor::handleInclude(Token* directiveToken) {
     Token* token = consume();
     bool systemPath;
     switch (token->kind) {
-        case TokenKind::UserIncludeFileName: systemPath = false; break;
-        case TokenKind::SystemIncludeFileName: systemPath = true; break;
+        case TokenKind::IncludeFileName: systemPath = false; break;
         case TokenKind::EndOfDirective:
             // end of the line (or file) without finding the filename
             // issue an error and be on our merry way

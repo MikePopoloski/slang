@@ -17,7 +17,8 @@ public:
     // an infinite stream of EndOfFile tokens will be generated
     Token* lex();
 
-    //Token* lexIncludeFileName();
+    // lex an include file name, either <path> or "path"
+    Token* lexIncludeFileName();
 
     FileID getFile() const { return file; }
     Preprocessor& getPreprocessor() const { return preprocessor; }
@@ -45,6 +46,7 @@ private:
     void lexVectorDigits(TokenInfo& info);
 
     void lexTrivia(Buffer<Trivia>& buffer);
+    void lexDirectiveTrivia(Buffer<Trivia>& buffer);
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
     void scanIdentifier();
     void scanBlockComment();

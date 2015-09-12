@@ -31,8 +31,7 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
             case TokenKind::SystemIdentifier:
                 buffer.appendRange(((IdentifierInfo*)(this + 1))->rawText);
                 break;
-            case TokenKind::UserIncludeFileName:
-            case TokenKind::SystemIncludeFileName:
+            case TokenKind::IncludeFileName:
             case TokenKind::StringLiteral:
                 buffer.appendRange(((StringLiteralInfo*)(this + 1))->rawText);
                 break;
@@ -68,8 +67,7 @@ StringRef Token::valueText() const {
             break;
         case TokenKind::SystemIdentifier:
             return ((IdentifierInfo*)(this + 1))->rawText;
-        case TokenKind::UserIncludeFileName:
-        case TokenKind::SystemIncludeFileName:
+        case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
             return ((StringLiteralInfo*)(this + 1))->niceText;
         case TokenKind::Directive:
@@ -148,7 +146,7 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef
 }
 
 Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value) {
-    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(StringLiteralInfo));
+    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(NumericLiteralInfo));
     new (token) Token(kind, trivia);
 
     NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
@@ -165,6 +163,14 @@ Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Tri
     DirectiveInfo* info = (DirectiveInfo*)(token + 1);
     info->rawText = rawText;
     info->kind = directiveKind;
+
+    return token;
+}
+
+Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia) {
+    // TODO: flag missing
+    Token* token = (Token*)alloc.allocate(sizeof(Token));
+    new (token) Token(kind, trivia);
 
     return token;
 }
@@ -551,8 +557,7 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         case TokenKind::RootSystemName: os << "RootSystemName"; break;
         case TokenKind::Directive: os << "Directive"; break;
         case TokenKind::EndOfDirective: os << "EndOfDirective"; break;
-        case TokenKind::UserIncludeFileName: os << "UserIncludeFileName"; break;
-        case TokenKind::SystemIncludeFileName: os << "SystemIncludeFileName"; break;
+        case TokenKind::IncludeFileName: os << "IncludeFileName"; break;
         case TokenKind::MacroUsage: os << "MacroUsage"; break;
         case TokenKind::MacroQuote: os << "MacroQuote"; break;
         case TokenKind::MacroEscapedQuote: os << "MacroEscapedQuote"; break;
