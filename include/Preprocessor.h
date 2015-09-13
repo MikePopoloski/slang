@@ -2,7 +2,7 @@
 
 namespace slang {
 
-class Preprocessor : TokenConsumer<Lexer, 32> {
+class Preprocessor {
 public:
     Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
 
@@ -13,7 +13,7 @@ public:
 
     TokenKind lookupKeyword(StringRef identifier);
 
-    void parseDirective(Lexer* lexer);
+    Trivia* parseDirective(Lexer* lexer);
 
     SourceTracker& getSourceTracker() const { return sourceTracker; }
     BumpAllocator& getAllocator() const { return alloc; }
@@ -23,17 +23,23 @@ private:
     Token* handleInclude(Token* directiveToken);
     Token* handleIdentifier(Token* token);
 
-    void parseIncludeDirective();
+    Trivia* parseIncludeDirective(Token* directive);
     Token* parseEndOfDirective();
 
+    Token* peek();
+    Token* consume();
+    Token* expect(TokenKind kind);
+
     void addError(DiagCode code);
-    void convertDirectiveToTrivia(Token* directive);
 
     SourceTracker& sourceTracker;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
 
     std::deque<Lexer> lexerStack;
+    Lexer* currentLexer;
+    Token* currentToken;
+
     Buffer<Trivia> triviaBuffer;
 
     const StringTable<TokenKind>* keywordTable;

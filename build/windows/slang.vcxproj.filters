@@ -61,9 +61,6 @@
     <ClInclude Include="..\..\source\CharInfo.h">
       <Filter>lexing</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\TokenConsumer.h">
-      <Filter>lexing</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\Debug.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -94,6 +91,9 @@
       <Filter>lexing</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\SourceTracker.cpp">
+      <Filter>lexing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\Trivia.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
   </ItemGroup>

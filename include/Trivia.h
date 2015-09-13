@@ -2,6 +2,8 @@
 
 namespace slang {
 
+class Token;
+
 enum class TriviaKind : uint8_t {
     Unknown,
     Whitespace,
@@ -37,12 +39,50 @@ enum class TriviaKind : uint8_t {
 std::ostream& operator<<(std::ostream& os, TriviaKind kind);
 
 struct Trivia {
-    StringRef rawText;
     TriviaKind kind;
 
-    Trivia(TriviaKind kind, StringRef rawText) :
-        rawText(rawText), kind(kind) {
-    }
+    Trivia(TriviaKind kind) : kind(kind) {}
+
+    virtual void writeTo(Buffer<char>& buffer) = 0;
 };
+
+struct SimpleTrivia : public Trivia {
+    StringRef rawText;
+
+    SimpleTrivia(TriviaKind kind, StringRef rawText) :
+        Trivia(kind), rawText(rawText) {
+    }
+
+    void writeTo(Buffer<char>& buffer) override;
+};
+
+struct SimpleDirectiveTrivia : public Trivia {
+    Token* directive;
+    Token* endOfDirective;
+
+    SimpleDirectiveTrivia(TriviaKind kind, Token* directive, Token* endOfDirective) :
+        Trivia(kind),
+        directive(directive),
+        endOfDirective(endOfDirective) {
+    }
+
+    void writeTo(Buffer<char>& buffer) override;
+};
+
+struct IncludeDirectiveTrivia : public Trivia {
+    Token* directive;
+    Token* fileName;
+    Token* endOfDirective;
+
+    IncludeDirectiveTrivia(Token* directive, Token* fileName, Token* endOfDirective) :
+        Trivia(TriviaKind::IncludeDirective),
+        directive(directive),
+        fileName(fileName),
+        endOfDirective(endOfDirective) {
+    }
+
+    void writeTo(Buffer<char>& buffer) override;
+};
+
 
 }

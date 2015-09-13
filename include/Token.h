@@ -43,7 +43,7 @@ struct NumericValue {
 
 class Token {
 public:
-    ArrayRef<Trivia> trivia;
+    ArrayRef<Trivia*> trivia;
     TokenKind kind;
 
     // value text is the "nice" lexed version of certain tokens;
@@ -64,16 +64,16 @@ public:
     IdentifierType identifierType() const;
     TriviaKind directiveKind() const;
 
-    static Token* createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText);
-    static Token* createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia);
-    static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type);
-    static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText);
-    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value);
-    static Token* createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, TriviaKind directiveKind);
-    static Token* missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia = nullptr);
+    static Token* createUnknown(BumpAllocator& alloc, ArrayRef<Trivia*> trivia, StringRef rawText);
+    static Token* createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia);
+    static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, IdentifierType type);
+    static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, StringRef niceText);
+    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, NumericValue value);
+    static Token* createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, TriviaKind directiveKind);
+    static Token* missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia = nullptr);
 
 private:
-    Token(TokenKind kind, ArrayRef<Trivia> trivia);
+    Token(TokenKind kind, ArrayRef<Trivia*> trivia);
     Token(const Token&) = delete;
     Token& operator=(const Token&) = delete;
 

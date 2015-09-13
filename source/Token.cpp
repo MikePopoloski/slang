@@ -10,14 +10,14 @@
 
 namespace slang {
 
-Token::Token(TokenKind kind, ArrayRef<Trivia> trivia) :
+Token::Token(TokenKind kind, ArrayRef<Trivia*> trivia) :
     kind(kind), trivia(trivia) {
 }
 
 void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
     if (includeTrivia) {
         for (const auto& t : trivia)
-            buffer.appendRange(t.rawText);
+            t->writeTo(buffer);
     }
 
     StringRef text = getTokenKindText(kind);
@@ -106,7 +106,7 @@ TriviaKind Token::directiveKind() const {
     return ((DirectiveInfo*)(this + 1))->kind;
 }
 
-Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText) {
+Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia*> trivia, StringRef rawText) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
     new (token) Token(TokenKind::Unknown, trivia);
 
@@ -117,13 +117,13 @@ Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, Strin
     return token;
 }
 
-Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia) {
+Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia) {
     Token* token = (Token*)alloc.allocate(sizeof(Token));
     new (token) Token(kind, trivia);
     return token;
 }
 
-Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type) {
+Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, IdentifierType type) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
     new (token) Token(kind, trivia);
 
@@ -134,7 +134,7 @@ Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Tr
     return token;
 }
 
-Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText) {
+Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, StringRef niceText) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(StringLiteralInfo));
     new (token) Token(kind, trivia);
 
@@ -145,7 +145,7 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef
     return token;
 }
 
-Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value) {
+Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, NumericValue value) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(NumericLiteralInfo));
     new (token) Token(kind, trivia);
 
@@ -156,7 +156,7 @@ Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRe
     return token;
 }
 
-Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, TriviaKind directiveKind) {
+Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, TriviaKind directiveKind) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(DirectiveInfo));
     new (token) Token(kind, trivia);
 
@@ -167,49 +167,24 @@ Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Tri
     return token;
 }
 
-Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia) {
+Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia) {
     // TODO: flag missing
-    Token* token = (Token*)alloc.allocate(sizeof(Token));
-    new (token) Token(kind, trivia);
-
-    return token;
-}
-
-std::ostream& operator<<(std::ostream& os, TriviaKind kind) {
-    // auto-generated
     switch (kind) {
-        case TriviaKind::Unknown: os << "Unknown"; break;
-        case TriviaKind::Whitespace: os << "Whitespace"; break;
-        case TriviaKind::EndOfLine: os << "EndOfLine"; break;
-        case TriviaKind::LineContinuation: os << "LineContinuation"; break;
-        case TriviaKind::LineComment: os << "LineComment"; break;
-        case TriviaKind::BlockComment: os << "BlockComment"; break;
-        case TriviaKind::DisabledText: os << "DisabledText"; break;
-        case TriviaKind::SkippedTokens: os << "SkippedTokens"; break;
-        case TriviaKind::MacroUsage: os << "MacroUsage"; break;
-        case TriviaKind::BeginKeywordsDirective: os << "BeginKeywordsDirective"; break;
-        case TriviaKind::CellDefineDirective: os << "CellDefineDirective"; break;
-        case TriviaKind::DefaultNetTypeDirective: os << "DefaultNetTypeDirective"; break;
-        case TriviaKind::DefineDirective: os << "DefineDirective"; break;
-        case TriviaKind::ElseDirective: os << "ElseDirective"; break;
-        case TriviaKind::ElseIfDirective: os << "ElseIfDirective"; break;
-        case TriviaKind::EndKeywordsDirective: os << "EndKeywordsDirective"; break;
-        case TriviaKind::EndCellDefineDirective: os << "EndCellDefineDirective"; break;
-        case TriviaKind::EndIfDirective: os << "EndIfDirective"; break;
-        case TriviaKind::IfDefDirective: os << "IfDefDirective"; break;
-        case TriviaKind::IfNDefDirective: os << "IfNDefDirective"; break;
-        case TriviaKind::IncludeDirective: os << "IncludeDirective"; break;
-        case TriviaKind::LineDirective: os << "LineDirective"; break;
-        case TriviaKind::NoUnconnectedDriveDirective: os << "NoUnconnectedDriveDirective"; break;
-        case TriviaKind::PragmaDirective: os << "PragmaDirective"; break;
-        case TriviaKind::ResetAllDirective: os << "ResetAllDirective"; break;
-        case TriviaKind::TimescaleDirective: os << "TimescaleDirective"; break;
-        case TriviaKind::UnconnectedDriveDirective: os << "UnconnectedDriveDirective"; break;
-        case TriviaKind::UndefDirective: os << "UndefDirective"; break;
-        case TriviaKind::UndefineAllDirective: os << "UndefineAllDirective"; break;
-        default: os << "<unknown>"; break;
+        case TokenKind::Unknown:
+            return createUnknown(alloc, trivia, nullptr);
+        case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
+            return createIdentifier(alloc, kind, trivia, nullptr, IdentifierType::Unknown);
+        case TokenKind::IntegerLiteral:
+        case TokenKind::RealLiteral:
+            return createNumericLiteral(alloc, kind, trivia, nullptr, 0);
+        case TokenKind::StringLiteral:
+            return createStringLiteral(alloc, kind, trivia, nullptr, nullptr);
+        case TokenKind::Directive:
+            return createDirective(alloc, kind, trivia, nullptr, TriviaKind::Unknown);
+        default:
+            return createSimple(alloc, kind, trivia);
     }
-    return os;
 }
 
 std::ostream& operator<<(std::ostream& os, TokenKind kind) {

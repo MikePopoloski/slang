@@ -13,7 +13,6 @@
 #include "SourceTracker.h"
 #include "Token.h"
 #include "Lexer.h"
-#include "TokenConsumer.h"
 #include "StringTable.h"
 #include "SyntaxFacts.h"
 #include "Preprocessor.h"
@@ -39,7 +38,11 @@ slang::ArrayRef<T> copyArray(slang::BumpAllocator& alloc, const slang::Buffer<T>
 namespace slang {
 
 Preprocessor::Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    sourceTracker(sourceTracker), alloc(alloc), diagnostics(diagnostics) {
+    sourceTracker(sourceTracker),
+    alloc(alloc),
+    diagnostics(diagnostics),
+    currentLexer(nullptr),
+    currentToken(nullptr) {
 
     keywordTable = getKeywordTable();
 }
@@ -53,7 +56,7 @@ void Preprocessor::enterFile(FileID file, SourceText source) {
     // TODO: max include depth
     // create a new lexer for this file and push it onto the stack
     lexerStack.emplace_back(file, source, *this);
-    setSource(&lexerStack.back());
+    currentLexer = &lexerStack.back();
 }
 
 Token* Preprocessor::lex() {
@@ -64,10 +67,7 @@ Token* Preprocessor::lex() {
                 return handleIdentifier(token);
             case TokenKind::EndOfFile:
                 lexerStack.pop_back();
-                if (lexerStack.empty())
-                    setSource(nullptr);
-                else
-                    setSource(&lexerStack.back());
+                currentLexer = lexerStack.empty() ? nullptr : &lexerStack.back();
                 return token;
             case TokenKind::Directive:
                 switch (token->directiveKind()) {
@@ -93,21 +93,22 @@ TokenKind Preprocessor::lookupKeyword(StringRef identifier) {
     return TokenKind::Unknown;
 }
 
-void Preprocessor::parseDirective(Lexer* lexer) {
-    setSource(lexer);
+Trivia* Preprocessor::parseDirective(Lexer* lexer) {
+    currentLexer = lexer;
 
     Token* directive = expect(TokenKind::Directive);
-    switch (getDirectiveKind(directive->valueText())) {
-        case TriviaKind::IncludeDirective:
-            parseIncludeDirective();
-            break;
+    switch (directive->directiveKind()) {
+        case TriviaKind::IncludeDirective: return parseIncludeDirective(directive);
+        default: return alloc.emplace<SimpleDirectiveTrivia>(directive->directiveKind(), directive, parseEndOfDirective());
     }
 }
 
-void Preprocessor::parseIncludeDirective() {
+Trivia* Preprocessor::parseIncludeDirective(Token* directive) {
     // next token should be a filename; lex that manually
-    Token* fileName = getSource()->lexIncludeFileName();
+    Token* fileName = currentLexer->lexIncludeFileName();
     Token* end = parseEndOfDirective();
+
+    return alloc.emplace<IncludeDirectiveTrivia>(directive, fileName, end);
 }
 
 Token* Preprocessor::parseEndOfDirective() {
@@ -141,7 +142,6 @@ Token* Preprocessor::handleInclude(Token* directiveToken) {
 
         case TokenKind::EndOfFile:
             addError(DiagCode::ExpectedIncludeFileName);
-            convertDirectiveToTrivia(directiveToken);
             //triviaBuffer.appendRange(token->trivia);
 //            return alloc.emplace<Token>(TokenKind::EndOfFile, nullptr, copyArray(alloc, triviaBuffer));
         default:
@@ -150,7 +150,7 @@ Token* Preprocessor::handleInclude(Token* directiveToken) {
             return nullptr;
     }
 
-    SourceFile* file = sourceTracker.readHeader(getSource()->getFile(), token->valueText(), systemPath);
+    SourceFile* file = sourceTracker.readHeader(currentLexer->getFile(), token->valueText(), systemPath);
     if (!file)
         return nullptr;
 
@@ -159,13 +159,27 @@ Token* Preprocessor::handleInclude(Token* directiveToken) {
     enterFile(file->id, file->buffer);
 }
 
-void Preprocessor::convertDirectiveToTrivia(Token* directive) {
-//    triviaBuffer.appendRange(directive->trivia);
-  //  triviaBuffer.append(Trivia(directive->directiveKind(), StringRef()));
-}
-
 void Preprocessor::addError(DiagCode code) {
     diagnostics.add(SyntaxError(code, 0, 0));
+}
+
+Token* Preprocessor::peek() {
+    if (!currentToken)
+        currentToken = currentLexer->lex();
+    return currentToken;
+}
+
+Token* Preprocessor::consume() {
+    Token* result = peek();
+    currentToken = nullptr;
+    return result;
+}
+
+Token* Preprocessor::expect(TokenKind kind) {
+    if (peek()->kind == kind)
+        return consume();
+
+    return Token::missing(alloc, kind);
 }
 
 }

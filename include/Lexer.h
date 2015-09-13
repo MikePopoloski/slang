@@ -17,6 +17,11 @@ public:
     // an infinite stream of EndOfFile tokens will be generated
     Token* lex();
 
+    // tokens get lexed slightly differently when in "directive mode"
+    // normally the lexer will switch in and out of this mode when necessary,
+    // but this function lets you force it if you need to (like for testing)
+    Token* lexDirectiveMode();
+
     // lex an include file name, either <path> or "path"
     Token* lexIncludeFileName();
 
@@ -45,16 +50,17 @@ private:
     template<bool (*IsDigitFunc)(char), uint32_t (*ValueFunc)(char)>
     void lexVectorDigits(TokenInfo& info);
 
-    void lexTrivia(Buffer<Trivia>& buffer);
-    void lexDirectiveTrivia(Buffer<Trivia>& buffer);
+    bool lexTrivia();
+    void lexDirectiveTrivia();
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
+    bool scanBlockComment();
     void scanIdentifier();
-    void scanBlockComment();
     void scanWhitespace();
     void scanLineComment();
 
     int findNextNonWhitespace();
 
+    void addTrivia(TriviaKind kind);
     void addError(DiagCode code);
 
     // source pointer manipulation
@@ -79,14 +85,8 @@ private:
         return false;
     }
 
-    enum class LexingMode {
-        Normal,
-        Include,
-        Directive
-    };
-
     Buffer<char> stringBuffer;
-    Buffer<Trivia> triviaBuffer;
+    Buffer<Trivia*> triviaBuffer;
     VectorBuilder vectorBuilder;
     Preprocessor& preprocessor;
     BumpAllocator& alloc;
@@ -94,7 +94,7 @@ private:
     const char* sourceEnd;
     const char* marker;
     FileID file;
-    LexingMode mode;
+    bool inDirective;
 };
 
 // lightweight wrapper around text data that serves as input to the lexer

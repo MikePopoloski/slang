@@ -35,7 +35,6 @@
     <ClInclude Include="..\..\include\StringTable.h" />
     <ClInclude Include="..\..\include\SyntaxFacts.h" />
     <ClInclude Include="..\..\include\Token.h" />
-    <ClInclude Include="..\..\include\TokenConsumer.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />
   </ItemGroup>
@@ -47,6 +46,7 @@
     <ClCompile Include="..\..\source\Preprocessor.cpp" />
     <ClCompile Include="..\..\source\SyntaxFacts.cpp" />
     <ClCompile Include="..\..\source\Token.cpp" />
+    <ClCompile Include="..\..\source\Trivia.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ED4CEA60-96A0-4B04-9036-B8D5869ED8E3}</ProjectGuid>
