@@ -1,5 +1,8 @@
 #pragma once
 
+#include "BumpAllocator.h"
+#include "ArrayRef.h"
+
 // Simple resizable buffer that can only be appended and cleared.
 // It makes no attempt at being exception safe.
 
@@ -102,6 +105,17 @@ public:
     void extend(uint32_t size) {
         ensureSize(len + size);
         len += size;
+    }
+
+    ArrayRef<T> copy(BumpAllocator& alloc) const {
+        if (len == 0)
+            return nullptr;
+
+        const T* source = data;
+        T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T)));
+        for (uint32_t i = 0; i < len; i++)
+            new (&dest[i]) T(*source++);
+        return ArrayRef<T>(dest, len);
     }
 
 private:

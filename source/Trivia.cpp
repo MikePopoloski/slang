@@ -23,6 +23,11 @@ void IncludeDirectiveTrivia::writeTo(Buffer<char>& buffer) {
     directive->writeTo(buffer, true);
 }
 
+void SkippedTokensTrivia::writeTo(Buffer<char>& buffer) {
+    for (auto& token : tokens)
+        token->writeTo(buffer, true);
+}
+
 std::ostream& operator<<(std::ostream& os, TriviaKind kind) {
     // auto-generated
     switch (kind) {

@@ -84,5 +84,14 @@ struct IncludeDirectiveTrivia : public Trivia {
     void writeTo(Buffer<char>& buffer) override;
 };
 
+struct SkippedTokensTrivia : public Trivia {
+    ArrayRef<Token*> tokens;
+
+    SkippedTokensTrivia(ArrayRef<Token*> tokens) :
+        Trivia(TriviaKind::SkippedTokens), tokens(tokens) {
+    }
+
+    void writeTo(Buffer<char>& buffer) override;
+};
 
 }

@@ -20,9 +20,9 @@ SourceTracker& getTracker() {
 const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
     Preprocessor preprocessor(getTracker(), alloc, diagnostics);
-    preprocessor.enterFile(text);
+    Lexer lexer(FileID(), text, preprocessor);
 
-    Token* token = preprocessor.lex();
+    Token* token = lexer.lex();
     REQUIRE(token != nullptr);
     return *token;
 }

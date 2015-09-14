@@ -36,19 +36,6 @@ const double powersOf10[] = {
     1.0e256
 };
 
-template<typename T>
-slang::ArrayRef<T> copyArray(slang::BumpAllocator& alloc, const slang::Buffer<T>& buffer) {
-    uint32_t count = buffer.count();
-    if (count == 0)
-        return slang::ArrayRef<T>(nullptr, 0);
-
-    const T* source = buffer.cbegin();
-    T* dest = reinterpret_cast<T*>(alloc.allocate(count * sizeof(T)));
-    for (uint32_t i = 0; i < count; i++)
-        new (&dest[i]) T(*source++);
-    return slang::ArrayRef<T>(dest, count);
-}
-
 bool composeDouble(double fraction, int exp, double& result) {
     bool neg = false;
     if (exp < 0) {
@@ -110,7 +97,7 @@ Token* Lexer::lex() {
     // lex leading trivia
     triviaBuffer.clear();
     bool eod = lexTrivia();
-    ArrayRef<Trivia*> trivia = copyArray(alloc, triviaBuffer);
+    ArrayRef<Trivia*> trivia = triviaBuffer.copy(alloc);
 
     // return an eod token right away if we detected we need one
     if (eod)
@@ -149,14 +136,23 @@ Token* Lexer::lexDirectiveMode() {
 }
 
 Token* Lexer::lexIncludeFileName() {
-    // TODO: trivia
+    // leading whitespace should lex into trivia
+    triviaBuffer.clear();
+    if (isHorizontalWhitespace(peek())) {
+        mark();
+        scanWhitespace();
+    }
 
+    ArrayRef<Trivia*> trivia = triviaBuffer.copy(alloc);
+
+    mark();
     char delim = peek();
     if (delim != '"' && delim != '<') {
         addError(DiagCode::ExpectedIncludeFileName);
-        return Token::missing(alloc, TokenKind::IncludeFileName);
+        return Token::missing(alloc, TokenKind::IncludeFileName, trivia);
     }
 
+    advance();
     char c;
     do {
         c = peek();
@@ -167,12 +163,8 @@ Token* Lexer::lexIncludeFileName() {
         advance();
     } while (c != delim);
 
-    uint32_t len = lexemeLength() - 1;
-    if (c == delim)
-        len--;
-
     StringRef rawText = lexeme();
-    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, nullptr, rawText, rawText.subString(1, len));
+    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, trivia, rawText, rawText);
 }
 
 TokenKind Lexer::lexToken(TokenInfo& info) {
@@ -854,7 +846,6 @@ bool Lexer::lexTrivia() {
             case '\f':
                 advance();
                 scanWhitespace();
-                addTrivia(TriviaKind::Whitespace);
                 break;
             case '/':
                 switch (peek(1)) {
@@ -965,6 +956,7 @@ void Lexer::scanWhitespace() {
                 break;
         }
     }
+    addTrivia(TriviaKind::Whitespace);
 }
 
 void Lexer::scanLineComment() {

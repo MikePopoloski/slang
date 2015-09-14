@@ -9,10 +9,7 @@ public:
     void enterFile(SourceText source);
     void enterFile(FileID file, SourceText source);
 
-    Token* lex();
-
     TokenKind lookupKeyword(StringRef identifier);
-
     Trivia* parseDirective(Lexer* lexer);
 
     SourceTracker& getSourceTracker() const { return sourceTracker; }
@@ -20,9 +17,6 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-    Token* handleInclude(Token* directiveToken);
-    Token* handleIdentifier(Token* token);
-
     Trivia* parseIncludeDirective(Token* directive);
     Token* parseEndOfDirective();
 
@@ -40,7 +34,8 @@ private:
     Lexer* currentLexer;
     Token* currentToken;
 
-    Buffer<Trivia> triviaBuffer;
+    Buffer<Trivia*> triviaBuffer;
+    Buffer<Token*> tokenBuffer;
 
     const StringTable<TokenKind>* keywordTable;
 };
