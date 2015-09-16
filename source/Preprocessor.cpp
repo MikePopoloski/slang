@@ -29,16 +29,18 @@ Preprocessor::Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, D
     keywordTable = getKeywordTable();
 }
 
-void Preprocessor::enterFile(SourceText source) {
-    // TODO: expand this a bit
-    enterFile(sourceTracker.track("unnamed"), source);
-}
+// This function is a little weird; it's called from within the active lexer
+// to let us provide tokens from a lexer on the include stack.
+Token* Preprocessor::lex(Lexer* current) {
+    if (lexerStack.empty())
+        return nullptr;
 
-void Preprocessor::enterFile(FileID file, SourceText source) {
-    // TODO: max include depth
-    // create a new lexer for this file and push it onto the stack
-    lexerStack.emplace_back(file, source, *this);
-    currentLexer = &lexerStack.back();
+    // avoid an infinite recursion of death
+    Lexer* top = &lexerStack.back();
+    if (top == current)
+        return nullptr;
+
+    return lexerStack.back().lex();
 }
 
 TokenKind Preprocessor::lookupKeyword(StringRef identifier) {
@@ -74,8 +76,11 @@ Trivia* Preprocessor::parseIncludeDirective(Token* directive) {
     StringRef path = fileName->valueText();
     path = path.subString(1, path.length() - 2);
     SourceFile* source = sourceTracker.readHeader(currentLexer->getFile(), path, false);
+    ASSERT(source);
 
-    enterFile(source->id, source->buffer);
+    // push the new lexer onto the stack
+    // TODO: max include depth
+    lexerStack.emplace_back(source->id, source->buffer, *this);
 
     return alloc.emplace<IncludeDirectiveTrivia>(directive, fileName, end);
 }
@@ -105,7 +110,7 @@ void Preprocessor::addError(DiagCode code) {
 
 Token* Preprocessor::peek() {
     if (!currentToken)
-        currentToken = currentLexer->lex();
+        currentToken = currentLexer->lexDirectiveMode();
     return currentToken;
 }
 

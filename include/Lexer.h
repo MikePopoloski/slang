@@ -7,7 +7,7 @@ class Preprocessor;
 
 class Lexer {
 public:
-    Lexer(FileID file, const SourceText& source, Preprocessor& preprocessor);
+    Lexer(FileID file, SourceText source, Preprocessor& preprocessor);
 
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
@@ -17,9 +17,11 @@ public:
     // an infinite stream of EndOfFile tokens will be generated
     Token* lex();
 
+    // lex without invoking the preprocessor
+    Token* lexNoPP();
+
     // tokens get lexed slightly differently when in "directive mode"
-    // normally the lexer will switch in and out of this mode when necessary,
-    // but this function lets you force it if you need to (like for testing)
+    // the preprocessor will use this when parsing directives
     Token* lexDirectiveMode();
 
     // lex an include file name, either <path> or "path"
@@ -36,6 +38,7 @@ private:
         TriviaKind directiveKind;
     };
 
+    template<bool InDirective>
     TokenKind lexToken(TokenInfo& info);
     TokenKind lexNumericLiteral(TokenInfo& info);
     TokenKind lexEscapeSequence(TokenInfo& info);
@@ -50,9 +53,12 @@ private:
     template<bool (*IsDigitFunc)(char), uint32_t (*ValueFunc)(char)>
     void lexVectorDigits(TokenInfo& info);
 
+    template<bool InDirective>
     bool lexTrivia();
     void lexDirectiveTrivia();
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
+
+    template<bool InDirective>
     bool scanBlockComment();
     void scanIdentifier();
     void scanWhitespace();
@@ -60,6 +66,7 @@ private:
 
     int findNextNonWhitespace();
 
+    Token* createToken(TokenKind kind, TokenInfo& info);
     void addTrivia(TriviaKind kind);
     void addError(DiagCode code);
 
@@ -94,7 +101,6 @@ private:
     const char* sourceEnd;
     const char* marker;
     FileID file;
-    bool inDirective;
 };
 
 // lightweight wrapper around text data that serves as input to the lexer

@@ -20,7 +20,7 @@ fs::path canonicalWorkaround(const fs::path& path) {
         const wchar_t* cstr = e.c_str();
         if (cstr[0] == '.' && cstr[1] == '.' && cstr[2] == '\0')
             stack.pop_back();
-        else
+        else if (cstr[0] != '.')
             stack.push_back(e);
     }
 

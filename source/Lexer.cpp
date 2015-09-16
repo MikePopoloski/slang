@@ -65,14 +65,13 @@ bool composeDouble(double fraction, int exp, double& result) {
 
 namespace slang {
 
-Lexer::Lexer(FileID file, const SourceText& source, Preprocessor& preprocessor) :
+Lexer::Lexer(FileID file, SourceText source, Preprocessor& preprocessor) :
     preprocessor(preprocessor),
     alloc(preprocessor.getAllocator()),
     sourceBuffer(source.begin()),
     sourceEnd(source.end()),
     marker(nullptr),
-    file(file),
-    inDirective(false) {
+    file(file) {
 
     // detect BOMs so we can give nice errors for invaild encoding
     if (source.length() >= 2) {
@@ -94,45 +93,38 @@ Lexer::Lexer(FileID file, const SourceText& source, Preprocessor& preprocessor) 
 }
 
 Token* Lexer::lex() {
-    // lex leading trivia
-    triviaBuffer.clear();
-    bool eod = lexTrivia();
-    ArrayRef<Trivia*> trivia = triviaBuffer.copy(alloc);
+    // if the preprocessor has tokens (like from an include file or macro), we should lex them now
+    Token* ppToken = preprocessor.lex(this);
+    if (ppToken)
+        return ppToken;
 
-    // return an eod token right away if we detected we need one
-    if (eod)
-        return Token::createSimple(alloc, TokenKind::EndOfDirective, trivia);
+    // lex leading trivia
+    lexTrivia<false>();
+
+    // it's possible that we just lexed a directive trivia like `include that has
+    // pushed some tokens onto the preprocessor's stack, so check again
+    ppToken = preprocessor.lex(this);
+    if (ppToken)
+        return ppToken;
 
     // lex the next token
     mark();
     TokenInfo info;
-    TokenKind kind = lexToken(info);
-    switch (kind) {
-        case TokenKind::Unknown:
-            return Token::createUnknown(alloc, trivia, lexeme());
-        case TokenKind::Identifier:
-        case TokenKind::SystemIdentifier:
-            return Token::createIdentifier(alloc, kind, trivia, lexeme(), info.identifierType);
-        case TokenKind::IntegerLiteral:
-        case TokenKind::RealLiteral:
-            return Token::createNumericLiteral(alloc, kind, trivia, lexeme(), info.numericValue);
-        case TokenKind::StringLiteral:
-            return Token::createStringLiteral(alloc, kind, trivia, lexeme(), info.niceText);
-        case TokenKind::Directive:
-            return Token::createDirective(alloc, kind, trivia, lexeme(), info.directiveKind);
-        default:
-            return Token::createSimple(alloc, kind, trivia);
-    }
+    TokenKind kind = lexToken<false>(info);
+    return createToken(kind, info);
 }
 
 Token* Lexer::lexDirectiveMode() {
-    bool saveMode = inDirective;
-    inDirective = true;
-
-    Token* result = lex();
-    inDirective = saveMode;
-
-    return result;
+    // lex leading trivia
+    // return an eod token right away if we detected we need one
+    TokenInfo info;
+    if (lexTrivia<true>())
+        return createToken(TokenKind::EndOfDirective, info);
+    
+    // lex the next token
+    mark();
+    TokenKind kind = lexToken<true>(info);
+    return createToken(kind, info);
 }
 
 Token* Lexer::lexIncludeFileName() {
@@ -167,6 +159,7 @@ Token* Lexer::lexIncludeFileName() {
     return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, trivia, rawText, rawText);
 }
 
+template<bool InDirective>
 TokenKind Lexer::lexToken(TokenInfo& info) {
     char c = peek();
     advance();
@@ -183,7 +176,7 @@ TokenKind Lexer::lexToken(TokenInfo& info) {
             }
 
             // if we're lexing a directive, issue an EndOfDirective before the EndOfFile
-            if (inDirective)
+            if (InDirective)
                 return TokenKind::EndOfDirective;
 
             // otherwise, end of file
@@ -835,6 +828,7 @@ void Lexer::lexVectorDigits(TokenInfo& info) {
     }
 }
 
+template<bool InDirective>
 bool Lexer::lexTrivia() {
     while (true) {
         mark();
@@ -855,7 +849,7 @@ bool Lexer::lexTrivia() {
                         break;
                     case '*': {
                         advance(2);
-                        if (scanBlockComment())
+                        if (scanBlockComment<InDirective>())
                             return true;
                         break;
                     }
@@ -867,25 +861,25 @@ bool Lexer::lexTrivia() {
                 advance();
                 consume('\n');
                 addTrivia(TriviaKind::EndOfLine);
-                if (inDirective)
+                if (InDirective)
                     return true;
                 break;
             case '\n':
                 advance();
                 addTrivia(TriviaKind::EndOfLine);
-                if (inDirective)
+                if (InDirective)
                     return true;
                 break;
             case '`':
                 // can't recursively enter directive mode
                 // this is probably a token paste operator or macro usage
-                if (inDirective)
+                if (InDirective)
                     return false;
                 lexDirectiveTrivia();
                 break;
             case '\\':
                 // if we're lexing a directive, this might escape a newline
-                if (!inDirective || !isNewline(peek()))
+                if (!InDirective || !isNewline(peek()))
                     return false;
                 advance();
                 addTrivia(TriviaKind::LineContinuation);
@@ -902,11 +896,9 @@ void Lexer::lexDirectiveTrivia() {
     Buffer<Trivia*> saveTrivia(triviaBuffer.count() + 1);
     saveTrivia.appendRange(triviaBuffer);
 
-    inDirective = true;
     Trivia* directive = preprocessor.parseDirective(this);
     ASSERT(directive);
     saveTrivia.append(directive);
-    inDirective = false;
 
     // copy trivia back
     triviaBuffer.clear();
@@ -977,6 +969,7 @@ void Lexer::scanLineComment() {
     addTrivia(TriviaKind::LineComment);
 }
 
+template<bool InDirective>
 bool Lexer::scanBlockComment() {
     bool eod = false;
     while (true) {
@@ -1001,7 +994,7 @@ bool Lexer::scanBlockComment() {
         }
         else {
             advance();
-            if (inDirective && isNewline(c)) {
+            if (InDirective && isNewline(c)) {
                 // found a newline in a block comment inside a directive; this is not allowed
                 // we need to stop lexing trivia and issue an EndOfDirective token after this comment
                 addError(DiagCode::SplitBlockCommentInDirective);
@@ -1020,6 +1013,28 @@ int Lexer::findNextNonWhitespace() {
     while (isHorizontalWhitespace(c = peek(lookahead)))
         lookahead++;
     return lookahead;
+}
+
+Token* Lexer::createToken(TokenKind kind, TokenInfo& info) {
+    ArrayRef<Trivia*> trivia = triviaBuffer.copy(alloc);
+    triviaBuffer.clear();
+
+    switch (kind) {
+        case TokenKind::Unknown:
+            return Token::createUnknown(alloc, trivia, lexeme());
+        case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
+            return Token::createIdentifier(alloc, kind, trivia, lexeme(), info.identifierType);
+        case TokenKind::IntegerLiteral:
+        case TokenKind::RealLiteral:
+            return Token::createNumericLiteral(alloc, kind, trivia, lexeme(), info.numericValue);
+        case TokenKind::StringLiteral:
+            return Token::createStringLiteral(alloc, kind, trivia, lexeme(), info.niceText);
+        case TokenKind::Directive:
+            return Token::createDirective(alloc, kind, trivia, lexeme(), info.directiveKind);
+        default:
+            return Token::createSimple(alloc, kind, trivia);
+    }
 }
 
 void Lexer::addTrivia(TriviaKind kind) {
