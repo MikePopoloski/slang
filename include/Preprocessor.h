@@ -44,6 +44,8 @@ private:
     Buffer<Token*> tokenBuffer;
 
     const StringTable<TokenKind>* keywordTable;
+
+    static constexpr int MaxIncludeDepth = 32;
 };
 
 }

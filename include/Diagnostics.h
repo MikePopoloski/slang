@@ -28,9 +28,11 @@ enum class DiagCode : uint8_t {
     MissingVectorDigits,
     InvalidUnsizedLiteral,
     ExpectedEndOfIncludeFileName,
+    ExpectedIncludeFileName,
 
     // preprocessor
-    ExpectedIncludeFileName
+    CantOpenIncludeFile,
+    ExceededMaxIncludeDepth
 };
 
 class SyntaxError {

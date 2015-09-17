@@ -179,6 +179,7 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> tr
         case TokenKind::RealLiteral:
             return createNumericLiteral(alloc, kind, trivia, nullptr, 0);
         case TokenKind::StringLiteral:
+        case TokenKind::IncludeFileName:
             return createStringLiteral(alloc, kind, trivia, nullptr, nullptr);
         case TokenKind::Directive:
             return createDirective(alloc, kind, trivia, nullptr, TriviaKind::Unknown);

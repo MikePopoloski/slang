@@ -72,15 +72,19 @@ Trivia* Preprocessor::parseIncludeDirective(Token* directive) {
     Token* fileName = currentLexer->lexIncludeFileName();
     Token* end = parseEndOfDirective();
 
-    // TODO: error checking
+    // TODO: check missing or short filename
     StringRef path = fileName->valueText();
     path = path.subString(1, path.length() - 2);
     SourceFile* source = sourceTracker.readHeader(currentLexer->getFile(), path, false);
-    ASSERT(source);
-
-    // push the new lexer onto the stack
-    // TODO: max include depth
-    lexerStack.emplace_back(source->id, source->buffer, *this);
+    if (!source)
+        addError(DiagCode::CantOpenIncludeFile);
+    else if (lexerStack.size() >= MaxIncludeDepth)
+        addError(DiagCode::ExceededMaxIncludeDepth);
+    else {
+        // push the new lexer onto the include stack
+        // the active lexer will pull tokens from it
+        lexerStack.emplace_back(source->id, source->buffer, *this);
+    }
 
     return alloc.emplace<IncludeDirectiveTrivia>(directive, fileName, end);
 }
