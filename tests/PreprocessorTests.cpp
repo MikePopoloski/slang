@@ -54,7 +54,7 @@ void testDirective(TriviaKind kind) {
     CHECK(diagnostics.empty());
 }
 
-TEST_CASE("Directives", "[lexer]") {
+TEST_CASE("Directives", "[preprocessor]") {
     testDirective(TriviaKind::BeginKeywordsDirective);
     testDirective(TriviaKind::CellDefineDirective);
     testDirective(TriviaKind::DefaultNetTypeDirective);
@@ -77,14 +77,59 @@ TEST_CASE("Directives", "[lexer]") {
     testDirective(TriviaKind::UndefineAllDirective);
 }
 
-//TEST_CASE("Macro usage", "[lexer]") {
-//    auto& text = "`something";
-//    auto& token = lexToken(text);
-//
-//    CHECK(token.kind == TokenKind::MacroUsage);
-//    CHECK(token.toFullString() == text);
-//    CHECK(token.valueText() == text);
-//    CHECK(diagnostics.empty());
-//}
+TEST_CASE("Macro define (simple)", "[preprocessor]") {
+    auto& text = "`define FOO (1)";
+    auto& token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+    REQUIRE(token.trivia.count() == 1);
+    REQUIRE(token.trivia[0]->kind == TriviaKind::DefineDirective);
+
+    DefineDirectiveTrivia* def = (DefineDirectiveTrivia*)token.trivia[0];
+    CHECK(def->name->valueText() == "FOO");
+    CHECK(def->endOfDirective);
+    CHECK(def->directive);
+    CHECK(!def->formalArguments);
+    REQUIRE(def->body.count() == 3);
+    CHECK(def->body[1]->kind == TokenKind::IntegerLiteral);
+}
+
+TEST_CASE("Macro define (function-like)", "[preprocessor]") {
+    auto& text = "`define FOO(a) a+1";
+    auto& token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+    REQUIRE(token.trivia.count() == 1);
+    REQUIRE(token.trivia[0]->kind == TriviaKind::DefineDirective);
+
+    DefineDirectiveTrivia* def = (DefineDirectiveTrivia*)token.trivia[0];
+    CHECK(def->name->valueText() == "FOO");
+    CHECK(def->endOfDirective);
+    CHECK(def->directive);
+    CHECK(def->formalArguments);
+    REQUIRE(def->body.count() == 3);
+    CHECK(def->body[2]->kind == TokenKind::IntegerLiteral);
+}
+
+TEST_CASE("Macro usage (undefined)", "[preprocessor]") {
+    auto& text = "`FOO";
+    auto& token = lexToken(text);
+
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::UnknownDirective);
+}
+
+TEST_CASE("Macro usage (simple)", "[preprocessor]") {
+    auto& text = "`define FOO 42\n`FOO";
+    auto& token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.numericValue().integer == 42);
+    CHECK(diagnostics.empty());
+}
 
 }

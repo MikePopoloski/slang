@@ -2,10 +2,18 @@
 
 namespace slang {
 
-class MacroDecl {
+class MacroExpander {
 public:
-    StringRef name;
-    ArrayRef<Token*> body;
+    void start(DefineDirectiveTrivia* macro);
+    Token* next();
+
+    bool isActive() const;
+
+private:
+    Buffer<Token*> tokens;
+    Token** current = nullptr;
+
+    void expand(DefineDirectiveTrivia* macro);
 };
 
 class Preprocessor {
@@ -32,6 +40,7 @@ private:
     Trivia* handleIncludeDirective(Token* directive);
     Trivia* handleResetAllDirective(Token* directive);
     Trivia* handleDefineDirective(Token* directive);
+    Trivia* handleMacroUsage(Token* directive);
 
     Token* parseEndOfDirective();
 
@@ -45,8 +54,10 @@ private:
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
 
+    bool hasTokenSource;
     std::unordered_map<StringRef, DefineDirectiveTrivia*> macros;
     std::deque<Lexer> lexerStack;
+    MacroExpander currentMacro;
     Lexer* currentLexer;
     Token* currentToken;
 

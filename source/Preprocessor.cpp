@@ -31,17 +31,38 @@ Preprocessor::Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, D
 }
 
 // This function is a little weird; it's called from within the active lexer
-// to let us provide tokens from a lexer on the include stack.
+// to let us provide tokens from a lexer on the include stack. It's not pretty,
+// but it's necessary to present a nicer lexer interface to the user.
 Token* Preprocessor::lex(Lexer* current) {
-    if (lexerStack.empty())
+    // quick check for the common case
+    if (!hasTokenSource)
         return nullptr;
 
-    // avoid an infinite recursion of death
-    Lexer* top = &lexerStack.back();
-    if (top == current)
+    // check if we're expanding a macro
+    if (currentMacro.isActive())
+        return currentMacro.next();
+
+    if (lexerStack.empty()) {
+        hasTokenSource = false;
+        return nullptr;
+    }
+
+    // avoid an infinite recursion of death when called from an include file lexer
+    if (&lexerStack.back() == current)
         return nullptr;
 
-    return lexerStack.back().lex();
+    while (true) {
+        Token* result = lexerStack.back().lex();
+        if (result->kind != TokenKind::EndOfFile)
+            return result;
+
+        // end of file; pop and move to next lexer
+        lexerStack.pop_back();
+        if (lexerStack.empty()) {
+            hasTokenSource = false;
+            return nullptr;
+        }
+    }
 }
 
 TokenKind Preprocessor::lookupKeyword(StringRef identifier) {
@@ -59,6 +80,8 @@ Trivia* Preprocessor::parseDirective(Lexer* lexer) {
     switch (directive->directiveKind()) {
         case TriviaKind::IncludeDirective: return handleIncludeDirective(directive);
         case TriviaKind::ResetAllDirective: return handleResetAllDirective(directive);
+        case TriviaKind::DefineDirective: return handleDefineDirective(directive);
+        case TriviaKind::MacroUsage: return handleMacroUsage(directive);
         case TriviaKind::UndefineAllDirective:
         case TriviaKind::UnconnectedDriveDirective:
         case TriviaKind::NoUnconnectedDriveDirective:
@@ -84,6 +107,7 @@ Trivia* Preprocessor::handleIncludeDirective(Token* directive) {
     else {
         // push the new lexer onto the include stack
         // the active lexer will pull tokens from it
+        hasTokenSource = true;
         lexerStack.emplace_back(source->id, source->buffer, *this);
     }
 
@@ -139,13 +163,32 @@ Trivia* Preprocessor::handleDefineDirective(Token* directive) {
     while (peek()->kind != TokenKind::EndOfDirective)
         body.append(consume());
 
-    return alloc.emplace<DefineDirectiveTrivia>(
+    DefineDirectiveTrivia* result = alloc.emplace<DefineDirectiveTrivia>(
         directive,
         name,
         consume(),
         formalArguments,
         body.copy(alloc)
     );
+
+    macros.emplace(name->valueText().intern(alloc), result);
+    return result;
+}
+
+Trivia* Preprocessor::handleMacroUsage(Token* directive) {
+    // TODO: create specialized trivia for this
+    // try to look up the macro in our map
+    auto it = macros.find(directive->valueText().subString(1));
+    if (it == macros.end()) {
+        addError(DiagCode::UnknownDirective);
+        return alloc.emplace<SimpleDirectiveTrivia>(directive->directiveKind(), directive, parseEndOfDirective());
+    }
+
+    DefineDirectiveTrivia* macro = it->second;
+    currentMacro.start(macro);
+    hasTokenSource = true;
+
+    return alloc.emplace<SimpleDirectiveTrivia>(directive->directiveKind(), directive, parseEndOfDirective());
 }
 
 Token* Preprocessor::parseEndOfDirective() {
@@ -188,6 +231,35 @@ Token* Preprocessor::expect(TokenKind kind) {
         return consume();
 
     return Token::missing(alloc, kind);
+}
+
+void MacroExpander::start(DefineDirectiveTrivia* macro) {
+    // expand all tokens recursively and store them in our buffer
+    tokens.clear();
+    expand(macro);
+    current = tokens.begin();
+    if (current == tokens.end())
+        current = nullptr;
+}
+
+Token* MacroExpander::next() {
+    Token* result = *current;
+    current++;
+    if (current == tokens.end())
+        current = nullptr;
+
+    return result;
+}
+
+bool MacroExpander::isActive() const {
+    return current != nullptr;
+}
+
+void MacroExpander::expand(DefineDirectiveTrivia* macro) {
+    if (!macro->formalArguments) {
+        // simple macro; just take body tokens
+        tokens.appendRange(macro->body);
+    }
 }
 
 }
