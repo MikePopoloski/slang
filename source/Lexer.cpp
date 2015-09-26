@@ -8,6 +8,7 @@
 
 #include "BumpAllocator.h"
 #include "Buffer.h"
+#include "BufferPool.h"
 #include "StringRef.h"
 #include "StringTable.h"
 #include "Diagnostics.h"
@@ -895,6 +896,8 @@ void Lexer::lexDirectiveTrivia() {
     // call back in to lex() and that would stomp over the trivia we've already collected
     Buffer<Trivia*> saveTrivia(triviaBuffer.count() + 1);
     saveTrivia.appendRange(triviaBuffer);
+
+    // TODO: check that this is start of line
 
     Trivia* directive = preprocessor.parseDirective(this);
     ASSERT(directive);

@@ -31,7 +31,7 @@ enum class DiagCode : uint8_t {
     ExpectedIncludeFileName,
 
     // preprocessor
-    CantOpenIncludeFile,
+    CouldNotOpenIncludeFile,
     ExceededMaxIncludeDepth
 };
 

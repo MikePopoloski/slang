@@ -2,6 +2,12 @@
 
 namespace slang {
 
+class MacroDecl {
+public:
+    StringRef name;
+    ArrayRef<Token*> body;
+};
+
 class Preprocessor {
 public:
     Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
@@ -23,7 +29,10 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-    Trivia* parseIncludeDirective(Token* directive);
+    Trivia* handleIncludeDirective(Token* directive);
+    Trivia* handleResetAllDirective(Token* directive);
+    Trivia* handleDefineDirective(Token* directive);
+
     Token* parseEndOfDirective();
 
     Token* peek();
@@ -36,12 +45,14 @@ private:
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
 
+    std::unordered_map<StringRef, DefineDirectiveTrivia*> macros;
     std::deque<Lexer> lexerStack;
     Lexer* currentLexer;
     Token* currentToken;
 
     Buffer<Trivia*> triviaBuffer;
-    Buffer<Token*> tokenBuffer;
+    BufferPool<Token*> tokenPool;
+    BufferPool<MacroFormalArgument*> argumentPool;
 
     const StringTable<TokenKind>* keywordTable;
 

@@ -8,6 +8,7 @@
 
 #include "BumpAllocator.h"
 #include "Buffer.h"
+#include "BufferPool.h"
 #include "StringRef.h"
 #include "Diagnostics.h"
 #include "SourceTracker.h"
@@ -56,8 +57,8 @@ Trivia* Preprocessor::parseDirective(Lexer* lexer) {
 
     Token* directive = expect(TokenKind::Directive);
     switch (directive->directiveKind()) {
-        case TriviaKind::IncludeDirective: return parseIncludeDirective(directive);
-        case TriviaKind::ResetAllDirective:
+        case TriviaKind::IncludeDirective: return handleIncludeDirective(directive);
+        case TriviaKind::ResetAllDirective: return handleResetAllDirective(directive);
         case TriviaKind::UndefineAllDirective:
         case TriviaKind::UnconnectedDriveDirective:
         case TriviaKind::NoUnconnectedDriveDirective:
@@ -67,7 +68,7 @@ Trivia* Preprocessor::parseDirective(Lexer* lexer) {
     }
 }
 
-Trivia* Preprocessor::parseIncludeDirective(Token* directive) {
+Trivia* Preprocessor::handleIncludeDirective(Token* directive) {
     // next token should be a filename; lex that manually
     Token* fileName = currentLexer->lexIncludeFileName();
     Token* end = parseEndOfDirective();
@@ -77,7 +78,7 @@ Trivia* Preprocessor::parseIncludeDirective(Token* directive) {
     path = path.subString(1, path.length() - 2);
     SourceFile* source = sourceTracker.readHeader(currentLexer->getFile(), path, false);
     if (!source)
-        addError(DiagCode::CantOpenIncludeFile);
+        addError(DiagCode::CouldNotOpenIncludeFile);
     else if (lexerStack.size() >= MaxIncludeDepth)
         addError(DiagCode::ExceededMaxIncludeDepth);
     else {
@@ -89,20 +90,78 @@ Trivia* Preprocessor::parseIncludeDirective(Token* directive) {
     return alloc.emplace<IncludeDirectiveTrivia>(directive, fileName, end);
 }
 
+Trivia* Preprocessor::handleResetAllDirective(Token* directive) {
+    // TODO: reset all preprocessor state here
+    return alloc.emplace<SimpleDirectiveTrivia>(directive->directiveKind(), directive, parseEndOfDirective());
+}
+
+Trivia* Preprocessor::handleDefineDirective(Token* directive) {
+    // next token should be the macro name
+    Token* name = expect(TokenKind::Identifier);
+
+    // check if this is a function-like macro, which requires an opening paren with no leading space
+    MacroFormalArgumentList* formalArguments = nullptr;
+    Token* maybeParen = peek();
+    if (maybeParen->kind == TokenKind::OpenParenthesis && maybeParen->trivia.empty()) {
+        // parse all formal arguments
+        auto arguments = argumentPool.get();
+        consume();
+        while (true) {
+            Token* arg = expect(TokenKind::Identifier);
+            TokenKind kind = peek()->kind;
+            if (kind == TokenKind::Equals) {
+               // parseMacroDefault();
+                kind = peek()->kind;
+            }
+
+            arguments.append(alloc.emplace<MacroFormalArgument>(arg, nullptr));
+
+            if (kind == TokenKind::CloseParenthesis)
+                break;
+
+            // TODO: handle errors
+            if (kind != TokenKind::Comma) {
+            }
+            else {
+            }
+        }
+
+        formalArguments = alloc.emplace<MacroFormalArgumentList>(
+            maybeParen,
+            arguments.copy(alloc),
+            nullptr, // TODO
+            consume() // TODO
+        );
+    }
+    
+    // consume all remaining tokens as macro text
+    auto body = tokenPool.get();
+    while (peek()->kind != TokenKind::EndOfDirective)
+        body.append(consume());
+
+    return alloc.emplace<DefineDirectiveTrivia>(
+        directive,
+        name,
+        consume(),
+        formalArguments,
+        body.copy(alloc)
+    );
+}
+
 Token* Preprocessor::parseEndOfDirective() {
     // consume all extraneous tokens as SkippedToken trivia
     // TODO: error reporting
-    tokenBuffer.clear();
+    auto skipped = tokenPool.get();
     while (peek()->kind != TokenKind::EndOfDirective)
-        tokenBuffer.append(consume());
+        skipped.append(consume());
 
     Token* eod = consume();
-    if (tokenBuffer.empty())
+    if (skipped.empty())
         return eod;
 
     // splice together the trivia
     triviaBuffer.clear();
-    triviaBuffer.append(alloc.emplace<SkippedTokensTrivia>(tokenBuffer.copy(alloc)));
+    triviaBuffer.append(alloc.emplace<SkippedTokensTrivia>(skipped.copy(alloc)));
     triviaBuffer.appendRange(eod->trivia);
 
     return Token::createSimple(alloc, TokenKind::EndOfDirective, triviaBuffer.copy(alloc));

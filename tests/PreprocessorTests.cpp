@@ -32,6 +32,10 @@ TEST_CASE("Include File", "[preprocessor]") {
     auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
+
+    // there should be one error about a non-existent include file
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::CouldNotOpenIncludeFile);
 }
 
 void testDirective(TriviaKind kind) {

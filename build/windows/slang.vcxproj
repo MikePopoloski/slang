@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\ArrayRef.h" />
+    <ClInclude Include="..\..\include\BufferPool.h" />
     <ClInclude Include="..\..\include\Debug.h" />
     <ClInclude Include="..\..\include\BitVector.h" />
     <ClInclude Include="..\..\include\Buffer.h" />

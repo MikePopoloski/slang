@@ -28,6 +28,39 @@ void SkippedTokensTrivia::writeTo(Buffer<char>& buffer) {
         token->writeTo(buffer, true);
 }
 
+MacroFormalArgumentList::MacroFormalArgumentList(
+    Token* openParen,
+    ArrayRef<MacroFormalArgument*> args,
+    ArrayRef<Token*> commaSeparators,
+    Token* closeParen
+) :
+    openParen(openParen),
+    args(args),
+    commaSeparators(commaSeparators),
+    closeParen(closeParen)
+{
+}
+
+DefineDirectiveTrivia::DefineDirectiveTrivia(
+    Token* directive,
+    Token* name,
+    Token* endOfDirective,
+    MacroFormalArgumentList* formalArguments,
+    ArrayRef<Token*> body
+) :
+    Trivia(TriviaKind::DefineDirective),
+    directive(directive),
+    name(name),
+    endOfDirective(endOfDirective),
+    formalArguments(formalArguments),
+    body(body)
+{
+}
+
+void DefineDirectiveTrivia::writeTo(Buffer<char>& buffer) {
+    directive->writeTo(buffer, true);
+}
+
 std::ostream& operator<<(std::ostream& os, TriviaKind kind) {
     // auto-generated
     switch (kind) {

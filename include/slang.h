@@ -13,6 +13,7 @@
 #include "BumpAllocator.h"
 #include "ArrayRef.h"
 #include "Buffer.h"
+#include "BufferPool.h"
 #include "StringRef.h"
 #include "StringTable.h"
 #include "SourceTracker.h"

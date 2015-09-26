@@ -84,6 +84,52 @@ struct IncludeDirectiveTrivia : public Trivia {
     void writeTo(Buffer<char>& buffer) override;
 };
 
+struct MacroArgumentDefault {
+    Token* equals;
+    ArrayRef<Token*> tokens;
+};
+
+struct MacroFormalArgument {
+    Token* name;
+    MacroArgumentDefault* defaultValue;
+
+    MacroFormalArgument(Token* name, MacroArgumentDefault* def) :
+        name(name), defaultValue(def) {
+    }
+};
+
+struct MacroFormalArgumentList {
+    Token* openParen;
+    ArrayRef<MacroFormalArgument*> args;
+    ArrayRef<Token*> commaSeparators;
+    Token* closeParen;
+
+    MacroFormalArgumentList(
+        Token* openParen,
+        ArrayRef<MacroFormalArgument*> args,
+        ArrayRef<Token*> commaSeparators,
+        Token* closeParen
+    );
+};
+
+struct DefineDirectiveTrivia : public Trivia {
+    Token* directive;
+    Token* name;
+    Token* endOfDirective;
+    MacroFormalArgumentList* formalArguments;
+    ArrayRef<Token*> body;
+
+    DefineDirectiveTrivia(
+        Token* directive,
+        Token* name,
+        Token* endOfDirective,
+        MacroFormalArgumentList* formalArguments,
+        ArrayRef<Token*> body
+    );
+
+    void writeTo(Buffer<char>& buffer) override;
+};
+
 struct SkippedTokensTrivia : public Trivia {
     ArrayRef<Token*> tokens;
 
