@@ -46,9 +46,6 @@
     <ClInclude Include="..\..\include\ArrayRef.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\SyntaxFacts.h">
-      <Filter>parsing</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\Buffer.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -81,9 +78,6 @@
     <ClCompile Include="..\..\source\Lexer.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\SyntaxFacts.cpp">
-      <Filter>parsing</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\Token.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
@@ -101,6 +95,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\SourceTracker.cpp">
       <Filter>text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\LexerTables.cpp">
+      <Filter>lexing</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

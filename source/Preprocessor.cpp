@@ -15,7 +15,6 @@
 #include "Token.h"
 #include "Lexer.h"
 #include "StringTable.h"
-#include "SyntaxFacts.h"
 #include "Preprocessor.h"
 
 namespace slang {

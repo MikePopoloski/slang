@@ -4,6 +4,7 @@
 #include "Buffer.h"
 #include "BitVector.h"
 #include "Trivia.h"
+#include "StringTable.h"
 
 namespace slang {
 
@@ -97,6 +98,9 @@ private:
         TriviaKind kind;
     };
 };
+
+StringRef getTokenKindText(TokenKind kind);
+const StringTable<TokenKind>* getKeywordTable();
 
 std::ostream& operator<<(std::ostream& os, TokenKind kind);
 

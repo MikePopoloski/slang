@@ -34,18 +34,17 @@
     <ClInclude Include="..\..\include\slang.h" />
     <ClInclude Include="..\..\include\StringRef.h" />
     <ClInclude Include="..\..\include\StringTable.h" />
-    <ClInclude Include="..\..\include\SyntaxFacts.h" />
     <ClInclude Include="..\..\include\Token.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
+    <ClCompile Include="..\..\source\LexerTables.cpp" />
     <ClCompile Include="..\..\source\SourceTracker.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
     <ClCompile Include="..\..\source\Preprocessor.cpp" />
-    <ClCompile Include="..\..\source\SyntaxFacts.cpp" />
     <ClCompile Include="..\..\source\Token.cpp" />
     <ClCompile Include="..\..\source\Trivia.cpp" />
   </ItemGroup>

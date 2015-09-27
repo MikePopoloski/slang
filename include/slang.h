@@ -23,4 +23,3 @@
 #include "Token.h"
 #include "Lexer.h"
 #include "Preprocessor.h"
-#include "SyntaxFacts.h"

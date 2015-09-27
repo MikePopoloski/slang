@@ -18,7 +18,6 @@
 #include "Preprocessor.h"
 #include "CharInfo.h"
 #include "StringTable.h"
-#include "SyntaxFacts.h"
 
 namespace {
 
