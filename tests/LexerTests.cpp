@@ -766,7 +766,7 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
     auto& text = "`";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::Unknown);
+    CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toFullString() == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::MisplacedDirectiveChar);

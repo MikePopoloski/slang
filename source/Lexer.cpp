@@ -575,7 +575,8 @@ TokenKind Lexer::lexDirective(TokenInfo& info) {
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
         addError(DiagCode::MisplacedDirectiveChar);
-        return TokenKind::Unknown;
+        info.directiveKind = TriviaKind::Unknown;
+        return TokenKind::Directive;
     }
 
     info.directiveKind = getDirectiveKind(lexeme());

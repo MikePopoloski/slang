@@ -96,19 +96,23 @@ Trivia* Preprocessor::handleIncludeDirective(Token* directive) {
     Token* fileName = currentLexer->lexIncludeFileName();
     Token* end = parseEndOfDirective();
 
-    // TODO: check missing or short filename
     StringRef path = fileName->valueText();
-    path = path.subString(1, path.length() - 2);
-    SourceFile* source = sourceTracker.readHeader(currentLexer->getFile(), path, false);
-    if (!source)
-        addError(DiagCode::CouldNotOpenIncludeFile);
-    else if (lexerStack.size() >= MaxIncludeDepth)
-        addError(DiagCode::ExceededMaxIncludeDepth);
+    if (path.length() < 3)
+        addError(DiagCode::ExpectedIncludeFileName);
     else {
-        // push the new lexer onto the include stack
-        // the active lexer will pull tokens from it
-        hasTokenSource = true;
-        lexerStack.emplace_back(source->id, source->buffer, *this);
+        // remove delimiters
+        path = path.subString(1, path.length() - 2);
+        SourceFile* source = sourceTracker.readHeader(currentLexer->getFile(), path, false);
+        if (!source)
+            addError(DiagCode::CouldNotOpenIncludeFile);
+        else if (lexerStack.size() >= MaxIncludeDepth)
+            addError(DiagCode::ExceededMaxIncludeDepth);
+        else {
+            // push the new lexer onto the include stack
+            // the active lexer will pull tokens from it
+            hasTokenSource = true;
+            lexerStack.emplace_back(source->id, source->buffer, *this);
+        }
     }
 
     return alloc.emplace<IncludeDirectiveTrivia>(directive, fileName, end);
@@ -193,10 +197,13 @@ Trivia* Preprocessor::handleMacroUsage(Token* directive) {
 
 Token* Preprocessor::parseEndOfDirective() {
     // consume all extraneous tokens as SkippedToken trivia
-    // TODO: error reporting
     auto skipped = tokenPool.get();
-    while (peek()->kind != TokenKind::EndOfDirective)
-        skipped.append(consume());
+    if (peek()->kind != TokenKind::EndOfDirective) {
+        addError(DiagCode::ExpectedEndOfDirective);
+        do {
+            skipped.append(consume());
+        } while (peek()->kind != TokenKind::EndOfDirective);
+    }
 
     Token* eod = consume();
     if (skipped.empty())
