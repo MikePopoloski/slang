@@ -19,6 +19,9 @@
     <Filter Include="text">
       <UniqueIdentifier>{a3b1fc88-9595-4353-8d1c-0ece6f94e212}</UniqueIdentifier>
     </Filter>
+    <Filter Include="parsing\syntax">
+      <UniqueIdentifier>{c22d4ff4-66b9-4af5-bbc9-3540a8f804ed}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\slang.h" />
@@ -73,6 +76,15 @@
     <ClInclude Include="..\..\include\BufferPool.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\SyntaxNode.h">
+      <Filter>parsing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\AllSyntax.h">
+      <Filter>parsing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\syntax\DirectiveSyntax.h">
+      <Filter>parsing\syntax</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -90,13 +102,13 @@
     <ClCompile Include="..\..\source\Preprocessor.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\Trivia.cpp">
-      <Filter>lexing</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\SourceTracker.cpp">
       <Filter>text</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\LexerTables.cpp">
+      <Filter>lexing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\Trivia.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
   </ItemGroup>

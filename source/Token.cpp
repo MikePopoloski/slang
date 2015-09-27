@@ -9,14 +9,14 @@
 
 namespace slang {
 
-Token::Token(TokenKind kind, ArrayRef<Trivia*> trivia) :
+Token::Token(TokenKind kind, ArrayRef<Trivia> trivia) :
     kind(kind), trivia(trivia) {
 }
 
 void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
     if (includeTrivia) {
         for (const auto& t : trivia)
-            t->writeTo(buffer);
+            t.writeTo(buffer);
     }
 
     StringRef text = getTokenKindText(kind);
@@ -100,12 +100,12 @@ IdentifierType Token::identifierType() const {
     return IdentifierType::Unknown;
 }
 
-TriviaKind Token::directiveKind() const {
+SyntaxKind Token::directiveKind() const {
     ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     return ((DirectiveInfo*)(this + 1))->kind;
 }
 
-Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia*> trivia, StringRef rawText) {
+Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
     new (token) Token(TokenKind::Unknown, trivia);
 
@@ -116,13 +116,13 @@ Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia*> trivia, Stri
     return token;
 }
 
-Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia) {
+Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia) {
     Token* token = (Token*)alloc.allocate(sizeof(Token));
     new (token) Token(kind, trivia);
     return token;
 }
 
-Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, IdentifierType type) {
+Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
     new (token) Token(kind, trivia);
 
@@ -133,7 +133,7 @@ Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Tr
     return token;
 }
 
-Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, StringRef niceText) {
+Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(StringLiteralInfo));
     new (token) Token(kind, trivia);
 
@@ -144,7 +144,7 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef
     return token;
 }
 
-Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, NumericValue value) {
+Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(NumericLiteralInfo));
     new (token) Token(kind, trivia);
 
@@ -155,7 +155,7 @@ Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRe
     return token;
 }
 
-Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia, StringRef rawText, TriviaKind directiveKind) {
+Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(DirectiveInfo));
     new (token) Token(kind, trivia);
 
@@ -166,7 +166,7 @@ Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Tri
     return token;
 }
 
-Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> trivia) {
+Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia) {
     // TODO: flag missing
     switch (kind) {
         case TokenKind::Unknown:
@@ -181,7 +181,7 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia*> tr
         case TokenKind::IncludeFileName:
             return createStringLiteral(alloc, kind, trivia, nullptr, nullptr);
         case TokenKind::Directive:
-            return createDirective(alloc, kind, trivia, nullptr, TriviaKind::Unknown);
+            return createDirective(alloc, kind, trivia, nullptr, SyntaxKind::Unknown);
         default:
             return createSimple(alloc, kind, trivia);
     }

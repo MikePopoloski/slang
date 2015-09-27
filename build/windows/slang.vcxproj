@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\AllSyntax.h" />
     <ClInclude Include="..\..\include\ArrayRef.h" />
     <ClInclude Include="..\..\include\BufferPool.h" />
     <ClInclude Include="..\..\include\Debug.h" />
@@ -34,6 +35,8 @@
     <ClInclude Include="..\..\include\slang.h" />
     <ClInclude Include="..\..\include\StringRef.h" />
     <ClInclude Include="..\..\include\StringTable.h" />
+    <ClInclude Include="..\..\include\SyntaxNode.h" />
+    <ClInclude Include="..\..\include\syntax\DirectiveSyntax.h" />
     <ClInclude Include="..\..\include\Token.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />

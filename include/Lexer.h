@@ -32,7 +32,7 @@ private:
         StringRef niceText;
         NumericValue numericValue;
         IdentifierType identifierType;
-        TriviaKind directiveKind;
+        SyntaxKind directiveKind;
     };
 
     template<bool InDirective>
@@ -51,20 +51,20 @@ private:
     void lexVectorDigits(TokenInfo& info);
 
     template<bool InDirective>
-    bool lexTrivia(Buffer<Trivia*>& buffer);
-    void lexDirectiveTrivia(Buffer<Trivia*>& buffer);
+    bool lexTrivia(Buffer<Trivia>& buffer);
+    void lexDirectiveTrivia(Buffer<Trivia>& buffer);
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
 
     template<bool InDirective>
-    bool scanBlockComment(Buffer<Trivia*>& buffer);
-    void scanWhitespace(Buffer<Trivia*>& buffer);
-    void scanLineComment(Buffer<Trivia*>& buffer);
+    bool scanBlockComment(Buffer<Trivia>& buffer);
+    void scanWhitespace(Buffer<Trivia>& buffer);
+    void scanLineComment(Buffer<Trivia>& buffer);
     void scanIdentifier();
 
     int findNextNonWhitespace();
 
-    Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia*>& triviaBuffer);
-    void addTrivia(TriviaKind kind, Buffer<Trivia*>& buffer);
+    Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer);
+    void addTrivia(TriviaKind kind, Buffer<Trivia>& buffer);
     void addError(DiagCode code);
 
     // source pointer manipulation
@@ -90,7 +90,7 @@ private:
     }
 
     Buffer<char> stringBuffer;
-    BufferPool<Trivia*> triviaPool;
+    BufferPool<Trivia> triviaPool;
     VectorBuilder vectorBuilder;
     Preprocessor& preprocessor;
     BumpAllocator& alloc;

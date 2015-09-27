@@ -38,44 +38,44 @@ TEST_CASE("Include File", "[preprocessor]") {
     CHECK(diagnostics.last().code == DiagCode::CouldNotOpenIncludeFile);
 }
 
-void testDirective(TriviaKind kind) {
-    auto& text = getTriviaKindText(kind);
+//void testDirective(TriviaKind kind) {
+//    auto& text = getTriviaKindText(kind);
+//
+//    diagnostics.clear();
+//    Preprocessor preprocessor(getTracker(), alloc, diagnostics);
+//    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), preprocessor);
+//
+//    Token* token = lexer.lexDirectiveMode();
+//    REQUIRE(token != nullptr);
+//
+//    CHECK(token->kind == TokenKind::Directive);
+//    CHECK(token->toFullString() == text);
+//    CHECK(token->valueText() == text);
+//    CHECK(diagnostics.empty());
+//}
 
-    diagnostics.clear();
-    Preprocessor preprocessor(getTracker(), alloc, diagnostics);
-    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), preprocessor);
-
-    Token* token = lexer.lexDirectiveMode();
-    REQUIRE(token != nullptr);
-
-    CHECK(token->kind == TokenKind::Directive);
-    CHECK(token->toFullString() == text);
-    CHECK(token->valueText() == text);
-    CHECK(diagnostics.empty());
-}
-
-TEST_CASE("Directives", "[preprocessor]") {
-    testDirective(TriviaKind::BeginKeywordsDirective);
-    testDirective(TriviaKind::CellDefineDirective);
-    testDirective(TriviaKind::DefaultNetTypeDirective);
-    testDirective(TriviaKind::DefineDirective);
-    testDirective(TriviaKind::ElseDirective);
-    testDirective(TriviaKind::ElseIfDirective);
-    testDirective(TriviaKind::EndKeywordsDirective);
-    testDirective(TriviaKind::EndCellDefineDirective);
-    testDirective(TriviaKind::EndIfDirective);
-    testDirective(TriviaKind::IfDefDirective);
-    testDirective(TriviaKind::IfNDefDirective);
-    testDirective(TriviaKind::IncludeDirective);
-    testDirective(TriviaKind::LineDirective);
-    testDirective(TriviaKind::NoUnconnectedDriveDirective);
-    testDirective(TriviaKind::PragmaDirective);
-    testDirective(TriviaKind::ResetAllDirective);
-    testDirective(TriviaKind::TimescaleDirective);
-    testDirective(TriviaKind::UnconnectedDriveDirective);
-    testDirective(TriviaKind::UndefDirective);
-    testDirective(TriviaKind::UndefineAllDirective);
-}
+//TEST_CASE("Directives", "[preprocessor]") {
+//    testDirective(TriviaKind::BeginKeywordsDirective);
+//    testDirective(TriviaKind::CellDefineDirective);
+//    testDirective(TriviaKind::DefaultNetTypeDirective);
+//    testDirective(TriviaKind::DefineDirective);
+//    testDirective(TriviaKind::ElseDirective);
+//    testDirective(TriviaKind::ElseIfDirective);
+//    testDirective(TriviaKind::EndKeywordsDirective);
+//    testDirective(TriviaKind::EndCellDefineDirective);
+//    testDirective(TriviaKind::EndIfDirective);
+//    testDirective(TriviaKind::IfDefDirective);
+//    testDirective(TriviaKind::IfNDefDirective);
+//    testDirective(TriviaKind::IncludeDirective);
+//    testDirective(TriviaKind::LineDirective);
+//    testDirective(TriviaKind::NoUnconnectedDriveDirective);
+//    testDirective(TriviaKind::PragmaDirective);
+//    testDirective(TriviaKind::ResetAllDirective);
+//    testDirective(TriviaKind::TimescaleDirective);
+//    testDirective(TriviaKind::UnconnectedDriveDirective);
+//    testDirective(TriviaKind::UndefDirective);
+//    testDirective(TriviaKind::UndefineAllDirective);
+//}
 
 TEST_CASE("Macro define (simple)", "[preprocessor]") {
     auto& text = "`define FOO (1)";
@@ -85,9 +85,9 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     CHECK(token.toFullString() == text);
     CHECK(diagnostics.empty());
     REQUIRE(token.trivia.count() == 1);
-    REQUIRE(token.trivia[0]->kind == TriviaKind::DefineDirective);
+    REQUIRE(token.trivia[0].kind == TriviaKind::Directive);
 
-    DefineDirectiveTrivia* def = (DefineDirectiveTrivia*)token.trivia[0];
+    auto def = token.trivia[0].syntax()->as<DefineDirectiveSyntax>();
     CHECK(def->name->valueText() == "FOO");
     CHECK(def->endOfDirective);
     CHECK(def->directive);
@@ -104,9 +104,9 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     CHECK(token.toFullString() == text);
     CHECK(diagnostics.empty());
     REQUIRE(token.trivia.count() == 1);
-    REQUIRE(token.trivia[0]->kind == TriviaKind::DefineDirective);
+    REQUIRE(token.trivia[0].kind == TriviaKind::Directive);
 
-    DefineDirectiveTrivia* def = (DefineDirectiveTrivia*)token.trivia[0];
+    auto def = token.trivia[0].syntax()->as<DefineDirectiveSyntax>();
     CHECK(def->name->valueText() == "FOO");
     CHECK(def->endOfDirective);
     CHECK(def->directive);

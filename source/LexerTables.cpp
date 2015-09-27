@@ -11,27 +11,27 @@
 
 namespace slang {
 
-const static StringTable<TriviaKind> directiveTable = {
-    { "`begin_keywords", TriviaKind::BeginKeywordsDirective },
-    { "`celldefine", TriviaKind::CellDefineDirective },
-    { "`default_nettype", TriviaKind::DefaultNetTypeDirective },
-    { "`define", TriviaKind::DefineDirective },
-    { "`else", TriviaKind::ElseDirective },
-    { "`elseif", TriviaKind::ElseIfDirective },
-    { "`end_keywords", TriviaKind::EndKeywordsDirective },
-    { "`endcelldefine", TriviaKind::EndCellDefineDirective },
-    { "`endif", TriviaKind::EndIfDirective },
-    { "`ifdef", TriviaKind::IfDefDirective },
-    { "`ifndef", TriviaKind::IfNDefDirective },
-    { "`include", TriviaKind::IncludeDirective },
-    { "`line", TriviaKind::LineDirective },
-    { "`nounconnected_drive", TriviaKind::NoUnconnectedDriveDirective },
-    { "`pragma", TriviaKind::PragmaDirective },
-    { "`resetall", TriviaKind::ResetAllDirective },
-    { "`timescale", TriviaKind::TimescaleDirective },
-    { "`unconnected_drive", TriviaKind::UnconnectedDriveDirective },
-    { "`undef", TriviaKind::UndefDirective },
-    { "`undefineall", TriviaKind::UndefineAllDirective }
+const static StringTable<SyntaxKind> directiveTable = {
+    { "`begin_keywords", SyntaxKind::BeginKeywordsDirective },
+    { "`celldefine", SyntaxKind::CellDefineDirective },
+    { "`default_nettype", SyntaxKind::DefaultNetTypeDirective },
+    { "`define", SyntaxKind::DefineDirective },
+    { "`else", SyntaxKind::ElseDirective },
+    { "`elseif", SyntaxKind::ElseIfDirective },
+    { "`end_keywords", SyntaxKind::EndKeywordsDirective },
+    { "`endcelldefine", SyntaxKind::EndCellDefineDirective },
+    { "`endif", SyntaxKind::EndIfDirective },
+    { "`ifdef", SyntaxKind::IfDefDirective },
+    { "`ifndef", SyntaxKind::IfNDefDirective },
+    { "`include", SyntaxKind::IncludeDirective },
+    { "`line", SyntaxKind::LineDirective },
+    { "`nounconnected_drive", SyntaxKind::NoUnconnectedDriveDirective },
+    { "`pragma", SyntaxKind::PragmaDirective },
+    { "`resetall", SyntaxKind::ResetAllDirective },
+    { "`timescale", SyntaxKind::TimescaleDirective },
+    { "`unconnected_drive", SyntaxKind::UnconnectedDriveDirective },
+    { "`undef", SyntaxKind::UndefDirective },
+    { "`undefineall", SyntaxKind::UndefineAllDirective }
 };
 
 const static StringTable<TokenKind> allKeywords = {
@@ -285,11 +285,11 @@ const static StringTable<TokenKind> allKeywords = {
     { "xnor", TokenKind::XnorKeyword }
 };
 
-TriviaKind getDirectiveKind(StringRef directive) {
-    TriviaKind kind;
+SyntaxKind getDirectiveKind(StringRef directive) {
+    SyntaxKind kind;
     if (directiveTable.lookup(directive, kind))
         return kind;
-    return TriviaKind::MacroUsage;
+    return SyntaxKind::MacroUsage;
 }
 
 const StringTable<TokenKind>* getKeywordTable() {
@@ -645,34 +645,7 @@ StringRef getTokenKindText(TokenKind kind) {
     }
 }
 
-StringRef getTriviaKindText(TriviaKind kind) {
-    switch (kind) {
-        case TriviaKind::BeginKeywordsDirective: return "`begin_keywords";
-        case TriviaKind::CellDefineDirective: return "`celldefine";
-        case TriviaKind::DefaultNetTypeDirective: return "`default_nettype";
-        case TriviaKind::DefineDirective: return "`define";
-        case TriviaKind::ElseDirective: return "`else";
-        case TriviaKind::ElseIfDirective: return "`elseif";
-        case TriviaKind::EndKeywordsDirective: return "`end_keywords";
-        case TriviaKind::EndCellDefineDirective: return "`endcelldefine";
-        case TriviaKind::EndIfDirective: return "`endif";
-        case TriviaKind::IfDefDirective: return "`ifdef";
-        case TriviaKind::IfNDefDirective: return "`ifndef";
-        case TriviaKind::IncludeDirective: return "`include";
-        case TriviaKind::LineDirective: return "`line";
-        case TriviaKind::NoUnconnectedDriveDirective: return "`nounconnected_drive";
-        case TriviaKind::PragmaDirective: return "`pragma";
-        case TriviaKind::ResetAllDirective: return "`resetall";
-        case TriviaKind::TimescaleDirective: return "`timescale";
-        case TriviaKind::UnconnectedDriveDirective: return "`unconnected_drive";
-        case TriviaKind::UndefDirective: return "`undef";
-        case TriviaKind::UndefineAllDirective: return "`undefineall";
-        default: return nullptr;
-    }
-}
-
 std::ostream& operator<<(std::ostream& os, TokenKind kind) {
-    // auto-generated
     switch (kind) {
         case TokenKind::Unknown: os << "Unknown"; break;
         case TokenKind::EndOfFile: os << "EndOfFile"; break;
@@ -1027,7 +1000,6 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
 }
 
 std::ostream& operator<<(std::ostream& os, TriviaKind kind) {
-    // auto-generated
     switch (kind) {
         case TriviaKind::Unknown: os << "Unknown"; break;
         case TriviaKind::Whitespace: os << "Whitespace"; break;
@@ -1037,27 +1009,6 @@ std::ostream& operator<<(std::ostream& os, TriviaKind kind) {
         case TriviaKind::BlockComment: os << "BlockComment"; break;
         case TriviaKind::DisabledText: os << "DisabledText"; break;
         case TriviaKind::SkippedTokens: os << "SkippedTokens"; break;
-        case TriviaKind::MacroUsage: os << "MacroUsage"; break;
-        case TriviaKind::BeginKeywordsDirective: os << "BeginKeywordsDirective"; break;
-        case TriviaKind::CellDefineDirective: os << "CellDefineDirective"; break;
-        case TriviaKind::DefaultNetTypeDirective: os << "DefaultNetTypeDirective"; break;
-        case TriviaKind::DefineDirective: os << "DefineDirective"; break;
-        case TriviaKind::ElseDirective: os << "ElseDirective"; break;
-        case TriviaKind::ElseIfDirective: os << "ElseIfDirective"; break;
-        case TriviaKind::EndKeywordsDirective: os << "EndKeywordsDirective"; break;
-        case TriviaKind::EndCellDefineDirective: os << "EndCellDefineDirective"; break;
-        case TriviaKind::EndIfDirective: os << "EndIfDirective"; break;
-        case TriviaKind::IfDefDirective: os << "IfDefDirective"; break;
-        case TriviaKind::IfNDefDirective: os << "IfNDefDirective"; break;
-        case TriviaKind::IncludeDirective: os << "IncludeDirective"; break;
-        case TriviaKind::LineDirective: os << "LineDirective"; break;
-        case TriviaKind::NoUnconnectedDriveDirective: os << "NoUnconnectedDriveDirective"; break;
-        case TriviaKind::PragmaDirective: os << "PragmaDirective"; break;
-        case TriviaKind::ResetAllDirective: os << "ResetAllDirective"; break;
-        case TriviaKind::TimescaleDirective: os << "TimescaleDirective"; break;
-        case TriviaKind::UnconnectedDriveDirective: os << "UnconnectedDriveDirective"; break;
-        case TriviaKind::UndefDirective: os << "UndefDirective"; break;
-        case TriviaKind::UndefineAllDirective: os << "UndefineAllDirective"; break;
         default: os << "<unknown>"; break;
     }
     return os;

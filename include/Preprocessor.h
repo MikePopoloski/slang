@@ -2,9 +2,12 @@
 
 namespace slang {
 
+struct DefineDirectiveSyntax;
+struct MacroFormalArgumentSyntax;
+
 class MacroExpander {
 public:
-    void start(DefineDirectiveTrivia* macro);
+    void start(DefineDirectiveSyntax* macro);
     Token* next();
 
     bool isActive() const;
@@ -13,7 +16,7 @@ private:
     Buffer<Token*> tokens;
     Token** current = nullptr;
 
-    void expand(DefineDirectiveTrivia* macro);
+    void expand(DefineDirectiveSyntax* macro);
 };
 
 class Preprocessor {
@@ -26,7 +29,7 @@ public:
     TokenKind lookupKeyword(StringRef identifier);
 
     // called by the active lexer to let the preprocessor parse a directive
-    Trivia* parseDirective(Lexer* lexer);
+    Trivia parseDirective(Lexer* lexer);
 
     // lexes a token from the current source on the lexer stack
     // if there are no include files on the stack, this returns null
@@ -37,16 +40,18 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-    Trivia* handleIncludeDirective(Token* directive);
-    Trivia* handleResetAllDirective(Token* directive);
-    Trivia* handleDefineDirective(Token* directive);
-    Trivia* handleMacroUsage(Token* directive);
+    Trivia handleIncludeDirective(Token* directive);
+    Trivia handleResetAllDirective(Token* directive);
+    Trivia handleDefineDirective(Token* directive);
+    Trivia handleMacroUsage(Token* directive);
 
     Token* parseEndOfDirective();
 
     Token* peek();
     Token* consume();
     Token* expect(TokenKind kind);
+
+    Trivia createSimpleDirective(Token* directive);
 
     void addError(DiagCode code);
 
@@ -55,19 +60,21 @@ private:
     Diagnostics& diagnostics;
 
     bool hasTokenSource;
-    std::unordered_map<StringRef, DefineDirectiveTrivia*> macros;
+    std::unordered_map<StringRef, DefineDirectiveSyntax*> macros;
     std::deque<Lexer> lexerStack;
     MacroExpander currentMacro;
     Lexer* currentLexer;
     Token* currentToken;
 
-    Buffer<Trivia*> triviaBuffer;
+    Buffer<Trivia> triviaBuffer;
     BufferPool<Token*> tokenPool;
-    BufferPool<MacroFormalArgument*> argumentPool;
+    BufferPool<MacroFormalArgumentSyntax*> argumentPool;
 
     const StringTable<TokenKind>* keywordTable;
 
     static constexpr int MaxIncludeDepth = 32;
 };
+
+SyntaxKind getDirectiveKind(StringRef directive);
 
 }

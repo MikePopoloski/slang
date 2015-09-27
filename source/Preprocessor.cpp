@@ -16,6 +16,7 @@
 #include "Lexer.h"
 #include "StringTable.h"
 #include "Preprocessor.h"
+#include "AllSyntax.h"
 
 namespace slang {
 
@@ -72,25 +73,25 @@ TokenKind Preprocessor::lookupKeyword(StringRef identifier) {
     return TokenKind::Unknown;
 }
 
-Trivia* Preprocessor::parseDirective(Lexer* lexer) {
+Trivia Preprocessor::parseDirective(Lexer* lexer) {
     currentLexer = lexer;
 
     Token* directive = expect(TokenKind::Directive);
     switch (directive->directiveKind()) {
-        case TriviaKind::IncludeDirective: return handleIncludeDirective(directive);
-        case TriviaKind::ResetAllDirective: return handleResetAllDirective(directive);
-        case TriviaKind::DefineDirective: return handleDefineDirective(directive);
-        case TriviaKind::MacroUsage: return handleMacroUsage(directive);
-        case TriviaKind::UndefineAllDirective:
-        case TriviaKind::UnconnectedDriveDirective:
-        case TriviaKind::NoUnconnectedDriveDirective:
-        case TriviaKind::CellDefineDirective:
-        case TriviaKind::EndCellDefineDirective:
-        default: return alloc.emplace<SimpleDirectiveTrivia>(directive->directiveKind(), directive, parseEndOfDirective());
+        case SyntaxKind::IncludeDirective: return handleIncludeDirective(directive);
+        case SyntaxKind::ResetAllDirective: return handleResetAllDirective(directive);
+        case SyntaxKind::DefineDirective: return handleDefineDirective(directive);
+        case SyntaxKind::MacroUsage: return handleMacroUsage(directive);
+        case SyntaxKind::UndefineAllDirective:
+        case SyntaxKind::UnconnectedDriveDirective:
+        case SyntaxKind::NoUnconnectedDriveDirective:
+        case SyntaxKind::CellDefineDirective:
+        case SyntaxKind::EndCellDefineDirective:
+        default: return createSimpleDirective(directive);
     }
 }
 
-Trivia* Preprocessor::handleIncludeDirective(Token* directive) {
+Trivia Preprocessor::handleIncludeDirective(Token* directive) {
     // next token should be a filename; lex that manually
     Token* fileName = currentLexer->lexIncludeFileName();
     Token* end = parseEndOfDirective();
@@ -114,20 +115,21 @@ Trivia* Preprocessor::handleIncludeDirective(Token* directive) {
         }
     }
 
-    return alloc.emplace<IncludeDirectiveTrivia>(directive, fileName, end);
+    auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName, end);
+    return Trivia(TriviaKind::Directive, syntax);
 }
 
-Trivia* Preprocessor::handleResetAllDirective(Token* directive) {
+Trivia Preprocessor::handleResetAllDirective(Token* directive) {
     // TODO: reset all preprocessor state here
-    return alloc.emplace<SimpleDirectiveTrivia>(directive->directiveKind(), directive, parseEndOfDirective());
+    return createSimpleDirective(directive);
 }
 
-Trivia* Preprocessor::handleDefineDirective(Token* directive) {
+Trivia Preprocessor::handleDefineDirective(Token* directive) {
     // next token should be the macro name
     Token* name = expect(TokenKind::Identifier);
 
     // check if this is a function-like macro, which requires an opening paren with no leading space
-    MacroFormalArgumentList* formalArguments = nullptr;
+    MacroFormalArgumentListSyntax* formalArguments = nullptr;
     Token* maybeParen = peek();
     if (maybeParen->kind == TokenKind::OpenParenthesis && maybeParen->trivia.empty()) {
         // parse all formal arguments
@@ -141,7 +143,7 @@ Trivia* Preprocessor::handleDefineDirective(Token* directive) {
                 kind = peek()->kind;
             }
 
-            arguments.append(alloc.emplace<MacroFormalArgument>(arg, nullptr));
+            arguments.append(alloc.emplace<MacroFormalArgumentSyntax>(arg, nullptr));
 
             if (kind == TokenKind::CloseParenthesis)
                 break;
@@ -153,7 +155,7 @@ Trivia* Preprocessor::handleDefineDirective(Token* directive) {
             }
         }
 
-        formalArguments = alloc.emplace<MacroFormalArgumentList>(
+        formalArguments = alloc.emplace<MacroFormalArgumentListSyntax>(
             maybeParen,
             arguments.copy(alloc),
             nullptr, // TODO
@@ -166,7 +168,7 @@ Trivia* Preprocessor::handleDefineDirective(Token* directive) {
     while (peek()->kind != TokenKind::EndOfDirective)
         body.append(consume());
 
-    DefineDirectiveTrivia* result = alloc.emplace<DefineDirectiveTrivia>(
+    DefineDirectiveSyntax* result = alloc.emplace<DefineDirectiveSyntax>(
         directive,
         name,
         consume(),
@@ -175,23 +177,23 @@ Trivia* Preprocessor::handleDefineDirective(Token* directive) {
     );
 
     macros.emplace(name->valueText().intern(alloc), result);
-    return result;
+    return Trivia(TriviaKind::Directive, result);
 }
 
-Trivia* Preprocessor::handleMacroUsage(Token* directive) {
+Trivia Preprocessor::handleMacroUsage(Token* directive) {
     // TODO: create specialized trivia for this
     // try to look up the macro in our map
     auto it = macros.find(directive->valueText().subString(1));
     if (it == macros.end()) {
         addError(DiagCode::UnknownDirective);
-        return alloc.emplace<SimpleDirectiveTrivia>(directive->directiveKind(), directive, parseEndOfDirective());
+        return createSimpleDirective(directive);
     }
 
-    DefineDirectiveTrivia* macro = it->second;
+    DefineDirectiveSyntax* macro = it->second;
     currentMacro.start(macro);
     hasTokenSource = true;
 
-    return alloc.emplace<SimpleDirectiveTrivia>(directive->directiveKind(), directive, parseEndOfDirective());
+    return createSimpleDirective(directive);
 }
 
 Token* Preprocessor::parseEndOfDirective() {
@@ -210,10 +212,15 @@ Token* Preprocessor::parseEndOfDirective() {
 
     // splice together the trivia
     triviaBuffer.clear();
-    triviaBuffer.append(alloc.emplace<SkippedTokensTrivia>(skipped.copy(alloc)));
+    triviaBuffer.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
     triviaBuffer.appendRange(eod->trivia);
 
     return Token::createSimple(alloc, TokenKind::EndOfDirective, triviaBuffer.copy(alloc));
+}
+
+Trivia Preprocessor::createSimpleDirective(Token* directive) {
+    DirectiveSyntax* syntax = alloc.emplace<DirectiveSyntax>(directive->directiveKind(), directive, parseEndOfDirective());
+    return Trivia(TriviaKind::Directive, syntax);
 }
 
 void Preprocessor::addError(DiagCode code) {
@@ -239,7 +246,7 @@ Token* Preprocessor::expect(TokenKind kind) {
     return Token::missing(alloc, kind);
 }
 
-void MacroExpander::start(DefineDirectiveTrivia* macro) {
+void MacroExpander::start(DefineDirectiveSyntax* macro) {
     // expand all tokens recursively and store them in our buffer
     tokens.clear();
     expand(macro);
@@ -261,7 +268,7 @@ bool MacroExpander::isActive() const {
     return current != nullptr;
 }
 
-void MacroExpander::expand(DefineDirectiveTrivia* macro) {
+void MacroExpander::expand(DefineDirectiveSyntax* macro) {
     if (!macro->formalArguments) {
         // simple macro; just take body tokens
         tokens.appendRange(macro->body);
