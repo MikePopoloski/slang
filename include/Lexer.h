@@ -17,9 +17,6 @@ public:
     // an infinite stream of EndOfFile tokens will be generated
     Token* lex();
 
-    // lex without invoking the preprocessor
-    Token* lexNoPP();
-
     // tokens get lexed slightly differently when in "directive mode"
     // the preprocessor will use this when parsing directives
     Token* lexDirectiveMode();
