@@ -105,10 +105,10 @@
     <ClCompile Include="..\..\source\SourceTracker.cpp">
       <Filter>text</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\LexerTables.cpp">
+    <ClCompile Include="..\..\source\Trivia.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\Trivia.cpp">
+    <ClCompile Include="..\..\source\LexerFacts.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
   </ItemGroup>

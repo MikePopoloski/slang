@@ -43,7 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
-    <ClCompile Include="..\..\source\LexerTables.cpp" />
+    <ClCompile Include="..\..\source\LexerFacts.cpp" />
     <ClCompile Include="..\..\source\SourceTracker.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />

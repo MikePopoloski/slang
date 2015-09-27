@@ -38,44 +38,44 @@ TEST_CASE("Include File", "[preprocessor]") {
     CHECK(diagnostics.last().code == DiagCode::CouldNotOpenIncludeFile);
 }
 
-//void testDirective(TriviaKind kind) {
-//    auto& text = getTriviaKindText(kind);
-//
-//    diagnostics.clear();
-//    Preprocessor preprocessor(getTracker(), alloc, diagnostics);
-//    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), preprocessor);
-//
-//    Token* token = lexer.lexDirectiveMode();
-//    REQUIRE(token != nullptr);
-//
-//    CHECK(token->kind == TokenKind::Directive);
-//    CHECK(token->toFullString() == text);
-//    CHECK(token->valueText() == text);
-//    CHECK(diagnostics.empty());
-//}
+void testDirective(SyntaxKind kind) {
+    auto& text = getDirectiveText(kind);
 
-//TEST_CASE("Directives", "[preprocessor]") {
-//    testDirective(TriviaKind::BeginKeywordsDirective);
-//    testDirective(TriviaKind::CellDefineDirective);
-//    testDirective(TriviaKind::DefaultNetTypeDirective);
-//    testDirective(TriviaKind::DefineDirective);
-//    testDirective(TriviaKind::ElseDirective);
-//    testDirective(TriviaKind::ElseIfDirective);
-//    testDirective(TriviaKind::EndKeywordsDirective);
-//    testDirective(TriviaKind::EndCellDefineDirective);
-//    testDirective(TriviaKind::EndIfDirective);
-//    testDirective(TriviaKind::IfDefDirective);
-//    testDirective(TriviaKind::IfNDefDirective);
-//    testDirective(TriviaKind::IncludeDirective);
-//    testDirective(TriviaKind::LineDirective);
-//    testDirective(TriviaKind::NoUnconnectedDriveDirective);
-//    testDirective(TriviaKind::PragmaDirective);
-//    testDirective(TriviaKind::ResetAllDirective);
-//    testDirective(TriviaKind::TimescaleDirective);
-//    testDirective(TriviaKind::UnconnectedDriveDirective);
-//    testDirective(TriviaKind::UndefDirective);
-//    testDirective(TriviaKind::UndefineAllDirective);
-//}
+    diagnostics.clear();
+    Preprocessor preprocessor(getTracker(), alloc, diagnostics);
+    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), preprocessor);
+
+    Token* token = lexer.lexDirectiveMode();
+    REQUIRE(token != nullptr);
+
+    CHECK(token->kind == TokenKind::Directive);
+    CHECK(token->toFullString() == text);
+    CHECK(token->valueText() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Directives", "[preprocessor]") {
+    testDirective(SyntaxKind::BeginKeywordsDirective);
+    testDirective(SyntaxKind::CellDefineDirective);
+    testDirective(SyntaxKind::DefaultNetTypeDirective);
+    testDirective(SyntaxKind::DefineDirective);
+    testDirective(SyntaxKind::ElseDirective);
+    testDirective(SyntaxKind::ElseIfDirective);
+    testDirective(SyntaxKind::EndKeywordsDirective);
+    testDirective(SyntaxKind::EndCellDefineDirective);
+    testDirective(SyntaxKind::EndIfDirective);
+    testDirective(SyntaxKind::IfDefDirective);
+    testDirective(SyntaxKind::IfNDefDirective);
+    testDirective(SyntaxKind::IncludeDirective);
+    testDirective(SyntaxKind::LineDirective);
+    testDirective(SyntaxKind::NoUnconnectedDriveDirective);
+    testDirective(SyntaxKind::PragmaDirective);
+    testDirective(SyntaxKind::ResetAllDirective);
+    testDirective(SyntaxKind::TimescaleDirective);
+    testDirective(SyntaxKind::UnconnectedDriveDirective);
+    testDirective(SyntaxKind::UndefDirective);
+    testDirective(SyntaxKind::UndefineAllDirective);
+}
 
 TEST_CASE("Macro define (simple)", "[preprocessor]") {
     auto& text = "`define FOO (1)";

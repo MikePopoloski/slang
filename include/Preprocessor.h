@@ -76,5 +76,6 @@ private:
 };
 
 SyntaxKind getDirectiveKind(StringRef directive);
+StringRef getDirectiveText(SyntaxKind kind);
 
 }

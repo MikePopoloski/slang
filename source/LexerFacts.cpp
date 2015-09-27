@@ -296,6 +296,32 @@ const StringTable<TokenKind>* getKeywordTable() {
     return &allKeywords;
 }
 
+StringRef getDirectiveText(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::BeginKeywordsDirective: return "`begin_keywords";
+        case SyntaxKind::CellDefineDirective: return "`celldefine";
+        case SyntaxKind::DefaultNetTypeDirective: return "`default_nettype";
+        case SyntaxKind::DefineDirective: return "`define";
+        case SyntaxKind::ElseDirective: return "`else";
+        case SyntaxKind::ElseIfDirective: return "`elseif";
+        case SyntaxKind::EndKeywordsDirective: return "`end_keywords";
+        case SyntaxKind::EndCellDefineDirective: return "`endcelldefine";
+        case SyntaxKind::EndIfDirective: return "`endif";
+        case SyntaxKind::IfDefDirective: return "`ifdef";
+        case SyntaxKind::IfNDefDirective: return "`ifndef";
+        case SyntaxKind::IncludeDirective: return "`include";
+        case SyntaxKind::LineDirective: return "`line";
+        case SyntaxKind::NoUnconnectedDriveDirective: return "`nounconnected_drive";
+        case SyntaxKind::PragmaDirective: return "`pragma";
+        case SyntaxKind::ResetAllDirective: return "`resetall";
+        case SyntaxKind::TimescaleDirective: return "`timescale";
+        case SyntaxKind::UnconnectedDriveDirective: return "`unconnected_drive";
+        case SyntaxKind::UndefDirective: return "`undef";
+        case SyntaxKind::UndefineAllDirective: return "`undefineall";
+        default: return nullptr;
+    }
+}
+
 StringRef getTokenKindText(TokenKind kind) {
     switch (kind) {
         // punctuation
