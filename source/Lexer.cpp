@@ -100,7 +100,8 @@ Token* Lexer::lex() {
         return ppToken;
 
     // lex leading trivia
-    lexTrivia<false>();
+    auto triviaBuffer = triviaPool.get();
+    lexTrivia<false>(triviaBuffer);
 
     // it's possible that we just lexed a directive trivia like `include that has
     // pushed some tokens onto the preprocessor's stack, so check again
@@ -112,28 +113,29 @@ Token* Lexer::lex() {
     mark();
     TokenInfo info;
     TokenKind kind = lexToken<false>(info);
-    return createToken(kind, info);
+    return createToken(kind, info, triviaBuffer);
 }
 
 Token* Lexer::lexDirectiveMode() {
     // lex leading trivia
     // return an eod token right away if we detected we need one
     TokenInfo info;
-    if (lexTrivia<true>())
-        return createToken(TokenKind::EndOfDirective, info);
+    auto triviaBuffer = triviaPool.get();
+    if (lexTrivia<true>(triviaBuffer))
+        return createToken(TokenKind::EndOfDirective, info, triviaBuffer);
     
     // lex the next token
     mark();
     TokenKind kind = lexToken<true>(info);
-    return createToken(kind, info);
+    return createToken(kind, info, triviaBuffer);
 }
 
 Token* Lexer::lexIncludeFileName() {
     // leading whitespace should lex into trivia
-    triviaBuffer.clear();
+    auto triviaBuffer = triviaPool.get();
     if (isHorizontalWhitespace(peek())) {
         mark();
-        scanWhitespace();
+        scanWhitespace(triviaBuffer);
     }
 
     ArrayRef<Trivia*> trivia = triviaBuffer.copy(alloc);
@@ -831,7 +833,7 @@ void Lexer::lexVectorDigits(TokenInfo& info) {
 }
 
 template<bool InDirective>
-bool Lexer::lexTrivia() {
+bool Lexer::lexTrivia(Buffer<Trivia*>& buffer) {
     while (true) {
         mark();
 
@@ -841,17 +843,17 @@ bool Lexer::lexTrivia() {
             case '\v':
             case '\f':
                 advance();
-                scanWhitespace();
+                scanWhitespace(buffer);
                 break;
             case '/':
                 switch (peek(1)) {
                     case '/':
                         advance(2);
-                        scanLineComment();
+                        scanLineComment(buffer);
                         break;
                     case '*': {
                         advance(2);
-                        if (scanBlockComment<InDirective>())
+                        if (scanBlockComment<InDirective>(buffer))
                             return true;
                         break;
                     }
@@ -862,13 +864,13 @@ bool Lexer::lexTrivia() {
             case '\r':
                 advance();
                 consume('\n');
-                addTrivia(TriviaKind::EndOfLine);
+                addTrivia(TriviaKind::EndOfLine, buffer);
                 if (InDirective)
                     return true;
                 break;
             case '\n':
                 advance();
-                addTrivia(TriviaKind::EndOfLine);
+                addTrivia(TriviaKind::EndOfLine, buffer);
                 if (InDirective)
                     return true;
                 break;
@@ -877,14 +879,14 @@ bool Lexer::lexTrivia() {
                 // this is probably a token paste operator or macro usage
                 if (InDirective)
                     return false;
-                lexDirectiveTrivia();
+                lexDirectiveTrivia(buffer);
                 break;
             case '\\':
                 // if we're lexing a directive, this might escape a newline
                 if (!InDirective || !isNewline(peek()))
                     return false;
                 advance();
-                addTrivia(TriviaKind::LineContinuation);
+                addTrivia(TriviaKind::LineContinuation, buffer);
                 break;
             default:
                 return false;
@@ -892,21 +894,12 @@ bool Lexer::lexTrivia() {
     }
 }
 
-void Lexer::lexDirectiveTrivia() {
-    // make a copy of the trivia buffer locally, because the preprocessor is going to
-    // call back in to lex() and that would stomp over the trivia we've already collected
-    Buffer<Trivia*> saveTrivia(triviaBuffer.count() + 1);
-    saveTrivia.appendRange(triviaBuffer);
-
+void Lexer::lexDirectiveTrivia(Buffer<Trivia*>& buffer) {
     // TODO: check that this is start of line
 
     Trivia* directive = preprocessor.parseDirective(this);
     ASSERT(directive);
-    saveTrivia.append(directive);
-
-    // copy trivia back
-    triviaBuffer.clear();
-    triviaBuffer.appendRange(saveTrivia);
+    buffer.append(directive);
 }
 
 void Lexer::scanIdentifier() {
@@ -937,7 +930,7 @@ char Lexer::scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits) {
     return c;
 }
 
-void Lexer::scanWhitespace() {
+void Lexer::scanWhitespace(Buffer<Trivia*>& buffer) {
     bool done = false;
     while (!done) {
         switch (peek()) {
@@ -952,10 +945,10 @@ void Lexer::scanWhitespace() {
                 break;
         }
     }
-    addTrivia(TriviaKind::Whitespace);
+    addTrivia(TriviaKind::Whitespace, buffer);
 }
 
-void Lexer::scanLineComment() {
+void Lexer::scanLineComment(Buffer<Trivia*>& buffer) {
     while (true) {
         char c = peek();
         if (isNewline(c))
@@ -970,11 +963,11 @@ void Lexer::scanLineComment() {
         }
         advance();
     }
-    addTrivia(TriviaKind::LineComment);
+    addTrivia(TriviaKind::LineComment, buffer);
 }
 
 template<bool InDirective>
-bool Lexer::scanBlockComment() {
+bool Lexer::scanBlockComment(Buffer<Trivia*>& buffer) {
     bool eod = false;
     while (true) {
         char c = peek();
@@ -1007,7 +1000,7 @@ bool Lexer::scanBlockComment() {
         }
     }
     
-    addTrivia(TriviaKind::BlockComment);
+    addTrivia(TriviaKind::BlockComment, buffer);
     return eod;
 }
 
@@ -1019,10 +1012,8 @@ int Lexer::findNextNonWhitespace() {
     return lookahead;
 }
 
-Token* Lexer::createToken(TokenKind kind, TokenInfo& info) {
+Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia*>& triviaBuffer) {
     ArrayRef<Trivia*> trivia = triviaBuffer.copy(alloc);
-    triviaBuffer.clear();
-
     switch (kind) {
         case TokenKind::Unknown:
             return Token::createUnknown(alloc, trivia, lexeme());
@@ -1041,8 +1032,8 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info) {
     }
 }
 
-void Lexer::addTrivia(TriviaKind kind) {
-    triviaBuffer.append(alloc.emplace<SimpleTrivia>(kind, lexeme()));
+void Lexer::addTrivia(TriviaKind kind, Buffer<Trivia*>& buffer) {
+    buffer.append(alloc.emplace<SimpleTrivia>(kind, lexeme()));
 }
 
 void Lexer::addError(DiagCode code) {

@@ -54,20 +54,20 @@ private:
     void lexVectorDigits(TokenInfo& info);
 
     template<bool InDirective>
-    bool lexTrivia();
-    void lexDirectiveTrivia();
+    bool lexTrivia(Buffer<Trivia*>& buffer);
+    void lexDirectiveTrivia(Buffer<Trivia*>& buffer);
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
 
     template<bool InDirective>
-    bool scanBlockComment();
+    bool scanBlockComment(Buffer<Trivia*>& buffer);
+    void scanWhitespace(Buffer<Trivia*>& buffer);
+    void scanLineComment(Buffer<Trivia*>& buffer);
     void scanIdentifier();
-    void scanWhitespace();
-    void scanLineComment();
 
     int findNextNonWhitespace();
 
-    Token* createToken(TokenKind kind, TokenInfo& info);
-    void addTrivia(TriviaKind kind);
+    Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia*>& triviaBuffer);
+    void addTrivia(TriviaKind kind, Buffer<Trivia*>& buffer);
     void addError(DiagCode code);
 
     // source pointer manipulation
@@ -93,7 +93,7 @@ private:
     }
 
     Buffer<char> stringBuffer;
-    Buffer<Trivia*> triviaBuffer;
+    BufferPool<Trivia*> triviaPool;
     VectorBuilder vectorBuilder;
     Preprocessor& preprocessor;
     BumpAllocator& alloc;

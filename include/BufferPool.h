@@ -29,6 +29,8 @@ public:
         void emplace(Args&&... args) { buffer->emplace<Args...>(std::forward<Args>(args)...); }
 
         ArrayRef<T> copy(BumpAllocator& alloc) const { return buffer->copy(alloc); }
+
+        operator Buffer<T>&() { return *buffer; }
     };
 
     BufferWrapper get() {
