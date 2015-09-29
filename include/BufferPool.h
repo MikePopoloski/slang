@@ -30,6 +30,8 @@ public:
 
         ArrayRef<T> copy(BumpAllocator& alloc) const { return buffer->copy(alloc); }
 
+        Buffer<T>& get() { return *buffer; }
+
         operator Buffer<T>&() { return *buffer; }
     };
 

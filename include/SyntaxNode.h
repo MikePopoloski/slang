@@ -2,23 +2,12 @@
 
 namespace slang {
 
-enum class SyntaxKind : uint16_t;
-
-class SyntaxNode {
-public:
-    SyntaxKind kind;
-
-    SyntaxNode(SyntaxKind kind) : kind(kind) {}
-
-    template<typename T>
-    T* as() {
-        // TODO: assert kind
-        return static_cast<T*>(this);
-    }
-};
+class Token;
+class SyntaxNode;
 
 enum class SyntaxKind : uint16_t {
     Unknown,
+    List,
 
     // directives
     BeginKeywordsDirective,
@@ -47,6 +36,113 @@ enum class SyntaxKind : uint16_t {
     MacroFormalArgumentList,
     MacroFormalArgument,
     MacroArgumentDefault
+};
+
+// discriminated union of Token and SyntaxNode
+struct TokenOrSyntax {
+    union {
+        const Token* token;
+        const SyntaxNode* node;
+    };
+    bool isToken;
+
+    TokenOrSyntax(const Token* token) : token(token), isToken(true) {}
+    TokenOrSyntax(const SyntaxNode* node) : node(node), isToken(false) {}
+    TokenOrSyntax(std::nullptr_t) : token(nullptr), isToken(true) {}
+};
+
+// base class for all syntax nodes
+class SyntaxNode {
+public:
+    SyntaxKind kind;
+
+    SyntaxNode(SyntaxKind kind) : kind(kind) {}
+
+    void writeTo(Buffer<char>& buffer, bool includeTrivia) const;
+
+    template<typename T>
+    T* as() {
+        // TODO: assert kind
+        return static_cast<T*>(this);
+    }
+
+    int getChildCount() const { return childCount; }
+
+protected:
+    uint32_t childCount = 0;
+    virtual TokenOrSyntax getChild(uint32_t) const;
+};
+
+template<typename T>
+class SyntaxList : public SyntaxNode {
+public:
+    SyntaxList(ArrayRef<T*> elements) :
+        SyntaxNode(SyntaxKind::List), 
+        elements(elements)
+    {
+        childCount = elements.count();
+    }
+
+    uint32_t count() const { return elements.count(); }
+
+    T* const* begin() const { return elements.begin(); }
+    T* const* end() const { return elements.end(); }
+
+    const T* operator[](uint32_t index) const { return elements[index]; }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+
+private:
+    ArrayRef<T*> elements;
+};
+
+class TokenList : public SyntaxNode {
+public:
+    TokenList(ArrayRef<Token*> elements) :
+        SyntaxNode(SyntaxKind::List),
+        elements(elements)
+    {
+        childCount = elements.count();
+    }
+
+    uint32_t count() const { return elements.count(); }
+
+    Token* const* begin() const { return elements.begin(); }
+    Token* const* end() const { return elements.end(); }
+
+    const Token* operator[](uint32_t index) const { return elements[index]; }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+
+private:
+    ArrayRef<Token*> elements;
+};
+
+// TODO: do this properly
+template<typename T>
+class SeparatedSyntaxList : public SyntaxNode {
+public:
+    SeparatedSyntaxList(ArrayRef<T*> elements) :
+        SyntaxNode(SyntaxKind::List), 
+        elements(elements)
+    {
+        childCount = elements.count();
+    }
+
+    uint32_t count() const { return elements.count(); }
+
+    T* const* begin() const { return elements.begin(); }
+    T* const* end() const { return elements.end(); }
+
+    const T* operator[](uint32_t index) const { return elements[index]; }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+
+private:
+    ArrayRef<T*> elements;
 };
 
 }

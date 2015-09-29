@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Debug.h"
+
 // Wrapper around a {pointer, length} pair to an array on the heap.
 
 namespace slang {

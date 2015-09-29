@@ -111,5 +111,11 @@
     <ClCompile Include="..\..\source\LexerFacts.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\SyntaxNode.cpp">
+      <Filter>parsing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\SyntaxAccessors.cpp">
+      <Filter>parsing\syntax</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -158,7 +158,6 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
         formalArguments = alloc.emplace<MacroFormalArgumentListSyntax>(
             maybeParen,
             arguments.copy(alloc),
-            nullptr, // TODO
             consume() // TODO
         );
     }
@@ -170,8 +169,8 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 
     DefineDirectiveSyntax* result = alloc.emplace<DefineDirectiveSyntax>(
         directive,
-        name,
         consume(),
+        name,
         formalArguments,
         body.copy(alloc)
     );

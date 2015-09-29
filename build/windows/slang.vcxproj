@@ -48,6 +48,8 @@
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
     <ClCompile Include="..\..\source\Preprocessor.cpp" />
+    <ClCompile Include="..\..\source\SyntaxAccessors.cpp" />
+    <ClCompile Include="..\..\source\SyntaxNode.cpp" />
     <ClCompile Include="..\..\source\Token.cpp" />
     <ClCompile Include="..\..\source\Trivia.cpp" />
   </ItemGroup>

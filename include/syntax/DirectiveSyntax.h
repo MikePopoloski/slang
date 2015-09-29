@@ -10,7 +10,13 @@ struct DirectiveSyntax : public SyntaxNode {
     Token* endOfDirective;
 
     DirectiveSyntax(SyntaxKind kind, Token* directive, Token* endOfDirective) :
-        SyntaxNode(kind), directive(directive), endOfDirective(endOfDirective) {}
+        SyntaxNode(kind), directive(directive), endOfDirective(endOfDirective)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override;
 };
 
 struct IncludeDirectiveSyntax : public DirectiveSyntax {
@@ -18,15 +24,27 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
 
     IncludeDirectiveSyntax(Token* directive, Token* endOfDirective, Token* fileName) :
         DirectiveSyntax(SyntaxKind::IncludeDirective, directive, endOfDirective),
-        fileName(fileName) {}
+        fileName(fileName)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final;
 };
 
 struct MacroArgumentDefaultSyntax : public SyntaxNode {
     Token* equals;
-    ArrayRef<Token*> tokens;
+    TokenList tokens;
 
-    MacroArgumentDefaultSyntax(Token* equals, ArrayRef<Token*> tokens) :
-        SyntaxNode(SyntaxKind::MacroArgumentDefault), equals(equals), tokens(tokens) {}
+    MacroArgumentDefaultSyntax(Token* equals, TokenList tokens) :
+        SyntaxNode(SyntaxKind::MacroArgumentDefault), equals(equals), tokens(tokens)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final;
 };
 
 struct MacroFormalArgumentSyntax : public SyntaxNode {
@@ -34,33 +52,49 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
     MacroArgumentDefaultSyntax* defaultValue;
 
     MacroFormalArgumentSyntax(Token* name, MacroArgumentDefaultSyntax* def) :
-        SyntaxNode(SyntaxKind::MacroFormalArgument), name(name), defaultValue(def) {}
+        SyntaxNode(SyntaxKind::MacroFormalArgument), name(name), defaultValue(def)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final;
 };
 
 struct MacroFormalArgumentListSyntax : public SyntaxNode {
     Token* openParen;
-    ArrayRef<MacroFormalArgumentSyntax*> args;
-    ArrayRef<Token*> commaSeparators;
+    SeparatedSyntaxList<MacroFormalArgumentSyntax> args;
     Token* closeParen;
 
-    MacroFormalArgumentListSyntax(Token* openParen, ArrayRef<MacroFormalArgumentSyntax*> args, ArrayRef<Token*> commaSeparators, Token* closeParen) :
+    MacroFormalArgumentListSyntax(Token* openParen, SeparatedSyntaxList<MacroFormalArgumentSyntax> args, Token* closeParen) :
         SyntaxNode(SyntaxKind::MacroFormalArgumentList),
         openParen(openParen),
         args(args),
-        commaSeparators(commaSeparators),
-        closeParen(closeParen) {}
+        closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final;
 };
 
 struct DefineDirectiveSyntax : public DirectiveSyntax {
     Token* name;
     MacroFormalArgumentListSyntax* formalArguments;
-    ArrayRef<Token*> body;
+    TokenList body;
 
-    DefineDirectiveSyntax(Token* directive, Token* endOfDirective, Token* name, MacroFormalArgumentListSyntax* formalArguments, ArrayRef<Token*> body) :
+    DefineDirectiveSyntax(Token* directive, Token* endOfDirective, Token* name, MacroFormalArgumentListSyntax* formalArguments, TokenList body) :
         DirectiveSyntax(SyntaxKind::DefineDirective, directive, endOfDirective),
         name(name),
         formalArguments(formalArguments),
-        body(body) {}
+        body(body)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final;
 };
 
 }
