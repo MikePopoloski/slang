@@ -133,7 +133,7 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
     Token* maybeParen = peek();
     if (maybeParen->kind == TokenKind::OpenParenthesis && maybeParen->trivia.empty()) {
         // parse all formal arguments
-        auto arguments = argumentPool.get();
+        auto arguments = syntaxPool.get();
         consume();
         while (true) {
             Token* arg = expect(TokenKind::Identifier);
@@ -152,13 +152,14 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
             if (kind != TokenKind::Comma) {
             }
             else {
+                arguments.append(consume());
             }
         }
 
         formalArguments = alloc.emplace<MacroFormalArgumentListSyntax>(
             maybeParen,
             arguments.copy(alloc),
-            consume() // TODO
+            expect(TokenKind::CloseParenthesis)
         );
     }
     
@@ -167,7 +168,7 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
     while (peek()->kind != TokenKind::EndOfDirective)
         body.append(consume());
 
-    DefineDirectiveSyntax* result = alloc.emplace<DefineDirectiveSyntax>(
+    auto result = alloc.emplace<DefineDirectiveSyntax>(
         directive,
         consume(),
         name,

@@ -68,7 +68,7 @@ private:
 
     Buffer<Trivia> triviaBuffer;
     BufferPool<Token*> tokenPool;
-    BufferPool<MacroFormalArgumentSyntax*> argumentPool;
+    BufferPool<TokenOrSyntax> syntaxPool;
 
     const StringTable<TokenKind>* keywordTable;
 

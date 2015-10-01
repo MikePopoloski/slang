@@ -120,29 +120,29 @@ private:
     ArrayRef<Token*> elements;
 };
 
-// TODO: do this properly
 template<typename T>
 class SeparatedSyntaxList : public SyntaxNode {
 public:
-    SeparatedSyntaxList(ArrayRef<T*> elements) :
+    SeparatedSyntaxList(ArrayRef<TokenOrSyntax> elements) :
         SyntaxNode(SyntaxKind::List), 
         elements(elements)
     {
         childCount = elements.count();
     }
 
-    uint32_t count() const { return elements.count(); }
+    uint32_t count() const { return std::ceil(elements.count() / 2.0); }
 
-    T* const* begin() const { return elements.begin(); }
-    T* const* end() const { return elements.end(); }
-
-    const T* operator[](uint32_t index) const { return elements[index]; }
+    const T* operator[](uint32_t index) const {
+        index <<= 1;
+        ASSERT(!elements[index].isToken);
+        return static_cast<const T*>(elements[index].node);
+    }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
 private:
-    ArrayRef<T*> elements;
+    ArrayRef<TokenOrSyntax> elements;
 };
 
 }
