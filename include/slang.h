@@ -24,3 +24,4 @@
 #include "Lexer.h"
 #include "Preprocessor.h"
 #include "AllSyntax.h"
+#include "Parser.h"

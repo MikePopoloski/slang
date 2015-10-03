@@ -18,6 +18,65 @@ empty
 LiteralExpressionSyntax base=PrimaryExpressionSyntax
 token literal
 
+EmptyQueueExpressionSyntax base=PrimaryExpressionSyntax kind=EmptyQueueExpression
+token openBrace
+token closeBrace
+
+ConcatenationExpressionSyntax base=PrimaryExpressionSyntax kind=ConcatenationExpression
+token openBrace
+separated_list<ExpressionSyntax> expressions
+token closeBrace
+
+MultipleConcatenationExpressionSyntax base=PrimaryExpressionSyntax kind=MultipleConcatenationExpression
+token openBrace
+ExpressionSyntax expression
+ConcatenationExpressionSyntax concatenation
+token closeBrace
+
+StreamExpressionWithRange kind=StreamExpressionWithRange
+token withKeyword
+token openBracket
+token closeBracket
+
+StreamExpressionSyntax kind=StreamExpression
+ExpressionSyntax expression
+StreamExpressionWithRange withRange
+
+StreamingConcatenationExpressionSyntax base=PrimaryExpressionSyntax kind=StreamingConcatenationExpression
+token openBrace
+token operatorToken
+ExpressionSyntax sliceSize
+token innerOpenBrace
+separated_list<StreamExpressionSyntax> expressions
+token innerCloseBrace
+token closeBrace
+
+ParenthesizedExpressionSyntax base=PrimaryExpressionSyntax kind=ParenthesizedExpression
+token openParen
+ExpressionSyntax expression
+token closeParen
+
+MinTypMaxExpressionSyntax base=ExpressionSyntax kind=MinTypMaxExpression
+ExpressionSyntax min
+token colon1
+ExpressionSyntax typ
+token colon2
+ExpressionSyntax max
+
+NameSyntax base=ExpressionSyntax final=false
+empty
+
+IdentifierNameSyntax base=NameSyntax kind=IdentifierName
+token identifier
+
+KeywordNameSyntax base=NameSyntax
+token keyword
+
+HierarchicalNameSyntax base=NameSyntax kind=HierarchicalName
+NameSyntax left
+token separator
+NameSyntax right
+
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false

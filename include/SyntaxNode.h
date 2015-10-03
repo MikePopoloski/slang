@@ -56,6 +56,13 @@ enum class SyntaxKind : uint16_t {
     RealLiteralExpression,
     TimeLiteralExpression,
     ParenthesizedExpression,
+    MinTypMaxExpression,
+    EmptyQueueExpression,
+    ConcatenationExpression,
+    MultipleConcatenationExpression,
+    StreamingConcatenationExpression,
+    StreamExpression,
+    StreamExpressionWithRange,
 
     // postfix expressions
     InvocationExpression,
@@ -104,6 +111,17 @@ enum class SyntaxKind : uint16_t {
     LogicalRightShiftAssignmentExpression,
     ArithmeticLeftShiftAssignmentExpression,
     ArithmeticRightShiftAssignmentExpression,
+
+    // names
+    LocalScope,
+    UnitScope,
+    ClassOrPackageScope,
+    RootScope,
+    IdentifierName,
+    HierarchicalName,
+    SystemName,
+    ThisHandle,
+    SuperHandle,
 };
 
 enum class TokenKind : uint16_t;
@@ -207,7 +225,7 @@ public:
         childCount = elements.count();
     }
 
-    uint32_t count() const { return std::ceil(elements.count() / 2.0); }
+    uint32_t count() const { return (uint32_t)std::ceil(elements.count() / 2.0); }
 
     const T* operator[](uint32_t index) const {
         index <<= 1;

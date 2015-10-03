@@ -1,8 +1,11 @@
 # This script generates C++ source for parse tree syntax nodes from a data file.
 
+import os
+
 def main():
-	inf = open("syntax.txt")
-	outf = open("../include/AllSyntax.h", 'w')
+	ourdir = os.path.dirname(os.path.realpath(__file__))
+	inf = open(os.path.join(ourdir, "syntax.txt"))
+	outf = open(os.path.join(ourdir, "../include/AllSyntax.h"), 'w')
 
 	outf.write('''#pragma once
 

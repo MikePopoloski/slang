@@ -86,6 +86,258 @@ protected:
     }
 };
 
+struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
+    Token* openBrace;
+    Token* closeBrace;
+
+    EmptyQueueExpressionSyntax(Token* openBrace, Token* closeBrace) :
+        PrimaryExpressionSyntax(SyntaxKind::EmptyQueueExpression), openBrace(openBrace), closeBrace(closeBrace)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return openBrace;
+            case 1: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
+    Token* openBrace;
+    SeparatedSyntaxList<ExpressionSyntax> expressions;
+    Token* closeBrace;
+
+    ConcatenationExpressionSyntax(Token* openBrace, SeparatedSyntaxList<ExpressionSyntax> expressions, Token* closeBrace) :
+        PrimaryExpressionSyntax(SyntaxKind::ConcatenationExpression), openBrace(openBrace), expressions(expressions), closeBrace(closeBrace)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return openBrace;
+            case 1: return &expressions;
+            case 2: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
+struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
+    Token* openBrace;
+    ExpressionSyntax* expression;
+    ConcatenationExpressionSyntax* concatenation;
+    Token* closeBrace;
+
+    MultipleConcatenationExpressionSyntax(Token* openBrace, ExpressionSyntax* expression, ConcatenationExpressionSyntax* concatenation, Token* closeBrace) :
+        PrimaryExpressionSyntax(SyntaxKind::MultipleConcatenationExpression), openBrace(openBrace), expression(expression), concatenation(concatenation), closeBrace(closeBrace)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return openBrace;
+            case 1: return expression;
+            case 2: return concatenation;
+            case 3: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StreamExpressionWithRange : public SyntaxNode {
+    Token* withKeyword;
+    Token* openBracket;
+    Token* closeBracket;
+
+    StreamExpressionWithRange(Token* withKeyword, Token* openBracket, Token* closeBracket) :
+        SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), openBracket(openBracket), closeBracket(closeBracket)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return withKeyword;
+            case 1: return openBracket;
+            case 2: return closeBracket;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StreamExpressionSyntax : public SyntaxNode {
+    ExpressionSyntax* expression;
+    StreamExpressionWithRange* withRange;
+
+    StreamExpressionSyntax(ExpressionSyntax* expression, StreamExpressionWithRange* withRange) :
+        SyntaxNode(SyntaxKind::StreamExpression), expression(expression), withRange(withRange)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return expression;
+            case 1: return withRange;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
+    Token* openBrace;
+    Token* operatorToken;
+    ExpressionSyntax* sliceSize;
+    Token* innerOpenBrace;
+    SeparatedSyntaxList<StreamExpressionSyntax> expressions;
+    Token* innerCloseBrace;
+    Token* closeBrace;
+
+    StreamingConcatenationExpressionSyntax(Token* openBrace, Token* operatorToken, ExpressionSyntax* sliceSize, Token* innerOpenBrace, SeparatedSyntaxList<StreamExpressionSyntax> expressions, Token* innerCloseBrace, Token* closeBrace) :
+        PrimaryExpressionSyntax(SyntaxKind::StreamingConcatenationExpression), openBrace(openBrace), operatorToken(operatorToken), sliceSize(sliceSize), innerOpenBrace(innerOpenBrace), expressions(expressions), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
+    {
+        childCount += 7;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return openBrace;
+            case 1: return operatorToken;
+            case 2: return sliceSize;
+            case 3: return innerOpenBrace;
+            case 4: return &expressions;
+            case 5: return innerCloseBrace;
+            case 6: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
+    Token* openParen;
+    ExpressionSyntax* expression;
+    Token* closeParen;
+
+    ParenthesizedExpressionSyntax(Token* openParen, ExpressionSyntax* expression, Token* closeParen) :
+        PrimaryExpressionSyntax(SyntaxKind::ParenthesizedExpression), openParen(openParen), expression(expression), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return expression;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* min;
+    Token* colon1;
+    ExpressionSyntax* typ;
+    Token* colon2;
+    ExpressionSyntax* max;
+
+    MinTypMaxExpressionSyntax(ExpressionSyntax* min, Token* colon1, ExpressionSyntax* typ, Token* colon2, ExpressionSyntax* max) :
+        ExpressionSyntax(SyntaxKind::MinTypMaxExpression), min(min), colon1(colon1), typ(typ), colon2(colon2), max(max)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return min;
+            case 1: return colon1;
+            case 2: return typ;
+            case 3: return colon2;
+            case 4: return max;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NameSyntax : public ExpressionSyntax {
+
+    NameSyntax(SyntaxKind kind) :
+        ExpressionSyntax(kind)
+    {
+    }
+};
+
+struct IdentifierNameSyntax : public NameSyntax {
+    Token* identifier;
+
+    IdentifierNameSyntax(Token* identifier) :
+        NameSyntax(SyntaxKind::IdentifierName), identifier(identifier)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return identifier;
+            default: return nullptr;
+        }
+    }
+};
+
+struct KeywordNameSyntax : public NameSyntax {
+    Token* keyword;
+
+    KeywordNameSyntax(SyntaxKind kind, Token* keyword) :
+        NameSyntax(kind), keyword(keyword)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return keyword;
+            default: return nullptr;
+        }
+    }
+};
+
+struct HierarchicalNameSyntax : public NameSyntax {
+    NameSyntax* left;
+    Token* separator;
+    NameSyntax* right;
+
+    HierarchicalNameSyntax(NameSyntax* left, Token* separator, NameSyntax* right) :
+        NameSyntax(SyntaxKind::HierarchicalName), left(left), separator(separator), right(right)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return separator;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- DIRECTIVES -----
 
 struct DirectiveSyntax : public SyntaxNode {
