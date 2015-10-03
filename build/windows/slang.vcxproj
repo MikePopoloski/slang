@@ -37,8 +37,6 @@
     <ClInclude Include="..\..\include\StringRef.h" />
     <ClInclude Include="..\..\include\StringTable.h" />
     <ClInclude Include="..\..\include\SyntaxNode.h" />
-    <ClInclude Include="..\..\include\syntax\DirectiveSyntax.h" />
-    <ClInclude Include="..\..\include\syntax\ExpressionSyntax.h" />
     <ClInclude Include="..\..\include\Token.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />
@@ -51,7 +49,6 @@
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
     <ClCompile Include="..\..\source\Preprocessor.cpp" />
-    <ClCompile Include="..\..\source\SyntaxAccessors.cpp" />
     <ClCompile Include="..\..\source\SyntaxFacts.cpp" />
     <ClCompile Include="..\..\source\SyntaxNode.cpp" />
     <ClCompile Include="..\..\source\Token.cpp" />

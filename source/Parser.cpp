@@ -79,11 +79,64 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
 }
 
 ExpressionSyntax* Parser::parsePrimaryExpression(int precedence) {
+    // first try to get a class name or handle expression
+    //ExpressionSyntax expr = ParseNameOrClassHandle();
+    //if (expr == null) {
+
+
+
+    ExpressionSyntax* expr = nullptr;
+    //switch (peek()->kind) {
+    //    case TokenKind::StringLiteral:
+    //    case TokenKind::IntegerLiteral:
+    //    case TokenKind::RealLiteral:
+    //    case TokenKind::TimeLiteral:
+    //    case TokenKind::NullKeyword:
+    //        auto literal = consume();
+    //        expr = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
+    //        break;
+    //    case TokenKind::SystemIdentifier:
+    //        auto identifier = consume();
+    //        expr = alloc.emplace<KeywordNameSyntax>(SyntaxKind::SystemName, identifier);
+    //        break;
+    //    case TokenKind::LocalKeyword:
+    //        Token keyword;
+    //        source.Consume(out keyword);
+
+    //        Token doubleColon;
+    //        Expect(TokenKind::DoubleColon, out doubleColon);
+    //        expr = new HierarchicalNameSyntax(
+    //            new KeywordNameSyntax(SyntaxKind.LocalScope, ref keyword),
+    //            ref doubleColon,
+    //            ParseNameOrClassHandle()
+    //            );
+    //        break;
+    //    case TokenKind::DoubleColon:
+    //        // misplaced ::
+    //        // TODO: error
+    //        goto default;
+    //    case TokenKind::OpenParenthesis:
+    //        Token openParen;
+    //        source.Consume(out openParen);
+    //        expr = ParseExpression();
+
+    //        Token closeParen;
+    //        Expect(TokenKind::CloseParenthesis, out closeParen);
+    //        expr = new ParenthesizedExpressionSyntax(ref openParen, expr, ref closeParen);
+    //        break;
+    //    default:
+    //        // TODO: error
+    //        var missing = Token.Missing(TokenKind.Identifier);
+    //        expr = new IdentifierNameSyntax(ref missing);
+    //        break;
+    //}
+
+    return parsePostfixExpression(expr);
 }
 
-ExpressionSyntax* Parser::parsePostfixExpression(int precedence) {
+ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
+    return expr;
 }
-
 
 void Parser::addError(DiagCode code) {
     diagnostics.add(SyntaxError(code, 0, 0));

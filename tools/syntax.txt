@@ -1,0 +1,46 @@
+// ----- EXPRESSIONS -----
+
+ExpressionSyntax final=false
+empty
+
+PrefixUnaryExpressionSyntax base=ExpressionSyntax
+token operatorToken
+ExpressionSyntax operand
+
+BinaryExpressionSyntax base=ExpressionSyntax
+ExpressionSyntax left
+token operatorToken
+ExpressionSyntax right
+
+PrimaryExpressionSyntax base=ExpressionSyntax
+empty
+
+LiteralExpressionSyntax base=PrimaryExpressionSyntax
+token literal
+
+// ----- DIRECTIVES -----
+
+DirectiveSyntax final=false
+token directive
+token endOfDirective
+
+IncludeDirectiveSyntax base=DirectiveSyntax kind=IncludeDirective
+token fileName
+
+MacroArgumentDefaultSyntax kind=MacroArgumentDefault
+token equals
+tokenlist tokens
+
+MacroFormalArgumentSyntax kind=MacroFormalArgument
+token name
+MacroArgumentDefaultSyntax defaultValue
+
+MacroFormalArgumentListSyntax kind=MacroFormalArgumentList
+token openParen
+separated_list<MacroFormalArgumentSyntax> args
+token closeParen
+
+DefineDirectiveSyntax base=DirectiveSyntax kind=DefineDirective
+token name
+MacroFormalArgumentListSyntax formalArguments
+tokenlist body

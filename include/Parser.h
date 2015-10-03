@@ -16,7 +16,7 @@ private:
     ExpressionSyntax* parseExpression();
     ExpressionSyntax* parseSubExpression(int precedence);
     ExpressionSyntax* parsePrimaryExpression(int precedence);
-    ExpressionSyntax* parsePostfixExpression(int precedence);
+    ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
 
     Token* peek();
     Token* consume();

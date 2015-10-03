@@ -19,9 +19,6 @@
     <Filter Include="text">
       <UniqueIdentifier>{a3b1fc88-9595-4353-8d1c-0ece6f94e212}</UniqueIdentifier>
     </Filter>
-    <Filter Include="parsing\syntax">
-      <UniqueIdentifier>{c22d4ff4-66b9-4af5-bbc9-3540a8f804ed}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\slang.h" />
@@ -82,14 +79,8 @@
     <ClInclude Include="..\..\include\AllSyntax.h">
       <Filter>parsing</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\syntax\DirectiveSyntax.h">
-      <Filter>parsing\syntax</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\Parser.h">
       <Filter>parsing</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\syntax\ExpressionSyntax.h">
-      <Filter>parsing\syntax</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -119,9 +110,6 @@
     </ClCompile>
     <ClCompile Include="..\..\source\SyntaxNode.cpp">
       <Filter>parsing</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\SyntaxAccessors.cpp">
-      <Filter>parsing\syntax</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\Parser.cpp">
       <Filter>parsing</Filter>
