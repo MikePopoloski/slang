@@ -85,6 +85,12 @@
     <ClInclude Include="..\..\include\syntax\DirectiveSyntax.h">
       <Filter>parsing\syntax</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\Parser.h">
+      <Filter>parsing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\syntax\ExpressionSyntax.h">
+      <Filter>parsing\syntax</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -116,6 +122,12 @@
     </ClCompile>
     <ClCompile Include="..\..\source\SyntaxAccessors.cpp">
       <Filter>parsing\syntax</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\Parser.cpp">
+      <Filter>parsing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\SyntaxFacts.cpp">
+      <Filter>parsing</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

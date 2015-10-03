@@ -35,8 +35,85 @@ enum class SyntaxKind : uint16_t {
     MacroUsage,
     MacroFormalArgumentList,
     MacroFormalArgument,
-    MacroArgumentDefault
+    MacroArgumentDefault,
+
+    // unary expressions
+    UnaryPlusExpression,
+    UnaryMinusExpression,
+    UnaryBitwiseAndExpression,
+    UnaryBitwiseNandExpression,
+    UnaryBitwiseOrExpression,
+    UnaryBitwiseNorExpression,
+    UnaryBitwiseXorExpression,
+    UnaryBitwiseXnorExpression,
+    LogicalNotExpression,
+    BitwiseNotExpression,
+
+    // primary expressions
+    NullLiteralExpression,
+    StringLiteralExpression,
+    IntegerLiteralExpression,
+    RealLiteralExpression,
+    TimeLiteralExpression,
+    ParenthesizedExpression,
+
+    // postfix expressions
+    InvocationExpression,
+
+    // binary expressions
+    AddExpression,
+    SubtractExpression,
+    MultiplyExpression,
+    DivideExpression,
+    PowerExpression,
+    ModExpression,
+    EqualityExpression,
+    InequalityExpression,
+    CaseEqualityExpression,
+    CaseInequalityExpression,
+    WildcardEqualityExpression,
+    WildcardInequalityExpression,
+    LessThanExpression,
+    LessThanEqualExpression,
+    GreaterThanExpression,
+    GreaterThanEqualExpression,
+    LogicalAndExpression,
+    LogicalOrExpression,
+    BinaryAndExpression,
+    BinaryOrExpression,
+    BinaryXorExpression,
+    BinaryXnorExpression,
+    LogicalImplicationExpression,
+    LogicalEquivalenceExpression,
+    LogicalShiftLeftExpression,
+    LogicalShiftRightExpression,
+    ArithmeticShiftLeftExpression,
+    ArithmeticShiftRightExpression,
+
+    // assignment expressions
+    AssignmentExpression,
+    AddAssignmentExpression,
+    SubtractAssignmentExpression,
+    MultiplyAssignmentExpression,
+    DivideAssignmentExpression,
+    ModAssignmentExpression,
+    AndAssignmentExpression,
+    OrAssignmentExpression,
+    XorAssignmentExpression,
+    LogicalLeftShiftAssignmentExpression,
+    LogicalRightShiftAssignmentExpression,
+    ArithmeticLeftShiftAssignmentExpression,
+    ArithmeticRightShiftAssignmentExpression,
 };
+
+enum class TokenKind : uint16_t;
+
+SyntaxKind getUnaryExpression(TokenKind kind);
+SyntaxKind getLiteralExpression(TokenKind kind);
+SyntaxKind getBinaryExpression(TokenKind kind);
+SyntaxKind getAssignmentExpression(TokenKind kind);
+int getPrecedence(SyntaxKind kind);
+bool isRightAssociative(SyntaxKind kind);
 
 // discriminated union of Token and SyntaxNode
 struct TokenOrSyntax {

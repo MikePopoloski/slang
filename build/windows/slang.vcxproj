@@ -26,6 +26,7 @@
     <ClInclude Include="..\..\include\BitVector.h" />
     <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
+    <ClInclude Include="..\..\include\Parser.h" />
     <ClInclude Include="..\..\include\SourceTracker.h" />
     <ClInclude Include="..\..\include\Handle.h" />
     <ClInclude Include="..\..\include\Hash.h" />
@@ -37,6 +38,7 @@
     <ClInclude Include="..\..\include\StringTable.h" />
     <ClInclude Include="..\..\include\SyntaxNode.h" />
     <ClInclude Include="..\..\include\syntax\DirectiveSyntax.h" />
+    <ClInclude Include="..\..\include\syntax\ExpressionSyntax.h" />
     <ClInclude Include="..\..\include\Token.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />
@@ -44,11 +46,13 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
+    <ClCompile Include="..\..\source\Parser.cpp" />
     <ClCompile Include="..\..\source\SourceTracker.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
     <ClCompile Include="..\..\source\Preprocessor.cpp" />
     <ClCompile Include="..\..\source\SyntaxAccessors.cpp" />
+    <ClCompile Include="..\..\source\SyntaxFacts.cpp" />
     <ClCompile Include="..\..\source\SyntaxNode.cpp" />
     <ClCompile Include="..\..\source\Token.cpp" />
     <ClCompile Include="..\..\source\Trivia.cpp" />
