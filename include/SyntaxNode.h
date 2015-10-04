@@ -130,6 +130,7 @@ SyntaxKind getUnaryExpression(TokenKind kind);
 SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
 SyntaxKind getAssignmentExpression(TokenKind kind);
+SyntaxKind getKeywordNameExpression(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 
@@ -152,6 +153,11 @@ public:
     SyntaxKind kind;
 
     SyntaxNode(SyntaxKind kind) : kind(kind) {}
+
+    // convenience methods that wrap writeTo
+    // toFullString() includes trivia, toString() does not
+    std::string toString() const;
+    std::string toFullString() const;
 
     void writeTo(Buffer<char>& buffer, bool includeTrivia) const;
 

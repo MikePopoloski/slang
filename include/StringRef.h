@@ -70,6 +70,10 @@ public:
         return StringRef(dest, len);
     }
 
+    std::string toString() const {
+        return std::string(ptr, len);
+    }
+
     char operator[](uint32_t index) const {
         ASSERT(index < len);
         return ptr[index];

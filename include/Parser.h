@@ -13,10 +13,10 @@ class Parser {
 public:
     Parser(Lexer& lexer);
 
-
+    SyntaxNode* parse();
+    ExpressionSyntax* parseExpression();
 
 private:
-    ExpressionSyntax* parseExpression();
     ExpressionSyntax* parseMinTypMaxExpression();
     ExpressionSyntax* parseSubExpression(int precedence);
     ExpressionSyntax* parsePrimaryExpression();

@@ -92,6 +92,14 @@ SyntaxKind getAssignmentExpression(TokenKind kind) {
     }
 }
 
+SyntaxKind getKeywordNameExpression(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::SuperKeyword: return SyntaxKind::SuperHandle;
+        case TokenKind::ThisKeyword: return SyntaxKind::ThisHandle;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
 int getPrecedence(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::LogicalImplicationExpression:

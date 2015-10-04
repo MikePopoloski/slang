@@ -27,6 +27,10 @@ Parser::Parser(Lexer& lexer) :
     currentToken(nullptr) {
 }
 
+SyntaxNode* Parser::parse() {
+    return parseExpression();
+}
+
 ExpressionSyntax* Parser::parseExpression() {
     return parseSubExpression(0);
 }

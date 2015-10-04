@@ -26,4 +26,16 @@ TokenOrSyntax SyntaxNode::getChild(uint32_t) const {
     return nullptr;
 }
 
+std::string SyntaxNode::toString() const {
+    Buffer<char> buffer;
+    writeTo(buffer, false);
+    return std::string(buffer.begin(), buffer.end());
+}
+
+std::string SyntaxNode::toFullString() const {
+    Buffer<char> buffer;
+    writeTo(buffer, true);
+    return std::string(buffer.begin(), buffer.end());
+}
+
 }

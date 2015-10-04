@@ -5,6 +5,6 @@
     <ClCompile Include="..\..\..\tests\LexerTests.cpp" />
     <ClCompile Include="..\..\..\tests\FileTests.cpp" />
     <ClCompile Include="..\..\..\tests\PreprocessorTests.cpp" />
-    <ClCompile Include="..\..\..\tests\ParserTests.cpp" />
+    <ClCompile Include="..\..\..\tests\ExpressionParsingTests.cpp" />
   </ItemGroup>
 </Project>
