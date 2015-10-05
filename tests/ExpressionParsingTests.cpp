@@ -49,6 +49,16 @@ TEST_CASE("Parenthesized expression", "[parser:expressions]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("MinTypMax expression", "[parser:expressions]") {
+    auto& text = "(foo:34+99:baz)";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::ParenthesizedExpression);
+    CHECK(((ParenthesizedExpressionSyntax*)expr)->expression->kind == SyntaxKind::MinTypMaxExpression);
+    CHECK(expr->toString() == text);
+    CHECK(diagnostics.empty());
+}
+
 void testImplicitClassHandle(TokenKind kind) {
     auto text = getTokenKindText(kind);
     auto expr = parse(SourceText::fromNullTerminated(text));
@@ -108,6 +118,15 @@ TEST_CASE("Null literal expression", "[parser:expressions]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Wildcard expression", "[parser:expressions]") {
+    auto& text = "$";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::WildcardLiteralExpression);
+    CHECK(expr->toString() == text);
+    CHECK(diagnostics.empty());
+}
+
 void testPrefixUnary(TokenKind kind) {
     auto text = getTokenKindText(kind).toString() + "a";
     auto expr = parse(text);
@@ -134,19 +153,59 @@ TEST_CASE("Unary operators", "[parser:expressions]") {
     testPrefixUnary(TokenKind::DoubleMinus);
 }
 
-TEST_CASE("Hierarchical identifiers", "[parser:expressions]") {
-    auto& text = "$root.foo.bar";
+void testHierarchicalName(const SourceText& text) {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::HierarchicalName);
+    CHECK(expr->toString() == text.begin());
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Hierarchical identifiers", "[parser:expressions]") {
+    testHierarchicalName("$root.foo.bar");
+    testHierarchicalName("foo.bar");
+    testHierarchicalName("$unit::foo.bar");
+    testHierarchicalName("blah::foo.bar");
+    testHierarchicalName("local::foo.bar");
+}
+
+TEST_CASE("Class scoped name", "[parser:expressions]") {
+    // TODO
+}
+
+TEST_CASE("Empty queue", "[parser:expressions]") {
+    auto& text = "{}";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::EmptyQueueExpression);
     CHECK(expr->toString() == text);
     CHECK(diagnostics.empty());
+}
 
-    auto& text2 = "foo.bar";
-    expr = parse(text2);
+TEST_CASE("Concatenation", "[parser:expressions]") {
+    auto& text = "{3+4, foo.bar}";
+    auto expr = parse(text);
 
-    REQUIRE(expr->kind == SyntaxKind::HierarchicalName);
-    CHECK(expr->toString() == text2);
+    REQUIRE(expr->kind == SyntaxKind::ConcatenationExpression);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Multiple concatenation", "[parser:expressions]") {
+    auto& text = "{3+4 {foo.bar, 9**22}}";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::MultipleConcatenationExpression);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Streaming concatenation", "[parser:expressions]") {
+    auto& text = "{<< 3+9 {foo, 24.32}}";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::StreamingConcatenationExpression);
+    CHECK(expr->toFullString() == text);
     CHECK(diagnostics.empty());
 }
 

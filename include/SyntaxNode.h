@@ -57,6 +57,7 @@ enum class SyntaxKind : uint16_t {
     IntegerLiteralExpression,
     RealLiteralExpression,
     TimeLiteralExpression,
+    WildcardLiteralExpression,
     ParenthesizedExpression,
     MinTypMaxExpression,
     EmptyQueueExpression,
@@ -135,6 +136,8 @@ SyntaxKind getAssignmentExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
+
+std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 
 // discriminated union of Token and SyntaxNode
 struct TokenOrSyntax {

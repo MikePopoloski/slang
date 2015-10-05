@@ -1,0 +1,24 @@
+[Lexer]
+* Perfect keyword hashing
+* Time literals
+* Improve unnamed buffer handling
+* Token flags
+* Stop lexing if too many errors
+* Start of line check for directives
+* Test escaped identifiers are not keywords
+
+[Preprocessor]
+* Different keyword sets
+* Finish macros
+* Conditional directives
+* Pragmas
+* Other directives
+* Controlling macros on includes
+
+[Parser]
+* Class scoped names
+* Stream expression withers
+* Stack overflow prevention
+* Parser error recovery
+* Give syntax nodes a Kind for as<> casting
+* Unify parser and preprocessor support code

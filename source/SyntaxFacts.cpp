@@ -36,6 +36,7 @@ SyntaxKind getLiteralExpression(TokenKind kind) {
         case TokenKind::RealLiteral: return SyntaxKind::RealLiteralExpression;
         case TokenKind::TimeLiteral: return SyntaxKind::TimeLiteralExpression;
         case TokenKind::NullKeyword: return SyntaxKind::NullLiteralExpression;
+        case TokenKind::Dollar: return SyntaxKind::WildcardLiteralExpression;
         default: return SyntaxKind::Unknown;
     }
 }
@@ -170,6 +171,117 @@ bool isRightAssociative(SyntaxKind kind) {
         default:
             return false;
     }
+}
+
+std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
+#define CASE(name) case SyntaxKind::name: os << #name; break
+    switch (kind) {
+        CASE(Unknown);
+        CASE(List);
+        CASE(BeginKeywordsDirective);
+        CASE(CellDefineDirective);
+        CASE(DefaultNetTypeDirective);
+        CASE(DefineDirective);
+        CASE(ElseDirective);
+        CASE(ElseIfDirective);
+        CASE(EndKeywordsDirective);
+        CASE(EndCellDefineDirective);
+        CASE(EndIfDirective);
+        CASE(IfDefDirective);
+        CASE(IfNDefDirective);
+        CASE(IncludeDirective);
+        CASE(LineDirective);
+        CASE(NoUnconnectedDriveDirective);
+        CASE(PragmaDirective);
+        CASE(ResetAllDirective);
+        CASE(TimescaleDirective);
+        CASE(UnconnectedDriveDirective);
+        CASE(UndefDirective);
+        CASE(UndefineAllDirective);
+        CASE(MacroUsage);
+        CASE(MacroFormalArgumentList);
+        CASE(MacroFormalArgument);
+        CASE(MacroArgumentDefault);
+        CASE(UnaryPlusExpression);
+        CASE(UnaryMinusExpression);
+        CASE(UnaryBitwiseAndExpression);
+        CASE(UnaryBitwiseNandExpression);
+        CASE(UnaryBitwiseOrExpression);
+        CASE(UnaryBitwiseNorExpression);
+        CASE(UnaryBitwiseXorExpression);
+        CASE(UnaryBitwiseXnorExpression);
+        CASE(UnaryPreincrementExpression);
+        CASE(UnaryPredecrementExpression);
+        CASE(LogicalNotExpression);
+        CASE(BitwiseNotExpression);
+        CASE(NullLiteralExpression);
+        CASE(StringLiteralExpression);
+        CASE(IntegerLiteralExpression);
+        CASE(RealLiteralExpression);
+        CASE(TimeLiteralExpression);
+        CASE(WildcardLiteralExpression);
+        CASE(ParenthesizedExpression);
+        CASE(MinTypMaxExpression);
+        CASE(EmptyQueueExpression);
+        CASE(ConcatenationExpression);
+        CASE(MultipleConcatenationExpression);
+        CASE(StreamingConcatenationExpression);
+        CASE(StreamExpression);
+        CASE(StreamExpressionWithRange);
+        CASE(InvocationExpression);
+        CASE(AddExpression);
+        CASE(SubtractExpression);
+        CASE(MultiplyExpression);
+        CASE(DivideExpression);
+        CASE(PowerExpression);
+        CASE(ModExpression);
+        CASE(EqualityExpression);
+        CASE(InequalityExpression);
+        CASE(CaseEqualityExpression);
+        CASE(CaseInequalityExpression);
+        CASE(WildcardEqualityExpression);
+        CASE(WildcardInequalityExpression);
+        CASE(LessThanExpression);
+        CASE(LessThanEqualExpression);
+        CASE(GreaterThanExpression);
+        CASE(GreaterThanEqualExpression);
+        CASE(LogicalAndExpression);
+        CASE(LogicalOrExpression);
+        CASE(BinaryAndExpression);
+        CASE(BinaryOrExpression);
+        CASE(BinaryXorExpression);
+        CASE(BinaryXnorExpression);
+        CASE(LogicalImplicationExpression);
+        CASE(LogicalEquivalenceExpression);
+        CASE(LogicalShiftLeftExpression);
+        CASE(LogicalShiftRightExpression);
+        CASE(ArithmeticShiftLeftExpression);
+        CASE(ArithmeticShiftRightExpression);
+        CASE(AssignmentExpression);
+        CASE(AddAssignmentExpression);
+        CASE(SubtractAssignmentExpression);
+        CASE(MultiplyAssignmentExpression);
+        CASE(DivideAssignmentExpression);
+        CASE(ModAssignmentExpression);
+        CASE(AndAssignmentExpression);
+        CASE(OrAssignmentExpression);
+        CASE(XorAssignmentExpression);
+        CASE(LogicalLeftShiftAssignmentExpression);
+        CASE(LogicalRightShiftAssignmentExpression);
+        CASE(ArithmeticLeftShiftAssignmentExpression);
+        CASE(ArithmeticRightShiftAssignmentExpression);
+        CASE(LocalScope);
+        CASE(UnitScope);
+        CASE(ClassOrPackageScope);
+        CASE(RootScope);
+        CASE(IdentifierName);
+        CASE(HierarchicalName);
+        CASE(SystemName);
+        CASE(ThisHandle);
+        CASE(SuperHandle);
+    }
+    return os;
+#undef CASE
 }
 
 }

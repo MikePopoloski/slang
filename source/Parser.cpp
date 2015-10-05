@@ -103,7 +103,8 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
         case TokenKind::IntegerLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-        case TokenKind::NullKeyword: {
+        case TokenKind::NullKeyword:
+        case TokenKind::Dollar: {
             auto literal = consume();
             expr = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
             break;
@@ -203,7 +204,10 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
 
 ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, ExpressionSyntax* first) {
     auto buffer = tosPool.get();
-    buffer.append(first);
+    if (first)
+        buffer.append(first);
+    else
+        buffer.append(parseExpression());
 
     while (peek(TokenKind::Comma)) {
         buffer.append(consume());
