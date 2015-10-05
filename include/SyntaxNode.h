@@ -46,6 +46,8 @@ enum class SyntaxKind : uint16_t {
     UnaryBitwiseNorExpression,
     UnaryBitwiseXorExpression,
     UnaryBitwiseXnorExpression,
+    UnaryPreincrementExpression,
+    UnaryPredecrementExpression,
     LogicalNotExpression,
     BitwiseNotExpression,
 

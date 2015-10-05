@@ -130,6 +130,8 @@ TEST_CASE("Unary operators", "[parser:expressions]") {
     testPrefixUnary(TokenKind::Xor);
     testPrefixUnary(TokenKind::XorTilde);
     testPrefixUnary(TokenKind::TildeXor);
+    testPrefixUnary(TokenKind::DoublePlus);
+    testPrefixUnary(TokenKind::DoubleMinus);
 }
 
 // TODO: make this not stack overflow

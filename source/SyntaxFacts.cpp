@@ -22,6 +22,8 @@ SyntaxKind getUnaryExpression(TokenKind kind) {
         case TokenKind::XorTilde:
         case TokenKind::TildeXor:
             return SyntaxKind::UnaryBitwiseXnorExpression;
+        case TokenKind::DoublePlus: return SyntaxKind::UnaryPreincrementExpression;
+        case TokenKind::DoubleMinus: return SyntaxKind::UnaryPredecrementExpression;
         default:
             return SyntaxKind::Unknown;
     }
@@ -152,6 +154,8 @@ int getPrecedence(SyntaxKind kind) {
         case SyntaxKind::UnaryBitwiseNorExpression:
         case SyntaxKind::UnaryBitwiseXorExpression:
         case SyntaxKind::UnaryBitwiseXnorExpression:
+        case SyntaxKind::UnaryPreincrementExpression:
+        case SyntaxKind::UnaryPredecrementExpression:
             return 13;
         default:
             return 0;
