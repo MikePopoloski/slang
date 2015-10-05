@@ -99,6 +99,7 @@ private:
     };
 };
 
+TokenKind getSystemKeywordKind(StringRef text);
 StringRef getTokenKindText(TokenKind kind);
 const StringTable<TokenKind>* getKeywordTable();
 

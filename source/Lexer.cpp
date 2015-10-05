@@ -566,6 +566,11 @@ TokenKind Lexer::lexDollarSign(TokenInfo& info) {
         return TokenKind::Dollar;
 
     // otherwise, we have a system identifier
+    // check for system keywords
+    TokenKind kind = getSystemKeywordKind(lexeme());
+    if (kind != TokenKind::Unknown)
+        return kind;
+
     info.identifierType = IdentifierType::System;
     return TokenKind::SystemIdentifier;
 }

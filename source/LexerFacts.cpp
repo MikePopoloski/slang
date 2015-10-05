@@ -11,6 +11,11 @@
 
 namespace slang {
 
+const static StringTable<TokenKind> systemIdentifierKeywords = {
+    { "$root", TokenKind::RootSystemName },
+    { "$unit", TokenKind::UnitSystemName }
+};
+
 const static StringTable<SyntaxKind> directiveTable = {
     { "`begin_keywords", SyntaxKind::BeginKeywordsDirective },
     { "`celldefine", SyntaxKind::CellDefineDirective },
@@ -285,6 +290,13 @@ const static StringTable<TokenKind> allKeywords = {
     { "xnor", TokenKind::XnorKeyword }
 };
 
+TokenKind getSystemKeywordKind(StringRef text) {
+    TokenKind kind;
+    if (systemIdentifierKeywords.lookup(text, kind))
+        return kind;
+    return TokenKind::Unknown;
+}
+
 SyntaxKind getDirectiveKind(StringRef directive) {
     SyntaxKind kind;
     if (directiveTable.lookup(directive, kind))
@@ -408,7 +420,7 @@ StringRef getTokenKindText(TokenKind kind) {
         case TokenKind::DoubleAnd: return "&&";
         case TokenKind::TripleAnd: return "&&&";
 
-            // keywords
+        // keywords
         case TokenKind::AcceptOnKeyword: return "accept_on";
         case TokenKind::AliasKeyword: return "alias";
         case TokenKind::AlwaysKeyword: return "always";
@@ -658,11 +670,11 @@ StringRef getTokenKindText(TokenKind kind) {
         case TokenKind::XnorKeyword: return "xnor";
         case TokenKind::XorKeyword: return "xor";
 
-            // predefined system keywords
+        // predefined system keywords
         case TokenKind::UnitSystemName: return "$unit";
         case TokenKind::RootSystemName: return "$root";
 
-            // directives
+        // directives
         case TokenKind::MacroQuote: return "`\"";
         case TokenKind::MacroEscapedQuote: return "`\\`\"";
         case TokenKind::MacroPaste: return "``";

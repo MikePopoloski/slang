@@ -134,6 +134,22 @@ TEST_CASE("Unary operators", "[parser:expressions]") {
     testPrefixUnary(TokenKind::DoubleMinus);
 }
 
+TEST_CASE("Hierarchical identifiers", "[parser:expressions]") {
+    auto& text = "$root.foo.bar";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::HierarchicalName);
+    CHECK(expr->toString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& text2 = "foo.bar";
+    expr = parse(text2);
+
+    REQUIRE(expr->kind == SyntaxKind::HierarchicalName);
+    CHECK(expr->toString() == text2);
+    CHECK(diagnostics.empty());
+}
+
 // TODO: make this not stack overflow
 //TEST_CASE("Big expression", "[parser:expressions]") {
 //    auto& text =
