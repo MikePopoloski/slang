@@ -9,8 +9,8 @@
 
 namespace slang {
 
-Token::Token(TokenKind kind, ArrayRef<Trivia> trivia) :
-    kind(kind), trivia(trivia) {
+Token::Token(TokenKind kind, ArrayRef<Trivia> trivia, uint8_t flags) :
+    kind(kind), trivia(trivia), flags(flags) {
 }
 
 void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
@@ -105,9 +105,9 @@ SyntaxKind Token::directiveKind() const {
     return ((DirectiveInfo*)(this + 1))->kind;
 }
 
-Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText) {
+Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
-    new (token) Token(TokenKind::Unknown, trivia);
+    new (token) Token(TokenKind::Unknown, trivia, flags);
 
     IdentifierInfo* info = (IdentifierInfo*)(token + 1);
     info->rawText = rawText;
@@ -116,15 +116,15 @@ Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, Strin
     return token;
 }
 
-Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia) {
+Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, uint8_t flags) {
     Token* token = (Token*)alloc.allocate(sizeof(Token));
-    new (token) Token(kind, trivia);
+    new (token) Token(kind, trivia, flags);
     return token;
 }
 
-Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type) {
+Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
-    new (token) Token(kind, trivia);
+    new (token) Token(kind, trivia, flags);
 
     IdentifierInfo* info = (IdentifierInfo*)(token + 1);
     info->rawText = rawText;
@@ -133,9 +133,9 @@ Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Tr
     return token;
 }
 
-Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText) {
+Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(StringLiteralInfo));
-    new (token) Token(kind, trivia);
+    new (token) Token(kind, trivia, flags);
 
     StringLiteralInfo* info = (StringLiteralInfo*)(token + 1);
     info->rawText = rawText;
@@ -144,9 +144,9 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef
     return token;
 }
 
-Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value) {
+Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(NumericLiteralInfo));
-    new (token) Token(kind, trivia);
+    new (token) Token(kind, trivia, flags);
 
     NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
     info->rawText = rawText;
@@ -155,9 +155,9 @@ Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRe
     return token;
 }
 
-Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind) {
+Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(DirectiveInfo));
-    new (token) Token(kind, trivia);
+    new (token) Token(kind, trivia, flags);
 
     DirectiveInfo* info = (DirectiveInfo*)(token + 1);
     info->rawText = rawText;
@@ -167,23 +167,22 @@ Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Tri
 }
 
 Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia) {
-    // TODO: flag missing
     switch (kind) {
         case TokenKind::Unknown:
-            return createUnknown(alloc, trivia, nullptr);
+            return createUnknown(alloc, trivia, nullptr, TokenFlags::Missing);
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
-            return createIdentifier(alloc, kind, trivia, nullptr, IdentifierType::Unknown);
+            return createIdentifier(alloc, kind, trivia, nullptr, IdentifierType::Unknown, TokenFlags::Missing);
         case TokenKind::IntegerLiteral:
         case TokenKind::RealLiteral:
-            return createNumericLiteral(alloc, kind, trivia, nullptr, 0);
+            return createNumericLiteral(alloc, kind, trivia, nullptr, 0, TokenFlags::Missing);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:
-            return createStringLiteral(alloc, kind, trivia, nullptr, nullptr);
+            return createStringLiteral(alloc, kind, trivia, nullptr, nullptr, TokenFlags::Missing);
         case TokenKind::Directive:
-            return createDirective(alloc, kind, trivia, nullptr, SyntaxKind::Unknown);
+            return createDirective(alloc, kind, trivia, nullptr, SyntaxKind::Unknown, TokenFlags::Missing);
         default:
-            return createSimple(alloc, kind, trivia);
+            return createSimple(alloc, kind, trivia, TokenFlags::Missing);
     }
 }
 

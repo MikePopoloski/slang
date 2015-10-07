@@ -25,8 +25,7 @@ TEST_CASE("Empty string", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::IdentifierName);
-    // TODO:
-    //CHECK(((IdentifierNameSyntax*)expr)->identifier.isMissing);
+    CHECK(((IdentifierNameSyntax*)expr)->identifier->isMissing());
 }
 
 TEST_CASE("Name expression", "[parser:expressions]") {
@@ -34,8 +33,7 @@ TEST_CASE("Name expression", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::IdentifierName);
-    // TODO:
-    //CHECK(((IdentifierNameSyntax*)expr)->identifier.isMissing);
+    CHECK(!((IdentifierNameSyntax*)expr)->identifier->isMissing());
     CHECK(expr->toString() == text);
     CHECK(diagnostics.empty());
 }
