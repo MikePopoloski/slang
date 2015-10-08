@@ -46,6 +46,7 @@ private:
     void lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent);
     void lexVectorLiteral(TokenInfo& info, uint64_t size);
     void lexUnsizedNumericLiteral(TokenInfo& info);
+    uint8_t lexTimeUnit();
 
     template<bool (*IsDigitFunc)(char), uint32_t (*ValueFunc)(char)>
     void lexVectorDigits(TokenInfo& info);

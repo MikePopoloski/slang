@@ -36,6 +36,7 @@ void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
                 break;
             case TokenKind::IntegerLiteral:
             case TokenKind::RealLiteral:
+            case TokenKind::TimeLiteral:
                 buffer.appendRange(((NumericLiteralInfo*)(this + 1))->rawText);
                 break;
             case TokenKind::Directive:
@@ -90,7 +91,7 @@ std::string Token::toFullString() const {
 }
 
 const NumericValue& Token::numericValue() const {
-    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::RealLiteral);
+    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
     return ((NumericLiteralInfo*)(this + 1))->value;
 }
 
@@ -175,6 +176,7 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> tri
             return createIdentifier(alloc, kind, trivia, nullptr, IdentifierType::Unknown, TokenFlags::Missing);
         case TokenKind::IntegerLiteral:
         case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
             return createNumericLiteral(alloc, kind, trivia, nullptr, 0, TokenFlags::Missing);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:

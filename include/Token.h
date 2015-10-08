@@ -39,13 +39,22 @@ struct NumericValue {
     NumericValue(int32_t integer) : type(SignedInteger), integer(integer) {}
     NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
     NumericValue(LogicVector vector) : type(Vector), vector(vector) {}
+    NumericValue(double real, uint8_t timeUnit) : type(timeUnit), real(real) {}
+
+    bool isTimeValue() const { return type >= Seconds; }
 
     enum {
         Unknown,
         Real,
         SignedInteger,
         Vector,
-        UnsizedBit
+        UnsizedBit,
+        Seconds,
+        Milliseconds,
+        Microseconds,
+        Nanoseconds,
+        Picoseconds,
+        Femtoseconds
     };
 };
 

@@ -739,6 +739,27 @@ TEST_CASE("Binary vector literal (unsized)", "[lexer]") {
     //CHECK(value.integer == 19248);
 }
 
+void testTimeLiteral(uint8_t type, std::string text) {
+    auto& token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::TimeLiteral);
+    CHECK(token.toFullString() == text);
+    CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.isTimeValue());
+    CHECK(value.type == type);
+}
+
+TEST_CASE("Time literals", "[lexer]") {
+    testTimeLiteral(NumericValue::Seconds, "32.3s");
+    testTimeLiteral(NumericValue::Milliseconds, "49ms");
+    testTimeLiteral(NumericValue::Microseconds, "109.109us");
+    testTimeLiteral(NumericValue::Nanoseconds, "17ns");
+    testTimeLiteral(NumericValue::Picoseconds, "17ps");
+    testTimeLiteral(NumericValue::Femtoseconds, "17fs");
+}
+
 TEST_CASE("Unsized unbased literal", "[lexer]") {
     auto& text = "'1";
     auto& token = lexToken(text);

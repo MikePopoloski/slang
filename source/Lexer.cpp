@@ -631,6 +631,12 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
                 digits,
                 c == 'e' || c == 'E'
             );
+
+            uint8_t timeUnit = lexTimeUnit();
+            if (timeUnit) {
+                info.numericValue = NumericValue(info.numericValue.real, timeUnit);
+                return TokenKind::TimeLiteral;
+            }
             return TokenKind::RealLiteral;
         }
         case 'e':
@@ -649,8 +655,15 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
                 unsignedVal = INT32_MAX;
                 addError(DiagCode::SignedLiteralTooLarge);
             }
-            info.numericValue = (int32_t)unsignedVal;
-            return TokenKind::IntegerLiteral;
+            uint8_t timeUnit = lexTimeUnit();
+            if (timeUnit) {
+                info.numericValue = NumericValue((int32_t)unsignedVal, timeUnit);
+                return TokenKind::TimeLiteral;
+            }
+            else {
+                info.numericValue = (int32_t)unsignedVal;
+                return TokenKind::IntegerLiteral;
+            }
     }
 }
 
@@ -694,6 +707,46 @@ void Lexer::lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int di
         addError(DiagCode::RealExponentTooLarge);
 
     info.numericValue = result;
+}
+
+uint8_t Lexer::lexTimeUnit() {
+    char c = peek();
+    switch (c) {
+        case 's':
+            advance();
+            return NumericValue::Seconds;
+        case 'm':
+            if (peek(1) == 's') {
+                advance(2);
+                return NumericValue::Milliseconds;
+            }
+            break;
+        case 'u':
+            if (peek(1) == 's') {
+                advance(2);
+                return NumericValue::Microseconds;
+            }
+            break;
+        case 'n':
+            if (peek(1) == 's') {
+                advance(2);
+                return NumericValue::Nanoseconds;
+            }
+            break;
+        case 'p':
+            if (peek(1) == 's') {
+                advance(2);
+                return NumericValue::Picoseconds;
+            }
+            break;
+        case 'f':
+            if (peek(1) == 's') {
+                advance(2);
+                return NumericValue::Femtoseconds;
+            }
+            break;
+    }
+    return 0;
 }
 
 void Lexer::lexVectorLiteral(TokenInfo& info, uint64_t size64) {
@@ -1025,6 +1078,7 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
             return Token::createIdentifier(alloc, kind, trivia, lexeme(), info.identifierType);
         case TokenKind::IntegerLiteral:
         case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
             return Token::createNumericLiteral(alloc, kind, trivia, lexeme(), info.numericValue);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, trivia, lexeme(), info.niceText);

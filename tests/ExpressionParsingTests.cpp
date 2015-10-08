@@ -99,7 +99,7 @@ TEST_CASE("Real literal expression", "[parser:expressions]") {
 }
 
 TEST_CASE("Time literal expression", "[parser:expressions]") {
-    auto& text = "42 ns";
+    auto& text = "42ns";
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::TimeLiteralExpression);
