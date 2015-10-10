@@ -152,13 +152,39 @@ protected:
     }
 };
 
-struct StreamExpressionWithRange : public SyntaxNode {
-    Token* withKeyword;
-    Token* openBracket;
-    Token* closeBracket;
+struct SelectorSyntax : public SyntaxNode {
 
-    StreamExpressionWithRange(Token* withKeyword, Token* openBracket, Token* closeBracket) :
-        SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), openBracket(openBracket), closeBracket(closeBracket)
+    SelectorSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct BitSelectSyntax : public SelectorSyntax {
+    ExpressionSyntax* expr;
+
+    BitSelectSyntax(ExpressionSyntax* expr) :
+        SelectorSyntax(SyntaxKind::BitSelect), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct RangeSelectSyntax : public SelectorSyntax {
+    ExpressionSyntax* left;
+    Token* range;
+    ExpressionSyntax* right;
+
+    RangeSelectSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* range, ExpressionSyntax* right) :
+        SelectorSyntax(kind), left(left), range(range), right(right)
     {
         childCount += 3;
     }
@@ -166,9 +192,51 @@ struct StreamExpressionWithRange : public SyntaxNode {
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
         switch(index) {
-            case 0: return withKeyword;
-            case 1: return openBracket;
+            case 0: return left;
+            case 1: return range;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ElementSelectExpressionSyntax : public ExpressionSyntax {
+    Token* openBracket;
+    SelectorSyntax* selector;
+    Token* closeBracket;
+
+    ElementSelectExpressionSyntax(Token* openBracket, SelectorSyntax* selector, Token* closeBracket) :
+        ExpressionSyntax(SyntaxKind::ElementSelectExpression), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return openBracket;
+            case 1: return selector;
             case 2: return closeBracket;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StreamExpressionWithRange : public SyntaxNode {
+    Token* withKeyword;
+    ElementSelectExpressionSyntax* range;
+
+    StreamExpressionWithRange(Token* withKeyword, ElementSelectExpressionSyntax* range) :
+        SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), range(range)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return withKeyword;
+            case 1: return range;
             default: return nullptr;
         }
     }

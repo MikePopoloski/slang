@@ -222,14 +222,56 @@ SeparatedSyntaxList<StreamExpressionSyntax> Parser::parseStreamConcatenation() {
     auto buffer = tosPool.get();
 
     // TODO: parse stream expression instead of expression
-    buffer.append(parseExpression());
+    buffer.append(parseStreamExpression());
 
     while (peek(TokenKind::Comma)) {
         buffer.append(consume());
-        buffer.append(parseExpression());
+        buffer.append(parseStreamExpression());
     }
 
     return buffer.copy(alloc);
+}
+
+StreamExpressionSyntax* Parser::parseStreamExpression() {
+    auto expr = parseExpression();
+
+    StreamExpressionWithRange* withRange = nullptr;
+    if (peek(TokenKind::WithKeyword)) {
+        auto with = consume();
+        withRange = alloc.emplace<StreamExpressionWithRange>(with, parseElementSelect());
+    }
+
+    return alloc.emplace<StreamExpressionSyntax>(expr, withRange);
+}
+
+ElementSelectExpressionSyntax* Parser::parseElementSelect() {
+    auto openBracket = expect(TokenKind::OpenBracket);
+    auto expr = parseExpression();
+
+    SelectorSyntax* selector;
+    switch (peek()->kind) {
+        case TokenKind::Colon: {
+            auto range = consume();
+            selector = alloc.emplace<RangeSelectSyntax>(SyntaxKind::SimpleRangeSelect, expr, range, parseExpression());
+            break;
+        }
+        case TokenKind::PlusColon: {
+            auto range = consume();
+            selector = alloc.emplace<RangeSelectSyntax>(SyntaxKind::AscendingRangeSelect, expr, range, parseExpression());
+            break;
+        }
+        case TokenKind::MinusColon: {
+            auto range = consume();
+            selector = alloc.emplace<RangeSelectSyntax>(SyntaxKind::DescendingRangeSelect, expr, range, parseExpression());
+            break;
+        }
+        default:
+            selector = alloc.emplace<BitSelectSyntax>(expr);
+            break;
+    }
+
+    auto closeBracket = expect(TokenKind::CloseBracket);
+    return alloc.emplace<ElementSelectExpressionSyntax>(openBracket, selector, closeBracket);
 }
 
 ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {

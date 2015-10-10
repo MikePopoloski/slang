@@ -33,10 +33,25 @@ ExpressionSyntax expression
 ConcatenationExpressionSyntax concatenation
 token closeBrace
 
+SelectorSyntax final=false
+empty
+
+BitSelectSyntax base=SelectorSyntax kind=BitSelect
+ExpressionSyntax expr
+
+RangeSelectSyntax base=SelectorSyntax
+ExpressionSyntax left
+token range
+ExpressionSyntax right
+
+ElementSelectExpressionSyntax base=ExpressionSyntax kind=ElementSelectExpression
+token openBracket
+SelectorSyntax selector
+token closeBracket
+
 StreamExpressionWithRange kind=StreamExpressionWithRange
 token withKeyword
-token openBracket
-token closeBracket
+ElementSelectExpressionSyntax range
 
 StreamExpressionSyntax kind=StreamExpression
 ExpressionSyntax expression

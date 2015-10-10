@@ -199,10 +199,11 @@ TEST_CASE("Multiple concatenation", "[parser:expressions]") {
 }
 
 TEST_CASE("Streaming concatenation", "[parser:expressions]") {
-    auto& text = "{<< 3+9 {foo, 24.32}}";
+    auto& text = "{<< 3+9 {foo, 24.32 with [3+:4]}}";
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::StreamingConcatenationExpression);
+    CHECK(((StreamingConcatenationExpressionSyntax*)expr)->expressions[1]->withRange->range->selector->kind == SyntaxKind::AscendingRangeSelect);
     CHECK(expr->toFullString() == text);
     CHECK(diagnostics.empty());
 }

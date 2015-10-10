@@ -8,6 +8,7 @@ struct ExpressionSyntax;
 struct NameSyntax;
 struct ConcatenationExpressionSyntax;
 struct StreamExpressionSyntax;
+struct ElementSelectExpressionSyntax;
 
 class Parser {
 public:
@@ -23,6 +24,8 @@ private:
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
     SeparatedSyntaxList<StreamExpressionSyntax> parseStreamConcatenation();
+    StreamExpressionSyntax* parseStreamExpression();
+    ElementSelectExpressionSyntax* parseElementSelect();
     NameSyntax* parseNameOrClassHandle();
     NameSyntax* parseHierarchicalName();
     NameSyntax* parseSimpleName();

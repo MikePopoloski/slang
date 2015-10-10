@@ -228,7 +228,11 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(StreamingConcatenationExpression);
         CASE(StreamExpression);
         CASE(StreamExpressionWithRange);
-        CASE(InvocationExpression);
+        CASE(BitSelect);
+        CASE(SimpleRangeSelect);
+        CASE(AscendingRangeSelect);
+        CASE(DescendingRangeSelect);
+        CASE(ElementSelectExpression);
         CASE(AddExpression);
         CASE(SubtractExpression);
         CASE(MultiplyExpression);

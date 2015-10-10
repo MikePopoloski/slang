@@ -67,8 +67,14 @@ enum class SyntaxKind : uint16_t {
     StreamExpression,
     StreamExpressionWithRange,
 
+    // selectors
+    BitSelect,
+    SimpleRangeSelect,
+    AscendingRangeSelect,
+    DescendingRangeSelect,
+
     // postfix expressions
-    InvocationExpression,
+    ElementSelectExpression,
 
     // binary expressions
     AddExpression,
