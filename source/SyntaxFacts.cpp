@@ -202,8 +202,9 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(MacroFormalArgumentList);
         CASE(MacroFormalArgument);
         CASE(MacroArgumentDefault);
-        CASE(OrderedParameterAssignment);
-        CASE(NamedParameterAssignment);
+        CASE(OrderedArgument);
+        CASE(NamedArgument);
+        CASE(ArgumentList);
         CASE(ParameterValueAssignment);
         CASE(UnaryPlusExpression);
         CASE(UnaryMinusExpression);
@@ -235,7 +236,10 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(SimpleRangeSelect);
         CASE(AscendingRangeSelect);
         CASE(DescendingRangeSelect);
+        CASE(ElementSelect);
         CASE(ElementSelectExpression);
+        CASE(MemberAccessExpression);
+        CASE(InvocationExpression);
         CASE(AddExpression);
         CASE(SubtractExpression);
         CASE(MultiplyExpression);
@@ -283,7 +287,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(RootScope);
         CASE(IdentifierName);
         CASE(ClassName);
-        CASE(HierarchicalName);
+        CASE(ScopedName);
         CASE(SystemName);
         CASE(ThisHandle);
         CASE(SuperHandle);

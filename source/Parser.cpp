@@ -31,14 +31,13 @@ SyntaxNode* Parser::parse() {
     return parseExpression();
 }
 
-ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
-    auto hash = expect(TokenKind::Hash);
+ArgumentListSyntax* Parser::parseArgumentList() {
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     auto buffer = tosPool.get();
     while (!peek(TokenKind::CloseParenthesis)) {
         if (!peek(TokenKind::Dot))
-            buffer.append(alloc.emplace<OrderedParameterAssignmentSyntax>(parseParamExpression())); 
+            buffer.append(alloc.emplace<OrderedArgumentSyntax>(parseParamExpression())); 
         else {
             auto dot = consume();
             auto name = expect(TokenKind::Identifier);
@@ -48,7 +47,7 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
             if (!peek(TokenKind::CloseParenthesis))
                 expr = parseParamExpression();
 
-            buffer.append(alloc.emplace<NamedParameterAssignmentSyntax>(dot, name, innerOpenParen, expr, expect(TokenKind::CloseParenthesis)));
+            buffer.append(alloc.emplace<NamedArgumentSyntax>(dot, name, innerOpenParen, expr, expect(TokenKind::CloseParenthesis)));
         }
 
         // TODO: rework this for error handling
@@ -59,7 +58,7 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
     }
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
-    return alloc.emplace<ParameterValueAssignmentSyntax>(hash, openParen, buffer.copy(alloc), closeParen);
+    return alloc.emplace<ArgumentListSyntax>(openParen, buffer.copy(alloc), closeParen);
 }
 
 ExpressionSyntax* Parser::parseExpression() {
@@ -154,7 +153,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             auto keyword = consume();
             auto doubleColon = expect(TokenKind::DoubleColon);
 
-            expr = alloc.emplace<HierarchicalNameSyntax>(
+            expr = alloc.emplace<ScopedNameSyntax>(
                 alloc.emplace<KeywordNameSyntax>(SyntaxKind::LocalScope, keyword),
                 doubleColon,
                 parseNameOrClassHandle()
@@ -280,7 +279,7 @@ StreamExpressionSyntax* Parser::parseStreamExpression() {
     return alloc.emplace<StreamExpressionSyntax>(expr, withRange);
 }
 
-ElementSelectExpressionSyntax* Parser::parseElementSelect() {
+ElementSelectSyntax* Parser::parseElementSelect() {
     auto openBracket = expect(TokenKind::OpenBracket);
     auto expr = parseExpression();
 
@@ -307,11 +306,24 @@ ElementSelectExpressionSyntax* Parser::parseElementSelect() {
     }
 
     auto closeBracket = expect(TokenKind::CloseBracket);
-    return alloc.emplace<ElementSelectExpressionSyntax>(openBracket, selector, closeBracket);
+    return alloc.emplace<ElementSelectSyntax>(openBracket, selector, closeBracket);
 }
 
 ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
-    return expr;
+    while (true) {
+        switch (peek()->kind) {
+            case TokenKind::OpenBracket:
+                expr = alloc.emplace<ElementSelectExpressionSyntax>(expr, parseElementSelect());
+                break;
+            case TokenKind::Dot: {
+                auto dot = consume();
+                auto name = expect(TokenKind::Identifier);
+                expr = alloc.emplace<MemberAccessExpressionSyntax>(expr, dot, name);
+            }
+            default:
+                return expr;
+        }
+    }
 }
 
 NameSyntax* Parser::parseNameOrClassHandle() {
@@ -320,15 +332,14 @@ NameSyntax* Parser::parseNameOrClassHandle() {
             auto unit = consume();
             auto separator = expect(TokenKind::DoubleColon);
 
-            return alloc.emplace<HierarchicalNameSyntax>(
+            return alloc.emplace<ScopedNameSyntax>(
                 alloc.emplace<KeywordNameSyntax>(SyntaxKind::UnitScope, unit),
                 separator,
-                parseHierarchicalName()
+                parseScopedName()
             );
         }
-        case TokenKind::RootSystemName:
         case TokenKind::Identifier:
-            return parseHierarchicalName();
+            return parseScopedName();
         case TokenKind::ThisKeyword:
             return alloc.emplace<KeywordNameSyntax>(SyntaxKind::ThisHandle, consume());
         case TokenKind::SuperKeyword:
@@ -338,31 +349,25 @@ NameSyntax* Parser::parseNameOrClassHandle() {
     }
 }
 
-NameSyntax* Parser::parseHierarchicalName() {
-    NameSyntax* left;
+NameSyntax* Parser::parseScopedName() {
     if (peek(TokenKind::RootSystemName))
-        left = alloc.emplace<KeywordNameSyntax>(SyntaxKind::RootScope, consume());
+        return alloc.emplace<KeywordNameSyntax>(SyntaxKind::RootScope, consume());
+
+    NameSyntax* left;
+    auto identifier = expect(TokenKind::Identifier);
+    if (!peek(TokenKind::Hash))
+        left = alloc.emplace<IdentifierNameSyntax>(identifier);
     else {
-        auto identifier = expect(TokenKind::Identifier);
-        if (peek(TokenKind::Hash))
-            left = alloc.emplace<ClassNameSyntax>(identifier, parseParameterValueAssignment());
-        else
-            left = alloc.emplace<IdentifierNameSyntax>(identifier);
+        auto hash = consume();
+        auto parameterValues = alloc.emplace<ParameterValueAssignmentSyntax>(hash, parseArgumentList());
+        left = alloc.emplace<ClassNameSyntax>(identifier, parameterValues);
     }
 
-    switch (peek()->kind) {
-        case TokenKind::DoubleColon: {
-            // TODO: can't transition from dots back to double colon; error if we see that and pretend they used a dot
-            auto doubleColon = consume();
-            return alloc.emplace<HierarchicalNameSyntax>(left, doubleColon, parseHierarchicalName());
-        }
-        case TokenKind::Dot: {
-            auto dot = consume();
-            return alloc.emplace<HierarchicalNameSyntax>(left, dot, parseHierarchicalName());
-        }
-        default:
-            return left;
-    }
+    if (!peek(TokenKind::DoubleColon))
+        return left;
+    
+    auto doubleColon = consume();
+    return alloc.emplace<ScopedNameSyntax>(left, doubleColon, parseScopedName());
 }
 
 void Parser::addError(DiagCode code) {

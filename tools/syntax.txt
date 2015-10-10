@@ -1,26 +1,29 @@
 ExpressionSyntax final=false
 empty
 
-// ----- INSTANTIATIONS -----
+// ----- ARGUMENTS -----
 
-ParameterAssignmentSyntax final=false
+ArgumentSyntax final=false
 empty
 
-OrderedParameterAssignmentSyntax base=ParameterAssignmentSyntax kind=OrderedParameterAssignment
+OrderedArgumentSyntax base=ArgumentSyntax kind=OrderedArgument
 ExpressionSyntax expr
 
-NamedParameterAssignmentSyntax base=ParameterAssignmentSyntax kind=NamedParameterAssignment
+NamedArgumentSyntax base=ArgumentSyntax kind=NamedArgument
 token dot
 token name
 token openParen
 ExpressionSyntax expr
 token closeParen
 
+ArgumentListSyntax kind=ArgumentList
+token openParen
+separated_list<ArgumentSyntax> parameters
+token closeParen
+
 ParameterValueAssignmentSyntax kind=ParameterValueAssignment
 token hash
-token openParen
-separated_list<ParameterAssignmentSyntax> parameters
-token closeParen
+ArgumentListSyntax parameters
 
 // ----- EXPRESSIONS -----
 
@@ -32,6 +35,32 @@ BinaryExpressionSyntax base=ExpressionSyntax
 ExpressionSyntax left
 token operatorToken
 ExpressionSyntax right
+
+MinTypMaxExpressionSyntax base=ExpressionSyntax kind=MinTypMaxExpression
+ExpressionSyntax min
+token colon1
+ExpressionSyntax typ
+token colon2
+ExpressionSyntax max
+
+// ----- SELECTORS -----
+SelectorSyntax final=false
+empty
+
+BitSelectSyntax base=SelectorSyntax kind=BitSelect
+ExpressionSyntax expr
+
+RangeSelectSyntax base=SelectorSyntax
+ExpressionSyntax left
+token range
+ExpressionSyntax right
+
+ElementSelectSyntax kind=ElementSelect
+token openBracket
+SelectorSyntax selector
+token closeBracket
+
+// ----- PRIMARY EXPRESSIONS -----
 
 PrimaryExpressionSyntax base=ExpressionSyntax
 empty
@@ -54,25 +83,9 @@ ExpressionSyntax expression
 ConcatenationExpressionSyntax concatenation
 token closeBrace
 
-SelectorSyntax final=false
-empty
-
-BitSelectSyntax base=SelectorSyntax kind=BitSelect
-ExpressionSyntax expr
-
-RangeSelectSyntax base=SelectorSyntax
-ExpressionSyntax left
-token range
-ExpressionSyntax right
-
-ElementSelectExpressionSyntax base=ExpressionSyntax kind=ElementSelectExpression
-token openBracket
-SelectorSyntax selector
-token closeBracket
-
 StreamExpressionWithRange kind=StreamExpressionWithRange
 token withKeyword
-ElementSelectExpressionSyntax range
+ElementSelectSyntax range
 
 StreamExpressionSyntax kind=StreamExpression
 ExpressionSyntax expression
@@ -92,12 +105,7 @@ token openParen
 ExpressionSyntax expression
 token closeParen
 
-MinTypMaxExpressionSyntax base=ExpressionSyntax kind=MinTypMaxExpression
-ExpressionSyntax min
-token colon1
-ExpressionSyntax typ
-token colon2
-ExpressionSyntax max
+// ----- NAMES -----
 
 NameSyntax base=ExpressionSyntax final=false
 empty
@@ -112,10 +120,25 @@ ClassNameSyntax base=NameSyntax kind=ClassName
 token identifier
 ParameterValueAssignmentSyntax parameters
 
-HierarchicalNameSyntax base=NameSyntax kind=HierarchicalName
+ScopedNameSyntax base=NameSyntax kind=ScopedName
 NameSyntax left
 token separator
 NameSyntax right
+
+// ----- POSTFIX EXPRESSIONS
+
+ElementSelectExpressionSyntax base=ExpressionSyntax kind=ElementSelectExpression
+ExpressionSyntax left
+ElementSelectSyntax select
+
+MemberAccessExpressionSyntax base=ExpressionSyntax kind=MemberAccessExpression
+ExpressionSyntax left
+token dot
+token name
+
+InvocationExpressionSyntax base=ExpressionSyntax kind=InvocationExpression
+ExpressionSyntax left
+ArgumentListSyntax arguments
 
 // ----- DIRECTIVES -----
 

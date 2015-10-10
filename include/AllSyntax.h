@@ -16,21 +16,21 @@ struct ExpressionSyntax : public SyntaxNode {
     }
 };
 
-// ----- INSTANTIATIONS -----
+// ----- ARGUMENTS -----
 
-struct ParameterAssignmentSyntax : public SyntaxNode {
+struct ArgumentSyntax : public SyntaxNode {
 
-    ParameterAssignmentSyntax(SyntaxKind kind) :
+    ArgumentSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
     {
     }
 };
 
-struct OrderedParameterAssignmentSyntax : public ParameterAssignmentSyntax {
+struct OrderedArgumentSyntax : public ArgumentSyntax {
     ExpressionSyntax* expr;
 
-    OrderedParameterAssignmentSyntax(ExpressionSyntax* expr) :
-        ParameterAssignmentSyntax(SyntaxKind::OrderedParameterAssignment), expr(expr)
+    OrderedArgumentSyntax(ExpressionSyntax* expr) :
+        ArgumentSyntax(SyntaxKind::OrderedArgument), expr(expr)
     {
         childCount += 1;
     }
@@ -44,15 +44,15 @@ protected:
     }
 };
 
-struct NamedParameterAssignmentSyntax : public ParameterAssignmentSyntax {
+struct NamedArgumentSyntax : public ArgumentSyntax {
     Token* dot;
     Token* name;
     Token* openParen;
     ExpressionSyntax* expr;
     Token* closeParen;
 
-    NamedParameterAssignmentSyntax(Token* dot, Token* name, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
-        ParameterAssignmentSyntax(SyntaxKind::NamedParameterAssignment), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
+    NamedArgumentSyntax(Token* dot, Token* name, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+        ArgumentSyntax(SyntaxKind::NamedArgument), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 5;
     }
@@ -70,25 +70,43 @@ protected:
     }
 };
 
-struct ParameterValueAssignmentSyntax : public SyntaxNode {
-    Token* hash;
+struct ArgumentListSyntax : public SyntaxNode {
     Token* openParen;
-    SeparatedSyntaxList<ParameterAssignmentSyntax> parameters;
+    SeparatedSyntaxList<ArgumentSyntax> parameters;
     Token* closeParen;
 
-    ParameterValueAssignmentSyntax(Token* hash, Token* openParen, SeparatedSyntaxList<ParameterAssignmentSyntax> parameters, Token* closeParen) :
-        SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), openParen(openParen), parameters(parameters), closeParen(closeParen)
+    ArgumentListSyntax(Token* openParen, SeparatedSyntaxList<ArgumentSyntax> parameters, Token* closeParen) :
+        SyntaxNode(SyntaxKind::ArgumentList), openParen(openParen), parameters(parameters), closeParen(closeParen)
     {
-        childCount += 4;
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return &parameters;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ParameterValueAssignmentSyntax : public SyntaxNode {
+    Token* hash;
+    ArgumentListSyntax* parameters;
+
+    ParameterValueAssignmentSyntax(Token* hash, ArgumentListSyntax* parameters) :
+        SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), parameters(parameters)
+    {
+        childCount += 2;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
         switch(index) {
             case 0: return hash;
-            case 1: return openParen;
-            case 2: return &parameters;
-            case 3: return closeParen;
+            case 1: return parameters;
             default: return nullptr;
         }
     }
@@ -137,6 +155,106 @@ protected:
         }
     }
 };
+
+struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* min;
+    Token* colon1;
+    ExpressionSyntax* typ;
+    Token* colon2;
+    ExpressionSyntax* max;
+
+    MinTypMaxExpressionSyntax(ExpressionSyntax* min, Token* colon1, ExpressionSyntax* typ, Token* colon2, ExpressionSyntax* max) :
+        ExpressionSyntax(SyntaxKind::MinTypMaxExpression), min(min), colon1(colon1), typ(typ), colon2(colon2), max(max)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return min;
+            case 1: return colon1;
+            case 2: return typ;
+            case 3: return colon2;
+            case 4: return max;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- SELECTORS -----
+
+struct SelectorSyntax : public SyntaxNode {
+
+    SelectorSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct BitSelectSyntax : public SelectorSyntax {
+    ExpressionSyntax* expr;
+
+    BitSelectSyntax(ExpressionSyntax* expr) :
+        SelectorSyntax(SyntaxKind::BitSelect), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct RangeSelectSyntax : public SelectorSyntax {
+    ExpressionSyntax* left;
+    Token* range;
+    ExpressionSyntax* right;
+
+    RangeSelectSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* range, ExpressionSyntax* right) :
+        SelectorSyntax(kind), left(left), range(range), right(right)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return range;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ElementSelectSyntax : public SyntaxNode {
+    Token* openBracket;
+    SelectorSyntax* selector;
+    Token* closeBracket;
+
+    ElementSelectSyntax(Token* openBracket, SelectorSyntax* selector, Token* closeBracket) :
+        SyntaxNode(SyntaxKind::ElementSelect), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return openBracket;
+            case 1: return selector;
+            case 2: return closeBracket;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- PRIMARY EXPRESSIONS -----
 
 struct PrimaryExpressionSyntax : public ExpressionSyntax {
 
@@ -230,81 +348,11 @@ protected:
     }
 };
 
-struct SelectorSyntax : public SyntaxNode {
-
-    SelectorSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {
-    }
-};
-
-struct BitSelectSyntax : public SelectorSyntax {
-    ExpressionSyntax* expr;
-
-    BitSelectSyntax(ExpressionSyntax* expr) :
-        SelectorSyntax(SyntaxKind::BitSelect), expr(expr)
-    {
-        childCount += 1;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
-        switch(index) {
-            case 0: return expr;
-            default: return nullptr;
-        }
-    }
-};
-
-struct RangeSelectSyntax : public SelectorSyntax {
-    ExpressionSyntax* left;
-    Token* range;
-    ExpressionSyntax* right;
-
-    RangeSelectSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* range, ExpressionSyntax* right) :
-        SelectorSyntax(kind), left(left), range(range), right(right)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
-        switch(index) {
-            case 0: return left;
-            case 1: return range;
-            case 2: return right;
-            default: return nullptr;
-        }
-    }
-};
-
-struct ElementSelectExpressionSyntax : public ExpressionSyntax {
-    Token* openBracket;
-    SelectorSyntax* selector;
-    Token* closeBracket;
-
-    ElementSelectExpressionSyntax(Token* openBracket, SelectorSyntax* selector, Token* closeBracket) :
-        ExpressionSyntax(SyntaxKind::ElementSelectExpression), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
-        switch(index) {
-            case 0: return openBracket;
-            case 1: return selector;
-            case 2: return closeBracket;
-            default: return nullptr;
-        }
-    }
-};
-
 struct StreamExpressionWithRange : public SyntaxNode {
     Token* withKeyword;
-    ElementSelectExpressionSyntax* range;
+    ElementSelectSyntax* range;
 
-    StreamExpressionWithRange(Token* withKeyword, ElementSelectExpressionSyntax* range) :
+    StreamExpressionWithRange(Token* withKeyword, ElementSelectSyntax* range) :
         SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), range(range)
     {
         childCount += 2;
@@ -392,31 +440,7 @@ protected:
     }
 };
 
-struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
-    ExpressionSyntax* min;
-    Token* colon1;
-    ExpressionSyntax* typ;
-    Token* colon2;
-    ExpressionSyntax* max;
-
-    MinTypMaxExpressionSyntax(ExpressionSyntax* min, Token* colon1, ExpressionSyntax* typ, Token* colon2, ExpressionSyntax* max) :
-        ExpressionSyntax(SyntaxKind::MinTypMaxExpression), min(min), colon1(colon1), typ(typ), colon2(colon2), max(max)
-    {
-        childCount += 5;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
-        switch(index) {
-            case 0: return min;
-            case 1: return colon1;
-            case 2: return typ;
-            case 3: return colon2;
-            case 4: return max;
-            default: return nullptr;
-        }
-    }
-};
+// ----- NAMES -----
 
 struct NameSyntax : public ExpressionSyntax {
 
@@ -482,13 +506,13 @@ protected:
     }
 };
 
-struct HierarchicalNameSyntax : public NameSyntax {
+struct ScopedNameSyntax : public NameSyntax {
     NameSyntax* left;
     Token* separator;
     NameSyntax* right;
 
-    HierarchicalNameSyntax(NameSyntax* left, Token* separator, NameSyntax* right) :
-        NameSyntax(SyntaxKind::HierarchicalName), left(left), separator(separator), right(right)
+    ScopedNameSyntax(NameSyntax* left, Token* separator, NameSyntax* right) :
+        NameSyntax(SyntaxKind::ScopedName), left(left), separator(separator), right(right)
     {
         childCount += 3;
     }
@@ -499,6 +523,70 @@ protected:
             case 0: return left;
             case 1: return separator;
             case 2: return right;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- POSTFIX EXPRESSIONS
+
+struct ElementSelectExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* left;
+    ElementSelectSyntax* select;
+
+    ElementSelectExpressionSyntax(ExpressionSyntax* left, ElementSelectSyntax* select) :
+        ExpressionSyntax(SyntaxKind::ElementSelectExpression), left(left), select(select)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return select;
+            default: return nullptr;
+        }
+    }
+};
+
+struct MemberAccessExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* left;
+    Token* dot;
+    Token* name;
+
+    MemberAccessExpressionSyntax(ExpressionSyntax* left, Token* dot, Token* name) :
+        ExpressionSyntax(SyntaxKind::MemberAccessExpression), left(left), dot(dot), name(name)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return dot;
+            case 2: return name;
+            default: return nullptr;
+        }
+    }
+};
+
+struct InvocationExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* left;
+    ArgumentListSyntax* arguments;
+
+    InvocationExpressionSyntax(ExpressionSyntax* left, ArgumentListSyntax* arguments) :
+        ExpressionSyntax(SyntaxKind::InvocationExpression), left(left), arguments(arguments)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return arguments;
             default: return nullptr;
         }
     }

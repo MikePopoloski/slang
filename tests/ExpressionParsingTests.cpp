@@ -151,27 +151,27 @@ TEST_CASE("Unary operators", "[parser:expressions]") {
     testPrefixUnary(TokenKind::DoubleMinus);
 }
 
-void testHierarchicalName(const SourceText& text) {
+void testScopedName(const SourceText& text) {
     auto expr = parse(text);
 
-    REQUIRE(expr->kind == SyntaxKind::HierarchicalName);
+    REQUIRE(expr->kind == SyntaxKind::ScopedName);
     CHECK(expr->toString() == text.begin());
     CHECK(diagnostics.empty());
 }
 
-TEST_CASE("Hierarchical identifiers", "[parser:expressions]") {
-    testHierarchicalName("$root.foo.bar");
-    testHierarchicalName("foo.bar");
-    testHierarchicalName("$unit::foo.bar");
-    testHierarchicalName("blah::foo.bar");
-    testHierarchicalName("local::foo.bar");
+TEST_CASE("Scoped identifiers", "[parser:expressions]") {
+    testScopedName("$unit::$root");
+    testScopedName("foo::bar");
+    testScopedName("$unit::foo::bar");
+    testScopedName("blah::foo::bar");
+    testScopedName("local::foo::bar");
 }
 
 TEST_CASE("Class scoped name", "[parser:expressions]") {
     auto& text = "blah::foo #(stuff, .thing(3+9))::bar";
     auto expr = parse(text);
 
-    REQUIRE(expr->kind == SyntaxKind::HierarchicalName);
+    REQUIRE(expr->kind == SyntaxKind::ScopedName);
     CHECK(expr->toFullString() == text);
     CHECK(diagnostics.empty());
 }
@@ -209,6 +209,33 @@ TEST_CASE("Streaming concatenation", "[parser:expressions]") {
 
     REQUIRE(expr->kind == SyntaxKind::StreamingConcatenationExpression);
     CHECK(((StreamingConcatenationExpressionSyntax*)expr)->expressions[1]->withRange->range->selector->kind == SyntaxKind::AscendingRangeSelect);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Element Access", "[parser:expressions]") {
+    auto& text = "foo[3][9+4]";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::ElementSelectExpression);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Member Access", "[parser:expressions]") {
+    auto& text = "foo.bar";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::MemberAccessExpression);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Invocation expression", "[parser:expressions]") {
+    auto& text = "foo.bar(5, 6, .param(9))";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::InvocationExpression);
     CHECK(expr->toFullString() == text);
     CHECK(diagnostics.empty());
 }

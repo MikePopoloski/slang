@@ -37,9 +37,10 @@ enum class SyntaxKind : uint16_t {
     MacroFormalArgument,
     MacroArgumentDefault,
 
-    // parameters
-    OrderedParameterAssignment,
-    NamedParameterAssignment,
+    // arguments
+    OrderedArgument,
+    NamedArgument,
+    ArgumentList,
     ParameterValueAssignment,
 
     // unary expressions
@@ -77,9 +78,12 @@ enum class SyntaxKind : uint16_t {
     SimpleRangeSelect,
     AscendingRangeSelect,
     DescendingRangeSelect,
+    ElementSelect,
 
     // postfix expressions
     ElementSelectExpression,
+    MemberAccessExpression,
+    InvocationExpression,
 
     // binary expressions
     AddExpression,
@@ -133,7 +137,7 @@ enum class SyntaxKind : uint16_t {
     RootScope,
     IdentifierName,
     ClassName,
-    HierarchicalName,
+    ScopedName,
     SystemName,
     ThisHandle,
     SuperHandle,
