@@ -1,7 +1,28 @@
-// ----- EXPRESSIONS -----
-
 ExpressionSyntax final=false
 empty
+
+// ----- INSTANTIATIONS -----
+
+ParameterAssignmentSyntax final=false
+empty
+
+OrderedParameterAssignmentSyntax base=ParameterAssignmentSyntax kind=OrderedParameterAssignment
+ExpressionSyntax expr
+
+NamedParameterAssignmentSyntax base=ParameterAssignmentSyntax kind=NamedParameterAssignment
+token dot
+token name
+token openParen
+ExpressionSyntax expr
+token closeParen
+
+ParameterValueAssignmentSyntax kind=ParameterValueAssignment
+token hash
+token openParen
+separated_list<ParameterAssignmentSyntax> parameters
+token closeParen
+
+// ----- EXPRESSIONS -----
 
 PrefixUnaryExpressionSyntax base=ExpressionSyntax
 token operatorToken
@@ -86,6 +107,10 @@ token identifier
 
 KeywordNameSyntax base=NameSyntax
 token keyword
+
+ClassNameSyntax base=NameSyntax kind=ClassName
+token identifier
+ParameterValueAssignmentSyntax parameters
 
 HierarchicalNameSyntax base=NameSyntax kind=HierarchicalName
 NameSyntax left

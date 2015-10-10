@@ -168,7 +168,12 @@ TEST_CASE("Hierarchical identifiers", "[parser:expressions]") {
 }
 
 TEST_CASE("Class scoped name", "[parser:expressions]") {
-    // TODO
+    auto& text = "blah::foo #(stuff, .thing(3+9))::bar";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::HierarchicalName);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Empty queue", "[parser:expressions]") {

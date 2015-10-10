@@ -37,6 +37,11 @@ enum class SyntaxKind : uint16_t {
     MacroFormalArgument,
     MacroArgumentDefault,
 
+    // parameters
+    OrderedParameterAssignment,
+    NamedParameterAssignment,
+    ParameterValueAssignment,
+
     // unary expressions
     UnaryPlusExpression,
     UnaryMinusExpression,
@@ -127,6 +132,7 @@ enum class SyntaxKind : uint16_t {
     ClassOrPackageScope,
     RootScope,
     IdentifierName,
+    ClassName,
     HierarchicalName,
     SystemName,
     ThisHandle,

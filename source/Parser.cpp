@@ -31,6 +31,37 @@ SyntaxNode* Parser::parse() {
     return parseExpression();
 }
 
+ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
+    auto hash = expect(TokenKind::Hash);
+    auto openParen = expect(TokenKind::OpenParenthesis);
+
+    auto buffer = tosPool.get();
+    while (!peek(TokenKind::CloseParenthesis)) {
+        if (!peek(TokenKind::Dot))
+            buffer.append(alloc.emplace<OrderedParameterAssignmentSyntax>(parseParamExpression())); 
+        else {
+            auto dot = consume();
+            auto name = expect(TokenKind::Identifier);
+            auto innerOpenParen = expect(TokenKind::OpenParenthesis);
+
+            ExpressionSyntax* expr = nullptr;
+            if (!peek(TokenKind::CloseParenthesis))
+                expr = parseParamExpression();
+
+            buffer.append(alloc.emplace<NamedParameterAssignmentSyntax>(dot, name, innerOpenParen, expr, expect(TokenKind::CloseParenthesis)));
+        }
+
+        // TODO: rework this for error handling
+        if (!peek(TokenKind::Comma))
+            break;
+
+        buffer.append(consume());
+    }
+
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return alloc.emplace<ParameterValueAssignmentSyntax>(hash, openParen, buffer.copy(alloc), closeParen);
+}
+
 ExpressionSyntax* Parser::parseExpression() {
     return parseSubExpression(0);
 }
@@ -46,6 +77,11 @@ ExpressionSyntax* Parser::parseMinTypMaxExpression() {
     auto max = parseSubExpression(0);
 
     return alloc.emplace<MinTypMaxExpressionSyntax>(first, colon1, typ, colon2, max);
+}
+
+ExpressionSyntax* Parser::parseParamExpression() {
+    // TODO: this could also be a data type
+    return parseExpression();
 }
 
 ExpressionSyntax* Parser::parseSubExpression(int precedence) {
@@ -303,7 +339,17 @@ NameSyntax* Parser::parseNameOrClassHandle() {
 }
 
 NameSyntax* Parser::parseHierarchicalName() {
-    auto left = parseSimpleName();
+    NameSyntax* left;
+    if (peek(TokenKind::RootSystemName))
+        left = alloc.emplace<KeywordNameSyntax>(SyntaxKind::RootScope, consume());
+    else {
+        auto identifier = expect(TokenKind::Identifier);
+        if (peek(TokenKind::Hash))
+            left = alloc.emplace<ClassNameSyntax>(identifier, parseParameterValueAssignment());
+        else
+            left = alloc.emplace<IdentifierNameSyntax>(identifier);
+    }
+
     switch (peek()->kind) {
         case TokenKind::DoubleColon: {
             // TODO: can't transition from dots back to double colon; error if we see that and pretend they used a dot
@@ -317,13 +363,6 @@ NameSyntax* Parser::parseHierarchicalName() {
         default:
             return left;
     }
-}
-
-NameSyntax* Parser::parseSimpleName() {
-    if (peek(TokenKind::RootSystemName))
-        return alloc.emplace<KeywordNameSyntax>(SyntaxKind::RootScope, consume());
-
-    return new IdentifierNameSyntax(expect(TokenKind::Identifier));
 }
 
 void Parser::addError(DiagCode code) {

@@ -35,6 +35,8 @@ namespace slang {
 			if len(p) != 2:
 				raise Exception("Two elements per member please.")
 			currtype.append(p)
+		elif line.startswith('forward '):
+			outf.write('struct {};\n'.format(line[8:]))
 		else:
 			p = line.split(' ')
 			currtype_name = p[0]

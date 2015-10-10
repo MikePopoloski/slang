@@ -8,8 +8,6 @@
 
 namespace slang {
 
-// ----- EXPRESSIONS -----
-
 struct ExpressionSyntax : public SyntaxNode {
 
     ExpressionSyntax(SyntaxKind kind) :
@@ -17,6 +15,86 @@ struct ExpressionSyntax : public SyntaxNode {
     {
     }
 };
+
+// ----- INSTANTIATIONS -----
+
+struct ParameterAssignmentSyntax : public SyntaxNode {
+
+    ParameterAssignmentSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct OrderedParameterAssignmentSyntax : public ParameterAssignmentSyntax {
+    ExpressionSyntax* expr;
+
+    OrderedParameterAssignmentSyntax(ExpressionSyntax* expr) :
+        ParameterAssignmentSyntax(SyntaxKind::OrderedParameterAssignment), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NamedParameterAssignmentSyntax : public ParameterAssignmentSyntax {
+    Token* dot;
+    Token* name;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
+
+    NamedParameterAssignmentSyntax(Token* dot, Token* name, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+        ParameterAssignmentSyntax(SyntaxKind::NamedParameterAssignment), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return dot;
+            case 1: return name;
+            case 2: return openParen;
+            case 3: return expr;
+            case 4: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ParameterValueAssignmentSyntax : public SyntaxNode {
+    Token* hash;
+    Token* openParen;
+    SeparatedSyntaxList<ParameterAssignmentSyntax> parameters;
+    Token* closeParen;
+
+    ParameterValueAssignmentSyntax(Token* hash, Token* openParen, SeparatedSyntaxList<ParameterAssignmentSyntax> parameters, Token* closeParen) :
+        SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), openParen(openParen), parameters(parameters), closeParen(closeParen)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return hash;
+            case 1: return openParen;
+            case 2: return &parameters;
+            case 3: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- EXPRESSIONS -----
 
 struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
     Token* operatorToken;
@@ -379,6 +457,26 @@ protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
         switch(index) {
             case 0: return keyword;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ClassNameSyntax : public NameSyntax {
+    Token* identifier;
+    ParameterValueAssignmentSyntax* parameters;
+
+    ClassNameSyntax(Token* identifier, ParameterValueAssignmentSyntax* parameters) :
+        NameSyntax(SyntaxKind::ClassName), identifier(identifier), parameters(parameters)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return identifier;
+            case 1: return parameters;
             default: return nullptr;
         }
     }

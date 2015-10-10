@@ -9,6 +9,7 @@ struct NameSyntax;
 struct ConcatenationExpressionSyntax;
 struct StreamExpressionSyntax;
 struct ElementSelectExpressionSyntax;
+struct ParameterValueAssignmentSyntax;
 
 class Parser {
 public:
@@ -21,6 +22,7 @@ private:
     ExpressionSyntax* parseMinTypMaxExpression();
     ExpressionSyntax* parseSubExpression(int precedence);
     ExpressionSyntax* parsePrimaryExpression();
+    ExpressionSyntax* parseParamExpression();
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
     SeparatedSyntaxList<StreamExpressionSyntax> parseStreamConcatenation();
@@ -28,7 +30,7 @@ private:
     ElementSelectExpressionSyntax* parseElementSelect();
     NameSyntax* parseNameOrClassHandle();
     NameSyntax* parseHierarchicalName();
-    NameSyntax* parseSimpleName();
+    ParameterValueAssignmentSyntax* parseParameterValueAssignment();
 
     Token* peek();
     Token* consume();
