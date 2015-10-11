@@ -84,6 +84,8 @@ enum class SyntaxKind : uint16_t {
     ElementSelectExpression,
     MemberAccessExpression,
     InvocationExpression,
+    PostincrementExpression,
+    PostdecrementExpression,
 
     // binary expressions
     AddExpression,
@@ -147,7 +149,8 @@ enum class SyntaxKind : uint16_t {
 
 enum class TokenKind : uint16_t;
 
-SyntaxKind getUnaryExpression(TokenKind kind);
+SyntaxKind getUnaryPrefixExpression(TokenKind kind);
+SyntaxKind getUnaryPostfixExpression(TokenKind kind);
 SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);

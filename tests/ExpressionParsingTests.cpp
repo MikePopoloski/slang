@@ -129,7 +129,7 @@ void testPrefixUnary(TokenKind kind) {
     auto text = getTokenKindText(kind).toString() + "a";
     auto expr = parse(text);
 
-    REQUIRE(expr->kind == getUnaryExpression(kind));
+    REQUIRE(expr->kind == getUnaryPrefixExpression(kind));
     CHECK(expr->toString() == text);
     CHECK(diagnostics.empty());
     auto us = (PrefixUnaryExpressionSyntax*)expr;
@@ -137,7 +137,7 @@ void testPrefixUnary(TokenKind kind) {
     CHECK(us->operand->kind == SyntaxKind::IdentifierName);
 }
 
-TEST_CASE("Unary operators", "[parser:expressions]") {
+TEST_CASE("Unary prefix operators", "[parser:expressions]") {
     testPrefixUnary(TokenKind::Plus);
     testPrefixUnary(TokenKind::Minus);
     testPrefixUnary(TokenKind::And);
@@ -151,8 +151,25 @@ TEST_CASE("Unary operators", "[parser:expressions]") {
     testPrefixUnary(TokenKind::DoubleMinus);
 }
 
+void testPostfixUnary(TokenKind kind) {
+    auto text = "a" + getTokenKindText(kind).toString();
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == getUnaryPostfixExpression(kind));
+    CHECK(expr->toString() == text);
+    CHECK(diagnostics.empty());
+    auto us = (PostfixUnaryExpressionSyntax*)expr;
+    CHECK(us->operatorToken->kind == kind);
+    CHECK(us->operand->kind == SyntaxKind::IdentifierName);
+}
+
+TEST_CASE("Unary postfix operators", "[parser:expressions]") {
+    testPostfixUnary(TokenKind::DoublePlus);
+    testPostfixUnary(TokenKind::DoubleMinus);
+}
+
 void testBinaryOperator(TokenKind kind) {
-    auto text = "3 " + getTokenKindText(kind).toString() + " 4";
+    auto text = "a " + getTokenKindText(kind).toString() + " 4";
     auto expr = parse(text);
 
     REQUIRE(expr->kind == getBinaryExpression(kind));
@@ -160,7 +177,7 @@ void testBinaryOperator(TokenKind kind) {
     CHECK(diagnostics.empty());
     auto us = (BinaryExpressionSyntax*)expr;
     CHECK(us->operatorToken->kind == kind);
-    CHECK(us->left->kind == SyntaxKind::IntegerLiteralExpression);
+    CHECK(us->left->kind == SyntaxKind::IdentifierName);
     CHECK(us->right->kind == SyntaxKind::IntegerLiteralExpression);
 }
 

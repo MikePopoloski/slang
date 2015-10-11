@@ -31,6 +31,10 @@ PrefixUnaryExpressionSyntax base=ExpressionSyntax
 token operatorToken
 ExpressionSyntax operand
 
+PostfixUnaryExpressionSyntax base=ExpressionSyntax
+ExpressionSyntax operand
+token operatorToken
+
 BinaryExpressionSyntax base=ExpressionSyntax
 ExpressionSyntax left
 token operatorToken

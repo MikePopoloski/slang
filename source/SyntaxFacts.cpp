@@ -10,7 +10,7 @@
 
 namespace slang {
 
-SyntaxKind getUnaryExpression(TokenKind kind) {
+SyntaxKind getUnaryPrefixExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::Plus: return SyntaxKind::UnaryPlusExpression;
         case TokenKind::Minus: return SyntaxKind::UnaryMinusExpression;
@@ -26,6 +26,14 @@ SyntaxKind getUnaryExpression(TokenKind kind) {
         case TokenKind::DoubleMinus: return SyntaxKind::UnaryPredecrementExpression;
         default:
             return SyntaxKind::Unknown;
+    }
+}
+
+SyntaxKind getUnaryPostfixExpression(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::DoublePlus: return SyntaxKind::PostincrementExpression;
+        case TokenKind::DoubleMinus: return SyntaxKind::PostdecrementExpression;
+        default: return SyntaxKind::Unknown;
     }
 }
 

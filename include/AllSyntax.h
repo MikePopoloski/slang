@@ -134,6 +134,26 @@ protected:
     }
 };
 
+struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* operand;
+    Token* operatorToken;
+
+    PostfixUnaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* operand, Token* operatorToken) :
+        ExpressionSyntax(kind), operand(operand), operatorToken(operatorToken)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return operand;
+            case 1: return operatorToken;
+            default: return nullptr;
+        }
+    }
+};
+
 struct BinaryExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* left;
     Token* operatorToken;

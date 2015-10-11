@@ -95,7 +95,7 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
         return alloc.emplace<TaggedUnionExpressionSyntax>(tagged, member, nullptr);
     }
 
-    SyntaxKind opKind = getUnaryExpression(current->kind);
+    SyntaxKind opKind = getUnaryPrefixExpression(current->kind);
     if (opKind != SyntaxKind::Unknown) {
         auto opToken = consume();
 
@@ -356,6 +356,12 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
             case TokenKind::OpenParenthesis:
                 expr = alloc.emplace<InvocationExpressionSyntax>(expr, parseArgumentList());
                 break;
+            case TokenKind::DoublePlus:
+                // can't have any other postfix expressions after inc/dec
+                return alloc.emplace<PostfixUnaryExpressionSyntax>(SyntaxKind::PostincrementExpression, expr, consume());
+            case TokenKind::DoubleMinus:
+                // can't have any other postfix expressions after inc/dec
+                return alloc.emplace<PostfixUnaryExpressionSyntax>(SyntaxKind::PostdecrementExpression, expr, consume());
             default:
                 return expr;
         }
