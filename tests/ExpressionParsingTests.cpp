@@ -151,6 +151,64 @@ TEST_CASE("Unary operators", "[parser:expressions]") {
     testPrefixUnary(TokenKind::DoubleMinus);
 }
 
+void testBinaryOperator(TokenKind kind) {
+    auto text = "3 " + getTokenKindText(kind).toString() + " 4";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == getBinaryExpression(kind));
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+    auto us = (BinaryExpressionSyntax*)expr;
+    CHECK(us->operatorToken->kind == kind);
+    CHECK(us->left->kind == SyntaxKind::IntegerLiteralExpression);
+    CHECK(us->right->kind == SyntaxKind::IntegerLiteralExpression);
+}
+
+TEST_CASE("Binary operators", "[parser:expression]") {
+    testBinaryOperator(TokenKind::Plus);
+    testBinaryOperator(TokenKind::Minus);
+    testBinaryOperator(TokenKind::Star);
+    testBinaryOperator(TokenKind::Slash);
+    testBinaryOperator(TokenKind::Percent);
+    testBinaryOperator(TokenKind::DoubleStar);
+    testBinaryOperator(TokenKind::DoubleEquals);
+    testBinaryOperator(TokenKind::ExclamationEquals);
+    testBinaryOperator(TokenKind::TripleEquals);
+    testBinaryOperator(TokenKind::ExclamationDoubleEquals);
+    testBinaryOperator(TokenKind::DoubleEqualsQuestion);
+    testBinaryOperator(TokenKind::ExclamationEqualsQuestion);
+    testBinaryOperator(TokenKind::DoubleAnd);
+    testBinaryOperator(TokenKind::DoubleOr);
+    testBinaryOperator(TokenKind::MinusArrow);
+    testBinaryOperator(TokenKind::LessThanMinusArrow);
+    testBinaryOperator(TokenKind::LessThan);
+    testBinaryOperator(TokenKind::LessThanEquals);
+    testBinaryOperator(TokenKind::GreaterThan);
+    testBinaryOperator(TokenKind::GreaterThanEquals);
+    testBinaryOperator(TokenKind::And);
+    testBinaryOperator(TokenKind::Or);
+    testBinaryOperator(TokenKind::Xor);
+    testBinaryOperator(TokenKind::XorTilde);
+    testBinaryOperator(TokenKind::TildeXor);
+    testBinaryOperator(TokenKind::RightShift);
+    testBinaryOperator(TokenKind::TripleRightShift);
+    testBinaryOperator(TokenKind::LeftShift);
+    testBinaryOperator(TokenKind::TripleLeftShift);
+    testBinaryOperator(TokenKind::Equals);
+    testBinaryOperator(TokenKind::PlusEqual);
+    testBinaryOperator(TokenKind::MinusEqual);
+    testBinaryOperator(TokenKind::StarEqual);
+    testBinaryOperator(TokenKind::SlashEqual);
+    testBinaryOperator(TokenKind::PercentEqual);
+    testBinaryOperator(TokenKind::AndEqual);
+    testBinaryOperator(TokenKind::OrEqual);
+    testBinaryOperator(TokenKind::XorEqual);
+    testBinaryOperator(TokenKind::LeftShiftEqual);
+    testBinaryOperator(TokenKind::TripleLeftShiftEqual);
+    testBinaryOperator(TokenKind::RightShiftEqual);
+    testBinaryOperator(TokenKind::TripleRightShiftEqual);
+}
+
 void testScopedName(const SourceText& text) {
     auto expr = parse(text);
 

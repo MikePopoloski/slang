@@ -73,12 +73,6 @@ SyntaxKind getBinaryExpression(TokenKind kind) {
         case TokenKind::LeftShift: return SyntaxKind::LogicalShiftLeftExpression;
         case TokenKind::TripleLeftShift: return SyntaxKind::ArithmeticShiftLeftExpression;
         case TokenKind::InsideKeyword: return SyntaxKind::InsideExpression;
-        default: return SyntaxKind::Unknown;
-    }
-}
-
-SyntaxKind getAssignmentExpression(TokenKind kind) {
-    switch (kind) {
         case TokenKind::Equals: return SyntaxKind::AssignmentExpression;
         case TokenKind::PlusEqual: return SyntaxKind::AddAssignmentExpression;
         case TokenKind::MinusEqual: return SyntaxKind::SubtractAssignmentExpression;
@@ -106,47 +100,61 @@ SyntaxKind getKeywordNameExpression(TokenKind kind) {
 
 int getPrecedence(SyntaxKind kind) {
     switch (kind) {
+        case SyntaxKind::AssignmentExpression:
+        case SyntaxKind::AddAssignmentExpression:
+        case SyntaxKind::SubtractAssignmentExpression:
+        case SyntaxKind::MultiplyAssignmentExpression:
+        case SyntaxKind::DivideAssignmentExpression:
+        case SyntaxKind::ModAssignmentExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::XorAssignmentExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            return 1;
         case SyntaxKind::LogicalImplicationExpression:
         case SyntaxKind::LogicalEquivalenceExpression:
-            return 1;
-        case SyntaxKind::LogicalOrExpression:
             return 2;
-        case SyntaxKind::LogicalAndExpression:
+        case SyntaxKind::LogicalOrExpression:
             return 3;
-        case SyntaxKind::BinaryOrExpression:
+        case SyntaxKind::LogicalAndExpression:
             return 4;
+        case SyntaxKind::BinaryOrExpression:
+            return 5;
         case SyntaxKind::BinaryXorExpression:
         case SyntaxKind::BinaryXnorExpression:
-            return 5;
-        case SyntaxKind::BinaryAndExpression:
             return 6;
+        case SyntaxKind::BinaryAndExpression:
+            return 7;
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
         case SyntaxKind::CaseEqualityExpression:
         case SyntaxKind::CaseInequalityExpression:
         case SyntaxKind::WildcardEqualityExpression:
         case SyntaxKind::WildcardInequalityExpression:
-            return 7;
+            return 8;
         case SyntaxKind::LessThanExpression:
         case SyntaxKind::LessThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::InsideExpression:
-            return 8;
+            return 9;
         case SyntaxKind::LogicalShiftLeftExpression:
         case SyntaxKind::LogicalShiftRightExpression:
         case SyntaxKind::ArithmeticShiftLeftExpression:
         case SyntaxKind::ArithmeticShiftRightExpression:
-            return 9;
+            return 10;
         case SyntaxKind::AddExpression:
         case SyntaxKind::SubtractExpression:
-            return 10;
+            return 11;
         case SyntaxKind::MultiplyExpression:
         case SyntaxKind::DivideExpression:
         case SyntaxKind::ModExpression:
-            return 11;
-        case SyntaxKind::PowerExpression:
             return 12;
+        case SyntaxKind::PowerExpression:
+            return 13;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::LogicalNotExpression:
@@ -159,7 +167,7 @@ int getPrecedence(SyntaxKind kind) {
         case SyntaxKind::UnaryBitwiseXnorExpression:
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            return 13;
+            return 14;
         default:
             return 0;
     }

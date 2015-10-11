@@ -150,7 +150,6 @@ enum class TokenKind : uint16_t;
 SyntaxKind getUnaryExpression(TokenKind kind);
 SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
-SyntaxKind getAssignmentExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
