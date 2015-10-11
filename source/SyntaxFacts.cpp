@@ -72,6 +72,7 @@ SyntaxKind getBinaryExpression(TokenKind kind) {
         case TokenKind::TripleRightShift: return SyntaxKind::ArithmeticShiftRightExpression;
         case TokenKind::LeftShift: return SyntaxKind::LogicalShiftLeftExpression;
         case TokenKind::TripleLeftShift: return SyntaxKind::ArithmeticShiftLeftExpression;
+        case TokenKind::InsideKeyword: return SyntaxKind::InsideExpression;
         default: return SyntaxKind::Unknown;
     }
 }
@@ -130,6 +131,7 @@ int getPrecedence(SyntaxKind kind) {
         case SyntaxKind::LessThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::GreaterThanEqualExpression:
+        case SyntaxKind::InsideExpression:
             return 8;
         case SyntaxKind::LogicalShiftLeftExpression:
         case SyntaxKind::LogicalShiftRightExpression:
@@ -268,6 +270,8 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(LogicalShiftRightExpression);
         CASE(ArithmeticShiftLeftExpression);
         CASE(ArithmeticShiftRightExpression);
+        CASE(TaggedUnionExpression);
+        CASE(InsideExpression);
         CASE(AssignmentExpression);
         CASE(AddAssignmentExpression);
         CASE(SubtractAssignmentExpression);

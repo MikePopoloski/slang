@@ -240,6 +240,24 @@ TEST_CASE("Invocation expression", "[parser:expressions]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Inside expression", "[parser:expressions]") {
+    auto& text = "34 inside { 34, [12:12], 19 }";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::InsideExpression);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Tagged union expression", "[parser:expressions]") {
+    auto& text = "tagged foo";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::TaggedUnionExpression);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
 // TODO: make this not stack overflow
 //TEST_CASE("Big expression", "[parser:expressions]") {
 //    auto& text =

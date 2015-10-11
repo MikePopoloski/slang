@@ -88,6 +88,13 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
     int newPrecedence = 0;
 
     auto current = peek();
+    if (current->kind == TokenKind::TaggedKeyword) {
+        // TODO: check for trailing expression
+        auto tagged = consume();
+        auto member = expect(TokenKind::Identifier);
+        return alloc.emplace<TaggedUnionExpressionSyntax>(tagged, member, nullptr);
+    }
+
     SyntaxKind opKind = getUnaryExpression(current->kind);
     if (opKind != SyntaxKind::Unknown) {
         auto opToken = consume();
@@ -118,10 +125,13 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
             break;
 
         // take the operator
-        auto opToken = consume();
-
-        auto rightOperand = parseSubExpression(newPrecedence);
-        leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, rightOperand);
+        if (opKind == SyntaxKind::InsideExpression)
+            leftOperand = parseInsideExpression(leftOperand);
+        else {
+            auto opToken = consume();
+            auto rightOperand = parseSubExpression(newPrecedence);
+            leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, rightOperand);
+        }
     }
 
     // see if we have a conditional operator we want to take
@@ -237,6 +247,28 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
     return parsePostfixExpression(expr);
 }
 
+ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
+    auto inside = expect(TokenKind::InsideKeyword);
+    auto openBrace = expect(TokenKind::OpenBrace);
+
+    auto buffer = tosPool.get();
+    while (!peek(TokenKind::CloseParenthesis)) {
+        if (!peek(TokenKind::OpenBracket))
+            buffer.append(parseExpression());
+        else
+            buffer.append(parseElementSelect());
+
+        // TODO: rework this for error handling
+        if (!peek(TokenKind::Comma))
+            break;
+
+        buffer.append(consume());
+    }
+
+    auto closeBrace = expect(TokenKind::CloseBrace);
+    return alloc.emplace<InsideExpressionSyntax>(expr, inside, openBrace, buffer.copy(alloc), closeBrace);
+}
+
 ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, ExpressionSyntax* first) {
     auto buffer = tosPool.get();
     if (first)
@@ -319,7 +351,11 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
                 auto dot = consume();
                 auto name = expect(TokenKind::Identifier);
                 expr = alloc.emplace<MemberAccessExpressionSyntax>(expr, dot, name);
+                break;
             }
+            case TokenKind::OpenParenthesis:
+                expr = alloc.emplace<InvocationExpressionSyntax>(expr, parseArgumentList());
+                break;
             default:
                 return expr;
         }

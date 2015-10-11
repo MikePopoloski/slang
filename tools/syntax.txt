@@ -43,6 +43,18 @@ ExpressionSyntax typ
 token colon2
 ExpressionSyntax max
 
+TaggedUnionExpressionSyntax base=ExpressionSyntax kind=TaggedUnionExpression
+token tagged
+token member
+ExpressionSyntax expr
+
+InsideExpressionSyntax base=ExpressionSyntax kind=InsideExpression
+ExpressionSyntax expr
+token inside
+token openBrace
+separated_list<ExpressionSyntax> valueRanges
+token closeBrace
+
 // ----- SELECTORS -----
 SelectorSyntax final=false
 empty
@@ -55,7 +67,7 @@ ExpressionSyntax left
 token range
 ExpressionSyntax right
 
-ElementSelectSyntax kind=ElementSelect
+ElementSelectSyntax base=ExpressionSyntax kind=ElementSelect
 token openBracket
 SelectorSyntax selector
 token closeBracket

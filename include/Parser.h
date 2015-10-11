@@ -23,6 +23,7 @@ private:
     ExpressionSyntax* parseSubExpression(int precedence);
     ExpressionSyntax* parsePrimaryExpression();
     ExpressionSyntax* parseParamExpression();
+    ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
     SeparatedSyntaxList<StreamExpressionSyntax> parseStreamConcatenation();

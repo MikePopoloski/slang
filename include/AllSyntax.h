@@ -182,6 +182,54 @@ protected:
     }
 };
 
+struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
+    Token* tagged;
+    Token* member;
+    ExpressionSyntax* expr;
+
+    TaggedUnionExpressionSyntax(Token* tagged, Token* member, ExpressionSyntax* expr) :
+        ExpressionSyntax(SyntaxKind::TaggedUnionExpression), tagged(tagged), member(member), expr(expr)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return tagged;
+            case 1: return member;
+            case 2: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct InsideExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* expr;
+    Token* inside;
+    Token* openBrace;
+    SeparatedSyntaxList<ExpressionSyntax> valueRanges;
+    Token* closeBrace;
+
+    InsideExpressionSyntax(ExpressionSyntax* expr, Token* inside, Token* openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token* closeBrace) :
+        ExpressionSyntax(SyntaxKind::InsideExpression), expr(expr), inside(inside), openBrace(openBrace), valueRanges(valueRanges), closeBrace(closeBrace)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch(index) {
+            case 0: return expr;
+            case 1: return inside;
+            case 2: return openBrace;
+            case 3: return &valueRanges;
+            case 4: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- SELECTORS -----
 
 struct SelectorSyntax : public SyntaxNode {
@@ -232,13 +280,13 @@ protected:
     }
 };
 
-struct ElementSelectSyntax : public SyntaxNode {
+struct ElementSelectSyntax : public ExpressionSyntax {
     Token* openBracket;
     SelectorSyntax* selector;
     Token* closeBracket;
 
     ElementSelectSyntax(Token* openBracket, SelectorSyntax* selector, Token* closeBracket) :
-        SyntaxNode(SyntaxKind::ElementSelect), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
+        ExpressionSyntax(SyntaxKind::ElementSelect), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
     {
         childCount += 3;
     }

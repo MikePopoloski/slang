@@ -114,6 +114,8 @@ enum class SyntaxKind : uint16_t {
     LogicalShiftRightExpression,
     ArithmeticShiftLeftExpression,
     ArithmeticShiftRightExpression,
+    TaggedUnionExpression,
+    InsideExpression,
 
     // assignment expressions
     AssignmentExpression,
