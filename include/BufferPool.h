@@ -25,6 +25,9 @@ public:
         void append(const T& item) { buffer->append(item); }
         void appendRange(const T* begin, const T* end) { buffer->appendRange(begin, end); }
 
+        template<typename Container>
+        void appendRange(const Container& container) { buffer->appendRange(container); }
+
         template<typename... Args>
         void emplace(Args&&... args) { buffer->emplace<Args...>(std::forward<Args>(args)...); }
 

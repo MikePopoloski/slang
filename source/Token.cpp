@@ -13,11 +13,14 @@ Token::Token(TokenKind kind, ArrayRef<Trivia> trivia, uint8_t flags) :
     kind(kind), trivia(trivia), flags(flags) {
 }
 
-void Token::writeTo(Buffer<char>& buffer, bool includeTrivia) const {
+void Token::writeTo(Buffer<char>& buffer, bool includeTrivia, bool includeMissing) const {
     if (includeTrivia) {
         for (const auto& t : trivia)
             t.writeTo(buffer);
     }
+
+    if (!includeMissing && isMissing())
+        return;
 
     StringRef text = getTokenKindText(kind);
     if (text)

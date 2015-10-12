@@ -53,6 +53,7 @@ public:
     const T* end() const { return data + len; }
     const T* cbegin() const { return data; }
     const T* cend() const { return data + len; }
+    const T& last() const { return data[len]; }
 
     uint32_t count() const { return len; }
     bool empty() const { return len == 0; }
@@ -60,6 +61,12 @@ public:
     void clear() {
         destructElements();
         len = 0;
+    }
+
+    void pop() {
+        ASSERT(len);
+        len--;
+        data[len].~T();
     }
 
     void append(const T& item) {

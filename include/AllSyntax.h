@@ -36,7 +36,7 @@ struct OrderedArgumentSyntax : public ArgumentSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return expr;
             default: return nullptr;
@@ -58,7 +58,7 @@ struct NamedArgumentSyntax : public ArgumentSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return dot;
             case 1: return name;
@@ -82,7 +82,7 @@ struct ArgumentListSyntax : public SyntaxNode {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return openParen;
             case 1: return &parameters;
@@ -103,7 +103,7 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return hash;
             case 1: return parameters;
@@ -125,7 +125,7 @@ struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return operatorToken;
             case 1: return operand;
@@ -145,7 +145,7 @@ struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return operand;
             case 1: return operatorToken;
@@ -166,7 +166,7 @@ struct BinaryExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return left;
             case 1: return operatorToken;
@@ -190,7 +190,7 @@ struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return min;
             case 1: return colon1;
@@ -214,7 +214,7 @@ struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return tagged;
             case 1: return member;
@@ -238,7 +238,7 @@ struct InsideExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return expr;
             case 1: return inside;
@@ -270,7 +270,7 @@ struct BitSelectSyntax : public SelectorSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return expr;
             default: return nullptr;
@@ -290,7 +290,7 @@ struct RangeSelectSyntax : public SelectorSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return left;
             case 1: return range;
@@ -312,7 +312,7 @@ struct ElementSelectSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return openBracket;
             case 1: return selector;
@@ -342,7 +342,7 @@ struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return literal;
             default: return nullptr;
@@ -361,7 +361,7 @@ struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return openBrace;
             case 1: return closeBrace;
@@ -382,7 +382,7 @@ struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return openBrace;
             case 1: return &expressions;
@@ -405,7 +405,7 @@ struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return openBrace;
             case 1: return expression;
@@ -427,7 +427,7 @@ struct StreamExpressionWithRange : public SyntaxNode {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return withKeyword;
             case 1: return range;
@@ -447,7 +447,7 @@ struct StreamExpressionSyntax : public SyntaxNode {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return expression;
             case 1: return withRange;
@@ -472,7 +472,7 @@ struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return openBrace;
             case 1: return operatorToken;
@@ -498,7 +498,7 @@ struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return openParen;
             case 1: return expression;
@@ -528,7 +528,7 @@ struct IdentifierNameSyntax : public NameSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return identifier;
             default: return nullptr;
@@ -546,7 +546,7 @@ struct KeywordNameSyntax : public NameSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return keyword;
             default: return nullptr;
@@ -565,7 +565,7 @@ struct ClassNameSyntax : public NameSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return identifier;
             case 1: return parameters;
@@ -586,7 +586,7 @@ struct ScopedNameSyntax : public NameSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return left;
             case 1: return separator;
@@ -609,7 +609,7 @@ struct ElementSelectExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return left;
             case 1: return select;
@@ -630,7 +630,7 @@ struct MemberAccessExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return left;
             case 1: return dot;
@@ -651,7 +651,7 @@ struct InvocationExpressionSyntax : public ExpressionSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return left;
             case 1: return arguments;
@@ -673,7 +673,7 @@ struct DirectiveSyntax : public SyntaxNode {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override {
+    TokenOrSyntax getChild(uint32_t index) override {
         switch(index) {
             case 0: return directive;
             case 1: return endOfDirective;
@@ -692,7 +692,7 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return directive;
             case 1: return endOfDirective;
@@ -713,7 +713,7 @@ struct MacroArgumentDefaultSyntax : public SyntaxNode {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return equals;
             case 1: return &tokens;
@@ -733,7 +733,7 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return name;
             case 1: return defaultValue;
@@ -754,7 +754,7 @@ struct MacroFormalArgumentListSyntax : public SyntaxNode {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return openParen;
             case 1: return &args;
@@ -776,7 +776,7 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return directive;
             case 1: return endOfDirective;

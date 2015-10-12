@@ -76,7 +76,7 @@ public:
     std::string toFullString() const;
 
     // copy string representation to the given buffer
-    void writeTo(Buffer<char>& buffer, bool includeTrivia) const;
+    void writeTo(Buffer<char>& buffer, bool includeTrivia, bool includeMissing = false) const;
 
     // data accessors for specific kinds of tokens
     // these will generally assert if the kind is wrong

@@ -333,6 +333,15 @@ TEST_CASE("Tagged union expression", "[parser:expressions]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Bad argument recovery", "[parser:expressions]") {
+    auto& text = "foo(]], 3 4,)";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::InvocationExpression);
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty()); // TODO: at some point this test should fail
+}
+
 // TODO: make this not stack overflow
 //TEST_CASE("Big expression", "[parser:expressions]") {
 //    auto& text =

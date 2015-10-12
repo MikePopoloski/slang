@@ -156,35 +156,38 @@ SyntaxKind getBinaryExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
+bool isPossibleExpression(TokenKind kind);
 
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 
 // discriminated union of Token and SyntaxNode
 struct TokenOrSyntax {
     union {
-        const Token* token;
-        const SyntaxNode* node;
+        Token* token;
+        SyntaxNode* node;
     };
     bool isToken;
 
-    TokenOrSyntax(const Token* token) : token(token), isToken(true) {}
-    TokenOrSyntax(const SyntaxNode* node) : node(node), isToken(false) {}
+    TokenOrSyntax(Token* token) : token(token), isToken(true) {}
+    TokenOrSyntax(SyntaxNode* node) : node(node), isToken(false) {}
     TokenOrSyntax(std::nullptr_t) : token(nullptr), isToken(true) {}
 };
 
 // base class for all syntax nodes
 class SyntaxNode {
 public:
+    uint32_t childCount = 0;
     SyntaxKind kind;
 
     SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
     // convenience methods that wrap writeTo
     // toFullString() includes trivia, toString() does not
-    std::string toString() const;
-    std::string toFullString() const;
+    std::string toString();
+    std::string toFullString();
 
-    void writeTo(Buffer<char>& buffer, bool includeTrivia) const;
+    void writeTo(Buffer<char>& buffer, bool includeTrivia, bool includeMissing = false);
+    Token* getFirstToken();
 
     template<typename T>
     T* as() {
@@ -192,11 +195,7 @@ public:
         return static_cast<T*>(this);
     }
 
-    int getChildCount() const { return childCount; }
-
-protected:
-    uint32_t childCount = 0;
-    virtual TokenOrSyntax getChild(uint32_t) const;
+    virtual TokenOrSyntax getChild(uint32_t);
 };
 
 template<typename T>
@@ -217,7 +216,7 @@ public:
     const T* operator[](uint32_t index) const { return elements[index]; }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+    TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
 
 private:
     ArrayRef<T*> elements;
@@ -240,7 +239,7 @@ public:
     const Token* operator[](uint32_t index) const { return elements[index]; }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+    TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
 
 private:
     ArrayRef<Token*> elements;
@@ -265,7 +264,7 @@ public:
     }
 
 protected:
-    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+    TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
 
 private:
     ArrayRef<TokenOrSyntax> elements;

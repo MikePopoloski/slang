@@ -10,6 +10,7 @@ struct ConcatenationExpressionSyntax;
 struct StreamExpressionSyntax;
 struct ElementSelectSyntax;
 struct ArgumentListSyntax;
+struct ArgumentSyntax;
 
 class Parser {
 public:
@@ -19,10 +20,14 @@ public:
     ExpressionSyntax* parseExpression();
 
 private:
+    enum class SkipAction {
+        Continue,
+        Abort
+    };
+    
     ExpressionSyntax* parseMinTypMaxExpression();
     ExpressionSyntax* parseSubExpression(int precedence);
     ExpressionSyntax* parsePrimaryExpression();
-    ExpressionSyntax* parseParamExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
@@ -32,6 +37,15 @@ private:
     NameSyntax* parseNameOrClassHandle();
     NameSyntax* parseScopedName();
     ArgumentListSyntax* parseArgumentList();
+    ArgumentSyntax* parseArgument();
+
+    SkipAction skipBadArgumentListTokens(Trivia* skippedTokens);
+
+    template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
+    SkipAction skipBadTokens(Trivia* skippedTokens);
+
+    SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
+    Token* prependTrivia(Token* token, Trivia* trivia);
 
     Token* peek();
     Token* consume();
@@ -44,6 +58,8 @@ private:
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
     Token* currentToken;
+    BufferPool<Trivia> triviaPool;
+    BufferPool<Token*> tokenPool;
     BufferPool<SyntaxNode*> nodePool;
     BufferPool<TokenOrSyntax> tosPool;
 };

@@ -18,6 +18,27 @@
 #include "Parser.h"
 #include "AllSyntax.h"
 
+namespace {
+
+using namespace slang;
+
+bool isPossibleArgument(TokenKind kind) {
+    // allow a comma here to handle cases like:  foo(, 3);
+    switch (kind) {
+        case TokenKind::Dot:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
+}
+
+bool isEndOfArgumentList(TokenKind kind) {
+    return kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
+}
+
+}
+
 namespace slang {
 
 Parser::Parser(Lexer& lexer) :
@@ -29,36 +50,6 @@ Parser::Parser(Lexer& lexer) :
 
 SyntaxNode* Parser::parse() {
     return parseExpression();
-}
-
-ArgumentListSyntax* Parser::parseArgumentList() {
-    auto openParen = expect(TokenKind::OpenParenthesis);
-
-    auto buffer = tosPool.get();
-    while (!peek(TokenKind::CloseParenthesis)) {
-        if (!peek(TokenKind::Dot))
-            buffer.append(alloc.emplace<OrderedArgumentSyntax>(parseParamExpression())); 
-        else {
-            auto dot = consume();
-            auto name = expect(TokenKind::Identifier);
-            auto innerOpenParen = expect(TokenKind::OpenParenthesis);
-
-            ExpressionSyntax* expr = nullptr;
-            if (!peek(TokenKind::CloseParenthesis))
-                expr = parseParamExpression();
-
-            buffer.append(alloc.emplace<NamedArgumentSyntax>(dot, name, innerOpenParen, expr, expect(TokenKind::CloseParenthesis)));
-        }
-
-        // TODO: rework this for error handling
-        if (!peek(TokenKind::Comma))
-            break;
-
-        buffer.append(consume());
-    }
-
-    auto closeParen = expect(TokenKind::CloseParenthesis);
-    return alloc.emplace<ArgumentListSyntax>(openParen, buffer.copy(alloc), closeParen);
 }
 
 ExpressionSyntax* Parser::parseExpression() {
@@ -76,11 +67,6 @@ ExpressionSyntax* Parser::parseMinTypMaxExpression() {
     auto max = parseSubExpression(0);
 
     return alloc.emplace<MinTypMaxExpressionSyntax>(first, colon1, typ, colon2, max);
-}
-
-ExpressionSyntax* Parser::parseParamExpression() {
-    // TODO: this could also be a data type
-    return parseExpression();
 }
 
 ExpressionSyntax* Parser::parseSubExpression(int precedence) {
@@ -232,10 +218,6 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             expr = parseNameOrClassHandle();
             if (expr)
                 break;
-
-            // TODO: explicitly check for misplaced :: to give a better error
-            if (kind == TokenKind::DoubleColon) {
-            }
 
             // TODO: error
             auto missing = Token::missing(alloc, TokenKind::Identifier);
@@ -410,6 +392,105 @@ NameSyntax* Parser::parseScopedName() {
     
     auto doubleColon = consume();
     return alloc.emplace<ScopedNameSyntax>(left, doubleColon, parseScopedName());
+}
+
+ArgumentListSyntax* Parser::parseArgumentList() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto buffer = tosPool.get();
+    auto current = peek();
+
+    Trivia skippedTokens;
+
+    // we check against semicolon for cases where there is a missing close paren:  foo(3, 4;
+    if (current->kind != TokenKind::CloseParenthesis && current->kind != TokenKind::Semicolon) {
+        while (true) {
+            if (isPossibleArgument(current->kind)) {
+                buffer.append(prependTrivia(parseArgument(), &skippedTokens));
+                while (true) {
+                    current = peek();
+                    if (current->kind == TokenKind::CloseParenthesis || current->kind == TokenKind::Semicolon)
+                        break;
+
+                    if (isPossibleArgument(current->kind)) {
+                        buffer.append(prependTrivia(expect(TokenKind::Comma), &skippedTokens));
+                        buffer.append(parseArgument());
+                        continue;
+                    }
+
+                    if (skipBadArgumentListTokens(&skippedTokens) == SkipAction::Abort)
+                        break;
+                }
+                // done with arguments
+                break;
+            }
+            else if (skipBadArgumentListTokens(&skippedTokens) == SkipAction::Abort)
+                break;
+            else
+                current = peek();
+        }
+    }
+
+    auto closeParen = prependTrivia(expect(TokenKind::CloseParenthesis), &skippedTokens);
+    return alloc.emplace<ArgumentListSyntax>(openParen, buffer.copy(alloc), closeParen);
+}
+
+ArgumentSyntax* Parser::parseArgument() {
+    // check for named arguments
+    if (peek(TokenKind::Dot)) {
+        auto dot = consume();
+        auto name = expect(TokenKind::Identifier);
+        auto innerOpenParen = expect(TokenKind::OpenParenthesis);
+
+        ExpressionSyntax* expr = nullptr;
+        if (!peek(TokenKind::CloseParenthesis))
+            expr = parseExpression();
+
+        return alloc.emplace<NamedArgumentSyntax>(dot, name, innerOpenParen, expr, expect(TokenKind::CloseParenthesis));
+    }
+
+    return alloc.emplace<OrderedArgumentSyntax>(parseExpression());
+}
+
+Parser::SkipAction Parser::skipBadArgumentListTokens(Trivia* skippedTokens) {
+    return skipBadTokens<isPossibleArgument, isEndOfArgumentList>(skippedTokens);
+}
+
+template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
+Parser::SkipAction Parser::skipBadTokens(Trivia* skippedTokens) {
+    auto tokens = tokenPool.get();
+    auto result = SkipAction::Continue;
+    while (!IsExpected(peek()->kind)) {
+        if (IsAbort(peek()->kind)) {
+            result = SkipAction::Abort;
+            break;
+        }
+        tokens.append(consume());
+    }
+
+    if (tokens.empty())
+        *skippedTokens = Trivia();
+    else
+        *skippedTokens = Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc));
+
+    return result;
+}
+
+SyntaxNode* Parser::prependTrivia(SyntaxNode* node, Trivia* trivia) {
+    if (trivia->kind != TriviaKind::Unknown && node)
+        prependTrivia(node->getFirstToken(), trivia);
+    return node;
+}
+
+Token* Parser::prependTrivia(Token* token, Trivia* trivia) {
+    if (trivia->kind != TriviaKind::Unknown && token) {
+        auto buffer = triviaPool.get();
+        buffer.append(*trivia);
+        buffer.appendRange(token->trivia);
+        token->trivia = buffer.copy(alloc);
+
+        *trivia = Trivia();
+    }
+    return token;
 }
 
 void Parser::addError(DiagCode code) {

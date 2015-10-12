@@ -191,6 +191,41 @@ bool isRightAssociative(SyntaxKind kind) {
     }
 }
 
+bool isPossibleExpression(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::TaggedKeyword:
+        case TokenKind::StringLiteral:
+        case TokenKind::IntegerLiteral:
+        case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
+        case TokenKind::NullKeyword:
+        case TokenKind::Dollar:
+        case TokenKind::SystemIdentifier:
+        case TokenKind::LocalKeyword:
+        case TokenKind::OpenParenthesis:
+        case TokenKind::OpenBrace:
+        case TokenKind::UnitSystemName:
+        case TokenKind::ThisKeyword:
+        case TokenKind::SuperKeyword:
+        case TokenKind::DoubleColon:
+        case TokenKind::Identifier:
+        case TokenKind::RootSystemName:
+        case TokenKind::Hash:
+            return true;
+        default: break;
+    }
+
+    SyntaxKind opKind = getUnaryPrefixExpression(kind);
+    if (opKind != SyntaxKind::Unknown)
+        return true;
+
+    opKind = getBinaryExpression(kind);
+    if (opKind != SyntaxKind::Unknown)
+        return true;
+
+    return false;
+}
+
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
 #define CASE(name) case SyntaxKind::name: os << #name; break
     switch (kind) {

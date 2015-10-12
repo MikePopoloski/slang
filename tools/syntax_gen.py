@@ -115,7 +115,7 @@ def generate(outf, name, tags, members, alltypes):
 		outf.write('        childCount += {};\n'.format(len(members)))
 		outf.write('    }\n')
 		outf.write('\nprotected:\n')
-		outf.write('    TokenOrSyntax getChild(uint32_t index) const override{} {{\n'.format(final))
+		outf.write('    TokenOrSyntax getChild(uint32_t index) override{} {{\n'.format(final))
 		outf.write('        switch(index) {\n')
 
 		index = 0
