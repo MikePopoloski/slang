@@ -39,7 +39,15 @@ private:
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
 
-    SkipAction skipBadArgumentListTokens(Trivia* skippedTokens);
+    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
+    void parseCommaSeparatedList(
+        TokenKind openKind,
+        TokenKind closeKind,
+        Token*& openToken,
+        ArrayRef<TokenOrSyntax>& list,
+        Token*& closeToken,
+        TParserFunc&& parseItem
+    );
 
     template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
     SkipAction skipBadTokens(Trivia* skippedTokens);

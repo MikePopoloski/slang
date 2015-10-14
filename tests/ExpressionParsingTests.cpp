@@ -297,6 +297,20 @@ TEST_CASE("Element Access", "[parser:expressions]") {
     CHECK(diagnostics.empty());
 }
 
+void testElementRange(const SourceText& text, SyntaxKind kind) {
+    auto expr = parse(text);
+    REQUIRE(expr->kind == SyntaxKind::ElementSelectExpression);
+    CHECK(((ElementSelectExpressionSyntax*)expr)->select->selector->kind == kind);
+    CHECK(expr->toFullString() == text.begin());
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Element range", "[parser:expressions]") {
+    testElementRange("foo[3:4]", SyntaxKind::SimpleRangeSelect);
+    testElementRange("foo[3+:4]", SyntaxKind::AscendingRangeSelect);
+    testElementRange("foo[3-:4]", SyntaxKind::DescendingRangeSelect);
+}
+
 TEST_CASE("Member Access", "[parser:expressions]") {
     auto& text = "foo.bar";
     auto expr = parse(text);

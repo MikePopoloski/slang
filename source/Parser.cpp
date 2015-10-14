@@ -267,6 +267,8 @@ ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, Expr
     return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
 }
 
+
+
 SeparatedSyntaxList<StreamExpressionSyntax> Parser::parseStreamConcatenation() {
     auto buffer = tosPool.get();
 
@@ -395,43 +397,20 @@ NameSyntax* Parser::parseScopedName() {
 }
 
 ArgumentListSyntax* Parser::parseArgumentList() {
-    auto openParen = expect(TokenKind::OpenParenthesis);
-    auto buffer = tosPool.get();
-    auto current = peek();
+    Token* openParen;
+    Token* closeParen;
+    ArrayRef<TokenOrSyntax> list = nullptr;
 
-    Trivia skippedTokens;
+    parseCommaSeparatedList<isPossibleArgument, isEndOfArgumentList>(
+        TokenKind::OpenParenthesis,
+        TokenKind::CloseParenthesis,
+        openParen,
+        list,
+        closeParen,
+        &Parser::parseArgument
+    );
 
-    // we check against semicolon for cases where there is a missing close paren:  foo(3, 4;
-    if (current->kind != TokenKind::CloseParenthesis && current->kind != TokenKind::Semicolon) {
-        while (true) {
-            if (isPossibleArgument(current->kind)) {
-                buffer.append(prependTrivia(parseArgument(), &skippedTokens));
-                while (true) {
-                    current = peek();
-                    if (current->kind == TokenKind::CloseParenthesis || current->kind == TokenKind::Semicolon)
-                        break;
-
-                    if (isPossibleArgument(current->kind)) {
-                        buffer.append(prependTrivia(expect(TokenKind::Comma), &skippedTokens));
-                        buffer.append(parseArgument());
-                        continue;
-                    }
-
-                    if (skipBadArgumentListTokens(&skippedTokens) == SkipAction::Abort)
-                        break;
-                }
-                // done with arguments
-                break;
-            }
-            else if (skipBadArgumentListTokens(&skippedTokens) == SkipAction::Abort)
-                break;
-            else
-                current = peek();
-        }
-    }
-
-    auto closeParen = prependTrivia(expect(TokenKind::CloseParenthesis), &skippedTokens);
-    return alloc.emplace<ArgumentListSyntax>(openParen, buffer.copy(alloc), closeParen);
+    return alloc.emplace<ArgumentListSyntax>(openParen, list, closeParen);
 }
 
 ArgumentSyntax* Parser::parseArgument() {
@@ -451,8 +430,51 @@ ArgumentSyntax* Parser::parseArgument() {
     return alloc.emplace<OrderedArgumentSyntax>(parseExpression());
 }
 
-Parser::SkipAction Parser::skipBadArgumentListTokens(Trivia* skippedTokens) {
-    return skipBadTokens<isPossibleArgument, isEndOfArgumentList>(skippedTokens);
+// this is a generalized method for parsing a comma separated list of things
+// with bookend tokens in a way that robustly handles bad tokens
+template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
+void Parser::parseCommaSeparatedList(
+    TokenKind openKind,
+    TokenKind closeKind,
+    Token*& openToken,
+    ArrayRef<TokenOrSyntax>& list,
+    Token*& closeToken,
+    TParserFunc&& parseItem
+    ) {
+    Trivia skippedTokens;
+    openToken = expect(openKind);
+
+    auto buffer = tosPool.get();
+    auto current = peek();
+    if (!IsEnd(current->kind)) {
+        while (true) {
+            if (IsExpected(current->kind)) {
+                buffer.append(prependTrivia((this->*parseItem)(), &skippedTokens));
+                while (true) {
+                    current = peek();
+                    if (IsEnd(current->kind))
+                        break;
+
+                    if (IsExpected(current->kind)) {
+                        buffer.append(prependTrivia(expect(TokenKind::Comma), &skippedTokens));
+                        buffer.append((this->*parseItem)());
+                        continue;
+                    }
+
+                    if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens) == SkipAction::Abort)
+                        break;
+                }
+                // found the end
+                break;
+            }
+            else if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens) == SkipAction::Abort)
+                break;
+            else
+                current = peek();
+        }
+    }
+    closeToken = prependTrivia(expect(closeKind), &skippedTokens);
+    list = buffer.copy(alloc);
 }
 
 template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
