@@ -7,6 +7,7 @@ class BumpAllocator;
 struct ExpressionSyntax;
 struct NameSyntax;
 struct ConcatenationExpressionSyntax;
+struct StreamingConcatenationExpressionSyntax;
 struct StreamExpressionSyntax;
 struct ElementSelectSyntax;
 struct ArgumentListSyntax;
@@ -31,20 +32,30 @@ private:
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
-    SeparatedSyntaxList<StreamExpressionSyntax> parseStreamConcatenation();
+    StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token* openBrace);
     StreamExpressionSyntax* parseStreamExpression();
+    ExpressionSyntax* parseInsideElement();
     ElementSelectSyntax* parseElementSelect();
     NameSyntax* parseNameOrClassHandle();
     NameSyntax* parseScopedName();
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
 
+    // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
     void parseCommaSeparatedList(
         TokenKind openKind,
         TokenKind closeKind,
         Token*& openToken,
         ArrayRef<TokenOrSyntax>& list,
+        Token*& closeToken,
+        TParserFunc&& parseItem
+    );
+
+    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
+    void parseCommaSeparatedList(
+        Buffer<TokenOrSyntax>& buffer,
+        TokenKind closeKind,
         Token*& closeToken,
         TParserFunc&& parseItem
     );

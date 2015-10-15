@@ -33,8 +33,26 @@ bool isPossibleArgument(TokenKind kind) {
     }
 }
 
-bool isEndOfArgumentList(TokenKind kind) {
+bool isPossibleExpressionOrComma(TokenKind kind) {
+    return kind == TokenKind::Comma || isPossibleExpression(kind);
+}
+
+bool isPossibleInsideElement(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenBracket:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
+}
+
+bool isEndOfParenList(TokenKind kind) {
     return kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
+}
+
+bool isEndOfBracedList(TokenKind kind) {
+    return kind == TokenKind::CloseBrace || kind == TokenKind::Semicolon;
 }
 
 }
@@ -176,28 +194,9 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
                     expr = alloc.emplace<EmptyQueueExpressionSyntax>(openBrace, consume());
                     break;
                 case TokenKind::LeftShift:
-                case TokenKind::RightShift: {
-                    auto op = consume();
-                    ExpressionSyntax* sliceSize = nullptr;
-                    if (!peek(TokenKind::OpenBrace))
-                        sliceSize = parseExpression();
-
-                    auto openBraceInner = expect(TokenKind::OpenBrace);
-                    auto concat = parseStreamConcatenation();
-                    auto closeBraceInner = expect(TokenKind::CloseBrace);
-                    auto closeBrace = expect(TokenKind::CloseBrace);
-
-                    expr = alloc.emplace<StreamingConcatenationExpressionSyntax>(
-                        openBrace,
-                        op,
-                        sliceSize,
-                        openBraceInner,
-                        concat,
-                        closeBraceInner, 
-                        closeBrace
-                    );
+                case TokenKind::RightShift:
+                    expr = parseStreamConcatenation(openBrace);
                     break;
-                }
                 default: {
                     auto first = parseExpression();
                     if (!peek(TokenKind::OpenBrace))
@@ -231,56 +230,75 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
 
 ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
     auto inside = expect(TokenKind::InsideKeyword);
-    auto openBrace = expect(TokenKind::OpenBrace);
 
-    auto buffer = tosPool.get();
-    while (!peek(TokenKind::CloseParenthesis)) {
-        if (!peek(TokenKind::OpenBracket))
-            buffer.append(parseExpression());
-        else
-            buffer.append(parseElementSelect());
+    Token* openBrace;
+    Token* closeBrace;
+    ArrayRef<TokenOrSyntax> list = nullptr;
 
-        // TODO: rework this for error handling
-        if (!peek(TokenKind::Comma))
-            break;
+    parseCommaSeparatedList<isPossibleInsideElement, isEndOfBracedList>(
+        TokenKind::OpenBrace,
+        TokenKind::CloseBrace,
+        openBrace,
+        list,
+        closeBrace,
+        &Parser::parseInsideElement
+    );
+    return alloc.emplace<InsideExpressionSyntax>(expr, inside, openBrace, list, closeBrace);
+}
 
-        buffer.append(consume());
-    }
-
-    auto closeBrace = expect(TokenKind::CloseBrace);
-    return alloc.emplace<InsideExpressionSyntax>(expr, inside, openBrace, buffer.copy(alloc), closeBrace);
+ExpressionSyntax* Parser::parseInsideElement() {
+    if (!peek(TokenKind::OpenBracket))
+        return parseExpression();
+    return parseElementSelect();
 }
 
 ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, ExpressionSyntax* first) {
     auto buffer = tosPool.get();
-    if (first)
+    if (first) {
         buffer.append(first);
-    else
-        buffer.append(parseExpression());
-
-    while (peek(TokenKind::Comma)) {
-        buffer.append(consume());
-        buffer.append(parseExpression());
+        buffer.append(expect(TokenKind::Comma));
     }
 
-    auto closeBrace = expect(TokenKind::CloseBrace);
+    Token* closeBrace;
+    parseCommaSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
+        buffer,
+        TokenKind::CloseBrace,
+        closeBrace,
+        &Parser::parseExpression
+    );
+
     return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
 }
 
+StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token* openBrace) {
+    auto op = consume();
+    ExpressionSyntax* sliceSize = nullptr;
+    if (!peek(TokenKind::OpenBrace))
+        sliceSize = parseExpression();
 
+    Token* openBraceInner;
+    Token* closeBraceInner;
+    ArrayRef<TokenOrSyntax> list = nullptr;
 
-SeparatedSyntaxList<StreamExpressionSyntax> Parser::parseStreamConcatenation() {
-    auto buffer = tosPool.get();
+    parseCommaSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
+        TokenKind::OpenBrace,
+        TokenKind::CloseBrace,
+        openBraceInner,
+        list,
+        closeBraceInner,
+        &Parser::parseStreamExpression
+    );
 
-    // TODO: parse stream expression instead of expression
-    buffer.append(parseStreamExpression());
-
-    while (peek(TokenKind::Comma)) {
-        buffer.append(consume());
-        buffer.append(parseStreamExpression());
-    }
-
-    return buffer.copy(alloc);
+    auto closeBrace = expect(TokenKind::CloseBrace);
+    return alloc.emplace<StreamingConcatenationExpressionSyntax>(
+        openBrace,
+        op,
+        sliceSize,
+        openBraceInner,
+        list,
+        closeBraceInner,
+        closeBrace
+    );
 }
 
 StreamExpressionSyntax* Parser::parseStreamExpression() {
@@ -401,7 +419,7 @@ ArgumentListSyntax* Parser::parseArgumentList() {
     Token* closeParen;
     ArrayRef<TokenOrSyntax> list = nullptr;
 
-    parseCommaSeparatedList<isPossibleArgument, isEndOfArgumentList>(
+    parseCommaSeparatedList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis,
         TokenKind::CloseParenthesis,
         openParen,
@@ -440,11 +458,22 @@ void Parser::parseCommaSeparatedList(
     ArrayRef<TokenOrSyntax>& list,
     Token*& closeToken,
     TParserFunc&& parseItem
-    ) {
-    Trivia skippedTokens;
+) {
     openToken = expect(openKind);
 
     auto buffer = tosPool.get();
+    parseCommaSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, closeToken, std::forward<TParserFunc>(parseItem));
+    list = buffer.copy(alloc);
+}
+
+template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
+void Parser::parseCommaSeparatedList(
+    Buffer<TokenOrSyntax>& buffer,
+    TokenKind closeKind,
+    Token*& closeToken,
+    TParserFunc&& parseItem
+) {
+    Trivia skippedTokens;
     auto current = peek();
     if (!IsEnd(current->kind)) {
         while (true) {
@@ -474,7 +503,6 @@ void Parser::parseCommaSeparatedList(
         }
     }
     closeToken = prependTrivia(expect(closeKind), &skippedTokens);
-    list = buffer.copy(alloc);
 }
 
 template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
