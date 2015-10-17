@@ -912,6 +912,24 @@ struct StatementSyntax : public SyntaxNode {
     }
 };
 
+struct EmptyStatementSyntax : public StatementSyntax {
+    Token* semicolon;
+
+    EmptyStatementSyntax(Token* semicolon) :
+        StatementSyntax(SyntaxKind::EmptyStatement), semicolon(semicolon)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return semicolon;
+            default: return nullptr;
+        }
+    }
+};
+
 struct ElseClauseSyntax : public SyntaxNode {
     Token* elseKeyword;
     StatementSyntax* statement;
@@ -939,11 +957,12 @@ struct ConditionalStatementSyntax : public StatementSyntax {
     ConditionalPredicateSyntax* predicate;
     Token* closeParen;
     StatementSyntax* statement;
+    ElseClauseSyntax* elseClause;
 
-    ConditionalStatementSyntax(Token* uniqueOrPriority, Token* ifKeyword, Token* openParen, ConditionalPredicateSyntax* predicate, Token* closeParen, StatementSyntax* statement) :
-        StatementSyntax(SyntaxKind::ConditionalStatement), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(predicate), closeParen(closeParen), statement(statement)
+    ConditionalStatementSyntax(Token* uniqueOrPriority, Token* ifKeyword, Token* openParen, ConditionalPredicateSyntax* predicate, Token* closeParen, StatementSyntax* statement, ElseClauseSyntax* elseClause) :
+        StatementSyntax(SyntaxKind::ConditionalStatement), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(predicate), closeParen(closeParen), statement(statement), elseClause(elseClause)
     {
-        childCount += 6;
+        childCount += 7;
     }
 
 protected:
@@ -955,6 +974,7 @@ protected:
             case 3: return predicate;
             case 4: return closeParen;
             case 5: return statement;
+            case 6: return elseClause;
             default: return nullptr;
         }
     }

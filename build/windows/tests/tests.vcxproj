@@ -24,6 +24,7 @@
     <ClCompile Include="..\..\..\tests\main.cpp" />
     <ClCompile Include="..\..\..\tests\ExpressionParsingTests.cpp" />
     <ClCompile Include="..\..\..\tests\PreprocessorTests.cpp" />
+    <ClCompile Include="..\..\..\tests\StatementParsingTests.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{32EA3BBF-5E07-4307-9C66-D1F0F9566EA9}</ProjectGuid>

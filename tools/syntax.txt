@@ -215,6 +215,9 @@ ArgumentListSyntax arguments
 StatementSyntax final=false
 empty
 
+EmptyStatementSyntax base=StatementSyntax kind=EmptyStatement
+token semicolon
+
 ElseClauseSyntax kind=ElseClause
 token elseKeyword
 StatementSyntax statement
@@ -226,6 +229,7 @@ token openParen
 ConditionalPredicateSyntax predicate
 token closeParen
 StatementSyntax statement
+ElseClauseSyntax elseClause
 
 // ----- DIRECTIVES -----
 

@@ -60,7 +60,7 @@ bool isEndOfBracedList(TokenKind kind) {
 }
 
 bool isEndOfConditionalPredicate(TokenKind kind) {
-    return kind == TokenKind::Question || kind == TokenKind::Semicolon;
+    return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
 }
 
 }
@@ -74,13 +74,39 @@ Parser::Parser(Lexer& lexer) :
     currentToken(nullptr) {
 }
 
-SyntaxNode* Parser::parse() {
-    return parseExpression();
-}
-
 // ----- STATEMENTS -----
 
+StatementSyntax* Parser::parseStatement() {
+    switch (peek()->kind) {
+        case TokenKind::UniqueKeyword:
+        case TokenKind::Unique0Keyword:
+        case TokenKind::PriorityKeyword:
+            return parseConditionalStatement(consume());
+        case TokenKind::IfKeyword:
+            return parseConditionalStatement(nullptr);
+        case TokenKind::Semicolon:
+            return alloc.emplace<EmptyStatementSyntax>(consume());
+    }
 
+    return nullptr;
+}
+
+ConditionalStatementSyntax* Parser::parseConditionalStatement(Token* uniqueOrPriority) {
+    auto ifKeyword = expect(TokenKind::IfKeyword);
+    auto openParen = expect(TokenKind::OpenParenthesis);
+
+    Token* closeParen;
+    auto predicate = parseConditionalPredicate(parseExpression(), TokenKind::CloseParenthesis, closeParen);
+    auto statement = parseStatement();
+
+    ElseClauseSyntax* elseClause = nullptr;
+    if (peek(TokenKind::ElseKeyword)) {
+        auto elseKeyword = consume();
+        elseClause = alloc.emplace<ElseClauseSyntax>(elseKeyword, parseStatement());
+    }
+
+    return alloc.emplace<ConditionalStatementSyntax>(uniqueOrPriority, ifKeyword, openParen, predicate, closeParen, statement, elseClause);
+}
 
 // ----- EXPRESSIONS -----
 
@@ -159,7 +185,7 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
         (current->kind == TokenKind::Question && precedence < logicalOrPrecedence)) {
 
         Token* question;
-        auto predicate = parseConditionalPredicate(leftOperand, question);
+        auto predicate = parseConditionalPredicate(leftOperand, TokenKind::Question, question);
         auto left = parseSubExpression(logicalOrPrecedence - 1);
         auto colon = expect(TokenKind::Colon);
         auto right = parseSubExpression(logicalOrPrecedence - 1);
@@ -499,7 +525,7 @@ PatternSyntax* Parser::parsePattern() {
     return alloc.emplace<ExpressionPatternSyntax>(parseExpression());
 }
 
-ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* first, Token*& question) {
+ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end) {
     auto buffer = tosPool.get();
     if (peek(TokenKind::MatchesKeyword)) {
         auto matches = consume();
@@ -514,9 +540,9 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
 
     parseSeparatedList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
         buffer,
-        TokenKind::Question,
+        endKind,
         TokenKind::TripleAnd,
-        question,
+        end,
         &Parser::parseConditionalPattern
     );
 

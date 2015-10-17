@@ -15,13 +15,15 @@ struct ArgumentSyntax;
 struct PatternSyntax;
 struct ConditionalPredicateSyntax;
 struct ConditionalPatternSyntax;
+struct StatementSyntax;
+struct ConditionalStatementSyntax;
 
 class Parser {
 public:
     Parser(Lexer& lexer);
 
-    SyntaxNode* parse();
     ExpressionSyntax* parseExpression();
+    StatementSyntax* parseStatement();
 
 private:
     enum class SkipAction {
@@ -44,8 +46,9 @@ private:
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();
-    ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, Token*& question);
+    ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
     ConditionalPatternSyntax* parseConditionalPattern();
+    ConditionalStatementSyntax* parseConditionalStatement(Token* uniqueOrPriority);
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>

@@ -359,6 +359,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(SystemName);
         CASE(ThisHandle);
         CASE(SuperHandle);
+        CASE(EmptyStatement);
         CASE(ElseClause);
         CASE(ConditionalStatement);
         default: ASSERT(false && "Missing case");

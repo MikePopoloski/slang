@@ -160,6 +160,7 @@ enum class SyntaxKind : uint16_t {
     SuperHandle,
 
     // statements
+    EmptyStatement,
     ElseClause,
     ConditionalStatement
 };
