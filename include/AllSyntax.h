@@ -112,6 +112,222 @@ protected:
     }
 };
 
+// ----- PATTERNS -----
+
+struct PatternSyntax : public SyntaxNode {
+
+    PatternSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct VariablePatternSyntax : public PatternSyntax {
+    Token* dot;
+    Token* variableName;
+
+    VariablePatternSyntax(Token* dot, Token* variableName) :
+        PatternSyntax(SyntaxKind::VariablePattern), dot(dot), variableName(variableName)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return dot;
+            case 1: return variableName;
+            default: return nullptr;
+        }
+    }
+};
+
+struct WildcardPatternSyntax : public PatternSyntax {
+    Token* dotStar;
+
+    WildcardPatternSyntax(Token* dotStar) :
+        PatternSyntax(SyntaxKind::WildcardPattern), dotStar(dotStar)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return dotStar;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ExpressionPatternSyntax : public PatternSyntax {
+    ExpressionSyntax* expr;
+
+    ExpressionPatternSyntax(ExpressionSyntax* expr) :
+        PatternSyntax(SyntaxKind::ExpressionPattern), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TaggedPatternSyntax : public PatternSyntax {
+    Token* tagged;
+    Token* memberName;
+    PatternSyntax* pattern;
+
+    TaggedPatternSyntax(Token* tagged, Token* memberName, PatternSyntax* pattern) :
+        PatternSyntax(SyntaxKind::TaggedPattern), tagged(tagged), memberName(memberName), pattern(pattern)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return tagged;
+            case 1: return memberName;
+            case 2: return pattern;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StructurePatternMemberSyntax : public SyntaxNode {
+
+    StructurePatternMemberSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
+    PatternSyntax* pattern;
+
+    OrderedStructurePatternMemberSyntax(PatternSyntax* pattern) :
+        StructurePatternMemberSyntax(SyntaxKind::OrderedStructurePatternMember), pattern(pattern)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return pattern;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
+    Token* name;
+    Token* colon;
+    PatternSyntax* pattern;
+
+    NamedStructurePatternMemberSyntax(Token* name, Token* colon, PatternSyntax* pattern) :
+        StructurePatternMemberSyntax(SyntaxKind::NamedStructurePatternMember), name(name), colon(colon), pattern(pattern)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return name;
+            case 1: return colon;
+            case 2: return pattern;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StructurePatternSyntax : public PatternSyntax {
+    Token* openBrace;
+    SeparatedSyntaxList<StructurePatternMemberSyntax> members;
+    Token* closeBrace;
+
+    StructurePatternSyntax(Token* openBrace, SeparatedSyntaxList<StructurePatternMemberSyntax> members, Token* closeBrace) :
+        PatternSyntax(SyntaxKind::StructurePattern), openBrace(openBrace), members(members), closeBrace(closeBrace)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openBrace;
+            case 1: return &members;
+            case 2: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
+struct MatchesClauseSyntax : public SyntaxNode {
+    Token* matchesKeyword;
+    PatternSyntax* pattern;
+
+    MatchesClauseSyntax(Token* matchesKeyword, PatternSyntax* pattern) :
+        SyntaxNode(SyntaxKind::MatchesClause), matchesKeyword(matchesKeyword), pattern(pattern)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return matchesKeyword;
+            case 1: return pattern;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ConditionalPatternSyntax : public SyntaxNode {
+    ExpressionSyntax* expr;
+    MatchesClauseSyntax* matchesClause;
+
+    ConditionalPatternSyntax(ExpressionSyntax* expr, MatchesClauseSyntax* matchesClause) :
+        SyntaxNode(SyntaxKind::ConditionalPattern), expr(expr), matchesClause(matchesClause)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return expr;
+            case 1: return matchesClause;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ConditionalPredicateSyntax : public SyntaxNode {
+    SeparatedSyntaxList<ConditionalPatternSyntax> conditions;
+
+    ConditionalPredicateSyntax(SeparatedSyntaxList<ConditionalPatternSyntax> conditions) :
+        SyntaxNode(SyntaxKind::ConditionalPredicate), conditions(conditions)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &conditions;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- EXPRESSIONS -----
 
 struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
@@ -655,6 +871,64 @@ protected:
         switch(index) {
             case 0: return left;
             case 1: return arguments;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- STATEMENTS -----
+
+struct StatementSyntax : public SyntaxNode {
+
+    StatementSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct ElseClauseSyntax : public SyntaxNode {
+    Token* elseKeyword;
+    StatementSyntax* statement;
+
+    ElseClauseSyntax(Token* elseKeyword, StatementSyntax* statement) :
+        SyntaxNode(SyntaxKind::ElseClause), elseKeyword(elseKeyword), statement(statement)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return elseKeyword;
+            case 1: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ConditionalStatementSyntax : public StatementSyntax {
+    Token* uniqueOrPriority;
+    Token* ifKeyword;
+    Token* openParen;
+    ConditionalPredicateSyntax* predicate;
+    Token* closeParen;
+    StatementSyntax* statement;
+
+    ConditionalStatementSyntax(Token* uniqueOrPriority, Token* ifKeyword, Token* openParen, ConditionalPredicateSyntax* predicate, Token* closeParen, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::ConditionalStatement), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(predicate), closeParen(closeParen), statement(statement)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return uniqueOrPriority;
+            case 1: return ifKeyword;
+            case 2: return openParen;
+            case 3: return predicate;
+            case 4: return closeParen;
+            case 5: return statement;
             default: return nullptr;
         }
     }

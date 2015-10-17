@@ -43,6 +43,18 @@ enum class SyntaxKind : uint16_t {
     ArgumentList,
     ParameterValueAssignment,
 
+    // patterns
+    VariablePattern,
+    WildcardPattern,
+    ExpressionPattern,
+    TaggedPattern,
+    OrderedStructurePatternMember,
+    NamedStructurePatternMember,
+    StructurePattern,
+    MatchesClause,
+    ConditionalPattern,
+    ConditionalPredicate,
+
     // unary expressions
     UnaryPlusExpression,
     UnaryMinusExpression,
@@ -145,6 +157,10 @@ enum class SyntaxKind : uint16_t {
     SystemName,
     ThisHandle,
     SuperHandle,
+
+    // statements
+    ElseClause,
+    ConditionalStatement
 };
 
 enum class TokenKind : uint16_t;

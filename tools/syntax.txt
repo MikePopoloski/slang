@@ -25,6 +25,53 @@ ParameterValueAssignmentSyntax kind=ParameterValueAssignment
 token hash
 ArgumentListSyntax parameters
 
+// ----- PATTERNS -----
+
+PatternSyntax final=false
+empty
+
+VariablePatternSyntax base=PatternSyntax kind=VariablePattern
+token dot
+token variableName
+
+WildcardPatternSyntax base=PatternSyntax kind=WildcardPattern
+token dotStar
+
+ExpressionPatternSyntax base=PatternSyntax kind=ExpressionPattern
+ExpressionSyntax expr
+
+TaggedPatternSyntax base=PatternSyntax kind=TaggedPattern
+token tagged
+token memberName
+PatternSyntax pattern
+
+StructurePatternMemberSyntax final=false
+empty
+
+OrderedStructurePatternMemberSyntax base=StructurePatternMemberSyntax kind=OrderedStructurePatternMember
+PatternSyntax pattern
+
+NamedStructurePatternMemberSyntax base=StructurePatternMemberSyntax kind=NamedStructurePatternMember
+token name
+token colon
+PatternSyntax pattern
+
+StructurePatternSyntax base=PatternSyntax kind=StructurePattern
+token openBrace
+separated_list<StructurePatternMemberSyntax> members
+token closeBrace
+
+MatchesClauseSyntax kind=MatchesClause
+token matchesKeyword
+PatternSyntax pattern
+
+ConditionalPatternSyntax kind=ConditionalPattern
+ExpressionSyntax expr
+MatchesClauseSyntax matchesClause
+
+ConditionalPredicateSyntax kind=ConditionalPredicate
+separated_list<ConditionalPatternSyntax> conditions
+
 // ----- EXPRESSIONS -----
 
 PrefixUnaryExpressionSyntax base=ExpressionSyntax
@@ -58,6 +105,8 @@ token inside
 token openBrace
 separated_list<ExpressionSyntax> valueRanges
 token closeBrace
+
+
 
 // ----- SELECTORS -----
 SelectorSyntax final=false
@@ -155,6 +204,23 @@ token name
 InvocationExpressionSyntax base=ExpressionSyntax kind=InvocationExpression
 ExpressionSyntax left
 ArgumentListSyntax arguments
+
+// ----- STATEMENTS -----
+
+StatementSyntax final=false
+empty
+
+ElseClauseSyntax kind=ElseClause
+token elseKeyword
+StatementSyntax statement
+
+ConditionalStatementSyntax base=StatementSyntax kind=ConditionalStatement
+token uniqueOrPriority
+token ifKeyword
+token openParen
+ConditionalPredicateSyntax predicate
+token closeParen
+StatementSyntax statement
 
 // ----- DIRECTIVES -----
 

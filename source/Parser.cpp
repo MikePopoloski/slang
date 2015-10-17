@@ -70,6 +70,12 @@ SyntaxNode* Parser::parse() {
     return parseExpression();
 }
 
+// ----- STATEMENTS -----
+
+
+
+// ----- EXPRESSIONS -----
+
 ExpressionSyntax* Parser::parseExpression() {
     return parseSubExpression(0);
 }
