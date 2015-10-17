@@ -37,6 +37,10 @@ bool isPossibleExpressionOrComma(TokenKind kind) {
     return kind == TokenKind::Comma || isPossibleExpression(kind);
 }
 
+bool isPossibleExpressionOrTripleAnd(TokenKind kind) {
+    return kind == TokenKind::TripleAnd || isPossibleExpression(kind);
+}
+
 bool isPossibleInsideElement(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenBracket:
@@ -53,6 +57,10 @@ bool isEndOfParenList(TokenKind kind) {
 
 bool isEndOfBracedList(TokenKind kind) {
     return kind == TokenKind::CloseBrace || kind == TokenKind::Semicolon;
+}
+
+bool isEndOfConditionalPredicate(TokenKind kind) {
+    return kind == TokenKind::Question || kind == TokenKind::Semicolon;
 }
 
 }
@@ -144,9 +152,20 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
         }
     }
 
-    // see if we have a conditional operator we want to take
+    // if we see the matches keyword or &&& we're in a pattern conditional predicate
+    // if we see a question mark, we were in a simple conditional predicate
+    auto logicalOrPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression);
+    if (current->kind == TokenKind::MatchesKeyword || current->kind == TokenKind::TripleAnd ||
+        (current->kind == TokenKind::Question && precedence < logicalOrPrecedence)) {
 
-
+        Token* question;
+        auto predicate = parseConditionalPredicate(leftOperand, question);
+        auto left = parseSubExpression(logicalOrPrecedence - 1);
+        auto colon = expect(TokenKind::Colon);
+        auto right = parseSubExpression(logicalOrPrecedence - 1);
+        leftOperand = alloc.emplace<ConditionalExpressionSyntax>(predicate, question, left, colon, right);
+    }
+    
     return leftOperand;
 }
 
@@ -241,9 +260,10 @@ ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
     Token* closeBrace;
     ArrayRef<TokenOrSyntax> list = nullptr;
 
-    parseCommaSeparatedList<isPossibleInsideElement, isEndOfBracedList>(
+    parseSeparatedList<isPossibleInsideElement, isEndOfBracedList>(
         TokenKind::OpenBrace,
         TokenKind::CloseBrace,
+        TokenKind::Comma,
         openBrace,
         list,
         closeBrace,
@@ -266,9 +286,10 @@ ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, Expr
     }
 
     Token* closeBrace;
-    parseCommaSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
+    parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
         buffer,
         TokenKind::CloseBrace,
+        TokenKind::Comma,
         closeBrace,
         &Parser::parseExpression
     );
@@ -286,9 +307,10 @@ StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token* 
     Token* closeBraceInner;
     ArrayRef<TokenOrSyntax> list = nullptr;
 
-    parseCommaSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
+    parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
         TokenKind::OpenBrace,
         TokenKind::CloseBrace,
+        TokenKind::Comma,
         openBraceInner,
         list,
         closeBraceInner,
@@ -425,9 +447,10 @@ ArgumentListSyntax* Parser::parseArgumentList() {
     Token* closeParen;
     ArrayRef<TokenOrSyntax> list = nullptr;
 
-    parseCommaSeparatedList<isPossibleArgument, isEndOfParenList>(
+    parseSeparatedList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis,
         TokenKind::CloseParenthesis,
+        TokenKind::Comma,
         openParen,
         list,
         closeParen,
@@ -454,12 +477,71 @@ ArgumentSyntax* Parser::parseArgument() {
     return alloc.emplace<OrderedArgumentSyntax>(parseExpression());
 }
 
+PatternSyntax* Parser::parsePattern() {
+    switch (peek()->kind) {
+        case TokenKind::DotStar:
+            return alloc.emplace<WildcardPatternSyntax>(consume());
+        case TokenKind::Dot: {
+            auto dot = consume();
+            return alloc.emplace<VariablePatternSyntax>(dot, expect(TokenKind::Identifier));
+        }
+        case TokenKind::TaggedKeyword: {
+            auto tagged = consume();
+            auto name = expect(TokenKind::Identifier);
+            // TODO: optional trailing pattern
+            return alloc.emplace<TaggedPatternSyntax>(tagged, name, nullptr);
+        }
+        case TokenKind::ApostropheOpenBrace:
+            // TODO: assignment pattern
+            break;
+    }
+    // otherwise, it's either an expression or an error (parseExpression will handle that for us)
+    return alloc.emplace<ExpressionPatternSyntax>(parseExpression());
+}
+
+ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* first, Token*& question) {
+    auto buffer = tosPool.get();
+    if (peek(TokenKind::MatchesKeyword)) {
+        auto matches = consume();
+        auto matchesClause = alloc.emplace<MatchesClauseSyntax>(matches, parsePattern());
+        buffer.append(alloc.emplace<ConditionalPatternSyntax>(first, matchesClause));
+    }
+    else {
+        buffer.append(alloc.emplace<ConditionalPatternSyntax>(first, nullptr));
+        if (peek(TokenKind::TripleAnd))
+            buffer.append(consume());
+    }
+
+    parseSeparatedList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
+        buffer,
+        TokenKind::Question,
+        TokenKind::TripleAnd,
+        question,
+        &Parser::parseConditionalPattern
+    );
+
+    return alloc.emplace<ConditionalPredicateSyntax>(buffer.copy(alloc));
+}
+
+ConditionalPatternSyntax* Parser::parseConditionalPattern() {
+    auto expr = parseExpression();
+    
+    MatchesClauseSyntax* matchesClause = nullptr;
+    if (peek(TokenKind::MatchesKeyword)) {
+        auto matches = consume();
+        matchesClause = alloc.emplace<MatchesClauseSyntax>(matches, parsePattern());
+    }
+
+    return alloc.emplace<ConditionalPatternSyntax>(expr, matchesClause);
+}
+
 // this is a generalized method for parsing a comma separated list of things
 // with bookend tokens in a way that robustly handles bad tokens
 template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-void Parser::parseCommaSeparatedList(
+void Parser::parseSeparatedList(
     TokenKind openKind,
     TokenKind closeKind,
+    TokenKind separatorKind,
     Token*& openToken,
     ArrayRef<TokenOrSyntax>& list,
     Token*& closeToken,
@@ -468,14 +550,15 @@ void Parser::parseCommaSeparatedList(
     openToken = expect(openKind);
 
     auto buffer = tosPool.get();
-    parseCommaSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, closeToken, std::forward<TParserFunc>(parseItem));
+    parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken, std::forward<TParserFunc>(parseItem));
     list = buffer.copy(alloc);
 }
 
 template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-void Parser::parseCommaSeparatedList(
+void Parser::parseSeparatedList(
     Buffer<TokenOrSyntax>& buffer,
     TokenKind closeKind,
+    TokenKind separatorKind,
     Token*& closeToken,
     TParserFunc&& parseItem
 ) {
@@ -491,7 +574,7 @@ void Parser::parseCommaSeparatedList(
                         break;
 
                     if (IsExpected(current->kind)) {
-                        buffer.append(prependTrivia(expect(TokenKind::Comma), &skippedTokens));
+                        buffer.append(prependTrivia(expect(separatorKind), &skippedTokens));
                         buffer.append((this->*parseItem)());
                         continue;
                     }
@@ -515,12 +598,14 @@ template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
 Parser::SkipAction Parser::skipBadTokens(Trivia* skippedTokens) {
     auto tokens = tokenPool.get();
     auto result = SkipAction::Continue;
-    while (!IsExpected(peek()->kind)) {
-        if (IsAbort(peek()->kind)) {
+    auto current = peek();
+    while (!IsExpected(current->kind)) {
+        if (current->kind == TokenKind::EndOfFile || IsAbort(current->kind)) {
             result = SkipAction::Abort;
             break;
         }
         tokens.append(consume());
+        current = peek();
     }
 
     if (tokens.empty())

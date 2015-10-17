@@ -356,6 +356,35 @@ TEST_CASE("Bad argument recovery", "[parser:expressions]") {
     CHECK(diagnostics.empty()); // TODO: at some point this test should fail
 }
 
+TEST_CASE("Conditional expression", "[parser:expressions]") {
+    // check proper precedence
+    auto& text = "foo || bar ? 3 : 4";
+    auto expr = parse(text);
+
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+    REQUIRE(expr->kind == SyntaxKind::ConditionalExpression);
+
+    auto cond = (ConditionalExpressionSyntax*)expr;
+    REQUIRE(cond->predicate->conditions.count() == 1);
+    CHECK(cond->predicate->conditions[0]->expr->kind == SyntaxKind::LogicalOrExpression);
+}
+
+TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
+    // check proper precedence
+    auto& text = "foo matches 34 &&& foo ? 3 : 4";
+    auto expr = parse(text);
+
+    CHECK(expr->toFullString() == text);
+    CHECK(diagnostics.empty());
+    REQUIRE(expr->kind == SyntaxKind::ConditionalExpression);
+
+    auto cond = (ConditionalExpressionSyntax*)expr;
+    REQUIRE(cond->predicate->conditions.count() == 1);
+    CHECK(cond->predicate->conditions[0]->expr->kind == SyntaxKind::IdentifierName);
+    CHECK(cond->predicate->conditions[0]->matchesClause->pattern->kind == SyntaxKind::ExpressionPattern);
+}
+
 // TODO: make this not stack overflow
 //TEST_CASE("Big expression", "[parser:expressions]") {
 //    auto& text =

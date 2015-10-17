@@ -466,6 +466,32 @@ protected:
     }
 };
 
+struct ConditionalExpressionSyntax : public ExpressionSyntax {
+    ConditionalPredicateSyntax* predicate;
+    Token* question;
+    ExpressionSyntax* left;
+    Token* colon;
+    ExpressionSyntax* right;
+
+    ConditionalExpressionSyntax(ConditionalPredicateSyntax* predicate, Token* question, ExpressionSyntax* left, Token* colon, ExpressionSyntax* right) :
+        ExpressionSyntax(SyntaxKind::ConditionalExpression), predicate(predicate), question(question), left(left), colon(colon), right(right)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return predicate;
+            case 1: return question;
+            case 2: return left;
+            case 3: return colon;
+            case 4: return right;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- SELECTORS -----
 
 struct SelectorSyntax : public SyntaxNode {

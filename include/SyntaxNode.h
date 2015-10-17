@@ -130,6 +130,7 @@ enum class SyntaxKind : uint16_t {
     ArithmeticShiftRightExpression,
     TaggedUnionExpression,
     InsideExpression,
+    ConditionalExpression,
 
     // assignment expressions
     AssignmentExpression,

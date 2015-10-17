@@ -259,6 +259,16 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(NamedArgument);
         CASE(ArgumentList);
         CASE(ParameterValueAssignment);
+        CASE(VariablePattern);
+        CASE(WildcardPattern);
+        CASE(ExpressionPattern);
+        CASE(TaggedPattern);
+        CASE(OrderedStructurePatternMember);
+        CASE(NamedStructurePatternMember);
+        CASE(StructurePattern);
+        CASE(MatchesClause);
+        CASE(ConditionalPattern);
+        CASE(ConditionalPredicate);
         CASE(UnaryPlusExpression);
         CASE(UnaryMinusExpression);
         CASE(UnaryBitwiseAndExpression);
@@ -293,6 +303,8 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ElementSelectExpression);
         CASE(MemberAccessExpression);
         CASE(InvocationExpression);
+        CASE(PostincrementExpression);
+        CASE(PostdecrementExpression);
         CASE(AddExpression);
         CASE(SubtractExpression);
         CASE(MultiplyExpression);
@@ -323,6 +335,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ArithmeticShiftRightExpression);
         CASE(TaggedUnionExpression);
         CASE(InsideExpression);
+        CASE(ConditionalExpression);
         CASE(AssignmentExpression);
         CASE(AddAssignmentExpression);
         CASE(SubtractAssignmentExpression);
@@ -346,6 +359,9 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(SystemName);
         CASE(ThisHandle);
         CASE(SuperHandle);
+        CASE(ElseClause);
+        CASE(ConditionalStatement);
+        default: ASSERT(false && "Missing case");
     }
     return os;
 #undef CASE

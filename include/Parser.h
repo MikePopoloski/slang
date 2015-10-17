@@ -12,6 +12,9 @@ struct StreamExpressionSyntax;
 struct ElementSelectSyntax;
 struct ArgumentListSyntax;
 struct ArgumentSyntax;
+struct PatternSyntax;
+struct ConditionalPredicateSyntax;
+struct ConditionalPatternSyntax;
 
 class Parser {
 public:
@@ -40,12 +43,16 @@ private:
     NameSyntax* parseScopedName();
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
+    PatternSyntax* parsePattern();
+    ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, Token*& question);
+    ConditionalPatternSyntax* parseConditionalPattern();
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-    void parseCommaSeparatedList(
+    void parseSeparatedList(
         TokenKind openKind,
         TokenKind closeKind,
+        TokenKind separatorKind,
         Token*& openToken,
         ArrayRef<TokenOrSyntax>& list,
         Token*& closeToken,
@@ -53,9 +60,10 @@ private:
     );
 
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-    void parseCommaSeparatedList(
+    void parseSeparatedList(
         Buffer<TokenOrSyntax>& buffer,
         TokenKind closeKind,
+        TokenKind separatorKind,
         Token*& closeToken,
         TParserFunc&& parseItem
     );

@@ -1033,7 +1033,7 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         CASE(MacroQuote);
         CASE(MacroEscapedQuote);
         CASE(MacroPaste);
-        default: os << "<unknown>"; break;
+        default: ASSERT(false && "Missing case");
     }
     return os;
 #undef CASE
@@ -1050,7 +1050,8 @@ std::ostream& operator<<(std::ostream& os, TriviaKind kind) {
         CASE(BlockComment);
         CASE(DisabledText);
         CASE(SkippedTokens);
-        default: os << "<unknown>"; break;
+        CASE(Directive);
+        default: ASSERT(false && "Missing case");
     }
     return os;
 #undef CASE

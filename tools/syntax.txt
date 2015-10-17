@@ -106,7 +106,12 @@ token openBrace
 separated_list<ExpressionSyntax> valueRanges
 token closeBrace
 
-
+ConditionalExpressionSyntax base=ExpressionSyntax kind=ConditionalExpression
+ConditionalPredicateSyntax predicate
+token question
+ExpressionSyntax left
+token colon
+ExpressionSyntax right
 
 // ----- SELECTORS -----
 SelectorSyntax final=false
