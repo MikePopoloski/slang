@@ -261,6 +261,35 @@ token matchesOrInside
 list<CaseItemSyntax> items
 token endcase
 
+ForeverStatementSyntax base=StatementSyntax kind=ForeverStatement
+token foreverKeyword
+StatementSyntax statement
+
+LoopStatementSyntax base=StatementSyntax kind=LoopStatement
+token repeatOrWhile
+token openParen
+ExpressionSyntax expr
+token closeParen
+StatementSyntax statement
+
+DoWhileStatementSyntax base=StatementSyntax kind=DoWhileStatement
+token doKeyword
+StatementSyntax statement
+token whileKeyword
+token openParen
+ExpressionSyntax expr
+token closeParen
+token semi
+
+ReturnStatementSyntax base=StatementSyntax kind=ReturnStatement
+token returnKeyword
+ExpressionSyntax returnValue
+token semi
+
+JumpStatementSyntax base=StatementSyntax kind=JumpStatement
+token breakOrContinue
+token semi
+
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false

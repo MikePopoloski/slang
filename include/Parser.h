@@ -39,6 +39,10 @@ private:
     ConditionalPatternSyntax* parseConditionalPattern();
     ConditionalStatementSyntax* parseConditionalStatement(Token* uniqueOrPriority);
     CaseStatementSyntax* parseCaseStatement(Token* uniqueOrPriority, Token* caseKeyword);
+    LoopStatementSyntax* parseLoopStatement();
+    DoWhileStatementSyntax* parseDoWhileStatement();
+    ReturnStatementSyntax* parseReturnStatement();
+    JumpStatementSyntax* parseJumpStatement();
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>

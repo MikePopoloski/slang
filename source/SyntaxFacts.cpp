@@ -366,6 +366,11 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(PatternCaseItem);
         CASE(StandardCaseItem);
         CASE(CaseStatement);
+        CASE(ForeverStatement);
+        CASE(LoopStatement);
+        CASE(DoWhileStatement);
+        CASE(ReturnStatement);
+        CASE(JumpStatement);
         default: ASSERT(false && "Missing case");
     }
     return os;

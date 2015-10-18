@@ -1090,6 +1090,124 @@ protected:
     }
 };
 
+struct ForeverStatementSyntax : public StatementSyntax {
+    Token* foreverKeyword;
+    StatementSyntax* statement;
+
+    ForeverStatementSyntax(Token* foreverKeyword, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::ForeverStatement), foreverKeyword(foreverKeyword), statement(statement)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return foreverKeyword;
+            case 1: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct LoopStatementSyntax : public StatementSyntax {
+    Token* repeatOrWhile;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
+    StatementSyntax* statement;
+
+    LoopStatementSyntax(Token* repeatOrWhile, Token* openParen, ExpressionSyntax* expr, Token* closeParen, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::LoopStatement), repeatOrWhile(repeatOrWhile), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return repeatOrWhile;
+            case 1: return openParen;
+            case 2: return expr;
+            case 3: return closeParen;
+            case 4: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DoWhileStatementSyntax : public StatementSyntax {
+    Token* doKeyword;
+    StatementSyntax* statement;
+    Token* whileKeyword;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
+    Token* semi;
+
+    DoWhileStatementSyntax(Token* doKeyword, StatementSyntax* statement, Token* whileKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen, Token* semi) :
+        StatementSyntax(SyntaxKind::DoWhileStatement), doKeyword(doKeyword), statement(statement), whileKeyword(whileKeyword), openParen(openParen), expr(expr), closeParen(closeParen), semi(semi)
+    {
+        childCount += 7;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return doKeyword;
+            case 1: return statement;
+            case 2: return whileKeyword;
+            case 3: return openParen;
+            case 4: return expr;
+            case 5: return closeParen;
+            case 6: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ReturnStatementSyntax : public StatementSyntax {
+    Token* returnKeyword;
+    ExpressionSyntax* returnValue;
+    Token* semi;
+
+    ReturnStatementSyntax(Token* returnKeyword, ExpressionSyntax* returnValue, Token* semi) :
+        StatementSyntax(SyntaxKind::ReturnStatement), returnKeyword(returnKeyword), returnValue(returnValue), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return returnKeyword;
+            case 1: return returnValue;
+            case 2: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct JumpStatementSyntax : public StatementSyntax {
+    Token* breakOrContinue;
+    Token* semi;
+
+    JumpStatementSyntax(Token* breakOrContinue, Token* semi) :
+        StatementSyntax(SyntaxKind::JumpStatement), breakOrContinue(breakOrContinue), semi(semi)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return breakOrContinue;
+            case 1: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- DIRECTIVES -----
 
 struct DirectiveSyntax : public SyntaxNode {

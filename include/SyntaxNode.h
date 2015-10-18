@@ -166,7 +166,12 @@ enum class SyntaxKind : uint16_t {
     DefaultCaseItem,
     PatternCaseItem,
     StandardCaseItem,
-    CaseStatement
+    CaseStatement,
+    ForeverStatement,
+    LoopStatement,
+    DoWhileStatement,
+    ReturnStatement,
+    JumpStatement
 };
 
 enum class TokenKind : uint16_t;

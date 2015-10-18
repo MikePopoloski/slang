@@ -100,6 +100,20 @@ StatementSyntax* Parser::parseStatement() {
             return parseCaseStatement(nullptr, consume());
         case TokenKind::IfKeyword:
             return parseConditionalStatement(nullptr);
+        case TokenKind::ForeverKeyword: {
+            auto forever = consume();
+            return alloc.emplace<ForeverStatementSyntax>(forever, parseStatement());
+        }
+        case TokenKind::RepeatKeyword:
+        case TokenKind::WhileKeyword:
+            return parseLoopStatement();
+        case TokenKind::DoKeyword:
+            return parseDoWhileStatement();
+        case TokenKind::ReturnKeyword:
+            return parseReturnStatement();
+        case TokenKind::BreakKeyword:
+        case TokenKind::ContinueKeyword:
+            return parseJumpStatement();
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyStatementSyntax>(consume());
     }
@@ -140,6 +154,43 @@ CaseStatementSyntax* Parser::parseCaseStatement(Token* uniqueOrPriority, Token* 
     // TODO: items
     auto endcase = expect(TokenKind::EndCaseKeyword);
     return alloc.emplace<CaseStatementSyntax>(uniqueOrPriority, caseKeyword, openParen, expr, closeParen, matchesOrInside, ArrayRef<CaseItemSyntax*>(nullptr), endcase);
+}
+
+LoopStatementSyntax* Parser::parseLoopStatement() {
+    auto keyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto expr = parseExpression();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    auto statement = parseStatement();
+    return alloc.emplace<LoopStatementSyntax>(keyword, openParen, expr, closeParen, statement);
+}
+
+DoWhileStatementSyntax* Parser::parseDoWhileStatement() {
+    auto doKeyword = consume();
+    auto statement = parseStatement();
+    auto whileKeyword = expect(TokenKind::WhileKeyword);
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto expr = parseExpression();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    auto semi = expect(TokenKind::Semicolon);
+    return alloc.emplace<DoWhileStatementSyntax>(doKeyword, statement, whileKeyword, openParen, expr, closeParen, semi);
+}
+
+ReturnStatementSyntax* Parser::parseReturnStatement() {
+    auto keyword = consume();
+
+    ExpressionSyntax* expr = nullptr;
+    if (!peek(TokenKind::Semicolon))
+        expr = parseExpression();
+
+    auto semi = expect(TokenKind::Semicolon);
+    return alloc.emplace<ReturnStatementSyntax>(keyword, expr, semi);
+}
+
+JumpStatementSyntax* Parser::parseJumpStatement() {
+    auto keyword = consume();
+    auto semi = expect(TokenKind::Semicolon);
+    return alloc.emplace<JumpStatementSyntax>(keyword, semi);
 }
 
 // ----- EXPRESSIONS -----
