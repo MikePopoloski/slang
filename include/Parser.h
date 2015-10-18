@@ -1,22 +1,11 @@
 #pragma once
 
+#include "AllSyntax.h"
+
 namespace slang {
 
 class Lexer;
 class BumpAllocator;
-struct ExpressionSyntax;
-struct NameSyntax;
-struct ConcatenationExpressionSyntax;
-struct StreamingConcatenationExpressionSyntax;
-struct StreamExpressionSyntax;
-struct ElementSelectSyntax;
-struct ArgumentListSyntax;
-struct ArgumentSyntax;
-struct PatternSyntax;
-struct ConditionalPredicateSyntax;
-struct ConditionalPatternSyntax;
-struct StatementSyntax;
-struct ConditionalStatementSyntax;
 
 class Parser {
 public:
@@ -49,6 +38,7 @@ private:
     ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
     ConditionalPatternSyntax* parseConditionalPattern();
     ConditionalStatementSyntax* parseConditionalStatement(Token* uniqueOrPriority);
+    CaseStatementSyntax* parseCaseStatement(Token* uniqueOrPriority, Token* caseKeyword);
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>

@@ -231,6 +231,36 @@ token closeParen
 StatementSyntax statement
 ElseClauseSyntax elseClause
 
+CaseItemSyntax final=false
+empty
+
+DefaultCaseItemSyntax base=CaseItemSyntax kind=DefaultCaseItem
+token defaultKeyword
+token colon
+StatementSyntax statement
+
+PatternCaseItemSyntax base=CaseItemSyntax kind=PatternCaseItem
+PatternSyntax pattern
+token tripleAnd
+ExpressionSyntax expr
+token colon
+StatementSyntax statement
+
+StandardCaseItemSyntax base=CaseItemSyntax kind=StandardCaseItem
+separated_list<ExpressionSyntax> expressions
+token colon
+StatementSyntax statement
+
+CaseStatementSyntax base=StatementSyntax kind=CaseStatement
+token uniqueOrPriority
+token caseKeyword
+token openParen
+ExpressionSyntax expr
+token closeParen
+token matchesOrInside
+list<CaseItemSyntax> items
+token endcase
+
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false

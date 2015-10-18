@@ -25,7 +25,18 @@ TEST_CASE("If statement", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::ConditionalStatement);
+    CHECK(stmt->toFullString() == text);
+    CHECK(diagnostics.empty());
     CHECK(((ConditionalStatementSyntax*)stmt)->predicate->conditions[0]->expr->kind == SyntaxKind::LogicalAndExpression);
+}
+
+TEST_CASE("Case statement (empty)", "[parser:statements]") {
+    auto& text = "unique casez (foo) endcase";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::CaseStatement);
+    CHECK(stmt->toFullString() == text);
+    CHECK(diagnostics.empty());
 }
 
 }

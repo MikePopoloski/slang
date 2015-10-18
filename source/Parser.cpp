@@ -16,7 +16,6 @@
 #include "Lexer.h"
 #include "Preprocessor.h"
 #include "Parser.h"
-#include "AllSyntax.h"
 
 namespace {
 
@@ -60,7 +59,7 @@ bool isEndOfBracedList(TokenKind kind) {
 }
 
 bool isEndOfConditionalPredicate(TokenKind kind) {
-    return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
+    return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::BeginKeyword || kind == TokenKind::Semicolon;
 }
 
 }
@@ -80,8 +79,25 @@ StatementSyntax* Parser::parseStatement() {
     switch (peek()->kind) {
         case TokenKind::UniqueKeyword:
         case TokenKind::Unique0Keyword:
-        case TokenKind::PriorityKeyword:
-            return parseConditionalStatement(consume());
+        case TokenKind::PriorityKeyword: {
+            auto modifier = consume();
+            switch (peek()->kind) {
+                case TokenKind::IfKeyword:
+                    return parseConditionalStatement(modifier);
+                case TokenKind::CaseKeyword:
+                case TokenKind::CaseXKeyword:
+                case TokenKind::CaseZKeyword:
+                    return parseCaseStatement(modifier, consume());
+                default:
+                    // TODO: handle error case
+                    break;
+            }
+            break;
+        }
+        case TokenKind::CaseKeyword:
+        case TokenKind::CaseXKeyword:
+        case TokenKind::CaseZKeyword:
+            return parseCaseStatement(nullptr, consume());
         case TokenKind::IfKeyword:
             return parseConditionalStatement(nullptr);
         case TokenKind::Semicolon:
@@ -106,6 +122,24 @@ ConditionalStatementSyntax* Parser::parseConditionalStatement(Token* uniqueOrPri
     }
 
     return alloc.emplace<ConditionalStatementSyntax>(uniqueOrPriority, ifKeyword, openParen, predicate, closeParen, statement, elseClause);
+}
+
+CaseStatementSyntax* Parser::parseCaseStatement(Token* uniqueOrPriority, Token* caseKeyword) {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto expr = parseExpression();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+
+    Token* matchesOrInside = nullptr;
+    switch (peek()->kind) {
+        case TokenKind::MatchesKeyword:
+        case TokenKind::InsideKeyword:
+            matchesOrInside = consume();
+            break;
+    }
+
+    // TODO: items
+    auto endcase = expect(TokenKind::EndCaseKeyword);
+    return alloc.emplace<CaseStatementSyntax>(uniqueOrPriority, caseKeyword, openParen, expr, closeParen, matchesOrInside, ArrayRef<CaseItemSyntax*>(nullptr), endcase);
 }
 
 // ----- EXPRESSIONS -----

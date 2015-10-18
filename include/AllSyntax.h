@@ -980,6 +980,116 @@ protected:
     }
 };
 
+struct CaseItemSyntax : public SyntaxNode {
+
+    CaseItemSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct DefaultCaseItemSyntax : public CaseItemSyntax {
+    Token* defaultKeyword;
+    Token* colon;
+    StatementSyntax* statement;
+
+    DefaultCaseItemSyntax(Token* defaultKeyword, Token* colon, StatementSyntax* statement) :
+        CaseItemSyntax(SyntaxKind::DefaultCaseItem), defaultKeyword(defaultKeyword), colon(colon), statement(statement)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return defaultKeyword;
+            case 1: return colon;
+            case 2: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct PatternCaseItemSyntax : public CaseItemSyntax {
+    PatternSyntax* pattern;
+    Token* tripleAnd;
+    ExpressionSyntax* expr;
+    Token* colon;
+    StatementSyntax* statement;
+
+    PatternCaseItemSyntax(PatternSyntax* pattern, Token* tripleAnd, ExpressionSyntax* expr, Token* colon, StatementSyntax* statement) :
+        CaseItemSyntax(SyntaxKind::PatternCaseItem), pattern(pattern), tripleAnd(tripleAnd), expr(expr), colon(colon), statement(statement)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return pattern;
+            case 1: return tripleAnd;
+            case 2: return expr;
+            case 3: return colon;
+            case 4: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StandardCaseItemSyntax : public CaseItemSyntax {
+    SeparatedSyntaxList<ExpressionSyntax> expressions;
+    Token* colon;
+    StatementSyntax* statement;
+
+    StandardCaseItemSyntax(SeparatedSyntaxList<ExpressionSyntax> expressions, Token* colon, StatementSyntax* statement) :
+        CaseItemSyntax(SyntaxKind::StandardCaseItem), expressions(expressions), colon(colon), statement(statement)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &expressions;
+            case 1: return colon;
+            case 2: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct CaseStatementSyntax : public StatementSyntax {
+    Token* uniqueOrPriority;
+    Token* caseKeyword;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
+    Token* matchesOrInside;
+    SyntaxList<CaseItemSyntax> items;
+    Token* endcase;
+
+    CaseStatementSyntax(Token* uniqueOrPriority, Token* caseKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen, Token* matchesOrInside, SyntaxList<CaseItemSyntax> items, Token* endcase) :
+        StatementSyntax(SyntaxKind::CaseStatement), uniqueOrPriority(uniqueOrPriority), caseKeyword(caseKeyword), openParen(openParen), expr(expr), closeParen(closeParen), matchesOrInside(matchesOrInside), items(items), endcase(endcase)
+    {
+        childCount += 8;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return uniqueOrPriority;
+            case 1: return caseKeyword;
+            case 2: return openParen;
+            case 3: return expr;
+            case 4: return closeParen;
+            case 5: return matchesOrInside;
+            case 6: return &items;
+            case 7: return endcase;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- DIRECTIVES -----
 
 struct DirectiveSyntax : public SyntaxNode {

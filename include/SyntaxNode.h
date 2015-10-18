@@ -162,7 +162,11 @@ enum class SyntaxKind : uint16_t {
     // statements
     EmptyStatement,
     ElseClause,
-    ConditionalStatement
+    ConditionalStatement,
+    DefaultCaseItem,
+    PatternCaseItem,
+    StandardCaseItem,
+    CaseStatement
 };
 
 enum class TokenKind : uint16_t;
