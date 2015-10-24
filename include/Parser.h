@@ -47,6 +47,8 @@ private:
     ReturnStatementSyntax* parseReturnStatement();
     JumpStatementSyntax* parseJumpStatement();
     AssignmentStatementSyntax* parseAssignmentStatement();
+    ProceduralAssignStatementSyntax* parseProceduralAssign(SyntaxKind kind);
+    ProceduralDeassignStatementSyntax* parseProceduralDeassign(SyntaxKind kind);
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>

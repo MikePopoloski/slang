@@ -190,6 +190,10 @@ enum class SyntaxKind : uint16_t {
     ReturnStatement,
     JumpStatement,
     TimingControlStatement,
+    ProceduralAssignStatement,
+    ProceduralForceStatement,
+    ProceduralDeassignStatement,
+    ProceduralReleaseStatement,
 
     // assignment statements
     NonblockingAssignmentStatement,

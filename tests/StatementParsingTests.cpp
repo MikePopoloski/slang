@@ -133,4 +133,19 @@ TEST_CASE("Timing control statements", "[parser:statements]") {
     testTimingControl("@(posedge foo iff foo+92 == 76 or negedge clk, (edge clk)) ;", SyntaxKind::EventControlWithExpression);
 }
 
+void testProceduralAssign(const SourceText& text, SyntaxKind kind) {
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == kind);
+    CHECK(stmt->toFullString() == text.begin());
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Procedural assign", "[parser:statements]") {
+    testProceduralAssign("assign foo = bar;", SyntaxKind::ProceduralAssignStatement);
+    testProceduralAssign("force foo = bar;", SyntaxKind::ProceduralForceStatement);
+    testProceduralAssign("deassign foo;", SyntaxKind::ProceduralDeassignStatement);
+    testProceduralAssign("release foo;", SyntaxKind::ProceduralReleaseStatement);
+}
+
 }

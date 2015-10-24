@@ -378,6 +378,18 @@ TimingControlSyntax timingControl
 ExpressionSyntax expr
 token semi
 
+ProceduralAssignStatementSyntax base=StatementSyntax
+token keyword
+ExpressionSyntax lvalue
+token equals
+ExpressionSyntax value
+token semi
+
+ProceduralDeassignStatementSyntax base=StatementSyntax
+token keyword
+ExpressionSyntax variable
+token semi
+
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false

@@ -1590,6 +1590,54 @@ protected:
     }
 };
 
+struct ProceduralAssignStatementSyntax : public StatementSyntax {
+    Token* keyword;
+    ExpressionSyntax* lvalue;
+    Token* equals;
+    ExpressionSyntax* value;
+    Token* semi;
+
+    ProceduralAssignStatementSyntax(SyntaxKind kind, Token* keyword, ExpressionSyntax* lvalue, Token* equals, ExpressionSyntax* value, Token* semi) :
+        StatementSyntax(kind), keyword(keyword), lvalue(lvalue), equals(equals), value(value), semi(semi)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return lvalue;
+            case 2: return equals;
+            case 3: return value;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ProceduralDeassignStatementSyntax : public StatementSyntax {
+    Token* keyword;
+    ExpressionSyntax* variable;
+    Token* semi;
+
+    ProceduralDeassignStatementSyntax(SyntaxKind kind, Token* keyword, ExpressionSyntax* variable, Token* semi) :
+        StatementSyntax(kind), keyword(keyword), variable(variable), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return variable;
+            case 2: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- DIRECTIVES -----
 
 struct DirectiveSyntax : public SyntaxNode {
