@@ -85,6 +85,8 @@ enum class SyntaxKind : uint16_t {
     StreamingConcatenationExpression,
     StreamExpression,
     StreamExpressionWithRange,
+    NewClassExpression,
+    NewArrayExpression,
 
     // selectors
     BitSelect,
@@ -151,7 +153,6 @@ enum class SyntaxKind : uint16_t {
     // names
     LocalScope,
     UnitScope,
-    ClassOrPackageScope,
     RootScope,
     IdentifierName,
     IdentifierSelectName,
@@ -160,6 +161,7 @@ enum class SyntaxKind : uint16_t {
     SystemName,
     ThisHandle,
     SuperHandle,
+    ClassScope,
 
     // timing control
     DelayControl,
@@ -172,6 +174,7 @@ enum class SyntaxKind : uint16_t {
     ImplicitEventControl,
     ParenImplicitEventControl,
     EventControlWithExpression,
+    RepeatedEventControl,
 
     // statements
     EmptyStatement,
@@ -186,7 +189,23 @@ enum class SyntaxKind : uint16_t {
     DoWhileStatement,
     ReturnStatement,
     JumpStatement,
-    TimingControlStatement
+    TimingControlStatement,
+
+    // assignment statements
+    NonblockingAssignmentStatement,
+    BlockingAssignmentStatement,
+    AddAssignmentStatement,
+    SubtractAssignmentStatement,
+    MultiplyAssignmentStatement,
+    DivideAssignmentStatement,
+    ModAssignmentStatement,
+    AndAssignmentStatement,
+    OrAssignmentStatement,
+    XorAssignmentStatement,
+    LogicalLeftShiftAssignmentStatement,
+    LogicalRightShiftAssignmentStatement,
+    ArithmeticLeftShiftAssignmentStatement,
+    ArithmeticRightShiftAssignmentStatement
 };
 
 enum class TokenKind : uint16_t;
@@ -196,6 +215,7 @@ SyntaxKind getUnaryPostfixExpression(TokenKind kind);
 SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
+SyntaxKind getAssignmentStatement(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleExpression(TokenKind kind);

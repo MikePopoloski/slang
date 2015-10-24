@@ -107,6 +107,25 @@ SyntaxKind getKeywordNameExpression(TokenKind kind) {
     }
 }
 
+SyntaxKind getAssignmentStatement(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Equals: return SyntaxKind::BlockingAssignmentStatement;
+        case TokenKind::PlusEqual: return SyntaxKind::AddAssignmentStatement;
+        case TokenKind::MinusEqual: return SyntaxKind::SubtractAssignmentStatement;
+        case TokenKind::StarEqual: return SyntaxKind::MultiplyAssignmentStatement;
+        case TokenKind::SlashEqual: return SyntaxKind::DivideAssignmentStatement;
+        case TokenKind::PercentEqual: return SyntaxKind::ModAssignmentStatement;
+        case TokenKind::AndEqual: return SyntaxKind::AndAssignmentStatement;
+        case TokenKind::OrEqual: return SyntaxKind::OrAssignmentStatement;
+        case TokenKind::XorEqual: return SyntaxKind::XorAssignmentStatement;
+        case TokenKind::LeftShiftEqual: return SyntaxKind::LogicalLeftShiftAssignmentStatement;
+        case TokenKind::TripleLeftShiftEqual: return SyntaxKind::ArithmeticLeftShiftAssignmentStatement;
+        case TokenKind::RightShiftEqual: return SyntaxKind::LogicalRightShiftAssignmentStatement;
+        case TokenKind::TripleRightShiftEqual: return SyntaxKind::ArithmeticRightShiftAssignmentStatement;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
 int getPrecedence(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::AssignmentExpression:
@@ -302,6 +321,8 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(StreamingConcatenationExpression);
         CASE(StreamExpression);
         CASE(StreamExpressionWithRange);
+        CASE(NewClassExpression);
+        CASE(NewArrayExpression);
         CASE(BitSelect);
         CASE(SimpleRangeSelect);
         CASE(AscendingRangeSelect);
@@ -358,7 +379,6 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ArithmeticRightShiftAssignmentExpression);
         CASE(LocalScope);
         CASE(UnitScope);
-        CASE(ClassOrPackageScope);
         CASE(RootScope);
         CASE(IdentifierName);
         CASE(IdentifierSelectName);
@@ -367,6 +387,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(SystemName);
         CASE(ThisHandle);
         CASE(SuperHandle);
+        CASE(ClassScope);
         CASE(DelayControl);
         CASE(CycleDelay);
         CASE(EventControl);
@@ -377,6 +398,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ImplicitEventControl);
         CASE(ParenImplicitEventControl);
         CASE(EventControlWithExpression);
+        CASE(RepeatedEventControl);
         CASE(EmptyStatement);
         CASE(ElseClause);
         CASE(ConditionalStatement);
@@ -390,6 +412,20 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ReturnStatement);
         CASE(JumpStatement);
         CASE(TimingControlStatement);
+        CASE(NonblockingAssignmentStatement);
+        CASE(BlockingAssignmentStatement);
+        CASE(AddAssignmentStatement);
+        CASE(SubtractAssignmentStatement);
+        CASE(MultiplyAssignmentStatement);
+        CASE(DivideAssignmentStatement);
+        CASE(ModAssignmentStatement);
+        CASE(AndAssignmentStatement);
+        CASE(OrAssignmentStatement);
+        CASE(XorAssignmentStatement);
+        CASE(LogicalLeftShiftAssignmentStatement);
+        CASE(LogicalRightShiftAssignmentStatement);
+        CASE(ArithmeticLeftShiftAssignmentStatement);
+        CASE(ArithmeticRightShiftAssignmentStatement);
         default: ASSERT(false && "Missing case");
     }
     return os;

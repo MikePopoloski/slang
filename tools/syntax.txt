@@ -130,6 +130,34 @@ token openBracket
 SelectorSyntax selector
 token closeBracket
 
+// ----- NAMES -----
+
+NameSyntax base=ExpressionSyntax final=false
+empty
+
+IdentifierNameSyntax base=NameSyntax kind=IdentifierName
+token identifier
+
+IdentifierSelectNameSyntax base=NameSyntax kind=IdentifierSelectName
+token identifier
+list<ElementSelectSyntax> selectors
+
+KeywordNameSyntax base=NameSyntax
+token keyword
+
+ClassNameSyntax base=NameSyntax kind=ClassName
+token identifier
+ParameterValueAssignmentSyntax parameters
+
+ScopedNameSyntax base=NameSyntax kind=ScopedName
+NameSyntax left
+token separator
+NameSyntax right
+
+ClassScopeSyntax kind=ClassScope
+NameSyntax left
+token separator
+
 // ----- PRIMARY EXPRESSIONS -----
 
 PrimaryExpressionSyntax base=ExpressionSyntax
@@ -175,29 +203,17 @@ token openParen
 ExpressionSyntax expression
 token closeParen
 
-// ----- NAMES -----
+NewClassExpressionSyntax base=ExpressionSyntax kind=NewClassExpression
+ClassScopeSyntax classScope
+token newKeyword
+ArgumentListSyntax arguments
 
-NameSyntax base=ExpressionSyntax final=false
-empty
-
-IdentifierNameSyntax base=NameSyntax kind=IdentifierName
-token identifier
-
-IdentifierSelectNameSyntax base=NameSyntax kind=IdentifierSelectName
-token identifier
-list<ElementSelectSyntax> selectors
-
-KeywordNameSyntax base=NameSyntax
-token keyword
-
-ClassNameSyntax base=NameSyntax kind=ClassName
-token identifier
-ParameterValueAssignmentSyntax parameters
-
-ScopedNameSyntax base=NameSyntax kind=ScopedName
-NameSyntax left
-token separator
-NameSyntax right
+NewArrayExpressionSyntax base=ExpressionSyntax kind=NewArrayExpression
+token newKeyword
+token openBracket
+ExpressionSyntax sizeExpr
+token closeBracket
+ParenthesizedExpressionSyntax initializer
 
 // ----- POSTFIX EXPRESSIONS -----
 
@@ -263,6 +279,13 @@ token openParenStarCloseParen
 EventControlWithExpressionSyntax base=TimingControlSyntax kind=EventControlWithExpression
 token at
 EventExpressionSyntax expr
+
+RepeatedEventControlSyntax base=TimingControlSyntax kind=RepeatedEventControl
+token repeat
+token openParen
+ExpressionSyntax expr
+token closeParen
+TimingControlSyntax eventControl
 
 // ----- STATEMENTS -----
 
@@ -347,6 +370,13 @@ token semi
 TimingControlStatementSyntax base=StatementSyntax kind=TimingControlStatement
 TimingControlSyntax timingControl
 StatementSyntax statement
+
+AssignmentStatementSyntax base=StatementSyntax
+ExpressionSyntax left
+token operatorToken
+TimingControlSyntax timingControl
+ExpressionSyntax expr
+token semi
 
 // ----- DIRECTIVES -----
 

@@ -564,6 +564,134 @@ protected:
     }
 };
 
+// ----- NAMES -----
+
+struct NameSyntax : public ExpressionSyntax {
+
+    NameSyntax(SyntaxKind kind) :
+        ExpressionSyntax(kind)
+    {
+    }
+};
+
+struct IdentifierNameSyntax : public NameSyntax {
+    Token* identifier;
+
+    IdentifierNameSyntax(Token* identifier) :
+        NameSyntax(SyntaxKind::IdentifierName), identifier(identifier)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return identifier;
+            default: return nullptr;
+        }
+    }
+};
+
+struct IdentifierSelectNameSyntax : public NameSyntax {
+    Token* identifier;
+    SyntaxList<ElementSelectSyntax> selectors;
+
+    IdentifierSelectNameSyntax(Token* identifier, SyntaxList<ElementSelectSyntax> selectors) :
+        NameSyntax(SyntaxKind::IdentifierSelectName), identifier(identifier), selectors(selectors)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return identifier;
+            case 1: return &selectors;
+            default: return nullptr;
+        }
+    }
+};
+
+struct KeywordNameSyntax : public NameSyntax {
+    Token* keyword;
+
+    KeywordNameSyntax(SyntaxKind kind, Token* keyword) :
+        NameSyntax(kind), keyword(keyword)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ClassNameSyntax : public NameSyntax {
+    Token* identifier;
+    ParameterValueAssignmentSyntax* parameters;
+
+    ClassNameSyntax(Token* identifier, ParameterValueAssignmentSyntax* parameters) :
+        NameSyntax(SyntaxKind::ClassName), identifier(identifier), parameters(parameters)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return identifier;
+            case 1: return parameters;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ScopedNameSyntax : public NameSyntax {
+    NameSyntax* left;
+    Token* separator;
+    NameSyntax* right;
+
+    ScopedNameSyntax(NameSyntax* left, Token* separator, NameSyntax* right) :
+        NameSyntax(SyntaxKind::ScopedName), left(left), separator(separator), right(right)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return separator;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ClassScopeSyntax : public SyntaxNode {
+    NameSyntax* left;
+    Token* separator;
+
+    ClassScopeSyntax(NameSyntax* left, Token* separator) :
+        SyntaxNode(SyntaxKind::ClassScope), left(left), separator(separator)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return separator;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- PRIMARY EXPRESSIONS -----
 
 struct PrimaryExpressionSyntax : public ExpressionSyntax {
@@ -750,99 +878,13 @@ protected:
     }
 };
 
-// ----- NAMES -----
+struct NewClassExpressionSyntax : public ExpressionSyntax {
+    ClassScopeSyntax* classScope;
+    Token* newKeyword;
+    ArgumentListSyntax* arguments;
 
-struct NameSyntax : public ExpressionSyntax {
-
-    NameSyntax(SyntaxKind kind) :
-        ExpressionSyntax(kind)
-    {
-    }
-};
-
-struct IdentifierNameSyntax : public NameSyntax {
-    Token* identifier;
-
-    IdentifierNameSyntax(Token* identifier) :
-        NameSyntax(SyntaxKind::IdentifierName), identifier(identifier)
-    {
-        childCount += 1;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return identifier;
-            default: return nullptr;
-        }
-    }
-};
-
-struct IdentifierSelectNameSyntax : public NameSyntax {
-    Token* identifier;
-    SyntaxList<ElementSelectSyntax> selectors;
-
-    IdentifierSelectNameSyntax(Token* identifier, SyntaxList<ElementSelectSyntax> selectors) :
-        NameSyntax(SyntaxKind::IdentifierSelectName), identifier(identifier), selectors(selectors)
-    {
-        childCount += 2;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return identifier;
-            case 1: return &selectors;
-            default: return nullptr;
-        }
-    }
-};
-
-struct KeywordNameSyntax : public NameSyntax {
-    Token* keyword;
-
-    KeywordNameSyntax(SyntaxKind kind, Token* keyword) :
-        NameSyntax(kind), keyword(keyword)
-    {
-        childCount += 1;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return keyword;
-            default: return nullptr;
-        }
-    }
-};
-
-struct ClassNameSyntax : public NameSyntax {
-    Token* identifier;
-    ParameterValueAssignmentSyntax* parameters;
-
-    ClassNameSyntax(Token* identifier, ParameterValueAssignmentSyntax* parameters) :
-        NameSyntax(SyntaxKind::ClassName), identifier(identifier), parameters(parameters)
-    {
-        childCount += 2;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return identifier;
-            case 1: return parameters;
-            default: return nullptr;
-        }
-    }
-};
-
-struct ScopedNameSyntax : public NameSyntax {
-    NameSyntax* left;
-    Token* separator;
-    NameSyntax* right;
-
-    ScopedNameSyntax(NameSyntax* left, Token* separator, NameSyntax* right) :
-        NameSyntax(SyntaxKind::ScopedName), left(left), separator(separator), right(right)
+    NewClassExpressionSyntax(ClassScopeSyntax* classScope, Token* newKeyword, ArgumentListSyntax* arguments) :
+        ExpressionSyntax(SyntaxKind::NewClassExpression), classScope(classScope), newKeyword(newKeyword), arguments(arguments)
     {
         childCount += 3;
     }
@@ -850,9 +892,35 @@ struct ScopedNameSyntax : public NameSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return left;
-            case 1: return separator;
-            case 2: return right;
+            case 0: return classScope;
+            case 1: return newKeyword;
+            case 2: return arguments;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NewArrayExpressionSyntax : public ExpressionSyntax {
+    Token* newKeyword;
+    Token* openBracket;
+    ExpressionSyntax* sizeExpr;
+    Token* closeBracket;
+    ParenthesizedExpressionSyntax* initializer;
+
+    NewArrayExpressionSyntax(Token* newKeyword, Token* openBracket, ExpressionSyntax* sizeExpr, Token* closeBracket, ParenthesizedExpressionSyntax* initializer) :
+        ExpressionSyntax(SyntaxKind::NewArrayExpression), newKeyword(newKeyword), openBracket(openBracket), sizeExpr(sizeExpr), closeBracket(closeBracket), initializer(initializer)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return newKeyword;
+            case 1: return openBracket;
+            case 2: return sizeExpr;
+            case 3: return closeBracket;
+            case 4: return initializer;
             default: return nullptr;
         }
     }
@@ -1139,6 +1207,32 @@ protected:
         switch(index) {
             case 0: return at;
             case 1: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct RepeatedEventControlSyntax : public TimingControlSyntax {
+    Token* repeat;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
+    TimingControlSyntax* eventControl;
+
+    RepeatedEventControlSyntax(Token* repeat, Token* openParen, ExpressionSyntax* expr, Token* closeParen, TimingControlSyntax* eventControl) :
+        TimingControlSyntax(SyntaxKind::RepeatedEventControl), repeat(repeat), openParen(openParen), expr(expr), closeParen(closeParen), eventControl(eventControl)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return repeat;
+            case 1: return openParen;
+            case 2: return expr;
+            case 3: return closeParen;
+            case 4: return eventControl;
             default: return nullptr;
         }
     }
@@ -1465,6 +1559,32 @@ protected:
         switch(index) {
             case 0: return timingControl;
             case 1: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct AssignmentStatementSyntax : public StatementSyntax {
+    ExpressionSyntax* left;
+    Token* operatorToken;
+    TimingControlSyntax* timingControl;
+    ExpressionSyntax* expr;
+    Token* semi;
+
+    AssignmentStatementSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* operatorToken, TimingControlSyntax* timingControl, ExpressionSyntax* expr, Token* semi) :
+        StatementSyntax(kind), left(left), operatorToken(operatorToken), timingControl(timingControl), expr(expr), semi(semi)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return operatorToken;
+            case 2: return timingControl;
+            case 3: return expr;
+            case 4: return semi;
             default: return nullptr;
         }
     }

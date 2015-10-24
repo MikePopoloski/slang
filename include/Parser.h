@@ -25,7 +25,6 @@ private:
     ExpressionSyntax* parsePrimaryExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
-    ExpressionSyntax* parseAssignmentExpression();
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token* openBrace);
     StreamExpressionSyntax* parseStreamExpression();
@@ -37,7 +36,7 @@ private:
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();
     EventExpressionSyntax* parseEventExpression();
-    TimingControlSyntax* parseTimingControl();
+    TimingControlSyntax* parseTimingControl(bool allowRepeat);
     ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
     ConditionalPatternSyntax* parseConditionalPattern();
     ConditionalStatementSyntax* parseConditionalStatement(Token* uniqueOrPriority);
@@ -47,6 +46,7 @@ private:
     DoWhileStatementSyntax* parseDoWhileStatement();
     ReturnStatementSyntax* parseReturnStatement();
     JumpStatementSyntax* parseJumpStatement();
+    AssignmentStatementSyntax* parseAssignmentStatement();
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>

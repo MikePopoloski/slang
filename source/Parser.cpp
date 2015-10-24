@@ -61,6 +61,17 @@ bool isPossiblePattern(TokenKind kind) {
     }
 }
 
+bool isPossibleDelayOrEventControl(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Hash:
+        case TokenKind::At:
+        case TokenKind::AtStar:
+        case TokenKind::RepeatKeyword:
+            return true;
+    }
+    return false;
+}
+
 bool isEndKeyword(TokenKind kind) {
     switch (kind) {
         case TokenKind::EndKeyword:
@@ -159,7 +170,7 @@ StatementSyntax* Parser::parseStatement() {
         case TokenKind::DoubleHash:
         case TokenKind::At:
         case TokenKind::AtStar: {
-            auto timingControl = parseTimingControl();
+            auto timingControl = parseTimingControl(false);
             return alloc.emplace<TimingControlStatementSyntax>(timingControl, parseStatement());
         }
         case TokenKind::Semicolon:
@@ -338,6 +349,66 @@ JumpStatementSyntax* Parser::parseJumpStatement() {
     return alloc.emplace<JumpStatementSyntax>(keyword, semi);
 }
 
+AssignmentStatementSyntax* Parser::parseAssignmentStatement() {
+    ExpressionSyntax* lvalue = parsePrimaryExpression();
+
+    // non-blocking assignments
+    auto kind = peek()->kind;
+    if (kind == TokenKind::LessThanEquals) {
+        auto op = consume();
+        auto timingControl = parseTimingControl(true);
+        auto expr = parseExpression();
+        return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::NonblockingAssignmentStatement, lvalue, op, timingControl, expr, expect(TokenKind::Semicolon));
+    }
+
+    // special case blocking assignments
+    if (kind == TokenKind::Equals) {
+        auto op = consume();
+        kind = peek()->kind;
+        if (isPossibleDelayOrEventControl(kind)) {
+            auto timingControl = parseTimingControl(true);
+            auto expr = parseExpression();
+            return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::BlockingAssignmentStatement, lvalue, op, timingControl, expr, expect(TokenKind::Semicolon));
+        }
+
+        if (kind == TokenKind::NewKeyword) {
+            auto newKeyword = consume();
+            kind = peek()->kind;
+
+            ExpressionSyntax* rvalue = nullptr;
+            if (kind == TokenKind::OpenBracket) {
+                // new array
+                auto openBracket = consume();
+                auto sizeExpr = parseExpression();
+                auto closeBracket = expect(TokenKind::CloseBracket);
+
+                ParenthesizedExpressionSyntax* initializer = nullptr;
+                if (peek(TokenKind::OpenParenthesis)) {
+                    auto openParen = consume();
+                    auto initializerExpr = parseExpression();
+                    initializer = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, initializerExpr, expect(TokenKind::CloseParenthesis));
+                }
+                rvalue = alloc.emplace<NewArrayExpressionSyntax>(newKeyword, openBracket, sizeExpr, closeBracket, initializer);
+            }
+            else {
+                // new class
+                ArgumentListSyntax* arguments = nullptr;
+                if (kind == TokenKind::OpenParenthesis)
+                    arguments = parseArgumentList();
+
+                rvalue = alloc.emplace<NewClassExpressionSyntax>(nullptr, newKeyword, arguments);
+            }
+            return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::BlockingAssignmentStatement, lvalue, op, nullptr, rvalue, expect(TokenKind::Semicolon));
+        }
+
+        // TODO: handle class scoped new
+    }
+
+    // TODO: handle error case where operator is missing
+    auto op = consume();
+    return alloc.emplace<AssignmentStatementSyntax>(getAssignmentStatement(kind), lvalue, op, nullptr, parseExpression(), expect(TokenKind::Semicolon));
+}
+
 // ----- EXPRESSIONS -----
 
 ExpressionSyntax* Parser::parseExpression() {
@@ -355,17 +426,6 @@ ExpressionSyntax* Parser::parseMinTypMaxExpression() {
     auto max = parseSubExpression(0);
 
     return alloc.emplace<MinTypMaxExpressionSyntax>(first, colon1, typ, colon2, max);
-}
-
-ExpressionSyntax* Parser::parseAssignmentExpression() {
-    ExpressionSyntax* lvalue = parsePrimaryExpression();
-
-   /* switch (peek()->kind) {
-        case TokenKind::Equals:
-        case TokenKind::LessThanEquals:
-        default:
-    }*/
-    return nullptr;
 }
 
 ExpressionSyntax* Parser::parseSubExpression(int precedence) {
@@ -822,7 +882,7 @@ EventExpressionSyntax* Parser::parseEventExpression() {
     return left;
 }
 
-TimingControlSyntax* Parser::parseTimingControl() {
+TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
     switch (peek()->kind) {
         case TokenKind::Hash: {
             auto hash = consume();
@@ -884,7 +944,15 @@ TimingControlSyntax* Parser::parseTimingControl() {
         }
         case TokenKind::AtStar:
             return alloc.emplace<ImplicitEventControlSyntax>(consume());
-        // TODO: repeated event control
+        case TokenKind::RepeatKeyword: {
+            if (!allowRepeat)
+                return nullptr;
+            auto repeat = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            auto expr = parseExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            return alloc.emplace<RepeatedEventControlSyntax>(repeat, openParen, expr, closeParen, parseTimingControl(false));
+        }
         default:
             return nullptr;
     }
