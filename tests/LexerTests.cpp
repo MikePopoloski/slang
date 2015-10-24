@@ -804,6 +804,7 @@ void testKeyword(TokenKind kind) {
 }
 
 TEST_CASE("All Keywords", "[preprocessor]") {
+    testKeyword(TokenKind::OneStep);
     testKeyword(TokenKind::AcceptOnKeyword);
     testKeyword(TokenKind::AliasKeyword);
     testKeyword(TokenKind::AlwaysKeyword);
@@ -1072,6 +1073,7 @@ TEST_CASE("All Punctuation", "[lexer]") {
     testPunctuation(TokenKind::CloseBracket);
     testPunctuation(TokenKind::OpenParenthesis);
     testPunctuation(TokenKind::OpenParenthesisStar);
+    testPunctuation(TokenKind::OpenParenthesisStarCloseParenthesis);
     testPunctuation(TokenKind::CloseParenthesis);
     testPunctuation(TokenKind::StarCloseParenthesis);
     testPunctuation(TokenKind::Semicolon);
@@ -1143,6 +1145,7 @@ TEST_CASE("All Punctuation", "[lexer]") {
     testPunctuation(TokenKind::OrMinusArrow);
     testPunctuation(TokenKind::OrEqualsArrow);
     testPunctuation(TokenKind::At);
+    testPunctuation(TokenKind::AtStar);
     testPunctuation(TokenKind::DoubleAt);
     testPunctuation(TokenKind::And);
     testPunctuation(TokenKind::DoubleAnd);

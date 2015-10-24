@@ -199,7 +199,7 @@ NameSyntax left
 token separator
 NameSyntax right
 
-// ----- POSTFIX EXPRESSIONS
+// ----- POSTFIX EXPRESSIONS -----
 
 ElementSelectExpressionSyntax base=ExpressionSyntax kind=ElementSelectExpression
 ExpressionSyntax left
@@ -213,6 +213,56 @@ token name
 InvocationExpressionSyntax base=ExpressionSyntax kind=InvocationExpression
 ExpressionSyntax left
 ArgumentListSyntax arguments
+
+// ----- TIMING CONTROL -----
+
+TimingControlSyntax final=false
+empty
+
+DelayControlSyntax base=TimingControlSyntax kind=DelayControl
+token hash
+ExpressionSyntax delayValue
+
+CycleDelaySyntax base=TimingControlSyntax kind=CycleDelay
+token doubleHash
+ExpressionSyntax delayValue
+
+EventControlSyntax base=TimingControlSyntax kind=EventControl
+token at
+NameSyntax eventName
+
+EventExpressionSyntax final=false
+empty
+
+IffClauseSyntax kind=IffClause
+token iff
+ExpressionSyntax expr
+
+SignalEventExpressionSyntax base=EventExpressionSyntax kind=SignalEventExpression
+token edge
+ExpressionSyntax expr
+IffClauseSyntax iffClause
+
+BinaryEventExpressionSyntax base=EventExpressionSyntax kind=BinaryEventExpression
+EventExpressionSyntax left
+token operatorToken
+EventExpressionSyntax right
+
+ParenthesizedEventExpressionSyntax base=EventExpressionSyntax kind=ParenthesizedEventExpression
+token openParen
+EventExpressionSyntax expr
+token closeParen
+
+ImplicitEventControlSyntax base=TimingControlSyntax kind=ImplicitEventControl
+token atStar
+
+ParenImplicitEventControlSyntax base=TimingControlSyntax kind=ParenImplicitEventControl
+token at
+token openParenStarCloseParen
+
+EventControlWithExpressionSyntax base=TimingControlSyntax kind=EventControlWithExpression
+token at
+EventExpressionSyntax expr
 
 // ----- STATEMENTS -----
 
@@ -293,6 +343,10 @@ token semi
 JumpStatementSyntax base=StatementSyntax kind=JumpStatement
 token breakOrContinue
 token semi
+
+TimingControlStatementSyntax base=StatementSyntax kind=TimingControlStatement
+TimingControlSyntax timingControl
+StatementSyntax statement
 
 // ----- DIRECTIVES -----
 

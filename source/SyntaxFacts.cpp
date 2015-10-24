@@ -45,6 +45,7 @@ SyntaxKind getLiteralExpression(TokenKind kind) {
         case TokenKind::TimeLiteral: return SyntaxKind::TimeLiteralExpression;
         case TokenKind::NullKeyword: return SyntaxKind::NullLiteralExpression;
         case TokenKind::Dollar: return SyntaxKind::WildcardLiteralExpression;
+        case TokenKind::OneStep: return SyntaxKind::OneStepLiteralExpression;
         default: return SyntaxKind::Unknown;
     }
 }
@@ -207,10 +208,15 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::UnitSystemName:
         case TokenKind::ThisKeyword:
         case TokenKind::SuperKeyword:
-        case TokenKind::DoubleColon:
         case TokenKind::Identifier:
         case TokenKind::RootSystemName:
         case TokenKind::Hash:
+            // expressions can't actually start with these, but we'll allow it
+            // to provide good error handling
+        case TokenKind::DoubleColon:
+        case TokenKind::Question:
+        case TokenKind::MatchesKeyword:
+        case TokenKind::TripleAnd:
             return true;
         default: break;
     }
@@ -287,6 +293,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(RealLiteralExpression);
         CASE(TimeLiteralExpression);
         CASE(WildcardLiteralExpression);
+        CASE(OneStepLiteralExpression);
         CASE(ParenthesizedExpression);
         CASE(MinTypMaxExpression);
         CASE(EmptyQueueExpression);
@@ -360,6 +367,16 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(SystemName);
         CASE(ThisHandle);
         CASE(SuperHandle);
+        CASE(DelayControl);
+        CASE(CycleDelay);
+        CASE(EventControl);
+        CASE(IffClause);
+        CASE(SignalEventExpression);
+        CASE(BinaryEventExpression);
+        CASE(ParenthesizedEventExpression);
+        CASE(ImplicitEventControl);
+        CASE(ParenImplicitEventControl);
+        CASE(EventControlWithExpression);
         CASE(EmptyStatement);
         CASE(ElseClause);
         CASE(ConditionalStatement);
@@ -372,6 +389,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(DoWhileStatement);
         CASE(ReturnStatement);
         CASE(JumpStatement);
+        CASE(TimingControlStatement);
         default: ASSERT(false && "Missing case");
     }
     return os;

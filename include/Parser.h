@@ -25,6 +25,7 @@ private:
     ExpressionSyntax* parsePrimaryExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
+    ExpressionSyntax* parseAssignmentExpression();
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token* openBrace);
     StreamExpressionSyntax* parseStreamExpression();
@@ -35,6 +36,8 @@ private:
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();
+    EventExpressionSyntax* parseEventExpression();
+    TimingControlSyntax* parseTimingControl();
     ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
     ConditionalPatternSyntax* parseConditionalPattern();
     ConditionalStatementSyntax* parseConditionalStatement(Token* uniqueOrPriority);

@@ -344,6 +344,7 @@ StringRef getTokenKindText(TokenKind kind) {
         case TokenKind::CloseBracket: return "]";
         case TokenKind::OpenParenthesis: return "(";
         case TokenKind::OpenParenthesisStar: return "(*";
+        case TokenKind::OpenParenthesisStarCloseParenthesis: return "(*)";
         case TokenKind::CloseParenthesis: return ")";
         case TokenKind::StarCloseParenthesis: return "*)";
         case TokenKind::Semicolon: return ";";
@@ -415,12 +416,14 @@ StringRef getTokenKindText(TokenKind kind) {
         case TokenKind::OrMinusArrow: return "|->";
         case TokenKind::OrEqualsArrow: return "|=>";
         case TokenKind::At: return "@";
+        case TokenKind::AtStar: return "@*";
         case TokenKind::DoubleAt: return "@@";
         case TokenKind::And: return "&";
         case TokenKind::DoubleAnd: return "&&";
         case TokenKind::TripleAnd: return "&&&";
 
         // keywords
+        case TokenKind::OneStep: return "1step";
         case TokenKind::AcceptOnKeyword: return "accept_on";
         case TokenKind::AliasKeyword: return "alias";
         case TokenKind::AlwaysKeyword: return "always";
@@ -701,6 +704,7 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         CASE(CloseBracket);
         CASE(OpenParenthesis);
         CASE(OpenParenthesisStar);
+        CASE(OpenParenthesisStarCloseParenthesis);
         CASE(CloseParenthesis);
         CASE(StarCloseParenthesis);
         CASE(Semicolon);
@@ -772,10 +776,12 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         CASE(OrMinusArrow);
         CASE(OrEqualsArrow);
         CASE(At);
+        CASE(AtStar);
         CASE(DoubleAt);
         CASE(And);
         CASE(DoubleAnd);
         CASE(TripleAnd);
+        CASE(OneStep);
         CASE(AcceptOnKeyword);
         CASE(AliasKeyword);
         CASE(AlwaysKeyword);

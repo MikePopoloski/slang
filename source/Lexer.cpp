@@ -238,10 +238,12 @@ TokenKind Lexer::lexToken(TokenInfo& info) {
             lexUnsizedNumericLiteral(info);
             return TokenKind::IntegerLiteral;
         case '(':
-            if (consume('*'))
-                return TokenKind::OpenParenthesisStar;
-            else
+            if (!consume('*'))
                 return TokenKind::OpenParenthesis;
+            else if (consume(')'))
+                return TokenKind::OpenParenthesisStarCloseParenthesis;
+            else
+                return TokenKind::OpenParenthesisStar;
         case ')': return TokenKind::CloseParenthesis;
         case '*':
             switch (peek()) {
@@ -362,10 +364,11 @@ TokenKind Lexer::lexToken(TokenInfo& info) {
             return TokenKind::GreaterThan;
         case '?': return TokenKind::Question;
         case '@':
-            if (consume('@'))
-                return TokenKind::DoubleAt;
-            else
-                return TokenKind::At;
+            switch (peek()) {
+                case '@': advance(); return TokenKind::DoubleAt;
+                case '*': advance(); return TokenKind::AtStar;
+                default: return TokenKind::At;
+            }
         case 'A': case 'B': case 'C': case 'D':
         case 'E': case 'F': case 'G': case 'H':
         case 'I': case 'J': case 'L': case 'K':
@@ -590,6 +593,17 @@ TokenKind Lexer::lexDirective(TokenInfo& info) {
 }
 
 TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
+    // have to check for the "1step" magic keyword
+    static const char OneStepText[] = "1step";
+    for (int i = 0; i < sizeof(OneStepText) - 1; i++) {
+        if (peek(i) != OneStepText[i])
+            break;
+        if (i == sizeof(OneStepText) - 2) {
+            advance(sizeof(OneStepText) - 1);
+            return TokenKind::OneStep;
+        }
+    }
+
     // skip over leading zeros
     char c;
     while ((c = peek()) == '0')

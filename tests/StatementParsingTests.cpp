@@ -111,4 +111,26 @@ TEST_CASE("Jump statements", "[parser:statements]") {
     CHECK(diagnostics.empty());
 }
 
+void testTimingControl(const SourceText& text, SyntaxKind kind) {
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::TimingControlStatement);
+    CHECK(((TimingControlStatementSyntax*)stmt)->timingControl->kind == kind);
+    CHECK(stmt->toFullString() == text.begin());
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Timing control statements", "[parser:statements]") {
+    testTimingControl("# 52 ;", SyntaxKind::DelayControl);
+    testTimingControl("#1step ;", SyntaxKind::DelayControl);
+    testTimingControl("# (3:4:5) ;", SyntaxKind::DelayControl);
+    testTimingControl("## (3+2) ;", SyntaxKind::CycleDelay);
+    testTimingControl("## foo ;", SyntaxKind::CycleDelay);
+    testTimingControl("##92 ;", SyntaxKind::CycleDelay);
+    testTimingControl("@* ;", SyntaxKind::ImplicitEventControl);
+    testTimingControl("@ (*) ;", SyntaxKind::ParenImplicitEventControl);
+    testTimingControl("@* ;", SyntaxKind::ImplicitEventControl);
+    testTimingControl("@(posedge foo iff foo+92 == 76 or negedge clk, (edge clk)) ;", SyntaxKind::EventControlWithExpression);
+}
+
 }

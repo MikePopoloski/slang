@@ -155,6 +155,13 @@ StatementSyntax* Parser::parseStatement() {
         case TokenKind::BreakKeyword:
         case TokenKind::ContinueKeyword:
             return parseJumpStatement();
+        case TokenKind::Hash:
+        case TokenKind::DoubleHash:
+        case TokenKind::At:
+        case TokenKind::AtStar: {
+            auto timingControl = parseTimingControl();
+            return alloc.emplace<TimingControlStatementSyntax>(timingControl, parseStatement());
+        }
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyStatementSyntax>(consume());
     }
@@ -348,6 +355,17 @@ ExpressionSyntax* Parser::parseMinTypMaxExpression() {
     auto max = parseSubExpression(0);
 
     return alloc.emplace<MinTypMaxExpressionSyntax>(first, colon1, typ, colon2, max);
+}
+
+ExpressionSyntax* Parser::parseAssignmentExpression() {
+    ExpressionSyntax* lvalue = parsePrimaryExpression();
+
+   /* switch (peek()->kind) {
+        case TokenKind::Equals:
+        case TokenKind::LessThanEquals:
+        default:
+    }*/
+    return nullptr;
 }
 
 ExpressionSyntax* Parser::parseSubExpression(int precedence) {
@@ -764,6 +782,112 @@ ConditionalPatternSyntax* Parser::parseConditionalPattern() {
     }
 
     return alloc.emplace<ConditionalPatternSyntax>(expr, matchesClause);
+}
+
+EventExpressionSyntax* Parser::parseEventExpression() {
+    EventExpressionSyntax* left;
+    switch (peek()->kind) {
+        case TokenKind::OpenParenthesis: {
+            auto openParen = consume();
+            auto expr = parseEventExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            left = alloc.emplace<ParenthesizedEventExpressionSyntax>(openParen, expr, closeParen);
+            break;
+        }
+        case TokenKind::PosEdgeKeyword:
+        case TokenKind::NegEdgeKeyword:
+        case TokenKind::EdgeKeyword: {
+            auto edge = consume();
+            auto expr = parseExpression();
+
+            IffClauseSyntax* iffClause = nullptr;
+            if (peek(TokenKind::IffKeyword)) {
+                auto iff = consume();
+                iffClause = alloc.emplace<IffClauseSyntax>(iff, parseExpression());
+            }
+            left = alloc.emplace<SignalEventExpressionSyntax>(edge, expr, iffClause);
+            break;
+        }
+        // TODO: sequence instances and undecorated signal expressions
+        default:
+            left = nullptr;
+            break;
+    }
+
+    auto kind = peek()->kind;
+    if (kind == TokenKind::Comma || kind == TokenKind::OrKeyword) {
+        auto op = consume();
+        left = alloc.emplace<BinaryEventExpressionSyntax>(left, op, parseEventExpression());
+    }
+    return left;
+}
+
+TimingControlSyntax* Parser::parseTimingControl() {
+    switch (peek()->kind) {
+        case TokenKind::Hash: {
+            auto hash = consume();
+            ExpressionSyntax* delayValue;
+            switch (peek()->kind) {
+                case TokenKind::IntegerLiteral:
+                case TokenKind::RealLiteral:
+                case TokenKind::TimeLiteral:
+                case TokenKind::OneStep: {
+                    auto literal = consume();
+                    delayValue = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
+                    break;
+                }
+                case TokenKind::OpenParenthesis: {
+                    auto openParen = consume();
+                    auto expr = parseMinTypMaxExpression();
+                    auto closeParen = expect(TokenKind::CloseParenthesis);
+                    delayValue = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, closeParen);
+                    break;
+                }
+                default:
+                    delayValue = parseName();
+                    break;
+            }
+            return alloc.emplace<DelayControlSyntax>(hash, delayValue);
+        }
+        case TokenKind::DoubleHash: {
+            auto doubleHash = consume();
+            ExpressionSyntax* delayValue;
+            switch (peek()->kind) {
+                case TokenKind::IntegerLiteral:
+                    delayValue = alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::IntegerLiteralExpression, consume());
+                    break;
+                case TokenKind::OpenParenthesis: {
+                    auto openParen = consume();
+                    auto expr = parseExpression();
+                    auto closeParen = expect(TokenKind::CloseParenthesis);
+                    delayValue = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, closeParen);
+                    break;
+                }
+                default:
+                    delayValue = alloc.emplace<IdentifierNameSyntax>(expect(TokenKind::Identifier));
+                    break;
+            }
+            return alloc.emplace<CycleDelaySyntax>(doubleHash, delayValue);
+        }
+        case TokenKind::At: {
+            auto at = consume();
+            if (peek(TokenKind::OpenParenthesis)) {
+                auto openParen = consume();
+                auto eventExpr = parseEventExpression();
+                auto closeParen = expect(TokenKind::CloseParenthesis);
+                return alloc.emplace<EventControlWithExpressionSyntax>(at, alloc.emplace<ParenthesizedEventExpressionSyntax>(openParen, eventExpr, closeParen));
+            }
+            else if (peek(TokenKind::OpenParenthesisStarCloseParenthesis))
+                return alloc.emplace<ParenImplicitEventControlSyntax>(at, consume());
+            else
+                return alloc.emplace<EventControlSyntax>(at, parseName());
+        }
+        case TokenKind::AtStar:
+            return alloc.emplace<ImplicitEventControlSyntax>(consume());
+        // TODO: repeated event control
+        default:
+            return nullptr;
+    }
 }
 
 // this is a generalized method for parsing a comma separated list of things

@@ -858,7 +858,7 @@ protected:
     }
 };
 
-// ----- POSTFIX EXPRESSIONS
+// ----- POSTFIX EXPRESSIONS -----
 
 struct ElementSelectExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* left;
@@ -917,6 +917,228 @@ protected:
         switch(index) {
             case 0: return left;
             case 1: return arguments;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- TIMING CONTROL -----
+
+struct TimingControlSyntax : public SyntaxNode {
+
+    TimingControlSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct DelayControlSyntax : public TimingControlSyntax {
+    Token* hash;
+    ExpressionSyntax* delayValue;
+
+    DelayControlSyntax(Token* hash, ExpressionSyntax* delayValue) :
+        TimingControlSyntax(SyntaxKind::DelayControl), hash(hash), delayValue(delayValue)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return hash;
+            case 1: return delayValue;
+            default: return nullptr;
+        }
+    }
+};
+
+struct CycleDelaySyntax : public TimingControlSyntax {
+    Token* doubleHash;
+    ExpressionSyntax* delayValue;
+
+    CycleDelaySyntax(Token* doubleHash, ExpressionSyntax* delayValue) :
+        TimingControlSyntax(SyntaxKind::CycleDelay), doubleHash(doubleHash), delayValue(delayValue)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return doubleHash;
+            case 1: return delayValue;
+            default: return nullptr;
+        }
+    }
+};
+
+struct EventControlSyntax : public TimingControlSyntax {
+    Token* at;
+    NameSyntax* eventName;
+
+    EventControlSyntax(Token* at, NameSyntax* eventName) :
+        TimingControlSyntax(SyntaxKind::EventControl), at(at), eventName(eventName)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return at;
+            case 1: return eventName;
+            default: return nullptr;
+        }
+    }
+};
+
+struct EventExpressionSyntax : public SyntaxNode {
+
+    EventExpressionSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct IffClauseSyntax : public SyntaxNode {
+    Token* iff;
+    ExpressionSyntax* expr;
+
+    IffClauseSyntax(Token* iff, ExpressionSyntax* expr) :
+        SyntaxNode(SyntaxKind::IffClause), iff(iff), expr(expr)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return iff;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct SignalEventExpressionSyntax : public EventExpressionSyntax {
+    Token* edge;
+    ExpressionSyntax* expr;
+    IffClauseSyntax* iffClause;
+
+    SignalEventExpressionSyntax(Token* edge, ExpressionSyntax* expr, IffClauseSyntax* iffClause) :
+        EventExpressionSyntax(SyntaxKind::SignalEventExpression), edge(edge), expr(expr), iffClause(iffClause)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return edge;
+            case 1: return expr;
+            case 2: return iffClause;
+            default: return nullptr;
+        }
+    }
+};
+
+struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
+    EventExpressionSyntax* left;
+    Token* operatorToken;
+    EventExpressionSyntax* right;
+
+    BinaryEventExpressionSyntax(EventExpressionSyntax* left, Token* operatorToken, EventExpressionSyntax* right) :
+        EventExpressionSyntax(SyntaxKind::BinaryEventExpression), left(left), operatorToken(operatorToken), right(right)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return operatorToken;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
+    Token* openParen;
+    EventExpressionSyntax* expr;
+    Token* closeParen;
+
+    ParenthesizedEventExpressionSyntax(Token* openParen, EventExpressionSyntax* expr, Token* closeParen) :
+        EventExpressionSyntax(SyntaxKind::ParenthesizedEventExpression), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return expr;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ImplicitEventControlSyntax : public TimingControlSyntax {
+    Token* atStar;
+
+    ImplicitEventControlSyntax(Token* atStar) :
+        TimingControlSyntax(SyntaxKind::ImplicitEventControl), atStar(atStar)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return atStar;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
+    Token* at;
+    Token* openParenStarCloseParen;
+
+    ParenImplicitEventControlSyntax(Token* at, Token* openParenStarCloseParen) :
+        TimingControlSyntax(SyntaxKind::ParenImplicitEventControl), at(at), openParenStarCloseParen(openParenStarCloseParen)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return at;
+            case 1: return openParenStarCloseParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct EventControlWithExpressionSyntax : public TimingControlSyntax {
+    Token* at;
+    EventExpressionSyntax* expr;
+
+    EventControlWithExpressionSyntax(Token* at, EventExpressionSyntax* expr) :
+        TimingControlSyntax(SyntaxKind::EventControlWithExpression), at(at), expr(expr)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return at;
+            case 1: return expr;
             default: return nullptr;
         }
     }
@@ -1223,6 +1445,26 @@ protected:
         switch(index) {
             case 0: return breakOrContinue;
             case 1: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TimingControlStatementSyntax : public StatementSyntax {
+    TimingControlSyntax* timingControl;
+    StatementSyntax* statement;
+
+    TimingControlStatementSyntax(TimingControlSyntax* timingControl, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::TimingControlStatement), timingControl(timingControl), statement(statement)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return timingControl;
+            case 1: return statement;
             default: return nullptr;
         }
     }

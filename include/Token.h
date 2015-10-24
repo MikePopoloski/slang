@@ -145,6 +145,7 @@ enum class TokenKind : uint16_t {
     CloseBracket,
     OpenParenthesis,
     OpenParenthesisStar,
+    OpenParenthesisStarCloseParenthesis,
     CloseParenthesis,
     StarCloseParenthesis,
     Semicolon,
@@ -216,12 +217,14 @@ enum class TokenKind : uint16_t {
     OrMinusArrow,
     OrEqualsArrow,
     At,
+    AtStar,
     DoubleAt,
     And,
     DoubleAnd,
     TripleAnd,
 
     // keywords
+    OneStep,
     AcceptOnKeyword,
     AliasKeyword,
     AlwaysKeyword,

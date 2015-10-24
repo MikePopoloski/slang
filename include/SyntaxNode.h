@@ -76,6 +76,7 @@ enum class SyntaxKind : uint16_t {
     RealLiteralExpression,
     TimeLiteralExpression,
     WildcardLiteralExpression,
+    OneStepLiteralExpression,
     ParenthesizedExpression,
     MinTypMaxExpression,
     EmptyQueueExpression,
@@ -160,6 +161,18 @@ enum class SyntaxKind : uint16_t {
     ThisHandle,
     SuperHandle,
 
+    // timing control
+    DelayControl,
+    CycleDelay,
+    EventControl,
+    IffClause,
+    SignalEventExpression,
+    BinaryEventExpression,
+    ParenthesizedEventExpression,
+    ImplicitEventControl,
+    ParenImplicitEventControl,
+    EventControlWithExpression,
+
     // statements
     EmptyStatement,
     ElseClause,
@@ -172,7 +185,8 @@ enum class SyntaxKind : uint16_t {
     LoopStatement,
     DoWhileStatement,
     ReturnStatement,
-    JumpStatement
+    JumpStatement,
+    TimingControlStatement
 };
 
 enum class TokenKind : uint16_t;
