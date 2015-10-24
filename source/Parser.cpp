@@ -50,12 +50,53 @@ bool isPossibleInsideElement(TokenKind kind) {
     }
 }
 
+bool isPossiblePattern(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Dot:
+        case TokenKind::DotStar:
+        case TokenKind::ApostropheOpenBrace:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
+}
+
+bool isEndKeyword(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::EndKeyword:
+        case TokenKind::EndCaseKeyword:
+        case TokenKind::EndCheckerKeyword:
+        case TokenKind::EndClassKeyword:
+        case TokenKind::EndClockingKeyword:
+        case TokenKind::EndConfigKeyword:
+        case TokenKind::EndFunctionKeyword:
+        case TokenKind::EndGenerateKeyword:
+        case TokenKind::EndGroupKeyword:
+        case TokenKind::EndInterfaceKeyword:
+        case TokenKind::EndModuleKeyword:
+        case TokenKind::EndPackageKeyword:
+        case TokenKind::EndPrimitiveKeyword:
+        case TokenKind::EndProgramKeyword:
+        case TokenKind::EndPropertyKeyword:
+        case TokenKind::EndSpecifyKeyword:
+        case TokenKind::EndSequenceKeyword:
+        case TokenKind::EndTableKeyword:
+        case TokenKind::EndTaskKeyword:
+            return true;
+    }
+    return false;
+}
+
 bool isEndOfParenList(TokenKind kind) {
     return kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
 }
 
 bool isEndOfBracedList(TokenKind kind) {
     return kind == TokenKind::CloseBrace || kind == TokenKind::Semicolon;
+}
+
+bool isEndOfCaseItem(TokenKind kind) {
+    return kind == TokenKind::Colon || kind == TokenKind::Semicolon;
 }
 
 bool isEndOfConditionalPredicate(TokenKind kind) {
@@ -140,20 +181,117 @@ ConditionalStatementSyntax* Parser::parseConditionalStatement(Token* uniqueOrPri
 
 CaseStatementSyntax* Parser::parseCaseStatement(Token* uniqueOrPriority, Token* caseKeyword) {
     auto openParen = expect(TokenKind::OpenParenthesis);
-    auto expr = parseExpression();
+    auto caseExpr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
     Token* matchesOrInside = nullptr;
+    auto itemBuffer = nodePool.getAs<CaseItemSyntax*>();
+
     switch (peek()->kind) {
         case TokenKind::MatchesKeyword:
-        case TokenKind::InsideKeyword:
+            // pattern matching case statement
             matchesOrInside = consume();
+            while (true) {
+                auto kind = peek()->kind;
+                if (kind == TokenKind::DefaultKeyword)
+                    itemBuffer.append(parseDefaultCaseItem());
+                else if (isPossiblePattern(kind)) {
+                    auto pattern = parsePattern();
+                    Token* tripleAnd = nullptr;
+                    ExpressionSyntax* patternExpr = nullptr;
+
+                    if (peek(TokenKind::TripleAnd)) {
+                        tripleAnd = consume();
+                        patternExpr = parseExpression();
+                    }
+
+                    auto colon = expect(TokenKind::Colon);
+                    itemBuffer.append(alloc.emplace<PatternCaseItemSyntax>(pattern, tripleAnd, patternExpr, colon, parseStatement()));
+                }
+                else {
+                    // no idea what this is; break out and clean up
+                    break;
+                }
+            }
+            break;
+
+        case TokenKind::InsideKeyword:
+            // range checking case statement
+            matchesOrInside = consume();
+            while (true) {
+                auto kind = peek()->kind;
+                if (kind == TokenKind::DefaultKeyword)
+                    itemBuffer.append(parseDefaultCaseItem());
+                else if (isPossibleInsideElement(kind)) {
+                    Token* colon;
+                    auto buffer = tosPool.get();
+
+                    parseSeparatedList<isPossibleInsideElement, isEndOfCaseItem>(
+                        buffer,
+                        TokenKind::Colon,
+                        TokenKind::Comma,
+                        colon,
+                        &Parser::parseInsideElement
+                    );
+
+                    itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
+                }
+                else {
+                    // no idea what this is; break out and clean up
+                    break;
+                }
+            }
+            break;
+
+        default:
+            // normal case statement
+            while (true) {
+                auto kind = peek()->kind;
+                if (kind == TokenKind::DefaultKeyword)
+                    itemBuffer.append(parseDefaultCaseItem());
+                else if (isPossibleExpression(kind)) {
+                    Token* colon;
+                    auto buffer = tosPool.get();
+
+                    parseSeparatedList<isPossibleInsideElement, isEndOfCaseItem>(
+                        buffer,
+                        TokenKind::Colon,
+                        TokenKind::Comma,
+                        colon,
+                        &Parser::parseExpression
+                    );
+
+                    itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
+                }
+                else {
+                    // no idea what this is; break out and clean up
+                    break;
+                }
+            }
             break;
     }
 
-    // TODO: items
     auto endcase = expect(TokenKind::EndCaseKeyword);
-    return alloc.emplace<CaseStatementSyntax>(uniqueOrPriority, caseKeyword, openParen, expr, closeParen, matchesOrInside, ArrayRef<CaseItemSyntax*>(nullptr), endcase);
+    return alloc.emplace<CaseStatementSyntax>(
+        uniqueOrPriority,
+        caseKeyword,
+        openParen,
+        caseExpr,
+        closeParen,
+        matchesOrInside,
+        itemBuffer.copy(alloc),
+        endcase
+    );
+}
+
+DefaultCaseItemSyntax* Parser::parseDefaultCaseItem() {
+    auto defaultKeyword = consume();
+
+    Token* colon = nullptr;
+    if (peek(TokenKind::Colon))
+        colon = consume();
+
+    return alloc.emplace<DefaultCaseItemSyntax>(defaultKeyword, colon, parseStatement());
 }
 
 LoopStatementSyntax* Parser::parseLoopStatement() {

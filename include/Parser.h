@@ -39,6 +39,7 @@ private:
     ConditionalPatternSyntax* parseConditionalPattern();
     ConditionalStatementSyntax* parseConditionalStatement(Token* uniqueOrPriority);
     CaseStatementSyntax* parseCaseStatement(Token* uniqueOrPriority, Token* caseKeyword);
+    DefaultCaseItemSyntax* parseDefaultCaseItem();
     LoopStatementSyntax* parseLoopStatement();
     DoWhileStatementSyntax* parseDoWhileStatement();
     ReturnStatementSyntax* parseReturnStatement();

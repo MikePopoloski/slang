@@ -39,6 +39,33 @@ TEST_CASE("Case statement (empty)", "[parser:statements]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Case statement (normal)", "[parser:statements]") {
+    auto& text = "unique case (foo) 3'd01: ; 3+9, foo: ; default; endcase";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::CaseStatement);
+    CHECK(stmt->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Case statement (pattern)", "[parser:statements]") {
+    auto& text = "priority casez (foo) matches .foo &&& bar: ; default; endcase";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::CaseStatement);
+    CHECK(stmt->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Case statement (range)", "[parser:statements]") {
+    auto& text = "casex (foo) inside 3, [4:2], [99]: ; default; endcase";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::CaseStatement);
+    CHECK(stmt->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
 TEST_CASE("Loop statements", "[parser:statements]") {
     auto& text = "while (foo) ;";
     auto stmt = parse(text);
