@@ -299,17 +299,6 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             expr = alloc.emplace<KeywordNameSyntax>(SyntaxKind::SystemName, identifier);
             break;
         }
-        case TokenKind::LocalKeyword: {
-            auto keyword = consume();
-            auto doubleColon = expect(TokenKind::DoubleColon);
-
-            expr = alloc.emplace<ScopedNameSyntax>(
-                alloc.emplace<KeywordNameSyntax>(SyntaxKind::LocalScope, keyword),
-                doubleColon,
-                parseNameOrClassHandle()
-            );
-            break;
-        }
         case TokenKind::OpenParenthesis: {
             auto openParen = consume();
             expr = parseMinTypMaxExpression();
@@ -348,17 +337,11 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             }
             break;
         }
-        default: {
-            // might be a variable name or class handle expression
-            expr = parseNameOrClassHandle();
-            if (expr)
-                break;
-
-            // TODO: error
-            auto missing = Token::missing(alloc, TokenKind::Identifier);
-            expr = alloc.emplace<IdentifierNameSyntax>(missing);
+        default:
+            // either a name or implicit class handle, or an error
+            // parseName() will insert a missing identifier token for the error case
+            expr = parseName();
             break;
-        }
     }
 
     return parsePostfixExpression(expr);
@@ -509,48 +492,47 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
     }
 }
 
-NameSyntax* Parser::parseNameOrClassHandle() {
-    switch (peek()->kind) {
-        case TokenKind::UnitSystemName: {
-            auto unit = consume();
-            auto separator = expect(TokenKind::DoubleColon);
+NameSyntax* Parser::parseName() {
+    NameSyntax* name = parseNamePart();
 
-            return alloc.emplace<ScopedNameSyntax>(
-                alloc.emplace<KeywordNameSyntax>(SyntaxKind::UnitScope, unit),
-                separator,
-                parseScopedName()
-            );
-        }
-        case TokenKind::Identifier:
-            return parseScopedName();
-        case TokenKind::ThisKeyword:
-            return alloc.emplace<KeywordNameSyntax>(SyntaxKind::ThisHandle, consume());
-        case TokenKind::SuperKeyword:
-            return alloc.emplace<KeywordNameSyntax>(SyntaxKind::SuperHandle, consume());
-        default:
-            return nullptr;
+    auto kind = peek()->kind;
+    while (kind == TokenKind::Dot || kind == TokenKind::DoubleColon) {
+        // TODO: error if switching from dots back to colons
+        auto separator = consume();
+        name = alloc.emplace<ScopedNameSyntax>(name, separator, parseNamePart());
+        kind = peek()->kind;
     }
+
+    return name;
 }
 
-NameSyntax* Parser::parseScopedName() {
-    if (peek(TokenKind::RootSystemName))
-        return alloc.emplace<KeywordNameSyntax>(SyntaxKind::RootScope, consume());
+NameSyntax* Parser::parseNamePart() {
+    switch (peek()->kind) {
+        case TokenKind::UnitSystemName: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::UnitScope, consume());
+        case TokenKind::RootSystemName: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::RootScope, consume());
+        case TokenKind::LocalKeyword: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::LocalScope, consume());
+        case TokenKind::ThisKeyword: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::ThisHandle, consume());
+        case TokenKind::SuperKeyword: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::SuperHandle, consume());
+        default: {
+            auto identifier = expect(TokenKind::Identifier);
+            switch (peek()->kind) {
+                case TokenKind::Hash: {
+                    auto hash = consume();
+                    auto parameterValues = alloc.emplace<ParameterValueAssignmentSyntax>(hash, parseArgumentList());
+                    return alloc.emplace<ClassNameSyntax>(identifier, parameterValues);
+                }
+                case TokenKind::OpenBracket: {
+                    auto buffer = nodePool.getAs<ElementSelectSyntax*>();
+                    do {
+                        buffer.append(parseElementSelect());
+                    } while (peek(TokenKind::OpenBracket));
 
-    NameSyntax* left;
-    auto identifier = expect(TokenKind::Identifier);
-    if (!peek(TokenKind::Hash))
-        left = alloc.emplace<IdentifierNameSyntax>(identifier);
-    else {
-        auto hash = consume();
-        auto parameterValues = alloc.emplace<ParameterValueAssignmentSyntax>(hash, parseArgumentList());
-        left = alloc.emplace<ClassNameSyntax>(identifier, parameterValues);
+                    return alloc.emplace<IdentifierSelectNameSyntax>(identifier, buffer.copy(alloc));
+                }
+                default: return alloc.emplace<IdentifierNameSyntax>(identifier);
+            }
+        }
     }
-
-    if (!peek(TokenKind::DoubleColon))
-        return left;
-    
-    auto doubleColon = consume();
-    return alloc.emplace<ScopedNameSyntax>(left, doubleColon, parseScopedName());
 }
 
 ArgumentListSyntax* Parser::parseArgumentList() {

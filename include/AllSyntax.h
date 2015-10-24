@@ -778,6 +778,26 @@ protected:
     }
 };
 
+struct IdentifierSelectNameSyntax : public NameSyntax {
+    Token* identifier;
+    SyntaxList<ElementSelectSyntax> selectors;
+
+    IdentifierSelectNameSyntax(Token* identifier, SyntaxList<ElementSelectSyntax> selectors) :
+        NameSyntax(SyntaxKind::IdentifierSelectName), identifier(identifier), selectors(selectors)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return identifier;
+            case 1: return &selectors;
+            default: return nullptr;
+        }
+    }
+};
+
 struct KeywordNameSyntax : public NameSyntax {
     Token* keyword;
 

@@ -354,6 +354,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ClassOrPackageScope);
         CASE(RootScope);
         CASE(IdentifierName);
+        CASE(IdentifierSelectName);
         CASE(ClassName);
         CASE(ScopedName);
         CASE(SystemName);

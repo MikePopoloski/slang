@@ -30,8 +30,8 @@ private:
     StreamExpressionSyntax* parseStreamExpression();
     ExpressionSyntax* parseInsideElement();
     ElementSelectSyntax* parseElementSelect();
-    NameSyntax* parseNameOrClassHandle();
-    NameSyntax* parseScopedName();
+    NameSyntax* parseName();
+    NameSyntax* parseNamePart();
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();

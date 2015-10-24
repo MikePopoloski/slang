@@ -153,6 +153,7 @@ enum class SyntaxKind : uint16_t {
     ClassOrPackageScope,
     RootScope,
     IdentifierName,
+    IdentifierSelectName,
     ClassName,
     ScopedName,
     SystemName,

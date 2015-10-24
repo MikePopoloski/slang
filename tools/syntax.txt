@@ -183,6 +183,10 @@ empty
 IdentifierNameSyntax base=NameSyntax kind=IdentifierName
 token identifier
 
+IdentifierSelectNameSyntax base=NameSyntax kind=IdentifierSelectName
+token identifier
+list<ElementSelectSyntax> selectors
+
 KeywordNameSyntax base=NameSyntax
 token keyword
 

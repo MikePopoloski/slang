@@ -4,6 +4,8 @@
 
 namespace slang {
 
+// TODO: clean this up
+
 template<typename T>
 class BufferPool {
 public:
@@ -13,6 +15,7 @@ public:
             delete buffer;
     }
 
+    template<typename T>
     struct BufferWrapper {
         BufferPool* pool;
         Buffer<T>* buffer;
@@ -38,18 +41,30 @@ public:
         operator Buffer<T>&() { return *buffer; }
     };
 
-    BufferWrapper get() {
+    BufferWrapper<T> get() {
         if (buffers.empty())
-            return BufferWrapper(this, new Buffer<T>());
+            return BufferWrapper<T>(this, new Buffer<T>());
 
         Buffer<T>* result = buffers.back();
         buffers.pop_back();
         result->clear();
-        return BufferWrapper(this, result);
+        return BufferWrapper<T>(this, result);
     }
 
-    void free(Buffer<T>* buffer) {
-        buffers.push_back(buffer);
+    // potentially unsafe; only use this for compatible types (pointers, etc)
+    template<typename U>
+    BufferWrapper<U> getAs() {
+        if (buffers.empty())
+            return BufferWrapper<U>(this, (Buffer<U>*)new Buffer<T>());
+
+        Buffer<T>* result = buffers.back();
+        buffers.pop_back();
+        result->clear();
+        return BufferWrapper<U>(this, (Buffer<U>*)result);
+    }
+
+    void free(void* buffer) {
+        buffers.push_back((Buffer<T>*)buffer);
     }
 
 private:
