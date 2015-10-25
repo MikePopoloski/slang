@@ -251,6 +251,33 @@ bool isPossibleExpression(TokenKind kind) {
     return false;
 }
 
+SyntaxKind getIntegerType(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::BitKeyword: return SyntaxKind::BitType;
+        case TokenKind::LogicKeyword: return SyntaxKind::LogicType;
+        case TokenKind::RegKeyword: return SyntaxKind::RegType;
+        case TokenKind::ByteKeyword: return SyntaxKind::ByteType;
+        case TokenKind::ShortIntKeyword: return SyntaxKind::ShortIntType;
+        case TokenKind::IntKeyword: return SyntaxKind::IntType;
+        case TokenKind::LongIntKeyword: return SyntaxKind::LongIntType;
+        case TokenKind::IntegerKeyword: return SyntaxKind::IntegerType;
+        case TokenKind::TimeKeyword: return SyntaxKind::TimeType;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
+SyntaxKind getKeywordType(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::ShortRealKeyword: return SyntaxKind::ShortRealType;
+        case TokenKind::RealKeyword: return SyntaxKind::RealType;
+        case TokenKind::RealTimeKeyword: return SyntaxKind::RealTimeType;
+        case TokenKind::StringKeyword: return SyntaxKind::StringType;
+        case TokenKind::CHandleKeyword: return SyntaxKind::CHandleType;
+        case TokenKind::EventKeyword: return SyntaxKind::EventType;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
 #define CASE(name) case SyntaxKind::name: os << #name; break
     switch (kind) {

@@ -32,6 +32,7 @@ private:
     ElementSelectSyntax* parseElementSelect();
     NameSyntax* parseName();
     NameSyntax* parseNamePart();
+    ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();
@@ -52,6 +53,10 @@ private:
     ProceduralDeassignStatementSyntax* parseProceduralDeassignStatement(SyntaxKind kind);
     StatementSyntax* parseDisableStatement();
     SequentialBlockStatementSyntax* parseSequentialBlock();
+    Token* parseSigning();
+    VariableDimensionSyntax* parseDimension();
+    ArrayRef<VariableDimensionSyntax*> parseDimensionList();
+    DataTypeSyntax* parseDataType();
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
@@ -82,6 +87,7 @@ private:
 
     Token* peek();
     Token* consume();
+    Token* consume(TokenKind kind);
     Token* expect(TokenKind kind);
     bool peek(TokenKind kind);
 

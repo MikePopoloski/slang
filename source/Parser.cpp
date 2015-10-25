@@ -125,8 +125,6 @@ Parser::Parser(Lexer& lexer) :
     currentToken(nullptr) {
 }
 
-// ----- STATEMENTS -----
-
 StatementSyntax* Parser::parseStatement() {
     switch (peek()->kind) {
         case TokenKind::UniqueKeyword:
@@ -465,8 +463,6 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock() {
     return alloc.emplace<SequentialBlockStatementSyntax>(begin, name, end, endName);
 }
 
-// ----- EXPRESSIONS -----
-
 ExpressionSyntax* Parser::parseExpression() {
     return parseSubExpression(0);
 }
@@ -789,8 +785,7 @@ NameSyntax* Parser::parseNamePart() {
             auto identifier = expect(TokenKind::Identifier);
             switch (peek()->kind) {
                 case TokenKind::Hash: {
-                    auto hash = consume();
-                    auto parameterValues = alloc.emplace<ParameterValueAssignmentSyntax>(hash, parseArgumentList());
+                    auto parameterValues = parseParameterValueAssignment();
                     return alloc.emplace<ClassNameSyntax>(identifier, parameterValues);
                 }
                 case TokenKind::OpenBracket: {
@@ -805,6 +800,14 @@ NameSyntax* Parser::parseNamePart() {
             }
         }
     }
+}
+
+ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
+    if (!peek(TokenKind::Hash))
+        return nullptr;
+
+    auto hash = consume();
+    return alloc.emplace<ParameterValueAssignmentSyntax>(hash, parseArgumentList());
 }
 
 ArgumentListSyntax* Parser::parseArgumentList() {
@@ -1014,6 +1017,92 @@ TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
     }
 }
 
+Token* Parser::parseSigning() {
+    switch (peek()->kind) {
+        case TokenKind::SignedKeyword:
+        case TokenKind::UnsignedKeyword:
+            return consume();
+        default:
+            return nullptr;
+    }
+}
+
+VariableDimensionSyntax* Parser::parseDimension() {
+    if (!peek(TokenKind::OpenBracket))
+        return nullptr;
+
+    auto openBracket = consume();
+
+    DimensionSpecifierSyntax* specifier = nullptr;
+    switch (peek()->kind) {
+        case TokenKind::CloseBracket:
+            // empty specifier
+            break;
+        case TokenKind::Star:
+            specifier = alloc.emplace<WildcardDimensionSpecifierSyntax>(consume());
+            break;
+        case TokenKind::Dollar: {
+            auto dollar = consume();
+
+            ColonExpressionClauseSyntax* colonExpressionClause = nullptr;
+            if (peek(TokenKind::Colon)) {
+                auto colon = consume();
+                colonExpressionClause = alloc.emplace<ColonExpressionClauseSyntax>(colon, parseExpression());
+            }
+            specifier = alloc.emplace<QueueDimensionSpecifierSyntax>(dollar, colonExpressionClause);
+            break;
+        }
+        default:
+            // TODO: scan type or expression
+            break;
+    }
+
+    auto closeBracket = expect(TokenKind::CloseBracket);
+    return alloc.emplace<VariableDimensionSyntax>(openBracket, specifier, closeBracket);
+}
+
+ArrayRef<VariableDimensionSyntax*> Parser::parseDimensionList() {
+    auto buffer = nodePool.getAs<VariableDimensionSyntax*>();
+    while (true) {
+        auto dim = parseDimension();
+        if (!dim)
+            break;
+        buffer.append(dim);
+    }
+    return buffer.copy(alloc);
+}
+
+DataTypeSyntax* Parser::parseDataType() {
+    auto kind = peek()->kind;
+    auto type = getIntegerType(kind);
+    if (type != SyntaxKind::Unknown) {
+        auto keyword = consume();
+        auto signing = parseSigning();
+        return alloc.emplace<IntegerTypeSyntax>(type, keyword, signing, parseDimensionList());
+    }
+
+    type = getKeywordType(kind);
+    if (type != SyntaxKind::Unknown)
+        return alloc.emplace<KeywordTypeSyntax>(type, consume());
+
+    if (kind == TokenKind::VirtualKeyword) {
+        auto virtualKeyword = consume();
+        auto interfaceKeyword = consume(TokenKind::InterfaceKeyword);
+        auto name = expect(TokenKind::Identifier);
+        auto parameters = parseParameterValueAssignment();
+
+        DotMemberClauseSyntax* modport = nullptr;
+        if (peek(TokenKind::Dot)) {
+            auto dot = consume();
+            modport = alloc.emplace<DotMemberClauseSyntax>(dot, expect(TokenKind::Identifier));
+        }
+        return alloc.emplace<VirtualInterfaceTypeSyntax>(virtualKeyword, interfaceKeyword, name, parameters, modport);
+    }
+
+    // TODO: other data types, implicit, void, etc
+    return nullptr;
+}
+
 // this is a generalized method for parsing a comma separated list of things
 // with bookend tokens in a way that robustly handles bad tokens
 template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
@@ -1131,6 +1220,12 @@ Token* Parser::consume() {
     Token* result = peek();
     currentToken = nullptr;
     return result;
+}
+
+Token* Parser::consume(TokenKind kind) {
+    if (peek(kind))
+        return consume();
+    return nullptr;
 }
 
 Token* Parser::expect(TokenKind kind) {

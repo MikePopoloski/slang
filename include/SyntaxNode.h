@@ -264,6 +264,8 @@ SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
 SyntaxKind getAssignmentStatement(TokenKind kind);
+SyntaxKind getIntegerType(TokenKind kind);
+SyntaxKind getKeywordType(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleExpression(TokenKind kind);

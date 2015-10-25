@@ -1698,7 +1698,7 @@ protected:
     }
 };
 
-struct VirtualInterfaceTypeSyntax : public SyntaxNode {
+struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
     Token* virtualKeyword;
     Token* interfaceKeyword;
     Token* name;
@@ -1706,7 +1706,7 @@ struct VirtualInterfaceTypeSyntax : public SyntaxNode {
     DotMemberClauseSyntax* modport;
 
     VirtualInterfaceTypeSyntax(Token* virtualKeyword, Token* interfaceKeyword, Token* name, ParameterValueAssignmentSyntax* parameters, DotMemberClauseSyntax* modport) :
-        SyntaxNode(SyntaxKind::VirtualInterfaceType), virtualKeyword(virtualKeyword), interfaceKeyword(interfaceKeyword), name(name), parameters(parameters), modport(modport)
+        DataTypeSyntax(SyntaxKind::VirtualInterfaceType), virtualKeyword(virtualKeyword), interfaceKeyword(interfaceKeyword), name(name), parameters(parameters), modport(modport)
     {
         childCount += 5;
     }

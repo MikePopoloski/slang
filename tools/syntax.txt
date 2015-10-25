@@ -398,7 +398,7 @@ DotMemberClauseSyntax kind=DotMemberClause
 token dot
 token member
 
-VirtualInterfaceTypeSyntax kind=DataTypeSyntax kind=VirtualInterfaceType
+VirtualInterfaceTypeSyntax base=DataTypeSyntax kind=VirtualInterfaceType
 token virtualKeyword
 token interfaceKeyword
 token name
