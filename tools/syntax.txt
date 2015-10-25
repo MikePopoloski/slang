@@ -1,6 +1,9 @@
 ExpressionSyntax final=false
 empty
 
+DataTypeSyntax final=false
+empty
+
 // ----- ARGUMENTS -----
 
 ArgumentSyntax final=false
@@ -114,6 +117,7 @@ token colon
 ExpressionSyntax right
 
 // ----- SELECTORS -----
+
 SelectorSyntax final=false
 empty
 
@@ -286,6 +290,124 @@ token openParen
 ExpressionSyntax expr
 token closeParen
 TimingControlSyntax eventControl
+
+// ----- DECLARATIONS -----
+
+DimensionSpecifierSyntax final=false
+empty
+
+RangeDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=RangeDimensionSpecifier
+ExpressionSyntax left
+token colon
+ExpressionSyntax right
+
+ExpressionDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=ExpressionDimensionSpecifier
+ExpressionSyntax expr
+
+DataTypeDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=DataTypeDimensionSpecifier
+DataTypeSyntax type
+
+WildcardDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=WildcardDimensionSpecifier
+token star
+
+ColonExpressionClauseSyntax kind=ColonExpressionClause
+token colon
+ExpressionSyntax expr
+
+QueueDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=QueueDimensionSpecifier
+token dollar
+ColonExpressionClauseSyntax maxSizeClause
+
+VariableDimensionSyntax kind=VariableDimension
+token openBracket
+DimensionSpecifierSyntax specifier
+token closeBracket
+
+EqualsValueClauseSyntax kind=EqualsValueClause
+token equals
+ExpressionSyntax expr
+
+VariableDeclaratorSyntax kind=VariableDeclarator
+token name
+list<VariableDimensionSyntax> dimensions
+EqualsValueClauseSyntax initializer
+
+DataDeclarationSyntax kind=DataDeclaration
+token constKeyword
+token varKeyword
+token lifetime
+DataTypeSyntax type
+separated_list<VariableDeclaratorSyntax> declarators
+token semi
+
+// ----- TYPES -----
+
+IntegerTypeSyntax base=DataTypeSyntax
+token keyword
+token signing
+list<VariableDimensionSyntax> dimensions
+
+KeywordTypeSyntax base=DataTypeSyntax
+token keyword
+
+NamedTypeSyntax base=DataTypeSyntax kind=NamedType
+NameSyntax name
+
+StructUnionMemberSyntax kind=StructUnionMember
+token randomQualifier
+DataTypeSyntax type
+list<VariableDeclaratorSyntax> declarators
+token semi
+
+StructUnionTypeSyntax base=DataTypeSyntax
+token keyword
+token tagged
+token packed
+token signing
+token openBrace
+list<StructUnionMemberSyntax> members
+token closeBrace
+list<VariableDimensionSyntax> dimensions
+
+EnumNameDeclarationSyntax kind=EnumNameDeclaration
+token name
+VariableDimensionSyntax dimension
+EqualsValueClauseSyntax initializer
+
+EnumTypeSyntax base=DataTypeSyntax kind=EnumType
+token keyword
+DataTypeSyntax baseType
+token openBrace
+list<EnumNameDeclarationSyntax> members
+token closeBrace
+list<VariableDimensionSyntax> dimensions
+
+ExpressionTypeReferenceSyntax base=DataTypeSyntax kind=ExpressionTypeReference
+token typeKeyword
+token openParen
+ExpressionSyntax expr
+token closeParen
+
+DataTypeReferenceSyntax base=DataTypeSyntax kind=DataTypeReference
+token typeKeyword
+token openParen
+DataTypeSyntax type
+token closeParen
+
+DotMemberClauseSyntax kind=DotMemberClause
+token dot
+token member
+
+VirtualInterfaceTypeSyntax kind=DataTypeSyntax kind=VirtualInterfaceType
+token virtualKeyword
+token interfaceKeyword
+token name
+ParameterValueAssignmentSyntax parameters
+DotMemberClauseSyntax modport
+
+ImplicitTypeSyntax kind=DataTypeSyntax kind=ImplicitType
+token signing
+list<VariableDimensionSyntax> dimensions
 
 // ----- STATEMENTS -----
 

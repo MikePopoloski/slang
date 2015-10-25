@@ -16,6 +16,14 @@ struct ExpressionSyntax : public SyntaxNode {
     }
 };
 
+struct DataTypeSyntax : public SyntaxNode {
+
+    DataTypeSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
 // ----- ARGUMENTS -----
 
 struct ArgumentSyntax : public SyntaxNode {
@@ -1233,6 +1241,504 @@ protected:
             case 2: return expr;
             case 3: return closeParen;
             case 4: return eventControl;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- DECLARATIONS -----
+
+struct DimensionSpecifierSyntax : public SyntaxNode {
+
+    DimensionSpecifierSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
+    ExpressionSyntax* left;
+    Token* colon;
+    ExpressionSyntax* right;
+
+    RangeDimensionSpecifierSyntax(ExpressionSyntax* left, Token* colon, ExpressionSyntax* right) :
+        DimensionSpecifierSyntax(SyntaxKind::RangeDimensionSpecifier), left(left), colon(colon), right(right)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return colon;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ExpressionDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
+    ExpressionSyntax* expr;
+
+    ExpressionDimensionSpecifierSyntax(ExpressionSyntax* expr) :
+        DimensionSpecifierSyntax(SyntaxKind::ExpressionDimensionSpecifier), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DataTypeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
+    DataTypeSyntax* type;
+
+    DataTypeDimensionSpecifierSyntax(DataTypeSyntax* type) :
+        DimensionSpecifierSyntax(SyntaxKind::DataTypeDimensionSpecifier), type(type)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return type;
+            default: return nullptr;
+        }
+    }
+};
+
+struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
+    Token* star;
+
+    WildcardDimensionSpecifierSyntax(Token* star) :
+        DimensionSpecifierSyntax(SyntaxKind::WildcardDimensionSpecifier), star(star)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return star;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ColonExpressionClauseSyntax : public SyntaxNode {
+    Token* colon;
+    ExpressionSyntax* expr;
+
+    ColonExpressionClauseSyntax(Token* colon, ExpressionSyntax* expr) :
+        SyntaxNode(SyntaxKind::ColonExpressionClause), colon(colon), expr(expr)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return colon;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
+    Token* dollar;
+    ColonExpressionClauseSyntax* maxSizeClause;
+
+    QueueDimensionSpecifierSyntax(Token* dollar, ColonExpressionClauseSyntax* maxSizeClause) :
+        DimensionSpecifierSyntax(SyntaxKind::QueueDimensionSpecifier), dollar(dollar), maxSizeClause(maxSizeClause)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return dollar;
+            case 1: return maxSizeClause;
+            default: return nullptr;
+        }
+    }
+};
+
+struct VariableDimensionSyntax : public SyntaxNode {
+    Token* openBracket;
+    DimensionSpecifierSyntax* specifier;
+    Token* closeBracket;
+
+    VariableDimensionSyntax(Token* openBracket, DimensionSpecifierSyntax* specifier, Token* closeBracket) :
+        SyntaxNode(SyntaxKind::VariableDimension), openBracket(openBracket), specifier(specifier), closeBracket(closeBracket)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openBracket;
+            case 1: return specifier;
+            case 2: return closeBracket;
+            default: return nullptr;
+        }
+    }
+};
+
+struct EqualsValueClauseSyntax : public SyntaxNode {
+    Token* equals;
+    ExpressionSyntax* expr;
+
+    EqualsValueClauseSyntax(Token* equals, ExpressionSyntax* expr) :
+        SyntaxNode(SyntaxKind::EqualsValueClause), equals(equals), expr(expr)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return equals;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct VariableDeclaratorSyntax : public SyntaxNode {
+    Token* name;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+    EqualsValueClauseSyntax* initializer;
+
+    VariableDeclaratorSyntax(Token* name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer) :
+        SyntaxNode(SyntaxKind::VariableDeclarator), name(name), dimensions(dimensions), initializer(initializer)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return name;
+            case 1: return &dimensions;
+            case 2: return initializer;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DataDeclarationSyntax : public SyntaxNode {
+    Token* constKeyword;
+    Token* varKeyword;
+    Token* lifetime;
+    DataTypeSyntax* type;
+    SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
+    Token* semi;
+
+    DataDeclarationSyntax(Token* constKeyword, Token* varKeyword, Token* lifetime, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+        SyntaxNode(SyntaxKind::DataDeclaration), constKeyword(constKeyword), varKeyword(varKeyword), lifetime(lifetime), type(type), declarators(declarators), semi(semi)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return constKeyword;
+            case 1: return varKeyword;
+            case 2: return lifetime;
+            case 3: return type;
+            case 4: return &declarators;
+            case 5: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- TYPES -----
+
+struct IntegerTypeSyntax : public DataTypeSyntax {
+    Token* keyword;
+    Token* signing;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+
+    IntegerTypeSyntax(SyntaxKind kind, Token* keyword, Token* signing, SyntaxList<VariableDimensionSyntax> dimensions) :
+        DataTypeSyntax(kind), keyword(keyword), signing(signing), dimensions(dimensions)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return signing;
+            case 2: return &dimensions;
+            default: return nullptr;
+        }
+    }
+};
+
+struct KeywordTypeSyntax : public DataTypeSyntax {
+    Token* keyword;
+
+    KeywordTypeSyntax(SyntaxKind kind, Token* keyword) :
+        DataTypeSyntax(kind), keyword(keyword)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NamedTypeSyntax : public DataTypeSyntax {
+    NameSyntax* name;
+
+    NamedTypeSyntax(NameSyntax* name) :
+        DataTypeSyntax(SyntaxKind::NamedType), name(name)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return name;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StructUnionMemberSyntax : public SyntaxNode {
+    Token* randomQualifier;
+    DataTypeSyntax* type;
+    SyntaxList<VariableDeclaratorSyntax> declarators;
+    Token* semi;
+
+    StructUnionMemberSyntax(Token* randomQualifier, DataTypeSyntax* type, SyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+        SyntaxNode(SyntaxKind::StructUnionMember), randomQualifier(randomQualifier), type(type), declarators(declarators), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return randomQualifier;
+            case 1: return type;
+            case 2: return &declarators;
+            case 3: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StructUnionTypeSyntax : public DataTypeSyntax {
+    Token* keyword;
+    Token* tagged;
+    Token* packed;
+    Token* signing;
+    Token* openBrace;
+    SyntaxList<StructUnionMemberSyntax> members;
+    Token* closeBrace;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+
+    StructUnionTypeSyntax(SyntaxKind kind, Token* keyword, Token* tagged, Token* packed, Token* signing, Token* openBrace, SyntaxList<StructUnionMemberSyntax> members, Token* closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
+        DataTypeSyntax(kind), keyword(keyword), tagged(tagged), packed(packed), signing(signing), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
+    {
+        childCount += 8;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return tagged;
+            case 2: return packed;
+            case 3: return signing;
+            case 4: return openBrace;
+            case 5: return &members;
+            case 6: return closeBrace;
+            case 7: return &dimensions;
+            default: return nullptr;
+        }
+    }
+};
+
+struct EnumNameDeclarationSyntax : public SyntaxNode {
+    Token* name;
+    VariableDimensionSyntax* dimension;
+    EqualsValueClauseSyntax* initializer;
+
+    EnumNameDeclarationSyntax(Token* name, VariableDimensionSyntax* dimension, EqualsValueClauseSyntax* initializer) :
+        SyntaxNode(SyntaxKind::EnumNameDeclaration), name(name), dimension(dimension), initializer(initializer)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return name;
+            case 1: return dimension;
+            case 2: return initializer;
+            default: return nullptr;
+        }
+    }
+};
+
+struct EnumTypeSyntax : public DataTypeSyntax {
+    Token* keyword;
+    DataTypeSyntax* baseType;
+    Token* openBrace;
+    SyntaxList<EnumNameDeclarationSyntax> members;
+    Token* closeBrace;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+
+    EnumTypeSyntax(Token* keyword, DataTypeSyntax* baseType, Token* openBrace, SyntaxList<EnumNameDeclarationSyntax> members, Token* closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
+        DataTypeSyntax(SyntaxKind::EnumType), keyword(keyword), baseType(baseType), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return baseType;
+            case 2: return openBrace;
+            case 3: return &members;
+            case 4: return closeBrace;
+            case 5: return &dimensions;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ExpressionTypeReferenceSyntax : public DataTypeSyntax {
+    Token* typeKeyword;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
+
+    ExpressionTypeReferenceSyntax(Token* typeKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+        DataTypeSyntax(SyntaxKind::ExpressionTypeReference), typeKeyword(typeKeyword), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return typeKeyword;
+            case 1: return openParen;
+            case 2: return expr;
+            case 3: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DataTypeReferenceSyntax : public DataTypeSyntax {
+    Token* typeKeyword;
+    Token* openParen;
+    DataTypeSyntax* type;
+    Token* closeParen;
+
+    DataTypeReferenceSyntax(Token* typeKeyword, Token* openParen, DataTypeSyntax* type, Token* closeParen) :
+        DataTypeSyntax(SyntaxKind::DataTypeReference), typeKeyword(typeKeyword), openParen(openParen), type(type), closeParen(closeParen)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return typeKeyword;
+            case 1: return openParen;
+            case 2: return type;
+            case 3: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DotMemberClauseSyntax : public SyntaxNode {
+    Token* dot;
+    Token* member;
+
+    DotMemberClauseSyntax(Token* dot, Token* member) :
+        SyntaxNode(SyntaxKind::DotMemberClause), dot(dot), member(member)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return dot;
+            case 1: return member;
+            default: return nullptr;
+        }
+    }
+};
+
+struct VirtualInterfaceTypeSyntax : public SyntaxNode {
+    Token* virtualKeyword;
+    Token* interfaceKeyword;
+    Token* name;
+    ParameterValueAssignmentSyntax* parameters;
+    DotMemberClauseSyntax* modport;
+
+    VirtualInterfaceTypeSyntax(Token* virtualKeyword, Token* interfaceKeyword, Token* name, ParameterValueAssignmentSyntax* parameters, DotMemberClauseSyntax* modport) :
+        SyntaxNode(SyntaxKind::VirtualInterfaceType), virtualKeyword(virtualKeyword), interfaceKeyword(interfaceKeyword), name(name), parameters(parameters), modport(modport)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return virtualKeyword;
+            case 1: return interfaceKeyword;
+            case 2: return name;
+            case 3: return parameters;
+            case 4: return modport;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ImplicitTypeSyntax : public SyntaxNode {
+    Token* signing;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+
+    ImplicitTypeSyntax(Token* signing, SyntaxList<VariableDimensionSyntax> dimensions) :
+        SyntaxNode(SyntaxKind::ImplicitType), signing(signing), dimensions(dimensions)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return signing;
+            case 1: return &dimensions;
             default: return nullptr;
         }
     }
