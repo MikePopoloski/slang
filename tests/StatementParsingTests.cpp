@@ -111,6 +111,24 @@ TEST_CASE("Jump statements", "[parser:statements]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Disable statement", "[parser:statements]") {
+    auto& text = "disable blah::foobar;";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::DisableStatement);
+    CHECK(stmt->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Disable fork statement", "[parser:statements]") {
+    auto& text = "disable fork;";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::DisableForkStatement);
+    CHECK(stmt->toFullString() == text);
+    CHECK(diagnostics.empty());
+}
+
 void testTimingControl(const SourceText& text, SyntaxKind kind) {
     auto stmt = parse(text);
 

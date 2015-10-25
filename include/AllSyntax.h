@@ -1638,6 +1638,94 @@ protected:
     }
 };
 
+struct DisableStatementSyntax : public StatementSyntax {
+    Token* disable;
+    NameSyntax* name;
+    Token* semi;
+
+    DisableStatementSyntax(Token* disable, NameSyntax* name, Token* semi) :
+        StatementSyntax(SyntaxKind::DisableStatement), disable(disable), name(name), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return disable;
+            case 1: return name;
+            case 2: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DisableForkStatementSyntax : public StatementSyntax {
+    Token* disable;
+    Token* fork;
+    Token* semi;
+
+    DisableForkStatementSyntax(Token* disable, Token* fork, Token* semi) :
+        StatementSyntax(SyntaxKind::DisableForkStatement), disable(disable), fork(fork), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return disable;
+            case 1: return fork;
+            case 2: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NamedBlockClauseSyntax : public SyntaxNode {
+    Token* colon;
+    Token* name;
+
+    NamedBlockClauseSyntax(Token* colon, Token* name) :
+        SyntaxNode(SyntaxKind::NamedBlockClause), colon(colon), name(name)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return colon;
+            case 1: return name;
+            default: return nullptr;
+        }
+    }
+};
+
+struct SequentialBlockStatementSyntax : public StatementSyntax {
+    Token* begin;
+    NamedBlockClauseSyntax* blockName;
+    Token* end;
+    NamedBlockClauseSyntax* endBlockName;
+
+    SequentialBlockStatementSyntax(Token* begin, NamedBlockClauseSyntax* blockName, Token* end, NamedBlockClauseSyntax* endBlockName) :
+        StatementSyntax(SyntaxKind::SequentialBlockStatement), begin(begin), blockName(blockName), end(end), endBlockName(endBlockName)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return begin;
+            case 1: return blockName;
+            case 2: return end;
+            case 3: return endBlockName;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- DIRECTIVES -----
 
 struct DirectiveSyntax : public SyntaxNode {

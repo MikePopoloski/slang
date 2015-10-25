@@ -390,6 +390,26 @@ token keyword
 ExpressionSyntax variable
 token semi
 
+DisableStatementSyntax base=StatementSyntax kind=DisableStatement
+token disable
+NameSyntax name
+token semi
+
+DisableForkStatementSyntax base=StatementSyntax kind=DisableForkStatement
+token disable
+token fork
+token semi
+
+NamedBlockClauseSyntax kind=NamedBlockClause
+token colon
+token name
+
+SequentialBlockStatementSyntax base=StatementSyntax kind=SequentialBlockStatement
+token begin
+NamedBlockClauseSyntax blockName
+token end
+NamedBlockClauseSyntax endBlockName
+
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false

@@ -194,6 +194,10 @@ enum class SyntaxKind : uint16_t {
     ProceduralForceStatement,
     ProceduralDeassignStatement,
     ProceduralReleaseStatement,
+    DisableStatement,
+    DisableForkStatement,
+    NamedBlockClause,
+    SequentialBlockStatement,
 
     // assignment statements
     NonblockingAssignmentStatement,

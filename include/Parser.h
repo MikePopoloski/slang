@@ -36,6 +36,7 @@ private:
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();
     EventExpressionSyntax* parseEventExpression();
+    NamedBlockClauseSyntax* parseNamedBlockClause();
     TimingControlSyntax* parseTimingControl(bool allowRepeat);
     ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
     ConditionalPatternSyntax* parseConditionalPattern();
@@ -47,8 +48,10 @@ private:
     ReturnStatementSyntax* parseReturnStatement();
     JumpStatementSyntax* parseJumpStatement();
     AssignmentStatementSyntax* parseAssignmentStatement();
-    ProceduralAssignStatementSyntax* parseProceduralAssign(SyntaxKind kind);
-    ProceduralDeassignStatementSyntax* parseProceduralDeassign(SyntaxKind kind);
+    ProceduralAssignStatementSyntax* parseProceduralAssignStatement(SyntaxKind kind);
+    ProceduralDeassignStatementSyntax* parseProceduralDeassignStatement(SyntaxKind kind);
+    StatementSyntax* parseDisableStatement();
+    SequentialBlockStatementSyntax* parseSequentialBlock();
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>

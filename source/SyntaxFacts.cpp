@@ -416,6 +416,10 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ProceduralForceStatement);
         CASE(ProceduralDeassignStatement);
         CASE(ProceduralReleaseStatement);
+        CASE(DisableStatement);
+        CASE(DisableForkStatement);
+        CASE(NamedBlockClause);
+        CASE(SequentialBlockStatement);
         CASE(NonblockingAssignmentStatement);
         CASE(BlockingAssignmentStatement);
         CASE(AddAssignmentStatement);

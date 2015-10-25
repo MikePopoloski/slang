@@ -174,13 +174,17 @@ StatementSyntax* Parser::parseStatement() {
             return alloc.emplace<TimingControlStatementSyntax>(timingControl, parseStatement());
         }
         case TokenKind::AssignKeyword:
-            return parseProceduralAssign(SyntaxKind::ProceduralAssignStatement);
+            return parseProceduralAssignStatement(SyntaxKind::ProceduralAssignStatement);
         case TokenKind::ForceKeyword:
-            return parseProceduralAssign(SyntaxKind::ProceduralForceStatement);
+            return parseProceduralAssignStatement(SyntaxKind::ProceduralForceStatement);
         case TokenKind::DeassignKeyword:
-            return parseProceduralDeassign(SyntaxKind::ProceduralDeassignStatement);
+            return parseProceduralDeassignStatement(SyntaxKind::ProceduralDeassignStatement);
         case TokenKind::ReleaseKeyword:
-            return parseProceduralDeassign(SyntaxKind::ProceduralReleaseStatement);
+            return parseProceduralDeassignStatement(SyntaxKind::ProceduralReleaseStatement);
+        case TokenKind::DisableKeyword:
+            return parseDisableStatement();
+        case TokenKind::BeginKeyword:
+            return parseSequentialBlock();
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyStatementSyntax>(consume());
     }
@@ -417,7 +421,7 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement() {
     return alloc.emplace<AssignmentStatementSyntax>(getAssignmentStatement(kind), lvalue, op, nullptr, parseExpression(), expect(TokenKind::Semicolon));
 }
 
-ProceduralAssignStatementSyntax* Parser::parseProceduralAssign(SyntaxKind kind) {
+ProceduralAssignStatementSyntax* Parser::parseProceduralAssignStatement(SyntaxKind kind) {
     auto keyword = consume();
     auto lvalue = parsePrimaryExpression();
     auto equals = expect(TokenKind::Equals);
@@ -426,11 +430,39 @@ ProceduralAssignStatementSyntax* Parser::parseProceduralAssign(SyntaxKind kind) 
     return alloc.emplace<ProceduralAssignStatementSyntax>(kind, keyword, lvalue, equals, expr, semi);
 }
 
-ProceduralDeassignStatementSyntax* Parser::parseProceduralDeassign(SyntaxKind kind) {
+ProceduralDeassignStatementSyntax* Parser::parseProceduralDeassignStatement(SyntaxKind kind) {
     auto keyword = consume();
     auto variable = parsePrimaryExpression();
     auto semi = expect(TokenKind::Semicolon);
     return alloc.emplace<ProceduralDeassignStatementSyntax>(kind, keyword, variable, semi);
+}
+
+StatementSyntax* Parser::parseDisableStatement() {
+    auto disable = consume();
+    if (peek(TokenKind::ForkKeyword)) {
+        auto fork = consume();
+        return alloc.emplace<DisableForkStatementSyntax>(disable, fork, expect(TokenKind::Semicolon));
+    }
+
+    auto name = parseName();
+    return alloc.emplace<DisableStatementSyntax>(disable, name, expect(TokenKind::Semicolon));
+}
+
+NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
+    if (peek(TokenKind::Colon)) {
+        auto colon = consume();
+        return alloc.emplace<NamedBlockClauseSyntax>(colon, expect(TokenKind::Identifier));
+    }
+    return nullptr;
+}
+
+SequentialBlockStatementSyntax* Parser::parseSequentialBlock() {
+    auto begin = consume();
+    auto name = parseNamedBlockClause();
+    // TODO: members
+    auto end = expect(TokenKind::EndKeyword);
+    auto endName = parseNamedBlockClause();
+    return alloc.emplace<SequentialBlockStatementSyntax>(begin, name, end, endName);
 }
 
 // ----- EXPRESSIONS -----
