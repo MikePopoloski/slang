@@ -337,6 +337,7 @@ StringRef getDirectiveText(SyntaxKind kind) {
 StringRef getTokenKindText(TokenKind kind) {
     switch (kind) {
         // punctuation
+        case TokenKind::Apostrophe: return "'";
         case TokenKind::ApostropheOpenBrace: return "'{";
         case TokenKind::OpenBrace: return "{";
         case TokenKind::CloseBrace: return "}";
@@ -697,6 +698,7 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         CASE(IntegerLiteral);
         CASE(RealLiteral);
         CASE(TimeLiteral);
+        CASE(Apostrophe);
         CASE(ApostropheOpenBrace);
         CASE(OpenBrace);
         CASE(CloseBrace);

@@ -269,6 +269,7 @@ SyntaxKind getKeywordType(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleExpression(TokenKind kind);
+bool isPossibleStatement(TokenKind kind);
 
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 

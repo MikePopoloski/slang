@@ -16,6 +16,14 @@ struct ExpressionSyntax : public SyntaxNode {
     }
 };
 
+struct StatementSyntax : public SyntaxNode {
+
+    StatementSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
 struct DataTypeSyntax : public SyntaxNode {
 
     DataTypeSyntax(SyntaxKind kind) :
@@ -1436,7 +1444,7 @@ protected:
     }
 };
 
-struct DataDeclarationSyntax : public SyntaxNode {
+struct DataDeclarationSyntax : public StatementSyntax {
     Token* constKeyword;
     Token* varKeyword;
     Token* lifetime;
@@ -1445,7 +1453,7 @@ struct DataDeclarationSyntax : public SyntaxNode {
     Token* semi;
 
     DataDeclarationSyntax(Token* constKeyword, Token* varKeyword, Token* lifetime, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
-        SyntaxNode(SyntaxKind::DataDeclaration), constKeyword(constKeyword), varKeyword(varKeyword), lifetime(lifetime), type(type), declarators(declarators), semi(semi)
+        StatementSyntax(SyntaxKind::DataDeclaration), constKeyword(constKeyword), varKeyword(varKeyword), lifetime(lifetime), type(type), declarators(declarators), semi(semi)
     {
         childCount += 6;
     }
@@ -1745,14 +1753,6 @@ protected:
 };
 
 // ----- STATEMENTS -----
-
-struct StatementSyntax : public SyntaxNode {
-
-    StatementSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {
-    }
-};
 
 struct EmptyStatementSyntax : public StatementSyntax {
     Token* semicolon;
@@ -2211,13 +2211,14 @@ protected:
 struct SequentialBlockStatementSyntax : public StatementSyntax {
     Token* begin;
     NamedBlockClauseSyntax* blockName;
+    SyntaxList<StatementSyntax> items;
     Token* end;
     NamedBlockClauseSyntax* endBlockName;
 
-    SequentialBlockStatementSyntax(Token* begin, NamedBlockClauseSyntax* blockName, Token* end, NamedBlockClauseSyntax* endBlockName) :
-        StatementSyntax(SyntaxKind::SequentialBlockStatement), begin(begin), blockName(blockName), end(end), endBlockName(endBlockName)
+    SequentialBlockStatementSyntax(Token* begin, NamedBlockClauseSyntax* blockName, SyntaxList<StatementSyntax> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
+        StatementSyntax(SyntaxKind::SequentialBlockStatement), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
     {
-        childCount += 4;
+        childCount += 5;
     }
 
 protected:
@@ -2225,8 +2226,9 @@ protected:
         switch(index) {
             case 0: return begin;
             case 1: return blockName;
-            case 2: return end;
-            case 3: return endBlockName;
+            case 2: return &items;
+            case 3: return end;
+            case 4: return endBlockName;
             default: return nullptr;
         }
     }

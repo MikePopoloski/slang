@@ -773,16 +773,6 @@ TEST_CASE("Unsized unbased literal", "[lexer]") {
     //CHECK(value.integer == 19248);
 }
 
-TEST_CASE("Unsized literal (invalid)", "[lexer]") {
-    auto& text = "'f";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toFullString() == "'");
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::InvalidUnsizedLiteral);
-}
-
 TEST_CASE("Misplaced directive char", "[lexer]") {
     auto& text = "`";
     auto& token = lexToken(text);

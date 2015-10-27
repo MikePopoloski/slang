@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AllSyntax.h"
+#include "TokenWindow.h"
 
 namespace slang {
 
@@ -58,6 +59,9 @@ private:
     ArrayRef<VariableDimensionSyntax*> parseDimensionList();
     DataTypeSyntax* parseDataType();
 
+    bool scanTypePart(int& index, TokenKind start, TokenKind end);
+    bool isPossibleBlockDeclaration();
+
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
     void parseSeparatedList(
@@ -85,18 +89,19 @@ private:
     SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
     Token* prependTrivia(Token* token, Trivia* trivia);
 
-    Token* peek();
-    Token* consume();
-    Token* consume(TokenKind kind);
-    Token* expect(TokenKind kind);
-    bool peek(TokenKind kind);
+    Token* peek() { return window.peek(); }
+    Token* peek(int offset) { return window.peek(offset); }
+    Token* consume() { return window.consume(); }
+    Token* consumeIf(TokenKind kind) { return window.consumeIf(kind); }
+    Token* expect(TokenKind kind) { return window.expect(kind); }
+    bool peek(TokenKind kind) { return window.peek(kind); }
 
     void addError(DiagCode code);
 
     Lexer& lexer;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
-    Token* currentToken;
+    TokenWindow<&Lexer::lex> window;
     BufferPool<Trivia> triviaPool;
     BufferPool<Token*> tokenPool;
     BufferPool<SyntaxNode*> nodePool;

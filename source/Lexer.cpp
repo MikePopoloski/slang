@@ -234,9 +234,8 @@ TokenKind Lexer::lexToken(TokenInfo& info) {
             // either an unsized numeric literal, or a '{ range open sequence
             if (consume('{'))
                 return TokenKind::ApostropheOpenBrace;
-
-            lexUnsizedNumericLiteral(info);
-            return TokenKind::IntegerLiteral;
+            else
+                return lexUnsizedNumericLiteral(info);
         case '(':
             if (!consume('*'))
                 return TokenKind::OpenParenthesis;
@@ -817,7 +816,7 @@ void Lexer::lexVectorLiteral(TokenInfo& info, uint64_t size64) {
     }
 }
 
-void Lexer::lexUnsizedNumericLiteral(TokenInfo& info) {
+TokenKind Lexer::lexUnsizedNumericLiteral(TokenInfo& info) {
     vectorBuilder.startUnsized();
     char c = peek();
     switch (c) {
@@ -857,11 +856,10 @@ void Lexer::lexUnsizedNumericLiteral(TokenInfo& info) {
             info.numericValue = logic_t::z;
             break;
         default:
-            // error case
-            addError(DiagCode::InvalidUnsizedLiteral);
-            info.numericValue = 0;
-            break;
+            // just an apostrophe token
+            return TokenKind::Apostrophe;
     }
+    return TokenKind::IntegerLiteral;
 }
 
 template<bool(*IsDigitFunc)(char), uint32_t(*ValueFunc)(char)>

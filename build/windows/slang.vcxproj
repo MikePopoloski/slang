@@ -38,6 +38,7 @@
     <ClInclude Include="..\..\include\StringTable.h" />
     <ClInclude Include="..\..\include\SyntaxNode.h" />
     <ClInclude Include="..\..\include\Token.h" />
+    <ClInclude Include="..\..\include\TokenWindow.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />
   </ItemGroup>

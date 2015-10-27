@@ -114,6 +114,16 @@ bool isEndOfConditionalPredicate(TokenKind kind) {
     return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::BeginKeyword || kind == TokenKind::Semicolon;
 }
 
+bool isNotInType(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Semicolon:
+        case TokenKind::EndOfFile:
+            return true;
+        default:
+            return isEndKeyword(kind);
+    }
+}
+
 }
 
 namespace slang {
@@ -122,7 +132,7 @@ Parser::Parser(Lexer& lexer) :
     lexer(lexer),
     alloc(lexer.getPreprocessor().getAllocator()),
     diagnostics(lexer.getPreprocessor().getDiagnostics()),
-    currentToken(nullptr) {
+    window(lexer) {
 }
 
 StatementSyntax* Parser::parseStatement() {
@@ -457,10 +467,22 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
 SequentialBlockStatementSyntax* Parser::parseSequentialBlock() {
     auto begin = consume();
     auto name = parseNamedBlockClause();
-    // TODO: members
+
+    auto buffer = nodePool.getAs<StatementSyntax*>();
+    auto kind = peek()->kind;
+    while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
+        if (isPossibleBlockDeclaration()) {
+        }
+        else if (isPossibleStatement(kind))
+            buffer.append(parseStatement());
+        else {
+            // TODO: skipped tokens
+        }
+    }
+
     auto end = expect(TokenKind::EndKeyword);
     auto endName = parseNamedBlockClause();
-    return alloc.emplace<SequentialBlockStatementSyntax>(begin, name, end, endName);
+    return alloc.emplace<SequentialBlockStatementSyntax>(begin, name, buffer.copy(alloc), end, endName);
 }
 
 ExpressionSyntax* Parser::parseExpression() {
@@ -1087,7 +1109,7 @@ DataTypeSyntax* Parser::parseDataType() {
 
     if (kind == TokenKind::VirtualKeyword) {
         auto virtualKeyword = consume();
-        auto interfaceKeyword = consume(TokenKind::InterfaceKeyword);
+        auto interfaceKeyword = consumeIf(TokenKind::InterfaceKeyword);
         auto name = expect(TokenKind::Identifier);
         auto parameters = parseParameterValueAssignment();
 
@@ -1101,6 +1123,85 @@ DataTypeSyntax* Parser::parseDataType() {
 
     // TODO: other data types, implicit, void, etc
     return nullptr;
+}
+
+bool Parser::isPossibleBlockDeclaration() {
+    // decide whether a statement is a declaration or the start of an expression
+    auto kind = peek()->kind;
+    switch (kind) {
+        // some tokens unambiguously start a declaration
+        case TokenKind::VarKeyword:
+        case TokenKind::AutomaticKeyword:
+        case TokenKind::StaticKeyword:
+        case TokenKind::CHandleKeyword:
+        case TokenKind::VirtualKeyword:
+        case TokenKind::EventKeyword:
+        case TokenKind::StructKeyword:
+        case TokenKind::UnionKeyword:
+        case TokenKind::EnumKeyword:
+            return true;
+
+        // some cases might be a cast expression
+        case TokenKind::StringKeyword:
+        case TokenKind::ConstKeyword:
+        case TokenKind::BitKeyword:
+        case TokenKind::LogicKeyword:
+        case TokenKind::RegKeyword:
+        case TokenKind::ByteKeyword:
+        case TokenKind::ShortIntKeyword:
+        case TokenKind::IntKeyword:
+        case TokenKind::LongIntKeyword:
+        case TokenKind::IntegerKeyword:
+        case TokenKind::TimeKeyword:
+        case TokenKind::ShortRealKeyword:
+        case TokenKind::RealKeyword:
+        case TokenKind::RealTimeKeyword:
+            return peek(1)->kind != TokenKind::Apostrophe;
+    }
+
+    // scan through tokens until we find one that disambiguates
+    if (kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName)
+        return false;
+
+    int index = 0;
+    do {
+        if (peek(++index)->kind == TokenKind::Hash) {
+            // scan parameter value assignment
+            if (peek(++index)->kind != TokenKind::OpenParenthesis)
+                return false;
+            index++;
+            if (!scanTypePart(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis))
+                return false;
+        }
+    } while (peek(index)->kind == TokenKind::DoubleColon);
+
+    // might be a list of dimensions here
+    while (peek(index)->kind == TokenKind::OpenBracket) {
+        index++;
+        if (!scanTypePart(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
+            return false;
+    }
+
+    // next token is the decider; declarations must have an identifier here
+    return peek(index)->kind == TokenKind::Identifier;
+}
+
+bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
+    int nesting = 1;
+    while (true) {
+        auto kind = peek(index)->kind;
+        if (isNotInType(kind))
+            return false;
+
+        index++;
+        if (kind == start)
+            nesting++;
+        else if (kind == end) {
+            nesting--;
+            if (nesting <= 0)
+                return true;
+        }
+    }
 }
 
 // this is a generalized method for parsing a comma separated list of things
@@ -1204,35 +1305,6 @@ Token* Parser::prependTrivia(Token* token, Trivia* trivia) {
 
 void Parser::addError(DiagCode code) {
     diagnostics.add(SyntaxError(code, 0, 0));
-}
-
-bool Parser::peek(TokenKind kind) {
-    return peek()->kind == kind;
-}
-
-Token* Parser::peek() {
-    if (!currentToken)
-        currentToken = lexer.lex();
-    return currentToken;
-}
-
-Token* Parser::consume() {
-    Token* result = peek();
-    currentToken = nullptr;
-    return result;
-}
-
-Token* Parser::consume(TokenKind kind) {
-    if (peek(kind))
-        return consume();
-    return nullptr;
-}
-
-Token* Parser::expect(TokenKind kind) {
-    if (peek()->kind == kind)
-        return consume();
-
-    return Token::missing(alloc, kind);
 }
 
 }

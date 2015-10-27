@@ -138,6 +138,7 @@ enum class TokenKind : uint16_t {
     TimeLiteral,
 
     // punctuation
+    Apostrophe,
     ApostropheOpenBrace,
     OpenBrace,
     CloseBrace,

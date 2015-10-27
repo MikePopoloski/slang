@@ -1,6 +1,9 @@
 ExpressionSyntax final=false
 empty
 
+StatementSyntax final=false
+empty
+
 DataTypeSyntax final=false
 empty
 
@@ -332,7 +335,7 @@ token name
 list<VariableDimensionSyntax> dimensions
 EqualsValueClauseSyntax initializer
 
-DataDeclarationSyntax kind=DataDeclaration
+DataDeclarationSyntax base=StatementSyntax kind=DataDeclaration
 token constKeyword
 token varKeyword
 token lifetime
@@ -410,9 +413,6 @@ token signing
 list<VariableDimensionSyntax> dimensions
 
 // ----- STATEMENTS -----
-
-StatementSyntax final=false
-empty
 
 EmptyStatementSyntax base=StatementSyntax kind=EmptyStatement
 token semicolon
@@ -529,6 +529,7 @@ token name
 SequentialBlockStatementSyntax base=StatementSyntax kind=SequentialBlockStatement
 token begin
 NamedBlockClauseSyntax blockName
+list<StatementSyntax> items
 token end
 NamedBlockClauseSyntax endBlockName
 

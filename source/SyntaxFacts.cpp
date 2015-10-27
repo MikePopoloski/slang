@@ -251,6 +251,10 @@ bool isPossibleExpression(TokenKind kind) {
     return false;
 }
 
+bool isPossibleStatement(TokenKind kind) {
+    return false;
+}
+
 SyntaxKind getIntegerType(TokenKind kind) {
     switch (kind) {
         case TokenKind::BitKeyword: return SyntaxKind::BitType;
