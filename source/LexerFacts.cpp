@@ -415,6 +415,7 @@ StringRef getTokenKindText(TokenKind kind) {
         case TokenKind::Or: return "|";
         case TokenKind::DoubleOr: return "||";
         case TokenKind::OrMinusArrow: return "|->";
+        case TokenKind::OrMinusDoubleArrow: return "|->>";
         case TokenKind::OrEqualsArrow: return "|=>";
         case TokenKind::At: return "@";
         case TokenKind::AtStar: return "@*";
@@ -776,6 +777,7 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         CASE(Or);
         CASE(DoubleOr);
         CASE(OrMinusArrow);
+        CASE(OrMinusDoubleArrow);
         CASE(OrEqualsArrow);
         CASE(At);
         CASE(AtStar);

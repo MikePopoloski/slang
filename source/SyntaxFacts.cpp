@@ -211,6 +211,39 @@ bool isRightAssociative(SyntaxKind kind) {
     }
 }
 
+bool isPossibleDataType(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::BitKeyword:
+        case TokenKind::LogicKeyword:
+        case TokenKind::RegKeyword:
+        case TokenKind::ByteKeyword:
+        case TokenKind::ShortIntKeyword:
+        case TokenKind::IntKeyword:
+        case TokenKind::LongIntKeyword:
+        case TokenKind::IntegerKeyword:
+        case TokenKind::TimeKeyword:
+        case TokenKind::ShortRealKeyword:
+        case TokenKind::RealKeyword:
+        case TokenKind::RealTimeKeyword:
+        case TokenKind::StringKeyword:
+        case TokenKind::ConstKeyword:
+        case TokenKind::SignedKeyword:
+        case TokenKind::UnsignedKeyword:
+        case TokenKind::StructKeyword:
+        case TokenKind::UnionKeyword:
+        case TokenKind::EnumKeyword:
+        case TokenKind::CHandleKeyword:
+        case TokenKind::VirtualKeyword:
+        case TokenKind::EventKeyword:
+        case TokenKind::TypeKeyword:
+        case TokenKind::Identifier:
+        case TokenKind::UnitSystemName:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool isPossibleExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::TaggedKeyword:
@@ -230,15 +263,20 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::Identifier:
         case TokenKind::RootSystemName:
         case TokenKind::Hash:
+        case TokenKind::TypeKeyword:
+        case TokenKind::ApostropheOpenBrace:
             // expressions can't actually start with these, but we'll allow it
             // to provide good error handling
         case TokenKind::DoubleColon:
         case TokenKind::Question:
         case TokenKind::MatchesKeyword:
         case TokenKind::TripleAnd:
+        case TokenKind::InsideKeyword:
             return true;
-        default: break;
     }
+
+    if (isPossibleDataType(kind))
+        return true;
 
     SyntaxKind opKind = getUnaryPrefixExpression(kind);
     if (opKind != SyntaxKind::Unknown)
@@ -252,7 +290,60 @@ bool isPossibleExpression(TokenKind kind) {
 }
 
 bool isPossibleStatement(TokenKind kind) {
-    return false;
+    switch (kind) {
+        case TokenKind::Identifier:
+        case TokenKind::ThisKeyword:
+        case TokenKind::SuperKeyword:
+        case TokenKind::UnitSystemName:
+        case TokenKind::RootSystemName:
+        case TokenKind::SystemIdentifier:
+        case TokenKind::OpenBrace:
+        case TokenKind::ApostropheOpenBrace:
+        case TokenKind::AssignKeyword:
+        case TokenKind::DeassignKeyword:
+        case TokenKind::ForceKeyword:
+        case TokenKind::ReleaseKeyword:
+        case TokenKind::UniqueKeyword:
+        case TokenKind::Unique0Keyword:
+        case TokenKind::PriorityKeyword:
+        case TokenKind::CaseKeyword:
+        case TokenKind::CaseXKeyword:
+        case TokenKind::CaseZKeyword:
+        case TokenKind::IfKeyword:
+        case TokenKind::DoublePlus:
+        case TokenKind::DoubleMinus:
+        case TokenKind::VoidKeyword:
+        case TokenKind::DisableKeyword:
+        case TokenKind::MinusArrow:
+        case TokenKind::OrMinusDoubleArrow:
+        case TokenKind::ForeverKeyword:
+        case TokenKind::RepeatKeyword:
+        case TokenKind::WhileKeyword:
+        case TokenKind::ForKeyword:
+        case TokenKind::DoKeyword:
+        case TokenKind::ForeachKeyword:
+        case TokenKind::ReturnKeyword:
+        case TokenKind::BreakKeyword:
+        case TokenKind::ContinueKeyword:
+        case TokenKind::ForkKeyword:
+        case TokenKind::Hash:
+        case TokenKind::DoubleHash:
+        case TokenKind::At:
+        case TokenKind::AtStar:
+        case TokenKind::BeginKeyword:
+        case TokenKind::WaitKeyword:
+        case TokenKind::WaitOrderKeyword:
+        case TokenKind::AssertKeyword:
+        case TokenKind::AssumeKeyword:
+        case TokenKind::CoverKeyword:
+        case TokenKind::RestrictKeyword:
+        case TokenKind::RandSequenceKeyword:
+        case TokenKind::RandCaseKeyword:
+        case TokenKind::ExpectKeyword:
+            return true;
+        default:
+            return false;
+    }
 }
 
 SyntaxKind getIntegerType(TokenKind kind) {

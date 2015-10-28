@@ -268,6 +268,7 @@ SyntaxKind getIntegerType(TokenKind kind);
 SyntaxKind getKeywordType(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
+bool isPossibleDataType(TokenKind kind);
 bool isPossibleExpression(TokenKind kind);
 bool isPossibleStatement(TokenKind kind);
 

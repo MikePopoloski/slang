@@ -216,6 +216,7 @@ enum class TokenKind : uint16_t {
     Or,
     DoubleOr,
     OrMinusArrow,
+    OrMinusDoubleArrow,
     OrEqualsArrow,
     At,
     AtStar,

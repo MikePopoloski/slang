@@ -421,7 +421,10 @@ TokenKind Lexer::lexToken(TokenInfo& info) {
                 case '-':
                     if (peek(1) == '>') {
                         advance(2);
-                        return TokenKind::OrMinusArrow;
+                        if (consume('>'))
+                            return TokenKind::OrMinusDoubleArrow;
+                        else
+                            return TokenKind::OrMinusArrow;
                     }
                     return TokenKind::Or;
                 case '=':

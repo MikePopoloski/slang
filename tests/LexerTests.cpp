@@ -1133,6 +1133,7 @@ TEST_CASE("All Punctuation", "[lexer]") {
     testPunctuation(TokenKind::Or);
     testPunctuation(TokenKind::DoubleOr);
     testPunctuation(TokenKind::OrMinusArrow);
+    testPunctuation(TokenKind::OrMinusDoubleArrow);
     testPunctuation(TokenKind::OrEqualsArrow);
     testPunctuation(TokenKind::At);
     testPunctuation(TokenKind::AtStar);
