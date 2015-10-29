@@ -335,10 +335,11 @@ token name
 list<VariableDimensionSyntax> dimensions
 EqualsValueClauseSyntax initializer
 
-DataDeclarationSyntax base=StatementSyntax kind=DataDeclaration
-token constKeyword
-token varKeyword
-token lifetime
+LocalDeclarationSyntax base=StatementSyntax final=false
+empty
+
+DataDeclarationSyntax base=LocalDeclarationSyntax kind=DataDeclaration
+tokenlist modifiers
 DataTypeSyntax type
 separated_list<VariableDeclaratorSyntax> declarators
 token semi

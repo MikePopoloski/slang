@@ -166,4 +166,25 @@ TEST_CASE("Procedural assign", "[parser:statements]") {
     testProceduralAssign("release foo;", SyntaxKind::ProceduralReleaseStatement);
 }
 
+DataDeclarationSyntax* parseBlockDeclaration(const std::string& text) {
+    auto fullText = "begin " + text + " end";
+    auto stmt = parse(fullText);
+
+    REQUIRE(stmt->kind == SyntaxKind::SequentialBlockStatement);
+    CHECK(stmt->toFullString() == fullText);
+    CHECK(diagnostics.empty());
+
+    auto block = (SequentialBlockStatementSyntax*)stmt;
+    REQUIRE(block->items.count() == 1);
+    REQUIRE(block->items[0]->kind == SyntaxKind::DataDeclaration);
+
+    return (DataDeclarationSyntax*)block->items[0];
+}
+
+TEST_CASE("Sequential declarations", "[parser:statements]") {
+    parseBlockDeclaration("logic f = 4;");
+    parseBlockDeclaration("logic [3:0] f [1:4] = 4, g [99][10+:12] = new [foo] (bar);");
+    parseBlockDeclaration("const var static logic f;");
+}
+
 }

@@ -109,6 +109,14 @@ SyntaxKind Token::directiveKind() const {
     return ((DirectiveInfo*)(this + 1))->kind;
 }
 
+bool Token::hasTrivia(TriviaKind kind) const {
+    for (const auto& t : trivia) {
+        if (t.kind == kind)
+            return true;
+    }
+    return false;
+}
+
 Token* Token::createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags) {
     Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
     new (token) Token(TokenKind::Unknown, trivia, flags);

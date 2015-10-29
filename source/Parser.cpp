@@ -32,6 +32,14 @@ bool isPossibleArgument(TokenKind kind) {
     }
 }
 
+bool isComma(TokenKind kind) {
+    return kind == TokenKind::Comma;
+}
+
+bool isSemicolon(TokenKind kind) {
+    return kind == TokenKind::Semicolon;
+}
+
 bool isPossibleExpressionOrComma(TokenKind kind) {
     return kind == TokenKind::Comma || isPossibleExpression(kind);
 }
@@ -93,6 +101,17 @@ bool isEndKeyword(TokenKind kind) {
         case TokenKind::EndSequenceKeyword:
         case TokenKind::EndTableKeyword:
         case TokenKind::EndTaskKeyword:
+            return true;
+    }
+    return false;
+}
+
+bool isDeclarationModifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::ConstKeyword:
+        case TokenKind::VarKeyword:
+        case TokenKind::StaticKeyword:
+        case TokenKind::AutomaticKeyword:
             return true;
     }
     return false;
@@ -178,7 +197,7 @@ StatementSyntax* Parser::parseStatement() {
         case TokenKind::DoubleHash:
         case TokenKind::At:
         case TokenKind::AtStar: {
-            auto timingControl = parseTimingControl(false);
+            auto timingControl = parseTimingControl(/* allowRepeat */ false);
             return alloc.emplace<TimingControlStatementSyntax>(timingControl, parseStatement());
         }
         case TokenKind::AssignKeyword:
@@ -376,7 +395,7 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement() {
     auto kind = peek()->kind;
     if (kind == TokenKind::LessThanEquals) {
         auto op = consume();
-        auto timingControl = parseTimingControl(true);
+        auto timingControl = parseTimingControl(/* allowRepeat */ true);
         auto expr = parseExpression();
         return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::NonblockingAssignmentStatement, lvalue, op, timingControl, expr, expect(TokenKind::Semicolon));
     }
@@ -386,42 +405,13 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement() {
         auto op = consume();
         kind = peek()->kind;
         if (isPossibleDelayOrEventControl(kind)) {
-            auto timingControl = parseTimingControl(true);
+            auto timingControl = parseTimingControl(/* allowRepeat */ true);
             auto expr = parseExpression();
             return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::BlockingAssignmentStatement, lvalue, op, timingControl, expr, expect(TokenKind::Semicolon));
         }
 
-        if (kind == TokenKind::NewKeyword) {
-            auto newKeyword = consume();
-            kind = peek()->kind;
-
-            ExpressionSyntax* rvalue = nullptr;
-            if (kind == TokenKind::OpenBracket) {
-                // new array
-                auto openBracket = consume();
-                auto sizeExpr = parseExpression();
-                auto closeBracket = expect(TokenKind::CloseBracket);
-
-                ParenthesizedExpressionSyntax* initializer = nullptr;
-                if (peek(TokenKind::OpenParenthesis)) {
-                    auto openParen = consume();
-                    auto initializerExpr = parseExpression();
-                    initializer = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, initializerExpr, expect(TokenKind::CloseParenthesis));
-                }
-                rvalue = alloc.emplace<NewArrayExpressionSyntax>(newKeyword, openBracket, sizeExpr, closeBracket, initializer);
-            }
-            else {
-                // new class
-                ArgumentListSyntax* arguments = nullptr;
-                if (kind == TokenKind::OpenParenthesis)
-                    arguments = parseArgumentList();
-
-                rvalue = alloc.emplace<NewClassExpressionSyntax>(nullptr, newKeyword, arguments);
-            }
-            return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::BlockingAssignmentStatement, lvalue, op, nullptr, rvalue, expect(TokenKind::Semicolon));
-        }
-
-        // TODO: handle class scoped new
+        auto expr = parseAssignmentExpression();
+        return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::BlockingAssignmentStatement, lvalue, op, nullptr, expr, expect(TokenKind::Semicolon));
     }
 
     // TODO: handle error case where operator is missing
@@ -471,13 +461,14 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock() {
     auto buffer = nodePool.getAs<StatementSyntax*>();
     auto kind = peek()->kind;
     while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
-        if (isPossibleBlockDeclaration()) {
-        }
+        if (isPossibleBlockDeclaration())
+            buffer.append(parseBlockDeclaration());
         else if (isPossibleStatement(kind))
             buffer.append(parseStatement());
         else {
             // TODO: skipped tokens
         }
+        kind = peek()->kind;
     }
 
     auto end = expect(TokenKind::EndKeyword);
@@ -963,6 +954,38 @@ EventExpressionSyntax* Parser::parseEventExpression() {
     return left;
 }
 
+ExpressionSyntax* Parser::parseAssignmentExpression() {
+    if (!peek(TokenKind::NewKeyword))
+        return parseExpression();
+
+    auto newKeyword = consume();
+    auto kind = peek()->kind;
+
+    ExpressionSyntax* rvalue = nullptr;
+    if (kind == TokenKind::OpenBracket) {
+        // new array
+        auto openBracket = consume();
+        auto sizeExpr = parseExpression();
+        auto closeBracket = expect(TokenKind::CloseBracket);
+
+        ParenthesizedExpressionSyntax* initializer = nullptr;
+        if (peek(TokenKind::OpenParenthesis)) {
+            auto openParen = consume();
+            auto initializerExpr = parseExpression();
+            initializer = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, initializerExpr, expect(TokenKind::CloseParenthesis));
+        }
+        return alloc.emplace<NewArrayExpressionSyntax>(newKeyword, openBracket, sizeExpr, closeBracket, initializer);
+    }
+
+    // new class
+    ArgumentListSyntax* arguments = nullptr;
+    if (kind == TokenKind::OpenParenthesis)
+        arguments = parseArgumentList();
+
+    // TODO: handle class scoped new
+    return alloc.emplace<NewClassExpressionSyntax>(nullptr, newKeyword, arguments);
+}
+
 TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
     switch (peek()->kind) {
         case TokenKind::Hash: {
@@ -1032,7 +1055,7 @@ TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto expr = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            return alloc.emplace<RepeatedEventControlSyntax>(repeat, openParen, expr, closeParen, parseTimingControl(false));
+            return alloc.emplace<RepeatedEventControlSyntax>(repeat, openParen, expr, closeParen, parseTimingControl(/* allowRepeat */ false));
         }
         default:
             return nullptr;
@@ -1094,7 +1117,7 @@ ArrayRef<VariableDimensionSyntax*> Parser::parseDimensionList() {
     return buffer.copy(alloc);
 }
 
-DataTypeSyntax* Parser::parseDataType() {
+DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
     auto kind = peek()->kind;
     auto type = getIntegerType(kind);
     if (type != SyntaxKind::Unknown) {
@@ -1125,6 +1148,62 @@ DataTypeSyntax* Parser::parseDataType() {
     return nullptr;
 }
 
+LocalDeclarationSyntax* Parser::parseBlockDeclaration() {
+    // TODO: other kinds of declarations besides data
+    bool hasVar = false;
+    auto modifiers = tokenPool.get();
+    auto kind = peek()->kind;
+    while (isDeclarationModifier(kind)) {
+        // TODO: error on bad combination / ordering
+        modifiers.append(consume());
+        if (kind == TokenKind::VarKeyword)
+            hasVar = true;
+        kind = peek()->kind;
+    }
+
+    auto dataType = parseDataType(/* allowImplicit */ hasVar);
+    auto declarators = tosPool.get();
+
+    declarators.append(parseVariableDeclarator(/* isFirst */ true));
+
+    Trivia skippedTokens;
+    while (true) {
+        kind = peek()->kind;
+        if (kind == TokenKind::Semicolon)
+            break;
+        else if (kind == TokenKind::Comma) {
+            declarators.append(prependTrivia(consume(), &skippedTokens));
+            declarators.append(parseVariableDeclarator(/* isFirst */ false));
+        }
+        else if (skipBadTokens<isComma, isSemicolon>(&skippedTokens) == SkipAction::Abort)
+            break;
+    }
+
+    auto semi = prependTrivia(expect(TokenKind::Semicolon), &skippedTokens);
+    return alloc.emplace<DataDeclarationSyntax>(modifiers.copy(alloc), dataType, declarators.copy(alloc), semi);
+}
+
+VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
+    auto name = expect(TokenKind::Identifier);
+
+    // Give a better error message for cases like:
+    // X x = 1, Y y = 2;
+    // The second identifier would be treated as a variable name, which is confusing
+    if (!isFirst && peek(TokenKind::Identifier)) {
+        // TODO: error msg
+    }
+
+    auto dimensions = parseDimensionList();
+
+    EqualsValueClauseSyntax* initializer = nullptr;
+    if (peek(TokenKind::Equals)) {
+        auto equals = consume();
+        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseAssignmentExpression());
+    }
+
+    return alloc.emplace<VariableDeclaratorSyntax>(name, dimensions, initializer);
+}
+
 bool Parser::isPossibleBlockDeclaration() {
     // decide whether a statement is a declaration or the start of an expression
     auto kind = peek()->kind;
@@ -1139,6 +1218,13 @@ bool Parser::isPossibleBlockDeclaration() {
         case TokenKind::StructKeyword:
         case TokenKind::UnionKeyword:
         case TokenKind::EnumKeyword:
+        case TokenKind::TypedefKeyword:
+        case TokenKind::ImportKeyword:
+        case TokenKind::NetTypeKeyword:
+        case TokenKind::LocalParamKeyword:
+        case TokenKind::ParameterKeyword:
+        case TokenKind::BindKeyword:
+        case TokenKind::LetKeyword:
             return true;
 
         // some cases might be a cast expression
@@ -1155,8 +1241,10 @@ bool Parser::isPossibleBlockDeclaration() {
         case TokenKind::TimeKeyword:
         case TokenKind::ShortRealKeyword:
         case TokenKind::RealKeyword:
-        case TokenKind::RealTimeKeyword:
-            return peek(1)->kind != TokenKind::Apostrophe;
+        case TokenKind::RealTimeKeyword: {
+            auto next = peek(1)->kind;
+            return next != TokenKind::Apostrophe && next != TokenKind::ApostropheOpenBrace;
+        }
     }
 
     // scan through tokens until we find one that disambiguates

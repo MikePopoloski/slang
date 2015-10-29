@@ -38,6 +38,7 @@ private:
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();
     EventExpressionSyntax* parseEventExpression();
+    ExpressionSyntax* parseAssignmentExpression();
     NamedBlockClauseSyntax* parseNamedBlockClause();
     TimingControlSyntax* parseTimingControl(bool allowRepeat);
     ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
@@ -57,7 +58,9 @@ private:
     Token* parseSigning();
     VariableDimensionSyntax* parseDimension();
     ArrayRef<VariableDimensionSyntax*> parseDimensionList();
-    DataTypeSyntax* parseDataType();
+    DataTypeSyntax* parseDataType(bool allowImplicit);
+    LocalDeclarationSyntax* parseBlockDeclaration();
+    VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
 
     bool scanTypePart(int& index, TokenKind start, TokenKind end);
     bool isPossibleBlockDeclaration();

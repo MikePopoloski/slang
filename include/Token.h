@@ -84,6 +84,8 @@ public:
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
 
+    bool hasTrivia(TriviaKind kind) const;
+
     static Token* createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags = 0);
     static Token* createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, uint8_t flags = 0);
     static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);

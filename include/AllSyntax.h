@@ -1444,29 +1444,33 @@ protected:
     }
 };
 
-struct DataDeclarationSyntax : public StatementSyntax {
-    Token* constKeyword;
-    Token* varKeyword;
-    Token* lifetime;
+struct LocalDeclarationSyntax : public StatementSyntax {
+
+    LocalDeclarationSyntax(SyntaxKind kind) :
+        StatementSyntax(kind)
+    {
+    }
+};
+
+struct DataDeclarationSyntax : public LocalDeclarationSyntax {
+    TokenList modifiers;
     DataTypeSyntax* type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
     Token* semi;
 
-    DataDeclarationSyntax(Token* constKeyword, Token* varKeyword, Token* lifetime, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
-        StatementSyntax(SyntaxKind::DataDeclaration), constKeyword(constKeyword), varKeyword(varKeyword), lifetime(lifetime), type(type), declarators(declarators), semi(semi)
+    DataDeclarationSyntax(TokenList modifiers, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+        LocalDeclarationSyntax(SyntaxKind::DataDeclaration), modifiers(modifiers), type(type), declarators(declarators), semi(semi)
     {
-        childCount += 6;
+        childCount += 4;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return constKeyword;
-            case 1: return varKeyword;
-            case 2: return lifetime;
-            case 3: return type;
-            case 4: return &declarators;
-            case 5: return semi;
+            case 0: return &modifiers;
+            case 1: return type;
+            case 2: return &declarators;
+            case 3: return semi;
             default: return nullptr;
         }
     }
