@@ -40,6 +40,10 @@ bool isSemicolon(TokenKind kind) {
     return kind == TokenKind::Semicolon;
 }
 
+bool isIdentifierOrComma(TokenKind kind) {
+    return kind == TokenKind::Identifier || kind == TokenKind::Comma;
+}
+
 bool isPossibleExpressionOrComma(TokenKind kind) {
     return kind == TokenKind::Comma || isPossibleExpression(kind);
 }
@@ -133,6 +137,25 @@ bool isEndOfConditionalPredicate(TokenKind kind) {
     return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::BeginKeyword || kind == TokenKind::Semicolon;
 }
 
+bool isEndOfAttribute(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::StarCloseParenthesis:
+        // these indicate a missing *) somewhere
+        case TokenKind::Semicolon:
+        case TokenKind::PrimitiveKeyword:
+        case TokenKind::ProgramKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::PackageKeyword:
+        case TokenKind::CheckerKeyword:
+        case TokenKind::GenerateKeyword:
+        case TokenKind::ModuleKeyword:
+        case TokenKind::ClassKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool isNotInType(TokenKind kind) {
     switch (kind) {
         case TokenKind::Semicolon:
@@ -155,6 +178,14 @@ Parser::Parser(Lexer& lexer) :
 }
 
 StatementSyntax* Parser::parseStatement() {
+    StatementLabelSyntax* label = nullptr;
+    if (peek()->kind == TokenKind::Identifier && peek(1)->kind == TokenKind::Colon) {
+        auto name = consume();
+        label = alloc.emplace<StatementLabelSyntax>(name, consume());
+    }
+
+    auto attributes = parseAttributes();
+
     switch (peek()->kind) {
         case TokenKind::UniqueKeyword:
         case TokenKind::Unique0Keyword:
@@ -162,11 +193,11 @@ StatementSyntax* Parser::parseStatement() {
             auto modifier = consume();
             switch (peek()->kind) {
                 case TokenKind::IfKeyword:
-                    return parseConditionalStatement(modifier);
+                    return parseConditionalStatement(label, attributes, modifier);
                 case TokenKind::CaseKeyword:
                 case TokenKind::CaseXKeyword:
                 case TokenKind::CaseZKeyword:
-                    return parseCaseStatement(modifier, consume());
+                    return parseCaseStatement(label, attributes, modifier, consume());
                 default:
                     // TODO: handle error case
                     break;
@@ -176,50 +207,51 @@ StatementSyntax* Parser::parseStatement() {
         case TokenKind::CaseKeyword:
         case TokenKind::CaseXKeyword:
         case TokenKind::CaseZKeyword:
-            return parseCaseStatement(nullptr, consume());
+            return parseCaseStatement(label, attributes, nullptr, consume());
         case TokenKind::IfKeyword:
-            return parseConditionalStatement(nullptr);
+            return parseConditionalStatement(label, attributes, nullptr);
         case TokenKind::ForeverKeyword: {
             auto forever = consume();
-            return alloc.emplace<ForeverStatementSyntax>(forever, parseStatement());
+            return alloc.emplace<ForeverStatementSyntax>(label, attributes, forever, parseStatement());
         }
         case TokenKind::RepeatKeyword:
         case TokenKind::WhileKeyword:
-            return parseLoopStatement();
+            return parseLoopStatement(label, attributes);
         case TokenKind::DoKeyword:
-            return parseDoWhileStatement();
+            return parseDoWhileStatement(label, attributes);
         case TokenKind::ReturnKeyword:
-            return parseReturnStatement();
+            return parseReturnStatement(label, attributes);
         case TokenKind::BreakKeyword:
         case TokenKind::ContinueKeyword:
-            return parseJumpStatement();
+            return parseJumpStatement(label, attributes);
         case TokenKind::Hash:
         case TokenKind::DoubleHash:
         case TokenKind::At:
         case TokenKind::AtStar: {
             auto timingControl = parseTimingControl(/* allowRepeat */ false);
-            return alloc.emplace<TimingControlStatementSyntax>(timingControl, parseStatement());
+            return alloc.emplace<TimingControlStatementSyntax>(label, attributes, timingControl, parseStatement());
         }
         case TokenKind::AssignKeyword:
-            return parseProceduralAssignStatement(SyntaxKind::ProceduralAssignStatement);
+            return parseProceduralAssignStatement(label, attributes, SyntaxKind::ProceduralAssignStatement);
         case TokenKind::ForceKeyword:
-            return parseProceduralAssignStatement(SyntaxKind::ProceduralForceStatement);
+            return parseProceduralAssignStatement(label, attributes, SyntaxKind::ProceduralForceStatement);
         case TokenKind::DeassignKeyword:
-            return parseProceduralDeassignStatement(SyntaxKind::ProceduralDeassignStatement);
+            return parseProceduralDeassignStatement(label, attributes, SyntaxKind::ProceduralDeassignStatement);
         case TokenKind::ReleaseKeyword:
-            return parseProceduralDeassignStatement(SyntaxKind::ProceduralReleaseStatement);
+            return parseProceduralDeassignStatement(label, attributes, SyntaxKind::ProceduralReleaseStatement);
         case TokenKind::DisableKeyword:
-            return parseDisableStatement();
+            return parseDisableStatement(label, attributes);
         case TokenKind::BeginKeyword:
-            return parseSequentialBlock();
+            return parseSequentialBlock(label, attributes);
         case TokenKind::Semicolon:
-            return alloc.emplace<EmptyStatementSyntax>(consume());
+            // TODO: no label allowed on semicolon
+            return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
     }
 
     return nullptr;
 }
 
-ConditionalStatementSyntax* Parser::parseConditionalStatement(Token* uniqueOrPriority) {
+ConditionalStatementSyntax* Parser::parseConditionalStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority) {
     auto ifKeyword = expect(TokenKind::IfKeyword);
     auto openParen = expect(TokenKind::OpenParenthesis);
 
@@ -233,10 +265,20 @@ ConditionalStatementSyntax* Parser::parseConditionalStatement(Token* uniqueOrPri
         elseClause = alloc.emplace<ElseClauseSyntax>(elseKeyword, parseStatement());
     }
 
-    return alloc.emplace<ConditionalStatementSyntax>(uniqueOrPriority, ifKeyword, openParen, predicate, closeParen, statement, elseClause);
+    return alloc.emplace<ConditionalStatementSyntax>(
+        label,
+        attributes,
+        uniqueOrPriority,
+        ifKeyword,
+        openParen,
+        predicate,
+        closeParen,
+        statement,
+        elseClause
+    );
 }
 
-CaseStatementSyntax* Parser::parseCaseStatement(Token* uniqueOrPriority, Token* caseKeyword) {
+CaseStatementSyntax* Parser::parseCaseStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority, Token* caseKeyword) {
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto caseExpr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -330,6 +372,8 @@ CaseStatementSyntax* Parser::parseCaseStatement(Token* uniqueOrPriority, Token* 
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
     return alloc.emplace<CaseStatementSyntax>(
+        label,
+        attributes,
         uniqueOrPriority,
         caseKeyword,
         openParen,
@@ -351,16 +395,16 @@ DefaultCaseItemSyntax* Parser::parseDefaultCaseItem() {
     return alloc.emplace<DefaultCaseItemSyntax>(defaultKeyword, colon, parseStatement());
 }
 
-LoopStatementSyntax* Parser::parseLoopStatement() {
+LoopStatementSyntax* Parser::parseLoopStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto expr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto statement = parseStatement();
-    return alloc.emplace<LoopStatementSyntax>(keyword, openParen, expr, closeParen, statement);
+    return alloc.emplace<LoopStatementSyntax>(label, attributes, keyword, openParen, expr, closeParen, statement);
 }
 
-DoWhileStatementSyntax* Parser::parseDoWhileStatement() {
+DoWhileStatementSyntax* Parser::parseDoWhileStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto doKeyword = consume();
     auto statement = parseStatement();
     auto whileKeyword = expect(TokenKind::WhileKeyword);
@@ -368,10 +412,10 @@ DoWhileStatementSyntax* Parser::parseDoWhileStatement() {
     auto expr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto semi = expect(TokenKind::Semicolon);
-    return alloc.emplace<DoWhileStatementSyntax>(doKeyword, statement, whileKeyword, openParen, expr, closeParen, semi);
+    return alloc.emplace<DoWhileStatementSyntax>(label, attributes, doKeyword, statement, whileKeyword, openParen, expr, closeParen, semi);
 }
 
-ReturnStatementSyntax* Parser::parseReturnStatement() {
+ReturnStatementSyntax* Parser::parseReturnStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
 
     ExpressionSyntax* expr = nullptr;
@@ -379,16 +423,16 @@ ReturnStatementSyntax* Parser::parseReturnStatement() {
         expr = parseExpression();
 
     auto semi = expect(TokenKind::Semicolon);
-    return alloc.emplace<ReturnStatementSyntax>(keyword, expr, semi);
+    return alloc.emplace<ReturnStatementSyntax>(label, attributes, keyword, expr, semi);
 }
 
-JumpStatementSyntax* Parser::parseJumpStatement() {
+JumpStatementSyntax* Parser::parseJumpStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
     auto semi = expect(TokenKind::Semicolon);
-    return alloc.emplace<JumpStatementSyntax>(keyword, semi);
+    return alloc.emplace<JumpStatementSyntax>(label, attributes, keyword, semi);
 }
 
-AssignmentStatementSyntax* Parser::parseAssignmentStatement() {
+AssignmentStatementSyntax* Parser::parseAssignmentStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     ExpressionSyntax* lvalue = parsePrimaryExpression();
 
     // non-blocking assignments
@@ -397,7 +441,16 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement() {
         auto op = consume();
         auto timingControl = parseTimingControl(/* allowRepeat */ true);
         auto expr = parseExpression();
-        return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::NonblockingAssignmentStatement, lvalue, op, timingControl, expr, expect(TokenKind::Semicolon));
+        return alloc.emplace<AssignmentStatementSyntax>(
+            SyntaxKind::NonblockingAssignmentStatement,
+            label,
+            attributes,
+            lvalue,
+            op,
+            timingControl,
+            expr,
+            expect(TokenKind::Semicolon)
+        );
     }
 
     // special case blocking assignments
@@ -407,43 +460,70 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement() {
         if (isPossibleDelayOrEventControl(kind)) {
             auto timingControl = parseTimingControl(/* allowRepeat */ true);
             auto expr = parseExpression();
-            return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::BlockingAssignmentStatement, lvalue, op, timingControl, expr, expect(TokenKind::Semicolon));
+            return alloc.emplace<AssignmentStatementSyntax>(
+                SyntaxKind::BlockingAssignmentStatement,
+                label,
+                attributes,
+                lvalue,
+                op,
+                timingControl,
+                expr,
+                expect(TokenKind::Semicolon)
+            );
         }
 
         auto expr = parseAssignmentExpression();
-        return alloc.emplace<AssignmentStatementSyntax>(SyntaxKind::BlockingAssignmentStatement, lvalue, op, nullptr, expr, expect(TokenKind::Semicolon));
+        return alloc.emplace<AssignmentStatementSyntax>(
+            SyntaxKind::BlockingAssignmentStatement,
+            label,
+            attributes,
+            lvalue,
+            op,
+            nullptr,
+            expr,
+            expect(TokenKind::Semicolon)
+        );
     }
 
     // TODO: handle error case where operator is missing
     auto op = consume();
-    return alloc.emplace<AssignmentStatementSyntax>(getAssignmentStatement(kind), lvalue, op, nullptr, parseExpression(), expect(TokenKind::Semicolon));
+    return alloc.emplace<AssignmentStatementSyntax>(
+        getAssignmentStatement(kind),
+        label,
+        attributes,
+        lvalue,
+        op,
+        nullptr,
+        parseExpression(),
+        expect(TokenKind::Semicolon)
+    );
 }
 
-ProceduralAssignStatementSyntax* Parser::parseProceduralAssignStatement(SyntaxKind kind) {
+ProceduralAssignStatementSyntax* Parser::parseProceduralAssignStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
     auto keyword = consume();
     auto lvalue = parsePrimaryExpression();
     auto equals = expect(TokenKind::Equals);
     auto expr = parseExpression();
     auto semi = expect(TokenKind::Semicolon);
-    return alloc.emplace<ProceduralAssignStatementSyntax>(kind, keyword, lvalue, equals, expr, semi);
+    return alloc.emplace<ProceduralAssignStatementSyntax>(kind, label, attributes, keyword, lvalue, equals, expr, semi);
 }
 
-ProceduralDeassignStatementSyntax* Parser::parseProceduralDeassignStatement(SyntaxKind kind) {
+ProceduralDeassignStatementSyntax* Parser::parseProceduralDeassignStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
     auto keyword = consume();
     auto variable = parsePrimaryExpression();
     auto semi = expect(TokenKind::Semicolon);
-    return alloc.emplace<ProceduralDeassignStatementSyntax>(kind, keyword, variable, semi);
+    return alloc.emplace<ProceduralDeassignStatementSyntax>(kind, label, attributes, keyword, variable, semi);
 }
 
-StatementSyntax* Parser::parseDisableStatement() {
+StatementSyntax* Parser::parseDisableStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto disable = consume();
     if (peek(TokenKind::ForkKeyword)) {
         auto fork = consume();
-        return alloc.emplace<DisableForkStatementSyntax>(disable, fork, expect(TokenKind::Semicolon));
+        return alloc.emplace<DisableForkStatementSyntax>(label, attributes, disable, fork, expect(TokenKind::Semicolon));
     }
 
     auto name = parseName();
-    return alloc.emplace<DisableStatementSyntax>(disable, name, expect(TokenKind::Semicolon));
+    return alloc.emplace<DisableStatementSyntax>(label, attributes, disable, name, expect(TokenKind::Semicolon));
 }
 
 NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
@@ -454,7 +534,7 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
     return nullptr;
 }
 
-SequentialBlockStatementSyntax* Parser::parseSequentialBlock() {
+SequentialBlockStatementSyntax* Parser::parseSequentialBlock(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto begin = consume();
     auto name = parseNamedBlockClause();
 
@@ -473,7 +553,7 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock() {
 
     auto end = expect(TokenKind::EndKeyword);
     auto endName = parseNamedBlockClause();
-    return alloc.emplace<SequentialBlockStatementSyntax>(begin, name, buffer.copy(alloc), end, endName);
+    return alloc.emplace<SequentialBlockStatementSyntax>(label, attributes, begin, name, buffer.copy(alloc), end, endName);
 }
 
 ExpressionSyntax* Parser::parseExpression() {
@@ -508,10 +588,11 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
     SyntaxKind opKind = getUnaryPrefixExpression(current->kind);
     if (opKind != SyntaxKind::Unknown) {
         auto opToken = consume();
+        auto attributes = parseAttributes();
 
         newPrecedence = getPrecedence(opKind);
         ExpressionSyntax* operand = parseSubExpression(newPrecedence);
-        leftOperand = alloc.emplace<PrefixUnaryExpressionSyntax>(opKind, opToken, operand);
+        leftOperand = alloc.emplace<PrefixUnaryExpressionSyntax>(opKind, opToken, attributes, operand);
     }
     else {
         // not a unary operator, so must be a primary expression
@@ -539,8 +620,9 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
             leftOperand = parseInsideExpression(leftOperand);
         else {
             auto opToken = consume();
+            auto attributes = parseAttributes();
             auto rightOperand = parseSubExpression(newPrecedence);
-            leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, rightOperand);
+            leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, attributes, rightOperand);
         }
     }
 
@@ -552,10 +634,11 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
 
         Token* question;
         auto predicate = parseConditionalPredicate(leftOperand, TokenKind::Question, question);
+        auto attributes = parseAttributes();
         auto left = parseSubExpression(logicalOrPrecedence - 1);
         auto colon = expect(TokenKind::Colon);
         auto right = parseSubExpression(logicalOrPrecedence - 1);
-        leftOperand = alloc.emplace<ConditionalExpressionSyntax>(predicate, question, left, colon, right);
+        leftOperand = alloc.emplace<ConditionalExpressionSyntax>(predicate, question, attributes, left, colon, right);
     }
     
     return leftOperand;
@@ -761,12 +844,12 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
             case TokenKind::OpenParenthesis:
                 expr = alloc.emplace<InvocationExpressionSyntax>(expr, parseArgumentList());
                 break;
+            // can't have any other postfix expressions after inc/dec
+            // TODO: parse attributes
             case TokenKind::DoublePlus:
-                // can't have any other postfix expressions after inc/dec
-                return alloc.emplace<PostfixUnaryExpressionSyntax>(SyntaxKind::PostincrementExpression, expr, consume());
+                return alloc.emplace<PostfixUnaryExpressionSyntax>(SyntaxKind::PostincrementExpression, expr, ArrayRef<AttributeInstanceSyntax*>(nullptr), consume());
             case TokenKind::DoubleMinus:
-                // can't have any other postfix expressions after inc/dec
-                return alloc.emplace<PostfixUnaryExpressionSyntax>(SyntaxKind::PostdecrementExpression, expr, consume());
+                return alloc.emplace<PostfixUnaryExpressionSyntax>(SyntaxKind::PostdecrementExpression, expr, ArrayRef<AttributeInstanceSyntax*>(nullptr), consume());
             default:
                 return expr;
         }
@@ -961,7 +1044,6 @@ ExpressionSyntax* Parser::parseAssignmentExpression() {
     auto newKeyword = consume();
     auto kind = peek()->kind;
 
-    ExpressionSyntax* rvalue = nullptr;
     if (kind == TokenKind::OpenBracket) {
         // new array
         auto openBracket = consume();
@@ -1148,7 +1230,9 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
     return nullptr;
 }
 
-LocalDeclarationSyntax* Parser::parseBlockDeclaration() {
+StatementSyntax* Parser::parseBlockDeclaration() {
+    auto attributes = parseAttributes();
+
     // TODO: other kinds of declarations besides data
     bool hasVar = false;
     auto modifiers = tokenPool.get();
@@ -1180,7 +1264,7 @@ LocalDeclarationSyntax* Parser::parseBlockDeclaration() {
     }
 
     auto semi = prependTrivia(expect(TokenKind::Semicolon), &skippedTokens);
-    return alloc.emplace<DataDeclarationSyntax>(modifiers.copy(alloc), dataType, declarators.copy(alloc), semi);
+    return alloc.emplace<DataDeclarationSyntax>(nullptr, attributes, modifiers.copy(alloc), dataType, declarators.copy(alloc), semi);
 }
 
 VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
@@ -1204,9 +1288,55 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     return alloc.emplace<VariableDeclaratorSyntax>(name, dimensions, initializer);
 }
 
+ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
+    auto buffer = nodePool.getAs<AttributeInstanceSyntax*>();
+    while (peek(TokenKind::OpenParenthesisStar)) {
+        Token* openParen;
+        Token* closeParen;
+        ArrayRef<TokenOrSyntax> list = nullptr;
+
+        parseSeparatedList<isIdentifierOrComma, isEndOfAttribute>(
+            TokenKind::OpenParenthesisStar,
+            TokenKind::StarCloseParenthesis,
+            TokenKind::Comma,
+            openParen,
+            list,
+            closeParen,
+            &Parser::parseAttributeSpec
+        );
+
+        buffer.append(alloc.emplace<AttributeInstanceSyntax>(openParen, list, closeParen));
+    }
+    return buffer.copy(alloc);
+}
+
+AttributeSpecSyntax* Parser::parseAttributeSpec() {
+    auto name = expect(TokenKind::Identifier);
+
+    EqualsValueClauseSyntax* initializer = nullptr;
+    if (peek(TokenKind::Equals)) {
+        auto equals = consume();
+        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseExpression());
+    }
+
+    return alloc.emplace<AttributeSpecSyntax>(name, initializer);
+}
+
 bool Parser::isPossibleBlockDeclaration() {
+    int index = 0;
+    while (peek(index)->kind == TokenKind::OpenParenthesisStar) {
+        // scan over attributes
+        while (true) {
+            auto kind = peek(++index)->kind;
+            if (kind == TokenKind::EndOfFile)
+                return false;
+            if (kind == TokenKind::OpenParenthesisStar || kind == TokenKind::StarCloseParenthesis)
+                break;
+        }
+    }
+
     // decide whether a statement is a declaration or the start of an expression
-    auto kind = peek()->kind;
+    auto kind = peek(index++)->kind;
     switch (kind) {
         // some tokens unambiguously start a declaration
         case TokenKind::VarKeyword:
@@ -1242,7 +1372,7 @@ bool Parser::isPossibleBlockDeclaration() {
         case TokenKind::ShortRealKeyword:
         case TokenKind::RealKeyword:
         case TokenKind::RealTimeKeyword: {
-            auto next = peek(1)->kind;
+            auto next = peek(index)->kind;
             return next != TokenKind::Apostrophe && next != TokenKind::ApostropheOpenBrace;
         }
     }
@@ -1251,7 +1381,6 @@ bool Parser::isPossibleBlockDeclaration() {
     if (kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName)
         return false;
 
-    int index = 0;
     do {
         if (peek(++index)->kind == TokenKind::Hash) {
             // scan parameter value assignment

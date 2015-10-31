@@ -37,6 +37,10 @@ enum class SyntaxKind : uint16_t {
     MacroFormalArgument,
     MacroArgumentDefault,
 
+    // attributes
+    AttributeSpec,
+    AttributeInstance,
+
     // arguments
     OrderedArgument,
     NamedArgument,
@@ -217,6 +221,7 @@ enum class SyntaxKind : uint16_t {
     DotMemberClause,
 
     // statements
+    StatementLabel,
     EmptyStatement,
     ElseClause,
     ConditionalStatement,

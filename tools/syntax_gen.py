@@ -63,7 +63,7 @@ def generate(outf, name, tags, members, alltypes):
 	combined = members
 	if base != 'SyntaxNode':
 		processed_members.extend(alltypes[base][0])
-		pointerMembers.union(alltypes[base][2])
+		pointerMembers = pointerMembers.union(alltypes[base][2])
 		baseInitializers = ', '.join([x[1] for x in alltypes[base][1]])
 		if baseInitializers:
 			baseInitializers = ', ' + baseInitializers

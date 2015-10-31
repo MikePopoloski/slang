@@ -16,19 +16,115 @@ struct ExpressionSyntax : public SyntaxNode {
     }
 };
 
-struct StatementSyntax : public SyntaxNode {
-
-    StatementSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {
-    }
-};
-
 struct DataTypeSyntax : public SyntaxNode {
 
     DataTypeSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
     {
+    }
+};
+
+// ----- ATTRIBUTES -----
+
+struct EqualsValueClauseSyntax : public SyntaxNode {
+    Token* equals;
+    ExpressionSyntax* expr;
+
+    EqualsValueClauseSyntax(Token* equals, ExpressionSyntax* expr) :
+        SyntaxNode(SyntaxKind::EqualsValueClause), equals(equals), expr(expr)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return equals;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct AttributeSpecSyntax : public SyntaxNode {
+    Token* name;
+    EqualsValueClauseSyntax* value;
+
+    AttributeSpecSyntax(Token* name, EqualsValueClauseSyntax* value) :
+        SyntaxNode(SyntaxKind::AttributeSpec), name(name), value(value)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return name;
+            case 1: return value;
+            default: return nullptr;
+        }
+    }
+};
+
+struct AttributeInstanceSyntax : public SyntaxNode {
+    Token* openParen;
+    SeparatedSyntaxList<AttributeSpecSyntax> specs;
+    Token* closeParen;
+
+    AttributeInstanceSyntax(Token* openParen, SeparatedSyntaxList<AttributeSpecSyntax> specs, Token* closeParen) :
+        SyntaxNode(SyntaxKind::AttributeInstance), openParen(openParen), specs(specs), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return &specs;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StatementLabelSyntax : public SyntaxNode {
+    Token* name;
+    Token* colon;
+
+    StatementLabelSyntax(Token* name, Token* colon) :
+        SyntaxNode(SyntaxKind::StatementLabel), name(name), colon(colon)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return name;
+            case 1: return colon;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StatementSyntax : public SyntaxNode {
+    StatementLabelSyntax* label;
+    SyntaxList<AttributeInstanceSyntax> attributes;
+
+    StatementSyntax(SyntaxKind kind, StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes) :
+        SyntaxNode(kind), label(label), attributes(attributes)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            default: return nullptr;
+        }
     }
 };
 
@@ -348,19 +444,21 @@ protected:
 
 struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
     Token* operatorToken;
+    SyntaxList<AttributeInstanceSyntax> attributes;
     ExpressionSyntax* operand;
 
-    PrefixUnaryExpressionSyntax(SyntaxKind kind, Token* operatorToken, ExpressionSyntax* operand) :
-        ExpressionSyntax(kind), operatorToken(operatorToken), operand(operand)
+    PrefixUnaryExpressionSyntax(SyntaxKind kind, Token* operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* operand) :
+        ExpressionSyntax(kind), operatorToken(operatorToken), attributes(attributes), operand(operand)
     {
-        childCount += 2;
+        childCount += 3;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return operatorToken;
-            case 1: return operand;
+            case 1: return &attributes;
+            case 2: return operand;
             default: return nullptr;
         }
     }
@@ -368,19 +466,21 @@ protected:
 
 struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* operand;
+    SyntaxList<AttributeInstanceSyntax> attributes;
     Token* operatorToken;
 
-    PostfixUnaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* operand, Token* operatorToken) :
-        ExpressionSyntax(kind), operand(operand), operatorToken(operatorToken)
+    PostfixUnaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* operand, SyntaxList<AttributeInstanceSyntax> attributes, Token* operatorToken) :
+        ExpressionSyntax(kind), operand(operand), attributes(attributes), operatorToken(operatorToken)
     {
-        childCount += 2;
+        childCount += 3;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return operand;
-            case 1: return operatorToken;
+            case 1: return &attributes;
+            case 2: return operatorToken;
             default: return nullptr;
         }
     }
@@ -389,12 +489,13 @@ protected:
 struct BinaryExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* left;
     Token* operatorToken;
+    SyntaxList<AttributeInstanceSyntax> attributes;
     ExpressionSyntax* right;
 
-    BinaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* operatorToken, ExpressionSyntax* right) :
-        ExpressionSyntax(kind), left(left), operatorToken(operatorToken), right(right)
+    BinaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* right) :
+        ExpressionSyntax(kind), left(left), operatorToken(operatorToken), attributes(attributes), right(right)
     {
-        childCount += 3;
+        childCount += 4;
     }
 
 protected:
@@ -402,7 +503,8 @@ protected:
         switch(index) {
             case 0: return left;
             case 1: return operatorToken;
-            case 2: return right;
+            case 2: return &attributes;
+            case 3: return right;
             default: return nullptr;
         }
     }
@@ -485,14 +587,15 @@ protected:
 struct ConditionalExpressionSyntax : public ExpressionSyntax {
     ConditionalPredicateSyntax* predicate;
     Token* question;
+    SyntaxList<AttributeInstanceSyntax> attributes;
     ExpressionSyntax* left;
     Token* colon;
     ExpressionSyntax* right;
 
-    ConditionalExpressionSyntax(ConditionalPredicateSyntax* predicate, Token* question, ExpressionSyntax* left, Token* colon, ExpressionSyntax* right) :
-        ExpressionSyntax(SyntaxKind::ConditionalExpression), predicate(predicate), question(question), left(left), colon(colon), right(right)
+    ConditionalExpressionSyntax(ConditionalPredicateSyntax* predicate, Token* question, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* left, Token* colon, ExpressionSyntax* right) :
+        ExpressionSyntax(SyntaxKind::ConditionalExpression), predicate(predicate), question(question), attributes(attributes), left(left), colon(colon), right(right)
     {
-        childCount += 5;
+        childCount += 6;
     }
 
 protected:
@@ -500,9 +603,10 @@ protected:
         switch(index) {
             case 0: return predicate;
             case 1: return question;
-            case 2: return left;
-            case 3: return colon;
-            case 4: return right;
+            case 2: return &attributes;
+            case 3: return left;
+            case 4: return colon;
+            case 5: return right;
             default: return nullptr;
         }
     }
@@ -1402,26 +1506,6 @@ protected:
     }
 };
 
-struct EqualsValueClauseSyntax : public SyntaxNode {
-    Token* equals;
-    ExpressionSyntax* expr;
-
-    EqualsValueClauseSyntax(Token* equals, ExpressionSyntax* expr) :
-        SyntaxNode(SyntaxKind::EqualsValueClause), equals(equals), expr(expr)
-    {
-        childCount += 2;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return equals;
-            case 1: return expr;
-            default: return nullptr;
-        }
-    }
-};
-
 struct VariableDeclaratorSyntax : public SyntaxNode {
     Token* name;
     SyntaxList<VariableDimensionSyntax> dimensions;
@@ -1444,22 +1528,14 @@ protected:
     }
 };
 
-struct LocalDeclarationSyntax : public StatementSyntax {
-
-    LocalDeclarationSyntax(SyntaxKind kind) :
-        StatementSyntax(kind)
-    {
-    }
-};
-
-struct DataDeclarationSyntax : public LocalDeclarationSyntax {
+struct DataDeclarationSyntax : public StatementSyntax {
     TokenList modifiers;
     DataTypeSyntax* type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
     Token* semi;
 
-    DataDeclarationSyntax(TokenList modifiers, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
-        LocalDeclarationSyntax(SyntaxKind::DataDeclaration), modifiers(modifiers), type(type), declarators(declarators), semi(semi)
+    DataDeclarationSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+        StatementSyntax(SyntaxKind::DataDeclaration, label, attributes), modifiers(modifiers), type(type), declarators(declarators), semi(semi)
     {
         childCount += 4;
     }
@@ -1467,10 +1543,12 @@ struct DataDeclarationSyntax : public LocalDeclarationSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return &modifiers;
-            case 1: return type;
-            case 2: return &declarators;
-            case 3: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return &modifiers;
+            case 3: return type;
+            case 4: return &declarators;
+            case 5: return semi;
             default: return nullptr;
         }
     }
@@ -1761,8 +1839,8 @@ protected:
 struct EmptyStatementSyntax : public StatementSyntax {
     Token* semicolon;
 
-    EmptyStatementSyntax(Token* semicolon) :
-        StatementSyntax(SyntaxKind::EmptyStatement), semicolon(semicolon)
+    EmptyStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* semicolon) :
+        StatementSyntax(SyntaxKind::EmptyStatement, label, attributes), semicolon(semicolon)
     {
         childCount += 1;
     }
@@ -1770,7 +1848,9 @@ struct EmptyStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return semicolon;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return semicolon;
             default: return nullptr;
         }
     }
@@ -1805,8 +1885,8 @@ struct ConditionalStatementSyntax : public StatementSyntax {
     StatementSyntax* statement;
     ElseClauseSyntax* elseClause;
 
-    ConditionalStatementSyntax(Token* uniqueOrPriority, Token* ifKeyword, Token* openParen, ConditionalPredicateSyntax* predicate, Token* closeParen, StatementSyntax* statement, ElseClauseSyntax* elseClause) :
-        StatementSyntax(SyntaxKind::ConditionalStatement), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(predicate), closeParen(closeParen), statement(statement), elseClause(elseClause)
+    ConditionalStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* uniqueOrPriority, Token* ifKeyword, Token* openParen, ConditionalPredicateSyntax* predicate, Token* closeParen, StatementSyntax* statement, ElseClauseSyntax* elseClause) :
+        StatementSyntax(SyntaxKind::ConditionalStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(predicate), closeParen(closeParen), statement(statement), elseClause(elseClause)
     {
         childCount += 7;
     }
@@ -1814,13 +1894,15 @@ struct ConditionalStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return uniqueOrPriority;
-            case 1: return ifKeyword;
-            case 2: return openParen;
-            case 3: return predicate;
-            case 4: return closeParen;
-            case 5: return statement;
-            case 6: return elseClause;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return uniqueOrPriority;
+            case 3: return ifKeyword;
+            case 4: return openParen;
+            case 5: return predicate;
+            case 6: return closeParen;
+            case 7: return statement;
+            case 8: return elseClause;
             default: return nullptr;
         }
     }
@@ -1914,8 +1996,8 @@ struct CaseStatementSyntax : public StatementSyntax {
     SyntaxList<CaseItemSyntax> items;
     Token* endcase;
 
-    CaseStatementSyntax(Token* uniqueOrPriority, Token* caseKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen, Token* matchesOrInside, SyntaxList<CaseItemSyntax> items, Token* endcase) :
-        StatementSyntax(SyntaxKind::CaseStatement), uniqueOrPriority(uniqueOrPriority), caseKeyword(caseKeyword), openParen(openParen), expr(expr), closeParen(closeParen), matchesOrInside(matchesOrInside), items(items), endcase(endcase)
+    CaseStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* uniqueOrPriority, Token* caseKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen, Token* matchesOrInside, SyntaxList<CaseItemSyntax> items, Token* endcase) :
+        StatementSyntax(SyntaxKind::CaseStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), caseKeyword(caseKeyword), openParen(openParen), expr(expr), closeParen(closeParen), matchesOrInside(matchesOrInside), items(items), endcase(endcase)
     {
         childCount += 8;
     }
@@ -1923,14 +2005,16 @@ struct CaseStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return uniqueOrPriority;
-            case 1: return caseKeyword;
-            case 2: return openParen;
-            case 3: return expr;
-            case 4: return closeParen;
-            case 5: return matchesOrInside;
-            case 6: return &items;
-            case 7: return endcase;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return uniqueOrPriority;
+            case 3: return caseKeyword;
+            case 4: return openParen;
+            case 5: return expr;
+            case 6: return closeParen;
+            case 7: return matchesOrInside;
+            case 8: return &items;
+            case 9: return endcase;
             default: return nullptr;
         }
     }
@@ -1940,8 +2024,8 @@ struct ForeverStatementSyntax : public StatementSyntax {
     Token* foreverKeyword;
     StatementSyntax* statement;
 
-    ForeverStatementSyntax(Token* foreverKeyword, StatementSyntax* statement) :
-        StatementSyntax(SyntaxKind::ForeverStatement), foreverKeyword(foreverKeyword), statement(statement)
+    ForeverStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* foreverKeyword, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::ForeverStatement, label, attributes), foreverKeyword(foreverKeyword), statement(statement)
     {
         childCount += 2;
     }
@@ -1949,8 +2033,10 @@ struct ForeverStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return foreverKeyword;
-            case 1: return statement;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return foreverKeyword;
+            case 3: return statement;
             default: return nullptr;
         }
     }
@@ -1963,8 +2049,8 @@ struct LoopStatementSyntax : public StatementSyntax {
     Token* closeParen;
     StatementSyntax* statement;
 
-    LoopStatementSyntax(Token* repeatOrWhile, Token* openParen, ExpressionSyntax* expr, Token* closeParen, StatementSyntax* statement) :
-        StatementSyntax(SyntaxKind::LoopStatement), repeatOrWhile(repeatOrWhile), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
+    LoopStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* repeatOrWhile, Token* openParen, ExpressionSyntax* expr, Token* closeParen, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::LoopStatement, label, attributes), repeatOrWhile(repeatOrWhile), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
     {
         childCount += 5;
     }
@@ -1972,11 +2058,13 @@ struct LoopStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return repeatOrWhile;
-            case 1: return openParen;
-            case 2: return expr;
-            case 3: return closeParen;
-            case 4: return statement;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return repeatOrWhile;
+            case 3: return openParen;
+            case 4: return expr;
+            case 5: return closeParen;
+            case 6: return statement;
             default: return nullptr;
         }
     }
@@ -1991,8 +2079,8 @@ struct DoWhileStatementSyntax : public StatementSyntax {
     Token* closeParen;
     Token* semi;
 
-    DoWhileStatementSyntax(Token* doKeyword, StatementSyntax* statement, Token* whileKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen, Token* semi) :
-        StatementSyntax(SyntaxKind::DoWhileStatement), doKeyword(doKeyword), statement(statement), whileKeyword(whileKeyword), openParen(openParen), expr(expr), closeParen(closeParen), semi(semi)
+    DoWhileStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* doKeyword, StatementSyntax* statement, Token* whileKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen, Token* semi) :
+        StatementSyntax(SyntaxKind::DoWhileStatement, label, attributes), doKeyword(doKeyword), statement(statement), whileKeyword(whileKeyword), openParen(openParen), expr(expr), closeParen(closeParen), semi(semi)
     {
         childCount += 7;
     }
@@ -2000,13 +2088,15 @@ struct DoWhileStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return doKeyword;
-            case 1: return statement;
-            case 2: return whileKeyword;
-            case 3: return openParen;
-            case 4: return expr;
-            case 5: return closeParen;
-            case 6: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return doKeyword;
+            case 3: return statement;
+            case 4: return whileKeyword;
+            case 5: return openParen;
+            case 6: return expr;
+            case 7: return closeParen;
+            case 8: return semi;
             default: return nullptr;
         }
     }
@@ -2017,8 +2107,8 @@ struct ReturnStatementSyntax : public StatementSyntax {
     ExpressionSyntax* returnValue;
     Token* semi;
 
-    ReturnStatementSyntax(Token* returnKeyword, ExpressionSyntax* returnValue, Token* semi) :
-        StatementSyntax(SyntaxKind::ReturnStatement), returnKeyword(returnKeyword), returnValue(returnValue), semi(semi)
+    ReturnStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* returnKeyword, ExpressionSyntax* returnValue, Token* semi) :
+        StatementSyntax(SyntaxKind::ReturnStatement, label, attributes), returnKeyword(returnKeyword), returnValue(returnValue), semi(semi)
     {
         childCount += 3;
     }
@@ -2026,9 +2116,11 @@ struct ReturnStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return returnKeyword;
-            case 1: return returnValue;
-            case 2: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return returnKeyword;
+            case 3: return returnValue;
+            case 4: return semi;
             default: return nullptr;
         }
     }
@@ -2038,8 +2130,8 @@ struct JumpStatementSyntax : public StatementSyntax {
     Token* breakOrContinue;
     Token* semi;
 
-    JumpStatementSyntax(Token* breakOrContinue, Token* semi) :
-        StatementSyntax(SyntaxKind::JumpStatement), breakOrContinue(breakOrContinue), semi(semi)
+    JumpStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* breakOrContinue, Token* semi) :
+        StatementSyntax(SyntaxKind::JumpStatement, label, attributes), breakOrContinue(breakOrContinue), semi(semi)
     {
         childCount += 2;
     }
@@ -2047,8 +2139,10 @@ struct JumpStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return breakOrContinue;
-            case 1: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return breakOrContinue;
+            case 3: return semi;
             default: return nullptr;
         }
     }
@@ -2058,8 +2152,8 @@ struct TimingControlStatementSyntax : public StatementSyntax {
     TimingControlSyntax* timingControl;
     StatementSyntax* statement;
 
-    TimingControlStatementSyntax(TimingControlSyntax* timingControl, StatementSyntax* statement) :
-        StatementSyntax(SyntaxKind::TimingControlStatement), timingControl(timingControl), statement(statement)
+    TimingControlStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, TimingControlSyntax* timingControl, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::TimingControlStatement, label, attributes), timingControl(timingControl), statement(statement)
     {
         childCount += 2;
     }
@@ -2067,8 +2161,10 @@ struct TimingControlStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return timingControl;
-            case 1: return statement;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return timingControl;
+            case 3: return statement;
             default: return nullptr;
         }
     }
@@ -2081,8 +2177,8 @@ struct AssignmentStatementSyntax : public StatementSyntax {
     ExpressionSyntax* expr;
     Token* semi;
 
-    AssignmentStatementSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* operatorToken, TimingControlSyntax* timingControl, ExpressionSyntax* expr, Token* semi) :
-        StatementSyntax(kind), left(left), operatorToken(operatorToken), timingControl(timingControl), expr(expr), semi(semi)
+    AssignmentStatementSyntax(SyntaxKind kind, StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* left, Token* operatorToken, TimingControlSyntax* timingControl, ExpressionSyntax* expr, Token* semi) :
+        StatementSyntax(kind, label, attributes), left(left), operatorToken(operatorToken), timingControl(timingControl), expr(expr), semi(semi)
     {
         childCount += 5;
     }
@@ -2090,11 +2186,13 @@ struct AssignmentStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return left;
-            case 1: return operatorToken;
-            case 2: return timingControl;
-            case 3: return expr;
-            case 4: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return left;
+            case 3: return operatorToken;
+            case 4: return timingControl;
+            case 5: return expr;
+            case 6: return semi;
             default: return nullptr;
         }
     }
@@ -2107,8 +2205,8 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
     ExpressionSyntax* value;
     Token* semi;
 
-    ProceduralAssignStatementSyntax(SyntaxKind kind, Token* keyword, ExpressionSyntax* lvalue, Token* equals, ExpressionSyntax* value, Token* semi) :
-        StatementSyntax(kind), keyword(keyword), lvalue(lvalue), equals(equals), value(value), semi(semi)
+    ProceduralAssignStatementSyntax(SyntaxKind kind, StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, ExpressionSyntax* lvalue, Token* equals, ExpressionSyntax* value, Token* semi) :
+        StatementSyntax(kind, label, attributes), keyword(keyword), lvalue(lvalue), equals(equals), value(value), semi(semi)
     {
         childCount += 5;
     }
@@ -2116,11 +2214,13 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return keyword;
-            case 1: return lvalue;
-            case 2: return equals;
-            case 3: return value;
-            case 4: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return keyword;
+            case 3: return lvalue;
+            case 4: return equals;
+            case 5: return value;
+            case 6: return semi;
             default: return nullptr;
         }
     }
@@ -2131,8 +2231,8 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
     ExpressionSyntax* variable;
     Token* semi;
 
-    ProceduralDeassignStatementSyntax(SyntaxKind kind, Token* keyword, ExpressionSyntax* variable, Token* semi) :
-        StatementSyntax(kind), keyword(keyword), variable(variable), semi(semi)
+    ProceduralDeassignStatementSyntax(SyntaxKind kind, StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, ExpressionSyntax* variable, Token* semi) :
+        StatementSyntax(kind, label, attributes), keyword(keyword), variable(variable), semi(semi)
     {
         childCount += 3;
     }
@@ -2140,9 +2240,11 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return keyword;
-            case 1: return variable;
-            case 2: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return keyword;
+            case 3: return variable;
+            case 4: return semi;
             default: return nullptr;
         }
     }
@@ -2153,8 +2255,8 @@ struct DisableStatementSyntax : public StatementSyntax {
     NameSyntax* name;
     Token* semi;
 
-    DisableStatementSyntax(Token* disable, NameSyntax* name, Token* semi) :
-        StatementSyntax(SyntaxKind::DisableStatement), disable(disable), name(name), semi(semi)
+    DisableStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* disable, NameSyntax* name, Token* semi) :
+        StatementSyntax(SyntaxKind::DisableStatement, label, attributes), disable(disable), name(name), semi(semi)
     {
         childCount += 3;
     }
@@ -2162,9 +2264,11 @@ struct DisableStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return disable;
-            case 1: return name;
-            case 2: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return disable;
+            case 3: return name;
+            case 4: return semi;
             default: return nullptr;
         }
     }
@@ -2175,8 +2279,8 @@ struct DisableForkStatementSyntax : public StatementSyntax {
     Token* fork;
     Token* semi;
 
-    DisableForkStatementSyntax(Token* disable, Token* fork, Token* semi) :
-        StatementSyntax(SyntaxKind::DisableForkStatement), disable(disable), fork(fork), semi(semi)
+    DisableForkStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* disable, Token* fork, Token* semi) :
+        StatementSyntax(SyntaxKind::DisableForkStatement, label, attributes), disable(disable), fork(fork), semi(semi)
     {
         childCount += 3;
     }
@@ -2184,9 +2288,11 @@ struct DisableForkStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return disable;
-            case 1: return fork;
-            case 2: return semi;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return disable;
+            case 3: return fork;
+            case 4: return semi;
             default: return nullptr;
         }
     }
@@ -2219,8 +2325,8 @@ struct SequentialBlockStatementSyntax : public StatementSyntax {
     Token* end;
     NamedBlockClauseSyntax* endBlockName;
 
-    SequentialBlockStatementSyntax(Token* begin, NamedBlockClauseSyntax* blockName, SyntaxList<StatementSyntax> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
-        StatementSyntax(SyntaxKind::SequentialBlockStatement), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
+    SequentialBlockStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* begin, NamedBlockClauseSyntax* blockName, SyntaxList<StatementSyntax> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
+        StatementSyntax(SyntaxKind::SequentialBlockStatement, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
     {
         childCount += 5;
     }
@@ -2228,11 +2334,13 @@ struct SequentialBlockStatementSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return begin;
-            case 1: return blockName;
-            case 2: return &items;
-            case 3: return end;
-            case 4: return endBlockName;
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return begin;
+            case 3: return blockName;
+            case 4: return &items;
+            case 5: return end;
+            case 6: return endBlockName;
             default: return nullptr;
         }
     }

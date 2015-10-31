@@ -1,11 +1,31 @@
 ExpressionSyntax final=false
 empty
 
-StatementSyntax final=false
-empty
-
 DataTypeSyntax final=false
 empty
+
+// ----- ATTRIBUTES -----
+
+EqualsValueClauseSyntax kind=EqualsValueClause
+token equals
+ExpressionSyntax expr
+
+AttributeSpecSyntax kind=AttributeSpec
+token name
+EqualsValueClauseSyntax value
+
+AttributeInstanceSyntax kind=AttributeInstance
+token openParen
+separated_list<AttributeSpecSyntax> specs
+token closeParen
+
+StatementLabelSyntax kind=StatementLabel
+token name
+token colon
+
+StatementSyntax final=false
+StatementLabelSyntax label
+list<AttributeInstanceSyntax> attributes
 
 // ----- ARGUMENTS -----
 
@@ -82,15 +102,18 @@ separated_list<ConditionalPatternSyntax> conditions
 
 PrefixUnaryExpressionSyntax base=ExpressionSyntax
 token operatorToken
+list<AttributeInstanceSyntax> attributes
 ExpressionSyntax operand
 
 PostfixUnaryExpressionSyntax base=ExpressionSyntax
 ExpressionSyntax operand
+list<AttributeInstanceSyntax> attributes
 token operatorToken
 
 BinaryExpressionSyntax base=ExpressionSyntax
 ExpressionSyntax left
 token operatorToken
+list<AttributeInstanceSyntax> attributes
 ExpressionSyntax right
 
 MinTypMaxExpressionSyntax base=ExpressionSyntax kind=MinTypMaxExpression
@@ -115,6 +138,7 @@ token closeBrace
 ConditionalExpressionSyntax base=ExpressionSyntax kind=ConditionalExpression
 ConditionalPredicateSyntax predicate
 token question
+list<AttributeInstanceSyntax> attributes
 ExpressionSyntax left
 token colon
 ExpressionSyntax right
@@ -326,19 +350,12 @@ token openBracket
 DimensionSpecifierSyntax specifier
 token closeBracket
 
-EqualsValueClauseSyntax kind=EqualsValueClause
-token equals
-ExpressionSyntax expr
-
 VariableDeclaratorSyntax kind=VariableDeclarator
 token name
 list<VariableDimensionSyntax> dimensions
 EqualsValueClauseSyntax initializer
 
-LocalDeclarationSyntax base=StatementSyntax final=false
-empty
-
-DataDeclarationSyntax base=LocalDeclarationSyntax kind=DataDeclaration
+DataDeclarationSyntax base=StatementSyntax kind=DataDeclaration
 tokenlist modifiers
 DataTypeSyntax type
 separated_list<VariableDeclaratorSyntax> declarators

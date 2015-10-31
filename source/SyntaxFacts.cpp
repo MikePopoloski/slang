@@ -340,6 +340,7 @@ bool isPossibleStatement(TokenKind kind) {
         case TokenKind::RandSequenceKeyword:
         case TokenKind::RandCaseKeyword:
         case TokenKind::ExpectKeyword:
+        case TokenKind::OpenParenthesisStar:
             return true;
         default:
             return false;
@@ -402,6 +403,8 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(MacroFormalArgumentList);
         CASE(MacroFormalArgument);
         CASE(MacroArgumentDefault);
+        CASE(AttributeSpec);
+        CASE(AttributeInstance);
         CASE(OrderedArgument);
         CASE(NamedArgument);
         CASE(ArgumentList);
