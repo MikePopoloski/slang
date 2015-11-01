@@ -109,9 +109,9 @@ SyntaxKind Token::directiveKind() const {
     return ((DirectiveInfo*)(this + 1))->kind;
 }
 
-bool Token::hasTrivia(TriviaKind kind) const {
+bool Token::hasTrivia(TriviaKind triviaKind) const {
     for (const auto& t : trivia) {
-        if (t.kind == kind)
+        if (t.kind == triviaKind)
             return true;
     }
     return false;

@@ -259,6 +259,7 @@ token name
 
 InvocationExpressionSyntax base=ExpressionSyntax kind=InvocationExpression
 ExpressionSyntax left
+list<AttributeInstanceSyntax> attributes
 ArgumentListSyntax arguments
 
 // ----- TIMING CONTROL -----

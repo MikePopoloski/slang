@@ -1092,19 +1092,21 @@ protected:
 
 struct InvocationExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* left;
+    SyntaxList<AttributeInstanceSyntax> attributes;
     ArgumentListSyntax* arguments;
 
-    InvocationExpressionSyntax(ExpressionSyntax* left, ArgumentListSyntax* arguments) :
-        ExpressionSyntax(SyntaxKind::InvocationExpression), left(left), arguments(arguments)
+    InvocationExpressionSyntax(ExpressionSyntax* left, SyntaxList<AttributeInstanceSyntax> attributes, ArgumentListSyntax* arguments) :
+        ExpressionSyntax(SyntaxKind::InvocationExpression), left(left), attributes(attributes), arguments(arguments)
     {
-        childCount += 2;
+        childCount += 3;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return left;
-            case 1: return arguments;
+            case 1: return &attributes;
+            case 2: return arguments;
             default: return nullptr;
         }
     }

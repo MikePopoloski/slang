@@ -715,14 +715,32 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
                 break;
             }
             case TokenKind::OpenParenthesis:
-                expr = alloc.emplace<InvocationExpressionSyntax>(expr, parseArgumentList());
+                expr = alloc.emplace<InvocationExpressionSyntax>(expr, nullptr, parseArgumentList());
                 break;
             // can't have any other postfix expressions after inc/dec
-            // TODO: parse attributes
             case TokenKind::DoublePlus:
-                return alloc.emplace<PostfixUnaryExpressionSyntax>(SyntaxKind::PostincrementExpression, expr, ArrayRef<AttributeInstanceSyntax*>(nullptr), consume());
-            case TokenKind::DoubleMinus:
-                return alloc.emplace<PostfixUnaryExpressionSyntax>(SyntaxKind::PostdecrementExpression, expr, ArrayRef<AttributeInstanceSyntax*>(nullptr), consume());
+            case TokenKind::DoubleMinus: {
+                auto op = consume();
+                return alloc.emplace<PostfixUnaryExpressionSyntax>(getUnaryPostfixExpression(op->kind), expr, nullptr, op);
+            }
+            case TokenKind::OpenParenthesisStar: {
+                auto attributes = parseAttributes();
+                switch (peek()->kind) {
+                    case TokenKind::DoublePlus:
+                    case TokenKind::DoubleMinus: {
+                        auto op = consume();
+                        return alloc.emplace<PostfixUnaryExpressionSyntax>(getUnaryPostfixExpression(op->kind), expr, attributes, op);
+                    }
+                    case TokenKind::OpenParenthesis:
+                        expr = alloc.emplace<InvocationExpressionSyntax>(expr, attributes, parseArgumentList());
+                        break;
+                    default:
+                        // otherwise, this has to be a function call without any arguments
+                        expr = alloc.emplace<InvocationExpressionSyntax>(expr, attributes, nullptr);
+                        break;
+                }
+                break;
+            }
             default:
                 return expr;
         }

@@ -320,6 +320,7 @@ public:
 template<typename T>
 class SyntaxList : public SyntaxNode {
 public:
+    SyntaxList(std::nullptr_t) : SyntaxList(ArrayRef<T*>(nullptr)) {}
     SyntaxList(ArrayRef<T*> elements) :
         SyntaxNode(SyntaxKind::List), 
         elements(elements)
@@ -343,6 +344,7 @@ private:
 
 class TokenList : public SyntaxNode {
 public:
+    TokenList(std::nullptr_t) : TokenList(ArrayRef<Token*>(nullptr)) {}
     TokenList(ArrayRef<Token*> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
@@ -367,6 +369,7 @@ private:
 template<typename T>
 class SeparatedSyntaxList : public SyntaxNode {
 public:
+    SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(ArrayRef<TokenOrSyntax>(nullptr)) {}
     SeparatedSyntaxList(ArrayRef<TokenOrSyntax> elements) :
         SyntaxNode(SyntaxKind::List), 
         elements(elements)
