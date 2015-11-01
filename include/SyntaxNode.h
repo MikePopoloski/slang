@@ -165,6 +165,10 @@ enum class SyntaxKind : uint16_t {
     SystemName,
     ThisHandle,
     SuperHandle,
+    ArrayUniqueMethod,
+    ArrayAndMethod,
+    ArrayOrMethod,
+    ArrayXorMethod,
     ClassScope,
 
     // timing control

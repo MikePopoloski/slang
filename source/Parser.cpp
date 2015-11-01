@@ -762,30 +762,26 @@ NameSyntax* Parser::parseName() {
 }
 
 NameSyntax* Parser::parseNamePart() {
-    switch (peek()->kind) {
-        case TokenKind::UnitSystemName: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::UnitScope, consume());
-        case TokenKind::RootSystemName: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::RootScope, consume());
-        case TokenKind::LocalKeyword: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::LocalScope, consume());
-        case TokenKind::ThisKeyword: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::ThisHandle, consume());
-        case TokenKind::SuperKeyword: return alloc.emplace<KeywordNameSyntax>(SyntaxKind::SuperHandle, consume());
-        default: {
-            auto identifier = expect(TokenKind::Identifier);
-            switch (peek()->kind) {
-                case TokenKind::Hash: {
-                    auto parameterValues = parseParameterValueAssignment();
-                    return alloc.emplace<ClassNameSyntax>(identifier, parameterValues);
-                }
-                case TokenKind::OpenBracket: {
-                    auto buffer = nodePool.getAs<ElementSelectSyntax*>();
-                    do {
-                        buffer.append(parseElementSelect());
-                    } while (peek(TokenKind::OpenBracket));
+    auto kind = getKeywordNameExpression(peek()->kind);
+    if (kind != SyntaxKind::Unknown)
+        return alloc.emplace<KeywordNameSyntax>(kind, consume());
 
-                    return alloc.emplace<IdentifierSelectNameSyntax>(identifier, buffer.copy(alloc));
-                }
-                default: return alloc.emplace<IdentifierNameSyntax>(identifier);
-            }
+    auto identifier = expect(TokenKind::Identifier);
+    switch (peek()->kind) {
+        case TokenKind::Hash: {
+            auto parameterValues = parseParameterValueAssignment();
+            return alloc.emplace<ClassNameSyntax>(identifier, parameterValues);
         }
+        case TokenKind::OpenBracket: {
+            auto buffer = nodePool.getAs<ElementSelectSyntax*>();
+            do {
+                buffer.append(parseElementSelect());
+            } while (peek(TokenKind::OpenBracket));
+
+            return alloc.emplace<IdentifierSelectNameSyntax>(identifier, buffer.copy(alloc));
+        }
+        default:
+            return alloc.emplace<IdentifierNameSyntax>(identifier);
     }
 }
 

@@ -101,8 +101,15 @@ SyntaxKind getBinaryExpression(TokenKind kind) {
 
 SyntaxKind getKeywordNameExpression(TokenKind kind) {
     switch (kind) {
-        case TokenKind::SuperKeyword: return SyntaxKind::SuperHandle;
+        case TokenKind::UnitSystemName: return SyntaxKind::UnitScope;
+        case TokenKind::RootSystemName: return SyntaxKind::RootScope;
+        case TokenKind::LocalKeyword: return SyntaxKind::LocalScope;
         case TokenKind::ThisKeyword: return SyntaxKind::ThisHandle;
+        case TokenKind::SuperKeyword: return SyntaxKind::SuperHandle;
+        case TokenKind::UniqueKeyword: return SyntaxKind::ArrayUniqueMethod;
+        case TokenKind::AndKeyword: return SyntaxKind::ArrayAndMethod;
+        case TokenKind::OrKeyword: return SyntaxKind::ArrayOrMethod;
+        case TokenKind::XorKeyword: return SyntaxKind::ArrayXorMethod;
         default: return SyntaxKind::Unknown;
     }
 }
@@ -512,6 +519,10 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(SystemName);
         CASE(ThisHandle);
         CASE(SuperHandle);
+        CASE(ArrayUniqueMethod);
+        CASE(ArrayAndMethod);
+        CASE(ArrayOrMethod);
+        CASE(ArrayXorMethod);
         CASE(ClassScope);
         CASE(DelayControl);
         CASE(CycleDelay);
