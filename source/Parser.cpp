@@ -24,10 +24,7 @@ using namespace slang;
 bool isPossibleArgument(TokenKind kind);
 bool isComma(TokenKind kind);
 bool isSemicolon(TokenKind kind);
-bool isIdentifierOrComma(TokenKind kind) {
-    return kind == TokenKind::Identifier || kind == TokenKind::Comma;
-}
-
+bool isIdentifierOrComma(TokenKind kind);
 bool isPossibleExpressionOrComma(TokenKind kind);
 bool isPossibleExpressionOrTripleAnd(TokenKind kind);
 bool isPossibleInsideElement(TokenKind kind);
@@ -39,25 +36,7 @@ bool isEndOfParenList(TokenKind kind);
 bool isEndOfBracedList(TokenKind kind);
 bool isEndOfCaseItem(TokenKind kind);
 bool isEndOfConditionalPredicate(TokenKind kind);
-bool isEndOfAttribute(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::StarCloseParenthesis:
-        // these indicate a missing *) somewhere
-        case TokenKind::Semicolon:
-        case TokenKind::PrimitiveKeyword:
-        case TokenKind::ProgramKeyword:
-        case TokenKind::InterfaceKeyword:
-        case TokenKind::PackageKeyword:
-        case TokenKind::CheckerKeyword:
-        case TokenKind::GenerateKeyword:
-        case TokenKind::ModuleKeyword:
-        case TokenKind::ClassKeyword:
-            return true;
-        default:
-            return false;
-    }
-}
-
+bool isEndOfAttribute(TokenKind kind);
 bool isNotInType(TokenKind kind);
 
 }
@@ -1444,6 +1423,10 @@ bool isSemicolon(TokenKind kind) {
     return kind == TokenKind::Semicolon;
 }
 
+bool isIdentifierOrComma(TokenKind kind) {
+    return kind == TokenKind::Identifier || kind == TokenKind::Comma;
+}
+
 bool isPossibleExpressionOrComma(TokenKind kind) {
     return kind == TokenKind::Comma || isPossibleExpression(kind);
 }
@@ -1535,6 +1518,25 @@ bool isEndOfCaseItem(TokenKind kind) {
 
 bool isEndOfConditionalPredicate(TokenKind kind) {
     return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::BeginKeyword || kind == TokenKind::Semicolon;
+}
+
+bool isEndOfAttribute(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::StarCloseParenthesis:
+            // these indicate a missing *) somewhere
+        case TokenKind::Semicolon:
+        case TokenKind::PrimitiveKeyword:
+        case TokenKind::ProgramKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::PackageKeyword:
+        case TokenKind::CheckerKeyword:
+        case TokenKind::GenerateKeyword:
+        case TokenKind::ModuleKeyword:
+        case TokenKind::ClassKeyword:
+            return true;
+        default:
+            return false;
+    }
 }
 
 bool isNotInType(TokenKind kind) {
