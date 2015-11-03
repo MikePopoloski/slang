@@ -2348,6 +2348,374 @@ protected:
     }
 };
 
+// ----- MODULES -----
+
+struct PortListSyntax : public SyntaxNode {
+
+    PortListSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct NonAnsiPortSyntax : public SyntaxNode {
+
+    NonAnsiPortSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
+    ExpressionSyntax* expr;
+
+    ImplicitNonAnsiPortSyntax(ExpressionSyntax* expr) :
+        NonAnsiPortSyntax(SyntaxKind::ImplicitNonAnsiPort), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
+    Token* dot;
+    Token* name;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
+
+    ExplicitNonAnsiPortSyntax(Token* dot, Token* name, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+        NonAnsiPortSyntax(SyntaxKind::ExplicitNonAnsiPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return dot;
+            case 1: return name;
+            case 2: return openParen;
+            case 3: return expr;
+            case 4: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NonAnsiPortListSyntax : public PortListSyntax {
+    Token* openParen;
+    SeparatedSyntaxList<NonAnsiPortSyntax> ports;
+    Token* closeParen;
+
+    NonAnsiPortListSyntax(Token* openParen, SeparatedSyntaxList<NonAnsiPortSyntax> ports, Token* closeParen) :
+        PortListSyntax(SyntaxKind::NonAnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return &ports;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct AnsiPortSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+
+    AnsiPortSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
+        SyntaxNode(kind), attributes(attributes)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override {
+        switch(index) {
+            case 0: return &attributes;
+            default: return nullptr;
+        }
+    }
+};
+
+struct PortHeaderSyntax : public SyntaxNode {
+
+    PortHeaderSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
+    Token* nameOrKeyword;
+    DotMemberClauseSyntax* modport;
+
+    InterfacePortHeaderSyntax(Token* nameOrKeyword, DotMemberClauseSyntax* modport) :
+        PortHeaderSyntax(SyntaxKind::InterfacePortHeader), nameOrKeyword(nameOrKeyword), modport(modport)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return nameOrKeyword;
+            case 1: return modport;
+            default: return nullptr;
+        }
+    }
+};
+
+struct VariablePortHeaderSyntax : public PortHeaderSyntax {
+    Token* direction;
+    Token* varKeyword;
+    DataTypeSyntax* type;
+
+    VariablePortHeaderSyntax(Token* direction, Token* varKeyword, DataTypeSyntax* type) :
+        PortHeaderSyntax(SyntaxKind::VariablePortHeader), direction(direction), varKeyword(varKeyword), type(type)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return direction;
+            case 1: return varKeyword;
+            case 2: return type;
+            default: return nullptr;
+        }
+    }
+};
+
+struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
+    Token* direction;
+    Token* interconnect;
+    DataTypeSyntax* type;
+
+    InterconnectPortHeaderSyntax(Token* direction, Token* interconnect, DataTypeSyntax* type) :
+        PortHeaderSyntax(SyntaxKind::InterconnectPortHeader), direction(direction), interconnect(interconnect), type(type)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return direction;
+            case 1: return interconnect;
+            case 2: return type;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NetPortHeaderSyntax : public PortHeaderSyntax {
+    Token* direction;
+    Token* netType;
+    DataTypeSyntax* dataType;
+
+    NetPortHeaderSyntax(Token* direction, Token* netType, DataTypeSyntax* dataType) :
+        PortHeaderSyntax(SyntaxKind::NetPortHeader), direction(direction), netType(netType), dataType(dataType)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return direction;
+            case 1: return netType;
+            case 2: return dataType;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ImplicitAnsiPortSyntax : public AnsiPortSyntax {
+    PortHeaderSyntax* header;
+    Token* name;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+    EqualsValueClauseSyntax* defaultValue;
+
+    ImplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax* header, Token* name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* defaultValue) :
+        AnsiPortSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(header), name(name), dimensions(dimensions), defaultValue(defaultValue)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return header;
+            case 2: return name;
+            case 3: return &dimensions;
+            case 4: return defaultValue;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ExplicitAnsiPortSyntax : public AnsiPortSyntax {
+    Token* direction;
+    Token* dot;
+    Token* name;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
+
+    ExplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* direction, Token* dot, Token* name, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+        AnsiPortSyntax(SyntaxKind::ExplicitAnsiPort, attributes), direction(direction), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return direction;
+            case 2: return dot;
+            case 3: return name;
+            case 4: return openParen;
+            case 5: return expr;
+            case 6: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct AnsiPortListSyntax : public PortListSyntax {
+    Token* openParen;
+    SeparatedSyntaxList<AnsiPortSyntax> ports;
+    Token* closeParen;
+
+    AnsiPortListSyntax(Token* openParen, SeparatedSyntaxList<AnsiPortSyntax> ports, Token* closeParen) :
+        PortListSyntax(SyntaxKind::AnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return &ports;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct WildcardPortListSyntax : public PortListSyntax {
+    Token* openParen;
+    Token* dotStar;
+    Token* closeParen;
+
+    WildcardPortListSyntax(Token* openParen, Token* dotStar, Token* closeParen) :
+        PortListSyntax(SyntaxKind::WildcardPortList), openParen(openParen), dotStar(dotStar), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return dotStar;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+//list<PackageImportDeclarationSyntax> imports
+
+//ParameterPortListSyntax parameters
+
+struct ModuleHeaderSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+    Token* moduleKeyword;
+    Token* lifetime;
+    Token* name;
+    PortListSyntax* ports;
+    Token* semi;
+
+    ModuleHeaderSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* moduleKeyword, Token* lifetime, Token* name, PortListSyntax* ports, Token* semi) :
+        SyntaxNode(SyntaxKind::ModuleHeader), attributes(attributes), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), ports(ports), semi(semi)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return moduleKeyword;
+            case 2: return lifetime;
+            case 3: return name;
+            case 4: return ports;
+            case 5: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ModuleDeclarationSyntax : public SyntaxNode {
+    ModuleHeaderSyntax* header;
+    Token* endmodule;
+    NamedBlockClauseSyntax* blockName;
+
+    ModuleDeclarationSyntax(ModuleHeaderSyntax* header, Token* endmodule, NamedBlockClauseSyntax* blockName) :
+        SyntaxNode(SyntaxKind::ModuleDeclaration), header(header), endmodule(endmodule), blockName(blockName)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return header;
+            case 1: return endmodule;
+            case 2: return blockName;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ExternModuleSyntax : public SyntaxNode {
+    Token* externKeyword;
+    ModuleHeaderSyntax* header;
+
+    ExternModuleSyntax(Token* externKeyword, ModuleHeaderSyntax* header) :
+        SyntaxNode(SyntaxKind::ExternModule), externKeyword(externKeyword), header(header)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return externKeyword;
+            case 1: return header;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- DIRECTIVES -----
 
 struct DirectiveSyntax : public SyntaxNode {

@@ -17,3 +17,11 @@
 * Stack overflow prevention
 * Give syntax nodes a Kind for as<> casting
 * Unify parser and preprocessor support code
+
+[parsing]
+* Randomize / Array method "with" blocks
+* Sequence methods
+* Param expressions
+* Type reference expression
+* Assignment patterns
+* Casting

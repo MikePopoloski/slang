@@ -262,7 +262,25 @@ enum class SyntaxKind : uint16_t {
     LogicalLeftShiftAssignmentStatement,
     LogicalRightShiftAssignmentStatement,
     ArithmeticLeftShiftAssignmentStatement,
-    ArithmeticRightShiftAssignmentStatement
+    ArithmeticRightShiftAssignmentStatement,
+
+    // modules
+    ImplicitNonAnsiPort,
+    ExplicitNonAnsiPort,
+    NonAnsiPortList,
+    InterfacePortHeader,
+    VariablePortHeader,
+    SimpleNetPortType,
+    InterconnectPortHeader,
+    DataNetPortType,
+    NetPortHeader,
+    ImplicitAnsiPort,
+    ExplicitAnsiPort,
+    AnsiPortList,
+    WildcardPortList,
+    ModuleHeader,
+    ModuleDeclaration,
+    ExternModule
 };
 
 enum class TokenKind : uint16_t;
@@ -280,6 +298,7 @@ bool isRightAssociative(SyntaxKind kind);
 bool isPossibleDataType(TokenKind kind);
 bool isPossibleExpression(TokenKind kind);
 bool isPossibleStatement(TokenKind kind);
+bool isNetType(TokenKind kind);
 
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 

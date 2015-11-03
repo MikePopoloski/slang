@@ -38,6 +38,9 @@ bool isEndOfCaseItem(TokenKind kind);
 bool isEndOfConditionalPredicate(TokenKind kind);
 bool isEndOfAttribute(TokenKind kind);
 bool isNotInType(TokenKind kind);
+bool isNotInPortReference(TokenKind kind);
+bool isPossibleAnsiPort(TokenKind kind);
+bool isPossibleNonAnsiPort(TokenKind kind);
 
 }
 
@@ -48,6 +51,191 @@ Parser::Parser(Lexer& lexer) :
     alloc(lexer.getPreprocessor().getAllocator()),
     diagnostics(lexer.getPreprocessor().getDiagnostics()),
     window(lexer) {
+}
+
+ModuleHeaderSyntax* Parser::parseModuleHeader(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto moduleKeyword = consume();
+
+    Token* lifetime = nullptr;
+    auto kind = peek()->kind;
+    if (kind == TokenKind::StaticKeyword || kind == TokenKind::AutomaticKeyword)
+        lifetime = consume();
+
+    auto name = expect(TokenKind::Identifier);
+
+    // TODO: package imports, parameters
+
+    PortListSyntax* ports = nullptr;
+    if (peek(TokenKind::OpenParenthesis)) {
+        auto openParen = consume();
+        if (peek(TokenKind::DotStar)) {
+            auto dotStar = consume();
+            ports = alloc.emplace<WildcardPortListSyntax>(openParen, dotStar, expect(TokenKind::CloseParenthesis));
+        }
+        else if (peek(TokenKind::CloseParenthesis)) {
+            ports = alloc.emplace<AnsiPortListSyntax>(openParen, nullptr, consume());
+        }
+        else if (isNonAnsiPort()) {
+            Token* closeParen;
+            auto buffer = tosPool.get();
+            parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, &Parser::parseNonAnsiPort);
+
+            ports = alloc.emplace<NonAnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+        }
+        else {
+            Token* closeParen;
+            auto buffer = tosPool.get();
+            parseSeparatedList<isPossibleAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, &Parser::parseAnsiPort);
+
+            ports = alloc.emplace<AnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+        }
+    }
+
+    auto semi = expect(TokenKind::Semicolon);
+    return alloc.emplace<ModuleHeaderSyntax>(attributes, moduleKeyword, lifetime, name, ports, semi);
+}
+
+NonAnsiPortSyntax* Parser::parseNonAnsiPort() {
+    // TODO: error if unsupported expressions are used here
+    if (peek(TokenKind::Dot)) {
+        auto dot = consume();
+        auto name = expect(TokenKind::Identifier);
+        auto openParen = expect(TokenKind::OpenParenthesis);
+
+        ExpressionSyntax* expr;
+        if (!peek(TokenKind::CloseParenthesis))
+            expr = parsePrimaryExpression();
+
+        return alloc.emplace<ExplicitNonAnsiPortSyntax>(dot, name, openParen, expr, expect(TokenKind::CloseParenthesis));
+    }
+
+    return alloc.emplace<ImplicitNonAnsiPortSyntax>(parsePrimaryExpression());
+}
+
+AnsiPortSyntax* Parser::parseAnsiPort() {
+    auto attributes = parseAttributes();
+    auto kind = peek()->kind;
+
+    Token* direction = nullptr;
+    switch (kind) {
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
+            direction = consume();
+            kind = peek()->kind;
+            break;
+    }
+
+    if (kind == TokenKind::Dot) {
+        auto dot = consume();
+        auto name = expect(TokenKind::Identifier);
+        auto openParen = expect(TokenKind::OpenParenthesis);
+
+        ExpressionSyntax* expr;
+        if (!peek(TokenKind::CloseParenthesis))
+            expr = parseExpression();
+
+        return alloc.emplace<ExplicitAnsiPortSyntax>(attributes, direction, dot, name, openParen, expr, expect(TokenKind::CloseParenthesis));
+    }
+
+    PortHeaderSyntax* header;
+
+    if (isNetType(kind)) {
+        auto netType = consume();
+        header = alloc.emplace<NetPortHeaderSyntax>(direction, netType, parseDataType(/* allowImplicit */ true));
+    }
+    else if (kind == TokenKind::InterfaceKeyword) {
+        // TODO: error if direction is given
+        auto keyword = consume();
+
+        DotMemberClauseSyntax* modport = nullptr;
+        if (peek(TokenKind::Dot)) {
+            auto dot = consume();
+            modport = alloc.emplace<DotMemberClauseSyntax>(dot, expect(TokenKind::Identifier));
+        }
+        header = alloc.emplace<InterfacePortHeaderSyntax>(keyword, modport);
+    }
+    else if (kind == TokenKind::InterconnectKeyword) {
+        auto keyword = consume();
+        // TODO: parse implicit data type only
+        header = alloc.emplace<InterconnectPortHeaderSyntax>(direction, keyword, nullptr);
+    }
+    else if (kind == TokenKind::VarKeyword) {
+        auto varKeyword = consume();
+        header = alloc.emplace<VariablePortHeaderSyntax>(direction, varKeyword, parseDataType(/* allowImplicit */ true));
+    }
+    else if (kind == TokenKind::Identifier) {
+        // could be a bunch of different things here; scan ahead to see
+        if (peek(1)->kind == TokenKind::Dot && peek(2)->kind == TokenKind::Identifier && peek(3)->kind == TokenKind::Identifier) {
+            auto name = consume();
+            auto dot = consume();
+            auto modport = alloc.emplace<DotMemberClauseSyntax>(dot, consume());
+            header = alloc.emplace<InterfacePortHeaderSyntax>(name, modport);
+        }
+        else if (isPlainPortName()) {
+            // no header
+            header = nullptr;
+        }
+        else {
+            header = alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, parseDataType(/* allowImplicit */ false));
+        }
+    }
+    else {
+        // assume we have some kind of data type here
+        header = alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, parseDataType(/* allowImplicit */ true));
+    }
+
+    auto name = expect(TokenKind::Identifier);
+    auto dimensions = parseDimensionList();
+
+    EqualsValueClauseSyntax* initializer = nullptr;
+    if (peek(TokenKind::Equals)) {
+        auto equals = consume();
+        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseExpression());
+    }
+
+    return alloc.emplace<ImplicitAnsiPortSyntax>(attributes, header, name, dimensions, initializer);
+}
+
+bool Parser::isPlainPortName() {
+    int index = 1;
+    while (peek(index)->kind == TokenKind::OpenBracket) {
+        index++;
+        if (!scanTypePart<isNotInPortReference>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
+            return true; // if we see nonsense, we'll recover by pretending this is a plain port
+    }
+
+    auto kind = peek(index)->kind;
+    return kind == TokenKind::Equals || kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis;
+}
+
+bool Parser::isNonAnsiPort() {
+    auto kind = peek()->kind;
+    if (kind == TokenKind::Dot || kind == TokenKind::OpenBrace)
+        return true;
+
+    if (kind != TokenKind::Identifier)
+        return false;
+
+    // this might be a port name or the start of a data type
+    // scan over select expressions until we find out
+    int index = 1;
+    while (true) {
+        kind = peek(index++)->kind;
+        if (kind == TokenKind::Dot) {
+            if (peek(index++)->kind != TokenKind::Identifier)
+                return false;
+        }
+        else if (kind == TokenKind::OpenBracket) {
+            if (!scanTypePart<isNotInPortReference>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
+                return false;
+        }
+        else {
+            // found the end; comma or close paren means this is a non-ansi port
+            return kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis;
+        }
+    }
 }
 
 StatementSyntax* Parser::parseStatement() {
@@ -1274,7 +1462,7 @@ bool Parser::isPossibleBlockDeclaration() {
             if (peek(++index)->kind != TokenKind::OpenParenthesis)
                 return false;
             index++;
-            if (!scanTypePart(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis))
+            if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis))
                 return false;
         }
     } while (peek(index)->kind == TokenKind::DoubleColon);
@@ -1282,7 +1470,7 @@ bool Parser::isPossibleBlockDeclaration() {
     // might be a list of dimensions here
     while (peek(index)->kind == TokenKind::OpenBracket) {
         index++;
-        if (!scanTypePart(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
+        if (!scanTypePart<isNotInType>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
             return false;
     }
 
@@ -1290,11 +1478,12 @@ bool Parser::isPossibleBlockDeclaration() {
     return peek(index)->kind == TokenKind::Identifier;
 }
 
+template<bool(*IsEnd)(TokenKind)>
 bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
     int nesting = 1;
     while (true) {
         auto kind = peek(index)->kind;
-        if (isNotInType(kind))
+        if (IsEnd(kind))
             return false;
 
         index++;
@@ -1429,6 +1618,35 @@ bool isPossibleArgument(TokenKind kind) {
     }
 }
 
+bool isPossibleNonAnsiPort(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Dot:
+        case TokenKind::Comma:
+        case TokenKind::Identifier:
+        case TokenKind::OpenBrace:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isPossibleAnsiPort(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::InterconnectKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::Identifier:
+        case TokenKind::Dot:
+        case TokenKind::Comma:
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
+        case TokenKind::VarKeyword:
+            return true;
+    }
+    return isNetType(kind) || isPossibleDataType(kind);
+}
+
 bool isComma(TokenKind kind) {
     return kind == TokenKind::Comma;
 }
@@ -1561,6 +1779,10 @@ bool isNotInType(TokenKind kind) {
         default:
             return isEndKeyword(kind);
     }
+}
+
+bool isNotInPortReference(TokenKind kind) {
+    return kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
 }
 
 }

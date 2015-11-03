@@ -552,6 +552,97 @@ list<StatementSyntax> items
 token end
 NamedBlockClauseSyntax endBlockName
 
+// ----- MODULES -----
+
+PortListSyntax final=false
+empty
+
+NonAnsiPortSyntax final=false
+empty
+
+ImplicitNonAnsiPortSyntax base=NonAnsiPortSyntax kind=ImplicitNonAnsiPort
+ExpressionSyntax expr
+
+ExplicitNonAnsiPortSyntax base=NonAnsiPortSyntax kind=ExplicitNonAnsiPort
+token dot
+token name
+token openParen
+ExpressionSyntax expr
+token closeParen
+
+NonAnsiPortListSyntax base=PortListSyntax kind=NonAnsiPortList
+token openParen
+separated_list<NonAnsiPortSyntax> ports
+token closeParen
+
+AnsiPortSyntax final=false
+list<AttributeInstanceSyntax> attributes
+
+PortHeaderSyntax final=false
+empty
+
+InterfacePortHeaderSyntax base=PortHeaderSyntax kind=InterfacePortHeader
+token nameOrKeyword
+DotMemberClauseSyntax modport
+
+VariablePortHeaderSyntax base=PortHeaderSyntax kind=VariablePortHeader
+token direction
+token varKeyword
+DataTypeSyntax type
+
+InterconnectPortHeaderSyntax base=PortHeaderSyntax kind=InterconnectPortHeader
+token direction
+token interconnect
+DataTypeSyntax type
+
+NetPortHeaderSyntax base=PortHeaderSyntax kind=NetPortHeader
+token direction
+token netType
+DataTypeSyntax dataType
+
+ImplicitAnsiPortSyntax base=AnsiPortSyntax kind=ImplicitAnsiPort
+PortHeaderSyntax header
+token name
+list<VariableDimensionSyntax> dimensions
+EqualsValueClauseSyntax defaultValue
+
+ExplicitAnsiPortSyntax base=AnsiPortSyntax kind=ExplicitAnsiPort
+token direction
+token dot
+token name
+token openParen
+ExpressionSyntax expr
+token closeParen
+
+AnsiPortListSyntax base=PortListSyntax kind=AnsiPortList
+token openParen
+separated_list<AnsiPortSyntax> ports
+token closeParen
+
+WildcardPortListSyntax base=PortListSyntax kind=WildcardPortList
+token openParen
+token dotStar
+token closeParen
+
+ModuleHeaderSyntax kind=ModuleHeader
+list<AttributeInstanceSyntax> attributes
+token moduleKeyword
+token lifetime
+token name
+//list<PackageImportDeclarationSyntax> imports
+//ParameterPortListSyntax parameters
+PortListSyntax ports
+token semi
+
+ModuleDeclarationSyntax kind=ModuleDeclaration
+ModuleHeaderSyntax header
+token endmodule
+NamedBlockClauseSyntax blockName
+
+ExternModuleSyntax kind=ExternModule
+token externKeyword
+ModuleHeaderSyntax header
+
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false

@@ -63,9 +63,17 @@ private:
     VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
     ArrayRef<AttributeInstanceSyntax*> parseAttributes();
     AttributeSpecSyntax* parseAttributeSpec();
+    ModuleHeaderSyntax* parseModuleHeader(ArrayRef<AttributeInstanceSyntax*> attributes);
+    ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
+    NonAnsiPortSyntax* parseNonAnsiPort();
+    AnsiPortSyntax* parseAnsiPort();
 
-    bool scanTypePart(int& index, TokenKind start, TokenKind end);
     bool isPossibleBlockDeclaration();
+    bool isNonAnsiPort();
+    bool isPlainPortName();
+
+    template<bool(*IsEnd)(TokenKind)>
+    bool scanTypePart(int& index, TokenKind start, TokenKind end);
 
     // helper functions to parse a comma separated list of items
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>

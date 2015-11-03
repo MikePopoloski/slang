@@ -381,6 +381,26 @@ SyntaxKind getKeywordType(TokenKind kind) {
     }
 }
 
+bool isNetType(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Supply0Keyword:
+        case TokenKind::Supply1Keyword:
+        case TokenKind::TriKeyword:
+        case TokenKind::TriAndKeyword:
+        case TokenKind::TriOrKeyword:
+        case TokenKind::TriRegKeyword:
+        case TokenKind::Tri0Keyword:
+        case TokenKind::Tri1Keyword:
+        case TokenKind::UWireKeyword:
+        case TokenKind::WireKeyword:
+        case TokenKind::WAndKeyword:
+        case TokenKind::WOrKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
 #define CASE(name) case SyntaxKind::name: os << #name; break
     switch (kind) {
@@ -606,6 +626,22 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(LogicalRightShiftAssignmentStatement);
         CASE(ArithmeticLeftShiftAssignmentStatement);
         CASE(ArithmeticRightShiftAssignmentStatement);
+        CASE(ImplicitNonAnsiPort);
+        CASE(ExplicitNonAnsiPort);
+        CASE(NonAnsiPortList);
+        CASE(InterfacePortHeader);
+        CASE(VariablePortHeader);
+        CASE(SimpleNetPortType);
+        CASE(InterconnectPortHeader);
+        CASE(DataNetPortType);
+        CASE(NetPortHeader);
+        CASE(ImplicitAnsiPort);
+        CASE(ExplicitAnsiPort);
+        CASE(AnsiPortList);
+        CASE(WildcardPortList);
+        CASE(ModuleHeader);
+        CASE(ModuleDeclaration);
+        CASE(ExternModule);
         default: ASSERT(false && "Missing case");
     }
     return os;
