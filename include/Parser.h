@@ -63,10 +63,13 @@ private:
     VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
     ArrayRef<AttributeInstanceSyntax*> parseAttributes();
     AttributeSpecSyntax* parseAttributeSpec();
-    ModuleHeaderSyntax* parseModuleHeader(ArrayRef<AttributeInstanceSyntax*> attributes);
+    ModuleHeaderSyntax* parseModuleHeader();
     ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
     NonAnsiPortSyntax* parseNonAnsiPort();
     AnsiPortSyntax* parseAnsiPort();
+    MemberSyntax* parseMember();
+    ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind);
+    TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
 
     bool isPossibleBlockDeclaration();
     bool isNonAnsiPort();

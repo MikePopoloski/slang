@@ -2348,6 +2348,115 @@ protected:
     }
 };
 
+// ----- MEMBERS -----
+
+struct MemberSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+
+    MemberSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
+        SyntaxNode(kind), attributes(attributes)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override {
+        switch(index) {
+            case 0: return &attributes;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ProceduralBlockSyntax : public MemberSyntax {
+    Token* keyword;
+    StatementSyntax* statement;
+
+    ProceduralBlockSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, StatementSyntax* statement) :
+        MemberSyntax(kind, attributes), keyword(keyword), statement(statement)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct GenerateBlockSyntax : public MemberSyntax {
+    Token* keyword;
+    SyntaxList<MemberSyntax> members;
+    Token* endgenerate;
+
+    GenerateBlockSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SyntaxList<MemberSyntax> members, Token* endgenerate) :
+        MemberSyntax(SyntaxKind::GenerateBlock, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return &members;
+            case 3: return endgenerate;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DividerClauseSyntax : public SyntaxNode {
+    Token* divide;
+    Token* value;
+
+    DividerClauseSyntax(Token* divide, Token* value) :
+        SyntaxNode(SyntaxKind::DividerClause), divide(divide), value(value)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return divide;
+            case 1: return value;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TimeUnitsDeclarationSyntax : public MemberSyntax {
+    Token* keyword;
+    Token* time;
+    DividerClauseSyntax* divider;
+    Token* semi;
+
+    TimeUnitsDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* time, DividerClauseSyntax* divider, Token* semi) :
+        MemberSyntax(SyntaxKind::TimeUnitsDeclaration, attributes), keyword(keyword), time(time), divider(divider), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return time;
+            case 3: return divider;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- MODULES -----
 
 struct PortListSyntax : public SyntaxNode {
@@ -2647,50 +2756,53 @@ protected:
 //ParameterPortListSyntax parameters
 
 struct ModuleHeaderSyntax : public SyntaxNode {
-    SyntaxList<AttributeInstanceSyntax> attributes;
     Token* moduleKeyword;
     Token* lifetime;
     Token* name;
     PortListSyntax* ports;
     Token* semi;
 
-    ModuleHeaderSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* moduleKeyword, Token* lifetime, Token* name, PortListSyntax* ports, Token* semi) :
-        SyntaxNode(SyntaxKind::ModuleHeader), attributes(attributes), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), ports(ports), semi(semi)
+    ModuleHeaderSyntax(Token* moduleKeyword, Token* lifetime, Token* name, PortListSyntax* ports, Token* semi) :
+        SyntaxNode(SyntaxKind::ModuleHeader), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), ports(ports), semi(semi)
     {
-        childCount += 6;
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return moduleKeyword;
+            case 1: return lifetime;
+            case 2: return name;
+            case 3: return ports;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ModuleDeclarationSyntax : public MemberSyntax {
+    ModuleHeaderSyntax* header;
+    TimeUnitsDeclarationSyntax* timeunits;
+    SyntaxList<MemberSyntax> members;
+    Token* endmodule;
+    NamedBlockClauseSyntax* blockName;
+
+    ModuleDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax* header, TimeUnitsDeclarationSyntax* timeunits, SyntaxList<MemberSyntax> members, Token* endmodule, NamedBlockClauseSyntax* blockName) :
+        MemberSyntax(SyntaxKind::ModuleDeclaration, attributes), header(header), timeunits(timeunits), members(members), endmodule(endmodule), blockName(blockName)
+    {
+        childCount += 5;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return &attributes;
-            case 1: return moduleKeyword;
-            case 2: return lifetime;
-            case 3: return name;
-            case 4: return ports;
-            case 5: return semi;
-            default: return nullptr;
-        }
-    }
-};
-
-struct ModuleDeclarationSyntax : public SyntaxNode {
-    ModuleHeaderSyntax* header;
-    Token* endmodule;
-    NamedBlockClauseSyntax* blockName;
-
-    ModuleDeclarationSyntax(ModuleHeaderSyntax* header, Token* endmodule, NamedBlockClauseSyntax* blockName) :
-        SyntaxNode(SyntaxKind::ModuleDeclaration), header(header), endmodule(endmodule), blockName(blockName)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return header;
-            case 1: return endmodule;
-            case 2: return blockName;
+            case 1: return header;
+            case 2: return timeunits;
+            case 3: return &members;
+            case 4: return endmodule;
+            case 5: return blockName;
             default: return nullptr;
         }
     }

@@ -381,6 +381,18 @@ SyntaxKind getKeywordType(TokenKind kind) {
     }
 }
 
+SyntaxKind getProceduralBlockKind(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::InitialKeyword: return SyntaxKind::InitialBlock;
+        case TokenKind::FinalKeyword: return SyntaxKind::FinalBlock;
+        case TokenKind::AlwaysKeyword: return SyntaxKind::AlwaysBlock;
+        case TokenKind::AlwaysCombKeyword: return SyntaxKind::AlwaysCombBlock;
+        case TokenKind::AlwaysFFKeyword: return SyntaxKind::AlwaysFFBlock;
+        case TokenKind::AlwaysLatchKeyword: return SyntaxKind::AlwaysLatchBlock;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
 bool isNetType(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:
@@ -642,6 +654,15 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ModuleHeader);
         CASE(ModuleDeclaration);
         CASE(ExternModule);
+        CASE(InitialBlock);
+        CASE(FinalBlock);
+        CASE(AlwaysBlock);
+        CASE(AlwaysFFBlock);
+        CASE(AlwaysCombBlock);
+        CASE(AlwaysLatchBlock);
+        CASE(GenerateBlock);
+        CASE(DividerClause);
+        CASE(TimeUnitsDeclaration);
         default: ASSERT(false && "Missing case");
     }
     return os;

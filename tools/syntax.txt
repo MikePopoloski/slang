@@ -552,6 +552,30 @@ list<StatementSyntax> items
 token end
 NamedBlockClauseSyntax endBlockName
 
+// ----- MEMBERS -----
+
+MemberSyntax final=false
+list<AttributeInstanceSyntax> attributes
+
+ProceduralBlockSyntax base=MemberSyntax
+token keyword
+StatementSyntax statement
+
+GenerateBlockSyntax base=MemberSyntax kind=GenerateBlock
+token keyword
+list<MemberSyntax> members
+token endgenerate
+
+DividerClauseSyntax kind=DividerClause
+token divide
+token value
+
+TimeUnitsDeclarationSyntax base=MemberSyntax kind=TimeUnitsDeclaration
+token keyword
+token time
+DividerClauseSyntax divider
+token semi
+
 // ----- MODULES -----
 
 PortListSyntax final=false
@@ -625,7 +649,6 @@ token dotStar
 token closeParen
 
 ModuleHeaderSyntax kind=ModuleHeader
-list<AttributeInstanceSyntax> attributes
 token moduleKeyword
 token lifetime
 token name
@@ -634,8 +657,10 @@ token name
 PortListSyntax ports
 token semi
 
-ModuleDeclarationSyntax kind=ModuleDeclaration
+ModuleDeclarationSyntax base=MemberSyntax kind=ModuleDeclaration
 ModuleHeaderSyntax header
+TimeUnitsDeclarationSyntax timeunits
+list<MemberSyntax> members
 token endmodule
 NamedBlockClauseSyntax blockName
 

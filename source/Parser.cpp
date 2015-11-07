@@ -53,7 +53,15 @@ Parser::Parser(Lexer& lexer) :
     window(lexer) {
 }
 
-ModuleHeaderSyntax* Parser::parseModuleHeader(ArrayRef<AttributeInstanceSyntax*> attributes) {
+ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto header = parseModuleHeader();
+    auto timeunits = parseTimeUnitsDeclaration(nullptr);
+    auto members = parseMemberList(TokenKind::EndModuleKeyword);
+    auto endmodule = expect(TokenKind::EndModuleKeyword);
+    return alloc.emplace<ModuleDeclarationSyntax>(attributes, header, timeunits, members, endmodule, parseNamedBlockClause());
+}
+
+ModuleHeaderSyntax* Parser::parseModuleHeader() {
     auto moduleKeyword = consume();
 
     Token* lifetime = nullptr;
@@ -92,7 +100,7 @@ ModuleHeaderSyntax* Parser::parseModuleHeader(ArrayRef<AttributeInstanceSyntax*>
     }
 
     auto semi = expect(TokenKind::Semicolon);
-    return alloc.emplace<ModuleHeaderSyntax>(attributes, moduleKeyword, lifetime, name, ports, semi);
+    return alloc.emplace<ModuleHeaderSyntax>(moduleKeyword, lifetime, name, ports, semi);
 }
 
 NonAnsiPortSyntax* Parser::parseNonAnsiPort() {
@@ -236,6 +244,88 @@ bool Parser::isNonAnsiPort() {
             return kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis;
         }
     }
+}
+
+MemberSyntax* Parser::parseMember() {
+    auto attributes = parseAttributes();
+
+    // TODO: error on attributes that don't attach to a valid construct
+
+    switch (peek()->kind) {
+        case TokenKind::GenerateKeyword: {
+            auto keyword = consume();
+            auto members = parseMemberList(TokenKind::EndGenerateKeyword);
+            return alloc.emplace<GenerateBlockSyntax>(attributes, keyword, members, expect(TokenKind::EndGenerateKeyword));
+        }
+
+        case TokenKind::SpecifyKeyword:
+
+        case TokenKind::TimeUnitKeyword:
+        case TokenKind::TimePrecisionKeyword:
+            return parseTimeUnitsDeclaration(attributes);
+
+        case TokenKind::ModuleKeyword:
+        case TokenKind::MacromoduleKeyword:
+            return parseModule(attributes);
+        case TokenKind::ProgramKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::SpecParamKeyword:
+        case TokenKind::DefParamKeyword:
+        case TokenKind::Identifier:
+        case TokenKind::BindKeyword:
+        case TokenKind::AssignKeyword:
+        case TokenKind::AliasKeyword:
+
+        case TokenKind::InitialKeyword:
+        case TokenKind::FinalKeyword:
+        case TokenKind::AlwaysKeyword:
+        case TokenKind::AlwaysCombKeyword:
+        case TokenKind::AlwaysFFKeyword:
+        case TokenKind::AlwaysLatchKeyword: {
+            auto keyword = consume();
+            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword->kind), attributes, keyword, parseStatement());
+        }
+        case TokenKind::ForKeyword:
+        case TokenKind::IfKeyword:
+        case TokenKind::CaseKeyword:
+        case TokenKind::GenVarKeyword:
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
+            break;
+    }
+}
+
+ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind) {
+    auto buffer = nodePool.getAs<MemberSyntax*>();
+    while (true) {
+        auto kind = peek()->kind;
+        if (kind == TokenKind::EndOfFile || kind == endKind)
+            break;
+
+        // TODO: error checking
+
+        buffer.append(parseMember());
+    }
+    return buffer.copy(alloc);
+}
+
+TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto kind = peek()->kind;
+    if (kind != TokenKind::TimeUnitKeyword && kind != TokenKind::TimePrecisionKeyword)
+        return nullptr;
+
+    auto keyword = consume();
+    auto time = expect(TokenKind::TimeLiteral);
+
+    DividerClauseSyntax* divider = nullptr;
+    if (peek(TokenKind::Slash)) {
+        auto divide = consume();
+        divider = alloc.emplace<DividerClauseSyntax>(divide, expect(TokenKind::TimeLiteral));
+    }
+
+    return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
 }
 
 StatementSyntax* Parser::parseStatement() {

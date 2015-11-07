@@ -280,7 +280,18 @@ enum class SyntaxKind : uint16_t {
     WildcardPortList,
     ModuleHeader,
     ModuleDeclaration,
-    ExternModule
+    ExternModule,
+
+    // members
+    InitialBlock,
+    FinalBlock,
+    AlwaysBlock,
+    AlwaysFFBlock,
+    AlwaysCombBlock,
+    AlwaysLatchBlock,
+    GenerateBlock,
+    DividerClause,
+    TimeUnitsDeclaration
 };
 
 enum class TokenKind : uint16_t;
@@ -293,6 +304,7 @@ SyntaxKind getKeywordNameExpression(TokenKind kind);
 SyntaxKind getAssignmentStatement(TokenKind kind);
 SyntaxKind getIntegerType(TokenKind kind);
 SyntaxKind getKeywordType(TokenKind kind);
+SyntaxKind getProceduralBlockKind(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleDataType(TokenKind kind);
