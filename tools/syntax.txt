@@ -1,7 +1,7 @@
 ExpressionSyntax final=false
 empty
 
-DataTypeSyntax final=false
+DataTypeSyntax base=ExpressionSyntax final=false
 empty
 
 // ----- ATTRIBUTES -----
@@ -376,9 +376,10 @@ NamedTypeSyntax base=DataTypeSyntax kind=NamedType
 NameSyntax name
 
 StructUnionMemberSyntax kind=StructUnionMember
+list<AttributeInstanceSyntax> attributes
 token randomQualifier
 DataTypeSyntax type
-list<VariableDeclaratorSyntax> declarators
+separated_list<VariableDeclaratorSyntax> declarators
 token semi
 
 StructUnionTypeSyntax base=DataTypeSyntax
@@ -391,16 +392,11 @@ list<StructUnionMemberSyntax> members
 token closeBrace
 list<VariableDimensionSyntax> dimensions
 
-EnumNameDeclarationSyntax kind=EnumNameDeclaration
-token name
-VariableDimensionSyntax dimension
-EqualsValueClauseSyntax initializer
-
 EnumTypeSyntax base=DataTypeSyntax kind=EnumType
 token keyword
 DataTypeSyntax baseType
 token openBrace
-list<EnumNameDeclarationSyntax> members
+separated_list<VariableDeclaratorSyntax> members
 token closeBrace
 list<VariableDimensionSyntax> dimensions
 

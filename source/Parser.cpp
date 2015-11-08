@@ -24,6 +24,7 @@ using namespace slang;
 bool isPossibleArgument(TokenKind kind);
 bool isComma(TokenKind kind);
 bool isSemicolon(TokenKind kind);
+bool isCloseBrace(TokenKind kind);
 bool isIdentifierOrComma(TokenKind kind);
 bool isPossibleExpressionOrComma(TokenKind kind);
 bool isPossibleExpressionOrTripleAnd(TokenKind kind);
@@ -156,13 +157,7 @@ AnsiPortSyntax* Parser::parseAnsiPort() {
     else if (kind == TokenKind::InterfaceKeyword) {
         // TODO: error if direction is given
         auto keyword = consume();
-
-        DotMemberClauseSyntax* modport = nullptr;
-        if (peek(TokenKind::Dot)) {
-            auto dot = consume();
-            modport = alloc.emplace<DotMemberClauseSyntax>(dot, expect(TokenKind::Identifier));
-        }
-        header = alloc.emplace<InterfacePortHeaderSyntax>(keyword, modport);
+        header = alloc.emplace<InterfacePortHeaderSyntax>(keyword, parseDotMemberClause());
     }
     else if (kind == TokenKind::InterconnectKeyword) {
         auto keyword = consume();
@@ -177,9 +172,7 @@ AnsiPortSyntax* Parser::parseAnsiPort() {
         // could be a bunch of different things here; scan ahead to see
         if (peek(1)->kind == TokenKind::Dot && peek(2)->kind == TokenKind::Identifier && peek(3)->kind == TokenKind::Identifier) {
             auto name = consume();
-            auto dot = consume();
-            auto modport = alloc.emplace<DotMemberClauseSyntax>(dot, consume());
-            header = alloc.emplace<InterfacePortHeaderSyntax>(name, modport);
+            header = alloc.emplace<InterfacePortHeaderSyntax>(name, parseDotMemberClause());
         }
         else if (isPlainPortName()) {
             // no header
@@ -1364,6 +1357,81 @@ ArrayRef<VariableDimensionSyntax*> Parser::parseDimensionList() {
     return buffer.copy(alloc);
 }
 
+DotMemberClauseSyntax* Parser::parseDotMemberClause() {
+    if (peek(TokenKind::Dot)) {
+        auto dot = consume();
+        return alloc.emplace<DotMemberClauseSyntax>(dot, expect(TokenKind::Identifier));
+    }
+    return nullptr;
+}
+
+StructUnionTypeSyntax* Parser::parseStructUnion(SyntaxKind syntaxKind) {
+    auto keyword = consume();
+    auto tagged = consumeIf(TokenKind::TaggedKeyword);
+    auto packed = consumeIf(TokenKind::PackedKeyword);
+    auto signing = parseSigning();
+    auto openBrace = expect(TokenKind::OpenBrace);
+
+    Token* closeBrace;
+    auto buffer = nodePool.getAs<StructUnionMemberSyntax*>();
+
+    if (openBrace->isMissing())
+        closeBrace = Token::missing(alloc, TokenKind::CloseBrace);
+    else {
+        auto kind = peek()->kind;
+        while (kind != TokenKind::CloseBrace && kind != TokenKind::EndOfFile) {
+            auto attributes = parseAttributes();
+
+            Token* randomQualifier = nullptr;
+            switch (peek()->kind) {
+                case TokenKind::RandKeyword:
+                case TokenKind::RandCKeyword:
+                    randomQualifier = consume();
+            }
+
+            auto type = parseDataType(/* allowImplicit */ false);
+
+            Token* semi;
+            auto declarators = parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+
+            buffer.append(alloc.emplace<StructUnionMemberSyntax>(attributes, randomQualifier, type, declarators, semi));
+            kind = peek()->kind;
+        }
+        closeBrace = expect(TokenKind::CloseBrace);
+    }
+
+    return alloc.emplace<StructUnionTypeSyntax>(
+        syntaxKind,
+        keyword,
+        tagged,
+        packed,
+        signing,
+        openBrace,
+        buffer.copy(alloc),
+        closeBrace,
+        parseDimensionList()
+    );
+}
+
+EnumTypeSyntax* Parser::parseEnum() {
+    auto keyword = consume();
+
+    DataTypeSyntax* baseType = nullptr;
+    if (!peek(TokenKind::OpenBrace))
+        baseType = parseDataType(/* allowImplicit */ false);
+
+    auto openBrace = expect(TokenKind::OpenBrace);
+
+    Token* closeBrace;
+    ArrayRef<TokenOrSyntax> declarators = nullptr;
+    if (openBrace->isMissing())
+        closeBrace = Token::missing(alloc, TokenKind::CloseBrace);
+    else
+        declarators = parseVariableDeclarators<isCloseBrace>(TokenKind::CloseBrace, closeBrace);
+
+    return alloc.emplace<EnumTypeSyntax>(keyword, baseType, openBrace, declarators, closeBrace, parseDimensionList());
+}
+
 DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
     auto kind = peek()->kind;
     auto type = getIntegerType(kind);
@@ -1377,18 +1445,17 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
     if (type != SyntaxKind::Unknown)
         return alloc.emplace<KeywordTypeSyntax>(type, consume());
 
-    if (kind == TokenKind::VirtualKeyword) {
-        auto virtualKeyword = consume();
-        auto interfaceKeyword = consumeIf(TokenKind::InterfaceKeyword);
-        auto name = expect(TokenKind::Identifier);
-        auto parameters = parseParameterValueAssignment();
-
-        DotMemberClauseSyntax* modport = nullptr;
-        if (peek(TokenKind::Dot)) {
-            auto dot = consume();
-            modport = alloc.emplace<DotMemberClauseSyntax>(dot, expect(TokenKind::Identifier));
+    switch (kind) {
+        case TokenKind::StructKeyword: return parseStructUnion(SyntaxKind::StructType);
+        case TokenKind::UnionKeyword: return parseStructUnion(SyntaxKind::UnionType);
+        case TokenKind::EnumKeyword: return parseEnum();
+        case TokenKind::VirtualKeyword: {
+            auto virtualKeyword = consume();
+            auto interfaceKeyword = consumeIf(TokenKind::InterfaceKeyword);
+            auto name = expect(TokenKind::Identifier);
+            auto parameters = parseParameterValueAssignment();
+            return alloc.emplace<VirtualInterfaceTypeSyntax>(virtualKeyword, interfaceKeyword, name, parameters, parseDotMemberClause());
         }
-        return alloc.emplace<VirtualInterfaceTypeSyntax>(virtualKeyword, interfaceKeyword, name, parameters, modport);
     }
 
     // TODO: other data types, implicit, void, etc
@@ -1411,25 +1478,11 @@ StatementSyntax* Parser::parseBlockDeclaration() {
     }
 
     auto dataType = parseDataType(/* allowImplicit */ hasVar);
-    auto declarators = tosPool.get();
 
-    declarators.append(parseVariableDeclarator(/* isFirst */ true));
+    Token* semi;
+    auto declarators = parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
 
-    Trivia skippedTokens;
-    while (true) {
-        kind = peek()->kind;
-        if (kind == TokenKind::Semicolon)
-            break;
-        else if (kind == TokenKind::Comma) {
-            declarators.append(prependTrivia(consume(), &skippedTokens));
-            declarators.append(parseVariableDeclarator(/* isFirst */ false));
-        }
-        else if (skipBadTokens<isComma, isSemicolon>(&skippedTokens) == SkipAction::Abort)
-            break;
-    }
-
-    auto semi = prependTrivia(expect(TokenKind::Semicolon), &skippedTokens);
-    return alloc.emplace<DataDeclarationSyntax>(nullptr, attributes, modifiers.copy(alloc), dataType, declarators.copy(alloc), semi);
+    return alloc.emplace<DataDeclarationSyntax>(nullptr, attributes, modifiers.copy(alloc), dataType, declarators, semi);
 }
 
 VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
@@ -1451,6 +1504,14 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     }
 
     return alloc.emplace<VariableDeclaratorSyntax>(name, dimensions, initializer);
+}
+
+template<bool(*IsEnd)(TokenKind)>
+ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Token*& end) {
+    auto buffer = tosPool.get();
+    parseSeparatedListWithFirst<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end, &Parser::parseVariableDeclarator);
+
+    return buffer.copy(alloc);
 }
 
 ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
@@ -1627,7 +1688,50 @@ void Parser::parseSeparatedList(
 
                     if (IsExpected(current->kind)) {
                         buffer.append(prependTrivia(expect(separatorKind), &skippedTokens));
-                        buffer.append((this->*parseItem)());
+                        buffer.append(prependTrivia((this->*parseItem)(), &skippedTokens));
+                        continue;
+                    }
+
+                    if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens) == SkipAction::Abort)
+                        break;
+                }
+                // found the end
+                break;
+            }
+            else if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens) == SkipAction::Abort)
+                break;
+            else
+                current = peek();
+        }
+    }
+    closeToken = prependTrivia(expect(closeKind), &skippedTokens);
+}
+
+// this variant passes a boolean isFirst argument to the parse function
+// there is an annoying duplication of code here with the above function
+
+template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
+void Parser::parseSeparatedListWithFirst(
+    Buffer<TokenOrSyntax>& buffer,
+    TokenKind closeKind,
+    TokenKind separatorKind,
+    Token*& closeToken,
+    TParserFunc&& parseItem
+) {
+    Trivia skippedTokens;
+    auto current = peek();
+    if (!IsEnd(current->kind)) {
+        while (true) {
+            if (IsExpected(current->kind)) {
+                buffer.append(prependTrivia((this->*parseItem)(true), &skippedTokens));
+                while (true) {
+                    current = peek();
+                    if (IsEnd(current->kind))
+                        break;
+
+                    if (IsExpected(current->kind)) {
+                        buffer.append(prependTrivia(expect(separatorKind), &skippedTokens));
+                        buffer.append(prependTrivia((this->*parseItem)(false), &skippedTokens));
                         continue;
                     }
 
@@ -1666,6 +1770,12 @@ Parser::SkipAction Parser::skipBadTokens(Trivia* skippedTokens) {
         *skippedTokens = Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc));
 
     return result;
+}
+
+template<typename T>
+void Parser::prependTrivia(ArrayRef<T*> list, Trivia* trivia) {
+    if (trivia->kind != TriviaKind::Unknown && !list.empty())
+        prependTrivia(*list.begin(), trivia);
 }
 
 SyntaxNode* Parser::prependTrivia(SyntaxNode* node, Trivia* trivia) {
@@ -1743,6 +1853,10 @@ bool isComma(TokenKind kind) {
 
 bool isSemicolon(TokenKind kind) {
     return kind == TokenKind::Semicolon;
+}
+
+bool isCloseBrace(TokenKind kind) {
+    return kind == TokenKind::CloseBrace;
 }
 
 bool isIdentifierOrComma(TokenKind kind) {

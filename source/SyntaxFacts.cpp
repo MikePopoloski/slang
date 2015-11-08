@@ -601,7 +601,6 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ExpressionTypeReference);
         CASE(DataTypeReference);
         CASE(StructUnionMember);
-        CASE(EnumNameDeclaration);
         CASE(DotMemberClause);
         CASE(EmptyStatement);
         CASE(ElseClause);

@@ -221,7 +221,6 @@ enum class SyntaxKind : uint16_t {
     ExpressionTypeReference,
     DataTypeReference,
     StructUnionMember,
-    EnumNameDeclaration,
     DotMemberClause,
 
     // statements

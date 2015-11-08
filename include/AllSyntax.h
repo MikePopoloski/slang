@@ -16,10 +16,10 @@ struct ExpressionSyntax : public SyntaxNode {
     }
 };
 
-struct DataTypeSyntax : public SyntaxNode {
+struct DataTypeSyntax : public ExpressionSyntax {
 
     DataTypeSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
+        ExpressionSyntax(kind)
     {
     }
 };
@@ -1617,24 +1617,26 @@ protected:
 };
 
 struct StructUnionMemberSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
     Token* randomQualifier;
     DataTypeSyntax* type;
-    SyntaxList<VariableDeclaratorSyntax> declarators;
+    SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
     Token* semi;
 
-    StructUnionMemberSyntax(Token* randomQualifier, DataTypeSyntax* type, SyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
-        SyntaxNode(SyntaxKind::StructUnionMember), randomQualifier(randomQualifier), type(type), declarators(declarators), semi(semi)
+    StructUnionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* randomQualifier, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+        SyntaxNode(SyntaxKind::StructUnionMember), attributes(attributes), randomQualifier(randomQualifier), type(type), declarators(declarators), semi(semi)
     {
-        childCount += 4;
+        childCount += 5;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return randomQualifier;
-            case 1: return type;
-            case 2: return &declarators;
-            case 3: return semi;
+            case 0: return &attributes;
+            case 1: return randomQualifier;
+            case 2: return type;
+            case 3: return &declarators;
+            case 4: return semi;
             default: return nullptr;
         }
     }
@@ -1672,37 +1674,15 @@ protected:
     }
 };
 
-struct EnumNameDeclarationSyntax : public SyntaxNode {
-    Token* name;
-    VariableDimensionSyntax* dimension;
-    EqualsValueClauseSyntax* initializer;
-
-    EnumNameDeclarationSyntax(Token* name, VariableDimensionSyntax* dimension, EqualsValueClauseSyntax* initializer) :
-        SyntaxNode(SyntaxKind::EnumNameDeclaration), name(name), dimension(dimension), initializer(initializer)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return name;
-            case 1: return dimension;
-            case 2: return initializer;
-            default: return nullptr;
-        }
-    }
-};
-
 struct EnumTypeSyntax : public DataTypeSyntax {
     Token* keyword;
     DataTypeSyntax* baseType;
     Token* openBrace;
-    SyntaxList<EnumNameDeclarationSyntax> members;
+    SeparatedSyntaxList<VariableDeclaratorSyntax> members;
     Token* closeBrace;
     SyntaxList<VariableDimensionSyntax> dimensions;
 
-    EnumTypeSyntax(Token* keyword, DataTypeSyntax* baseType, Token* openBrace, SyntaxList<EnumNameDeclarationSyntax> members, Token* closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
+    EnumTypeSyntax(Token* keyword, DataTypeSyntax* baseType, Token* openBrace, SeparatedSyntaxList<VariableDeclaratorSyntax> members, Token* closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(SyntaxKind::EnumType), keyword(keyword), baseType(baseType), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
     {
         childCount += 6;

@@ -58,7 +58,10 @@ private:
     Token* parseSigning();
     VariableDimensionSyntax* parseDimension();
     ArrayRef<VariableDimensionSyntax*> parseDimensionList();
+    StructUnionTypeSyntax* parseStructUnion(SyntaxKind syntaxKind);
+    EnumTypeSyntax* parseEnum();
     DataTypeSyntax* parseDataType(bool allowImplicit);
+    DotMemberClauseSyntax* parseDotMemberClause();
     StatementSyntax* parseBlockDeclaration();
     VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
     ArrayRef<AttributeInstanceSyntax*> parseAttributes();
@@ -74,6 +77,9 @@ private:
     bool isPossibleBlockDeclaration();
     bool isNonAnsiPort();
     bool isPlainPortName();
+
+    template<bool(*IsEnd)(TokenKind)>
+    ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token*& end);
 
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);
@@ -99,8 +105,20 @@ private:
         TParserFunc&& parseItem
     );
 
+    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
+    void parseSeparatedListWithFirst(
+        Buffer<TokenOrSyntax>& buffer,
+        TokenKind closeKind,
+        TokenKind separatorKind,
+        Token*& closeToken,
+        TParserFunc&& parseItem
+    );
+
     template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
     SkipAction skipBadTokens(Trivia* skippedTokens);
+
+    template<typename T>
+    void prependTrivia(ArrayRef<T*> list, Trivia* trivia);
 
     SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
     Token* prependTrivia(Token* token, Trivia* trivia);
