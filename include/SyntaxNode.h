@@ -217,9 +217,9 @@ enum class SyntaxKind : uint16_t {
     VirtualInterfaceType,
     NamedType,
     EventType,
+    VoidType,
     ImplicitType,
-    ExpressionTypeReference,
-    DataTypeReference,
+    TypeReference,
     StructUnionMember,
     DotMemberClause,
 

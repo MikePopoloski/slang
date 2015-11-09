@@ -243,6 +243,7 @@ bool isPossibleDataType(TokenKind kind) {
         case TokenKind::VirtualKeyword:
         case TokenKind::EventKeyword:
         case TokenKind::TypeKeyword:
+        case TokenKind::VoidKeyword:
         case TokenKind::Identifier:
         case TokenKind::UnitSystemName:
             return true;
@@ -377,6 +378,7 @@ SyntaxKind getKeywordType(TokenKind kind) {
         case TokenKind::StringKeyword: return SyntaxKind::StringType;
         case TokenKind::CHandleKeyword: return SyntaxKind::CHandleType;
         case TokenKind::EventKeyword: return SyntaxKind::EventType;
+        case TokenKind::VoidKeyword: return SyntaxKind::VoidType;
         default: return SyntaxKind::Unknown;
     }
 }
@@ -597,9 +599,9 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(VirtualInterfaceType);
         CASE(NamedType);
         CASE(EventType);
+        CASE(VoidType);
         CASE(ImplicitType);
-        CASE(ExpressionTypeReference);
-        CASE(DataTypeReference);
+        CASE(TypeReference);
         CASE(StructUnionMember);
         CASE(DotMemberClause);
         CASE(EmptyStatement);
