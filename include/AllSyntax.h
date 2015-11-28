@@ -128,6 +128,24 @@ protected:
     }
 };
 
+struct MemberSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+
+    MemberSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
+        SyntaxNode(kind), attributes(attributes)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override {
+        switch(index) {
+            case 0: return &attributes;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- ARGUMENTS -----
 
 struct ArgumentSyntax : public SyntaxNode {
@@ -1530,14 +1548,14 @@ protected:
     }
 };
 
-struct DataDeclarationSyntax : public StatementSyntax {
+struct DataDeclarationSyntax : public MemberSyntax {
     TokenList modifiers;
     DataTypeSyntax* type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
     Token* semi;
 
-    DataDeclarationSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
-        StatementSyntax(SyntaxKind::DataDeclaration, label, attributes), modifiers(modifiers), type(type), declarators(declarators), semi(semi)
+    DataDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+        MemberSyntax(SyntaxKind::DataDeclaration, attributes), modifiers(modifiers), type(type), declarators(declarators), semi(semi)
     {
         childCount += 4;
     }
@@ -1545,12 +1563,125 @@ struct DataDeclarationSyntax : public StatementSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return &modifiers;
-            case 3: return type;
-            case 4: return &declarators;
-            case 5: return semi;
+            case 0: return &attributes;
+            case 1: return &modifiers;
+            case 2: return type;
+            case 3: return &declarators;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct PackageImportItemSyntax : public SyntaxNode {
+    Token* package;
+    Token* doubleColon;
+    Token* item;
+
+    PackageImportItemSyntax(Token* package, Token* doubleColon, Token* item) :
+        SyntaxNode(SyntaxKind::PackageImportItem), package(package), doubleColon(doubleColon), item(item)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return package;
+            case 1: return doubleColon;
+            case 2: return item;
+            default: return nullptr;
+        }
+    }
+};
+
+struct PackageImportDeclarationSyntax : public SyntaxNode {
+    Token* keyword;
+    SeparatedSyntaxList<PackageImportItemSyntax> items;
+    Token* semi;
+
+    PackageImportDeclarationSyntax(Token* keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token* semi) :
+        SyntaxNode(SyntaxKind::PackageImportDeclaration), keyword(keyword), items(items), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return &items;
+            case 2: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ParameterPortDeclarationSyntax : public SyntaxNode {
+
+    ParameterPortDeclarationSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct ParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
+    Token* keyword;
+    DataTypeSyntax* type;
+    VariableDeclaratorSyntax* declarator;
+
+    ParameterDeclarationSyntax(Token* keyword, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
+        ParameterPortDeclarationSyntax(SyntaxKind::ParameterDeclaration), keyword(keyword), type(type), declarator(declarator)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return type;
+            case 2: return declarator;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TypeParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
+    Token* keyword;
+    Token* type;
+    VariableDeclaratorSyntax* declarator;
+
+    TypeParameterDeclarationSyntax(Token* keyword, Token* type, VariableDeclaratorSyntax* declarator) :
+        ParameterPortDeclarationSyntax(SyntaxKind::TypeParameterDeclaration), keyword(keyword), type(type), declarator(declarator)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return type;
+            case 2: return declarator;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ParameterAssignmentSyntax : public ParameterPortDeclarationSyntax {
+    VariableDeclaratorSyntax* declarator;
+
+    ParameterAssignmentSyntax(VariableDeclaratorSyntax* declarator) :
+        ParameterPortDeclarationSyntax(SyntaxKind::ParameterAssignment), declarator(declarator)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return declarator;
             default: return nullptr;
         }
     }
@@ -2303,11 +2434,11 @@ protected:
 struct SequentialBlockStatementSyntax : public StatementSyntax {
     Token* begin;
     NamedBlockClauseSyntax* blockName;
-    SyntaxList<StatementSyntax> items;
+    SyntaxList<SyntaxNode> items;
     Token* end;
     NamedBlockClauseSyntax* endBlockName;
 
-    SequentialBlockStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* begin, NamedBlockClauseSyntax* blockName, SyntaxList<StatementSyntax> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
+    SequentialBlockStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
         StatementSyntax(SyntaxKind::SequentialBlockStatement, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
     {
         childCount += 5;
@@ -2329,24 +2460,6 @@ protected:
 };
 
 // ----- MEMBERS -----
-
-struct MemberSyntax : public SyntaxNode {
-    SyntaxList<AttributeInstanceSyntax> attributes;
-
-    MemberSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
-        SyntaxNode(kind), attributes(attributes)
-    {
-        childCount += 1;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override {
-        switch(index) {
-            case 0: return &attributes;
-            default: return nullptr;
-        }
-    }
-};
 
 struct ProceduralBlockSyntax : public MemberSyntax {
     Token* keyword;
@@ -2431,6 +2544,136 @@ protected:
             case 1: return keyword;
             case 2: return time;
             case 3: return divider;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct PortConnectionSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+
+    PortConnectionSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
+        SyntaxNode(kind), attributes(attributes)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override {
+        switch(index) {
+            case 0: return &attributes;
+            default: return nullptr;
+        }
+    }
+};
+
+struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
+    ExpressionSyntax* expr;
+
+    OrderedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr) :
+        PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NamedPortConnectionSyntax : public PortConnectionSyntax {
+    Token* dot;
+    Token* name;
+    ParenthesizedExpressionSyntax* connection;
+
+    NamedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* dot, Token* name, ParenthesizedExpressionSyntax* connection) :
+        PortConnectionSyntax(SyntaxKind::NamedPortConnection, attributes), dot(dot), name(name), connection(connection)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return dot;
+            case 2: return name;
+            case 3: return connection;
+            default: return nullptr;
+        }
+    }
+};
+
+struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
+    Token* dotStar;
+
+    WildcardPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* dotStar) :
+        PortConnectionSyntax(SyntaxKind::WildcardPortConnection, attributes), dotStar(dotStar)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return dotStar;
+            default: return nullptr;
+        }
+    }
+};
+
+struct HierarchicalInstanceSyntax : public SyntaxNode {
+    Token* name;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+    Token* openParen;
+    SeparatedSyntaxList<PortConnectionSyntax> connections;
+    Token* closeParen;
+
+    HierarchicalInstanceSyntax(Token* name, SyntaxList<VariableDimensionSyntax> dimensions, Token* openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token* closeParen) :
+        SyntaxNode(SyntaxKind::HierarchicalInstance), name(name), dimensions(dimensions), openParen(openParen), connections(connections), closeParen(closeParen)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return name;
+            case 1: return &dimensions;
+            case 2: return openParen;
+            case 3: return &connections;
+            case 4: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct HierarchyInstantiationSyntax : public MemberSyntax {
+    Token* type;
+    ParameterValueAssignmentSyntax* parameters;
+    SeparatedSyntaxList<HierarchicalInstanceSyntax> instances;
+    Token* semi;
+
+    HierarchyInstantiationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token* semi) :
+        MemberSyntax(SyntaxKind::HierarchyInstantiation, attributes), type(type), parameters(parameters), instances(instances), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return type;
+            case 2: return parameters;
+            case 3: return &instances;
             case 4: return semi;
             default: return nullptr;
         }
@@ -2731,21 +2974,43 @@ protected:
     }
 };
 
-//list<PackageImportDeclarationSyntax> imports
+struct ParameterPortListSyntax : public SyntaxNode {
+    Token* hash;
+    Token* openParen;
+    SeparatedSyntaxList<ParameterPortDeclarationSyntax> declarations;
+    Token* closeParen;
 
-//ParameterPortListSyntax parameters
+    ParameterPortListSyntax(Token* hash, Token* openParen, SeparatedSyntaxList<ParameterPortDeclarationSyntax> declarations, Token* closeParen) :
+        SyntaxNode(SyntaxKind::ParameterPortList), hash(hash), openParen(openParen), declarations(declarations), closeParen(closeParen)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return hash;
+            case 1: return openParen;
+            case 2: return &declarations;
+            case 3: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
 
 struct ModuleHeaderSyntax : public SyntaxNode {
     Token* moduleKeyword;
     Token* lifetime;
     Token* name;
+    SyntaxList<PackageImportDeclarationSyntax> imports;
+    ParameterPortListSyntax* parameters;
     PortListSyntax* ports;
     Token* semi;
 
-    ModuleHeaderSyntax(Token* moduleKeyword, Token* lifetime, Token* name, PortListSyntax* ports, Token* semi) :
-        SyntaxNode(SyntaxKind::ModuleHeader), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), ports(ports), semi(semi)
+    ModuleHeaderSyntax(SyntaxKind kind, Token* moduleKeyword, Token* lifetime, Token* name, SyntaxList<PackageImportDeclarationSyntax> imports, ParameterPortListSyntax* parameters, PortListSyntax* ports, Token* semi) :
+        SyntaxNode(kind), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), imports(imports), parameters(parameters), ports(ports), semi(semi)
     {
-        childCount += 5;
+        childCount += 7;
     }
 
 protected:
@@ -2754,8 +3019,10 @@ protected:
             case 0: return moduleKeyword;
             case 1: return lifetime;
             case 2: return name;
-            case 3: return ports;
-            case 4: return semi;
+            case 3: return &imports;
+            case 4: return parameters;
+            case 5: return ports;
+            case 6: return semi;
             default: return nullptr;
         }
     }
@@ -2768,8 +3035,8 @@ struct ModuleDeclarationSyntax : public MemberSyntax {
     Token* endmodule;
     NamedBlockClauseSyntax* blockName;
 
-    ModuleDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax* header, TimeUnitsDeclarationSyntax* timeunits, SyntaxList<MemberSyntax> members, Token* endmodule, NamedBlockClauseSyntax* blockName) :
-        MemberSyntax(SyntaxKind::ModuleDeclaration, attributes), header(header), timeunits(timeunits), members(members), endmodule(endmodule), blockName(blockName)
+    ModuleDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax* header, TimeUnitsDeclarationSyntax* timeunits, SyntaxList<MemberSyntax> members, Token* endmodule, NamedBlockClauseSyntax* blockName) :
+        MemberSyntax(kind, attributes), header(header), timeunits(timeunits), members(members), endmodule(endmodule), blockName(blockName)
     {
         childCount += 5;
     }

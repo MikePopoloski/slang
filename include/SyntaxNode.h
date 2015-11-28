@@ -195,6 +195,11 @@ enum class SyntaxKind : uint16_t {
     EqualsValueClause,
     VariableDeclarator,
     DataDeclaration,
+    PackageImportItem,
+    PackageImportDeclaration,
+    ParameterDeclaration,
+    TypeParameterDeclaration,
+    ParameterAssignment,
 
     // types
     BitType,
@@ -277,8 +282,13 @@ enum class SyntaxKind : uint16_t {
     ExplicitAnsiPort,
     AnsiPortList,
     WildcardPortList,
+    ParameterPortList,
     ModuleHeader,
     ModuleDeclaration,
+    InterfaceHeader,
+    InterfaceDeclaration,
+    ProgramHeader,
+    ProgramDeclaration,
     ExternModule,
 
     // members
@@ -290,7 +300,12 @@ enum class SyntaxKind : uint16_t {
     AlwaysLatchBlock,
     GenerateBlock,
     DividerClause,
-    TimeUnitsDeclaration
+    TimeUnitsDeclaration,
+    OrderedPortConnection,
+    NamedPortConnection,
+    WildcardPortConnection,
+    HierarchicalInstance,
+    HierarchyInstantiation
 };
 
 enum class TokenKind : uint16_t;
@@ -304,6 +319,8 @@ SyntaxKind getAssignmentStatement(TokenKind kind);
 SyntaxKind getIntegerType(TokenKind kind);
 SyntaxKind getKeywordType(TokenKind kind);
 SyntaxKind getProceduralBlockKind(TokenKind kind);
+SyntaxKind getModuleDeclarationKind(TokenKind kind);
+SyntaxKind getModuleHeaderKind(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleDataType(TokenKind kind);

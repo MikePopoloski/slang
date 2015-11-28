@@ -393,6 +393,26 @@ SyntaxKind getProceduralBlockKind(TokenKind kind) {
     }
 }
 
+SyntaxKind getModuleHeaderKind(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::ModuleKeyword: return SyntaxKind::ModuleHeader;
+        case TokenKind::MacromoduleKeyword: return SyntaxKind::ModuleHeader;
+        case TokenKind::ProgramKeyword: return SyntaxKind::ProgramHeader;
+        case TokenKind::InterfaceKeyword: return SyntaxKind::InterfaceHeader;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
+SyntaxKind getModuleDeclarationKind(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::ModuleKeyword: return SyntaxKind::ModuleDeclaration;
+        case TokenKind::MacromoduleKeyword: return SyntaxKind::ModuleDeclaration;
+        case TokenKind::ProgramKeyword: return SyntaxKind::ProgramDeclaration;
+        case TokenKind::InterfaceKeyword: return SyntaxKind::InterfaceDeclaration;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
 bool isNetType(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:
@@ -577,6 +597,11 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(EqualsValueClause);
         CASE(VariableDeclarator);
         CASE(DataDeclaration);
+        CASE(PackageImportItem);
+        CASE(PackageImportDeclaration);
+        CASE(ParameterDeclaration);
+        CASE(TypeParameterDeclaration);
+        CASE(ParameterAssignment);
         CASE(BitType);
         CASE(LogicType);
         CASE(RegType);
@@ -650,8 +675,13 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ExplicitAnsiPort);
         CASE(AnsiPortList);
         CASE(WildcardPortList);
+        CASE(ParameterPortList);
         CASE(ModuleHeader);
         CASE(ModuleDeclaration);
+        CASE(InterfaceHeader);
+        CASE(InterfaceDeclaration);
+        CASE(ProgramHeader);
+        CASE(ProgramDeclaration);
         CASE(ExternModule);
         CASE(InitialBlock);
         CASE(FinalBlock);
@@ -662,6 +692,11 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(GenerateBlock);
         CASE(DividerClause);
         CASE(TimeUnitsDeclaration);
+        CASE(OrderedPortConnection);
+        CASE(NamedPortConnection);
+        CASE(WildcardPortConnection);
+        CASE(HierarchicalInstance);
+        CASE(HierarchyInstantiation);
         default: ASSERT(false && "Missing case");
     }
     return os;

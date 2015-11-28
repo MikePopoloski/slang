@@ -62,7 +62,6 @@ private:
     EnumTypeSyntax* parseEnum();
     DataTypeSyntax* parseDataType(bool allowImplicit);
     DotMemberClauseSyntax* parseDotMemberClause();
-    StatementSyntax* parseBlockDeclaration();
     VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
     ArrayRef<AttributeInstanceSyntax*> parseAttributes();
     AttributeSpecSyntax* parseAttributeSpec();
@@ -73,8 +72,16 @@ private:
     MemberSyntax* parseMember();
     ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind);
     TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
+    PackageImportItemSyntax* parsePackageImportItem();
+    ParameterPortDeclarationSyntax* parseParameterPort();
+    MemberSyntax* parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    HierarchyInstantiationSyntax* parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes);
+    HierarchicalInstanceSyntax* parseHierarchicalInstance();
+    PortConnectionSyntax* parsePortConnection();
 
-    bool isPossibleBlockDeclaration();
+    bool isVariableDeclaration();
+    bool isHierarchyInstantiation();
     bool isNonAnsiPort();
     bool isPlainPortName();
 
@@ -111,6 +118,14 @@ private:
         TokenKind closeKind,
         TokenKind separatorKind,
         Token*& closeToken,
+        TParserFunc&& parseItem
+    );
+
+    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
+    void parseSeparatedListWithFirst(
+        Buffer<TokenOrSyntax>& buffer,
+        TokenKind separatorKind,
+        Trivia* skippedTokens,
         TParserFunc&& parseItem
     );
 

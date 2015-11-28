@@ -27,6 +27,9 @@ StatementSyntax final=false
 StatementLabelSyntax label
 list<AttributeInstanceSyntax> attributes
 
+MemberSyntax final=false
+list<AttributeInstanceSyntax> attributes
+
 // ----- ARGUMENTS -----
 
 ArgumentSyntax final=false
@@ -356,11 +359,37 @@ token name
 list<VariableDimensionSyntax> dimensions
 EqualsValueClauseSyntax initializer
 
-DataDeclarationSyntax base=StatementSyntax kind=DataDeclaration
+DataDeclarationSyntax base=MemberSyntax kind=DataDeclaration
 tokenlist modifiers
 DataTypeSyntax type
 separated_list<VariableDeclaratorSyntax> declarators
 token semi
+
+PackageImportItemSyntax kind=PackageImportItem
+token package
+token doubleColon
+token item
+
+PackageImportDeclarationSyntax kind=PackageImportDeclaration
+token keyword
+separated_list<PackageImportItemSyntax> items
+token semi
+
+ParameterPortDeclarationSyntax final=false
+empty
+
+ParameterDeclarationSyntax base=ParameterPortDeclarationSyntax kind=ParameterDeclaration
+token keyword
+DataTypeSyntax type
+VariableDeclaratorSyntax declarator
+
+TypeParameterDeclarationSyntax base=ParameterPortDeclarationSyntax kind=TypeParameterDeclaration
+token keyword
+token type
+VariableDeclaratorSyntax declarator
+
+ParameterAssignmentSyntax base=ParameterPortDeclarationSyntax kind=ParameterAssignment
+VariableDeclaratorSyntax declarator
 
 // ----- TYPES -----
 
@@ -544,14 +573,11 @@ token name
 SequentialBlockStatementSyntax base=StatementSyntax kind=SequentialBlockStatement
 token begin
 NamedBlockClauseSyntax blockName
-list<StatementSyntax> items
+list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax endBlockName
 
 // ----- MEMBERS -----
-
-MemberSyntax final=false
-list<AttributeInstanceSyntax> attributes
 
 ProceduralBlockSyntax base=MemberSyntax
 token keyword
@@ -570,6 +596,33 @@ TimeUnitsDeclarationSyntax base=MemberSyntax kind=TimeUnitsDeclaration
 token keyword
 token time
 DividerClauseSyntax divider
+token semi
+
+PortConnectionSyntax final=false
+list<AttributeInstanceSyntax> attributes
+
+OrderedPortConnectionSyntax base=PortConnectionSyntax kind=OrderedPortConnection
+ExpressionSyntax expr
+
+NamedPortConnectionSyntax base=PortConnectionSyntax kind=NamedPortConnection
+token dot
+token name
+ParenthesizedExpressionSyntax connection
+
+WildcardPortConnectionSyntax base=PortConnectionSyntax kind=WildcardPortConnection
+token dotStar
+
+HierarchicalInstanceSyntax kind=HierarchicalInstance
+token name
+list<VariableDimensionSyntax> dimensions
+token openParen
+separated_list<PortConnectionSyntax> connections
+token closeParen
+
+HierarchyInstantiationSyntax base=MemberSyntax kind=HierarchyInstantiation
+token type
+ParameterValueAssignmentSyntax parameters
+separated_list<HierarchicalInstanceSyntax> instances
 token semi
 
 // ----- MODULES -----
@@ -644,16 +697,22 @@ token openParen
 token dotStar
 token closeParen
 
-ModuleHeaderSyntax kind=ModuleHeader
+ParameterPortListSyntax kind=ParameterPortList
+token hash
+token openParen
+separated_list<ParameterPortDeclarationSyntax> declarations
+token closeParen
+
+ModuleHeaderSyntax
 token moduleKeyword
 token lifetime
 token name
-//list<PackageImportDeclarationSyntax> imports
-//ParameterPortListSyntax parameters
+list<PackageImportDeclarationSyntax> imports
+ParameterPortListSyntax parameters
 PortListSyntax ports
 token semi
 
-ModuleDeclarationSyntax base=MemberSyntax kind=ModuleDeclaration
+ModuleDeclarationSyntax base=MemberSyntax
 ModuleHeaderSyntax header
 TimeUnitsDeclarationSyntax timeunits
 list<MemberSyntax> members
