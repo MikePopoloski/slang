@@ -1499,10 +1499,22 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
             auto parameters = parseParameterValueAssignment();
             return alloc.emplace<VirtualInterfaceTypeSyntax>(virtualKeyword, interfaceKeyword, name, parameters, parseDotMemberClause());
         }
+        case TokenKind::Identifier:
+        case TokenKind::UnitSystemName:
+            return alloc.emplace<NamedTypeSyntax>(parseName());
+        case TokenKind::TypeKeyword: {
+            auto keyword = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            auto expr = parseExpression(); // TODO: make sure this supports types as well as expressions
+            return alloc.emplace<TypeReferenceSyntax>(keyword, openParen, expr, expect(TokenKind::CloseParenthesis));
+        }
     }
 
-    // TODO: other data types, implicit, void, etc
-    return nullptr;
+    auto signing = parseSigning();
+    auto dimensions = parseDimensionList();
+
+    // TODO: error if implicit isn't allowed here
+    return alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
 }
 
 MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -1754,8 +1766,8 @@ bool Parser::isVariableDeclaration() {
     if (kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName)
         return false;
 
-    do {
-        if (peek(++index)->kind == TokenKind::Hash) {
+    while (true) {
+        if (peek(index)->kind == TokenKind::Hash) {
             // scan parameter value assignment
             if (peek(++index)->kind != TokenKind::OpenParenthesis)
                 return false;
@@ -1763,7 +1775,14 @@ bool Parser::isVariableDeclaration() {
             if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis))
                 return false;
         }
-    } while (peek(index)->kind == TokenKind::DoubleColon);
+
+        if (peek(index)->kind != TokenKind::DoubleColon)
+            break;
+
+        index++;
+        if (peek(index++)->kind != TokenKind::Identifier)
+            return false;
+    }
 
     // might be a list of dimensions here
     while (peek(index)->kind == TokenKind::OpenBracket) {

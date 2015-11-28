@@ -429,16 +429,10 @@ separated_list<VariableDeclaratorSyntax> members
 token closeBrace
 list<VariableDimensionSyntax> dimensions
 
-ExpressionTypeReferenceSyntax base=DataTypeSyntax kind=ExpressionTypeReference
+TypeReferenceSyntax base=DataTypeSyntax kind=TypeReference
 token typeKeyword
 token openParen
 ExpressionSyntax expr
-token closeParen
-
-DataTypeReferenceSyntax base=DataTypeSyntax kind=DataTypeReference
-token typeKeyword
-token openParen
-DataTypeSyntax type
 token closeParen
 
 DotMemberClauseSyntax kind=DotMemberClause
@@ -452,7 +446,7 @@ token name
 ParameterValueAssignmentSyntax parameters
 DotMemberClauseSyntax modport
 
-ImplicitTypeSyntax kind=DataTypeSyntax kind=ImplicitType
+ImplicitTypeSyntax base=DataTypeSyntax kind=ImplicitType
 token signing
 list<VariableDimensionSyntax> dimensions
 

@@ -185,6 +185,11 @@ TEST_CASE("Sequential declarations", "[parser:statements]") {
     parseBlockDeclaration("logic f = 4;");
     parseBlockDeclaration("logic [3:0] f [1:4] = 4, g [99][10+:12] = new [foo] (bar);");
     parseBlockDeclaration("const var static logic f;");
+    parseBlockDeclaration("foo f;");
+    parseBlockDeclaration("var f;");
+    parseBlockDeclaration("foo::bar#()::blah f;");
+    parseBlockDeclaration("struct packed { blah blah; } f;");
+    parseBlockDeclaration("enum { blah = 4 } f, h, i;");
 }
 
 }

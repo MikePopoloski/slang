@@ -1833,14 +1833,14 @@ protected:
     }
 };
 
-struct ExpressionTypeReferenceSyntax : public DataTypeSyntax {
+struct TypeReferenceSyntax : public DataTypeSyntax {
     Token* typeKeyword;
     Token* openParen;
     ExpressionSyntax* expr;
     Token* closeParen;
 
-    ExpressionTypeReferenceSyntax(Token* typeKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
-        DataTypeSyntax(SyntaxKind::ExpressionTypeReference), typeKeyword(typeKeyword), openParen(openParen), expr(expr), closeParen(closeParen)
+    TypeReferenceSyntax(Token* typeKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+        DataTypeSyntax(SyntaxKind::TypeReference), typeKeyword(typeKeyword), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 4;
     }
@@ -1851,30 +1851,6 @@ protected:
             case 0: return typeKeyword;
             case 1: return openParen;
             case 2: return expr;
-            case 3: return closeParen;
-            default: return nullptr;
-        }
-    }
-};
-
-struct DataTypeReferenceSyntax : public DataTypeSyntax {
-    Token* typeKeyword;
-    Token* openParen;
-    DataTypeSyntax* type;
-    Token* closeParen;
-
-    DataTypeReferenceSyntax(Token* typeKeyword, Token* openParen, DataTypeSyntax* type, Token* closeParen) :
-        DataTypeSyntax(SyntaxKind::DataTypeReference), typeKeyword(typeKeyword), openParen(openParen), type(type), closeParen(closeParen)
-    {
-        childCount += 4;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return typeKeyword;
-            case 1: return openParen;
-            case 2: return type;
             case 3: return closeParen;
             default: return nullptr;
         }
@@ -1927,12 +1903,12 @@ protected:
     }
 };
 
-struct ImplicitTypeSyntax : public SyntaxNode {
+struct ImplicitTypeSyntax : public DataTypeSyntax {
     Token* signing;
     SyntaxList<VariableDimensionSyntax> dimensions;
 
     ImplicitTypeSyntax(Token* signing, SyntaxList<VariableDimensionSyntax> dimensions) :
-        SyntaxNode(SyntaxKind::ImplicitType), signing(signing), dimensions(dimensions)
+        DataTypeSyntax(SyntaxKind::ImplicitType), signing(signing), dimensions(dimensions)
     {
         childCount += 2;
     }
