@@ -1073,9 +1073,18 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
 NameSyntax* Parser::parseName() {
     NameSyntax* name = parseNamePart();
 
+    bool usedDot = false;
+    bool reportedError = false;
+
     auto kind = peek()->kind;
     while (kind == TokenKind::Dot || kind == TokenKind::DoubleColon) {
-        // TODO: error if switching from dots back to colons
+        if (kind == TokenKind::Dot)
+            usedDot = true;
+        else if (usedDot && !reportedError) {
+            reportedError = true;
+            addError(DiagCode::ColonShouldBeDot);
+        }
+
         auto separator = consume();
         name = alloc.emplace<ScopedNameSyntax>(name, separator, parseNamePart());
         kind = peek()->kind;
@@ -1537,7 +1546,9 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
     auto signing = parseSigning();
     auto dimensions = parseDimensionList();
 
-    // TODO: error if implicit isn't allowed here
+    if (!allowImplicit)
+        addError(DiagCode::ImplicitNotAllowed);
+
     return alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
 }
 
@@ -1569,9 +1580,8 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     // Give a better error message for cases like:
     // X x = 1, Y y = 2;
     // The second identifier would be treated as a variable name, which is confusing
-    if (!isFirst && peek(TokenKind::Identifier)) {
-        // TODO: error msg
-    }
+    if (!isFirst && peek(TokenKind::Identifier))
+        addError(DiagCode::MultipleTypesInDeclaration);
 
     auto dimensions = parseDimensionList();
 

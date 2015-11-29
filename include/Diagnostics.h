@@ -37,7 +37,10 @@ enum class DiagCode : uint8_t {
 
     // parser
     SyntaxError,
-
+    ImplicitNotAllowed,
+    MultipleTypesInDeclaration,
+    DirectionOnInterfacePort,
+    ColonShouldBeDot
 
 };
 
