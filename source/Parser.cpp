@@ -1396,9 +1396,16 @@ VariableDimensionSyntax* Parser::parseDimension() {
             specifier = alloc.emplace<QueueDimensionSpecifierSyntax>(dollar, colonExpressionClause);
             break;
         }
-        default:
-            // TODO: scan type or expression
+        default: {
+            auto expr = parseExpression();
+            if (peek(TokenKind::Colon)) {
+                auto colon = consume();
+                specifier = alloc.emplace<RangeDimensionSpecifierSyntax>(expr, colon, parseExpression());
+            }
+            else
+                specifier = alloc.emplace<ExpressionDimensionSpecifierSyntax>(expr);
             break;
+        }
     }
 
     auto closeBracket = expect(TokenKind::CloseBracket);
@@ -1520,7 +1527,7 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
         case TokenKind::TypeKeyword: {
             auto keyword = consume();
             auto openParen = expect(TokenKind::OpenParenthesis);
-            auto expr = parseExpression(); // TODO: make sure this supports types as well as expressions
+            auto expr = parseExpression();
             return alloc.emplace<TypeReferenceSyntax>(keyword, openParen, expr, expect(TokenKind::CloseParenthesis));
         }
     }
