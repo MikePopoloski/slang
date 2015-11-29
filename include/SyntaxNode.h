@@ -199,7 +199,6 @@ enum class SyntaxKind : uint16_t {
     PackageImportDeclaration,
     ParameterDeclaration,
     TypeParameterDeclaration,
-    ParameterAssignment,
 
     // types
     BitType,

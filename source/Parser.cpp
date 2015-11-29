@@ -894,12 +894,18 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             break;
         }
         default:
-            // either a name or implicit class handle, or an error
+            // possibilities here:
+            // 1. data type
+            // 2. qualified name
+            // 3. implicit class handles
+            // 4. error
+            if (isPossibleDataType(kind) && kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName)
+                return parseDataType(/* allowImplicit */ false);
+
             // parseName() will insert a missing identifier token for the error case
             expr = parseName();
             break;
     }
-
     return parsePostfixExpression(expr);
 }
 
@@ -1509,7 +1515,6 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
             auto parameters = parseParameterValueAssignment();
             return alloc.emplace<VirtualInterfaceTypeSyntax>(virtualKeyword, interfaceKeyword, name, parameters, parseDotMemberClause());
         }
-        case TokenKind::Identifier:
         case TokenKind::UnitSystemName:
             return alloc.emplace<NamedTypeSyntax>(parseName());
         case TokenKind::TypeKeyword: {
@@ -1517,6 +1522,17 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto expr = parseExpression(); // TODO: make sure this supports types as well as expressions
             return alloc.emplace<TypeReferenceSyntax>(keyword, openParen, expr, expect(TokenKind::CloseParenthesis));
+        }
+    }
+
+    if (kind == TokenKind::Identifier) {
+        if (!allowImplicit)
+            return alloc.emplace<NamedTypeSyntax>(parseName());
+        else {
+            int index = 1;
+            if (scanDimensionList(index) && peek(index)->kind == TokenKind::Identifier)
+                return alloc.emplace<NamedTypeSyntax>(parseName());
+            return alloc.emplace<ImplicitTypeSyntax>(nullptr, nullptr);
         }
     }
 
@@ -1663,19 +1679,8 @@ ParameterPortDeclarationSyntax* Parser::parseParameterPort() {
         return alloc.emplace<TypeParameterDeclarationSyntax>(nullptr, typeKeyword, parseVariableDeclarator<true>(/* isFirst */ true));
     }
 
-    // either a data type here, or just a straight declarator
-    if (peek(TokenKind::Identifier)) {
-        // might be a list of dimensions here
-        int index = 1;
-        if (scanDimensionList(index)) {
-            auto kind = peek(index)->kind;
-            if (kind == TokenKind::Equals || kind == TokenKind::CloseParenthesis || kind == TokenKind::Comma)
-                return alloc.emplace<ParameterAssignmentSyntax>(parseVariableDeclarator<true>(/* isFirst */ true));
-        }
-    }
-
     // this is a normal parameter without the actual parameter keyword (stupid implicit nonsense)
-    auto type = parseDataType(/* allowImplicit */ false);
+    auto type = parseDataType(/* allowImplicit */ true);
     return alloc.emplace<ParameterDeclarationSyntax>(nullptr, type, parseVariableDeclarator<true>(/* isFirst */ true));
 }
 

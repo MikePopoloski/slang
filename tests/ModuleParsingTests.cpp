@@ -73,7 +73,13 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     CHECK(diagnostics.empty());
 
     auto parameters = module->header->parameters->declarations;
-    CHECK(parameters[0]->kind == SyntaxKind::ParameterAssignment);
+    CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
+    CHECK(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
+    CHECK(parameters[2]->kind == SyntaxKind::ParameterDeclaration);
+    CHECK(((ParameterDeclarationSyntax*)parameters[2])->declarator->name->valueText() == "blah");
+    CHECK(parameters[3]->kind == SyntaxKind::TypeParameterDeclaration);
+    CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarator->name->valueText() == "blah");
+    CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarator->initializer->expr->kind == SyntaxKind::ShortIntType);
 }
 
 }

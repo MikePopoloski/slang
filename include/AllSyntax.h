@@ -1669,24 +1669,6 @@ protected:
     }
 };
 
-struct ParameterAssignmentSyntax : public ParameterPortDeclarationSyntax {
-    VariableDeclaratorSyntax* declarator;
-
-    ParameterAssignmentSyntax(VariableDeclaratorSyntax* declarator) :
-        ParameterPortDeclarationSyntax(SyntaxKind::ParameterAssignment), declarator(declarator)
-    {
-        childCount += 1;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return declarator;
-            default: return nullptr;
-        }
-    }
-};
-
 // ----- TYPES -----
 
 struct IntegerTypeSyntax : public DataTypeSyntax {

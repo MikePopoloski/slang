@@ -388,9 +388,6 @@ token keyword
 token type
 VariableDeclaratorSyntax declarator
 
-ParameterAssignmentSyntax base=ParameterPortDeclarationSyntax kind=ParameterAssignment
-VariableDeclaratorSyntax declarator
-
 // ----- TYPES -----
 
 IntegerTypeSyntax base=DataTypeSyntax

@@ -613,7 +613,6 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(PackageImportDeclaration);
         CASE(ParameterDeclaration);
         CASE(TypeParameterDeclaration);
-        CASE(ParameterAssignment);
         CASE(BitType);
         CASE(LogicType);
         CASE(RegType);
