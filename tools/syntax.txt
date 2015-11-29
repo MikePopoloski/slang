@@ -328,12 +328,7 @@ DimensionSpecifierSyntax final=false
 empty
 
 RangeDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=RangeDimensionSpecifier
-ExpressionSyntax left
-token colon
-ExpressionSyntax right
-
-ExpressionDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=ExpressionDimensionSpecifier
-ExpressionSyntax expr
+SelectorSyntax selector
 
 DataTypeDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=DataTypeDimensionSpecifier
 DataTypeSyntax type
@@ -705,7 +700,6 @@ token semi
 
 ModuleDeclarationSyntax base=MemberSyntax
 ModuleHeaderSyntax header
-TimeUnitsDeclarationSyntax timeunits
 list<MemberSyntax> members
 token endmodule
 NamedBlockClauseSyntax blockName

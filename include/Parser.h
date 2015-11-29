@@ -23,7 +23,6 @@ private:
     };
     
     ExpressionSyntax* parseMinTypMaxExpression();
-    ExpressionSyntax* parseSubExpression(int precedence);
     ExpressionSyntax* parsePrimaryExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
@@ -32,6 +31,7 @@ private:
     StreamExpressionSyntax* parseStreamExpression();
     ExpressionSyntax* parseInsideElement();
     ElementSelectSyntax* parseElementSelect();
+    SelectorSyntax* parseElementSelector();
     NameSyntax* parseName();
     NameSyntax* parseNamePart();
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
@@ -84,6 +84,9 @@ private:
     bool isNonAnsiPort();
     bool isPlainPortName();
     bool scanDimensionList(int& index);
+
+    template<bool AllowPatternMatch>
+    ExpressionSyntax* parseSubExpression(int precedence);
 
     template<bool(*IsEnd)(TokenKind)>
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token*& end);

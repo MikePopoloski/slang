@@ -63,7 +63,6 @@ ModuleDeclarationSyntax* Parser::parseModule() {
 
 ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto header = parseModuleHeader();
-    auto timeunits = parseTimeUnitsDeclaration(nullptr);
     auto endKind = getModuleEndKind(header->moduleKeyword->kind);
     auto members = parseMemberList(endKind);
     auto endmodule = expect(endKind);
@@ -71,7 +70,6 @@ ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> 
         getModuleDeclarationKind(header->moduleKeyword->kind),
         attributes,
         header,
-        timeunits,
         members,
         endmodule,
         parseNamedBlockClause()
@@ -448,7 +446,7 @@ ConditionalStatementSyntax* Parser::parseConditionalStatement(StatementLabelSynt
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token* closeParen;
-    auto predicate = parseConditionalPredicate(parseExpression(), TokenKind::CloseParenthesis, closeParen);
+    auto predicate = parseConditionalPredicate(parseSubExpression<false>(0), TokenKind::CloseParenthesis, closeParen);
     auto statement = parseStatement();
 
     ElseClauseSyntax* elseClause = nullptr;
@@ -749,22 +747,23 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock(StatementLabelSynta
 }
 
 ExpressionSyntax* Parser::parseExpression() {
-    return parseSubExpression(0);
+    return parseSubExpression<true>(0);
 }
 
 ExpressionSyntax* Parser::parseMinTypMaxExpression() {
-    ExpressionSyntax* first = parseSubExpression(0);
+    ExpressionSyntax* first = parseSubExpression<true>(0);
     if (!peek(TokenKind::Colon))
         return first;
 
     auto colon1 = consume();
-    auto typ = parseSubExpression(0);
+    auto typ = parseSubExpression<true>(0);
     auto colon2 = expect(TokenKind::Colon);
-    auto max = parseSubExpression(0);
+    auto max = parseSubExpression<true>(0);
 
     return alloc.emplace<MinTypMaxExpressionSyntax>(first, colon1, typ, colon2, max);
 }
 
+template<bool AllowPatternMatch>
 ExpressionSyntax* Parser::parseSubExpression(int precedence) {
     ExpressionSyntax* leftOperand = nullptr;
     int newPrecedence = 0;
@@ -783,7 +782,7 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
         auto attributes = parseAttributes();
 
         newPrecedence = getPrecedence(opKind);
-        ExpressionSyntax* operand = parseSubExpression(newPrecedence);
+        ExpressionSyntax* operand = parseSubExpression<AllowPatternMatch>(newPrecedence);
         leftOperand = alloc.emplace<PrefixUnaryExpressionSyntax>(opKind, opToken, attributes, operand);
     }
     else {
@@ -813,24 +812,27 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
         else {
             auto opToken = consume();
             auto attributes = parseAttributes();
-            auto rightOperand = parseSubExpression(newPrecedence);
+            auto rightOperand = parseSubExpression<AllowPatternMatch>(newPrecedence);
             leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, attributes, rightOperand);
         }
     }
 
-    // if we see the matches keyword or &&& we're in a pattern conditional predicate
-    // if we see a question mark, we were in a simple conditional predicate
-    auto logicalOrPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression);
-    if (current->kind == TokenKind::MatchesKeyword || current->kind == TokenKind::TripleAnd ||
-        (current->kind == TokenKind::Question && precedence < logicalOrPrecedence)) {
+    // can't nest pattern matching expressions
+    if (AllowPatternMatch) {
+        // if we see the matches keyword or &&& we're in a pattern conditional predicate
+        // if we see a question mark, we were in a simple conditional predicate (at the precedence level one beneath logical-or)
+        auto logicalOrPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression);
+        if (current->kind == TokenKind::MatchesKeyword || current->kind == TokenKind::TripleAnd ||
+            (current->kind == TokenKind::Question && precedence < logicalOrPrecedence)) {
 
-        Token* question;
-        auto predicate = parseConditionalPredicate(leftOperand, TokenKind::Question, question);
-        auto attributes = parseAttributes();
-        auto left = parseSubExpression(logicalOrPrecedence - 1);
-        auto colon = expect(TokenKind::Colon);
-        auto right = parseSubExpression(logicalOrPrecedence - 1);
-        leftOperand = alloc.emplace<ConditionalExpressionSyntax>(predicate, question, attributes, left, colon, right);
+            Token* question;
+            auto predicate = parseConditionalPredicate(leftOperand, TokenKind::Question, question);
+            auto attributes = parseAttributes();
+            auto left = parseSubExpression<AllowPatternMatch>(logicalOrPrecedence - 1);
+            auto colon = expect(TokenKind::Colon);
+            auto right = parseSubExpression<AllowPatternMatch>(logicalOrPrecedence - 1);
+            leftOperand = alloc.emplace<ConditionalExpressionSyntax>(predicate, question, attributes, left, colon, right);
+        }
     }
     
     return leftOperand;
@@ -999,32 +1001,28 @@ StreamExpressionSyntax* Parser::parseStreamExpression() {
 
 ElementSelectSyntax* Parser::parseElementSelect() {
     auto openBracket = expect(TokenKind::OpenBracket);
-    auto expr = parseExpression();
+    auto selector = parseElementSelector();
+    auto closeBracket = expect(TokenKind::CloseBracket);
+    return alloc.emplace<ElementSelectSyntax>(openBracket, selector, closeBracket);
+}
 
-    SelectorSyntax* selector;
+SelectorSyntax* Parser::parseElementSelector() {
+    auto expr = parseExpression();
     switch (peek()->kind) {
         case TokenKind::Colon: {
             auto range = consume();
-            selector = alloc.emplace<RangeSelectSyntax>(SyntaxKind::SimpleRangeSelect, expr, range, parseExpression());
-            break;
+            return alloc.emplace<RangeSelectSyntax>(SyntaxKind::SimpleRangeSelect, expr, range, parseExpression());
         }
         case TokenKind::PlusColon: {
             auto range = consume();
-            selector = alloc.emplace<RangeSelectSyntax>(SyntaxKind::AscendingRangeSelect, expr, range, parseExpression());
-            break;
+            return alloc.emplace<RangeSelectSyntax>(SyntaxKind::AscendingRangeSelect, expr, range, parseExpression());
         }
         case TokenKind::MinusColon: {
             auto range = consume();
-            selector = alloc.emplace<RangeSelectSyntax>(SyntaxKind::DescendingRangeSelect, expr, range, parseExpression());
-            break;
+            return alloc.emplace<RangeSelectSyntax>(SyntaxKind::DescendingRangeSelect, expr, range, parseExpression());
         }
-        default:
-            selector = alloc.emplace<BitSelectSyntax>(expr);
-            break;
     }
-
-    auto closeBracket = expect(TokenKind::CloseBracket);
-    return alloc.emplace<ElementSelectSyntax>(openBracket, selector, closeBracket);
+    return alloc.emplace<BitSelectSyntax>(expr);
 }
 
 ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
@@ -1172,21 +1170,21 @@ PatternSyntax* Parser::parsePattern() {
             break;
     }
     // otherwise, it's either an expression or an error (parseExpression will handle that for us)
-    return alloc.emplace<ExpressionPatternSyntax>(parseExpression());
+    return alloc.emplace<ExpressionPatternSyntax>(parseSubExpression<false>(0));
 }
 
 ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end) {
     auto buffer = tosPool.get();
+
+    MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
         auto matches = consume();
-        auto matchesClause = alloc.emplace<MatchesClauseSyntax>(matches, parsePattern());
-        buffer.append(alloc.emplace<ConditionalPatternSyntax>(first, matchesClause));
+        matchesClause = alloc.emplace<MatchesClauseSyntax>(matches, parsePattern());
     }
-    else {
-        buffer.append(alloc.emplace<ConditionalPatternSyntax>(first, nullptr));
-        if (peek(TokenKind::TripleAnd))
-            buffer.append(consume());
-    }
+
+    buffer.append(alloc.emplace<ConditionalPatternSyntax>(first, matchesClause));
+    if (peek(TokenKind::TripleAnd))
+        buffer.append(consume());
 
     parseSeparatedList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
         buffer,
@@ -1200,7 +1198,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
 }
 
 ConditionalPatternSyntax* Parser::parseConditionalPattern() {
-    auto expr = parseExpression();
+    auto expr = parseSubExpression<false>(0);
     
     MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
@@ -1396,16 +1394,9 @@ VariableDimensionSyntax* Parser::parseDimension() {
             specifier = alloc.emplace<QueueDimensionSpecifierSyntax>(dollar, colonExpressionClause);
             break;
         }
-        default: {
-            auto expr = parseExpression();
-            if (peek(TokenKind::Colon)) {
-                auto colon = consume();
-                specifier = alloc.emplace<RangeDimensionSpecifierSyntax>(expr, colon, parseExpression());
-            }
-            else
-                specifier = alloc.emplace<ExpressionDimensionSpecifierSyntax>(expr);
+        default:
+            specifier = alloc.emplace<RangeDimensionSpecifierSyntax>(parseElementSelector());
             break;
-        }
     }
 
     auto closeBracket = expect(TokenKind::CloseBracket);

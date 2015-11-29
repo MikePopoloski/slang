@@ -33,7 +33,12 @@ enum class DiagCode : uint8_t {
     CouldNotOpenIncludeFile,
     ExceededMaxIncludeDepth,
     UnknownDirective,
-    ExpectedEndOfDirective
+    ExpectedEndOfDirective,
+
+    // parser
+    SyntaxError,
+
+
 };
 
 class SyntaxError {

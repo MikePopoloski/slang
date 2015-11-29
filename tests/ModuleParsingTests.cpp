@@ -82,4 +82,31 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarator->initializer->expr->kind == SyntaxKind::ShortIntType);
 }
 
+const MemberSyntax* parseMember(const std::string& text, SyntaxKind kind) {
+    auto fullText = "module foo; " + text + " endmodule";
+    auto module = parse(fullText);
+
+    REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
+    CHECK(module->toFullString() == fullText);
+    CHECK(diagnostics.empty());
+
+    REQUIRE(module->members.count() == 1);
+    REQUIRE(module->members[0]->kind == kind);
+    return module->members[0];
+}
+
+TEST_CASE("Simple members", "[parser:modules]") {
+    parseMember("Foo #(stuff) bar(.*), baz(.clock, .rst(rst + 2));", SyntaxKind::HierarchyInstantiation);
+    parseMember("timeunit 30ns / 40ns;", SyntaxKind::TimeUnitsDeclaration);
+    parseMember("timeprecision 30ns;", SyntaxKind::TimeUnitsDeclaration);
+    parseMember("module foo; endmodule", SyntaxKind::ModuleDeclaration);
+    parseMember("interface foo; endinterface", SyntaxKind::InterfaceDeclaration);
+    parseMember("program foo; endprogram", SyntaxKind::ProgramDeclaration);
+    parseMember("generate logic foo = 4; endgenerate", SyntaxKind::GenerateBlock);
+    parseMember("initial begin logic foo = 4; end", SyntaxKind::InitialBlock);
+    parseMember("final begin logic foo = 4; end", SyntaxKind::FinalBlock);
+    parseMember("always @* begin logic foo = 4; end", SyntaxKind::AlwaysBlock);
+    parseMember("always_ff @(posedge clk) begin logic foo = 4; end", SyntaxKind::AlwaysFFBlock);
+}
+
 }

@@ -600,7 +600,6 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(EventControlWithExpression);
         CASE(RepeatedEventControl);
         CASE(RangeDimensionSpecifier);
-        CASE(ExpressionDimensionSpecifier);
         CASE(DataTypeDimensionSpecifier);
         CASE(WildcardDimensionSpecifier);
         CASE(ColonExpressionClause);

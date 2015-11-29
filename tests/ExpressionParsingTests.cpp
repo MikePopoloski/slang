@@ -353,7 +353,7 @@ TEST_CASE("Bad argument recovery", "[parser:expressions]") {
 
     REQUIRE(expr->kind == SyntaxKind::InvocationExpression);
     CHECK(expr->toFullString() == text);
-    CHECK(diagnostics.empty()); // TODO: at some point this test should fail
+    CHECK(!diagnostics.empty());
 }
 
 TEST_CASE("Conditional expression", "[parser:expressions]") {
@@ -380,7 +380,7 @@ TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
     REQUIRE(expr->kind == SyntaxKind::ConditionalExpression);
 
     auto cond = (ConditionalExpressionSyntax*)expr;
-    REQUIRE(cond->predicate->conditions.count() == 1);
+    REQUIRE(cond->predicate->conditions.count() == 2);
     CHECK(cond->predicate->conditions[0]->expr->kind == SyntaxKind::IdentifierName);
     CHECK(cond->predicate->conditions[0]->matchesClause->pattern->kind == SyntaxKind::ExpressionPattern);
 }

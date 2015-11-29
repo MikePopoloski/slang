@@ -1389,32 +1389,10 @@ struct DimensionSpecifierSyntax : public SyntaxNode {
 };
 
 struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
-    ExpressionSyntax* left;
-    Token* colon;
-    ExpressionSyntax* right;
+    SelectorSyntax* selector;
 
-    RangeDimensionSpecifierSyntax(ExpressionSyntax* left, Token* colon, ExpressionSyntax* right) :
-        DimensionSpecifierSyntax(SyntaxKind::RangeDimensionSpecifier), left(left), colon(colon), right(right)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return left;
-            case 1: return colon;
-            case 2: return right;
-            default: return nullptr;
-        }
-    }
-};
-
-struct ExpressionDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
-    ExpressionSyntax* expr;
-
-    ExpressionDimensionSpecifierSyntax(ExpressionSyntax* expr) :
-        DimensionSpecifierSyntax(SyntaxKind::ExpressionDimensionSpecifier), expr(expr)
+    RangeDimensionSpecifierSyntax(SelectorSyntax* selector) :
+        DimensionSpecifierSyntax(SyntaxKind::RangeDimensionSpecifier), selector(selector)
     {
         childCount += 1;
     }
@@ -1422,7 +1400,7 @@ struct ExpressionDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return expr;
+            case 0: return selector;
             default: return nullptr;
         }
     }
@@ -2988,15 +2966,14 @@ protected:
 
 struct ModuleDeclarationSyntax : public MemberSyntax {
     ModuleHeaderSyntax* header;
-    TimeUnitsDeclarationSyntax* timeunits;
     SyntaxList<MemberSyntax> members;
     Token* endmodule;
     NamedBlockClauseSyntax* blockName;
 
-    ModuleDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax* header, TimeUnitsDeclarationSyntax* timeunits, SyntaxList<MemberSyntax> members, Token* endmodule, NamedBlockClauseSyntax* blockName) :
-        MemberSyntax(kind, attributes), header(header), timeunits(timeunits), members(members), endmodule(endmodule), blockName(blockName)
+    ModuleDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax* header, SyntaxList<MemberSyntax> members, Token* endmodule, NamedBlockClauseSyntax* blockName) :
+        MemberSyntax(kind, attributes), header(header), members(members), endmodule(endmodule), blockName(blockName)
     {
-        childCount += 5;
+        childCount += 4;
     }
 
 protected:
@@ -3004,10 +2981,9 @@ protected:
         switch(index) {
             case 0: return &attributes;
             case 1: return header;
-            case 2: return timeunits;
-            case 3: return &members;
-            case 4: return endmodule;
-            case 5: return blockName;
+            case 2: return &members;
+            case 3: return endmodule;
+            case 4: return blockName;
             default: return nullptr;
         }
     }

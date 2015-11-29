@@ -55,8 +55,12 @@ public:
 
     Token* expect(TokenKind kind) {
         auto result = peek();
-        if (result->kind != kind)
+        if (result->kind != kind) {
+            // report an error here for the missing token
+            // TODO: location info
+            source.getPreprocessor().getDiagnostics().add(SyntaxError(DiagCode::SyntaxError, 0, 0));
             return Token::missing(source.getPreprocessor().getAllocator(), kind);
+        }
 
         moveToNext();
         return result;

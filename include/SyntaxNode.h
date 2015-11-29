@@ -186,7 +186,6 @@ enum class SyntaxKind : uint16_t {
 
     // declarations
     RangeDimensionSpecifier,
-    ExpressionDimensionSpecifier,
     DataTypeDimensionSpecifier,
     WildcardDimensionSpecifier,
     ColonExpressionClause,
