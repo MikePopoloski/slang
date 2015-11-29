@@ -415,6 +415,16 @@ SyntaxKind getModuleDeclarationKind(TokenKind kind) {
     }
 }
 
+TokenKind getModuleEndKind(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::ModuleKeyword: return TokenKind::EndModuleKeyword;
+        case TokenKind::MacromoduleKeyword: return TokenKind::EndModuleKeyword;
+        case TokenKind::ProgramKeyword: return TokenKind::EndProgramKeyword;
+        case TokenKind::InterfaceKeyword: return TokenKind::EndInterfaceKeyword;
+        default: return TokenKind::Unknown;
+    }
+}
+
 bool isNetType(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:

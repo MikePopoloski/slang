@@ -57,11 +57,16 @@ Parser::Parser(Lexer& lexer) :
     window(lexer) {
 }
 
+ModuleDeclarationSyntax* Parser::parseModule() {
+    return parseModule(parseAttributes());
+}
+
 ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto header = parseModuleHeader();
     auto timeunits = parseTimeUnitsDeclaration(nullptr);
-    auto members = parseMemberList(TokenKind::EndModuleKeyword);
-    auto endmodule = expect(TokenKind::EndModuleKeyword);
+    auto endKind = getModuleEndKind(header->moduleKeyword->kind);
+    auto members = parseMemberList(endKind);
+    auto endmodule = expect(endKind);
     return alloc.emplace<ModuleDeclarationSyntax>(
         getModuleDeclarationKind(header->moduleKeyword->kind),
         attributes,
@@ -659,7 +664,7 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement(StatementLabelSyntax
             );
         }
 
-        auto expr = parseAssignmentExpression();
+        auto expr = parseAssignmentExpression<false>();
         return alloc.emplace<AssignmentStatementSyntax>(
             SyntaxKind::BlockingAssignmentStatement,
             label,
@@ -1238,9 +1243,14 @@ EventExpressionSyntax* Parser::parseEventExpression() {
     return left;
 }
 
+template<bool AllowMinTypeMax>
 ExpressionSyntax* Parser::parseAssignmentExpression() {
-    if (!peek(TokenKind::NewKeyword))
-        return parseExpression();
+    if (!peek(TokenKind::NewKeyword)) {
+        if (AllowMinTypeMax)
+            return parseMinTypMaxExpression();
+        else
+            return parseExpression();
+    }
 
     auto newKeyword = consume();
     auto kind = peek()->kind;
@@ -1538,6 +1548,7 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
     return alloc.emplace<DataDeclarationSyntax>(attributes, modifiers.copy(alloc), dataType, declarators, semi);
 }
 
+template<bool AllowMinTypMax>
 VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     auto name = expect(TokenKind::Identifier);
 
@@ -1553,7 +1564,7 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     EqualsValueClauseSyntax* initializer = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseAssignmentExpression());
+        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseAssignmentExpression<AllowMinTypMax>());
     }
 
     return alloc.emplace<VariableDeclaratorSyntax>(name, dimensions, initializer);
@@ -1562,7 +1573,7 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
 template<bool(*IsEnd)(TokenKind)>
 ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Token*& end) {
     auto buffer = tosPool.get();
-    parseSeparatedListWithFirst<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end, &Parser::parseVariableDeclarator);
+    parseSeparatedListWithFirst<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end, &Parser::parseVariableDeclarator<false>);
 
     return buffer.copy(alloc);
 }
@@ -1640,15 +1651,32 @@ ParameterPortDeclarationSyntax* Parser::parseParameterPort() {
 
         if (peek(TokenKind::TypeKeyword)) {
             auto typeKeyword = consume();
-            return alloc.emplace<TypeParameterDeclarationSyntax>(keyword, typeKeyword, parseVariableDeclarator(/* isFirst */ true));
+            return alloc.emplace<TypeParameterDeclarationSyntax>(keyword, typeKeyword, parseVariableDeclarator<true>(/* isFirst */ true));
         }
 
         auto type = parseDataType(/* allowImplicit */ true);
-        return alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseVariableDeclarator(/* isFirst */ true));
+        return alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseVariableDeclarator<true>(/* isFirst */ true));
     }
 
-    // TODO: check for a type here
-    return alloc.emplace<ParameterAssignmentSyntax>(parseVariableDeclarator(/* isFirst */ true));
+    if (peek(TokenKind::TypeKeyword)) {
+        auto typeKeyword = consume();
+        return alloc.emplace<TypeParameterDeclarationSyntax>(nullptr, typeKeyword, parseVariableDeclarator<true>(/* isFirst */ true));
+    }
+
+    // either a data type here, or just a straight declarator
+    if (peek(TokenKind::Identifier)) {
+        // might be a list of dimensions here
+        int index = 1;
+        if (scanDimensionList(index)) {
+            auto kind = peek(index)->kind;
+            if (kind == TokenKind::Equals || kind == TokenKind::CloseParenthesis || kind == TokenKind::Comma)
+                return alloc.emplace<ParameterAssignmentSyntax>(parseVariableDeclarator<true>(/* isFirst */ true));
+        }
+    }
+
+    // this is a normal parameter without the actual parameter keyword (stupid implicit nonsense)
+    auto type = parseDataType(/* allowImplicit */ false);
+    return alloc.emplace<ParameterDeclarationSyntax>(nullptr, type, parseVariableDeclarator<true>(/* isFirst */ true));
 }
 
 HierarchyInstantiationSyntax* Parser::parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -1785,11 +1813,8 @@ bool Parser::isVariableDeclaration() {
     }
 
     // might be a list of dimensions here
-    while (peek(index)->kind == TokenKind::OpenBracket) {
-        index++;
-        if (!scanTypePart<isNotInType>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
-            return false;
-    }
+    if (!scanDimensionList(index))
+        return false;
 
     // next token is the decider; declarations must have an identifier here
     return peek(index)->kind == TokenKind::Identifier;
@@ -1813,14 +1838,20 @@ bool Parser::isHierarchyInstantiation() {
         return false;
 
     // might be a list of dimensions here
+    if (!scanDimensionList(index))
+        return false;
+
+    // a parenthesis here means we're definitely doing an instantiation
+    return peek(index)->kind == TokenKind::OpenParenthesis;
+}
+
+bool Parser::scanDimensionList(int& index) {
     while (peek(index)->kind == TokenKind::OpenBracket) {
         index++;
         if (!scanTypePart<isNotInType>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
             return false;
     }
-
-    // a parenthesis here means we're definitely doing an instantiation
-    return peek(index)->kind == TokenKind::OpenParenthesis;
+    return true;
 }
 
 template<bool(*IsEnd)(TokenKind)>
@@ -2113,9 +2144,10 @@ bool isPossibleParameter(TokenKind kind) {
         case TokenKind::ParameterKeyword:
         case TokenKind::LocalParamKeyword:
         case TokenKind::TypeKeyword:
+        case TokenKind::Comma:
             return true;
     }
-    return isPossibleExpression(kind);
+    return isPossibleDataType(kind);
 }
 
 bool isPossiblePortConnection(TokenKind kind) {

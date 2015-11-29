@@ -14,6 +14,7 @@ public:
 
     ExpressionSyntax* parseExpression();
     StatementSyntax* parseStatement();
+    ModuleDeclarationSyntax* parseModule();
 
 private:
     enum class SkipAction {
@@ -38,7 +39,6 @@ private:
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();
     EventExpressionSyntax* parseEventExpression();
-    ExpressionSyntax* parseAssignmentExpression();
     NamedBlockClauseSyntax* parseNamedBlockClause();
     TimingControlSyntax* parseTimingControl(bool allowRepeat);
     ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
@@ -62,7 +62,6 @@ private:
     EnumTypeSyntax* parseEnum();
     DataTypeSyntax* parseDataType(bool allowImplicit);
     DotMemberClauseSyntax* parseDotMemberClause();
-    VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
     ArrayRef<AttributeInstanceSyntax*> parseAttributes();
     AttributeSpecSyntax* parseAttributeSpec();
     ModuleHeaderSyntax* parseModuleHeader();
@@ -84,9 +83,16 @@ private:
     bool isHierarchyInstantiation();
     bool isNonAnsiPort();
     bool isPlainPortName();
+    bool scanDimensionList(int& index);
 
     template<bool(*IsEnd)(TokenKind)>
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token*& end);
+
+    template<bool AllowMinTypMax>
+    VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
+
+    template<bool AllowMinTypeMax>
+    ExpressionSyntax* parseAssignmentExpression();
 
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);

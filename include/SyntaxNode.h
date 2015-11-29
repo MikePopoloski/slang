@@ -321,6 +321,7 @@ SyntaxKind getKeywordType(TokenKind kind);
 SyntaxKind getProceduralBlockKind(TokenKind kind);
 SyntaxKind getModuleDeclarationKind(TokenKind kind);
 SyntaxKind getModuleHeaderKind(TokenKind kind);
+TokenKind getModuleEndKind(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleDataType(TokenKind kind);
