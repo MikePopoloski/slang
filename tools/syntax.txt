@@ -360,6 +360,29 @@ DataTypeSyntax type
 separated_list<VariableDeclaratorSyntax> declarators
 token semi
 
+NetStrengthSyntax final=false
+empty
+
+ChargeStrengthSyntax base=NetStrengthSyntax kind=ChargeStrength
+token openParen
+token strength
+token closeParen
+
+DriveStrengthSyntax base=NetStrengthSyntax kind=DriveStrength
+token openParen
+token strength0
+token comma
+token strength1
+token closeParen
+
+NetDeclarationSyntax base=MemberSyntax kind=NetDeclaration
+token netType
+NetStrengthSyntax strength
+token expansionHint
+DataTypeSyntax type
+separated_list<VariableDeclaratorSyntax> declarators
+token semi
+
 PackageImportItemSyntax kind=PackageImportItem
 token package
 token doubleColon
@@ -382,6 +405,10 @@ TypeParameterDeclarationSyntax base=ParameterPortDeclarationSyntax kind=TypePara
 token keyword
 token type
 VariableDeclaratorSyntax declarator
+
+ParameterDeclarationStatementSyntax base=MemberSyntax kind=ParameterDeclarationStatement
+ParameterPortDeclarationSyntax parameter
+token semi
 
 // ----- TYPES -----
 

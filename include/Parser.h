@@ -77,10 +77,12 @@ private:
     PackageImportItemSyntax* parsePackageImportItem();
     ParameterPortDeclarationSyntax* parseParameterPort();
     MemberSyntax* parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    MemberSyntax* parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     HierarchyInstantiationSyntax* parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes);
     HierarchicalInstanceSyntax* parseHierarchicalInstance();
     PortConnectionSyntax* parsePortConnection();
 
+    bool isNetDeclaration();
     bool isVariableDeclaration();
     bool isHierarchyInstantiation();
     bool isNonAnsiPort();

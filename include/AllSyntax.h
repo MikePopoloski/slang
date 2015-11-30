@@ -1551,6 +1551,91 @@ protected:
     }
 };
 
+struct NetStrengthSyntax : public SyntaxNode {
+
+    NetStrengthSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct ChargeStrengthSyntax : public NetStrengthSyntax {
+    Token* openParen;
+    Token* strength;
+    Token* closeParen;
+
+    ChargeStrengthSyntax(Token* openParen, Token* strength, Token* closeParen) :
+        NetStrengthSyntax(SyntaxKind::ChargeStrength), openParen(openParen), strength(strength), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return strength;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DriveStrengthSyntax : public NetStrengthSyntax {
+    Token* openParen;
+    Token* strength0;
+    Token* comma;
+    Token* strength1;
+    Token* closeParen;
+
+    DriveStrengthSyntax(Token* openParen, Token* strength0, Token* comma, Token* strength1, Token* closeParen) :
+        NetStrengthSyntax(SyntaxKind::DriveStrength), openParen(openParen), strength0(strength0), comma(comma), strength1(strength1), closeParen(closeParen)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return strength0;
+            case 2: return comma;
+            case 3: return strength1;
+            case 4: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NetDeclarationSyntax : public MemberSyntax {
+    Token* netType;
+    NetStrengthSyntax* strength;
+    Token* expansionHint;
+    DataTypeSyntax* type;
+    SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
+    Token* semi;
+
+    NetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* netType, NetStrengthSyntax* strength, Token* expansionHint, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+        MemberSyntax(SyntaxKind::NetDeclaration, attributes), netType(netType), strength(strength), expansionHint(expansionHint), type(type), declarators(declarators), semi(semi)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return netType;
+            case 2: return strength;
+            case 3: return expansionHint;
+            case 4: return type;
+            case 5: return &declarators;
+            case 6: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 struct PackageImportItemSyntax : public SyntaxNode {
     Token* package;
     Token* doubleColon;
@@ -1642,6 +1727,27 @@ protected:
             case 0: return keyword;
             case 1: return type;
             case 2: return declarator;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ParameterDeclarationStatementSyntax : public MemberSyntax {
+    ParameterPortDeclarationSyntax* parameter;
+    Token* semi;
+
+    ParameterDeclarationStatementSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ParameterPortDeclarationSyntax* parameter, Token* semi) :
+        MemberSyntax(SyntaxKind::ParameterDeclarationStatement, attributes), parameter(parameter), semi(semi)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return parameter;
+            case 2: return semi;
             default: return nullptr;
         }
     }

@@ -284,6 +284,9 @@ MemberSyntax* Parser::parseMember() {
     if (isHierarchyInstantiation())
         return parseHierarchyInstantiation(attributes);
 
+    if (isNetDeclaration())
+        return parseNetDeclaration(attributes);
+
     if (isVariableDeclaration())
         return parseVariableDeclaration(attributes);
 
@@ -443,6 +446,11 @@ StatementSyntax* Parser::parseStatement() {
             // TODO: no label allowed on semicolon
             return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
     }
+
+    // everything else is some kind of expression
+    // TODO: expand this to other kinds of expression statements
+    if (isPossibleExpression(peek()->kind))
+        return parseAssignmentStatement(label, attributes);
 
     return nullptr;
 }
@@ -1226,35 +1234,30 @@ ConditionalPatternSyntax* Parser::parseConditionalPattern() {
 
 EventExpressionSyntax* Parser::parseEventExpression() {
     EventExpressionSyntax* left;
-    switch (peek()->kind) {
-        case TokenKind::OpenParenthesis: {
-            auto openParen = consume();
-            auto expr = parseEventExpression();
-            auto closeParen = expect(TokenKind::CloseParenthesis);
-            left = alloc.emplace<ParenthesizedEventExpressionSyntax>(openParen, expr, closeParen);
-            break;
-        }
-        case TokenKind::PosEdgeKeyword:
-        case TokenKind::NegEdgeKeyword:
-        case TokenKind::EdgeKeyword: {
-            auto edge = consume();
-            auto expr = parseExpression();
+    auto kind = peek()->kind;
+    if (kind == TokenKind::OpenParenthesis) {
+        auto openParen = consume();
+        auto expr = parseEventExpression();
+        auto closeParen = expect(TokenKind::CloseParenthesis);
+        left = alloc.emplace<ParenthesizedEventExpressionSyntax>(openParen, expr, closeParen);
+    }
+    else {
+        Token* edge = nullptr;
+        if (kind == TokenKind::PosEdgeKeyword || kind == TokenKind::NegEdgeKeyword || kind == TokenKind::EdgeKeyword)
+            edge = consume();
 
-            IffClauseSyntax* iffClause = nullptr;
-            if (peek(TokenKind::IffKeyword)) {
-                auto iff = consume();
-                iffClause = alloc.emplace<IffClauseSyntax>(iff, parseExpression());
-            }
-            left = alloc.emplace<SignalEventExpressionSyntax>(edge, expr, iffClause);
-            break;
+        // TODO: support sequence instances
+        auto expr = parseExpression();
+
+        IffClauseSyntax* iffClause = nullptr;
+        if (peek(TokenKind::IffKeyword)) {
+            auto iff = consume();
+            iffClause = alloc.emplace<IffClauseSyntax>(iff, parseExpression());
         }
-        // TODO: sequence instances and undecorated signal expressions
-        default:
-            left = nullptr;
-            break;
+        left = alloc.emplace<SignalEventExpressionSyntax>(edge, expr, iffClause);
     }
 
-    auto kind = peek()->kind;
+    kind = peek()->kind;
     if (kind == TokenKind::Comma || kind == TokenKind::OrKeyword) {
         auto op = consume();
         left = alloc.emplace<BinaryEventExpressionSyntax>(left, op, parseEventExpression());
@@ -1558,7 +1561,34 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
     return alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
 }
 
+MemberSyntax* Parser::parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto netType = consume();
+
+    NetStrengthSyntax* strength = nullptr;
+    if (peek(TokenKind::OpenParenthesis)) {
+        // TODO: strength specifiers
+    }
+
+    Token* expansionHint = nullptr;
+    if (peek(TokenKind::VectoredKeyword) || peek(TokenKind::ScalaredKeyword))
+        expansionHint = consume();
+
+    auto type = parseDataType(/* allowImplicit */ true);
+
+    // TODO: delay control
+
+    Token* semi;
+    auto declarators = parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+
+    return alloc.emplace<NetDeclarationSyntax>(attributes, netType, strength, expansionHint, type, declarators, semi);
+}
+
 MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
+        auto parameter = parseParameterPort();
+        return alloc.emplace<ParameterDeclarationStatementSyntax>(attributes, parameter, expect(TokenKind::Semicolon));
+    }
+
     // TODO: other kinds of declarations besides data
     bool hasVar = false;
     auto modifiers = tokenPool.get();
@@ -1752,6 +1782,11 @@ PortConnectionSyntax* Parser::parsePortConnection() {
         return alloc.emplace<NamedPortConnectionSyntax>(attributes, dot, name, parenExpr);
     }
     return alloc.emplace<OrderedPortConnectionSyntax>(attributes, parseExpression());
+}
+
+bool Parser::isNetDeclaration() {
+    // TODO: other net types
+    return isNetType(peek()->kind);
 }
 
 bool Parser::isVariableDeclaration() {

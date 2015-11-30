@@ -198,6 +198,10 @@ enum class SyntaxKind : uint16_t {
     PackageImportDeclaration,
     ParameterDeclaration,
     TypeParameterDeclaration,
+    ParameterDeclarationStatement,
+    ChargeStrength,
+    DriveStrength,
+    NetDeclaration,
 
     // types
     BitType,
