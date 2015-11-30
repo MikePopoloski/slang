@@ -191,11 +191,11 @@ PortHeaderSyntax* Parser::parsePortHeader(Token* direction) {
             return alloc.emplace<InterfacePortHeaderSyntax>(name, parseDotMemberClause());
         }
         
-        if (isPlainPortName()) {
-            // no header
-            return nullptr;
-        }
-        return alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, parseDataType(/* allowImplicit */ false));
+        DataTypeSyntax* type = nullptr;
+        if (!isPlainPortName())
+            type = parseDataType(/* allowImplicit */ false);
+        
+        return alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, type);
     }
 
     // assume we have some kind of data type here
@@ -248,7 +248,14 @@ bool Parser::isPlainPortName() {
     }
 
     auto kind = peek(index)->kind;
-    return kind == TokenKind::Equals || kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis;
+    switch (kind) {
+        case TokenKind::Equals:
+        case TokenKind::Comma:
+        case TokenKind::CloseParenthesis:
+        case TokenKind::Semicolon:
+            return true;
+    }
+    return false;
 }
 
 bool Parser::isNonAnsiPort() {
