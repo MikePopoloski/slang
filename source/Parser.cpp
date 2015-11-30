@@ -418,6 +418,8 @@ StatementSyntax* Parser::parseStatement() {
             return parseLoopStatement(label, attributes);
         case TokenKind::DoKeyword:
             return parseDoWhileStatement(label, attributes);
+        case TokenKind::ForKeyword:
+            return parseForLoopStatement(label, attributes);
         case TokenKind::ReturnKeyword:
             return parseReturnStatement(label, attributes);
         case TokenKind::BreakKeyword:
@@ -617,6 +619,49 @@ DoWhileStatementSyntax* Parser::parseDoWhileStatement(StatementLabelSyntax* labe
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto semi = expect(TokenKind::Semicolon);
     return alloc.emplace<DoWhileStatementSyntax>(label, attributes, doKeyword, statement, whileKeyword, openParen, expr, closeParen, semi);
+}
+
+ForInitializerSyntax* Parser::parseForInitializer() {
+    if (isVariableDeclaration()) {
+        auto varKeyword = consumeIf(TokenKind::VarKeyword);
+        auto type = parseDataType(/* allowImplicit */ false);
+        return alloc.emplace<ForVariableDeclarationSyntax>(varKeyword, type, parseVariableDeclarator<true>(/* isFirst */ true));
+    }
+
+    auto left = parseExpression();
+    auto equals = expect(TokenKind::Equals);
+    auto right = parseExpression();
+    return alloc.emplace<ForVariableAssignmentSyntax>(left, equals, right);
+}
+
+ForLoopStatementSyntax* Parser::parseForLoopStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto forKeyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+
+    Token* semi1;
+    auto initializers = tosPool.get();
+    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, &Parser::parseForInitializer);
+
+    auto stopExpr = parseExpression();
+    auto semi2 = expect(TokenKind::Semicolon);
+
+    Token* closeParen;
+    auto steps = tosPool.get();
+    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, &Parser::parseExpression);
+
+    return alloc.emplace<ForLoopStatementSyntax>(
+        label,
+        attributes,
+        forKeyword,
+        openParen,
+        initializers.copy(alloc),
+        semi1,
+        stopExpr,
+        semi2,
+        steps.copy(alloc),
+        closeParen,
+        parseStatement()
+    );
 }
 
 ReturnStatementSyntax* Parser::parseReturnStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {

@@ -651,6 +651,9 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ForeverStatement);
         CASE(LoopStatement);
         CASE(DoWhileStatement);
+        CASE(ForVariableDeclaration);
+        CASE(ForVariableAssignment);
+        CASE(ForLoopStatement);
         CASE(ReturnStatement);
         CASE(JumpStatement);
         CASE(TimingControlStatement);

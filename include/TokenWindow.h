@@ -80,14 +80,14 @@ private:
             if (currentOffset > (capacity >> 1)) {
                 int shift = count - currentOffset;
                 if (shift > 0)
-                    memmove(buffer, buffer + currentOffset, shift);
+                    memmove(buffer, buffer + currentOffset, shift * sizeof(Token*));
 
                 count -= currentOffset;
                 currentOffset = 0;
             }
             else {
                 Token** newBuffer = new Token*[capacity * 2];
-                memcpy(newBuffer, buffer, count);
+                memcpy(newBuffer, buffer, count * sizeof(Token*));
 
                 delete[] buffer;
                 buffer = newBuffer;

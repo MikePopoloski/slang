@@ -537,6 +537,30 @@ ExpressionSyntax expr
 token closeParen
 token semi
 
+ForInitializerSyntax final=false
+empty
+
+ForVariableDeclarationSyntax base=ForInitializerSyntax kind=ForVariableDeclaration
+token varKeyword
+DataTypeSyntax type
+VariableDeclaratorSyntax declarator
+
+ForVariableAssignmentSyntax base=ForInitializerSyntax kind=ForVariableAssignment
+ExpressionSyntax left
+token equals
+ExpressionSyntax expr
+
+ForLoopStatementSyntax base=StatementSyntax kind=ForLoopStatement
+token forKeyword
+token openParen
+separated_list<ForInitializerSyntax> initializers
+token semi1
+ExpressionSyntax stopExpr
+token semi2
+separated_list<ExpressionSyntax> steps
+token closeParen
+StatementSyntax statement
+
 ReturnStatementSyntax base=StatementSyntax kind=ReturnStatement
 token returnKeyword
 ExpressionSyntax returnValue

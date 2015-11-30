@@ -2257,6 +2257,94 @@ protected:
     }
 };
 
+struct ForInitializerSyntax : public SyntaxNode {
+
+    ForInitializerSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct ForVariableDeclarationSyntax : public ForInitializerSyntax {
+    Token* varKeyword;
+    DataTypeSyntax* type;
+    VariableDeclaratorSyntax* declarator;
+
+    ForVariableDeclarationSyntax(Token* varKeyword, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
+        ForInitializerSyntax(SyntaxKind::ForVariableDeclaration), varKeyword(varKeyword), type(type), declarator(declarator)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return varKeyword;
+            case 1: return type;
+            case 2: return declarator;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ForVariableAssignmentSyntax : public ForInitializerSyntax {
+    ExpressionSyntax* left;
+    Token* equals;
+    ExpressionSyntax* expr;
+
+    ForVariableAssignmentSyntax(ExpressionSyntax* left, Token* equals, ExpressionSyntax* expr) :
+        ForInitializerSyntax(SyntaxKind::ForVariableAssignment), left(left), equals(equals), expr(expr)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return equals;
+            case 2: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ForLoopStatementSyntax : public StatementSyntax {
+    Token* forKeyword;
+    Token* openParen;
+    SeparatedSyntaxList<ForInitializerSyntax> initializers;
+    Token* semi1;
+    ExpressionSyntax* stopExpr;
+    Token* semi2;
+    SeparatedSyntaxList<ExpressionSyntax> steps;
+    Token* closeParen;
+    StatementSyntax* statement;
+
+    ForLoopStatementSyntax(StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* forKeyword, Token* openParen, SeparatedSyntaxList<ForInitializerSyntax> initializers, Token* semi1, ExpressionSyntax* stopExpr, Token* semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token* closeParen, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::ForLoopStatement, label, attributes), forKeyword(forKeyword), openParen(openParen), initializers(initializers), semi1(semi1), stopExpr(stopExpr), semi2(semi2), steps(steps), closeParen(closeParen), statement(statement)
+    {
+        childCount += 9;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return forKeyword;
+            case 3: return openParen;
+            case 4: return &initializers;
+            case 5: return semi1;
+            case 6: return stopExpr;
+            case 7: return semi2;
+            case 8: return &steps;
+            case 9: return closeParen;
+            case 10: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
 struct ReturnStatementSyntax : public StatementSyntax {
     Token* returnKeyword;
     ExpressionSyntax* returnValue;
