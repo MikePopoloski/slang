@@ -160,19 +160,56 @@ NonAnsiPortSyntax* Parser::parseNonAnsiPort() {
     return alloc.emplace<ImplicitNonAnsiPortSyntax>(parsePrimaryExpression());
 }
 
+PortHeaderSyntax* Parser::parsePortHeader(Token* direction) {
+    auto kind = peek()->kind;
+    if (isNetType(kind)) {
+        auto netType = consume();
+        return alloc.emplace<NetPortHeaderSyntax>(direction, netType, parseDataType(/* allowImplicit */ true));
+    }
+
+    if (kind == TokenKind::InterfaceKeyword) {
+        // TODO: error if direction is given
+        auto keyword = consume();
+        return alloc.emplace<InterfacePortHeaderSyntax>(keyword, parseDotMemberClause());
+    }
+
+    if (kind == TokenKind::InterconnectKeyword) {
+        auto keyword = consume();
+        // TODO: parse implicit data type only
+        return alloc.emplace<InterconnectPortHeaderSyntax>(direction, keyword, nullptr);
+    }
+
+    if (kind == TokenKind::VarKeyword) {
+        auto varKeyword = consume();
+        return alloc.emplace<VariablePortHeaderSyntax>(direction, varKeyword, parseDataType(/* allowImplicit */ true));
+    }
+
+    if (kind == TokenKind::Identifier) {
+        // could be a bunch of different things here; scan ahead to see
+        if (peek(1)->kind == TokenKind::Dot && peek(2)->kind == TokenKind::Identifier && peek(3)->kind == TokenKind::Identifier) {
+            auto name = consume();
+            return alloc.emplace<InterfacePortHeaderSyntax>(name, parseDotMemberClause());
+        }
+        
+        if (isPlainPortName()) {
+            // no header
+            return nullptr;
+        }
+        return alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, parseDataType(/* allowImplicit */ false));
+    }
+
+    // assume we have some kind of data type here
+    return alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, parseDataType(/* allowImplicit */ true));
+}
+
 AnsiPortSyntax* Parser::parseAnsiPort() {
     auto attributes = parseAttributes();
     auto kind = peek()->kind;
 
     Token* direction = nullptr;
-    switch (kind) {
-        case TokenKind::InputKeyword:
-        case TokenKind::OutputKeyword:
-        case TokenKind::InOutKeyword:
-        case TokenKind::RefKeyword:
-            direction = consume();
-            kind = peek()->kind;
-            break;
+    if (isPortDirection(kind)) {
+        direction = consume();
+        kind = peek()->kind;
     }
 
     if (kind == TokenKind::Dot) {
@@ -187,55 +224,19 @@ AnsiPortSyntax* Parser::parseAnsiPort() {
         return alloc.emplace<ExplicitAnsiPortSyntax>(attributes, direction, dot, name, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
 
-    PortHeaderSyntax* header;
+    auto header = parsePortHeader(direction);
+    auto declarator = parseVariableDeclarator<false>(/* isFirst */ true);
+    return alloc.emplace<ImplicitAnsiPortSyntax>(attributes, header, declarator);
+}
 
-    if (isNetType(kind)) {
-        auto netType = consume();
-        header = alloc.emplace<NetPortHeaderSyntax>(direction, netType, parseDataType(/* allowImplicit */ true));
-    }
-    else if (kind == TokenKind::InterfaceKeyword) {
-        // TODO: error if direction is given
-        auto keyword = consume();
-        header = alloc.emplace<InterfacePortHeaderSyntax>(keyword, parseDotMemberClause());
-    }
-    else if (kind == TokenKind::InterconnectKeyword) {
-        auto keyword = consume();
-        // TODO: parse implicit data type only
-        header = alloc.emplace<InterconnectPortHeaderSyntax>(direction, keyword, nullptr);
-    }
-    else if (kind == TokenKind::VarKeyword) {
-        auto varKeyword = consume();
-        header = alloc.emplace<VariablePortHeaderSyntax>(direction, varKeyword, parseDataType(/* allowImplicit */ true));
-    }
-    else if (kind == TokenKind::Identifier) {
-        // could be a bunch of different things here; scan ahead to see
-        if (peek(1)->kind == TokenKind::Dot && peek(2)->kind == TokenKind::Identifier && peek(3)->kind == TokenKind::Identifier) {
-            auto name = consume();
-            header = alloc.emplace<InterfacePortHeaderSyntax>(name, parseDotMemberClause());
-        }
-        else if (isPlainPortName()) {
-            // no header
-            header = nullptr;
-        }
-        else {
-            header = alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, parseDataType(/* allowImplicit */ false));
-        }
-    }
-    else {
-        // assume we have some kind of data type here
-        header = alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, parseDataType(/* allowImplicit */ true));
-    }
+PortDeclarationSyntax* Parser::parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    Token* direction = nullptr;
+    if (isPortDirection(peek()->kind))
+        direction = consume();
 
-    auto name = expect(TokenKind::Identifier);
-    auto dimensions = parseDimensionList();
-
-    EqualsValueClauseSyntax* initializer = nullptr;
-    if (peek(TokenKind::Equals)) {
-        auto equals = consume();
-        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseExpression());
-    }
-
-    return alloc.emplace<ImplicitAnsiPortSyntax>(attributes, header, name, dimensions, initializer);
+    auto header = parsePortHeader(direction);
+    auto declarator = parseVariableDeclarator<false>(/* isFirst */ true);
+    return alloc.emplace<PortDeclarationSyntax>(attributes, header, declarator, expect(TokenKind::Semicolon));
 }
 
 bool Parser::isPlainPortName() {
@@ -283,10 +284,10 @@ MemberSyntax* Parser::parseMember() {
 
     if (isHierarchyInstantiation())
         return parseHierarchyInstantiation(attributes);
-
+    if (isPortDeclaration())
+        return parsePortDeclaration(attributes);
     if (isNetDeclaration())
         return parseNetDeclaration(attributes);
-
     if (isVariableDeclaration())
         return parseVariableDeclaration(attributes);
 
@@ -1827,6 +1828,11 @@ PortConnectionSyntax* Parser::parsePortConnection() {
         return alloc.emplace<NamedPortConnectionSyntax>(attributes, dot, name, parenExpr);
     }
     return alloc.emplace<OrderedPortConnectionSyntax>(attributes, parseExpression());
+}
+
+bool Parser::isPortDeclaration() {
+    // TODO: check for interface port declaration
+    return isPortDirection(peek()->kind);
 }
 
 bool Parser::isNetDeclaration() {

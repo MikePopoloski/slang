@@ -202,6 +202,7 @@ enum class SyntaxKind : uint16_t {
     ChargeStrength,
     DriveStrength,
     NetDeclaration,
+    PortDeclaration,
 
     // types
     BitType,
@@ -336,6 +337,7 @@ bool isPossibleDataType(TokenKind kind);
 bool isPossibleExpression(TokenKind kind);
 bool isPossibleStatement(TokenKind kind);
 bool isNetType(TokenKind kind);
+bool isPortDirection(TokenKind kind);
 
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 

@@ -72,6 +72,8 @@ private:
     ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
     NonAnsiPortSyntax* parseNonAnsiPort();
     AnsiPortSyntax* parseAnsiPort();
+    PortHeaderSyntax* parsePortHeader(Token* direction);
+    PortDeclarationSyntax* parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseMember();
     ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind);
     TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
@@ -84,6 +86,7 @@ private:
     HierarchicalInstanceSyntax* parseHierarchicalInstance();
     PortConnectionSyntax* parsePortConnection();
 
+    bool isPortDeclaration();
     bool isNetDeclaration();
     bool isVariableDeclaration();
     bool isHierarchyInstantiation();

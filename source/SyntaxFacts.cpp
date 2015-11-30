@@ -445,6 +445,17 @@ bool isNetType(TokenKind kind) {
     }
 }
 
+bool isPortDirection(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
+            return true;
+    }
+    return false;
+}
+
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
 #define CASE(name) case SyntaxKind::name: os << #name; break
     switch (kind) {
@@ -616,6 +627,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(ChargeStrength);
         CASE(DriveStrength);
         CASE(NetDeclaration);
+        CASE(PortDeclaration);
         CASE(BitType);
         CASE(LogicType);
         CASE(RegType);

@@ -410,6 +410,14 @@ ParameterDeclarationStatementSyntax base=MemberSyntax kind=ParameterDeclarationS
 ParameterPortDeclarationSyntax parameter
 token semi
 
+PortHeaderSyntax final=false
+empty
+
+PortDeclarationSyntax base=MemberSyntax kind=PortDeclaration
+PortHeaderSyntax header
+VariableDeclaratorSyntax declarator
+token semi
+
 // ----- TYPES -----
 
 IntegerTypeSyntax base=DataTypeSyntax
@@ -688,9 +696,6 @@ token closeParen
 AnsiPortSyntax final=false
 list<AttributeInstanceSyntax> attributes
 
-PortHeaderSyntax final=false
-empty
-
 InterfacePortHeaderSyntax base=PortHeaderSyntax kind=InterfacePortHeader
 token nameOrKeyword
 DotMemberClauseSyntax modport
@@ -712,9 +717,7 @@ DataTypeSyntax dataType
 
 ImplicitAnsiPortSyntax base=AnsiPortSyntax kind=ImplicitAnsiPort
 PortHeaderSyntax header
-token name
-list<VariableDimensionSyntax> dimensions
-EqualsValueClauseSyntax defaultValue
+VariableDeclaratorSyntax declarator
 
 ExplicitAnsiPortSyntax base=AnsiPortSyntax kind=ExplicitAnsiPort
 token direction
@@ -726,7 +729,7 @@ token closeParen
 
 AnsiPortListSyntax base=PortListSyntax kind=AnsiPortList
 token openParen
-separated_list<AnsiPortSyntax> ports
+separated_list<MemberSyntax> ports
 token closeParen
 
 WildcardPortListSyntax base=PortListSyntax kind=WildcardPortList

@@ -1753,6 +1753,37 @@ protected:
     }
 };
 
+struct PortHeaderSyntax : public SyntaxNode {
+
+    PortHeaderSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct PortDeclarationSyntax : public MemberSyntax {
+    PortHeaderSyntax* header;
+    VariableDeclaratorSyntax* declarator;
+    Token* semi;
+
+    PortDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax* header, VariableDeclaratorSyntax* declarator, Token* semi) :
+        MemberSyntax(SyntaxKind::PortDeclaration, attributes), header(header), declarator(declarator), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return header;
+            case 2: return declarator;
+            case 3: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- TYPES -----
 
 struct IntegerTypeSyntax : public DataTypeSyntax {
@@ -2912,14 +2943,6 @@ protected:
     }
 };
 
-struct PortHeaderSyntax : public SyntaxNode {
-
-    PortHeaderSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {
-    }
-};
-
 struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
     Token* nameOrKeyword;
     DotMemberClauseSyntax* modport;
@@ -3008,14 +3031,12 @@ protected:
 
 struct ImplicitAnsiPortSyntax : public AnsiPortSyntax {
     PortHeaderSyntax* header;
-    Token* name;
-    SyntaxList<VariableDimensionSyntax> dimensions;
-    EqualsValueClauseSyntax* defaultValue;
+    VariableDeclaratorSyntax* declarator;
 
-    ImplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax* header, Token* name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* defaultValue) :
-        AnsiPortSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(header), name(name), dimensions(dimensions), defaultValue(defaultValue)
+    ImplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax* header, VariableDeclaratorSyntax* declarator) :
+        AnsiPortSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(header), declarator(declarator)
     {
-        childCount += 4;
+        childCount += 2;
     }
 
 protected:
@@ -3023,9 +3044,7 @@ protected:
         switch(index) {
             case 0: return &attributes;
             case 1: return header;
-            case 2: return name;
-            case 3: return &dimensions;
-            case 4: return defaultValue;
+            case 2: return declarator;
             default: return nullptr;
         }
     }
@@ -3062,10 +3081,10 @@ protected:
 
 struct AnsiPortListSyntax : public PortListSyntax {
     Token* openParen;
-    SeparatedSyntaxList<AnsiPortSyntax> ports;
+    SeparatedSyntaxList<MemberSyntax> ports;
     Token* closeParen;
 
-    AnsiPortListSyntax(Token* openParen, SeparatedSyntaxList<AnsiPortSyntax> ports, Token* closeParen) :
+    AnsiPortListSyntax(Token* openParen, SeparatedSyntaxList<MemberSyntax> ports, Token* closeParen) :
         PortListSyntax(SyntaxKind::AnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
     {
         childCount += 3;
