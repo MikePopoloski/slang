@@ -57,6 +57,12 @@ Parser::Parser(Lexer& lexer) :
     window(lexer) {
 }
 
+CompilationUnitSyntax* Parser::parseCompilationUnit() {
+    auto members = parseMemberList(TokenKind::EndOfFile);
+    auto eof = expect(TokenKind::EndOfFile);
+    return alloc.emplace<CompilationUnitSyntax>(members, eof);
+}
+
 ModuleDeclarationSyntax* Parser::parseModule() {
     return parseModule(parseAttributes());
 }

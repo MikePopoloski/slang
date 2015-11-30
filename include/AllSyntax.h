@@ -3009,6 +3009,28 @@ protected:
     }
 };
 
+// ----- TOP LEVEL -----
+
+struct CompilationUnitSyntax : public SyntaxNode {
+    SyntaxList<MemberSyntax> members;
+    Token* endOfFile;
+
+    CompilationUnitSyntax(SyntaxList<MemberSyntax> members, Token* endOfFile) :
+        SyntaxNode(SyntaxKind::CompilationUnit), members(members), endOfFile(endOfFile)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &members;
+            case 1: return endOfFile;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- DIRECTIVES -----
 
 struct DirectiveSyntax : public SyntaxNode {

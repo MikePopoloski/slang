@@ -12,6 +12,8 @@ class Parser {
 public:
     Parser(Lexer& lexer);
 
+    CompilationUnitSyntax* parseCompilationUnit();
+
     ExpressionSyntax* parseExpression();
     StatementSyntax* parseStatement();
     ModuleDeclarationSyntax* parseModule();

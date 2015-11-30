@@ -303,7 +303,10 @@ enum class SyntaxKind : uint16_t {
     NamedPortConnection,
     WildcardPortConnection,
     HierarchicalInstance,
-    HierarchyInstantiation
+    HierarchyInstantiation,
+
+    // top level
+    CompilationUnit
 };
 
 enum class TokenKind : uint16_t;

@@ -708,6 +708,12 @@ ExternModuleSyntax kind=ExternModule
 token externKeyword
 ModuleHeaderSyntax header
 
+// ----- TOP LEVEL -----
+
+CompilationUnitSyntax kind=CompilationUnit
+list<MemberSyntax> members
+token endOfFile
+
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false

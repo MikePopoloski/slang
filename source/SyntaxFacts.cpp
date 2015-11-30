@@ -707,6 +707,7 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(WildcardPortConnection);
         CASE(HierarchicalInstance);
         CASE(HierarchyInstantiation);
+        CASE(CompilationUnit);
         default: ASSERT(false && "Missing case");
     }
     return os;

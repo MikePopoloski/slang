@@ -8,5 +8,6 @@
     <ClCompile Include="..\..\..\tests\ExpressionParsingTests.cpp" />
     <ClCompile Include="..\..\..\tests\StatementParsingTests.cpp" />
     <ClCompile Include="..\..\..\tests\ModuleParsingTests.cpp" />
+    <ClCompile Include="..\..\..\tests\FullParserTests.cpp" />
   </ItemGroup>
 </Project>
