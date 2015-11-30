@@ -24,6 +24,8 @@ SyntaxKind getUnaryPrefixExpression(TokenKind kind) {
             return SyntaxKind::UnaryBitwiseXnorExpression;
         case TokenKind::DoublePlus: return SyntaxKind::UnaryPreincrementExpression;
         case TokenKind::DoubleMinus: return SyntaxKind::UnaryPredecrementExpression;
+        case TokenKind::Tilde: return SyntaxKind::UnaryBitwiseNotExpression;
+        case TokenKind::Exclamation: return SyntaxKind::UnaryLogicalNotExpression;
         default:
             return SyntaxKind::Unknown;
     }
@@ -192,8 +194,8 @@ int getPrecedence(SyntaxKind kind) {
             return 13;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
-        case SyntaxKind::LogicalNotExpression:
-        case SyntaxKind::BitwiseNotExpression:
+        case SyntaxKind::UnaryLogicalNotExpression:
+        case SyntaxKind::UnaryBitwiseNotExpression:
         case SyntaxKind::UnaryBitwiseAndExpression:
         case SyntaxKind::UnaryBitwiseNandExpression:
         case SyntaxKind::UnaryBitwiseOrExpression:
@@ -511,8 +513,8 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(UnaryBitwiseXnorExpression);
         CASE(UnaryPreincrementExpression);
         CASE(UnaryPredecrementExpression);
-        CASE(LogicalNotExpression);
-        CASE(BitwiseNotExpression);
+        CASE(UnaryLogicalNotExpression);
+        CASE(UnaryBitwiseNotExpression);
         CASE(NullLiteralExpression);
         CASE(StringLiteralExpression);
         CASE(IntegerLiteralExpression);

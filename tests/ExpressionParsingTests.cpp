@@ -149,6 +149,8 @@ TEST_CASE("Unary prefix operators", "[parser:expressions]") {
     testPrefixUnary(TokenKind::TildeXor);
     testPrefixUnary(TokenKind::DoublePlus);
     testPrefixUnary(TokenKind::DoubleMinus);
+    testPrefixUnary(TokenKind::Tilde);
+    testPrefixUnary(TokenKind::Exclamation);
 }
 
 void testPostfixUnary(TokenKind kind) {

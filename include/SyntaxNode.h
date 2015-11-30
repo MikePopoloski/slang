@@ -70,8 +70,8 @@ enum class SyntaxKind : uint16_t {
     UnaryBitwiseXnorExpression,
     UnaryPreincrementExpression,
     UnaryPredecrementExpression,
-    LogicalNotExpression,
-    BitwiseNotExpression,
+    UnaryLogicalNotExpression,
+    UnaryBitwiseNotExpression,
 
     // primary expressions
     NullLiteralExpression,
