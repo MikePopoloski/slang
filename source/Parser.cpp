@@ -53,8 +53,9 @@ namespace slang {
 Parser::Parser(Lexer& lexer) :
     lexer(lexer),
     alloc(lexer.getPreprocessor().getAllocator()),
-    diagnostics(lexer.getPreprocessor().getDiagnostics()),
-    window(lexer) {
+    diagnostics(lexer.getPreprocessor().getDiagnostics()) {
+
+    window.setSource(&lexer);
 }
 
 CompilationUnitSyntax* Parser::parseCompilationUnit() {

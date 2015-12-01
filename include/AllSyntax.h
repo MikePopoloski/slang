@@ -3248,16 +3248,33 @@ protected:
 
 struct DirectiveSyntax : public SyntaxNode {
     Token* directive;
-    Token* endOfDirective;
 
-    DirectiveSyntax(SyntaxKind kind, Token* directive, Token* endOfDirective) :
-        SyntaxNode(kind), directive(directive), endOfDirective(endOfDirective)
+    DirectiveSyntax(SyntaxKind kind, Token* directive) :
+        SyntaxNode(kind), directive(directive)
     {
-        childCount += 2;
+        childCount += 1;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override {
+        switch(index) {
+            case 0: return directive;
+            default: return nullptr;
+        }
+    }
+};
+
+struct SimpleDirectiveSyntax : public DirectiveSyntax {
+    Token* endOfDirective;
+
+    SimpleDirectiveSyntax(SyntaxKind kind, Token* directive, Token* endOfDirective) :
+        DirectiveSyntax(kind, directive), endOfDirective(endOfDirective)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return directive;
             case 1: return endOfDirective;
@@ -3268,19 +3285,20 @@ protected:
 
 struct IncludeDirectiveSyntax : public DirectiveSyntax {
     Token* fileName;
+    Token* endOfDirective;
 
-    IncludeDirectiveSyntax(Token* directive, Token* endOfDirective, Token* fileName) :
-        DirectiveSyntax(SyntaxKind::IncludeDirective, directive, endOfDirective), fileName(fileName)
+    IncludeDirectiveSyntax(Token* directive, Token* fileName, Token* endOfDirective) :
+        DirectiveSyntax(SyntaxKind::IncludeDirective, directive), fileName(fileName), endOfDirective(endOfDirective)
     {
-        childCount += 1;
+        childCount += 2;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return directive;
-            case 1: return endOfDirective;
-            case 2: return fileName;
+            case 1: return fileName;
+            case 2: return endOfDirective;
             default: return nullptr;
         }
     }
@@ -3352,21 +3370,22 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
     Token* name;
     MacroFormalArgumentListSyntax* formalArguments;
     TokenList body;
+    Token* endOfDirective;
 
-    DefineDirectiveSyntax(Token* directive, Token* endOfDirective, Token* name, MacroFormalArgumentListSyntax* formalArguments, TokenList body) :
-        DirectiveSyntax(SyntaxKind::DefineDirective, directive, endOfDirective), name(name), formalArguments(formalArguments), body(body)
+    DefineDirectiveSyntax(Token* directive, Token* name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token* endOfDirective) :
+        DirectiveSyntax(SyntaxKind::DefineDirective, directive), name(name), formalArguments(formalArguments), body(body), endOfDirective(endOfDirective)
     {
-        childCount += 3;
+        childCount += 4;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return directive;
-            case 1: return endOfDirective;
-            case 2: return name;
-            case 3: return formalArguments;
-            case 4: return &body;
+            case 1: return name;
+            case 2: return formalArguments;
+            case 3: return &body;
+            case 4: return endOfDirective;
             default: return nullptr;
         }
     }

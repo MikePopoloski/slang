@@ -1,5 +1,7 @@
 #pragma once
 
+#include "TokenWindow.h"
+
 namespace slang {
 
 struct DefineDirectiveSyntax;
@@ -47,11 +49,14 @@ private:
 
     Token* parseEndOfDirective();
 
-    Token* peek();
-    Token* consume();
-    Token* expect(TokenKind kind);
-
     Trivia createSimpleDirective(Token* directive);
+
+    Token* peek() { return window.peek(); }
+    Token* peek(int offset) { return window.peek(offset); }
+    Token* consume() { return window.consume(); }
+    Token* consumeIf(TokenKind kind) { return window.consumeIf(kind); }
+    Token* expect(TokenKind kind) { return window.expect(kind); }
+    bool peek(TokenKind kind) { return window.peek(kind); }
 
     void addError(DiagCode code);
 
@@ -64,8 +69,8 @@ private:
     std::deque<Lexer> lexerStack;
     MacroExpander currentMacro;
     Lexer* currentLexer;
-    Token* currentToken;
 
+    TokenWindow<&Lexer::lexDirectiveMode> window;
     Buffer<Trivia> triviaBuffer;
     BufferPool<Token*> tokenPool;
     BufferPool<TokenOrSyntax> syntaxPool;

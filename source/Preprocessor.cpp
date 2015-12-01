@@ -24,8 +24,7 @@ Preprocessor::Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, D
     sourceTracker(sourceTracker),
     alloc(alloc),
     diagnostics(diagnostics),
-    currentLexer(nullptr),
-    currentToken(nullptr) {
+    currentLexer(nullptr) {
 
     keywordTable = getKeywordTable();
 }
@@ -75,6 +74,7 @@ TokenKind Preprocessor::lookupKeyword(StringRef identifier) {
 
 Trivia Preprocessor::parseDirective(Lexer* lexer) {
     currentLexer = lexer;
+    window.setSource(lexer);
 
     Token* directive = expect(TokenKind::Directive);
     switch (directive->directiveKind()) {
@@ -170,10 +170,10 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 
     auto result = alloc.emplace<DefineDirectiveSyntax>(
         directive,
-        consume(),
         name,
         formalArguments,
-        body.copy(alloc)
+        body.copy(alloc),
+        consume()
     );
 
     macros.emplace(name->valueText().intern(alloc), result);
@@ -219,31 +219,12 @@ Token* Preprocessor::parseEndOfDirective() {
 }
 
 Trivia Preprocessor::createSimpleDirective(Token* directive) {
-    DirectiveSyntax* syntax = alloc.emplace<DirectiveSyntax>(directive->directiveKind(), directive, parseEndOfDirective());
+    DirectiveSyntax* syntax = alloc.emplace<SimpleDirectiveSyntax>(directive->directiveKind(), directive, parseEndOfDirective());
     return Trivia(TriviaKind::Directive, syntax);
 }
 
 void Preprocessor::addError(DiagCode code) {
     diagnostics.add(SyntaxError(code, 0, 0));
-}
-
-Token* Preprocessor::peek() {
-    if (!currentToken)
-        currentToken = currentLexer->lexDirectiveMode();
-    return currentToken;
-}
-
-Token* Preprocessor::consume() {
-    Token* result = peek();
-    currentToken = nullptr;
-    return result;
-}
-
-Token* Preprocessor::expect(TokenKind kind) {
-    if (peek()->kind == kind)
-        return consume();
-
-    return Token::missing(alloc, kind);
 }
 
 void MacroExpander::start(DefineDirectiveSyntax* macro) {
