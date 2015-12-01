@@ -72,6 +72,7 @@ private:
 
     TokenWindow<&Lexer::lexDirectiveMode> window;
     Buffer<Trivia> triviaBuffer;
+    Buffer<TokenKind> delimPairStack;
     BufferPool<Token*> tokenPool;
     BufferPool<TokenOrSyntax> syntaxPool;
 
