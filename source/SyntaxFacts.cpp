@@ -487,6 +487,8 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(MacroFormalArgumentList);
         CASE(MacroFormalArgument);
         CASE(MacroArgumentDefault);
+        CASE(MacroActualArgumentList);
+        CASE(MacroActualArgument);
         CASE(AttributeSpec);
         CASE(AttributeInstance);
         CASE(OrderedArgument);

@@ -798,3 +798,14 @@ token name
 MacroFormalArgumentListSyntax formalArguments
 tokenlist body
 token endOfDirective
+
+MacroActualArgumentSyntax kind=MacroActualArgument
+tokenlist tokens
+
+MacroActualArgumentListSyntax kind=MacroActualArgumentList
+token openParen
+separated_list<MacroActualArgumentSyntax> args
+token closeParen
+
+MacroUsageSyntax base=DirectiveSyntax kind=MacroUsage
+MacroActualArgumentListSyntax args

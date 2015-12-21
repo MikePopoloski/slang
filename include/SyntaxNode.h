@@ -36,6 +36,8 @@ enum class SyntaxKind : uint16_t {
     MacroFormalArgumentList,
     MacroFormalArgument,
     MacroArgumentDefault,
+    MacroActualArgumentList,
+    MacroActualArgument,
 
     // attributes
     AttributeSpec,

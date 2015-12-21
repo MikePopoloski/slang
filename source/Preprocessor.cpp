@@ -124,6 +124,46 @@ Trivia Preprocessor::handleResetAllDirective(Token* directive) {
     return createSimpleDirective(directive);
 }
 
+ArrayRef<Token*> Preprocessor::parseMacroArg() {
+    auto tokens = tokenPool.get();
+
+    // comma and right parenthesis only end the default token list if they are
+    // not inside a nested pair of (), [], or {}
+    // otherwise, keep swallowing tokens as part of the default
+    while (true) {
+        auto kind = peek()->kind;
+        if (kind == TokenKind::EndOfDirective) {
+            if (delimPairStack.empty())
+                addError(DiagCode::ExpectedEndOfMacroArgs);
+            else
+                addError(DiagCode::UnbalancedMacroArgDims);
+            delimPairStack.clear();
+            break;
+        }
+
+        if (delimPairStack.empty()) {
+            if ((kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis))
+                break;
+        }
+        else if (delimPairStack.last() == kind)
+            delimPairStack.pop();
+
+        tokens.append(consume());
+        switch (kind) {
+            case TokenKind::OpenParenthesis:
+                delimPairStack.append(TokenKind::CloseParenthesis);
+                break;
+            case TokenKind::OpenBrace:
+                delimPairStack.append(TokenKind::CloseBrace);
+                break;
+            case TokenKind::OpenBracket:
+                delimPairStack.append(TokenKind::CloseBracket);
+                break;
+        }
+    }
+    return tokens.copy(alloc);
+}
+
 Trivia Preprocessor::handleDefineDirective(Token* directive) {
     // next token should be the macro name
     auto name = expect(TokenKind::Identifier);
@@ -140,40 +180,7 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
             MacroArgumentDefaultSyntax* argDef = nullptr;
             if (peek(TokenKind::Equals)) {
                 auto equals = consume();
-                auto defaultText = tokenPool.get();
-
-                // comma and right parenthesis only end the default token list if they are
-                // not inside a nested pair of (), [], or {}
-                // otherwise, keep swallowing tokens as part of the default
-                delimPairStack.clear();
-                while (true) {
-                    auto kind = peek()->kind;
-                    if (kind == TokenKind::EndOfDirective)
-                        break;
-
-                    if (delimPairStack.empty()) {
-                        if ((kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis))
-                            break;
-                    }
-                    else if (delimPairStack.last() == kind)
-                        delimPairStack.pop();
-
-                    defaultText.append(consume());
-                    switch (kind) {
-                        case TokenKind::OpenParenthesis:
-                            delimPairStack.append(TokenKind::CloseParenthesis);
-                            break;
-                        case TokenKind::OpenBrace:
-                            delimPairStack.append(TokenKind::CloseBrace);
-                            break;
-                        case TokenKind::OpenBracket:
-                            delimPairStack.append(TokenKind::CloseBracket);
-                            break;
-                    }
-                }
-
-                // TODO: error if we still have delims
-                argDef = alloc.emplace<MacroArgumentDefaultSyntax>(equals, defaultText.copy(alloc));
+                argDef = alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseMacroArg());
             }
 
             arguments.append(alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef));
@@ -187,7 +194,6 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
                 // TODO: skipped tokens
             }
         }
-
         formalArguments = alloc.emplace<MacroFormalArgumentListSyntax>(
             openParen,
             arguments.copy(alloc),
@@ -213,7 +219,6 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 }
 
 Trivia Preprocessor::handleMacroUsage(Token* directive) {
-    // TODO: create specialized trivia for this
     // try to look up the macro in our map
     auto it = macros.find(directive->valueText().subString(1));
     if (it == macros.end()) {
@@ -222,6 +227,13 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
     }
 
     DefineDirectiveSyntax* macro = it->second;
+    if (macro->formalArguments) {
+        // macro has arguments, so we expect to see them here
+        // TODO: better error message
+        auto openParen = expect(TokenKind::OpenParenthesis);
+
+    }
+
     currentMacro.start(macro);
     hasTokenSource = true;
 

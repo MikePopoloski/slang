@@ -51,6 +51,8 @@ private:
 
     Trivia createSimpleDirective(Token* directive);
 
+    ArrayRef<Token*> parseMacroArg();
+
     Token* peek() { return window.peek(); }
     Token* peek(int offset) { return window.peek(offset); }
     Token* consume() { return window.consume(); }

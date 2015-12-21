@@ -3391,4 +3391,63 @@ protected:
     }
 };
 
+struct MacroActualArgumentSyntax : public SyntaxNode {
+    TokenList tokens;
+
+    MacroActualArgumentSyntax(TokenList tokens) :
+        SyntaxNode(SyntaxKind::MacroActualArgument), tokens(tokens)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &tokens;
+            default: return nullptr;
+        }
+    }
+};
+
+struct MacroActualArgumentListSyntax : public SyntaxNode {
+    Token* openParen;
+    SeparatedSyntaxList<MacroActualArgumentSyntax> args;
+    Token* closeParen;
+
+    MacroActualArgumentListSyntax(Token* openParen, SeparatedSyntaxList<MacroActualArgumentSyntax> args, Token* closeParen) :
+        SyntaxNode(SyntaxKind::MacroActualArgumentList), openParen(openParen), args(args), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openParen;
+            case 1: return &args;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct MacroUsageSyntax : public DirectiveSyntax {
+    MacroActualArgumentListSyntax* args;
+
+    MacroUsageSyntax(Token* directive, MacroActualArgumentListSyntax* args) :
+        DirectiveSyntax(SyntaxKind::MacroUsage, directive), args(args)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return directive;
+            case 1: return args;
+            default: return nullptr;
+        }
+    }
+};
+
 }
