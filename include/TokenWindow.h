@@ -10,13 +10,23 @@ class Token;
 template<Token* (Lexer::*next)()>
 class TokenWindow {
 public:
-    TokenWindow(Lexer& source) : source(source) {
-        capacity = 32;
-        buffer = new Token*[capacity];
-    }
-
+    TokenWindow() {}
     ~TokenWindow() {
         delete[] buffer;
+    }
+
+    TokenWindow(const TokenWindow&) = delete;
+    TokenWindow& operator=(const TokenWindow&) = delete;
+
+    void setSource(Lexer* newSource) {
+        delete[] buffer;
+
+        capacity = 32;
+        buffer = new Token*[capacity];
+        count = 0;
+        currentOffset = 0;
+        currentToken = nullptr;
+        source = newSource;
     }
 
     Token* peek(int offset) {
@@ -58,8 +68,8 @@ public:
         if (result->kind != kind) {
             // report an error here for the missing token
             // TODO: location info
-            source.getPreprocessor().getDiagnostics().add(SyntaxError(DiagCode::SyntaxError, 0, 0));
-            return Token::missing(source.getPreprocessor().getAllocator(), kind);
+            source->getPreprocessor().getDiagnostics().add(SyntaxError(DiagCode::SyntaxError, 0, 0));
+            return Token::missing(source->getPreprocessor().getAllocator(), kind);
         }
 
         moveToNext();
@@ -67,12 +77,12 @@ public:
     }
 
 private:
-    Lexer& source;
+    Lexer* source = nullptr;
     Token** buffer = nullptr;
     Token* currentToken = nullptr;
     int currentOffset = 0;
     int count = 0;
-    int capacity;
+    int capacity = 0;
 
     void addNew() {
         if (count >= capacity) {
@@ -93,7 +103,7 @@ private:
                 buffer = newBuffer;
             }
         }
-        buffer[count] = (source.*next)();
+        buffer[count] = (source->*next)();
         count++;
     }
 

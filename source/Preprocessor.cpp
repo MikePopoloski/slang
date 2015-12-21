@@ -24,8 +24,7 @@ Preprocessor::Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, D
     sourceTracker(sourceTracker),
     alloc(alloc),
     diagnostics(diagnostics),
-    currentLexer(nullptr),
-    currentToken(nullptr) {
+    currentLexer(nullptr) {
 
     keywordTable = getKeywordTable();
 }
@@ -75,6 +74,7 @@ TokenKind Preprocessor::lookupKeyword(StringRef identifier) {
 
 Trivia Preprocessor::parseDirective(Lexer* lexer) {
     currentLexer = lexer;
+    window.setSource(lexer);
 
     Token* directive = expect(TokenKind::Directive);
     switch (directive->directiveKind()) {
@@ -124,40 +124,78 @@ Trivia Preprocessor::handleResetAllDirective(Token* directive) {
     return createSimpleDirective(directive);
 }
 
+ArrayRef<Token*> Preprocessor::parseMacroArg() {
+    auto tokens = tokenPool.get();
+
+    // comma and right parenthesis only end the default token list if they are
+    // not inside a nested pair of (), [], or {}
+    // otherwise, keep swallowing tokens as part of the default
+    while (true) {
+        auto kind = peek()->kind;
+        if (kind == TokenKind::EndOfDirective) {
+            if (delimPairStack.empty())
+                addError(DiagCode::ExpectedEndOfMacroArgs);
+            else
+                addError(DiagCode::UnbalancedMacroArgDims);
+            delimPairStack.clear();
+            break;
+        }
+
+        if (delimPairStack.empty()) {
+            if ((kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis))
+                break;
+        }
+        else if (delimPairStack.last() == kind)
+            delimPairStack.pop();
+
+        tokens.append(consume());
+        switch (kind) {
+            case TokenKind::OpenParenthesis:
+                delimPairStack.append(TokenKind::CloseParenthesis);
+                break;
+            case TokenKind::OpenBrace:
+                delimPairStack.append(TokenKind::CloseBrace);
+                break;
+            case TokenKind::OpenBracket:
+                delimPairStack.append(TokenKind::CloseBracket);
+                break;
+        }
+    }
+    return tokens.copy(alloc);
+}
+
 Trivia Preprocessor::handleDefineDirective(Token* directive) {
     // next token should be the macro name
-    Token* name = expect(TokenKind::Identifier);
+    auto name = expect(TokenKind::Identifier);
 
     // check if this is a function-like macro, which requires an opening paren with no leading space
     MacroFormalArgumentListSyntax* formalArguments = nullptr;
-    Token* maybeParen = peek();
-    if (maybeParen->kind == TokenKind::OpenParenthesis && maybeParen->trivia.empty()) {
+    if (peek(TokenKind::OpenParenthesis) && peek()->trivia.empty()) {
         // parse all formal arguments
+        auto openParen = consume();
         auto arguments = syntaxPool.get();
-        consume();
         while (true) {
-            Token* arg = expect(TokenKind::Identifier);
-            TokenKind kind = peek()->kind;
-            if (kind == TokenKind::Equals) {
-               // parseMacroDefault();
-                kind = peek()->kind;
+            auto arg = expect(TokenKind::Identifier);
+
+            MacroArgumentDefaultSyntax* argDef = nullptr;
+            if (peek(TokenKind::Equals)) {
+                auto equals = consume();
+                argDef = alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseMacroArg());
             }
 
-            arguments.append(alloc.emplace<MacroFormalArgumentSyntax>(arg, nullptr));
+            arguments.append(alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef));
 
+            auto kind = peek()->kind;
             if (kind == TokenKind::CloseParenthesis)
                 break;
-
-            // TODO: handle errors
-            if (kind != TokenKind::Comma) {
-            }
-            else {
+            else if (kind == TokenKind::Comma)
                 arguments.append(consume());
+            else {
+                // TODO: skipped tokens
             }
         }
-
         formalArguments = alloc.emplace<MacroFormalArgumentListSyntax>(
-            maybeParen,
+            openParen,
             arguments.copy(alloc),
             expect(TokenKind::CloseParenthesis)
         );
@@ -165,15 +203,15 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
     
     // consume all remaining tokens as macro text
     auto body = tokenPool.get();
-    while (peek()->kind != TokenKind::EndOfDirective)
+    while (!peek(TokenKind::EndOfDirective))
         body.append(consume());
 
     auto result = alloc.emplace<DefineDirectiveSyntax>(
         directive,
-        consume(),
         name,
         formalArguments,
-        body.copy(alloc)
+        body.copy(alloc),
+        consume()
     );
 
     macros.emplace(name->valueText().intern(alloc), result);
@@ -181,7 +219,6 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 }
 
 Trivia Preprocessor::handleMacroUsage(Token* directive) {
-    // TODO: create specialized trivia for this
     // try to look up the macro in our map
     auto it = macros.find(directive->valueText().subString(1));
     if (it == macros.end()) {
@@ -190,6 +227,13 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
     }
 
     DefineDirectiveSyntax* macro = it->second;
+    if (macro->formalArguments) {
+        // macro has arguments, so we expect to see them here
+        // TODO: better error message
+        auto openParen = expect(TokenKind::OpenParenthesis);
+
+    }
+
     currentMacro.start(macro);
     hasTokenSource = true;
 
@@ -219,31 +263,12 @@ Token* Preprocessor::parseEndOfDirective() {
 }
 
 Trivia Preprocessor::createSimpleDirective(Token* directive) {
-    DirectiveSyntax* syntax = alloc.emplace<DirectiveSyntax>(directive->directiveKind(), directive, parseEndOfDirective());
+    DirectiveSyntax* syntax = alloc.emplace<SimpleDirectiveSyntax>(directive->directiveKind(), directive, parseEndOfDirective());
     return Trivia(TriviaKind::Directive, syntax);
 }
 
 void Preprocessor::addError(DiagCode code) {
     diagnostics.add(SyntaxError(code, 0, 0));
-}
-
-Token* Preprocessor::peek() {
-    if (!currentToken)
-        currentToken = currentLexer->lexDirectiveMode();
-    return currentToken;
-}
-
-Token* Preprocessor::consume() {
-    Token* result = peek();
-    currentToken = nullptr;
-    return result;
-}
-
-Token* Preprocessor::expect(TokenKind kind) {
-    if (peek()->kind == kind)
-        return consume();
-
-    return Token::missing(alloc, kind);
 }
 
 void MacroExpander::start(DefineDirectiveSyntax* macro) {

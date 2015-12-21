@@ -772,10 +772,13 @@ token endOfFile
 
 DirectiveSyntax final=false
 token directive
+
+SimpleDirectiveSyntax base=DirectiveSyntax
 token endOfDirective
 
 IncludeDirectiveSyntax base=DirectiveSyntax kind=IncludeDirective
 token fileName
+token endOfDirective
 
 MacroArgumentDefaultSyntax kind=MacroArgumentDefault
 token equals
@@ -794,3 +797,15 @@ DefineDirectiveSyntax base=DirectiveSyntax kind=DefineDirective
 token name
 MacroFormalArgumentListSyntax formalArguments
 tokenlist body
+token endOfDirective
+
+MacroActualArgumentSyntax kind=MacroActualArgument
+tokenlist tokens
+
+MacroActualArgumentListSyntax kind=MacroActualArgumentList
+token openParen
+separated_list<MacroActualArgumentSyntax> args
+token closeParen
+
+MacroUsageSyntax base=DirectiveSyntax kind=MacroUsage
+MacroActualArgumentListSyntax args

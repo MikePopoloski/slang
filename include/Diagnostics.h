@@ -34,6 +34,8 @@ enum class DiagCode : uint8_t {
     ExceededMaxIncludeDepth,
     UnknownDirective,
     ExpectedEndOfDirective,
+    ExpectedEndOfMacroArgs,
+    UnbalancedMacroArgDims,
 
     // parser
     SyntaxError,
