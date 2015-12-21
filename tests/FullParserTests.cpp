@@ -22,6 +22,7 @@ void parseFile(const SourceFile& file) {
     auto tree = parser.parseCompilationUnit();
     REQUIRE(tree);
     CHECK(diagnostics.empty());
+    CHECK(tree->toFullString() == std::string(file.buffer.begin(), file.buffer.end() - 1));
 }
 
 TEST_CASE("External files", "[parser:full]") {
