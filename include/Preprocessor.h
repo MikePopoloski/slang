@@ -6,10 +6,11 @@ namespace slang {
 
 struct DefineDirectiveSyntax;
 struct MacroFormalArgumentSyntax;
+struct MacroActualArgumentListSyntax;
 
 class MacroExpander {
 public:
-    void start(DefineDirectiveSyntax* macro);
+    void start(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
     Token* next();
 
     bool isActive() const;
@@ -18,7 +19,7 @@ private:
     Buffer<Token*> tokens;
     Token** current = nullptr;
 
-    void expand(DefineDirectiveSyntax* macro);
+    void expand(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
 };
 
 class Preprocessor {

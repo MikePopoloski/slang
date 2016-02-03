@@ -227,17 +227,40 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
     }
 
     DefineDirectiveSyntax* macro = it->second;
+
+	MacroActualArgumentListSyntax* actualArgs = nullptr;
     if (macro->formalArguments) {
         // macro has arguments, so we expect to see them here
-        // TODO: better error message
-        auto openParen = expect(TokenKind::OpenParenthesis);
+		if (!peek(TokenKind::OpenParenthesis)) {
+			addError(DiagCode::ExpectedMacroArgs);
+			return createSimpleDirective(directive);
+		}
 
+		auto openParen = consume();
+		auto arguments = syntaxPool.get();
+		while (true) {
+			auto arg = parseMacroArg();
+			arguments.append(alloc.emplace<MacroActualArgumentSyntax>(arg));
+
+			auto kind = peek()->kind;
+			if (kind == TokenKind::CloseParenthesis)
+				break;
+			else if (kind == TokenKind::Comma)
+				arguments.append(consume());
+			else {
+				// TODO: skipped tokens
+			}
+		}
+
+		auto closeParen = expect(TokenKind::CloseParenthesis);
+		actualArgs = alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(alloc), closeParen);
     }
 
-    currentMacro.start(macro);
+    currentMacro.start(macro, actualArgs);
     hasTokenSource = true;
 
-    return createSimpleDirective(directive);
+	auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
+	return Trivia(TriviaKind::Directive, syntax);
 }
 
 Token* Preprocessor::parseEndOfDirective() {
@@ -271,10 +294,10 @@ void Preprocessor::addError(DiagCode code) {
     diagnostics.add(SyntaxError(code, 0, 0));
 }
 
-void MacroExpander::start(DefineDirectiveSyntax* macro) {
+void MacroExpander::start(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
     // expand all tokens recursively and store them in our buffer
     tokens.clear();
-    expand(macro);
+    expand(macro, actualArgs);
     current = tokens.begin();
     if (current == tokens.end())
         current = nullptr;
@@ -293,11 +316,14 @@ bool MacroExpander::isActive() const {
     return current != nullptr;
 }
 
-void MacroExpander::expand(DefineDirectiveSyntax* macro) {
+void MacroExpander::expand(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
     if (!macro->formalArguments) {
         // simple macro; just take body tokens
         tokens.appendRange(macro->body);
+		return;
     }
+
+
 }
 
 }

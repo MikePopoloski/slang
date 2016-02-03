@@ -36,6 +36,7 @@ enum class DiagCode : uint8_t {
     ExpectedEndOfDirective,
     ExpectedEndOfMacroArgs,
     UnbalancedMacroArgDims,
+	ExpectedMacroArgs,
 
     // parser
     SyntaxError,
