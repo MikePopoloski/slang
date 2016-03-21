@@ -16,8 +16,8 @@ Preprocessor preprocessor(sourceTracker, alloc, diagnostics);
 
 void parseFile(const SourceFile& file) {
     diagnostics.clear();
-    Lexer lexer(file.id, file.buffer, preprocessor);
-    Parser parser(lexer);
+	preprocessor.pushSource(file.buffer, file.id);
+    Parser parser(preprocessor);
 
     auto tree = parser.parseCompilationUnit();
     REQUIRE(tree);

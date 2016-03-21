@@ -4,42 +4,39 @@ namespace slang {
 
 class Token;
 
-// maintains a sliding window of lexed tokens
-// sometimes parsing needs to lookahead and roll back to a reset point
+// Internal helper class that maintains a sliding window of tokens.
+// Sometimes parsing needs to lookahead and roll back to a reset point.
+//
+// TSource must expose getAllocator(), getDiagnostics(), and next() functions.
 
-template<Token* (Lexer::*next)()>
+template<typename TSource>
 class TokenWindow {
 public:
-    TokenWindow() {}
+	explicit TokenWindow(TSource& source) :
+		tokenSource(source)
+	{
+		capacity = 32;
+		windowBuffer = new Token*[capacity];
+	}
+
     ~TokenWindow() {
-        delete[] buffer;
+        delete[] windowBuffer;
     }
 
     TokenWindow(const TokenWindow&) = delete;
     TokenWindow& operator=(const TokenWindow&) = delete;
 
-    void setSource(Lexer* newSource) {
-        delete[] buffer;
-
-        capacity = 32;
-        buffer = new Token*[capacity];
-        count = 0;
-        currentOffset = 0;
-        currentToken = nullptr;
-        source = newSource;
-    }
-
     Token* peek(int offset) {
         while (currentOffset + offset >= count)
             addNew();
-        return buffer[currentOffset + offset];
+        return windowBuffer[currentOffset + offset];
     }
 
     Token* peek() {
         if (!currentToken) {
             if (currentOffset >= count)
                 addNew();
-            currentToken = buffer[currentOffset];
+            currentToken = windowBuffer[currentOffset];
         }
         return currentToken;
     }
@@ -68,8 +65,8 @@ public:
         if (result->kind != kind) {
             // report an error here for the missing token
             // TODO: location info
-            source->getPreprocessor().getDiagnostics().add(SyntaxError(DiagCode::SyntaxError, 0, 0));
-            return Token::missing(source->getPreprocessor().getAllocator(), kind);
+			tokenSource.getDiagnostics().add(SyntaxError(DiagCode::SyntaxError, 0, 0));
+            return Token::missing(tokenSource.getAllocator(), kind);
         }
 
         moveToNext();
@@ -77,8 +74,8 @@ public:
     }
 
 private:
-    Lexer* source = nullptr;
-    Token** buffer = nullptr;
+	TSource& tokenSource;
+    Token** windowBuffer = nullptr;
     Token* currentToken = nullptr;
     int currentOffset = 0;
     int count = 0;
@@ -90,20 +87,20 @@ private:
             if (currentOffset > (capacity >> 1)) {
                 int shift = count - currentOffset;
                 if (shift > 0)
-                    memmove(buffer, buffer + currentOffset, shift * sizeof(Token*));
+                    memmove(windowBuffer, windowBuffer + currentOffset, shift * sizeof(Token*));
 
                 count -= currentOffset;
                 currentOffset = 0;
             }
             else {
                 Token** newBuffer = new Token*[capacity * 2];
-                memcpy(newBuffer, buffer, count * sizeof(Token*));
+                memcpy(newBuffer, windowBuffer, count * sizeof(Token*));
 
-                delete[] buffer;
-                buffer = newBuffer;
+                delete[] windowBuffer;
+				windowBuffer = newBuffer;
             }
         }
-        buffer[count] = (source->*next)();
+		windowBuffer[count] = tokenSource.next();
         count++;
     }
 

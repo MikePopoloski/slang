@@ -1,18 +1,20 @@
 #pragma once
 
-#include "TokenWindow.h"
-
 namespace slang {
 
 struct DefineDirectiveSyntax;
 struct MacroFormalArgumentSyntax;
 struct MacroActualArgumentListSyntax;
 
+SyntaxKind getDirectiveKind(StringRef directive);
+StringRef getDirectiveText(SyntaxKind kind);
+
 class MacroExpander {
 public:
-    void start(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
+    MacroExpander(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
     Token* next();
 
+	bool done() const { return true; }
     bool isActive() const;
 
 private:
@@ -26,23 +28,20 @@ class Preprocessor {
 public:
     Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-    // look up a keyword by string; returns TokenKind::Unknown if not a keyword
-    // note that this uses the preprocessor's current set of keywords, which can
-    // be changed dynamically via directives
-    TokenKind lookupKeyword(StringRef identifier);
+	void pushSource(SourceText source, FileID file = FileID());
 
-    // called by the active lexer to let the preprocessor parse a directive
-    Trivia parseDirective(Lexer* lexer);
+	Token* next();
 
-    // lexes a token from the current source on the lexer stack
-    // if there are no include files on the stack, this returns null
-    Token* lex(Lexer* current);
+	FileID getCurrentFile();
 
     SourceTracker& getSourceTracker() const { return sourceTracker; }
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
+	Token* next(LexerMode mode);
+	Token* nextRaw(LexerMode mode);
+
     Trivia handleIncludeDirective(Token* directive);
     Trivia handleResetAllDirective(Token* directive);
     Trivia handleDefineDirective(Token* directive);
@@ -54,37 +53,45 @@ private:
 
     ArrayRef<Token*> parseMacroArg();
 
-    Token* peek() { return window.peek(); }
-    Token* peek(int offset) { return window.peek(offset); }
-    Token* consume() { return window.consume(); }
-    Token* consumeIf(TokenKind kind) { return window.consumeIf(kind); }
-    Token* expect(TokenKind kind) { return window.expect(kind); }
-    bool peek(TokenKind kind) { return window.peek(kind); }
+	Token* peek();
+	Token* consume();
+	Token* expect(TokenKind kind);
+	bool peek(TokenKind kind) { return peek()->kind == kind; }
 
     void addError(DiagCode code);
 
-    SourceTracker& sourceTracker;
-    BumpAllocator& alloc;
-    Diagnostics& diagnostics;
+	struct Source {
+		enum {
+			LEXER,
+			MACRO
+		};
+		uint8_t kind;
+		union {
+			Lexer* lexer;
+			MacroExpander* macro;
+		};
 
-    bool hasTokenSource;
+		Source(Lexer* lexer) : kind(LEXER), lexer(lexer) {}
+		Source(MacroExpander* macro) : kind(MACRO), macro(macro) {}
+	};
+
+	SourceTracker& sourceTracker;
+	BumpAllocator& alloc;
+	Diagnostics& diagnostics;
+
+	std::deque<Source> sourceStack;
     std::unordered_map<StringRef, DefineDirectiveSyntax*> macros;
-    std::deque<Lexer> lexerStack;
-    MacroExpander currentMacro;
-    Lexer* currentLexer;
 
-    TokenWindow<&Lexer::lexDirectiveMode> window;
-    Buffer<Trivia> triviaBuffer;
     Buffer<TokenKind> delimPairStack;
-    BufferPool<Token*> tokenPool;
+	BufferPool<Trivia> triviaPool;
+	BufferPool<Token*> tokenPool;
     BufferPool<TokenOrSyntax> syntaxPool;
+
+	Token* currentToken;
 
     const StringTable<TokenKind>* keywordTable;
 
-    static constexpr int MaxIncludeDepth = 32;
+    static constexpr int MaxSourceDepth = 8192;
 };
-
-SyntaxKind getDirectiveKind(StringRef directive);
-StringRef getDirectiveText(SyntaxKind kind);
 
 }

@@ -8,7 +8,6 @@ namespace {
 BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceTracker sourceTracker;
-Preprocessor preprocessor(sourceTracker, alloc, diagnostics);
 
 bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;
@@ -16,7 +15,7 @@ bool withinUlp(double a, double b) {
 
 const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
-    Lexer lexer(FileID(), text, preprocessor);
+    Lexer lexer(FileID(), text, alloc, diagnostics);
 
     Token* token = lexer.lex();
     REQUIRE(token != nullptr);
@@ -777,7 +776,8 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
     auto& text = "`";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.kind == TokenKind::Directive);
+	CHECK(token.directiveKind() == SyntaxKind::Unknown);
     CHECK(token.toFullString() == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::MisplacedDirectiveChar);
@@ -1147,9 +1147,9 @@ void testDirectivePunctuation(TokenKind kind) {
     auto& text = getTokenKindText(kind);
 
     diagnostics.clear();
-    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), preprocessor);
+    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), alloc, diagnostics);
 
-    Token* token = lexer.lexDirectiveMode();
+    Token* token = lexer.lex(LexerMode::Directive);
 
     CHECK(token->kind == kind);
     CHECK(token->toFullString() == text);

@@ -8,9 +8,9 @@ namespace slang {
 class Lexer;
 class BumpAllocator;
 
-class Parser {
+class Parser : TokenWindow<Preprocessor> {
 public:
-    Parser(Lexer& lexer);
+    Parser(Preprocessor& preprocessor);
 
     CompilationUnitSyntax* parseCompilationUnit();
 
@@ -18,12 +18,7 @@ public:
     StatementSyntax* parseStatement();
     ModuleDeclarationSyntax* parseModule();
 
-private:
-    enum class SkipAction {
-        Continue,
-        Abort
-    };
-    
+private:    
     ExpressionSyntax* parseMinTypMaxExpression();
     ExpressionSyntax* parsePrimaryExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
@@ -147,6 +142,11 @@ private:
         TParserFunc&& parseItem
     );
 
+	enum class SkipAction {
+		Continue,
+		Abort
+	};
+
     template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
     SkipAction skipBadTokens(Trivia* skippedTokens);
 
@@ -156,19 +156,10 @@ private:
     SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
     Token* prependTrivia(Token* token, Trivia* trivia);
 
-    Token* peek() { return window.peek(); }
-    Token* peek(int offset) { return window.peek(offset); }
-    Token* consume() { return window.consume(); }
-    Token* consumeIf(TokenKind kind) { return window.consumeIf(kind); }
-    Token* expect(TokenKind kind) { return window.expect(kind); }
-    bool peek(TokenKind kind) { return window.peek(kind); }
-
     void addError(DiagCode code);
 
-    Lexer& lexer;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
-    TokenWindow<&Lexer::lex> window;
     BufferPool<Trivia> triviaPool;
     BufferPool<Token*> tokenPool;
     BufferPool<SyntaxNode*> nodePool;

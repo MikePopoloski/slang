@@ -19,10 +19,11 @@ SourceTracker& getTracker() {
 
 const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
-    Preprocessor preprocessor(getTracker(), alloc, diagnostics);
-    Lexer lexer(FileID(), text, preprocessor);
 
-    Token* token = lexer.lex();
+    Preprocessor preprocessor(getTracker(), alloc, diagnostics);
+	preprocessor.pushSource(text);
+
+    Token* token = preprocessor.next();
     REQUIRE(token != nullptr);
     return *token;
 }
@@ -32,20 +33,17 @@ TEST_CASE("Include File", "[preprocessor]") {
     auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
-
-    // there should be one error about a non-existent include file
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::CouldNotOpenIncludeFile);
+	CHECK(token.valueText() == "test string");
+    CHECK(diagnostics.empty());
 }
 
 void testDirective(SyntaxKind kind) {
     auto& text = getDirectiveText(kind);
 
     diagnostics.clear();
-    Preprocessor preprocessor(getTracker(), alloc, diagnostics);
-    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), preprocessor);
+    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), alloc, diagnostics);
 
-    Token* token = lexer.lexDirectiveMode();
+    Token* token = lexer.lex(LexerMode::Directive);
     REQUIRE(token != nullptr);
 
     CHECK(token->kind == TokenKind::Directive);

@@ -3,11 +3,16 @@
 namespace slang {
 
 struct SourceText;
-class Preprocessor;
+
+enum class LexerMode {
+	Normal,
+	Directive,
+	IncludeFileName
+};
 
 class Lexer {
 public:
-    Lexer(FileID file, SourceText source, Preprocessor& preprocessor);
+    Lexer(FileID file, SourceText source, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
@@ -15,17 +20,11 @@ public:
     // lex the next token from the source code
     // will never return a null pointer; at the end of the buffer,
     // an infinite stream of EndOfFile tokens will be generated
-    Token* lex();
-
-    // tokens get lexed slightly differently when in "directive mode"
-    // the preprocessor will use this when parsing directives
-    Token* lexDirectiveMode();
-
-    // lex an include file name, either <path> or "path"
-    Token* lexIncludeFileName();
+    Token* lex(LexerMode mode = LexerMode::Normal);
 
     FileID getFile() const { return file; }
-    Preprocessor& getPreprocessor() const { return preprocessor; }
+	BumpAllocator& getAllocator() { return alloc; }
+	Diagnostics& getDiagnostics() { return diagnostics; }
 
 private:
     struct TokenInfo {
@@ -35,12 +34,13 @@ private:
         SyntaxKind directiveKind;
     };
 
-    template<bool InDirective>
-    TokenKind lexToken(TokenInfo& info);
+    TokenKind lexToken(TokenInfo& info, bool directiveMode);
     TokenKind lexNumericLiteral(TokenInfo& info);
     TokenKind lexEscapeSequence(TokenInfo& info);
     TokenKind lexDollarSign(TokenInfo& info);
     TokenKind lexDirective(TokenInfo& info);
+
+	Token* lexIncludeFileName();
 
     void lexStringLiteral(TokenInfo& info);
     void lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent);
@@ -51,13 +51,10 @@ private:
     template<bool (*IsDigitFunc)(char), uint32_t (*ValueFunc)(char)>
     void lexVectorDigits(TokenInfo& info);
 
-    template<bool InDirective>
-    bool lexTrivia(Buffer<Trivia>& buffer);
-    void lexDirectiveTrivia(Buffer<Trivia>& buffer);
+    bool lexTrivia(Buffer<Trivia>& buffer, bool directiveMode);
     char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
 
-    template<bool InDirective>
-    bool scanBlockComment(Buffer<Trivia>& buffer);
+    bool scanBlockComment(Buffer<Trivia>& buffer, bool directiveMode);
     void scanWhitespace(Buffer<Trivia>& buffer);
     void scanLineComment(Buffer<Trivia>& buffer);
     void scanIdentifier();
@@ -93,8 +90,8 @@ private:
     Buffer<char> stringBuffer;
     BufferPool<Trivia> triviaPool;
     VectorBuilder vectorBuilder;
-    Preprocessor& preprocessor;
     BumpAllocator& alloc;
+	Diagnostics& diagnostics;
     const char* sourceBuffer;
     const char* sourceEnd;
     const char* marker;

@@ -50,12 +50,11 @@ bool isPossiblePortConnection(TokenKind kind);
 
 namespace slang {
 
-Parser::Parser(Lexer& lexer) :
-    lexer(lexer),
-    alloc(lexer.getPreprocessor().getAllocator()),
-    diagnostics(lexer.getPreprocessor().getDiagnostics()) {
-
-    window.setSource(&lexer);
+Parser::Parser(Preprocessor& preprocessor) :
+	TokenWindow(preprocessor),
+    alloc(preprocessor.getAllocator()),
+    diagnostics(preprocessor.getDiagnostics())
+{
 }
 
 CompilationUnitSyntax* Parser::parseCompilationUnit() {

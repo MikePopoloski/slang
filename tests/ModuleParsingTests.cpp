@@ -12,8 +12,8 @@ Preprocessor preprocessor(sourceTracker, alloc, diagnostics);
 
 ModuleDeclarationSyntax* parse(const SourceText& text) {
     diagnostics.clear();
-    Lexer lexer(FileID(), text, preprocessor);
-    Parser parser(lexer);
+	preprocessor.pushSource(text);
+	Parser parser(preprocessor);
 
     auto node = parser.parseModule();
     REQUIRE(node);
