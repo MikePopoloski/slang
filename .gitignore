@@ -17,6 +17,7 @@ Thumbs.db
 *.lib
 *.sbr
 *.opensdf
+*.opendb
 *.sdf
 *.vsp
 *.sublime-workspace

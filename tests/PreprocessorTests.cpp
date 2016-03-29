@@ -132,4 +132,60 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
+	auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
+	auto& token = lexToken(text);
+
+	CHECK(token.kind == TokenKind::IntegerLiteral);
+	CHECK(token.numericValue().integer == 42);
+	CHECK(diagnostics.empty());
+}
+
+TEST_CASE("IfDef branch (not taken)", "[preprocessor]") {
+	auto& text = "`define FOO\n`ifdef BAR\n42\n`endif";
+	auto& token = lexToken(text);
+
+	CHECK(token.kind == TokenKind::EndOfFile);
+	CHECK(diagnostics.empty());
+}
+
+TEST_CASE("ElseIf branch", "[preprocessor]") {
+	auto& text = "`define FOO\n`ifdef BAR\n42\n`elseif FOO\n99`else\n1000`endif";
+	auto& token = lexToken(text);
+
+	CHECK(token.kind == TokenKind::IntegerLiteral);
+	CHECK(token.numericValue().integer == 99);
+	CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Nested branches", "[preprocessor]") {
+	auto& text =
+"`define FOO\n"
+"`ifdef BLAH\n"
+"	`define BAZ\n"
+"`elseif BAZ\n"
+"	42\n"
+"`else\n"
+"	`define YEP\n"
+"	`ifdef YEP\n"
+"		`ifdef FOO\n"
+"			`ifdef NOPE1\n"
+"				blahblah\n"
+"			`elseif NOPE2\n"
+"				blahblah2\n"
+"			`elseif YEP\n"
+"				`ifdef FOO\n"
+"					99\n"
+"				`endif\n"
+"			`endif\n"
+"		`endif\n"
+"	`endif\n"
+"`endif";
+	auto& token = lexToken(text);
+
+	CHECK(token.kind == TokenKind::IntegerLiteral);
+	CHECK(token.numericValue().integer == 99);
+	CHECK(diagnostics.empty());
+}
+
 }

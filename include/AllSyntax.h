@@ -3304,6 +3304,50 @@ protected:
     }
 };
 
+struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
+    Token* name;
+    Token* endOfDirective;
+    TokenList disabledTokens;
+
+    ConditionalBranchDirectiveSyntax(SyntaxKind kind, Token* directive, Token* name, Token* endOfDirective, TokenList disabledTokens) :
+        DirectiveSyntax(kind, directive), name(name), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return directive;
+            case 1: return name;
+            case 2: return endOfDirective;
+            case 3: return &disabledTokens;
+            default: return nullptr;
+        }
+    }
+};
+
+struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
+    Token* endOfDirective;
+    TokenList disabledTokens;
+
+    UnconditionalBranchDirectiveSyntax(SyntaxKind kind, Token* directive, Token* endOfDirective, TokenList disabledTokens) :
+        DirectiveSyntax(kind, directive), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return directive;
+            case 1: return endOfDirective;
+            case 2: return &disabledTokens;
+            default: return nullptr;
+        }
+    }
+};
+
 struct MacroArgumentDefaultSyntax : public SyntaxNode {
     Token* equals;
     TokenList tokens;

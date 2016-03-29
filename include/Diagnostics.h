@@ -35,6 +35,8 @@ enum class DiagCode : uint8_t {
     UnknownDirective,
     ExpectedEndOfDirective,
     ExpectedEndOfMacroArgs,
+	ExpectedEndIfDirective,
+	UnexpectedDirective,
     UnbalancedMacroArgDims,
 	ExpectedMacroArgs,
 

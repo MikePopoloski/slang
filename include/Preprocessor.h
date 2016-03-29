@@ -46,12 +46,19 @@ private:
     Trivia handleResetAllDirective(Token* directive);
     Trivia handleDefineDirective(Token* directive);
     Trivia handleMacroUsage(Token* directive);
+	Trivia handleIfDefDirective(Token* directive);
+	Trivia handleElseIfDirective(Token* directive);
+	Trivia handleElseDirective(Token* directive);
+	Trivia handleEndIfDirective(Token* directive);
 
     Token* parseEndOfDirective();
 
     Trivia createSimpleDirective(Token* directive);
 
     ArrayRef<Token*> parseMacroArg();
+
+	bool shouldTakeElseBranch(bool isElseIf, StringRef macroName);
+	Trivia parseBranchDirective(Token* directive, Token* condition, bool taken);
 
 	Token* peek();
 	Token* consume();
@@ -75,11 +82,20 @@ private:
 		Source(MacroExpander* macro) : kind(MACRO), macro(macro) {}
 	};
 
+	struct BranchEntry {
+		bool anyTaken;
+		bool currentActive;
+		bool hasElse = false;
+
+		BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
+	};
+
 	SourceTracker& sourceTracker;
 	BumpAllocator& alloc;
 	Diagnostics& diagnostics;
 
 	std::deque<Source> sourceStack;
+	std::deque<BranchEntry> branchStack;
     std::unordered_map<StringRef, DefineDirectiveSyntax*> macros;
 
     Buffer<TokenKind> delimPairStack;

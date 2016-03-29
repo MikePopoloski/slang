@@ -780,6 +780,15 @@ IncludeDirectiveSyntax base=DirectiveSyntax kind=IncludeDirective
 token fileName
 token endOfDirective
 
+ConditionalBranchDirectiveSyntax base=DirectiveSyntax
+token name
+token endOfDirective
+tokenlist disabledTokens
+
+UnconditionalBranchDirectiveSyntax base=DirectiveSyntax
+token endOfDirective
+tokenlist disabledTokens
+
 MacroArgumentDefaultSyntax kind=MacroArgumentDefault
 token equals
 tokenlist tokens

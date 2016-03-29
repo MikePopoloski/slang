@@ -21,17 +21,18 @@ void parseFile(const SourceFile& file) {
 
     auto tree = parser.parseCompilationUnit();
     REQUIRE(tree);
-    CHECK(diagnostics.empty());
-    CHECK(tree->toFullString() == std::string(file.buffer.begin(), file.buffer.end() - 1));
+	REQUIRE(tree->toFullString() == std::string(file.buffer.begin(), file.buffer.end() - 1));
+    REQUIRE(diagnostics.empty());
 }
 
 TEST_CASE("External files", "[parser:full]") {
     // run through all external files in our corpus and make sure they parse without error
-    /*for (auto& p : fs::directory_iterator(RelativeTestPath)) {
+    for (auto& p : fs::directory_iterator(RelativeTestPath)) {
         SourceFile file;
+		INFO("Parsing '" + p.path().string() + "'");
         REQUIRE(sourceTracker.readSource(p.path().string(), file));
         parseFile(file);
-    }*/
+    }
 }
 
 }

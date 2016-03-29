@@ -59,18 +59,14 @@ Token* Preprocessor::next(LexerMode mode) {
 		// TODO: handle all directive types
 		// TODO: check keyword eligibility
 		switch (token->directiveKind()) {
-			case SyntaxKind::IncludeDirective:
-				trivia.append(handleIncludeDirective(token));
-				break;
-			case SyntaxKind::ResetAllDirective:
-				trivia.append(handleResetAllDirective(token));
-				break;
-			case SyntaxKind::DefineDirective:
-				trivia.append(handleDefineDirective(token));
-				break;
-			case SyntaxKind::MacroUsage:
-				trivia.append(handleMacroUsage(token));
-				break;
+			case SyntaxKind::IncludeDirective: trivia.append(handleIncludeDirective(token)); break;
+			case SyntaxKind::ResetAllDirective: trivia.append(handleResetAllDirective(token)); break;
+			case SyntaxKind::DefineDirective: trivia.append(handleDefineDirective(token)); break;
+			case SyntaxKind::MacroUsage: trivia.append(handleMacroUsage(token)); break;
+			case SyntaxKind::IfDefDirective: trivia.append(handleIfDefDirective(token)); break;
+			case SyntaxKind::ElseIfDirective: trivia.append(handleElseIfDirective(token)); break;
+			case SyntaxKind::ElseDirective: trivia.append(handleElseDirective(token)); break;
+			case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
 			case SyntaxKind::UndefineAllDirective:
 			case SyntaxKind::UnconnectedDriveDirective:
 			case SyntaxKind::NoUnconnectedDriveDirective:
@@ -325,6 +321,120 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
 
 	auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
 	return Trivia(TriviaKind::Directive, syntax);
+}
+
+Trivia Preprocessor::handleIfDefDirective(Token* directive) {
+	// next token should be the macro name
+	auto name = expect(TokenKind::Identifier);
+	bool take = false;
+	if (branchStack.empty() || branchStack.back().currentActive)
+		take = macros.find(name->valueText()) != macros.end();
+
+	branchStack.push_back(BranchEntry(take));
+
+	return parseBranchDirective(directive, name, take);
+}
+
+Trivia Preprocessor::handleElseIfDirective(Token* directive) {
+	// next token should be the macro name
+	auto name = expect(TokenKind::Identifier);
+	return parseBranchDirective(directive, name, shouldTakeElseBranch(true, name->valueText()));
+}
+
+Trivia Preprocessor::handleElseDirective(Token* directive) {
+	return parseBranchDirective(directive, nullptr, shouldTakeElseBranch(false, nullptr));
+}
+
+bool Preprocessor::shouldTakeElseBranch(bool isElseIf, StringRef macroName) {
+	// empty stack is an error
+	if (branchStack.empty()) {
+		addError(DiagCode::UnexpectedDirective);
+		return true;
+	}
+
+	// if we already had an else for this branch, we can't have any more elseifs
+	BranchEntry& branch = branchStack.back();
+	if (branch.hasElse) {
+		addError(DiagCode::UnexpectedDirective);
+		return true;
+	}
+
+	// if part of this branch has already been taken, we can't take this one
+	bool taken = false;
+	if (!branch.anyTaken) {
+		// only take this branch if we're the only one in the stack, or our parent is active
+		if (branchStack.size() == 1 || branchStack[branchStack.size() - 2].currentActive) {
+			// if this is an elseif, the macro name needs to be defined
+			taken = !isElseIf || macros.find(macroName) != macros.end();
+		}
+	}
+
+	branch.currentActive = taken;
+	branch.anyTaken |= taken;
+	return taken;
+}
+
+Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bool taken) {
+	auto eod = parseEndOfDirective();
+
+	// skip over everything until we find another conditional compilation directive
+	auto skipped = tokenPool.get();
+	if (!taken) {
+		while (true) {
+			auto token = nextRaw(LexerMode::Normal);
+
+			// EoF or conditional directive stops the skipping process
+			bool done = false;
+			if (token->kind == TokenKind::EndOfFile)
+				done = true;
+			else if (token->kind == TokenKind::Directive) {
+				switch (token->directiveKind()) {
+					case SyntaxKind::IfDefDirective:
+					case SyntaxKind::ElseIfDirective:
+					case SyntaxKind::ElseDirective:
+					case SyntaxKind::EndIfDirective:
+						done = true;
+						break;
+				}
+			}
+
+			if (done) {
+				// put the token back so that we'll look at it next
+				currentToken = token;
+				break;
+			}
+			skipped.append(token);
+		}
+	}
+
+	SyntaxNode* syntax;
+	if (condition) {
+		syntax = alloc.emplace<ConditionalBranchDirectiveSyntax>(
+			directive->directiveKind(),
+			directive,
+			condition,
+			eod,
+			skipped.copy(alloc)
+		);
+	}
+	else {
+		syntax = alloc.emplace<UnconditionalBranchDirectiveSyntax>(
+			directive->directiveKind(),
+			directive,
+			eod,
+			skipped.copy(alloc)
+		);
+	}
+	return Trivia(TriviaKind::Directive, syntax);
+}
+
+Trivia Preprocessor::handleEndIfDirective(Token* directive) {
+	// pop the active branch off the stack
+	if (branchStack.empty())
+		addError(DiagCode::UnexpectedDirective);
+	else
+		branchStack.pop_back();
+	return createSimpleDirective(directive);
 }
 
 Token* Preprocessor::parseEndOfDirective() {
