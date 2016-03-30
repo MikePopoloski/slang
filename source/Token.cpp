@@ -13,13 +13,13 @@ Token::Token(TokenKind kind, ArrayRef<Trivia> trivia, uint8_t flags) :
     kind(kind), trivia(trivia), flags(flags) {
 }
 
-void Token::writeTo(Buffer<char>& buffer, bool includeTrivia, bool includeMissing) const {
-    if (includeTrivia) {
+void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
+    if (writeFlags & SyntaxToStringFlags::IncludeTrivia) {
         for (const auto& t : trivia)
-            t.writeTo(buffer);
+            t.writeTo(buffer, writeFlags);
     }
 
-    if (!includeMissing && isMissing())
+    if (!(writeFlags & SyntaxToStringFlags::IncludeMissing) && isMissing())
         return;
 
     StringRef text = getTokenKindText(kind);
@@ -81,15 +81,9 @@ StringRef Token::valueText() const {
     }
 }
 
-std::string Token::toString() const {
+std::string Token::toString(uint8_t writeFlags) const {
     Buffer<char> buffer;
-    writeTo(buffer, false);
-    return std::string(buffer.begin(), buffer.end());
-}
-
-std::string Token::toFullString() const {
-    Buffer<char> buffer;
-    writeTo(buffer, true);
+    writeTo(buffer, writeFlags);
     return std::string(buffer.begin(), buffer.end());
 }
 

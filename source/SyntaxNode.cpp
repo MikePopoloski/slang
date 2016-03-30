@@ -10,13 +10,13 @@
 
 namespace slang {
 
-void SyntaxNode::writeTo(Buffer<char>& buffer, bool includeTrivia, bool includeMissing) {
+void SyntaxNode::writeTo(Buffer<char>& buffer, uint8_t flags) {
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
         if (child.isToken && child.token)
-            child.token->writeTo(buffer, includeTrivia, includeMissing);
+            child.token->writeTo(buffer, flags);
         else if (child.node)
-            child.node->writeTo(buffer, includeTrivia);
+            child.node->writeTo(buffer, flags);
     }
 }
 
@@ -26,15 +26,9 @@ TokenOrSyntax SyntaxNode::getChild(uint32_t) {
     return nullptr;
 }
 
-std::string SyntaxNode::toString() {
+std::string SyntaxNode::toString(uint8_t flags) {
     Buffer<char> buffer;
-    writeTo(buffer, false);
-    return std::string(buffer.begin(), buffer.end());
-}
-
-std::string SyntaxNode::toFullString() {
-    Buffer<char> buffer;
-    writeTo(buffer, true);
+    writeTo(buffer, flags);
     return std::string(buffer.begin(), buffer.end());
 }
 

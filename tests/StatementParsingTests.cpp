@@ -25,7 +25,7 @@ TEST_CASE("If statement", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::ConditionalStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     CHECK(((ConditionalStatementSyntax*)stmt)->predicate->conditions[0]->expr->kind == SyntaxKind::LogicalAndExpression);
 }
@@ -35,7 +35,7 @@ TEST_CASE("Case statement (empty)", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::CaseStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -44,7 +44,7 @@ TEST_CASE("Case statement (normal)", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::CaseStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -53,7 +53,7 @@ TEST_CASE("Case statement (pattern)", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::CaseStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -62,7 +62,7 @@ TEST_CASE("Case statement (range)", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::CaseStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -71,7 +71,7 @@ TEST_CASE("Loop statements", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::LoopStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -80,7 +80,7 @@ TEST_CASE("Do while statement", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::DoWhileStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -89,7 +89,7 @@ TEST_CASE("Forever statement", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::ForeverStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -98,7 +98,7 @@ TEST_CASE("Return statement", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::ReturnStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -107,7 +107,7 @@ TEST_CASE("Jump statements", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::JumpStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -116,7 +116,7 @@ TEST_CASE("Disable statement", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::DisableStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -125,7 +125,7 @@ TEST_CASE("Disable fork statement", "[parser:statements]") {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::DisableForkStatement);
-    CHECK(stmt->toFullString() == text);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -134,7 +134,7 @@ void testTimingControl(const SourceText& text, SyntaxKind kind) {
 
     REQUIRE(stmt->kind == SyntaxKind::TimingControlStatement);
     CHECK(((TimingControlStatementSyntax*)stmt)->timingControl->kind == kind);
-    CHECK(stmt->toFullString() == text.begin());
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());
     CHECK(diagnostics.empty());
 }
 
@@ -155,7 +155,7 @@ void testProceduralAssign(const SourceText& text, SyntaxKind kind) {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == kind);
-    CHECK(stmt->toFullString() == text.begin());
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());
     CHECK(diagnostics.empty());
 }
 
@@ -171,7 +171,7 @@ DataDeclarationSyntax* parseBlockDeclaration(const std::string& text) {
     auto stmt = parse(fullText);
 
     REQUIRE(stmt->kind == SyntaxKind::SequentialBlockStatement);
-    CHECK(stmt->toFullString() == fullText);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
     CHECK(diagnostics.empty());
 
     auto block = (SequentialBlockStatementSyntax*)stmt;

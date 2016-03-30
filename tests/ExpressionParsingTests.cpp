@@ -175,7 +175,7 @@ void testBinaryOperator(TokenKind kind) {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == getBinaryExpression(kind));
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     auto us = (BinaryExpressionSyntax*)expr;
     CHECK(us->operatorToken->kind == kind);
@@ -249,7 +249,7 @@ TEST_CASE("Class scoped name", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::ScopedName);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -267,7 +267,7 @@ TEST_CASE("Concatenation", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::ConcatenationExpression);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -276,7 +276,7 @@ TEST_CASE("Multiple concatenation", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::MultipleConcatenationExpression);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -286,7 +286,7 @@ TEST_CASE("Streaming concatenation", "[parser:expressions]") {
 
     REQUIRE(expr->kind == SyntaxKind::StreamingConcatenationExpression);
     CHECK(((StreamingConcatenationExpressionSyntax*)expr)->expressions[1]->withRange->range->selector->kind == SyntaxKind::AscendingRangeSelect);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -295,7 +295,7 @@ TEST_CASE("Element Access", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::ElementSelectExpression);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -303,7 +303,7 @@ void testElementRange(const SourceText& text, SyntaxKind kind) {
     auto expr = parse(text);
     REQUIRE(expr->kind == SyntaxKind::ElementSelectExpression);
     CHECK(((ElementSelectExpressionSyntax*)expr)->select->selector->kind == kind);
-    CHECK(expr->toFullString() == text.begin());
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());
     CHECK(diagnostics.empty());
 }
 
@@ -318,7 +318,7 @@ TEST_CASE("Member Access", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::MemberAccessExpression);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -327,7 +327,7 @@ TEST_CASE("Invocation expression", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::InvocationExpression);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -336,7 +336,7 @@ TEST_CASE("Inside expression", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::InsideExpression);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -345,7 +345,7 @@ TEST_CASE("Tagged union expression", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::TaggedUnionExpression);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
 
@@ -354,7 +354,7 @@ TEST_CASE("Bad argument recovery", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::InvocationExpression);
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(!diagnostics.empty());
 }
 
@@ -363,7 +363,7 @@ TEST_CASE("Conditional expression", "[parser:expressions]") {
     auto& text = "foo || bar ? 3 : 4";
     auto expr = parse(text);
 
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     REQUIRE(expr->kind == SyntaxKind::ConditionalExpression);
 
@@ -377,7 +377,7 @@ TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
     auto& text = "foo matches 34 &&& foo ? 3 : 4";
     auto expr = parse(text);
 
-    CHECK(expr->toFullString() == text);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     REQUIRE(expr->kind == SyntaxKind::ConditionalExpression);
 

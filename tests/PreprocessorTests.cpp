@@ -47,7 +47,7 @@ void testDirective(SyntaxKind kind) {
     REQUIRE(token != nullptr);
 
     CHECK(token->kind == TokenKind::Directive);
-    CHECK(token->toFullString() == text);
+    CHECK(token->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(token->valueText() == text);
     CHECK(diagnostics.empty());
 }
@@ -80,7 +80,7 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(token.toFullString() == text);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     REQUIRE(token.trivia.count() == 1);
     REQUIRE(token.trivia[0].kind == TriviaKind::Directive);
@@ -99,7 +99,7 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(token.toFullString() == text);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     REQUIRE(token.trivia.count() == 1);
     REQUIRE(token.trivia[0].kind == TriviaKind::Directive);

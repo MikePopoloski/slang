@@ -15,15 +15,15 @@ SyntaxNode* Trivia::syntax() const {
     return syntaxNode;
 }
 
-void Trivia::writeTo(Buffer<char>& buffer) const {
+void Trivia::writeTo(Buffer<char>& buffer, uint8_t flags) const {
     switch (kind) {
         case TriviaKind::Directive:
-            syntaxNode->writeTo(buffer, true);
+            syntaxNode->writeTo(buffer, flags);
             break;
 
         case TriviaKind::SkippedTokens:
             for (auto& t : tokens)
-                t->writeTo(buffer, true);
+                t->writeTo(buffer, flags);
             break;
 
         default:

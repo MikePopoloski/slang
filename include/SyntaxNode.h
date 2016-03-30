@@ -364,12 +364,9 @@ public:
 
     SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
-    // convenience methods that wrap writeTo
-    // toFullString() includes trivia, toString() does not
-    std::string toString();
-    std::string toFullString();
+    std::string toString(uint8_t flags = 0);
 
-    void writeTo(Buffer<char>& buffer, bool includeTrivia, bool includeMissing = false);
+    void writeTo(Buffer<char>& buffer, uint8_t flags);
     Token* getFirstToken();
 
     template<typename T>

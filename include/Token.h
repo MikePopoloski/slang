@@ -13,8 +13,18 @@ enum class TokenKind : uint16_t;
 struct TokenFlags {
     enum {
         None = 0,
-        Missing = 1
+        Missing = 1,
+		IsFromPreprocessor = 2
     };
+};
+
+struct SyntaxToStringFlags {
+	enum {
+		None = 0,
+		IncludeTrivia = 1,
+		IncludeMissing = 2,
+		IncludePreprocessed = 4
+	};
 };
 
 enum class IdentifierType : uint8_t {
@@ -70,13 +80,11 @@ public:
     // for example, in string literals, escape sequences are converted appropriately
     StringRef valueText() const;
 
-    // convenience methods that wrap writeTo
-    // toFullString() includes trivia, toString() does not
-    std::string toString() const;
-    std::string toFullString() const;
+    // convenience method that wraps writeTo
+    std::string toString(uint8_t flags = 0) const;
 
     // copy string representation to the given buffer
-    void writeTo(Buffer<char>& buffer, bool includeTrivia, bool includeMissing = false) const;
+    void writeTo(Buffer<char>& buffer, uint8_t flags) const;
 
     // data accessors for specific kinds of tokens
     // these will generally assert if the kind is wrong

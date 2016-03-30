@@ -25,7 +25,7 @@ TEST_CASE("Simple module", "[parser:modules]") {
     auto module = parse(text);
 
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module->toFullString() == text);
+    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     CHECK(module->header->name->valueText() == "foo");
 }
@@ -35,7 +35,7 @@ TEST_CASE("Simple interface", "[parser:modules]") {
     auto module = parse(text);
 
     REQUIRE(module->kind == SyntaxKind::InterfaceDeclaration);
-    CHECK(module->toFullString() == text);
+    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     CHECK(module->header->name->valueText() == "foo");
 }
@@ -45,7 +45,7 @@ TEST_CASE("Simple program", "[parser:modules]") {
     auto module = parse(text);
 
     REQUIRE(module->kind == SyntaxKind::ProgramDeclaration);
-    CHECK(module->toFullString() == text);
+    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     CHECK(module->header->name->valueText() == "foo");
 }
@@ -55,7 +55,7 @@ TEST_CASE("Complex header", "[parser:modules]") {
     auto module = parse(text);
 
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module->toFullString() == text);
+    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     CHECK(module->header->name->valueText() == "foo");
     CHECK(module->attributes.count() == 1);
@@ -69,7 +69,7 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     auto module = parse(text);
 
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module->toFullString() == text);
+    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 
     auto parameters = module->header->parameters->declarations;
@@ -87,7 +87,7 @@ const MemberSyntax* parseMember(const std::string& text, SyntaxKind kind) {
     auto module = parse(fullText);
 
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module->toFullString() == fullText);
+    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
     CHECK(diagnostics.empty());
 
     REQUIRE(module->members.count() == 1);
