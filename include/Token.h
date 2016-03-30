@@ -74,7 +74,11 @@ public:
     TokenKind kind;
 
     // a missing token was expected and inserted by the parser at a given point
-    bool isMissing() const { return flags & TokenFlags::Missing; }
+	bool isMissing() const { return flags & TokenFlags::Missing; }
+
+	// token was sourced from a preprocessor directive (include, macro, etc)
+	bool isFromPreprocessor() const { return (flags & TokenFlags::IsFromPreprocessor) != 0; }
+	void markAsPreprocessed() { flags |= TokenFlags::IsFromPreprocessor; }
 
     // value text is the "nice" lexed version of certain tokens;
     // for example, in string literals, escape sequences are converted appropriately

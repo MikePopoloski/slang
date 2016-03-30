@@ -8,13 +8,14 @@ namespace {
 BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceTracker sourceTracker;
-Preprocessor preprocessor(sourceTracker, alloc, diagnostics);
 
 ModuleDeclarationSyntax* parse(const SourceText& text) {
-    diagnostics.clear();
-	preprocessor.pushSource(text);
-	Parser parser(preprocessor);
+	diagnostics.clear();
 
+	Preprocessor preprocessor(sourceTracker, alloc, diagnostics);
+	preprocessor.pushSource(text);
+
+	Parser parser(preprocessor);
     auto node = parser.parseModule();
     REQUIRE(node);
     return node;

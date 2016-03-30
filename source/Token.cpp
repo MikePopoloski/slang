@@ -22,6 +22,9 @@ void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
     if (!(writeFlags & SyntaxToStringFlags::IncludeMissing) && isMissing())
         return;
 
+	if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
+		return;
+
     StringRef text = getTokenKindText(kind);
     if (text)
         buffer.appendRange(text);

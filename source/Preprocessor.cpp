@@ -104,11 +104,17 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
 			token = source.macro->next();
 			if (source.macro->done())
 				sourceStack.pop_back();
+			token->markAsPreprocessed();
 			return token;
 		case Source::LEXER:
 			token = source.lexer->lex(mode);
-			if (token->kind != TokenKind::EndOfFile)
+			if (token->kind != TokenKind::EndOfFile) {
+				// The idea here is that if we have more things on the stack,
+				// the current lexer must be for an include file
+				if (sourceStack.size() > 1)
+					token->markAsPreprocessed();
 				return token;
+			}
 
 			// don't return EndOfFile tokens for included files, fall
 			// through to loop to merge trivia
@@ -130,6 +136,7 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
 				token = nextSource.macro->next();
 				if (nextSource.macro->done())
 					sourceStack.pop_back();
+				token->markAsPreprocessed();
 				break;
 			case Source::LEXER: {
 				token = nextSource.lexer->lex(mode);
@@ -148,6 +155,8 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
 		if (!keepGoing) {
 			// finally found a real token to return, so update trivia and get out of here
 			token->trivia = trivia.copy(alloc);
+			if (sourceStack.size() > 1)
+				token->markAsPreprocessed();
 			return token;
 		}
 	}
