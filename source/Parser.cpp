@@ -58,8 +58,8 @@ Parser::Parser(Preprocessor& preprocessor) :
 }
 
 CompilationUnitSyntax* Parser::parseCompilationUnit() {
-    auto members = parseMemberList(TokenKind::EndOfFile);
-    auto eof = expect(TokenKind::EndOfFile);
+	Token* eof;
+    auto members = parseMemberList(TokenKind::EndOfFile, eof);
     return alloc.emplace<CompilationUnitSyntax>(members, eof);
 }
 
@@ -70,8 +70,9 @@ ModuleDeclarationSyntax* Parser::parseModule() {
 ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto header = parseModuleHeader();
     auto endKind = getModuleEndKind(header->moduleKeyword->kind);
-    auto members = parseMemberList(endKind);
-    auto endmodule = expect(endKind);
+
+	Token* endmodule;
+    auto members = parseMemberList(endKind, endmodule);
     return alloc.emplace<ModuleDeclarationSyntax>(
         getModuleDeclarationKind(header->moduleKeyword->kind),
         attributes,
@@ -303,8 +304,10 @@ MemberSyntax* Parser::parseMember() {
     switch (peek()->kind) {
         case TokenKind::GenerateKeyword: {
             auto keyword = consume();
-            auto members = parseMemberList(TokenKind::EndGenerateKeyword);
-            return alloc.emplace<GenerateBlockSyntax>(attributes, keyword, members, expect(TokenKind::EndGenerateKeyword));
+
+			Token* endgenerate;
+            auto members = parseMemberList(TokenKind::EndGenerateKeyword, endgenerate);
+            return alloc.emplace<GenerateBlockSyntax>(attributes, keyword, members, endgenerate);
         }
 
         case TokenKind::SpecifyKeyword:
@@ -361,14 +364,7 @@ MemberSyntax* Parser::parseMember() {
 	return nullptr;
 }
 
-void Parser::reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia) {
-	if (skipped.empty())
-		return;
-	trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
-	skipped.clear();
-}
-
-ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind) {
+ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endToken) {
     auto members = nodePool.getAs<MemberSyntax*>();
 	auto skipped = tokenPool.get();
 	auto trivia = triviaPool.get();
@@ -397,6 +393,10 @@ ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind) {
 			members.append(member);
 		}
     }
+	
+	reduceSkippedTokens(skipped, trivia);
+	endToken = prependTrivia(expect(endKind), trivia);
+
     return members.copy(alloc);
 }
 
@@ -829,19 +829,23 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock(StatementLabelSynta
     auto name = parseNamedBlockClause();
 
     auto buffer = nodePool.get();
+	auto skipped = tokenPool.get();
     auto kind = peek()->kind;
     while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
+		SyntaxNode* newNode = nullptr;
         if (isVariableDeclaration())
-            buffer.append(parseVariableDeclaration(parseAttributes()));
+            newNode = parseVariableDeclaration(parseAttributes());
         else if (isPossibleStatement(kind))
-            buffer.append(parseStatement());
-        else {
-            // TODO: skipped tokens
-        }
+            newNode = parseStatement();
+        else
+			skipped.append(consume());
+
+		if (newNode)
+			buffer.append(prependSkippedTokens(newNode, skipped));
         kind = peek()->kind;
     }
 
-    auto end = expect(TokenKind::EndKeyword);
+	auto end = prependSkippedTokens(expect(TokenKind::EndKeyword), skipped);
     auto endName = parseNamedBlockClause();
     return alloc.emplace<SequentialBlockStatementSyntax>(label, attributes, begin, name, buffer.copy(alloc), end, endName);
 }
@@ -2018,7 +2022,7 @@ bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
     }
 }
 
-// this is a generalized method for parsing a comma separated list of things
+// this is a generalized method for parsing a delimiter separated list of things
 // with bookend tokens in a way that robustly handles bad tokens
 template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
 void Parser::parseSeparatedList(
@@ -2153,6 +2157,13 @@ Parser::SkipAction Parser::skipBadTokens(Trivia* skippedTokens) {
     return result;
 }
 
+void Parser::reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia) {
+	if (skipped.empty())
+		return;
+	trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
+	skipped.clear();
+}
+
 template<typename T>
 void Parser::prependTrivia(ArrayRef<T*> list, Trivia* trivia) {
     if (trivia->kind != TriviaKind::Unknown && !list.empty())
@@ -2177,18 +2188,37 @@ Token* Parser::prependTrivia(Token* token, Trivia* trivia) {
     return token;
 }
 
-void Parser::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
-	if (trivia.empty())
-		return;
-
-	ASSERT(node);
-	Token* token = node->getFirstToken();
+Token* Parser::prependTrivia(Token* token, Buffer<Trivia>& trivia) {
 	ASSERT(token);
-
 	trivia.appendRange(token->trivia);
 	token->trivia = trivia.copy(alloc);
-
 	trivia.clear();
+	return token;
+}
+
+void Parser::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
+	if (!trivia.empty()) {
+		ASSERT(node);
+		prependTrivia(node->getFirstToken(), trivia);
+	}
+}
+
+SyntaxNode* Parser::prependSkippedTokens(SyntaxNode* node, Buffer<Token*>& tokens) {
+	if (!tokens.empty()) {
+		Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
+		prependTrivia(node, &t);
+		tokens.clear();
+	}
+	return node;
+}
+
+Token* Parser::prependSkippedTokens(Token* token, Buffer<Token*>& tokens) {
+	if (!tokens.empty()) {
+		Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
+		prependTrivia(token, &t);
+		tokens.clear();
+	}
+	return token;
 }
 
 void Parser::addError(DiagCode code) {

@@ -70,7 +70,7 @@ private:
     PortHeaderSyntax* parsePortHeader(Token* direction);
     PortDeclarationSyntax* parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseMember();
-    ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind);
+    ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind, Token*& endToken);
     TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportItemSyntax* parsePackageImportItem();
@@ -159,6 +159,10 @@ private:
     Token* prependTrivia(Token* token, Trivia* trivia);
 
 	void prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia);
+	Token* prependTrivia(Token* token, Buffer<Trivia>& trivia);
+
+	SyntaxNode* prependSkippedTokens(SyntaxNode* node, Buffer<Token*>& tokens);
+	Token* prependSkippedTokens(Token* node, Buffer<Token*>& tokens);
 
     void addError(DiagCode code);
 
