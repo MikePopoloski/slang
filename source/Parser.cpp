@@ -351,20 +351,53 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::CheckerKeyword:
             break;
     }
+
+	// if we got attributes but don't know what comes next, we have an "incomplete member"
+	if (attributes.count())
+		// TODO: error
+		return alloc.emplace<MemberSyntax>(SyntaxKind::IncompleteMember, attributes);
+
+	// otherwise, we got nothing and should just return null so that are caller will skip and try again.
+	return nullptr;
+}
+
+void Parser::reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia) {
+	if (skipped.empty())
+		return;
+	trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
+	skipped.clear();
 }
 
 ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind) {
-    auto buffer = nodePool.getAs<MemberSyntax*>();
+    auto members = nodePool.getAs<MemberSyntax*>();
+	auto skipped = tokenPool.get();
+	auto trivia = triviaPool.get();
+
     while (true) {
         auto kind = peek()->kind;
         if (kind == TokenKind::EndOfFile || kind == endKind)
             break;
 
-        // TODO: error checking
-
-        buffer.append(parseMember());
+		auto member = parseMember();
+		if (!member) {
+			// couldn't parse anything, skip a token and try again
+			skipped.append(consume());
+		}
+		else if (member->kind == SyntaxKind::IncompleteMember) {
+			// we got what looked like the start of a member but nothing after it
+			// skip it and try again
+			reduceSkippedTokens(skipped, trivia);
+			trivia.append(Trivia(TriviaKind::SkippedSyntax, member));
+			skipped.append(consume());
+		}
+		else {
+			// got a real member; make sure not to lose the trivia
+			reduceSkippedTokens(skipped, trivia);
+			prependTrivia(member, trivia);
+			members.append(member);
+		}
     }
-    return buffer.copy(alloc);
+    return members.copy(alloc);
 }
 
 TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -2142,6 +2175,20 @@ Token* Parser::prependTrivia(Token* token, Trivia* trivia) {
         *trivia = Trivia();
     }
     return token;
+}
+
+void Parser::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
+	if (trivia.empty())
+		return;
+
+	ASSERT(node);
+	Token* token = node->getFirstToken();
+	ASSERT(token);
+
+	trivia.appendRange(token->trivia);
+	token->trivia = trivia.copy(alloc);
+
+	trivia.clear();
 }
 
 void Parser::addError(DiagCode code) {

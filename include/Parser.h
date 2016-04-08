@@ -147,14 +147,18 @@ private:
 		Abort
 	};
 
+	void reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia);
+
     template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
     SkipAction skipBadTokens(Trivia* skippedTokens);
 
     template<typename T>
     void prependTrivia(ArrayRef<T*> list, Trivia* trivia);
 
-    SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
+	SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
     Token* prependTrivia(Token* token, Trivia* trivia);
+
+	void prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia);
 
     void addError(DiagCode code);
 

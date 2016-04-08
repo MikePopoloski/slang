@@ -14,6 +14,9 @@ Token::Token(TokenKind kind, ArrayRef<Trivia> trivia, uint8_t flags) :
 }
 
 void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
+	if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
+		return;
+
     if (writeFlags & SyntaxToStringFlags::IncludeTrivia) {
         for (const auto& t : trivia)
             t.writeTo(buffer, writeFlags);
@@ -21,9 +24,6 @@ void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
 
     if (!(writeFlags & SyntaxToStringFlags::IncludeMissing) && isMissing())
         return;
-
-	if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
-		return;
 
     StringRef text = getTokenKindText(kind);
     if (text)

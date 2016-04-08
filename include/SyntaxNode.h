@@ -314,6 +314,7 @@ enum class SyntaxKind : uint16_t {
     WildcardPortConnection,
     HierarchicalInstance,
     HierarchyInstantiation,
+	IncompleteMember,
 
     // top level
     CompilationUnit

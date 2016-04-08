@@ -11,13 +11,14 @@
 namespace slang {
 
 SyntaxNode* Trivia::syntax() const {
-    ASSERT(kind == TriviaKind::Directive);
+    ASSERT(kind == TriviaKind::Directive || kind == TriviaKind::SkippedSyntax);
     return syntaxNode;
 }
 
 void Trivia::writeTo(Buffer<char>& buffer, uint8_t flags) const {
     switch (kind) {
-        case TriviaKind::Directive:
+		case TriviaKind::Directive:
+		case TriviaKind::SkippedSyntax:
             syntaxNode->writeTo(buffer, flags);
             break;
 

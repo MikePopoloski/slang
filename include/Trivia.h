@@ -17,6 +17,7 @@ enum class TriviaKind : uint8_t {
     BlockComment,
     DisabledText,
     SkippedTokens,
+	SkippedSyntax,
     Directive
 };
 
