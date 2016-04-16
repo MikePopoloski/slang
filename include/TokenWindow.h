@@ -65,7 +65,7 @@ public:
         if (result->kind != kind) {
             // report an error here for the missing token
             // TODO: location info
-			tokenSource.getDiagnostics().add(SyntaxError(DiagCode::SyntaxError, 0, 0));
+			tokenSource.getDiagnostics().emplace(DiagCode::SyntaxError, 0, 0);
             return Token::missing(tokenSource.getAllocator(), kind);
         }
 

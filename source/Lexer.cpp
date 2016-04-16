@@ -1074,7 +1074,7 @@ void Lexer::addTrivia(TriviaKind kind, Buffer<Trivia>& buffer) {
 
 void Lexer::addError(DiagCode code) {
     // TODO: location info
-    diagnostics.add(SyntaxError(code, 0, 0));
+    diagnostics.emplace(code, 0, 0);
 }
 
 } // namespace slang

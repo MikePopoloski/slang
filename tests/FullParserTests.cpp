@@ -23,9 +23,12 @@ void parseFile(const SourceFile& file) {
     REQUIRE(tree);
 	//REQUIRE(tree->toString(SyntaxToStringFlags::IncludeTrivia) == std::string(file.buffer.begin(), file.buffer.end() - 1));
     
-
+	for (auto& diag : diagnostics) {
+		auto report = diagnostics.getReport(diag);
+		WARN(report.toString());
+	}
 	
-	CHECK(diagnostics.empty());
+	REQUIRE(diagnostics.empty());
 }
 
 TEST_CASE("External files", "[parser:full]") {

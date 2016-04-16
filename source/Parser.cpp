@@ -2222,7 +2222,7 @@ Token* Parser::prependSkippedTokens(Token* token, Buffer<Token*>& tokens) {
 }
 
 void Parser::addError(DiagCode code) {
-    diagnostics.add(SyntaxError(code, 0, 0));
+    diagnostics.emplace(code, 0, 0);
 }
 
 }

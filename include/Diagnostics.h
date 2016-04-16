@@ -49,31 +49,38 @@ enum class DiagCode : uint8_t {
 
 };
 
-class SyntaxError {
+std::ostream& operator<<(std::ostream& os, DiagCode code);
+
+class Diagnostic {
 public:
     DiagCode code;
     int location;
     int width;
 
-    SyntaxError(DiagCode code, int location, int width)
-        : code(code), location(location), width(width) {
+	Diagnostic(DiagCode code, int location, int width) :
+		code(code), location(location), width(width)
+	{
     }
 };
 
-class Diagnostics {
+class DiagnosticReport {
+public:
+	const Diagnostic& diagnostic;
+	StringRef format;
+
+	DiagnosticReport(const Diagnostic& diagnostic, StringRef format) :
+		diagnostic(diagnostic), format(format)
+	{
+	}
+
+	std::string toString() const;
+};
+
+class Diagnostics : public Buffer<Diagnostic> {
 public:
     Diagnostics();
 
-    bool empty() const { return syntaxErrors.empty(); }
-
-    void clear() { syntaxErrors.clear(); }
-    void add(const SyntaxError& error);
-
-    // TODO: this is temporary
-    const SyntaxError& last() { return *(syntaxErrors.end() - 1); }
-
-private:
-    Buffer<SyntaxError> syntaxErrors;
+	DiagnosticReport getReport(const Diagnostic& diagnostic) const;
 };
 
 }

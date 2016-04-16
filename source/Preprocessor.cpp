@@ -499,7 +499,7 @@ Token* Preprocessor::expect(TokenKind kind) {
 }
 
 void Preprocessor::addError(DiagCode code) {
-    diagnostics.add(SyntaxError(code, 0, 0));
+    diagnostics.emplace(code, 0, 0);
 }
 
 MacroExpander::MacroExpander(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
