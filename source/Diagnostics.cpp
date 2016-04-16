@@ -11,7 +11,7 @@ namespace slang {
 
 const static StringRef diagnosticDescriptors[] = {
 	// lexer
-	"NonPrintableChar"
+	"NonPrintableChar",
 	"UTF8Char",
 	"UnicodeBOM",
 	"EmbeddedNull",
