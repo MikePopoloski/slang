@@ -9,50 +9,58 @@
 
 namespace slang {
 
-const static StringRef diagnosticDescriptors[] = {
-	// lexer
-	"NonPrintableChar",
-	"UTF8Char",
-	"UnicodeBOM",
-	"EmbeddedNull",
-	"MisplacedDirectiveChar",
-	"EscapedWhitespace",
-	"NewlineInStringLiteral",
-	"UnterminatedStringLiteral",
-	"UnterminatedBlockComment",
-	"NestedBlockComment",
-	"SplitBlockCommentInDirective",
-	"MissingExponentDigits",
-	"MissingFractionalDigits",
-	"OctalEscapeCodeTooBig",
-	"InvalidHexEscapeCode",
-	"UnknownEscapeCode",
-	"RealExponentTooLarge",
-	"SignedLiteralTooLarge",
-	"IntegerSizeZero",
-	"IntegerSizeTooLarge",
-	"MissingVectorBase",
-	"MissingVectorDigits",
-	"ExpectedEndOfIncludeFileName",
-	"ExpectedIncludeFileName",
+struct DiagnosticDescriptor {
+	StringRef format;
+	DiagnosticSeverity severity;
 
+	DiagnosticDescriptor(StringRef format) :
+		format(format), severity(DiagnosticSeverity::Error)
+	{
+	}
+};
+
+const static DiagnosticDescriptor diagnosticDescriptors[] = {
+	// lexer
+	{ "Non-printable character in source text. SystemVerilog only supports ASCII text." },
+	{ "UTF-8 sequence in source text. SystemVerilog only supports ASCII text." },
+	{ "Unicode BOM at start of source text. SystemVerilog only supports ASCII text." },
+	{ "Embedded NUL in source text. Are you sure this is source code?" },
+	{ "Expected directive name." },
+	{ "Expected newline after escape sequence; remove trailing whitespace." },
+	{ "Missing closing quote." },
+	{ "Block comment unclosed at end of file." },
+	{ "Nested block comments are disallowed by SystemVerilog." },
+	{ "Block comments on the same line as a directive must also be terminated on that line." },
+	{ "Expected exponent digits." },
+	{ "Expected fractional digits." },
+	{ "Octal escape code is too large to be an ASCII character." },
+	{ "Invalid hexadecimal number." },
+	{ "Unknown character escape sequence." },
+	{ "Literal exponent is too large." },
+	{ "Signed integer constant is too large." },
+	{ "Vector literal cannot have a size of zero." },
+	{ "Vector literal is too large." },
+	{ "Unknown vector literal base specifier." },
+	{ "Expected vector literal digits." },
+	{ "Expected an include file name." },
+	
 	// preprocessor
-	"CouldNotOpenIncludeFile",
-	"ExceededMaxIncludeDepth",
-	"UnknownDirective",
-	"ExpectedEndOfDirective",
-	"ExpectedEndOfMacroArgs",
-	"ExpectedEndIfDirective",
-	"UnexpectedDirective",
-	"UnbalancedMacroArgDims",
-	"ExpectedMacroArgs",
+	{ "CouldNotOpenIncludeFile" },
+	{ "ExceededMaxIncludeDepth" },
+	{ "UnknownDirective" },
+	{ "ExpectedEndOfDirective" },
+	{ "ExpectedEndOfMacroArgs" },
+	{ "ExpectedEndIfDirective" },
+	{ "UnexpectedDirective" },
+	{ "UnbalancedMacroArgDims" },
+	{ "ExpectedMacroArgs" },
 
 	// parser
-	"SyntaxError",
-	"ImplicitNotAllowed",
-	"MultipleTypesInDeclaration",
-	"DirectionOnInterfacePort",
-	"ColonShouldBeDot"
+	{ "SyntaxError" },
+	{ "ImplicitNotAllowed" },
+	{ "MultipleTypesInDeclaration" },
+	{ "DirectionOnInterfacePort" },
+	{ "ColonShouldBeDot" }
 };
 
 Diagnostics::Diagnostics() :
@@ -61,11 +69,22 @@ Diagnostics::Diagnostics() :
 }
 
 DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
-	return DiagnosticReport(diagnostic, diagnosticDescriptors[(int)diagnostic.code]);
+	auto& descriptor = diagnosticDescriptors[(int)diagnostic.code];
+	return {
+		diagnostic,
+		descriptor.format,
+		descriptor.severity
+	};
 }
 
 std::string DiagnosticReport::toString() const {
-	return format.toString();
+	std::string result;
+	switch (severity) {
+		case DiagnosticSeverity::Error: result = "ERROR: "; break;
+		case DiagnosticSeverity::Warning: result = "WARNING: "; break;
+		case DiagnosticSeverity::Info: result = "INFO: "; break;
+	}
+	return result + format.toString();
 }
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {
@@ -77,8 +96,7 @@ std::ostream& operator<<(std::ostream& os, DiagCode code) {
 		CASE(EmbeddedNull);
 		CASE(MisplacedDirectiveChar);
 		CASE(EscapedWhitespace);
-		CASE(NewlineInStringLiteral);
-		CASE(UnterminatedStringLiteral);
+		CASE(ExpectedClosingQuote);
 		CASE(UnterminatedBlockComment);
 		CASE(NestedBlockComment);
 		CASE(SplitBlockCommentInDirective);
@@ -93,7 +111,6 @@ std::ostream& operator<<(std::ostream& os, DiagCode code) {
 		CASE(IntegerSizeTooLarge);
 		CASE(MissingVectorBase);
 		CASE(MissingVectorDigits);
-		CASE(ExpectedEndOfIncludeFileName);
 		CASE(ExpectedIncludeFileName);
 		CASE(CouldNotOpenIncludeFile);
 		CASE(ExceededMaxIncludeDepth);

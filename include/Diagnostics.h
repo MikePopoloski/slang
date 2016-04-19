@@ -10,8 +10,7 @@ enum class DiagCode : uint8_t {
     EmbeddedNull,
     MisplacedDirectiveChar,
     EscapedWhitespace,
-    NewlineInStringLiteral,
-    UnterminatedStringLiteral,
+    ExpectedClosingQuote,
     UnterminatedBlockComment,
     NestedBlockComment,
     SplitBlockCommentInDirective,
@@ -26,7 +25,6 @@ enum class DiagCode : uint8_t {
     IntegerSizeTooLarge,
     MissingVectorBase,
     MissingVectorDigits,
-    ExpectedEndOfIncludeFileName,
     ExpectedIncludeFileName,
 
     // preprocessor
@@ -63,13 +61,20 @@ public:
     }
 };
 
+enum class DiagnosticSeverity {
+	Info,
+	Warning,
+	Error
+};
+
 class DiagnosticReport {
 public:
 	const Diagnostic& diagnostic;
 	StringRef format;
+	DiagnosticSeverity severity;
 
-	DiagnosticReport(const Diagnostic& diagnostic, StringRef format) :
-		diagnostic(diagnostic), format(format)
+	DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
+		diagnostic(diagnostic), format(format), severity(severity)
 	{
 	}
 

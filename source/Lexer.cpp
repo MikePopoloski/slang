@@ -472,12 +472,12 @@ void Lexer::lexStringLiteral(TokenInfo& info) {
             break;
         }
         else if (isNewline(c)) {
-            addError(DiagCode::NewlineInStringLiteral);
+            addError(DiagCode::ExpectedClosingQuote);
             break;
         }
         else if (c == '\0') {
             if (reallyAtEnd()) {
-                addError(DiagCode::UnterminatedStringLiteral);
+                addError(DiagCode::ExpectedClosingQuote);
                 break;
             }
 
@@ -564,7 +564,7 @@ Token* Lexer::lexIncludeFileName() {
 	do {
 		c = peek();
 		if (c == '\0' || isNewline(c)) {
-			addError(DiagCode::ExpectedEndOfIncludeFileName);
+			addError(DiagCode::ExpectedIncludeFileName);
 			break;
 		}
 		advance();

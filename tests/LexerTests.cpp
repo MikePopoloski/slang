@@ -260,7 +260,7 @@ TEST_CASE("String literal (newline)", "[lexer]") {
     CHECK(token.valueText() == "literal");
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::NewlineInStringLiteral);
+    CHECK(diagnostics.last().code == DiagCode::ExpectedClosingQuote);
 }
 
 TEST_CASE("String literal (escaped newline)", "[lexer]") {
@@ -282,7 +282,7 @@ TEST_CASE("String literal (unterminated)", "[lexer]") {
     CHECK(token.valueText() == "literal");
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::UnterminatedStringLiteral);
+    CHECK(diagnostics.last().code == DiagCode::ExpectedClosingQuote);
 }
 
 TEST_CASE("String literal (escapes)", "[lexer]") {
