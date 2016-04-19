@@ -5,10 +5,10 @@
 
 namespace slang {
 
-class SourceTracker;
+class SourceManager;
 
 struct FileID : public HandleBase<FileID> {
-    friend class SourceTracker;
+    friend class SourceManager;
 };
 
 struct SourceFile {
@@ -21,9 +21,9 @@ struct SourceFile {
     }
 };
 
-class SourceTracker {
+class SourceManager {
 public:
-    SourceTracker();
+	SourceManager();
 
     std::string makeAbsolutePath(StringRef path) const;
     void addSystemDirectory(StringRef path);

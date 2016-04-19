@@ -26,7 +26,7 @@ private:
 
 class Preprocessor {
 public:
-    Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
 
 	void pushSource(SourceText source, FileID file = FileID());
 
@@ -34,7 +34,7 @@ public:
 
 	FileID getCurrentFile();
 
-    SourceTracker& getSourceTracker() const { return sourceTracker; }
+	SourceManager& getSourceManager() const { return sourceManager; }
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
@@ -90,7 +90,7 @@ private:
 		BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
 	};
 
-	SourceTracker& sourceTracker;
+	SourceManager& sourceManager;
 	BumpAllocator& alloc;
 	Diagnostics& diagnostics;
 

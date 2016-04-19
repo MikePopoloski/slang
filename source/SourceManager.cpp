@@ -7,7 +7,7 @@
 #include "BumpAllocator.h"
 #include "Buffer.h"
 #include "StringRef.h"
-#include "SourceTracker.h"
+#include "SourceManager.h"
 
 namespace fs = std::tr2::sys;
 
@@ -35,31 +35,31 @@ fs::path canonicalWorkaround(const fs::path& path) {
 
 namespace slang {
 
-SourceTracker::SourceTracker() {
+SourceManager::SourceManager() {
     workingDir = fs::current_path();
 
     // add a dummy entry to the start of the directory list so that our file IDs line up
     fileToDirectory.push_back(nullptr);
 }
 
-std::string SourceTracker::makeAbsolutePath(StringRef path) const {
+std::string SourceManager::makeAbsolutePath(StringRef path) const {
     if (!path)
         return "";
 
     return (workingDir / path_type(path.begin(), path.end())).string();
 }
 
-void SourceTracker::addSystemDirectory(StringRef path) {
+void SourceManager::addSystemDirectory(StringRef path) {
     path_type p = fs::absolute(path_type(path.begin(), path.end()), workingDir);
     systemDirectories.push_back(canonicalWorkaround(p));
 }
 
-void SourceTracker::addUserDirectory(StringRef path) {
+void SourceManager::addUserDirectory(StringRef path) {
     path_type p = fs::absolute(path_type(path.begin(), path.end()), workingDir);
     userDirectories.push_back(canonicalWorkaround(p));
 }
 
-FileID SourceTracker::track(StringRef path) {
+FileID SourceManager::track(StringRef path) {
     auto it = pathMap.find(path);
     if (it != pathMap.end())
         return it->second;
@@ -72,7 +72,7 @@ FileID SourceTracker::track(StringRef path) {
     return result;
 }
 
-bool SourceTracker::readSource(StringRef fileName, SourceFile& file) {
+bool SourceManager::readSource(StringRef fileName, SourceFile& file) {
     // ensure that we have an absolute path
     ASSERT(fileName);
     path_type absPath = fs::absolute(path_type(fileName.begin(), fileName.end()), workingDir);
@@ -88,7 +88,7 @@ bool SourceTracker::readSource(StringRef fileName, SourceFile& file) {
     return true;
 }
 
-SourceFile* SourceTracker::readHeader(FileID currentSource, StringRef path, bool systemPath) {
+SourceFile* SourceManager::readHeader(FileID currentSource, StringRef path, bool systemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     ASSERT(path);
     path_type p(path.begin(), path.end());
@@ -123,7 +123,7 @@ SourceFile* SourceTracker::readHeader(FileID currentSource, StringRef path, bool
     return nullptr;
 }
 
-SourceFile* SourceTracker::openCached(path_type fullPath) {
+SourceFile* SourceManager::openCached(path_type fullPath) {
     // first see if we have this cached
     fullPath = canonicalWorkaround(fullPath);
     auto canonicalStr = fullPath.string();
@@ -146,7 +146,7 @@ SourceFile* SourceTracker::openCached(path_type fullPath) {
     return result.first->second.get();
 }
 
-bool SourceTracker::openFile(const path_type& path, Buffer<char>& buffer) {
+bool SourceManager::openFile(const path_type& path, Buffer<char>& buffer) {
     std::error_code ec;
     uintmax_t size = fs::file_size(path, ec);
     if (ec || size > INT32_MAX)
@@ -162,7 +162,7 @@ bool SourceTracker::openFile(const path_type& path, Buffer<char>& buffer) {
     return stream.good();
 }
 
-void SourceTracker::cacheDirectory(path_type path, FileID file) {
+void SourceManager::cacheDirectory(path_type path, FileID file) {
     fileToDirectory[file.getValue()] = &*directories.insert(path.remove_filename()).first;
 }
 

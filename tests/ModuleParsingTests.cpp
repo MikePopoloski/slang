@@ -7,12 +7,12 @@ namespace {
 
 BumpAllocator alloc;
 Diagnostics diagnostics;
-SourceTracker sourceTracker;
+SourceManager sourceManager;
 
 ModuleDeclarationSyntax* parse(const SourceText& text) {
 	diagnostics.clear();
 
-	Preprocessor preprocessor(sourceTracker, alloc, diagnostics);
+	Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 	preprocessor.pushSource(text);
 
 	Parser parser(preprocessor);

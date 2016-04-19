@@ -8,19 +8,19 @@ namespace {
 BumpAllocator alloc;
 Diagnostics diagnostics;
 
-SourceTracker& getTracker() {
-    static SourceTracker* tracker = nullptr;
-    if (!tracker) {
-        tracker = new SourceTracker();
-        tracker->addUserDirectory("../../../tests/data/");
+SourceManager& getSourceManager() {
+    static SourceManager* sourceManager = nullptr;
+    if (!sourceManager) {
+		sourceManager = new SourceManager();
+		sourceManager->addUserDirectory("../../../tests/data/");
     }
-    return *tracker;
+    return *sourceManager;
 }
 
 const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
 
-    Preprocessor preprocessor(getTracker(), alloc, diagnostics);
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
 	preprocessor.pushSource(text);
 
     Token* token = preprocessor.next();

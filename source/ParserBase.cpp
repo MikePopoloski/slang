@@ -10,7 +10,7 @@
 #include "Buffer.h"
 #include "BufferPool.h"
 #include "StringRef.h"
-#include "SourceTracker.h"
+#include "SourceManager.h"
 #include "Token.h"
 #include "Diagnostics.h"
 #include "Lexer.h"

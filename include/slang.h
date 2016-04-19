@@ -16,7 +16,7 @@
 #include "BufferPool.h"
 #include "StringRef.h"
 #include "StringTable.h"
-#include "SourceTracker.h"
+#include "SourceManager.h"
 #include "BitVector.h"
 #include "Diagnostics.h"
 #include "Trivia.h"

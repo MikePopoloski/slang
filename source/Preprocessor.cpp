@@ -11,7 +11,7 @@
 #include "BufferPool.h"
 #include "StringRef.h"
 #include "Diagnostics.h"
-#include "SourceTracker.h"
+#include "SourceManager.h"
 #include "Token.h"
 #include "Lexer.h"
 #include "StringTable.h"
@@ -20,8 +20,8 @@
 
 namespace slang {
 
-Preprocessor::Preprocessor(SourceTracker& sourceTracker, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    sourceTracker(sourceTracker),
+Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics) :
+	sourceManager(sourceManager),
     alloc(alloc),
     diagnostics(diagnostics)
 {
@@ -173,7 +173,7 @@ Trivia Preprocessor::handleIncludeDirective(Token* directive) {
 	else {
 		// remove delimiters
 		path = path.subString(1, path.length() - 2);
-		SourceFile* file = sourceTracker.readHeader(getCurrentFile(), path, false);
+		SourceFile* file = sourceManager.readHeader(getCurrentFile(), path, false);
 		if (!file)
 			addError(DiagCode::CouldNotOpenIncludeFile);
 		else if (sourceStack.size() >= MaxSourceDepth)

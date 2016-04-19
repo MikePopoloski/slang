@@ -67,9 +67,6 @@
     <ClInclude Include="..\..\source\CharInfo.h">
       <Filter>text</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\SourceTracker.h">
-      <Filter>text</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\BufferPool.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -86,6 +83,9 @@
       <Filter>parsing</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\SourceLocation.h">
+      <Filter>text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SourceManager.h">
       <Filter>text</Filter>
     </ClInclude>
   </ItemGroup>
@@ -105,9 +105,6 @@
     <ClCompile Include="..\..\source\Preprocessor.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\SourceTracker.cpp">
-      <Filter>text</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\Trivia.cpp">
       <Filter>lexing</Filter>
     </ClCompile>
@@ -125,6 +122,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\ParserBase.cpp">
       <Filter>parsing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\SourceManager.cpp">
+      <Filter>text</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

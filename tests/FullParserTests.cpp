@@ -11,8 +11,8 @@ namespace {
 
 BumpAllocator alloc;
 Diagnostics diagnostics;
-SourceTracker sourceTracker;
-Preprocessor preprocessor(sourceTracker, alloc, diagnostics);
+SourceManager sourceManager;
+Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 
 void parseFile(const SourceFile& file) {
     diagnostics.clear();
@@ -36,7 +36,7 @@ TEST_CASE("External files", "[parser:full]") {
     for (auto& p : fs::directory_iterator(RelativeTestPath)) {
         SourceFile file;
 		INFO("Parsing '" + p.path().string() + "'");
-        REQUIRE(sourceTracker.readSource(p.path().string(), file));
+        REQUIRE(sourceManager.readSource(p.path().string(), file));
         parseFile(file);
     }
 }

@@ -12,7 +12,7 @@
 #include "StringRef.h"
 #include "StringTable.h"
 #include "Diagnostics.h"
-#include "SourceTracker.h"
+#include "SourceManager.h"
 #include "Token.h"
 #include "Lexer.h"
 #include "CharInfo.h"
