@@ -82,6 +82,9 @@
     <ClInclude Include="..\..\include\Parser.h">
       <Filter>parsing</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ParserBase.h">
+      <Filter>parsing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -115,6 +118,9 @@
       <Filter>parsing</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\SyntaxFacts.cpp">
+      <Filter>parsing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\ParserBase.cpp">
       <Filter>parsing</Filter>
     </ClCompile>
   </ItemGroup>

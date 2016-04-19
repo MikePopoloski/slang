@@ -27,6 +27,7 @@
     <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
     <ClInclude Include="..\..\include\Parser.h" />
+    <ClInclude Include="..\..\include\ParserBase.h" />
     <ClInclude Include="..\..\include\SourceTracker.h" />
     <ClInclude Include="..\..\include\Handle.h" />
     <ClInclude Include="..\..\include\Hash.h" />
@@ -45,6 +46,7 @@
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
     <ClCompile Include="..\..\source\Parser.cpp" />
+    <ClCompile Include="..\..\source\ParserBase.cpp" />
     <ClCompile Include="..\..\source\SourceTracker.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />

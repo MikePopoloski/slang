@@ -1,12 +1,13 @@
 #pragma once
 
+#include "ParserBase.h"
 #include "AllSyntax.h"
 
 namespace slang {
 
 class BumpAllocator;
 
-class Parser {
+class Parser : ParserBase {
 public:
     Parser(Preprocessor& preprocessor);
 
@@ -101,108 +102,6 @@ private:
 
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);
-
-    // helper functions to parse a comma separated list of items
-    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-    void parseSeparatedList(
-        TokenKind openKind,
-        TokenKind closeKind,
-        TokenKind separatorKind,
-        Token*& openToken,
-        ArrayRef<TokenOrSyntax>& list,
-        Token*& closeToken,
-        TParserFunc&& parseItem
-    );
-
-    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-    void parseSeparatedList(
-        Buffer<TokenOrSyntax>& buffer,
-        TokenKind closeKind,
-        TokenKind separatorKind,
-        Token*& closeToken,
-        TParserFunc&& parseItem
-    );
-
-    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-    void parseSeparatedListWithFirst(
-        Buffer<TokenOrSyntax>& buffer,
-        TokenKind closeKind,
-        TokenKind separatorKind,
-        Token*& closeToken,
-        TParserFunc&& parseItem
-    );
-
-    template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-    void parseSeparatedListWithFirst(
-        Buffer<TokenOrSyntax>& buffer,
-        TokenKind separatorKind,
-        Trivia* skippedTokens,
-        TParserFunc&& parseItem
-    );
-
-	enum class SkipAction {
-		Continue,
-		Abort
-	};
-
-	void reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia);
-
-    template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
-    SkipAction skipBadTokens(Trivia* skippedTokens);
-
-    template<typename T>
-    void prependTrivia(ArrayRef<T*> list, Trivia* trivia);
-
-	SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
-    Token* prependTrivia(Token* token, Trivia* trivia);
-
-	void prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia);
-	Token* prependTrivia(Token* token, Buffer<Trivia>& trivia);
-
-	SyntaxNode* prependSkippedTokens(SyntaxNode* node, Buffer<Token*>& tokens);
-	Token* prependSkippedTokens(Token* node, Buffer<Token*>& tokens);
-
-    void addError(DiagCode code);
-
-	Token* peek(int offset);
-	Token* peek();
-	bool peek(TokenKind kind);
-	Token* consume();
-	Token* consumeIf(TokenKind kind);
-	Token* expect(TokenKind kind);
-
-	// sliding window of tokens
-	class Window {
-	public:
-		explicit Window(Preprocessor& source) :
-			tokenSource(source)
-		{
-			capacity = 32;
-			buffer = new Token*[capacity];
-		}
-
-		~Window() { delete[] buffer; }
-
-		Window(const Window&) = delete;
-		Window& operator=(const Window&) = delete;
-
-		Preprocessor& tokenSource;
-		Token** buffer = nullptr;
-		Token* currentToken = nullptr;
-		int currentOffset = 0;
-		int count = 0;
-		int capacity = 0;
-
-		void addNew();
-		void moveToNext();
-	};
-
-	Window window;
-    BumpAllocator& alloc;
-    BufferPool<Trivia> triviaPool;
-    BufferPool<Token*> tokenPool;
-    BufferPool<SyntaxNode*> nodePool;
-    BufferPool<TokenOrSyntax> tosPool;
 };
 
 }

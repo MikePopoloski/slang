@@ -51,8 +51,7 @@ bool isPossiblePortConnection(TokenKind kind);
 namespace slang {
 
 Parser::Parser(Preprocessor& preprocessor) :
-	window(preprocessor),
-    alloc(preprocessor.getAllocator())
+	ParserBase::ParserBase(preprocessor)
 {
 }
 
@@ -107,7 +106,7 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
             openParen,
             parameters,
             closeParen,
-            &Parser::parseParameterPort
+			[this](bool) { return parseParameterPort(); }
         );
 
         parameterList = alloc.emplace<ParameterPortListSyntax>(hash, openParen, parameters, closeParen);
@@ -126,14 +125,14 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
         else if (isNonAnsiPort()) {
             Token* closeParen;
             auto buffer = tosPool.get();
-            parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, &Parser::parseNonAnsiPort);
+			parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, [this](bool) { return parseNonAnsiPort(); });
 
             ports = alloc.emplace<NonAnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
         }
         else {
             Token* closeParen;
             auto buffer = tosPool.get();
-            parseSeparatedList<isPossibleAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, &Parser::parseAnsiPort);
+            parseSeparatedList<isPossibleAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, [this](bool) { return parseAnsiPort(); });
 
             ports = alloc.emplace<AnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
         }
@@ -576,7 +575,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(StatementLabelSyntax* label, Arr
                         TokenKind::Colon,
                         TokenKind::Comma,
                         colon,
-                        &Parser::parseInsideElement
+						[this](bool) { return parseInsideElement(); }
                     );
 
                     itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
@@ -603,7 +602,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(StatementLabelSyntax* label, Arr
                         TokenKind::Colon,
                         TokenKind::Comma,
                         colon,
-                        &Parser::parseExpression
+						[this](bool) { return parseExpression(); }
                     );
 
                     itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
@@ -680,14 +679,14 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(StatementLabelSyntax* labe
 
     Token* semi1;
     auto initializers = tosPool.get();
-    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, &Parser::parseForInitializer);
+    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, [this](bool) { return parseForInitializer(); });
 
     auto stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);
 
     Token* closeParen;
     auto steps = tosPool.get();
-    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, &Parser::parseExpression);
+    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, [this](bool) { return parseExpression(); });
 
     return alloc.emplace<ForLoopStatementSyntax>(
         label,
@@ -1028,7 +1027,7 @@ ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
         openBrace,
         list,
         closeBrace,
-        &Parser::parseInsideElement
+		[this](bool) { return parseInsideElement(); }
     );
     return alloc.emplace<InsideExpressionSyntax>(expr, inside, openBrace, list, closeBrace);
 }
@@ -1052,7 +1051,7 @@ ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, Expr
         TokenKind::CloseBrace,
         TokenKind::Comma,
         closeBrace,
-        &Parser::parseExpression
+		[this](bool) { return parseExpression(); }
     );
 
     return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
@@ -1075,7 +1074,7 @@ StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token* 
         openBraceInner,
         list,
         closeBraceInner,
-        &Parser::parseStreamExpression
+		[this](bool) { return parseStreamExpression(); }
     );
 
     auto closeBrace = expect(TokenKind::CloseBrace);
@@ -1240,7 +1239,7 @@ ArgumentListSyntax* Parser::parseArgumentList() {
         openParen,
         list,
         closeParen,
-        &Parser::parseArgument
+		[this](bool) { return parseArgument(); }
     );
 
     return alloc.emplace<ArgumentListSyntax>(openParen, list, closeParen);
@@ -1303,7 +1302,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
         endKind,
         TokenKind::TripleAnd,
         end,
-        &Parser::parseConditionalPattern
+		[this](bool) { return parseConditionalPattern(); }
     );
 
     return alloc.emplace<ConditionalPredicateSyntax>(buffer.copy(alloc));
@@ -1722,7 +1721,7 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
 template<bool(*IsEnd)(TokenKind)>
 ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Token*& end) {
     auto buffer = tosPool.get();
-    parseSeparatedListWithFirst<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end, &Parser::parseVariableDeclarator<false>);
+    parseSeparatedList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end, [this](bool first) { return parseVariableDeclarator<false>(first); });
 
     return buffer.copy(alloc);
 }
@@ -1741,7 +1740,7 @@ ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
             openParen,
             list,
             closeParen,
-            &Parser::parseAttributeSpec
+			[this](bool) { return parseAttributeSpec(); }
         );
 
         buffer.append(alloc.emplace<AttributeInstanceSyntax>(openParen, list, closeParen));
@@ -1773,7 +1772,7 @@ ArrayRef<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
             TokenKind::Semicolon,
             TokenKind::Comma,
             semi,
-            &Parser::parsePackageImportItem
+			[this](bool) { return parsePackageImportItem(); }
         );
 
         buffer.append(alloc.emplace<PackageImportDeclarationSyntax>(keyword, items.copy(alloc), semi));
@@ -1823,7 +1822,7 @@ HierarchyInstantiationSyntax* Parser::parseHierarchyInstantiation(ArrayRef<Attri
 
     Token* semi;
     auto items = tosPool.get();
-    parseSeparatedList<isIdentifierOrComma, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi, &Parser::parseHierarchicalInstance);
+    parseSeparatedList<isIdentifierOrComma, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi, [this](bool) { return parseHierarchicalInstance(); });
 
     return alloc.emplace<HierarchyInstantiationSyntax>(attributes, type, parameters, items.copy(alloc), semi);
 }
@@ -1843,7 +1842,7 @@ HierarchicalInstanceSyntax* Parser::parseHierarchicalInstance() {
         openParen,
         items,
         closeParen,
-        &Parser::parsePortConnection
+		[this](bool) { return parsePortConnection(); }
     );
 
     return alloc.emplace<HierarchicalInstanceSyntax>(name, dimensions, openParen, items, closeParen);
@@ -2019,284 +2018,6 @@ bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
                 return true;
         }
     }
-}
-
-// this is a generalized method for parsing a delimiter separated list of things
-// with bookend tokens in a way that robustly handles bad tokens
-template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-void Parser::parseSeparatedList(
-    TokenKind openKind,
-    TokenKind closeKind,
-    TokenKind separatorKind,
-    Token*& openToken,
-    ArrayRef<TokenOrSyntax>& list,
-    Token*& closeToken,
-    TParserFunc&& parseItem
-) {
-    openToken = expect(openKind);
-
-    auto buffer = tosPool.get();
-    parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken, std::forward<TParserFunc>(parseItem));
-    list = buffer.copy(alloc);
-}
-
-template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-void Parser::parseSeparatedList(
-    Buffer<TokenOrSyntax>& buffer,
-    TokenKind closeKind,
-    TokenKind separatorKind,
-    Token*& closeToken,
-    TParserFunc&& parseItem
-) {
-    Trivia skippedTokens;
-    auto current = peek();
-    if (!IsEnd(current->kind)) {
-        while (true) {
-            if (IsExpected(current->kind)) {
-                buffer.append(prependTrivia((this->*parseItem)(), &skippedTokens));
-                while (true) {
-                    current = peek();
-                    if (IsEnd(current->kind))
-                        break;
-
-                    if (IsExpected(current->kind)) {
-                        buffer.append(prependTrivia(expect(separatorKind), &skippedTokens));
-                        buffer.append(prependTrivia((this->*parseItem)(), &skippedTokens));
-                        continue;
-                    }
-
-                    if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens) == SkipAction::Abort)
-                        break;
-                }
-                // found the end
-                break;
-            }
-            else if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens) == SkipAction::Abort)
-                break;
-            else
-                current = peek();
-        }
-    }
-    closeToken = prependTrivia(expect(closeKind), &skippedTokens);
-}
-
-// this variant passes a boolean isFirst argument to the parse function
-// there is an annoying duplication of code here with parseSeparatedList
-
-template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-void Parser::parseSeparatedListWithFirst(
-    Buffer<TokenOrSyntax>& buffer,
-    TokenKind closeKind,
-    TokenKind separatorKind,
-    Token*& closeToken,
-    TParserFunc&& parseItem
-) {
-    Trivia skippedTokens;
-    parseSeparatedListWithFirst<IsExpected, IsEnd>(buffer, separatorKind, &skippedTokens, std::forward<TParserFunc>(parseItem));
-
-    closeToken = prependTrivia(expect(closeKind), &skippedTokens);
-}
-
-template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
-void Parser::parseSeparatedListWithFirst(
-    Buffer<TokenOrSyntax>& buffer,
-    TokenKind separatorKind,
-    Trivia* skippedTokens,
-    TParserFunc&& parseItem
-) {
-    auto current = peek();
-    if (!IsEnd(current->kind)) {
-        while (true) {
-            if (IsExpected(current->kind)) {
-                buffer.append(prependTrivia((this->*parseItem)(true), skippedTokens));
-                while (true) {
-                    current = peek();
-                    if (IsEnd(current->kind))
-                        break;
-
-                    if (IsExpected(current->kind)) {
-                        buffer.append(prependTrivia(expect(separatorKind), skippedTokens));
-                        buffer.append(prependTrivia((this->*parseItem)(false), skippedTokens));
-                        continue;
-                    }
-
-                    if (skipBadTokens<IsExpected, IsEnd>(skippedTokens) == SkipAction::Abort)
-                        break;
-                }
-                // found the end
-                break;
-            }
-            else if (skipBadTokens<IsExpected, IsEnd>(skippedTokens) == SkipAction::Abort)
-                break;
-            else
-                current = peek();
-        }
-    }
-}
-
-template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
-Parser::SkipAction Parser::skipBadTokens(Trivia* skippedTokens) {
-    auto tokens = tokenPool.get();
-    auto result = SkipAction::Continue;
-    auto current = peek();
-    while (!IsExpected(current->kind)) {
-        if (current->kind == TokenKind::EndOfFile || IsAbort(current->kind)) {
-            result = SkipAction::Abort;
-            break;
-        }
-        tokens.append(consume());
-        current = peek();
-    }
-
-    if (tokens.empty())
-        *skippedTokens = Trivia();
-    else
-        *skippedTokens = Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc));
-
-    return result;
-}
-
-void Parser::reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia) {
-	if (skipped.empty())
-		return;
-	trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
-	skipped.clear();
-}
-
-template<typename T>
-void Parser::prependTrivia(ArrayRef<T*> list, Trivia* trivia) {
-    if (trivia->kind != TriviaKind::Unknown && !list.empty())
-        prependTrivia(*list.begin(), trivia);
-}
-
-SyntaxNode* Parser::prependTrivia(SyntaxNode* node, Trivia* trivia) {
-    if (trivia->kind != TriviaKind::Unknown && node)
-        prependTrivia(node->getFirstToken(), trivia);
-    return node;
-}
-
-Token* Parser::prependTrivia(Token* token, Trivia* trivia) {
-    if (trivia->kind != TriviaKind::Unknown && token) {
-        auto buffer = triviaPool.get();
-        buffer.append(*trivia);
-        buffer.appendRange(token->trivia);
-        token->trivia = buffer.copy(alloc);
-
-        *trivia = Trivia();
-    }
-    return token;
-}
-
-Token* Parser::prependTrivia(Token* token, Buffer<Trivia>& trivia) {
-	ASSERT(token);
-	trivia.appendRange(token->trivia);
-	token->trivia = trivia.copy(alloc);
-	trivia.clear();
-	return token;
-}
-
-void Parser::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
-	if (!trivia.empty()) {
-		ASSERT(node);
-		prependTrivia(node->getFirstToken(), trivia);
-	}
-}
-
-SyntaxNode* Parser::prependSkippedTokens(SyntaxNode* node, Buffer<Token*>& tokens) {
-	if (!tokens.empty()) {
-		Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
-		prependTrivia(node, &t);
-		tokens.clear();
-	}
-	return node;
-}
-
-Token* Parser::prependSkippedTokens(Token* token, Buffer<Token*>& tokens) {
-	if (!tokens.empty()) {
-		Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
-		prependTrivia(token, &t);
-		tokens.clear();
-	}
-	return token;
-}
-
-void Parser::addError(DiagCode code) {
-    window.tokenSource.getDiagnostics().emplace(code, 0, 0);
-}
-
-Token* Parser::peek(int offset) {
-	while (window.currentOffset + offset >= window.count)
-		window.addNew();
-	return window.buffer[window.currentOffset + offset];
-}
-
-Token* Parser::peek() {
-	if (!window.currentToken) {
-		if (window.currentOffset >= window.count)
-			window.addNew();
-		window.currentToken = window.buffer[window.currentOffset];
-	}
-	return window.currentToken;
-}
-
-bool Parser::peek(TokenKind kind) {
-	return peek()->kind == kind;
-}
-
-Token* Parser::consume() {
-	auto result = peek();
-	window.moveToNext();
-	return result;
-}
-
-Token* Parser::consumeIf(TokenKind kind) {
-	auto result = peek();
-	if (result->kind != kind)
-		return nullptr;
-
-	window.moveToNext();
-	return result;
-}
-
-Token* Parser::expect(TokenKind kind) {
-	auto result = peek();
-	if (result->kind != kind) {
-		// report an error here for the missing token
-		// TODO: location info
-		addError(DiagCode::SyntaxError);
-		return Token::missing(alloc, kind);
-	}
-
-	window.moveToNext();
-	return result;
-}
-
-void Parser::Window::addNew() {
-	if (count >= capacity) {
-		// shift tokens to the left if we are too far to the right
-		if (currentOffset > (capacity >> 1)) {
-			int shift = count - currentOffset;
-			if (shift > 0)
-				memmove(buffer, buffer + currentOffset, shift * sizeof(Token*));
-
-			count -= currentOffset;
-			currentOffset = 0;
-		}
-		else {
-			Token** newBuffer = new Token*[capacity * 2];
-			memcpy(newBuffer, buffer, count * sizeof(Token*));
-
-			delete[] buffer;
-			buffer = newBuffer;
-		}
-	}
-	buffer[count] = tokenSource.next();
-	count++;
-}
-
-void Parser::Window::moveToNext() {
-	currentToken = nullptr;
-	currentOffset++;
 }
 
 }
