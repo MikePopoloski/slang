@@ -28,6 +28,7 @@
     <ClInclude Include="..\..\include\Diagnostics.h" />
     <ClInclude Include="..\..\include\Parser.h" />
     <ClInclude Include="..\..\include\ParserBase.h" />
+    <ClInclude Include="..\..\include\SourceLocation.h" />
     <ClInclude Include="..\..\include\SourceTracker.h" />
     <ClInclude Include="..\..\include\Handle.h" />
     <ClInclude Include="..\..\include\Hash.h" />

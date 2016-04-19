@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Handle.h"
+#include "SourceLocation.h"
 
 namespace slang {
 
