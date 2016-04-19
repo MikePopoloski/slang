@@ -51,9 +51,8 @@ bool isPossiblePortConnection(TokenKind kind);
 namespace slang {
 
 Parser::Parser(Preprocessor& preprocessor) :
-	TokenWindow(preprocessor),
-    alloc(preprocessor.getAllocator()),
-    diagnostics(preprocessor.getDiagnostics())
+	window(preprocessor),
+    alloc(preprocessor.getAllocator())
 {
 }
 
@@ -2222,7 +2221,82 @@ Token* Parser::prependSkippedTokens(Token* token, Buffer<Token*>& tokens) {
 }
 
 void Parser::addError(DiagCode code) {
-    diagnostics.emplace(code, 0, 0);
+    window.tokenSource.getDiagnostics().emplace(code, 0, 0);
+}
+
+Token* Parser::peek(int offset) {
+	while (window.currentOffset + offset >= window.count)
+		window.addNew();
+	return window.buffer[window.currentOffset + offset];
+}
+
+Token* Parser::peek() {
+	if (!window.currentToken) {
+		if (window.currentOffset >= window.count)
+			window.addNew();
+		window.currentToken = window.buffer[window.currentOffset];
+	}
+	return window.currentToken;
+}
+
+bool Parser::peek(TokenKind kind) {
+	return peek()->kind == kind;
+}
+
+Token* Parser::consume() {
+	auto result = peek();
+	window.moveToNext();
+	return result;
+}
+
+Token* Parser::consumeIf(TokenKind kind) {
+	auto result = peek();
+	if (result->kind != kind)
+		return nullptr;
+
+	window.moveToNext();
+	return result;
+}
+
+Token* Parser::expect(TokenKind kind) {
+	auto result = peek();
+	if (result->kind != kind) {
+		// report an error here for the missing token
+		// TODO: location info
+		addError(DiagCode::SyntaxError);
+		return Token::missing(alloc, kind);
+	}
+
+	window.moveToNext();
+	return result;
+}
+
+void Parser::Window::addNew() {
+	if (count >= capacity) {
+		// shift tokens to the left if we are too far to the right
+		if (currentOffset > (capacity >> 1)) {
+			int shift = count - currentOffset;
+			if (shift > 0)
+				memmove(buffer, buffer + currentOffset, shift * sizeof(Token*));
+
+			count -= currentOffset;
+			currentOffset = 0;
+		}
+		else {
+			Token** newBuffer = new Token*[capacity * 2];
+			memcpy(newBuffer, buffer, count * sizeof(Token*));
+
+			delete[] buffer;
+			buffer = newBuffer;
+		}
+	}
+	buffer[count] = tokenSource.next();
+	count++;
+}
+
+void Parser::Window::moveToNext() {
+	currentToken = nullptr;
+	currentOffset++;
 }
 
 }

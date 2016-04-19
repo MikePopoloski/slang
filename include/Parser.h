@@ -1,14 +1,12 @@
 #pragma once
 
 #include "AllSyntax.h"
-#include "TokenWindow.h"
 
 namespace slang {
 
-class Lexer;
 class BumpAllocator;
 
-class Parser : TokenWindow<Preprocessor> {
+class Parser {
 public:
     Parser(Preprocessor& preprocessor);
 
@@ -166,8 +164,41 @@ private:
 
     void addError(DiagCode code);
 
+	Token* peek(int offset);
+	Token* peek();
+	bool peek(TokenKind kind);
+	Token* consume();
+	Token* consumeIf(TokenKind kind);
+	Token* expect(TokenKind kind);
+
+	// sliding window of tokens
+	class Window {
+	public:
+		explicit Window(Preprocessor& source) :
+			tokenSource(source)
+		{
+			capacity = 32;
+			buffer = new Token*[capacity];
+		}
+
+		~Window() { delete[] buffer; }
+
+		Window(const Window&) = delete;
+		Window& operator=(const Window&) = delete;
+
+		Preprocessor& tokenSource;
+		Token** buffer = nullptr;
+		Token* currentToken = nullptr;
+		int currentOffset = 0;
+		int count = 0;
+		int capacity = 0;
+
+		void addNew();
+		void moveToNext();
+	};
+
+	Window window;
     BumpAllocator& alloc;
-    Diagnostics& diagnostics;
     BufferPool<Trivia> triviaPool;
     BufferPool<Token*> tokenPool;
     BufferPool<SyntaxNode*> nodePool;

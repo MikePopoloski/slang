@@ -82,9 +82,6 @@
     <ClInclude Include="..\..\include\Parser.h">
       <Filter>parsing</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\TokenWindow.h">
-      <Filter>lexing</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
