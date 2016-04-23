@@ -64,7 +64,7 @@ private:
 
     Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer);
     void addTrivia(TriviaKind kind, Buffer<Trivia>& buffer);
-    void addError(DiagCode code);
+    void addError(DiagCode code, uint32_t offset);
 
     // source pointer manipulation
     void mark() { marker = sourceBuffer; }

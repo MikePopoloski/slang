@@ -1,5 +1,7 @@
 #pragma once
 
+#include "SourceLocation.h"
+
 namespace slang {
 
 enum class DiagCode : uint8_t {
@@ -52,10 +54,10 @@ std::ostream& operator<<(std::ostream& os, DiagCode code);
 class Diagnostic {
 public:
     DiagCode code;
-    int location;
+    SourceLocation location;
     int width;
 
-	Diagnostic(DiagCode code, int location, int width) :
+	Diagnostic(DiagCode code, SourceLocation location, int width) :
 		code(code), location(location), width(width)
 	{
     }

@@ -84,7 +84,8 @@ Token* ParserBase::prependSkippedTokens(Token* token, Buffer<Token*>& tokens) {
 }
 
 void ParserBase::addError(DiagCode code) {
-	window.tokenSource.getDiagnostics().emplace(code, 0, 0);
+	// TODO: location
+	window.tokenSource.getDiagnostics().emplace(code, SourceLocation(), 0);
 }
 
 Token* ParserBase::peek(int offset) {
