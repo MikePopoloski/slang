@@ -19,6 +19,9 @@
     <Filter Include="text">
       <UniqueIdentifier>{a3b1fc88-9595-4353-8d1c-0ece6f94e212}</UniqueIdentifier>
     </Filter>
+    <Filter Include="util\3ps">
+      <UniqueIdentifier>{62a9b006-279b-4b9e-bdfd-cd14e4d029a9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\slang.h" />
@@ -88,6 +91,9 @@
     <ClInclude Include="..\..\include\SourceManager.h">
       <Filter>text</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\external\cppformat\format.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -125,6 +131,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\SourceManager.cpp">
       <Filter>text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\cppformat\format.cc">
+      <Filter>util\3ps</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

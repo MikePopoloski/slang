@@ -22,9 +22,10 @@ public:
     void addSystemDirectory(StringRef path);
     void addUserDirectory(StringRef path);
 
-	// SourceLocation query methods
+	// SourceLocation and FileID query methods
 	uint32_t getLineNumber(SourceLocation location);
 	uint32_t getColumnNumber(SourceLocation location);
+	StringRef getFileName(FileID file);
 
 	// get the buffer for the given file ID
 	SourceBuffer* getBuffer(FileID id);
@@ -47,6 +48,7 @@ private:
 	struct BufferEntry {
 		SourceBuffer* buffer = nullptr;
 		const path_type* directory = nullptr;
+		std::string name;
 		std::vector<uint32_t> lineOffsets;
 	};
 

@@ -125,6 +125,9 @@ public:
         return ArrayRef<T>(dest, len);
     }
 
+	T& operator [](int index) { return data[index]; }
+	const T& operator [](int index) const { return data[index]; }
+
 private:
     T* data;
     uint32_t len;

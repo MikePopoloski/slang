@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\external\cppformat\format.h" />
     <ClInclude Include="..\..\include\AllSyntax.h" />
     <ClInclude Include="..\..\include\ArrayRef.h" />
     <ClInclude Include="..\..\include\BufferPool.h" />
@@ -44,6 +45,7 @@
     <ClInclude Include="..\..\source\CharInfo.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\external\cppformat\format.cc" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
     <ClCompile Include="..\..\source\Parser.cpp" />

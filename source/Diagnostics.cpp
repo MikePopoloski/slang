@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <filesystem>
 
+#include "../external/cppformat/format.h"
+
 #include "Buffer.h"
 #include "StringRef.h"
 #include "Diagnostics.h"
@@ -25,7 +27,13 @@ struct DiagnosticDescriptor {
 	}
 };
 
-const static DiagnosticDescriptor diagnosticDescriptors[] = {
+static const char* severityToString[] = {
+	"info",
+	"warning",
+	"error"
+};
+
+static const DiagnosticDescriptor diagnosticDescriptors[] = {
 	// lexer
 	{ "Non-printable character in source text. SystemVerilog only supports ASCII text." },
 	{ "UTF-8 sequence in source text. SystemVerilog only supports ASCII text." },
@@ -69,6 +77,8 @@ const static DiagnosticDescriptor diagnosticDescriptors[] = {
 	{ "ColonShouldBeDot" }
 };
 
+static StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col);
+
 Diagnostics::Diagnostics() :
 	Buffer::Buffer(128)
 {
@@ -84,20 +94,47 @@ DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
 }
 
 std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
-	std::string result;
-	result += std::to_string(diagnostic.location.file.id) + ":" +
-			  std::to_string(diagnostic.location.offset) + ":" +
-			  std::to_string(sourceManager.getLineNumber(diagnostic.location)) + ": ";
+	auto location = diagnostic.location;
+	uint32_t col = sourceManager.getColumnNumber(location);
 
-	switch (severity) {
-		case DiagnosticSeverity::Error: result += "error: "; break;
-		case DiagnosticSeverity::Warning: result += "warning: "; break;
-		case DiagnosticSeverity::Info: result += "info: "; break;
+	fmt::MemoryWriter writer;
+	writer.write("{}:{}:{}: {}: {}",
+		sourceManager.getFileName(location.file),
+		sourceManager.getLineNumber(location),
+		col,
+		severityToString[(int)severity],
+		format
+	);
+
+	// print out the source line, if possible
+	StringRef line = getBufferLine(sourceManager, location, col);
+	if (!line)
+		writer << '\n';
+	else {
+		writer.write("\n{}\n", line);
+		for (int i = 0; i < col - 1; i++) {
+			if (line[i] == '\t')
+				writer << '\t';
+			else
+				writer << ' ';
+		}
+		writer << '^';
 	}
 
-	result += format.toString();
+	return writer.str();
+}
 
-	return result;
+StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
+	auto buffer = sourceManager.getBuffer(location.file);
+	if (!buffer)
+		return nullptr;
+
+	const char* start = buffer->data.begin() + location.offset - (col - 1);
+	uint32_t len = 0;
+	while (start[len] != '\n' && start[len] != '\r')
+		len++;
+
+	return StringRef(start, len);
 }
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {

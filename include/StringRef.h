@@ -28,7 +28,7 @@ public:
     }
 
     template<typename Container>
-    StringRef(const Container& container) {
+    explicit StringRef(const Container& container) {
         ptr = container.begin();
         len = (uint32_t)(container.end() - ptr);
     }
@@ -83,9 +83,9 @@ public:
         return !empty();
     }
 
-    std::ostream& operator<<(std::ostream& os) {
-        if (!empty())
-            os << std::string(ptr, len);
+    friend std::ostream& operator<<(std::ostream& os, const StringRef& rhs) {
+        if (rhs)
+            os << std::string(rhs.ptr, rhs.len);
         return os;
     }
 

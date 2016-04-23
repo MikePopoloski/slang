@@ -23,11 +23,14 @@ void parseFile(const SourceBuffer* buffer) {
     REQUIRE(tree);
 	//REQUIRE(tree->toString(SyntaxToStringFlags::IncludeTrivia) == std::string(file.buffer.begin(), file.buffer.end() - 1));
     
-	for (auto& diag : diagnostics) {
-		auto report = diagnostics.getReport(diag);
-		WARN(report.toString(sourceManager));
+	if (!diagnostics.empty()) {
+		for (auto& diag : diagnostics) {
+			auto report = diagnostics.getReport(diag);
+			printf("%s\n", report.toString(sourceManager).c_str());
+		}
+		printf("\n");
 	}
-	
+
 	REQUIRE(diagnostics.empty());
 }
 

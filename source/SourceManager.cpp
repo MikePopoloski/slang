@@ -49,7 +49,32 @@ uint32_t SourceManager::getLineNumber(SourceLocation location) {
 		computeLineOffsets(entry.buffer->data, entry.lineOffsets);
 
 	auto it = std::lower_bound(entry.lineOffsets.begin(), entry.lineOffsets.end(), location.offset);
-	return it - entry.lineOffsets.begin();
+	return (uint32_t)(it - entry.lineOffsets.begin());
+}
+
+uint32_t SourceManager::getColumnNumber(SourceLocation location) {
+	if (!location.file)
+		return 0;
+
+	ASSERT(location.file.id < bufferEntries.size());
+	BufferEntry& entry = bufferEntries[location.file.id];
+	Buffer<char>& data = entry.buffer->data;
+
+	// walk backward to find start of line
+	uint32_t lineStart = location.offset;
+	ASSERT(lineStart < data.count());
+	while (lineStart > 0 && data[lineStart - 1] != '\n' && data[lineStart - 1] != 'r')
+		lineStart--;
+
+	return location.offset - lineStart + 1;
+}
+
+StringRef SourceManager::getFileName(FileID file) {
+	if (!file)
+		return nullptr;
+
+	ASSERT(file.id < bufferEntries.size());
+	return bufferEntries[file.id].name;
 }
 
 SourceBuffer* SourceManager::getBuffer(FileID id) {
@@ -123,8 +148,9 @@ SourceBuffer* SourceManager::openCached(path_type fullPath) {
 	
 	BufferEntry entry;
 	entry.buffer = result;
+	entry.name = fullPath.filename().string();
 	entry.directory = &*directories.insert(fullPath.remove_filename()).first;
-	bufferEntries.push_back(entry);
+	bufferEntries.push_back(std::move(entry));
 
 	return result;
 }
@@ -157,7 +183,7 @@ void SourceManager::computeLineOffsets(const Buffer<char>& buffer, std::vector<u
 			if ((ptr[1] == '\n' || ptr[1] == '\r') && ptr[0] != ptr[1])
 				ptr++;
 			ptr++;
-			offsets.push_back(ptr - buffer.begin());
+			offsets.push_back((uint32_t)(ptr - buffer.begin()));
 		}
 		else {
 			ptr++;
