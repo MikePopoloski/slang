@@ -22,6 +22,9 @@ public:
     void addSystemDirectory(StringRef path);
     void addUserDirectory(StringRef path);
 
+	// get the buffer for the given file ID
+	SourceBuffer* getBuffer(FileID id);
+
 	// get the source buffer for the file at the specified path
 	SourceBuffer* readSource(StringRef path);
 	SourceBuffer* readHeader(StringRef path, FileID includedFrom, bool isSystemPath);

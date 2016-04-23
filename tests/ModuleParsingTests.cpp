@@ -6,8 +6,8 @@ using namespace slang;
 namespace {
 
 BumpAllocator alloc;
-Diagnostics diagnostics;
 SourceManager sourceManager;
+Diagnostics diagnostics(sourceManager);
 
 ModuleDeclarationSyntax* parse(const SourceText& text) {
 	diagnostics.clear();

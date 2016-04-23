@@ -37,6 +37,14 @@ void SourceManager::addUserDirectory(StringRef path) {
     userDirectories.push_back(fs::canonical(p));
 }
 
+SourceBuffer* SourceManager::getBuffer(FileID id) {
+	if (!id)
+		return nullptr;
+
+	ASSERT(id.id < fileToBuffer.size());
+	return fileToBuffer[id.id];
+}
+
 SourceBuffer* SourceManager::readSource(StringRef path) {
     // ensure that we have an absolute path
     ASSERT(path);

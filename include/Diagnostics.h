@@ -85,9 +85,12 @@ public:
 
 class Diagnostics : public Buffer<Diagnostic> {
 public:
-    Diagnostics();
+    Diagnostics(SourceManager& sourceManager);
 
 	DiagnosticReport getReport(const Diagnostic& diagnostic) const;
+
+private:
+	SourceManager& sourceManager;
 };
 
 }

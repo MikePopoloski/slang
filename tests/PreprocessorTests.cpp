@@ -5,17 +5,17 @@ using namespace slang;
 
 namespace {
 
-BumpAllocator alloc;
-Diagnostics diagnostics;
-
 SourceManager& getSourceManager() {
-    static SourceManager* sourceManager = nullptr;
-    if (!sourceManager) {
+	static SourceManager* sourceManager = nullptr;
+	if (!sourceManager) {
 		sourceManager = new SourceManager();
 		sourceManager->addUserDirectory("../../../tests/data/");
-    }
-    return *sourceManager;
+	}
+	return *sourceManager;
 }
+
+BumpAllocator alloc;
+Diagnostics diagnostics(getSourceManager());
 
 const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
