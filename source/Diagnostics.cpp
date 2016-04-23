@@ -1,11 +1,17 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
+#include <deque>
+#include <unordered_map>
+#include <set>
 #include <algorithm>
+#include <filesystem>
 
 #include "Buffer.h"
 #include "StringRef.h"
 #include "Diagnostics.h"
+#include "SourceManager.h"
 
 namespace slang {
 
@@ -77,16 +83,18 @@ DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
 	};
 }
 
-std::string DiagnosticReport::toString(const SourceManager& sourceManager) const {
+std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
 	std::string result;
 	result += std::to_string(diagnostic.location.file.id) + ":" +
-			  std::to_string(diagnostic.location.offset) + ": ";
+			  std::to_string(diagnostic.location.offset) + ":" +
+			  std::to_string(sourceManager.getLineNumber(diagnostic.location)) + ": ";
 
 	switch (severity) {
 		case DiagnosticSeverity::Error: result += "error: "; break;
 		case DiagnosticSeverity::Warning: result += "warning: "; break;
 		case DiagnosticSeverity::Info: result += "info: "; break;
 	}
+
 	result += format.toString();
 
 	return result;

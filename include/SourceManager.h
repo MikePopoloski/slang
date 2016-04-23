@@ -22,6 +22,10 @@ public:
     void addSystemDirectory(StringRef path);
     void addUserDirectory(StringRef path);
 
+	// SourceLocation query methods
+	uint32_t getLineNumber(SourceLocation location);
+	uint32_t getColumnNumber(SourceLocation location);
+
 	// get the buffer for the given file ID
 	SourceBuffer* getBuffer(FileID id);
 
@@ -40,12 +44,17 @@ private:
     path_type workingDir;
     uint32_t nextFileID = 1;
 
+	struct BufferEntry {
+		SourceBuffer* buffer = nullptr;
+		const path_type* directory = nullptr;
+		std::vector<uint32_t> lineOffsets;
+	};
+
+	// index from FileID to buffer metadata
+	std::deque<BufferEntry> bufferEntries;
+
     // cache for file lookups; this holds on to the actual file data
     std::unordered_map<std::string, std::unique_ptr<SourceBuffer>> lookupCache;
-	std::deque<SourceBuffer*> fileToBuffer;
-
-    // index from FileID to containing directory
-    std::deque<const path_type*> fileToDirectory;
 
     // directories for system and user includes
     std::vector<path_type> systemDirectories;
@@ -57,6 +66,7 @@ private:
 	FileID assignId(StringRef path);
     SourceBuffer* openCached(path_type fullPath);
     
+	static void computeLineOffsets(const Buffer<char>& buffer, std::vector<uint32_t>& offsets);
 	static bool readFile(const path_type& path, Buffer<char>& buffer);
 };
 
