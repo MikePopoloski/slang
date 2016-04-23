@@ -6,8 +6,7 @@ using namespace slang;
 namespace {
 
 BumpAllocator alloc;
-SourceManager sourceManager;
-Diagnostics diagnostics(sourceManager);
+Diagnostics diagnostics;
 
 bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;

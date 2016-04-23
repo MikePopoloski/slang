@@ -63,9 +63,8 @@ const static DiagnosticDescriptor diagnosticDescriptors[] = {
 	{ "ColonShouldBeDot" }
 };
 
-Diagnostics::Diagnostics(SourceManager& sourceManager) :
-	Buffer::Buffer(128),
-	sourceManager(sourceManager)
+Diagnostics::Diagnostics() :
+	Buffer::Buffer(128)
 {
 }
 

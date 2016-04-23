@@ -10,8 +10,8 @@ static const char RelativeTestPath[] = "../../../tests/corpus";
 namespace {
 
 BumpAllocator alloc;
+Diagnostics diagnostics;
 SourceManager sourceManager;
-Diagnostics diagnostics(sourceManager);
 Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 
 void parseFile(const SourceBuffer* buffer) {
