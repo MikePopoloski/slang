@@ -62,7 +62,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
 	{ "CouldNotOpenIncludeFile" },
 	{ "ExceededMaxIncludeDepth" },
 	{ "UnknownDirective" },
-	{ "ExpectedEndOfDirective" },
+	{ "Expected end of directive (missing newline?)" },
 	{ "ExpectedEndOfMacroArgs" },
 	{ "ExpectedEndIfDirective" },
 	{ "UnexpectedDirective" },

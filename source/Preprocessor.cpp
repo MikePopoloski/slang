@@ -450,7 +450,7 @@ Token* Preprocessor::parseEndOfDirective() {
     // consume all extraneous tokens as SkippedToken trivia
     auto skipped = tokenPool.get();
     if (!peek(TokenKind::EndOfDirective)) {
-        addError(DiagCode::ExpectedEndOfDirective);
+        addError(DiagCode::ExpectedEndOfDirective, peek()->location);
         do {
             skipped.append(consume());
         } while (!peek(TokenKind::EndOfDirective));
@@ -500,6 +500,11 @@ Token* Preprocessor::expect(TokenKind kind) {
 void Preprocessor::addError(DiagCode code) {
 	// TODO: location
     diagnostics.emplace(code, SourceLocation(), 0);
+}
+
+void Preprocessor::addError(DiagCode code, SourceLocation location) {
+	// TODO: location
+	diagnostics.emplace(code, location, 0);
 }
 
 MacroExpander::MacroExpander(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {

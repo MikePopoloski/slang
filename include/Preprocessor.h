@@ -65,7 +65,8 @@ private:
 	Token* expect(TokenKind kind);
 	bool peek(TokenKind kind) { return peek()->kind == kind; }
 
-    void addError(DiagCode code);
+	void addError(DiagCode code);
+	void addError(DiagCode code, SourceLocation location);
 
 	struct Source {
 		enum {
