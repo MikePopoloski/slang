@@ -25,7 +25,7 @@ void parseFile(const SourceBuffer* buffer) {
     
 	for (auto& diag : diagnostics) {
 		auto report = diagnostics.getReport(diag);
-		WARN(report.toString());
+		WARN(report.toString(sourceManager));
 	}
 	
 	REQUIRE(diagnostics.empty());

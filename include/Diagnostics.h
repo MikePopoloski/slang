@@ -80,7 +80,7 @@ public:
 	{
 	}
 
-	std::string toString() const;
+	std::string toString(const SourceManager& sourceManager) const;
 };
 
 class Diagnostics : public Buffer<Diagnostic> {

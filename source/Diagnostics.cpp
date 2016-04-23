@@ -77,7 +77,7 @@ DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
 	};
 }
 
-std::string DiagnosticReport::toString() const {
+std::string DiagnosticReport::toString(const SourceManager& sourceManager) const {
 	std::string result;
 	result += std::to_string(diagnostic.location.file.id) + ":" +
 			  std::to_string(diagnostic.location.offset) + ": ";
@@ -87,7 +87,9 @@ std::string DiagnosticReport::toString() const {
 		case DiagnosticSeverity::Warning: result += "warning: "; break;
 		case DiagnosticSeverity::Info: result += "info: "; break;
 	}
-	return result + format.toString();
+	result += format.toString();
+
+	return result;
 }
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {
