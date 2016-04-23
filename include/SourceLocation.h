@@ -34,10 +34,10 @@ public:
 	bool operator <(const SourceLocation& rhs) {
 		return offset < rhs.offset;
 	}
-
-private:
 	FileID file;
 	uint32_t offset;
+
+private:
 };
 
 }

@@ -12,6 +12,7 @@ public:
     explicit operator bool() const {
         return valid();
     }
+    uint32_t id = 0;
 
 protected:
     static T get(uint32_t value) {
@@ -22,7 +23,6 @@ protected:
     uint32_t getValue() const { return id; }
 
 private:
-    uint32_t id = 0;
 };
 
 }

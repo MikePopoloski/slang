@@ -79,10 +79,13 @@ DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
 
 std::string DiagnosticReport::toString() const {
 	std::string result;
+	result += std::to_string(diagnostic.location.file.id) + ":" +
+			  std::to_string(diagnostic.location.offset) + ": ";
+
 	switch (severity) {
-		case DiagnosticSeverity::Error: result = "ERROR: "; break;
-		case DiagnosticSeverity::Warning: result = "WARNING: "; break;
-		case DiagnosticSeverity::Info: result = "INFO: "; break;
+		case DiagnosticSeverity::Error: result += "error: "; break;
+		case DiagnosticSeverity::Warning: result += "warning: "; break;
+		case DiagnosticSeverity::Info: result += "info: "; break;
 	}
 	return result + format.toString();
 }
