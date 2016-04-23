@@ -14,9 +14,9 @@ Diagnostics diagnostics;
 SourceManager sourceManager;
 Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 
-void parseFile(const SourceFile& file) {
+void parseFile(const SourceBuffer* buffer) {
     diagnostics.clear();
-	preprocessor.pushSource(file.buffer, file.id);
+	preprocessor.pushSource(buffer->data, buffer->id);
     Parser parser(preprocessor);
 
     auto tree = parser.parseCompilationUnit();
@@ -34,10 +34,11 @@ void parseFile(const SourceFile& file) {
 TEST_CASE("External files", "[parser:full]") {
     // run through all external files in our corpus and make sure they parse without error
     for (auto& p : fs::directory_iterator(RelativeTestPath)) {
-        SourceFile file;
 		INFO("Parsing '" + p.path().string() + "'");
-        REQUIRE(sourceManager.readSource(p.path().string(), file));
-        parseFile(file);
+
+		SourceBuffer* buffer = sourceManager.readSource(p.path().string());
+        REQUIRE(buffer);
+        parseFile(buffer);
     }
 }
 

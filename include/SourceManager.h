@@ -4,13 +4,13 @@
 
 namespace slang {
 
-struct SourceFile {
-    Buffer<char> buffer;
+struct SourceBuffer {
+    Buffer<char> data;
     FileID id;
 
-    SourceFile() : buffer(0) {}
-    SourceFile(FileID id, Buffer<char>&& buffer) :
-        id(id), buffer(std::move(buffer)) {
+	SourceBuffer() : data(0) {}
+	SourceBuffer(FileID id, Buffer<char>&& data) :
+        id(id), data(std::move(data)) {
     }
 };
 
@@ -22,16 +22,13 @@ public:
     void addSystemDirectory(StringRef path);
     void addUserDirectory(StringRef path);
 
-    // tracks a file with the given name, without doing any work to actually open it
-    // this can be used to pretend that an in-memory buffer is an actual file somewhere
-    FileID track(StringRef path);
+	// get the source buffer for the file at the specified path
+	SourceBuffer* readSource(StringRef path);
+	SourceBuffer* readHeader(StringRef path, FileID includedFrom, bool isSystemPath);
 
-    // open a file and load it into memory
-    bool readSource(StringRef path, SourceFile& file);
-
-    // look up and load a header using proper search rules
-    // header file source is cached and reused
-    SourceFile* readHeader(FileID currentSource, StringRef path, bool systemPath);
+	// Give ownership of source code to the manager and refer to it by the given path.
+	// This method will fail if the given path is already loaded.
+	SourceBuffer* assignBuffer(StringRef path, Buffer<char>&& buffer);
 
 private:
     using path_type = std::tr2::sys::path;
@@ -40,13 +37,11 @@ private:
     path_type workingDir;
     uint32_t nextFileID = 1;
 
-    // map from arbitrary string name to file IDs
-    std::unordered_map<StringRef, FileID> pathMap;
+    // cache for file lookups; this holds on to the actual file data
+    std::unordered_map<std::string, std::unique_ptr<SourceBuffer>> lookupCache;
+	std::deque<SourceBuffer*> fileToBuffer;
 
-    // cache for header lookups; this holds on to the actual file data
-    std::unordered_map<std::string, std::unique_ptr<SourceFile>> lookupCache;
-
-    // map from FileID to containing directory
+    // index from FileID to containing directory
     std::deque<const path_type*> fileToDirectory;
 
     // directories for system and user includes
@@ -56,9 +51,10 @@ private:
     // uniquified backing memory for directories
     std::set<path_type> directories;
 
-    bool openFile(const path_type& path, Buffer<char>& buffer);
-    SourceFile* openCached(path_type fullPath);
-    void cacheDirectory(path_type path, FileID file);
+	FileID assignId(StringRef path);
+    SourceBuffer* openCached(path_type fullPath);
+    
+	static bool readFile(const path_type& path, Buffer<char>& buffer);
 };
 
 }

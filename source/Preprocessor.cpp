@@ -173,13 +173,13 @@ Trivia Preprocessor::handleIncludeDirective(Token* directive) {
 	else {
 		// remove delimiters
 		path = path.subString(1, path.length() - 2);
-		SourceFile* file = sourceManager.readHeader(getCurrentFile(), path, false);
-		if (!file)
+		SourceBuffer* buffer = sourceManager.readHeader(path, getCurrentFile(), false);
+		if (!buffer)
 			addError(DiagCode::CouldNotOpenIncludeFile);
 		else if (sourceStack.size() >= MaxSourceDepth)
 			addError(DiagCode::ExceededMaxIncludeDepth);
 		else
-			pushSource(file->buffer, file->id);
+			pushSource(buffer->data, buffer->id);
 	}
 
     auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName, end);

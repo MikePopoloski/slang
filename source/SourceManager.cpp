@@ -37,36 +37,14 @@ void SourceManager::addUserDirectory(StringRef path) {
     userDirectories.push_back(fs::canonical(p));
 }
 
-FileID SourceManager::track(StringRef path) {
-    auto it = pathMap.find(path);
-    if (it != pathMap.end())
-        return it->second;
-
-    FileID result = FileID::get(nextFileID++);
-    pathMap[path.intern(alloc)] = result;
-
-    fileToDirectory.push_back(nullptr);
-
-    return result;
-}
-
-bool SourceManager::readSource(StringRef fileName, SourceFile& file) {
+SourceBuffer* SourceManager::readSource(StringRef path) {
     // ensure that we have an absolute path
-    ASSERT(fileName);
-    path_type absPath = fs::absolute(path_type(fileName.begin(), fileName.end()), workingDir);
-
-    // load the file
-    if (!openFile(absPath, file.buffer))
-        return false;
-
-    // assign a file ID
-    file.id = track(absPath.string());
-    cacheDirectory(std::move(absPath), file.id);
-
-    return true;
+    ASSERT(path);
+    path_type absPath = fs::absolute(path_type(path.begin(), path.end()), workingDir);
+	return openCached(absPath);
 }
 
-SourceFile* SourceManager::readHeader(FileID currentSource, StringRef path, bool systemPath) {
+SourceBuffer* SourceManager::readHeader(StringRef path, FileID includedFrom, bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     ASSERT(path);
     path_type p(path.begin(), path.end());
@@ -74,9 +52,9 @@ SourceFile* SourceManager::readHeader(FileID currentSource, StringRef path, bool
         return openCached(p);
 
     // system path lookups only look in system directories
-    if (systemPath) {
+    if (isSystemPath) {
         for (auto& d : systemDirectories) {
-            SourceFile* result = openCached(d / p);
+            SourceBuffer* result = openCached(d / p);
             if (result)
                 return result;
         }
@@ -84,16 +62,16 @@ SourceFile* SourceManager::readHeader(FileID currentSource, StringRef path, bool
     }
 
     // search relative to the current file
-    const path_type* dir = fileToDirectory[currentSource.getValue()];
-    if (dir) {
-        SourceFile* result = openCached((*dir) / p);
-        if (result)
-            return result;
-    }
+	const path_type* dir = fileToDirectory[includedFrom.getValue()];
+	if (dir) {
+		SourceBuffer* result = openCached((*dir) / p);
+		if (result)
+			return result;
+	}
 
     // search additional include directories
     for (auto& d : userDirectories) {
-        SourceFile* result = openCached(d / p);
+		SourceBuffer* result = openCached(d / p);
         if (result)
             return result;
     }
@@ -101,7 +79,7 @@ SourceFile* SourceManager::readHeader(FileID currentSource, StringRef path, bool
     return nullptr;
 }
 
-SourceFile* SourceManager::openCached(path_type fullPath) {
+SourceBuffer* SourceManager::openCached(path_type fullPath) {
     // first see if we have this cached
     fullPath = fs::canonical(fullPath);
     auto canonicalStr = fullPath.string();
@@ -111,20 +89,23 @@ SourceFile* SourceManager::openCached(path_type fullPath) {
 
     // do the read
     Buffer<char> buffer(0);
-    if (!openFile(fullPath, buffer)) {
+    if (!readFile(fullPath, buffer)) {
         lookupCache.emplace(std::move(canonicalStr), nullptr);
         return nullptr;
     }
 
-    // cache the results
-    FileID id = track(canonicalStr);
-    auto result = lookupCache.emplace(std::move(canonicalStr), std::make_unique<SourceFile>(id, std::move(buffer)));
+	// cache the directory
+	fileToDirectory.push_back(&*directories.insert(fullPath.remove_filename()).first);
 
-    cacheDirectory(std::move(fullPath), id);
-    return result.first->second.get();
+	// cache the file
+	FileID id = FileID::get(nextFileID++);
+	auto result = lookupCache.emplace(std::move(canonicalStr), std::make_unique<SourceBuffer>(id, std::move(buffer))).first->second.get();
+	fileToBuffer.push_back(result);
+
+	return result;
 }
 
-bool SourceManager::openFile(const path_type& path, Buffer<char>& buffer) {
+bool SourceManager::readFile(const path_type& path, Buffer<char>& buffer) {
     std::error_code ec;
     uintmax_t size = fs::file_size(path, ec);
     if (ec || size > INT32_MAX)
@@ -138,10 +119,6 @@ bool SourceManager::openFile(const path_type& path, Buffer<char>& buffer) {
     buffer.begin()[(uint32_t)size] = '\0';
 
     return stream.good();
-}
-
-void SourceManager::cacheDirectory(path_type path, FileID file) {
-    fileToDirectory[file.getValue()] = &*directories.insert(path.remove_filename()).first;
 }
 
 }
