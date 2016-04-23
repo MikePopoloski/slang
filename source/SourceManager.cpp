@@ -11,28 +11,6 @@
 
 namespace fs = std::tr2::sys;
 
-namespace {
-
-// TODO: remove this once canonical() is fixed in <filesystem>
-fs::path canonicalWorkaround(const fs::path& path) {
-    std::deque<fs::path> stack;
-    for (auto& e : path) {
-        const wchar_t* cstr = e.c_str();
-        if (cstr[0] == '.' && cstr[1] == '.' && cstr[2] == '\0')
-            stack.pop_back();
-        else if (cstr[0] != '.')
-            stack.push_back(e);
-    }
-
-    fs::path result;
-    for (auto& e : stack)
-        result /= e;
-
-    return result;
-}
-
-}
-
 namespace slang {
 
 SourceManager::SourceManager() {
@@ -51,12 +29,12 @@ std::string SourceManager::makeAbsolutePath(StringRef path) const {
 
 void SourceManager::addSystemDirectory(StringRef path) {
     path_type p = fs::absolute(path_type(path.begin(), path.end()), workingDir);
-    systemDirectories.push_back(canonicalWorkaround(p));
+    systemDirectories.push_back(fs::canonical(p));
 }
 
 void SourceManager::addUserDirectory(StringRef path) {
     path_type p = fs::absolute(path_type(path.begin(), path.end()), workingDir);
-    userDirectories.push_back(canonicalWorkaround(p));
+    userDirectories.push_back(fs::canonical(p));
 }
 
 FileID SourceManager::track(StringRef path) {
@@ -125,7 +103,7 @@ SourceFile* SourceManager::readHeader(FileID currentSource, StringRef path, bool
 
 SourceFile* SourceManager::openCached(path_type fullPath) {
     // first see if we have this cached
-    fullPath = canonicalWorkaround(fullPath);
+    fullPath = fs::canonical(fullPath);
     auto canonicalStr = fullPath.string();
     auto it = lookupCache.find(canonicalStr);
     if (it != lookupCache.end())
