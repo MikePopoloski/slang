@@ -125,9 +125,8 @@ Token* ParserBase::expect(TokenKind kind) {
 	auto result = peek();
 	if (result->kind != kind) {
 		// report an error here for the missing token
-		// TODO: location info
 		addError(DiagCode::SyntaxError);
-		return Token::missing(alloc, kind);
+		return Token::missing(alloc, kind, result->location);
 	}
 
 	window.moveToNext();

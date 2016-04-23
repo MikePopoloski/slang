@@ -5,6 +5,7 @@
 #include "BitVector.h"
 #include "Trivia.h"
 #include "StringTable.h"
+#include "SourceLocation.h"
 
 namespace slang {
 
@@ -71,6 +72,7 @@ struct NumericValue {
 class Token {
 public:
     ArrayRef<Trivia> trivia;
+	SourceLocation location;
     TokenKind kind;
 
     // a missing token was expected and inserted by the parser at a given point
@@ -98,18 +100,18 @@ public:
 
     bool hasTrivia(TriviaKind triviaKind) const;
 
-    static Token* createUnknown(BumpAllocator& alloc, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags = 0);
-    static Token* createSimple(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, uint8_t flags = 0);
-    static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);
-    static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags = 0);
-    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags = 0);
-    static Token* createDirective(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags = 0);
-    static Token* missing(BumpAllocator& alloc, TokenKind kind, ArrayRef<Trivia> trivia = nullptr);
+    static Token* createUnknown(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags = 0);
+    static Token* createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags = 0);
+    static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);
+    static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags = 0);
+    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags = 0);
+    static Token* createDirective(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags = 0);
+    static Token* missing(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia = nullptr);
 
 private:
     uint8_t flags;
 
-    Token(TokenKind kind, ArrayRef<Trivia> trivia, uint8_t flags);
+    Token(TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags);
     Token(const Token&) = delete;
     Token& operator=(const Token&) = delete;
 

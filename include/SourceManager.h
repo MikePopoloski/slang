@@ -1,15 +1,8 @@
 #pragma once
 
-#include "Handle.h"
 #include "SourceLocation.h"
 
 namespace slang {
-
-class SourceManager;
-
-struct FileID : public HandleBase<FileID> {
-    friend class SourceManager;
-};
 
 struct SourceFile {
     Buffer<char> buffer;

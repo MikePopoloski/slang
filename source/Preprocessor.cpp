@@ -457,15 +457,15 @@ Token* Preprocessor::parseEndOfDirective() {
     }
 
     Token* eod = consume();
-    if (skipped.empty())
-        return eod;
+	if (!skipped.empty()) {
+		// splice together the trivia
+		auto trivia = triviaPool.get();
+		trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
+		trivia.appendRange(eod->trivia);
+		eod->trivia = trivia.copy(alloc);
+	}
 
-    // splice together the trivia
-	auto trivia = triviaPool.get();
-	trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
-	trivia.appendRange(eod->trivia);
-
-    return Token::createSimple(alloc, TokenKind::EndOfDirective, trivia.copy(alloc));
+    return eod;
 }
 
 Trivia Preprocessor::createSimpleDirective(Token* directive) {
@@ -489,9 +489,8 @@ Token* Preprocessor::expect(TokenKind kind) {
 	auto result = peek();
 	if (result->kind != kind) {
 		// report an error here for the missing token
-		// TODO: location info
 		addError(DiagCode::SyntaxError);
-		return Token::missing(alloc, kind);
+		return Token::missing(alloc, kind, result->location);
 	}
 
 	currentToken = nullptr;

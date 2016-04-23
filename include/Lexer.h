@@ -30,8 +30,9 @@ private:
     struct TokenInfo {
         StringRef niceText;
         NumericValue numericValue;
-        IdentifierType identifierType;
+		uint32_t offset;
         SyntaxKind directiveKind;
+        IdentifierType identifierType;
     };
 
     TokenKind lexToken(TokenInfo& info, bool directiveMode);
@@ -71,6 +72,7 @@ private:
     void advance(int count) { sourceBuffer += count; }
     char peek() { return *sourceBuffer; }
     char peek(int offset) { return sourceBuffer[offset]; }
+	uint32_t currentOffset() { return (uint32_t)(sourceBuffer - startPointer); }
 
     // in order to detect embedded nulls gracefully, we call this whenever we
     // encounter a null to check whether we really are at the end of the buffer
@@ -92,6 +94,7 @@ private:
     VectorBuilder vectorBuilder;
     BumpAllocator& alloc;
 	Diagnostics& diagnostics;
+	const char* const startPointer;
     const char* sourceBuffer;
     const char* sourceEnd;
     const char* marker;

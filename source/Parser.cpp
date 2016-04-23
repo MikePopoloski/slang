@@ -1508,7 +1508,7 @@ StructUnionTypeSyntax* Parser::parseStructUnion(SyntaxKind syntaxKind) {
     auto buffer = nodePool.getAs<StructUnionMemberSyntax*>();
 
     if (openBrace->isMissing())
-        closeBrace = Token::missing(alloc, TokenKind::CloseBrace);
+        closeBrace = Token::missing(alloc, TokenKind::CloseBrace, openBrace->location);
     else {
         auto kind = peek()->kind;
         while (kind != TokenKind::CloseBrace && kind != TokenKind::EndOfFile) {
@@ -1557,7 +1557,7 @@ EnumTypeSyntax* Parser::parseEnum() {
     Token* closeBrace;
     ArrayRef<TokenOrSyntax> declarators = nullptr;
     if (openBrace->isMissing())
-        closeBrace = Token::missing(alloc, TokenKind::CloseBrace);
+        closeBrace = Token::missing(alloc, TokenKind::CloseBrace, openBrace->location);
     else
         declarators = parseVariableDeclarators<isCloseBrace>(TokenKind::CloseBrace, closeBrace);
 

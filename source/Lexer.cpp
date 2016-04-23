@@ -69,7 +69,8 @@ SyntaxKind getDirectiveKind(StringRef directive);
 Lexer::Lexer(FileID file, SourceText source, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
 	diagnostics(diagnostics),
-    sourceBuffer(source.begin()),
+	startPointer(source.begin()),
+	sourceBuffer(source.begin()),
     sourceEnd(source.end()),
     marker(nullptr),
     file(file)
@@ -111,6 +112,8 @@ Token* Lexer::lex(LexerMode mode) {
 }
 
 TokenKind Lexer::lexToken(TokenInfo& info, bool directiveMode) {
+	info.offset = currentOffset();
+
     char c = peek();
     advance();
     switch (c) {
@@ -551,12 +554,13 @@ Token* Lexer::lexIncludeFileName() {
 	}
 
 	ArrayRef<Trivia> trivia = triviaBuffer.copy(alloc);
+	uint32_t offset = currentOffset();
 
 	mark();
 	char delim = peek();
 	if (delim != '"' && delim != '<') {
 		addError(DiagCode::ExpectedIncludeFileName);
-		return Token::missing(alloc, TokenKind::IncludeFileName, trivia);
+		return Token::missing(alloc, TokenKind::IncludeFileName, SourceLocation(file, offset), trivia);
 	}
 
 	advance();
@@ -571,7 +575,7 @@ Token* Lexer::lexIncludeFileName() {
 	} while (c != delim);
 
 	StringRef rawText = lexeme();
-	return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, trivia, rawText, rawText);
+	return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, SourceLocation(file, offset), trivia, rawText, rawText);
 }
 
 TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
@@ -1048,23 +1052,25 @@ int Lexer::findNextNonWhitespace() {
 }
 
 Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer) {
-    ArrayRef<Trivia> trivia = triviaBuffer.copy(alloc);
+    auto trivia = triviaBuffer.copy(alloc);
+	auto location = SourceLocation(file, info.offset);
+
     switch (kind) {
         case TokenKind::Unknown:
-            return Token::createUnknown(alloc, trivia, lexeme());
+            return Token::createUnknown(alloc, location, trivia, lexeme());
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
-            return Token::createIdentifier(alloc, kind, trivia, lexeme(), info.identifierType);
+            return Token::createIdentifier(alloc, kind, location, trivia, lexeme(), info.identifierType);
         case TokenKind::IntegerLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-            return Token::createNumericLiteral(alloc, kind, trivia, lexeme(), info.numericValue);
+            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue);
         case TokenKind::StringLiteral:
-            return Token::createStringLiteral(alloc, kind, trivia, lexeme(), info.niceText);
+            return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);
         case TokenKind::Directive:
-            return Token::createDirective(alloc, kind, trivia, lexeme(), info.directiveKind);
+            return Token::createDirective(alloc, kind, location, trivia, lexeme(), info.directiveKind);
         default:
-            return Token::createSimple(alloc, kind, trivia);
+            return Token::createSimple(alloc, kind, location, trivia);
     }
 }
 
