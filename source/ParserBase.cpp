@@ -88,6 +88,10 @@ void ParserBase::addError(DiagCode code) {
 	window.tokenSource.getDiagnostics().emplace(code, SourceLocation(), 0);
 }
 
+Diagnostic& ParserBase::addError(DiagCode code, SourceLocation location) {
+	return window.tokenSource.getDiagnostics().add(code, location);
+}
+
 Token* ParserBase::peek(int offset) {
 	while (window.currentOffset + offset >= window.count)
 		window.addNew();
@@ -123,15 +127,22 @@ Token* ParserBase::consumeIf(TokenKind kind) {
 }
 
 Token* ParserBase::expect(TokenKind kind) {
+	// keep this method small so that it gets inlined
 	auto result = peek();
-	if (result->kind != kind) {
-		// report an error here for the missing token
-		addError(DiagCode::SyntaxError);
-		return Token::missing(alloc, kind, result->location);
-	}
+	if (result->kind != kind)
+		return createExpectedToken(result, kind);
 
 	window.moveToNext();
 	return result;
+}
+
+Token* ParserBase::createExpectedToken(Token* actual, TokenKind expected) {
+	// report an error here for the missing token
+	switch (expected) {
+		case TokenKind::Identifier: addError(DiagCode::ExpectedIdentifier, actual->location); break;
+		default: addError(DiagCode::ExpectedToken, actual->location) << getTokenKindText(expected); break;
+	}
+	return Token::missing(alloc, expected, actual->location);
 }
 
 void ParserBase::Window::addNew() {

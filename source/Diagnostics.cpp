@@ -35,34 +35,34 @@ static const char* severityToString[] = {
 
 static const DiagnosticDescriptor diagnosticDescriptors[] = {
 	// lexer
-	{ "Non-printable character in source text. SystemVerilog only supports ASCII text." },
-	{ "UTF-8 sequence in source text. SystemVerilog only supports ASCII text." },
-	{ "Unicode BOM at start of source text. SystemVerilog only supports ASCII text." },
-	{ "Embedded NUL in source text. Are you sure this is source code?" },
-	{ "Expected directive name." },
-	{ "Expected newline after escape sequence; remove trailing whitespace." },
-	{ "Missing closing quote." },
-	{ "Block comment unclosed at end of file." },
-	{ "Nested block comments are disallowed by SystemVerilog." },
-	{ "Block comments on the same line as a directive must also be terminated on that line." },
-	{ "Expected exponent digits." },
-	{ "Expected fractional digits." },
-	{ "Octal escape code is too large to be an ASCII character." },
-	{ "Invalid hexadecimal number." },
-	{ "Unknown character escape sequence." },
-	{ "Literal exponent is too large." },
-	{ "Signed integer constant is too large." },
-	{ "Vector literal cannot have a size of zero." },
-	{ "Vector literal is too large." },
-	{ "Unknown vector literal base specifier." },
-	{ "Expected vector literal digits." },
-	{ "Expected an include file name." },
+	{ "non-printable character in source text; SystemVerilog only supports ASCII text" },
+	{ "UTF-8 sequence in source text; SystemVerilog only supports ASCII text" },
+	{ "Unicode BOM at start of source text; SystemVerilog only supports ASCII text" },
+	{ "embedded NUL in source text; are you sure this is source code?" },
+	{ "expected directive name" },
+	{ "expected newline after escape sequence; remove trailing whitespace" },
+	{ "missing closing quote" },
+	{ "block comment unclosed at end of file" },
+	{ "nested block comments are disallowed by SystemVerilog" },
+	{ "block comments on the same line as a directive must also be terminated on that line" },
+	{ "expected exponent digits" },
+	{ "expected fractional digits" },
+	{ "octal escape code is too large to be an ASCII character" },
+	{ "invalid hexadecimal number" },
+	{ "unknown character escape sequence" },
+	{ "literal exponent is too large" },
+	{ "signed integer constant is too large" },
+	{ "vector literal cannot have a size of zero" },
+	{ "vector literal is too large" },
+	{ "unknown vector literal base specifier" },
+	{ "expected vector literal digits" },
+	{ "expected an include file name" },
 	
 	// preprocessor
 	{ "CouldNotOpenIncludeFile" },
 	{ "ExceededMaxIncludeDepth" },
 	{ "UnknownDirective" },
-	{ "Expected end of directive (missing newline?)" },
+	{ "expected end of directive (missing newline?)" },
 	{ "ExpectedEndOfMacroArgs" },
 	{ "ExpectedEndIfDirective" },
 	{ "UnexpectedDirective" },
@@ -71,6 +71,8 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
 
 	// parser
 	{ "SyntaxError" },
+	{ "expected identifier" },
+	{ "expected '{}'" },
 	{ "ImplicitNotAllowed" },
 	{ "MultipleTypesInDeclaration" },
 	{ "DirectionOnInterfacePort" },
@@ -82,6 +84,11 @@ static StringRef getBufferLine(SourceManager& sourceManager, SourceLocation loca
 Diagnostics::Diagnostics() :
 	Buffer::Buffer(128)
 {
+}
+
+Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
+	emplace(code, location, 0);
+	return last();
 }
 
 DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
@@ -98,13 +105,21 @@ std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
 	uint32_t col = sourceManager.getColumnNumber(location);
 
 	fmt::MemoryWriter writer;
-	writer.write("{}:{}:{}: {}: {}",
+	writer.write("{}:{}:{}: {}: ",
 		sourceManager.getFileName(location.file),
 		sourceManager.getLineNumber(location),
 		col,
-		severityToString[(int)severity],
-		format
+		severityToString[(int)severity]
 	);
+
+	// build the error message from arguments, if we have any
+	switch (diagnostic.args.size()) {
+		case 0: writer << format.toString(); break;
+		case 1: writer.write(format.toString(), diagnostic.args[0]); break;
+		case 2: writer.write(format.toString(), diagnostic.args[0], diagnostic.args[1]); break;
+		default:
+			ASSERT(false && "Too many arguments to diagnostic format. Add another switch case!");
+	}
 
 	// print out the source line, if possible
 	StringRef line = getBufferLine(sourceManager, location, col);
@@ -112,7 +127,7 @@ std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
 		writer << '\n';
 	else {
 		writer.write("\n{}\n", line);
-		for (int i = 0; i < col - 1; i++) {
+		for (unsigned i = 0; i < col - 1; i++) {
 			if (line[i] == '\t')
 				writer << '\t';
 			else
@@ -172,6 +187,8 @@ std::ostream& operator<<(std::ostream& os, DiagCode code) {
 		CASE(UnbalancedMacroArgDims);
 		CASE(ExpectedMacroArgs);
 		CASE(SyntaxError);
+		CASE(ExpectedIdentifier);
+		CASE(ExpectedToken);
 		CASE(ImplicitNotAllowed);
 		CASE(MultipleTypesInDeclaration);
 		CASE(DirectionOnInterfacePort);

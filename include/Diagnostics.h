@@ -42,17 +42,39 @@ enum class DiagCode : uint8_t {
 
     // parser
     SyntaxError,
+	ExpectedIdentifier,
+	ExpectedToken,
     ImplicitNotAllowed,
     MultipleTypesInDeclaration,
     DirectionOnInterfacePort,
     ColonShouldBeDot
-
 };
 
 std::ostream& operator<<(std::ostream& os, DiagCode code);
 
 class Diagnostic {
 public:
+	struct Arg {
+		StringRef strRef;
+		uint8_t type;
+
+		Arg(StringRef strRef) : strRef(strRef), type(STRINGREF) {}
+
+		friend std::ostream& operator <<(std::ostream& os, const Arg& arg) {
+			switch (arg.type) {
+				case STRINGREF: os << arg.strRef; break;
+				default:
+					ASSERT(false && "Unknown arg type. Missing case!");
+			}
+			return os;
+		}
+
+		enum {
+			STRINGREF
+		};
+	};
+
+	std::deque<Arg> args;
     DiagCode code;
     SourceLocation location;
     int width;
@@ -61,6 +83,11 @@ public:
 		code(code), location(location), width(width)
 	{
     }
+
+	friend Diagnostic& operator <<(Diagnostic& diag, Arg arg) {
+		diag.args.push_back(std::move(arg));
+		return diag;
+	}
 };
 
 enum class DiagnosticSeverity {
@@ -87,6 +114,7 @@ class Diagnostics : public Buffer<Diagnostic> {
 public:
     Diagnostics();
 
+	Diagnostic& add(DiagCode code, SourceLocation location);
 	DiagnosticReport getReport(const Diagnostic& diagnostic) const;
 };
 

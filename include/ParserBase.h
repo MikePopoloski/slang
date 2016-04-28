@@ -21,6 +21,8 @@ protected:
 	void reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia);
 
 	void addError(DiagCode code);
+	Diagnostic& addError(DiagCode code, SourceLocation location);
+	Token* createExpectedToken(Token* actual, TokenKind expected);
 
 	Token* peek(int offset);
 	Token* peek();
