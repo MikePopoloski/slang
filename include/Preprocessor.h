@@ -11,12 +11,13 @@ StringRef getDirectiveText(SyntaxKind kind);
 
 class MacroExpander {
 public:
-    MacroExpander(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
+    MacroExpander(BumpAllocator& alloc, DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
     Token* next();
 
 	bool done() const;
 
 private:
+	BumpAllocator& alloc;
     Buffer<Token*> tokens;
     Token** current = nullptr;
 

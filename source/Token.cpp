@@ -118,9 +118,33 @@ bool Token::hasTrivia(TriviaKind triviaKind) const {
     return false;
 }
 
+size_t Token::getAllocSize(TokenKind kind) {
+	switch (kind) {
+		case TokenKind::Unknown:
+		case TokenKind::Identifier:
+		case TokenKind::SystemIdentifier:
+			return sizeof(Token) + sizeof(IdentifierInfo);
+		case TokenKind::IntegerLiteral:
+		case TokenKind::RealLiteral:
+		case TokenKind::TimeLiteral:
+			return sizeof(Token) + sizeof(NumericLiteralInfo);
+		case TokenKind::StringLiteral:
+		case TokenKind::IncludeFileName:
+			return sizeof(Token) + sizeof(StringLiteralInfo);
+		case TokenKind::Directive:
+			return sizeof(Token) + sizeof(DirectiveInfo);
+		default:
+			return sizeof(Token);
+	}
+}
+
+Token* Token::create(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags) {
+	Token* token = (Token*)alloc.allocate(getAllocSize(kind));
+	return new (token) Token(kind, location, trivia, flags);
+}
+
 Token* Token::createUnknown(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags) {
-    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
-    new (token) Token(TokenKind::Unknown, location, trivia, flags);
+	auto token = create(alloc, TokenKind::Unknown, location, trivia, flags);
 
     IdentifierInfo* info = (IdentifierInfo*)(token + 1);
     info->rawText = rawText;
@@ -130,14 +154,11 @@ Token* Token::createUnknown(BumpAllocator& alloc, SourceLocation location, Array
 }
 
 Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags) {
-    Token* token = (Token*)alloc.allocate(sizeof(Token));
-    new (token) Token(kind, location, trivia, flags);
-    return token;
+	return create(alloc, kind, location, trivia, flags);
 }
 
 Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags) {
-    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(IdentifierInfo));
-    new (token) Token(kind, location, trivia, flags);
+    auto token = create(alloc, kind, location, trivia, flags);
 
     IdentifierInfo* info = (IdentifierInfo*)(token + 1);
     info->rawText = rawText;
@@ -147,8 +168,7 @@ Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocat
 }
 
 Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags) {
-    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(StringLiteralInfo));
-    new (token) Token(kind, location, trivia, flags);
+	auto token = create(alloc, kind, location, trivia, flags);
 
     StringLiteralInfo* info = (StringLiteralInfo*)(token + 1);
     info->rawText = rawText;
@@ -158,8 +178,7 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLo
 }
 
 Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags) {
-    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(NumericLiteralInfo));
-    new (token) Token(kind, location, trivia, flags);
+	auto token = create(alloc, kind, location, trivia, flags);
 
     NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
     info->rawText = rawText;
@@ -169,8 +188,7 @@ Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceL
 }
 
 Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags) {
-    Token* token = (Token*)alloc.allocate(sizeof(Token) + sizeof(DirectiveInfo));
-    new (token) Token(kind, location, trivia, flags);
+	auto token = create(alloc, kind, location, trivia, flags);
 
     DirectiveInfo* info = (DirectiveInfo*)(token + 1);
     info->rawText = rawText;
@@ -198,6 +216,14 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
         default:
             return createSimple(alloc, kind, location, trivia, TokenFlags::Missing);
     }
+}
+
+Token* Token::clone(BumpAllocator& alloc) const {
+	size_t size = getAllocSize(kind);
+	auto cloned = (Token*)alloc.allocate(size);
+	memcpy(cloned, this, size);
+
+	return cloned;
 }
 
 }

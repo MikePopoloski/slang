@@ -325,7 +325,7 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
 		actualArgs = alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(alloc), closeParen);
     }
 
-	auto macroSource = alloc.emplace<MacroExpander>(macro, actualArgs);
+	auto macroSource = alloc.emplace<MacroExpander>(alloc, macro, actualArgs);
 	sourceStack.push_back(macroSource);
 
 	auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
@@ -507,7 +507,9 @@ void Preprocessor::addError(DiagCode code, SourceLocation location) {
 	diagnostics.emplace(code, location, 0);
 }
 
-MacroExpander::MacroExpander(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
+MacroExpander::MacroExpander(BumpAllocator& alloc, DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) :
+	alloc(alloc)
+{
     // expand all tokens recursively and store them in our buffer
     expand(macro, actualArgs);
     current = tokens.begin();
@@ -516,7 +518,7 @@ MacroExpander::MacroExpander(DefineDirectiveSyntax* macro, MacroActualArgumentLi
 }
 
 Token* MacroExpander::next() {
-    Token* result = *current;
+    Token* result = (*current)->clone(alloc);
     current++;
     if (current == tokens.end())
         current = nullptr;

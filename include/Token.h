@@ -100,6 +100,8 @@ public:
 
     bool hasTrivia(TriviaKind triviaKind) const;
 
+	Token* clone(BumpAllocator& alloc) const;
+
     static Token* createUnknown(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags = 0);
     static Token* createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags = 0);
     static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);
@@ -134,6 +136,9 @@ private:
         StringRef rawText;
         SyntaxKind kind;
     };
+
+	static size_t getAllocSize(TokenKind kind);
+	static Token* create(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags);
 };
 
 TokenKind getSystemKeywordKind(StringRef text);
