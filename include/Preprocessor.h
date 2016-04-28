@@ -14,8 +14,7 @@ public:
     MacroExpander(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
     Token* next();
 
-	bool done() const { return true; }
-    bool isActive() const;
+	bool done() const;
 
 private:
     Buffer<Token*> tokens;

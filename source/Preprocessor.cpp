@@ -509,7 +509,6 @@ void Preprocessor::addError(DiagCode code, SourceLocation location) {
 
 MacroExpander::MacroExpander(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
     // expand all tokens recursively and store them in our buffer
-    tokens.clear();
     expand(macro, actualArgs);
     current = tokens.begin();
     if (current == tokens.end())
@@ -525,8 +524,8 @@ Token* MacroExpander::next() {
     return result;
 }
 
-bool MacroExpander::isActive() const {
-    return current != nullptr;
+bool MacroExpander::done() const {
+    return current == nullptr;
 }
 
 void MacroExpander::expand(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
