@@ -439,11 +439,15 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
 
 Trivia Preprocessor::handleEndIfDirective(Token* directive) {
 	// pop the active branch off the stack
+	bool taken = true;
 	if (branchStack.empty())
 		addError(DiagCode::UnexpectedDirective);
-	else
+	else {
 		branchStack.pop_back();
-	return createSimpleDirective(directive);
+		if (!branchStack.empty() && !branchStack.back().currentActive)
+			taken = false;
+	}
+	return parseBranchDirective(directive, nullptr, taken);
 }
 
 Token* Preprocessor::parseEndOfDirective() {

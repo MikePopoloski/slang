@@ -158,6 +158,15 @@ TEST_CASE("ElseIf branch", "[preprocessor]") {
 	CHECK(diagnostics.empty());
 }
 
+TEST_CASE("EndIf not done", "[preprocessor]") {
+	auto& text = "`ifdef FOO\n`ifdef BAR\n42\n`endif\n1000`endif\n42.3";
+	auto& token = lexToken(text);
+
+	REQUIRE(token.kind == TokenKind::RealLiteral);
+	CHECK(token.numericValue().real == 42.3);
+	CHECK(diagnostics.empty());
+}
+
 TEST_CASE("Nested branches", "[preprocessor]") {
 	auto& text =
 "`define FOO\n"
