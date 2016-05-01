@@ -14,10 +14,10 @@ public:
     MacroExpander(BumpAllocator& alloc, DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
     Token* next();
 
-	bool done() const;
+    bool done() const;
 
 private:
-	BumpAllocator& alloc;
+    BumpAllocator& alloc;
     Buffer<Token*> tokens;
     Token** current = nullptr;
 
@@ -28,28 +28,28 @@ class Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-	void pushSource(SourceText source, FileID file = FileID());
+    void pushSource(SourceText source, FileID file = FileID());
 
-	Token* next();
+    Token* next();
 
-	FileID getCurrentFile();
+    FileID getCurrentFile();
 
-	SourceManager& getSourceManager() const { return sourceManager; }
+    SourceManager& getSourceManager() const { return sourceManager; }
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-	Token* next(LexerMode mode);
-	Token* nextRaw(LexerMode mode);
+    Token* next(LexerMode mode);
+    Token* nextRaw(LexerMode mode);
 
     Trivia handleIncludeDirective(Token* directive);
     Trivia handleResetAllDirective(Token* directive);
     Trivia handleDefineDirective(Token* directive);
     Trivia handleMacroUsage(Token* directive);
-	Trivia handleIfDefDirective(Token* directive);
-	Trivia handleElseIfDirective(Token* directive);
-	Trivia handleElseDirective(Token* directive);
-	Trivia handleEndIfDirective(Token* directive);
+    Trivia handleIfDefDirective(Token* directive);
+    Trivia handleElseIfDirective(Token* directive);
+    Trivia handleElseDirective(Token* directive);
+    Trivia handleEndIfDirective(Token* directive);
 
     Token* parseEndOfDirective();
 
@@ -57,54 +57,54 @@ private:
 
     ArrayRef<Token*> parseMacroArg();
 
-	bool shouldTakeElseBranch(bool isElseIf, StringRef macroName);
-	Trivia parseBranchDirective(Token* directive, Token* condition, bool taken);
+    bool shouldTakeElseBranch(bool isElseIf, StringRef macroName);
+    Trivia parseBranchDirective(Token* directive, Token* condition, bool taken);
 
-	Token* peek();
-	Token* consume();
-	Token* expect(TokenKind kind);
-	bool peek(TokenKind kind) { return peek()->kind == kind; }
+    Token* peek();
+    Token* consume();
+    Token* expect(TokenKind kind);
+    bool peek(TokenKind kind) { return peek()->kind == kind; }
 
-	void addError(DiagCode code);
-	void addError(DiagCode code, SourceLocation location);
+    void addError(DiagCode code);
+    void addError(DiagCode code, SourceLocation location);
 
-	struct Source {
-		enum {
-			LEXER,
-			MACRO
-		};
-		uint8_t kind;
-		union {
-			Lexer* lexer;
-			MacroExpander* macro;
-		};
+    struct Source {
+        enum {
+            LEXER,
+            MACRO
+        };
+        uint8_t kind;
+        union {
+            Lexer* lexer;
+            MacroExpander* macro;
+        };
 
-		Source(Lexer* lexer) : kind(LEXER), lexer(lexer) {}
-		Source(MacroExpander* macro) : kind(MACRO), macro(macro) {}
-	};
+        Source(Lexer* lexer) : kind(LEXER), lexer(lexer) {}
+        Source(MacroExpander* macro) : kind(MACRO), macro(macro) {}
+    };
 
-	struct BranchEntry {
-		bool anyTaken;
-		bool currentActive;
-		bool hasElse = false;
+    struct BranchEntry {
+        bool anyTaken;
+        bool currentActive;
+        bool hasElse = false;
 
-		BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
-	};
+        BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
+    };
 
-	SourceManager& sourceManager;
-	BumpAllocator& alloc;
-	Diagnostics& diagnostics;
+    SourceManager& sourceManager;
+    BumpAllocator& alloc;
+    Diagnostics& diagnostics;
 
-	std::deque<Source> sourceStack;
-	std::deque<BranchEntry> branchStack;
+    std::deque<Source> sourceStack;
+    std::deque<BranchEntry> branchStack;
     std::unordered_map<StringRef, DefineDirectiveSyntax*> macros;
 
     Buffer<TokenKind> delimPairStack;
-	BufferPool<Trivia> triviaPool;
-	BufferPool<Token*> tokenPool;
+    BufferPool<Trivia> triviaPool;
+    BufferPool<Token*> tokenPool;
     BufferPool<TokenOrSyntax> syntaxPool;
 
-	Token* currentToken;
+    Token* currentToken;
 
     const StringTable<TokenKind>* keywordTable;
 

@@ -361,7 +361,7 @@ TEST_CASE("Unsigned integer literal", "[lexer]") {
 }
 
 TEST_CASE("Signed integer literal (overflow)", "[lexer]") {
-	// TODO: update overflow checking
+    // TODO: update overflow checking
     auto& text = "9999999999";
     auto& token = lexToken(text);
 
@@ -376,35 +376,35 @@ TEST_CASE("Signed integer literal (overflow)", "[lexer]") {
 }
 
 void checkVectorBase(const std::string& s) {
-	auto& token = lexToken(s);
+    auto& token = lexToken(s);
 
-	CHECK(token.kind == TokenKind::IntegerVectorBase);
-	CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
-	CHECK(diagnostics.empty());
+    CHECK(token.kind == TokenKind::IntegerVectorBase);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Vector bases", "[lexer]") {
-	checkVectorBase("'d");
-	checkVectorBase("'D");
-	checkVectorBase("'b");
-	checkVectorBase("'B");
-	checkVectorBase("'o");
-	checkVectorBase("'O");
-	checkVectorBase("'h");
-	checkVectorBase("'H");
+    checkVectorBase("'d");
+    checkVectorBase("'D");
+    checkVectorBase("'b");
+    checkVectorBase("'B");
+    checkVectorBase("'o");
+    checkVectorBase("'O");
+    checkVectorBase("'h");
+    checkVectorBase("'H");
 }
 
 TEST_CASE("Unbased unsized literal", "[lexer]") {
-	auto& text = "'1";
-	auto& token = lexToken(text);
+    auto& text = "'1";
+    auto& token = lexToken(text);
 
-	CHECK(token.kind == TokenKind::UnbasedUnsizedLiteral);
-	CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-	CHECK(diagnostics.empty());
+    CHECK(token.kind == TokenKind::UnbasedUnsizedLiteral);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(diagnostics.empty());
 
-	auto& value = token.numericValue();
-	CHECK(value.type == NumericValue::UnsizedBit);
-	//CHECK(value.integer == 19248);
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::UnsizedBit);
+    CHECK(value.bit.value == 1);
 }
 
 TEST_CASE("Real literal (fraction)", "[lexer]") {
@@ -534,7 +534,7 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
     auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Directive);
-	CHECK(token.directiveKind() == SyntaxKind::Unknown);
+    CHECK(token.directiveKind() == SyntaxKind::Unknown);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::MisplacedDirectiveChar);

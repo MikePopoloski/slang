@@ -35,15 +35,15 @@ enum class DiagCode : uint8_t {
     UnknownDirective,
     ExpectedEndOfDirective,
     ExpectedEndOfMacroArgs,
-	ExpectedEndIfDirective,
-	UnexpectedDirective,
+    ExpectedEndIfDirective,
+    UnexpectedDirective,
     UnbalancedMacroArgDims,
-	ExpectedMacroArgs,
+    ExpectedMacroArgs,
 
     // parser
     SyntaxError,
-	ExpectedIdentifier,
-	ExpectedToken,
+    ExpectedIdentifier,
+    ExpectedToken,
     ImplicitNotAllowed,
     MultipleTypesInDeclaration,
     DirectionOnInterfacePort,
@@ -54,68 +54,68 @@ std::ostream& operator<<(std::ostream& os, DiagCode code);
 
 class Diagnostic {
 public:
-	struct Arg {
-		StringRef strRef;
-		uint8_t type;
+    struct Arg {
+        StringRef strRef;
+        uint8_t type;
 
-		Arg(StringRef strRef) : strRef(strRef), type(STRINGREF) {}
+        Arg(StringRef strRef) : strRef(strRef), type(STRINGREF) {}
 
-		friend std::ostream& operator <<(std::ostream& os, const Arg& arg) {
-			switch (arg.type) {
-				case STRINGREF: os << arg.strRef; break;
-				default:
-					ASSERT(false && "Unknown arg type. Missing case!");
-			}
-			return os;
-		}
+        friend std::ostream& operator <<(std::ostream& os, const Arg& arg) {
+            switch (arg.type) {
+                case STRINGREF: os << arg.strRef; break;
+                default:
+                    ASSERT(false && "Unknown arg type. Missing case!");
+            }
+            return os;
+        }
 
-		enum {
-			STRINGREF
-		};
-	};
+        enum {
+            STRINGREF
+        };
+    };
 
-	std::deque<Arg> args;
+    std::deque<Arg> args;
     DiagCode code;
     SourceLocation location;
     int width;
 
-	Diagnostic(DiagCode code, SourceLocation location, int width) :
-		code(code), location(location), width(width)
-	{
+    Diagnostic(DiagCode code, SourceLocation location, int width) :
+        code(code), location(location), width(width)
+    {
     }
 
-	friend Diagnostic& operator <<(Diagnostic& diag, Arg arg) {
-		diag.args.push_back(std::move(arg));
-		return diag;
-	}
+    friend Diagnostic& operator <<(Diagnostic& diag, Arg arg) {
+        diag.args.push_back(std::move(arg));
+        return diag;
+    }
 };
 
 enum class DiagnosticSeverity {
-	Info,
-	Warning,
-	Error
+    Info,
+    Warning,
+    Error
 };
 
 class DiagnosticReport {
 public:
-	const Diagnostic& diagnostic;
-	StringRef format;
-	DiagnosticSeverity severity;
+    const Diagnostic& diagnostic;
+    StringRef format;
+    DiagnosticSeverity severity;
 
-	DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
-		diagnostic(diagnostic), format(format), severity(severity)
-	{
-	}
+    DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
+        diagnostic(diagnostic), format(format), severity(severity)
+    {
+    }
 
-	std::string toString(SourceManager& sourceManager) const;
+    std::string toString(SourceManager& sourceManager) const;
 };
 
 class Diagnostics : public Buffer<Diagnostic> {
 public:
     Diagnostics();
 
-	Diagnostic& add(DiagCode code, SourceLocation location);
-	DiagnosticReport getReport(const Diagnostic& diagnostic) const;
+    Diagnostic& add(DiagCode code, SourceLocation location);
+    DiagnosticReport getReport(const Diagnostic& diagnostic) const;
 };
 
 }

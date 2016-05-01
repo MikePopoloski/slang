@@ -18,184 +18,184 @@
 namespace slang {
 
 struct DiagnosticDescriptor {
-	StringRef format;
-	DiagnosticSeverity severity;
+    StringRef format;
+    DiagnosticSeverity severity;
 
-	DiagnosticDescriptor(StringRef format) :
-		format(format), severity(DiagnosticSeverity::Error)
-	{
-	}
+    DiagnosticDescriptor(StringRef format) :
+        format(format), severity(DiagnosticSeverity::Error)
+    {
+    }
 };
 
 static const char* severityToString[] = {
-	"info",
-	"warning",
-	"error"
+    "info",
+    "warning",
+    "error"
 };
 
 static const DiagnosticDescriptor diagnosticDescriptors[] = {
-	// lexer
-	{ "non-printable character in source text; SystemVerilog only supports ASCII text" },
-	{ "UTF-8 sequence in source text; SystemVerilog only supports ASCII text" },
-	{ "Unicode BOM at start of source text; SystemVerilog only supports ASCII text" },
-	{ "embedded NUL in source text; are you sure this is source code?" },
-	{ "expected directive name" },
-	{ "expected newline after escape sequence; remove trailing whitespace" },
-	{ "missing closing quote" },
-	{ "block comment unclosed at end of file" },
-	{ "nested block comments are disallowed by SystemVerilog" },
-	{ "block comments on the same line as a directive must also be terminated on that line" },
-	{ "expected exponent digits" },
-	{ "expected fractional digits" },
-	{ "octal escape code is too large to be an ASCII character" },
-	{ "invalid hexadecimal number" },
-	{ "unknown character escape sequence" },
-	{ "literal exponent is too large" },
-	{ "signed integer constant is too large" },
-	{ "vector literal cannot have a size of zero" },
-	{ "vector literal is too large" },
-	{ "unknown vector literal base specifier" },
-	{ "expected vector literal digits" },
-	{ "expected an include file name" },
-	
-	// preprocessor
-	{ "CouldNotOpenIncludeFile" },
-	{ "ExceededMaxIncludeDepth" },
-	{ "UnknownDirective" },
-	{ "expected end of directive (missing newline?)" },
-	{ "ExpectedEndOfMacroArgs" },
-	{ "ExpectedEndIfDirective" },
-	{ "UnexpectedDirective" },
-	{ "UnbalancedMacroArgDims" },
-	{ "ExpectedMacroArgs" },
+    // lexer
+    { "non-printable character in source text; SystemVerilog only supports ASCII text" },
+    { "UTF-8 sequence in source text; SystemVerilog only supports ASCII text" },
+    { "Unicode BOM at start of source text; SystemVerilog only supports ASCII text" },
+    { "embedded NUL in source text; are you sure this is source code?" },
+    { "expected directive name" },
+    { "expected newline after escape sequence; remove trailing whitespace" },
+    { "missing closing quote" },
+    { "block comment unclosed at end of file" },
+    { "nested block comments are disallowed by SystemVerilog" },
+    { "block comments on the same line as a directive must also be terminated on that line" },
+    { "expected exponent digits" },
+    { "expected fractional digits" },
+    { "octal escape code is too large to be an ASCII character" },
+    { "invalid hexadecimal number" },
+    { "unknown character escape sequence" },
+    { "literal exponent is too large" },
+    { "signed integer constant is too large" },
+    { "vector literal cannot have a size of zero" },
+    { "vector literal is too large" },
+    { "unknown vector literal base specifier" },
+    { "expected vector literal digits" },
+    { "expected an include file name" },
+    
+    // preprocessor
+    { "CouldNotOpenIncludeFile" },
+    { "ExceededMaxIncludeDepth" },
+    { "UnknownDirective" },
+    { "expected end of directive (missing newline?)" },
+    { "ExpectedEndOfMacroArgs" },
+    { "ExpectedEndIfDirective" },
+    { "UnexpectedDirective" },
+    { "UnbalancedMacroArgDims" },
+    { "ExpectedMacroArgs" },
 
-	// parser
-	{ "SyntaxError" },
-	{ "expected identifier" },
-	{ "expected '{}'" },
-	{ "ImplicitNotAllowed" },
-	{ "MultipleTypesInDeclaration" },
-	{ "DirectionOnInterfacePort" },
-	{ "ColonShouldBeDot" }
+    // parser
+    { "SyntaxError" },
+    { "expected identifier" },
+    { "expected '{}'" },
+    { "ImplicitNotAllowed" },
+    { "MultipleTypesInDeclaration" },
+    { "DirectionOnInterfacePort" },
+    { "ColonShouldBeDot" }
 };
 
 static StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col);
 
 Diagnostics::Diagnostics() :
-	Buffer::Buffer(128)
+    Buffer::Buffer(128)
 {
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
-	emplace(code, location, 0);
-	return last();
+    emplace(code, location, 0);
+    return last();
 }
 
 DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
-	auto& descriptor = diagnosticDescriptors[(int)diagnostic.code];
-	return {
-		diagnostic,
-		descriptor.format,
-		descriptor.severity
-	};
+    auto& descriptor = diagnosticDescriptors[(int)diagnostic.code];
+    return {
+        diagnostic,
+        descriptor.format,
+        descriptor.severity
+    };
 }
 
 std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
-	auto location = diagnostic.location;
-	uint32_t col = sourceManager.getColumnNumber(location);
+    auto location = diagnostic.location;
+    uint32_t col = sourceManager.getColumnNumber(location);
 
-	fmt::MemoryWriter writer;
-	writer.write("{}:{}:{}: {}: ",
-		sourceManager.getFileName(location.file),
-		sourceManager.getLineNumber(location),
-		col,
-		severityToString[(int)severity]
-	);
+    fmt::MemoryWriter writer;
+    writer.write("{}:{}:{}: {}: ",
+        sourceManager.getFileName(location.file),
+        sourceManager.getLineNumber(location),
+        col,
+        severityToString[(int)severity]
+    );
 
-	// build the error message from arguments, if we have any
-	switch (diagnostic.args.size()) {
-		case 0: writer << format.toString(); break;
-		case 1: writer.write(format.toString(), diagnostic.args[0]); break;
-		case 2: writer.write(format.toString(), diagnostic.args[0], diagnostic.args[1]); break;
-		default:
-			ASSERT(false && "Too many arguments to diagnostic format. Add another switch case!");
-	}
+    // build the error message from arguments, if we have any
+    switch (diagnostic.args.size()) {
+        case 0: writer << format.toString(); break;
+        case 1: writer.write(format.toString(), diagnostic.args[0]); break;
+        case 2: writer.write(format.toString(), diagnostic.args[0], diagnostic.args[1]); break;
+        default:
+            ASSERT(false && "Too many arguments to diagnostic format. Add another switch case!");
+    }
 
-	// print out the source line, if possible
-	StringRef line = getBufferLine(sourceManager, location, col);
-	if (!line)
-		writer << '\n';
-	else {
-		writer.write("\n{}\n", line);
-		for (unsigned i = 0; i < col - 1; i++) {
-			if (line[i] == '\t')
-				writer << '\t';
-			else
-				writer << ' ';
-		}
-		writer << '^';
-	}
+    // print out the source line, if possible
+    StringRef line = getBufferLine(sourceManager, location, col);
+    if (!line)
+        writer << '\n';
+    else {
+        writer.write("\n{}\n", line);
+        for (unsigned i = 0; i < col - 1; i++) {
+            if (line[i] == '\t')
+                writer << '\t';
+            else
+                writer << ' ';
+        }
+        writer << '^';
+    }
 
-	return writer.str();
+    return writer.str();
 }
 
 StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
-	auto buffer = sourceManager.getBuffer(location.file);
-	if (!buffer)
-		return nullptr;
+    auto buffer = sourceManager.getBuffer(location.file);
+    if (!buffer)
+        return nullptr;
 
-	const char* start = buffer->data.begin() + location.offset - (col - 1);
-	uint32_t len = 0;
-	while (start[len] != '\n' && start[len] != '\r')
-		len++;
+    const char* start = buffer->data.begin() + location.offset - (col - 1);
+    uint32_t len = 0;
+    while (start[len] != '\n' && start[len] != '\r')
+        len++;
 
-	return StringRef(start, len);
+    return StringRef(start, len);
 }
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {
 #define CASE(name) case DiagCode::name: os << #name; break
-	switch (code) {
-		CASE(NonPrintableChar);
-		CASE(UTF8Char);
-		CASE(UnicodeBOM);
-		CASE(EmbeddedNull);
-		CASE(MisplacedDirectiveChar);
-		CASE(EscapedWhitespace);
-		CASE(ExpectedClosingQuote);
-		CASE(UnterminatedBlockComment);
-		CASE(NestedBlockComment);
-		CASE(SplitBlockCommentInDirective);
-		CASE(MissingExponentDigits);
-		CASE(MissingFractionalDigits);
-		CASE(OctalEscapeCodeTooBig);
-		CASE(InvalidHexEscapeCode);
-		CASE(UnknownEscapeCode);
-		CASE(RealExponentTooLarge);
-		CASE(SignedLiteralTooLarge);
-		CASE(IntegerSizeZero);
-		CASE(IntegerSizeTooLarge);
-		CASE(MissingVectorBase);
-		CASE(MissingVectorDigits);
-		CASE(ExpectedIncludeFileName);
-		CASE(CouldNotOpenIncludeFile);
-		CASE(ExceededMaxIncludeDepth);
-		CASE(UnknownDirective);
-		CASE(ExpectedEndOfDirective);
-		CASE(ExpectedEndOfMacroArgs);
-		CASE(ExpectedEndIfDirective);
-		CASE(UnexpectedDirective);
-		CASE(UnbalancedMacroArgDims);
-		CASE(ExpectedMacroArgs);
-		CASE(SyntaxError);
-		CASE(ExpectedIdentifier);
-		CASE(ExpectedToken);
-		CASE(ImplicitNotAllowed);
-		CASE(MultipleTypesInDeclaration);
-		CASE(DirectionOnInterfacePort);
-		CASE(ColonShouldBeDot);
-		default: ASSERT(false && "Missing case");
-	}
-	return os;
+    switch (code) {
+        CASE(NonPrintableChar);
+        CASE(UTF8Char);
+        CASE(UnicodeBOM);
+        CASE(EmbeddedNull);
+        CASE(MisplacedDirectiveChar);
+        CASE(EscapedWhitespace);
+        CASE(ExpectedClosingQuote);
+        CASE(UnterminatedBlockComment);
+        CASE(NestedBlockComment);
+        CASE(SplitBlockCommentInDirective);
+        CASE(MissingExponentDigits);
+        CASE(MissingFractionalDigits);
+        CASE(OctalEscapeCodeTooBig);
+        CASE(InvalidHexEscapeCode);
+        CASE(UnknownEscapeCode);
+        CASE(RealExponentTooLarge);
+        CASE(SignedLiteralTooLarge);
+        CASE(IntegerSizeZero);
+        CASE(IntegerSizeTooLarge);
+        CASE(MissingVectorBase);
+        CASE(MissingVectorDigits);
+        CASE(ExpectedIncludeFileName);
+        CASE(CouldNotOpenIncludeFile);
+        CASE(ExceededMaxIncludeDepth);
+        CASE(UnknownDirective);
+        CASE(ExpectedEndOfDirective);
+        CASE(ExpectedEndOfMacroArgs);
+        CASE(ExpectedEndIfDirective);
+        CASE(UnexpectedDirective);
+        CASE(UnbalancedMacroArgDims);
+        CASE(ExpectedMacroArgs);
+        CASE(SyntaxError);
+        CASE(ExpectedIdentifier);
+        CASE(ExpectedToken);
+        CASE(ImplicitNotAllowed);
+        CASE(MultipleTypesInDeclaration);
+        CASE(DirectionOnInterfacePort);
+        CASE(ColonShouldBeDot);
+        default: ASSERT(false && "Missing case");
+    }
+    return os;
 #undef CASE
 }
 

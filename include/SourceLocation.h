@@ -7,7 +7,7 @@ namespace slang {
 class SourceManager;
 
 struct FileID : public HandleBase<FileID> {
-	friend class SourceManager;
+    friend class SourceManager;
 };
 
 // Represents a location in source code. The SourceManager can decode this into
@@ -15,27 +15,27 @@ struct FileID : public HandleBase<FileID> {
 
 class SourceLocation {
 public:
-	SourceLocation() : offset(0) {}
-	SourceLocation(FileID file, uint32_t offset) :
-		file(file), offset(offset)
-	{
-	}
+    SourceLocation() : offset(0) {}
+    SourceLocation(FileID file, uint32_t offset) :
+        file(file), offset(offset)
+    {
+    }
 
-	bool isValid() const { return offset != 0; }
+    bool isValid() const { return offset != 0; }
 
-	bool operator ==(const SourceLocation& rhs) {
-		return offset == rhs.offset;
-	}
+    bool operator ==(const SourceLocation& rhs) {
+        return offset == rhs.offset;
+    }
 
-	bool operator !=(const SourceLocation& rhs) {
-		return offset != rhs.offset;
-	}
+    bool operator !=(const SourceLocation& rhs) {
+        return offset != rhs.offset;
+    }
 
-	bool operator <(const SourceLocation& rhs) {
-		return offset < rhs.offset;
-	}
-	FileID file;
-	uint32_t offset;
+    bool operator <(const SourceLocation& rhs) {
+        return offset < rhs.offset;
+    }
+    FileID file;
+    uint32_t offset;
 
 private:
 };

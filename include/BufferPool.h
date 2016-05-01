@@ -34,7 +34,7 @@ public:
         template<typename... Args>
         void emplace(Args&&... args) { buffer->emplace<Args...>(std::forward<Args>(args)...); }
 
-		void clear() { buffer->clear(); }
+        void clear() { buffer->clear(); }
 
         ArrayRef<T> copy(BumpAllocator& alloc) const { return buffer->copy(alloc); }
 

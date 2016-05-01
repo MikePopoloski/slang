@@ -17,8 +17,8 @@ SyntaxNode* Trivia::syntax() const {
 
 void Trivia::writeTo(Buffer<char>& buffer, uint8_t flags) const {
     switch (kind) {
-		case TriviaKind::Directive:
-		case TriviaKind::SkippedSyntax:
+        case TriviaKind::Directive:
+        case TriviaKind::SkippedSyntax:
             syntaxNode->writeTo(buffer, flags);
             break;
 

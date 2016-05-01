@@ -68,9 +68,9 @@ SyntaxKind getDirectiveKind(StringRef directive);
 
 Lexer::Lexer(FileID file, SourceText source, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
-	diagnostics(diagnostics),
-	startPointer(source.begin()),
-	sourceBuffer(source.begin()),
+    diagnostics(diagnostics),
+    startPointer(source.begin()),
+    sourceBuffer(source.begin()),
     sourceEnd(source.end()),
     marker(nullptr),
     file(file)
@@ -95,15 +95,15 @@ Lexer::Lexer(FileID file, SourceText source, BumpAllocator& alloc, Diagnostics& 
 }
 
 Token* Lexer::lex(LexerMode mode) {
-	if (mode == LexerMode::IncludeFileName)
-		return lexIncludeFileName();
+    if (mode == LexerMode::IncludeFileName)
+        return lexIncludeFileName();
 
     // lex leading trivia
-	TokenInfo info;
-	auto triviaBuffer = triviaPool.get();
-	bool directiveMode = mode == LexerMode::Directive;
+    TokenInfo info;
+    auto triviaBuffer = triviaPool.get();
+    bool directiveMode = mode == LexerMode::Directive;
     if (lexTrivia(triviaBuffer, directiveMode))
-		return createToken(TokenKind::EndOfDirective, info, triviaBuffer);
+        return createToken(TokenKind::EndOfDirective, info, triviaBuffer);
 
     // lex the next token
     mark();
@@ -112,8 +112,8 @@ Token* Lexer::lex(LexerMode mode) {
 }
 
 TokenKind Lexer::lexToken(TokenInfo& info, bool directiveMode) {
-	uint32_t offset = currentOffset();
-	info.offset = offset;
+    uint32_t offset = currentOffset();
+    info.offset = offset;
 
     char c = peek();
     advance();
@@ -337,9 +337,9 @@ TokenKind Lexer::lexToken(TokenInfo& info, bool directiveMode) {
             scanIdentifier();
 
             // might be a keyword
-			TokenKind kind;
-			if (getKeywordTable()->lookup(lexeme(), kind))
-				return kind;
+            TokenKind kind;
+            if (getKeywordTable()->lookup(lexeme(), kind))
+                return kind;
 
             info.identifierType = IdentifierType::Normal;
             return TokenKind::Identifier;
@@ -413,7 +413,7 @@ void Lexer::lexStringLiteral(TokenInfo& info) {
     stringBuffer.clear();
 
     while (true) {
-		uint32_t offset = currentOffset();
+        uint32_t offset = currentOffset();
         char c = peek();
 
         if (c == '\\') {
@@ -488,7 +488,7 @@ void Lexer::lexStringLiteral(TokenInfo& info) {
 
             // otherwise just error and ignore
             addError(DiagCode::EmbeddedNull, offset);
-			advance();
+            advance();
         }
         else {
             advance();
@@ -549,36 +549,36 @@ TokenKind Lexer::lexDirective(TokenInfo& info) {
 }
 
 Token* Lexer::lexIncludeFileName() {
-	// leading whitespace should lex into trivia
-	auto triviaBuffer = triviaPool.get();
-	if (isHorizontalWhitespace(peek())) {
-		mark();
-		scanWhitespace(triviaBuffer);
-	}
+    // leading whitespace should lex into trivia
+    auto triviaBuffer = triviaPool.get();
+    if (isHorizontalWhitespace(peek())) {
+        mark();
+        scanWhitespace(triviaBuffer);
+    }
 
-	ArrayRef<Trivia> trivia = triviaBuffer.copy(alloc);
-	uint32_t offset = currentOffset();
+    ArrayRef<Trivia> trivia = triviaBuffer.copy(alloc);
+    uint32_t offset = currentOffset();
 
-	mark();
-	char delim = peek();
-	if (delim != '"' && delim != '<') {
-		addError(DiagCode::ExpectedIncludeFileName, offset);
-		return Token::missing(alloc, TokenKind::IncludeFileName, SourceLocation(file, offset), trivia);
-	}
+    mark();
+    char delim = peek();
+    if (delim != '"' && delim != '<') {
+        addError(DiagCode::ExpectedIncludeFileName, offset);
+        return Token::missing(alloc, TokenKind::IncludeFileName, SourceLocation(file, offset), trivia);
+    }
 
-	advance();
-	char c;
-	do {
-		c = peek();
-		if (c == '\0' || isNewline(c)) {
-			addError(DiagCode::ExpectedIncludeFileName, offset);
-			break;
-		}
-		advance();
-	} while (c != delim);
+    advance();
+    char c;
+    do {
+        c = peek();
+        if (c == '\0' || isNewline(c)) {
+            addError(DiagCode::ExpectedIncludeFileName, offset);
+            break;
+        }
+        advance();
+    } while (c != delim);
 
-	StringRef rawText = lexeme();
-	return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, SourceLocation(file, offset), trivia, rawText, rawText);
+    StringRef rawText = lexeme();
+    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, SourceLocation(file, offset), trivia, rawText, rawText);
 }
 
 TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
@@ -594,7 +594,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     }
 
     // skip over leading zeros
-	uint32_t startOfNumberOffset = currentOffset();
+    uint32_t startOfNumberOffset = currentOffset();
     char c;
     while ((c = peek()) == '0')
         advance();
@@ -605,7 +605,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     int digits = 0;
     c = scanUnsignedNumber(c, unsignedVal, digits);
 
-	// check if we have a fractional number here
+    // check if we have a fractional number here
     switch (peek()) {
         case '.': {
             // fractional digits
@@ -637,12 +637,12 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
             return TokenKind::RealLiteral;
         default:
             // normal signed numeric literal; check for 32-bit overflow
-			// TODO: support literals larger than 32 bits? Standard only requires 32...
+            // TODO: support literals larger than 32 bits? Standard only requires 32...
             if (unsignedVal > INT32_MAX) {
                 unsignedVal = INT32_MAX;
                 addError(DiagCode::SignedLiteralTooLarge, startOfNumberOffset);
             }
-			info.numericValue = (int32_t)unsignedVal;
+            info.numericValue = (int32_t)unsignedVal;
             return TokenKind::UnsignedIntegerLiteral;
     }
 }
@@ -650,7 +650,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
 void Lexer::lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent) {
     bool neg = false;
     uint64_t expVal = 0;
-	uint32_t startOfExponent = currentOffset();
+    uint32_t startOfExponent = currentOffset();
 
     if (exponent) {
         advance();
@@ -691,12 +691,12 @@ void Lexer::lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int di
 }
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {
-	char c = peek();
+    char c = peek();
     switch (c) {
-		case 's':
-		case 'S':
-			advance();
-			// TODO: check base
+        case 's':
+        case 'S':
+            advance();
+            // TODO: check base
         case 'd':
         case 'D':
         case 'o':
@@ -706,7 +706,7 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
         case 'b':
         case 'B':
             advance();
-			return TokenKind::IntegerVectorBase;
+            return TokenKind::IntegerVectorBase;
         case '0':
         case '1':
             advance();
@@ -716,12 +716,12 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
         case 'X':
             advance();
             info.numericValue = logic_t::x;
-			return TokenKind::UnbasedUnsizedLiteral;
+            return TokenKind::UnbasedUnsizedLiteral;
         case 'Z':
         case 'z':
             advance();
             info.numericValue = logic_t::z;
-			return TokenKind::UnbasedUnsizedLiteral;
+            return TokenKind::UnbasedUnsizedLiteral;
         default:
             // just an apostrophe token
             return TokenKind::Apostrophe;
@@ -858,7 +858,7 @@ bool Lexer::scanBlockComment(Buffer<Trivia>& buffer, bool directiveMode) {
 
             // otherwise just error and ignore
             addError(DiagCode::EmbeddedNull, currentOffset());
-			advance();
+            advance();
         }
         else if (c == '*' && peek(1) == '/') {
             advance(2);
@@ -894,7 +894,7 @@ int Lexer::findNextNonWhitespace() {
 
 Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer) {
     auto trivia = triviaBuffer.copy(alloc);
-	auto location = SourceLocation(file, info.offset);
+    auto location = SourceLocation(file, info.offset);
 
     switch (kind) {
         case TokenKind::Unknown:
@@ -902,10 +902,10 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
             return Token::createIdentifier(alloc, kind, location, trivia, lexeme(), info.identifierType);
-		case TokenKind::UnsignedIntegerLiteral:
-		case TokenKind::IntegerVectorBase:
-		case TokenKind::UnbasedUnsizedLiteral:
-		case TokenKind::RealLiteral:
+        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::IntegerVectorBase:
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::RealLiteral:
             return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);

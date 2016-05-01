@@ -20,157 +20,157 @@
 namespace slang {
 
 ParserBase::ParserBase(Preprocessor& preprocessor) :
-	window(preprocessor),
-	alloc(preprocessor.getAllocator())
+    window(preprocessor),
+    alloc(preprocessor.getAllocator())
 {
 }
 
 void ParserBase::reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia) {
-	if (skipped.empty())
-		return;
-	trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
-	skipped.clear();
+    if (skipped.empty())
+        return;
+    trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
+    skipped.clear();
 }
 
 SyntaxNode* ParserBase::prependTrivia(SyntaxNode* node, Trivia* trivia) {
-	if (trivia->kind != TriviaKind::Unknown && node)
-		prependTrivia(node->getFirstToken(), trivia);
-	return node;
+    if (trivia->kind != TriviaKind::Unknown && node)
+        prependTrivia(node->getFirstToken(), trivia);
+    return node;
 }
 
 Token* ParserBase::prependTrivia(Token* token, Trivia* trivia) {
-	if (trivia->kind != TriviaKind::Unknown && token) {
-		auto buffer = triviaPool.get();
-		buffer.append(*trivia);
-		buffer.appendRange(token->trivia);
-		token->trivia = buffer.copy(alloc);
+    if (trivia->kind != TriviaKind::Unknown && token) {
+        auto buffer = triviaPool.get();
+        buffer.append(*trivia);
+        buffer.appendRange(token->trivia);
+        token->trivia = buffer.copy(alloc);
 
-		*trivia = Trivia();
-	}
-	return token;
+        *trivia = Trivia();
+    }
+    return token;
 }
 
 Token* ParserBase::prependTrivia(Token* token, Buffer<Trivia>& trivia) {
-	ASSERT(token);
-	trivia.appendRange(token->trivia);
-	token->trivia = trivia.copy(alloc);
-	trivia.clear();
-	return token;
+    ASSERT(token);
+    trivia.appendRange(token->trivia);
+    token->trivia = trivia.copy(alloc);
+    trivia.clear();
+    return token;
 }
 
 void ParserBase::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
-	if (!trivia.empty()) {
-		ASSERT(node);
-		prependTrivia(node->getFirstToken(), trivia);
-	}
+    if (!trivia.empty()) {
+        ASSERT(node);
+        prependTrivia(node->getFirstToken(), trivia);
+    }
 }
 
 SyntaxNode* ParserBase::prependSkippedTokens(SyntaxNode* node, Buffer<Token*>& tokens) {
-	if (!tokens.empty()) {
-		Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
-		prependTrivia(node, &t);
-		tokens.clear();
-	}
-	return node;
+    if (!tokens.empty()) {
+        Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
+        prependTrivia(node, &t);
+        tokens.clear();
+    }
+    return node;
 }
 
 Token* ParserBase::prependSkippedTokens(Token* token, Buffer<Token*>& tokens) {
-	if (!tokens.empty()) {
-		Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
-		prependTrivia(token, &t);
-		tokens.clear();
-	}
-	return token;
+    if (!tokens.empty()) {
+        Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
+        prependTrivia(token, &t);
+        tokens.clear();
+    }
+    return token;
 }
 
 void ParserBase::addError(DiagCode code) {
-	// TODO: location
-	window.tokenSource.getDiagnostics().emplace(code, SourceLocation(), 0);
+    // TODO: location
+    window.tokenSource.getDiagnostics().emplace(code, SourceLocation(), 0);
 }
 
 Diagnostic& ParserBase::addError(DiagCode code, SourceLocation location) {
-	return window.tokenSource.getDiagnostics().add(code, location);
+    return window.tokenSource.getDiagnostics().add(code, location);
 }
 
 Token* ParserBase::peek(int offset) {
-	while (window.currentOffset + offset >= window.count)
-		window.addNew();
-	return window.buffer[window.currentOffset + offset];
+    while (window.currentOffset + offset >= window.count)
+        window.addNew();
+    return window.buffer[window.currentOffset + offset];
 }
 
 Token* ParserBase::peek() {
-	if (!window.currentToken) {
-		if (window.currentOffset >= window.count)
-			window.addNew();
-		window.currentToken = window.buffer[window.currentOffset];
-	}
-	return window.currentToken;
+    if (!window.currentToken) {
+        if (window.currentOffset >= window.count)
+            window.addNew();
+        window.currentToken = window.buffer[window.currentOffset];
+    }
+    return window.currentToken;
 }
 
 bool ParserBase::peek(TokenKind kind) {
-	return peek()->kind == kind;
+    return peek()->kind == kind;
 }
 
 Token* ParserBase::consume() {
-	auto result = peek();
-	window.moveToNext();
-	return result;
+    auto result = peek();
+    window.moveToNext();
+    return result;
 }
 
 Token* ParserBase::consumeIf(TokenKind kind) {
-	auto result = peek();
-	if (result->kind != kind)
-		return nullptr;
+    auto result = peek();
+    if (result->kind != kind)
+        return nullptr;
 
-	window.moveToNext();
-	return result;
+    window.moveToNext();
+    return result;
 }
 
 Token* ParserBase::expect(TokenKind kind) {
-	// keep this method small so that it gets inlined
-	auto result = peek();
-	if (result->kind != kind)
-		return createExpectedToken(result, kind);
+    // keep this method small so that it gets inlined
+    auto result = peek();
+    if (result->kind != kind)
+        return createExpectedToken(result, kind);
 
-	window.moveToNext();
-	return result;
+    window.moveToNext();
+    return result;
 }
 
 Token* ParserBase::createExpectedToken(Token* actual, TokenKind expected) {
-	// report an error here for the missing token
-	switch (expected) {
-		case TokenKind::Identifier: addError(DiagCode::ExpectedIdentifier, actual->location); break;
-		default: addError(DiagCode::ExpectedToken, actual->location) << getTokenKindText(expected); break;
-	}
-	return Token::missing(alloc, expected, actual->location);
+    // report an error here for the missing token
+    switch (expected) {
+        case TokenKind::Identifier: addError(DiagCode::ExpectedIdentifier, actual->location); break;
+        default: addError(DiagCode::ExpectedToken, actual->location) << getTokenKindText(expected); break;
+    }
+    return Token::missing(alloc, expected, actual->location);
 }
 
 void ParserBase::Window::addNew() {
-	if (count >= capacity) {
-		// shift tokens to the left if we are too far to the right
-		if (currentOffset > (capacity >> 1)) {
-			int shift = count - currentOffset;
-			if (shift > 0)
-				memmove(buffer, buffer + currentOffset, shift * sizeof(Token*));
+    if (count >= capacity) {
+        // shift tokens to the left if we are too far to the right
+        if (currentOffset > (capacity >> 1)) {
+            int shift = count - currentOffset;
+            if (shift > 0)
+                memmove(buffer, buffer + currentOffset, shift * sizeof(Token*));
 
-			count -= currentOffset;
-			currentOffset = 0;
-		}
-		else {
-			Token** newBuffer = new Token*[capacity * 2];
-			memcpy(newBuffer, buffer, count * sizeof(Token*));
+            count -= currentOffset;
+            currentOffset = 0;
+        }
+        else {
+            Token** newBuffer = new Token*[capacity * 2];
+            memcpy(newBuffer, buffer, count * sizeof(Token*));
 
-			delete[] buffer;
-			buffer = newBuffer;
-		}
-	}
-	buffer[count] = tokenSource.next();
-	count++;
+            delete[] buffer;
+            buffer = newBuffer;
+        }
+    }
+    buffer[count] = tokenSource.next();
+    count++;
 }
 
 void ParserBase::Window::moveToNext() {
-	currentToken = nullptr;
-	currentOffset++;
+    currentToken = nullptr;
+    currentOffset++;
 }
 
 }

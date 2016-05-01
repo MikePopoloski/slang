@@ -15,17 +15,17 @@ struct TokenFlags {
     enum {
         None = 0,
         Missing = 1,
-		IsFromPreprocessor = 2
+        IsFromPreprocessor = 2
     };
 };
 
 struct SyntaxToStringFlags {
-	enum {
-		None = 0,
-		IncludeTrivia = 1,
-		IncludeMissing = 2,
-		IncludePreprocessed = 4
-	};
+    enum {
+        None = 0,
+        IncludeTrivia = 1,
+        IncludeMissing = 2,
+        IncludePreprocessed = 4
+    };
 };
 
 enum class IdentifierType : uint8_t {
@@ -40,7 +40,7 @@ struct NumericValue {
         logic_t bit;
         int32_t integer;
         double real;
-	};
+    };
 
     uint8_t type;
 
@@ -54,25 +54,25 @@ struct NumericValue {
         Real,
         Integer,
         UnsizedBit,
-		DecimalBase,
-		OctalBase,
-		BinaryBase,
-		HexBase
+        DecimalBase,
+        OctalBase,
+        BinaryBase,
+        HexBase
     };
 };
 
 class Token {
 public:
     ArrayRef<Trivia> trivia;
-	SourceLocation location;
+    SourceLocation location;
     TokenKind kind;
 
     // a missing token was expected and inserted by the parser at a given point
-	bool isMissing() const { return flags & TokenFlags::Missing; }
+    bool isMissing() const { return flags & TokenFlags::Missing; }
 
-	// token was sourced from a preprocessor directive (include, macro, etc)
-	bool isFromPreprocessor() const { return (flags & TokenFlags::IsFromPreprocessor) != 0; }
-	void markAsPreprocessed() { flags |= TokenFlags::IsFromPreprocessor; }
+    // token was sourced from a preprocessor directive (include, macro, etc)
+    bool isFromPreprocessor() const { return (flags & TokenFlags::IsFromPreprocessor) != 0; }
+    void markAsPreprocessed() { flags |= TokenFlags::IsFromPreprocessor; }
 
     // value text is the "nice" lexed version of certain tokens;
     // for example, in string literals, escape sequences are converted appropriately
@@ -92,7 +92,7 @@ public:
 
     bool hasTrivia(TriviaKind triviaKind) const;
 
-	Token* clone(BumpAllocator& alloc) const;
+    Token* clone(BumpAllocator& alloc) const;
 
     static Token* createUnknown(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags = 0);
     static Token* createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags = 0);
@@ -129,8 +129,8 @@ private:
         SyntaxKind kind;
     };
 
-	static size_t getAllocSize(TokenKind kind);
-	static Token* create(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags);
+    static size_t getAllocSize(TokenKind kind);
+    static Token* create(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags);
 };
 
 TokenKind getSystemKeywordKind(StringRef text);
@@ -147,9 +147,9 @@ enum class TokenKind : uint16_t {
     Identifier,
     SystemIdentifier,
     StringLiteral,
-	UnsignedIntegerLiteral,
-	IntegerVectorBase,
-	UnbasedUnsizedLiteral,
+    UnsignedIntegerLiteral,
+    IntegerVectorBase,
+    UnbasedUnsizedLiteral,
     RealLiteral,
 
     // punctuation

@@ -53,8 +53,8 @@ public:
     const T* end() const { return data + len; }
     const T* cbegin() const { return data; }
     const T* cend() const { return data + len; }
-	const T& last() const { return data[len - 1]; } // TODO: assert not empty
-	T& last() { return data[len - 1]; } // TODO: assert not empty
+    const T& last() const { return data[len - 1]; } // TODO: assert not empty
+    T& last() { return data[len - 1]; } // TODO: assert not empty
 
     uint32_t count() const { return len; }
     bool empty() const { return len == 0; }
@@ -126,8 +126,8 @@ public:
         return ArrayRef<T>(dest, len);
     }
 
-	T& operator [](int index) { return data[index]; }
-	const T& operator [](int index) const { return data[index]; }
+    T& operator [](int index) { return data[index]; }
+    const T& operator [](int index) const { return data[index]; }
 
 private:
     T* data;

@@ -11,8 +11,8 @@ Diagnostics diagnostics;
 SourceManager& getSourceManager() {
     static SourceManager* sourceManager = nullptr;
     if (!sourceManager) {
-		sourceManager = new SourceManager();
-		sourceManager->addUserDirectory("../../../tests/data/");
+        sourceManager = new SourceManager();
+        sourceManager->addUserDirectory("../../../tests/data/");
     }
     return *sourceManager;
 }
@@ -21,7 +21,7 @@ const Token& lexToken(const SourceText& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-	preprocessor.pushSource(text);
+    preprocessor.pushSource(text);
 
     Token* token = preprocessor.next();
     REQUIRE(token != nullptr);
@@ -33,7 +33,7 @@ TEST_CASE("Include File", "[preprocessor]") {
     auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
-	CHECK(token.valueText() == "test string");
+    CHECK(token.valueText() == "test string");
     CHECK(diagnostics.empty());
 }
 
@@ -133,68 +133,68 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
 }
 
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
-	auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
-	auto& token = lexToken(text);
+    auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
+    auto& token = lexToken(text);
 
-	CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
-	CHECK(token.numericValue().integer == 42);
-	CHECK(diagnostics.empty());
+    CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
+    CHECK(token.numericValue().integer == 42);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("IfDef branch (not taken)", "[preprocessor]") {
-	auto& text = "`define FOO\n`ifdef BAR\n42\n`endif";
-	auto& token = lexToken(text);
+    auto& text = "`define FOO\n`ifdef BAR\n42\n`endif";
+    auto& token = lexToken(text);
 
-	CHECK(token.kind == TokenKind::EndOfFile);
-	CHECK(diagnostics.empty());
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("ElseIf branch", "[preprocessor]") {
-	auto& text = "`define FOO\n`ifdef BAR\n42\n`elseif FOO\n99`else\n1000`endif";
-	auto& token = lexToken(text);
+    auto& text = "`define FOO\n`ifdef BAR\n42\n`elseif FOO\n99`else\n1000`endif";
+    auto& token = lexToken(text);
 
-	CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
-	CHECK(token.numericValue().integer == 99);
-	CHECK(diagnostics.empty());
+    CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
+    CHECK(token.numericValue().integer == 99);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("EndIf not done", "[preprocessor]") {
-	auto& text = "`ifdef FOO\n`ifdef BAR\n42\n`endif\n1000`endif\n42.3";
-	auto& token = lexToken(text);
+    auto& text = "`ifdef FOO\n`ifdef BAR\n42\n`endif\n1000`endif\n42.3";
+    auto& token = lexToken(text);
 
-	REQUIRE(token.kind == TokenKind::RealLiteral);
-	CHECK(token.numericValue().real == 42.3);
-	CHECK(diagnostics.empty());
+    REQUIRE(token.kind == TokenKind::RealLiteral);
+    CHECK(token.numericValue().real == 42.3);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Nested branches", "[preprocessor]") {
-	auto& text =
+    auto& text =
 "`define FOO\n"
 "`ifdef BLAH\n"
-"	`define BAZ\n"
+"   `define BAZ\n"
 "`elseif BAZ\n"
-"	42\n"
+"   42\n"
 "`else\n"
-"	`define YEP\n"
-"	`ifdef YEP\n"
-"		`ifdef FOO\n"
-"			`ifdef NOPE1\n"
-"				blahblah\n"
-"			`elseif NOPE2\n"
-"				blahblah2\n"
-"			`elseif YEP\n"
-"				`ifdef FOO\n"
-"					99\n"
-"				`endif\n"
-"			`endif\n"
-"		`endif\n"
-"	`endif\n"
+"   `define YEP\n"
+"   `ifdef YEP\n"
+"       `ifdef FOO\n"
+"           `ifdef NOPE1\n"
+"               blahblah\n"
+"           `elseif NOPE2\n"
+"               blahblah2\n"
+"           `elseif YEP\n"
+"               `ifdef FOO\n"
+"                   99\n"
+"               `endif\n"
+"           `endif\n"
+"       `endif\n"
+"   `endif\n"
 "`endif";
-	auto& token = lexToken(text);
+    auto& token = lexToken(text);
 
-	CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
-	CHECK(token.numericValue().integer == 99);
-	CHECK(diagnostics.empty());
+    CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
+    CHECK(token.numericValue().integer == 99);
+    CHECK(diagnostics.empty());
 }
 
 }

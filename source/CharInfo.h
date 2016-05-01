@@ -72,7 +72,7 @@ inline bool isLogicDigit(char c) {
 }
 
 inline bool isVectorDigit(char c) {
-	return isHexDigit(c) || isLogicDigit(c) || c == '_';
+    return isHexDigit(c) || isLogicDigit(c) || c == '_';
 }
 
 inline uint32_t getDigitValue(char c) {

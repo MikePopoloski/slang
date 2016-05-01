@@ -22,7 +22,7 @@ private:
     ExpressionSyntax* parsePrimaryExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
-	ExpressionSyntax* parseNumericExpression();
+    ExpressionSyntax* parseNumericExpression();
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token* openBrace);
     StreamExpressionSyntax* parseStreamExpression();
@@ -89,8 +89,8 @@ private:
     bool isPlainPortName();
     bool scanDimensionList(int& index);
 
-	Token* joinVectorDigits();
-	Token* joinTimeUnit();
+    Token* joinVectorDigits();
+    Token* joinTimeUnit();
 
     template<bool AllowPatternMatch>
     ExpressionSyntax* parseSubExpression(int precedence);

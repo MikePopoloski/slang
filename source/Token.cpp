@@ -11,15 +11,15 @@ namespace slang {
 
 Token::Token(TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags) :
     location(location),
-	kind(kind),
-	trivia(trivia),
-	flags(flags)
+    kind(kind),
+    trivia(trivia),
+    flags(flags)
 {
 }
 
 void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
-	if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
-		return;
+    if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
+        return;
 
     if (writeFlags & SyntaxToStringFlags::IncludeTrivia) {
         for (const auto& t : trivia)
@@ -44,21 +44,21 @@ void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
             case TokenKind::StringLiteral:
                 buffer.appendRange(((StringLiteralInfo*)(this + 1))->rawText);
                 break;
-			case TokenKind::UnsignedIntegerLiteral:
-			case TokenKind::IntegerVectorBase:
-			case TokenKind::UnbasedUnsizedLiteral:
-			case TokenKind::RealLiteral:
+            case TokenKind::UnsignedIntegerLiteral:
+            case TokenKind::IntegerVectorBase:
+            case TokenKind::UnbasedUnsizedLiteral:
+            case TokenKind::RealLiteral:
                 buffer.appendRange(((NumericLiteralInfo*)(this + 1))->rawText);
                 break;
             case TokenKind::Directive:
             case TokenKind::MacroUsage:
                 buffer.appendRange(((DirectiveInfo*)(this + 1))->rawText);
                 break;
-			case TokenKind::EndOfDirective:
-			case TokenKind::EndOfFile:
-				break;
-			default:
-				ASSERT(false && "What is this?");
+            case TokenKind::EndOfDirective:
+            case TokenKind::EndOfFile:
+                break;
+            default:
+                ASSERT(false && "What is this?");
         }
     }
 }
@@ -101,7 +101,7 @@ std::string Token::toString(uint8_t writeFlags) const {
 }
 
 const NumericValue& Token::numericValue() const {
-	ASSERT(isNumericLiteralToken(kind));
+    ASSERT(isNumericLiteralToken(kind));
     return ((NumericLiteralInfo*)(this + 1))->value;
 }
 
@@ -125,33 +125,33 @@ bool Token::hasTrivia(TriviaKind triviaKind) const {
 }
 
 size_t Token::getAllocSize(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::Unknown:
-		case TokenKind::Identifier:
-		case TokenKind::SystemIdentifier:
-			return sizeof(Token) + sizeof(IdentifierInfo);
-		case TokenKind::UnsignedIntegerLiteral:
-		case TokenKind::IntegerVectorBase:
-		case TokenKind::UnbasedUnsizedLiteral:
-		case TokenKind::RealLiteral:
-			return sizeof(Token) + sizeof(NumericLiteralInfo);
-		case TokenKind::StringLiteral:
-		case TokenKind::IncludeFileName:
-			return sizeof(Token) + sizeof(StringLiteralInfo);
-		case TokenKind::Directive:
-			return sizeof(Token) + sizeof(DirectiveInfo);
-		default:
-			return sizeof(Token);
-	}
+    switch (kind) {
+        case TokenKind::Unknown:
+        case TokenKind::Identifier:
+        case TokenKind::SystemIdentifier:
+            return sizeof(Token) + sizeof(IdentifierInfo);
+        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::IntegerVectorBase:
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::RealLiteral:
+            return sizeof(Token) + sizeof(NumericLiteralInfo);
+        case TokenKind::StringLiteral:
+        case TokenKind::IncludeFileName:
+            return sizeof(Token) + sizeof(StringLiteralInfo);
+        case TokenKind::Directive:
+            return sizeof(Token) + sizeof(DirectiveInfo);
+        default:
+            return sizeof(Token);
+    }
 }
 
 Token* Token::create(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags) {
-	Token* token = (Token*)alloc.allocate((uint32_t)getAllocSize(kind));
-	return new (token) Token(kind, location, trivia, flags);
+    Token* token = (Token*)alloc.allocate((uint32_t)getAllocSize(kind));
+    return new (token) Token(kind, location, trivia, flags);
 }
 
 Token* Token::createUnknown(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags) {
-	auto token = create(alloc, TokenKind::Unknown, location, trivia, flags);
+    auto token = create(alloc, TokenKind::Unknown, location, trivia, flags);
 
     IdentifierInfo* info = (IdentifierInfo*)(token + 1);
     info->rawText = rawText;
@@ -161,7 +161,7 @@ Token* Token::createUnknown(BumpAllocator& alloc, SourceLocation location, Array
 }
 
 Token* Token::createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags) {
-	return create(alloc, kind, location, trivia, flags);
+    return create(alloc, kind, location, trivia, flags);
 }
 
 Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags) {
@@ -175,7 +175,7 @@ Token* Token::createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocat
 }
 
 Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags) {
-	auto token = create(alloc, kind, location, trivia, flags);
+    auto token = create(alloc, kind, location, trivia, flags);
 
     StringLiteralInfo* info = (StringLiteralInfo*)(token + 1);
     info->rawText = rawText;
@@ -185,7 +185,7 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLo
 }
 
 Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags) {
-	auto token = create(alloc, kind, location, trivia, flags);
+    auto token = create(alloc, kind, location, trivia, flags);
 
     NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
     info->rawText = rawText;
@@ -195,7 +195,7 @@ Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceL
 }
 
 Token* Token::createDirective(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags) {
-	auto token = create(alloc, kind, location, trivia, flags);
+    auto token = create(alloc, kind, location, trivia, flags);
 
     DirectiveInfo* info = (DirectiveInfo*)(token + 1);
     info->rawText = rawText;
@@ -211,9 +211,9 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
             return createIdentifier(alloc, kind, location, trivia, nullptr, IdentifierType::Unknown, TokenFlags::Missing);
-		case TokenKind::UnsignedIntegerLiteral:
-		case TokenKind::IntegerVectorBase:
-		case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::IntegerVectorBase:
+        case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
             return createNumericLiteral(alloc, kind, location, trivia, nullptr, 0, TokenFlags::Missing);
         case TokenKind::StringLiteral:
@@ -227,11 +227,11 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
 }
 
 Token* Token::clone(BumpAllocator& alloc) const {
-	size_t size = getAllocSize(kind);
-	auto cloned = (Token*)alloc.allocate((uint32_t)size);
-	memcpy(cloned, this, size);
+    size_t size = getAllocSize(kind);
+    auto cloned = (Token*)alloc.allocate((uint32_t)size);
+    memcpy(cloned, this, size);
 
-	return cloned;
+    return cloned;
 }
 
 }

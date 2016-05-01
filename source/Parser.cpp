@@ -20,12 +20,12 @@
 namespace slang {
 
 Parser::Parser(Preprocessor& preprocessor) :
-	ParserBase::ParserBase(preprocessor)
+    ParserBase::ParserBase(preprocessor)
 {
 }
 
 CompilationUnitSyntax* Parser::parseCompilationUnit() {
-	Token* eof;
+    Token* eof;
     auto members = parseMemberList(TokenKind::EndOfFile, eof);
     return alloc.emplace<CompilationUnitSyntax>(members, eof);
 }
@@ -38,7 +38,7 @@ ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> 
     auto header = parseModuleHeader();
     auto endKind = getModuleEndKind(header->moduleKeyword->kind);
 
-	Token* endmodule;
+    Token* endmodule;
     auto members = parseMemberList(endKind, endmodule);
     return alloc.emplace<ModuleDeclarationSyntax>(
         getModuleDeclarationKind(header->moduleKeyword->kind),
@@ -75,7 +75,7 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
             openParen,
             parameters,
             closeParen,
-			[this](bool) { return parseParameterPort(); }
+            [this](bool) { return parseParameterPort(); }
         );
 
         parameterList = alloc.emplace<ParameterPortListSyntax>(hash, openParen, parameters, closeParen);
@@ -94,7 +94,7 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
         else if (isNonAnsiPort()) {
             Token* closeParen;
             auto buffer = tosPool.get();
-			parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, [this](bool) { return parseNonAnsiPort(); });
+            parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, [this](bool) { return parseNonAnsiPort(); });
 
             ports = alloc.emplace<NonAnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
         }
@@ -272,7 +272,7 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::GenerateKeyword: {
             auto keyword = consume();
 
-			Token* endgenerate;
+            Token* endgenerate;
             auto members = parseMemberList(TokenKind::EndGenerateKeyword, endgenerate);
             return alloc.emplace<GenerateBlockSyntax>(attributes, keyword, members, endgenerate);
         }
@@ -322,47 +322,47 @@ MemberSyntax* Parser::parseMember() {
             break;
     }
 
-	// if we got attributes but don't know what comes next, we have an "incomplete member"
-	if (attributes.count())
-		// TODO: error
-		return alloc.emplace<MemberSyntax>(SyntaxKind::IncompleteMember, attributes);
+    // if we got attributes but don't know what comes next, we have an "incomplete member"
+    if (attributes.count())
+        // TODO: error
+        return alloc.emplace<MemberSyntax>(SyntaxKind::IncompleteMember, attributes);
 
-	// otherwise, we got nothing and should just return null so that are caller will skip and try again.
-	return nullptr;
+    // otherwise, we got nothing and should just return null so that are caller will skip and try again.
+    return nullptr;
 }
 
 ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endToken) {
     auto members = nodePool.getAs<MemberSyntax*>();
-	auto skipped = tokenPool.get();
-	auto trivia = triviaPool.get();
+    auto skipped = tokenPool.get();
+    auto trivia = triviaPool.get();
 
     while (true) {
         auto kind = peek()->kind;
         if (kind == TokenKind::EndOfFile || kind == endKind)
             break;
 
-		auto member = parseMember();
-		if (!member) {
-			// couldn't parse anything, skip a token and try again
-			skipped.append(consume());
-		}
-		else if (member->kind == SyntaxKind::IncompleteMember) {
-			// we got what looked like the start of a member but nothing after it
-			// skip it and try again
-			reduceSkippedTokens(skipped, trivia);
-			trivia.append(Trivia(TriviaKind::SkippedSyntax, member));
-			skipped.append(consume());
-		}
-		else {
-			// got a real member; make sure not to lose the trivia
-			reduceSkippedTokens(skipped, trivia);
-			prependTrivia(member, trivia);
-			members.append(member);
-		}
+        auto member = parseMember();
+        if (!member) {
+            // couldn't parse anything, skip a token and try again
+            skipped.append(consume());
+        }
+        else if (member->kind == SyntaxKind::IncompleteMember) {
+            // we got what looked like the start of a member but nothing after it
+            // skip it and try again
+            reduceSkippedTokens(skipped, trivia);
+            trivia.append(Trivia(TriviaKind::SkippedSyntax, member));
+            skipped.append(consume());
+        }
+        else {
+            // got a real member; make sure not to lose the trivia
+            reduceSkippedTokens(skipped, trivia);
+            prependTrivia(member, trivia);
+            members.append(member);
+        }
     }
-	
-	reduceSkippedTokens(skipped, trivia);
-	endToken = prependTrivia(expect(endKind), trivia);
+    
+    reduceSkippedTokens(skipped, trivia);
+    endToken = prependTrivia(expect(endKind), trivia);
 
     return members.copy(alloc);
 }
@@ -372,14 +372,14 @@ TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<Attribute
     if (kind != TokenKind::TimeUnitKeyword && kind != TokenKind::TimePrecisionKeyword)
         return nullptr;
 
-	// TODO: fix this up to use time units
+    // TODO: fix this up to use time units
     auto keyword = consume();
     auto time = expect(TokenKind::Identifier); // expect(TokenKind::TimeLiteral);
 
     DividerClauseSyntax* divider = nullptr;
     if (peek(TokenKind::Slash)) {
         auto divide = consume();
-		divider = alloc.emplace<DividerClauseSyntax>(divide, expect(TokenKind::Identifier)); // TimeLiteral);
+        divider = alloc.emplace<DividerClauseSyntax>(divide, expect(TokenKind::Identifier)); // TimeLiteral);
     }
 
     return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
@@ -545,7 +545,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(StatementLabelSyntax* label, Arr
                         TokenKind::Colon,
                         TokenKind::Comma,
                         colon,
-						[this](bool) { return parseInsideElement(); }
+                        [this](bool) { return parseInsideElement(); }
                     );
 
                     itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
@@ -572,7 +572,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(StatementLabelSyntax* label, Arr
                         TokenKind::Colon,
                         TokenKind::Comma,
                         colon,
-						[this](bool) { return parseExpression(); }
+                        [this](bool) { return parseExpression(); }
                     );
 
                     itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
@@ -797,23 +797,23 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock(StatementLabelSynta
     auto name = parseNamedBlockClause();
 
     auto buffer = nodePool.get();
-	auto skipped = tokenPool.get();
+    auto skipped = tokenPool.get();
     auto kind = peek()->kind;
     while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
-		SyntaxNode* newNode = nullptr;
+        SyntaxNode* newNode = nullptr;
         if (isVariableDeclaration())
             newNode = parseVariableDeclaration(parseAttributes());
         else if (isPossibleStatement(kind))
             newNode = parseStatement();
         else
-			skipped.append(consume());
+            skipped.append(consume());
 
-		if (newNode)
-			buffer.append(prependSkippedTokens(newNode, skipped));
+        if (newNode)
+            buffer.append(prependSkippedTokens(newNode, skipped));
         kind = peek()->kind;
     }
 
-	auto end = prependSkippedTokens(expect(TokenKind::EndKeyword), skipped);
+    auto end = prependSkippedTokens(expect(TokenKind::EndKeyword), skipped);
     auto endName = parseNamedBlockClause();
     return alloc.emplace<SequentialBlockStatementSyntax>(label, attributes, begin, name, buffer.copy(alloc), end, endName);
 }
@@ -921,12 +921,12 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             expr = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
             break;
         }
-		case TokenKind::RealLiteral:
-		case TokenKind::UnsignedIntegerLiteral:
-		case TokenKind::UnbasedUnsizedLiteral:
-		case TokenKind::IntegerVectorBase:
-			expr = parseNumericExpression();
-			break;
+        case TokenKind::RealLiteral:
+        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::IntegerVectorBase:
+            expr = parseNumericExpression();
+            break;
         case TokenKind::SystemIdentifier: {
             auto identifier = consume();
             expr = alloc.emplace<KeywordNameSyntax>(SyntaxKind::SystemName, identifier);
@@ -988,60 +988,60 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
 
 // TODO: move this somewhere else
 bool isPotentialVectorDigitKind(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::UnsignedIntegerLiteral:
-		case TokenKind::Question:
-		case TokenKind::Identifier:
-			return true;
-	}
-	return false;
+    switch (kind) {
+        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::Question:
+        case TokenKind::Identifier:
+            return true;
+    }
+    return false;
 }
 
 Token* Parser::joinVectorDigits() {
-	// We need to parse vector digits, which may have hex characters (a-f), x's, z's, and ?'s.
-	// The lexer splits these into identifier tokens and question mark tokens, so we consume
-	// adjacent tokens and form them into a new one.
-	auto first = peek();
-	if (!isPotentialVectorDigitKind(first->kind)) {
-		// TODO: error
-		return expect(TokenKind::UnsignedIntegerLiteral);
-	}
+    // We need to parse vector digits, which may have hex characters (a-f), x's, z's, and ?'s.
+    // The lexer splits these into identifier tokens and question mark tokens, so we consume
+    // adjacent tokens and form them into a new one.
+    auto first = peek();
+    if (!isPotentialVectorDigitKind(first->kind)) {
+        // TODO: error
+        return expect(TokenKind::UnsignedIntegerLiteral);
+    }
 
-	// only look at further tokens if they're literally adjacent (no trivia in between)
-	consume();
-	Token* next;
-	while ((next = peek())->trivia.empty()) {
-		if (!isPotentialVectorDigitKind(next->kind))
-			break;
+    // only look at further tokens if they're literally adjacent (no trivia in between)
+    consume();
+    Token* next;
+    while ((next = peek())->trivia.empty()) {
+        if (!isPotentialVectorDigitKind(next->kind))
+            break;
 
-		// TODO: concat
-		consume();
-	}
-	return first;
+        // TODO: concat
+        consume();
+    }
+    return first;
 }
 
 ExpressionSyntax* Parser::parseNumericExpression() {
-	// TODO: error checking
-	Token* token = consume();
-	switch (token->kind) {
-		case TokenKind::RealLiteral:
-			return alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::RealLiteralExpression, token);
-		case TokenKind::UnbasedUnsizedLiteral:
-			return alloc.emplace<IntegerExpressionSyntax>(nullptr, nullptr, token);
-		case TokenKind::IntegerVectorBase:
-			return alloc.emplace<IntegerExpressionSyntax>(nullptr, token, joinVectorDigits());
-		case TokenKind::UnsignedIntegerLiteral:
-			if (!peek(TokenKind::IntegerVectorBase))
-				return alloc.emplace<IntegerExpressionSyntax>(nullptr, nullptr, token);
-			else {
-				auto base = consume();
-				return alloc.emplace<IntegerExpressionSyntax>(token, base, joinVectorDigits());
-			}
-		default:
-			ASSERT(false && "Unknown integer type");
-	}
-	// silence warnings
-	return nullptr;
+    // TODO: error checking
+    Token* token = consume();
+    switch (token->kind) {
+        case TokenKind::RealLiteral:
+            return alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::RealLiteralExpression, token);
+        case TokenKind::UnbasedUnsizedLiteral:
+            return alloc.emplace<IntegerExpressionSyntax>(nullptr, nullptr, token);
+        case TokenKind::IntegerVectorBase:
+            return alloc.emplace<IntegerExpressionSyntax>(nullptr, token, joinVectorDigits());
+        case TokenKind::UnsignedIntegerLiteral:
+            if (!peek(TokenKind::IntegerVectorBase))
+                return alloc.emplace<IntegerExpressionSyntax>(nullptr, nullptr, token);
+            else {
+                auto base = consume();
+                return alloc.emplace<IntegerExpressionSyntax>(token, base, joinVectorDigits());
+            }
+        default:
+            ASSERT(false && "Unknown integer type");
+    }
+    // silence warnings
+    return nullptr;
 }
 
 ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
@@ -1058,7 +1058,7 @@ ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
         openBrace,
         list,
         closeBrace,
-		[this](bool) { return parseInsideElement(); }
+        [this](bool) { return parseInsideElement(); }
     );
     return alloc.emplace<InsideExpressionSyntax>(expr, inside, openBrace, list, closeBrace);
 }
@@ -1082,7 +1082,7 @@ ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, Expr
         TokenKind::CloseBrace,
         TokenKind::Comma,
         closeBrace,
-		[this](bool) { return parseExpression(); }
+        [this](bool) { return parseExpression(); }
     );
 
     return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
@@ -1105,7 +1105,7 @@ StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token* 
         openBraceInner,
         list,
         closeBraceInner,
-		[this](bool) { return parseStreamExpression(); }
+        [this](bool) { return parseStreamExpression(); }
     );
 
     auto closeBrace = expect(TokenKind::CloseBrace);
@@ -1270,7 +1270,7 @@ ArgumentListSyntax* Parser::parseArgumentList() {
         openParen,
         list,
         closeParen,
-		[this](bool) { return parseArgument(); }
+        [this](bool) { return parseArgument(); }
     );
 
     return alloc.emplace<ArgumentListSyntax>(openParen, list, closeParen);
@@ -1333,7 +1333,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
         endKind,
         TokenKind::TripleAnd,
         end,
-		[this](bool) { return parseConditionalPattern(); }
+        [this](bool) { return parseConditionalPattern(); }
     );
 
     return alloc.emplace<ConditionalPredicateSyntax>(buffer.copy(alloc));
@@ -1423,7 +1423,7 @@ ExpressionSyntax* Parser::parseAssignmentExpression() {
 TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
     switch (peek()->kind) {
         case TokenKind::Hash:
-		case TokenKind::DoubleHash: {
+        case TokenKind::DoubleHash: {
             auto hash = consume();
             ExpressionSyntax* delayValue;
             switch (peek()->kind) {
@@ -1432,12 +1432,12 @@ TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
                     delayValue = alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::OneStepLiteralExpression, literal);
                     break;
                 }
-				case TokenKind::RealLiteral:
-				case TokenKind::UnsignedIntegerLiteral:
-				case TokenKind::UnbasedUnsizedLiteral:
-				case TokenKind::IntegerVectorBase:
-					delayValue = parseNumericExpression();
-					break;
+                case TokenKind::RealLiteral:
+                case TokenKind::UnsignedIntegerLiteral:
+                case TokenKind::UnbasedUnsizedLiteral:
+                case TokenKind::IntegerVectorBase:
+                    delayValue = parseNumericExpression();
+                    break;
                 case TokenKind::OpenParenthesis: {
                     auto openParen = consume();
                     auto expr = parseMinTypMaxExpression();
@@ -1449,7 +1449,7 @@ TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
                     delayValue = parseName();
                     break;
             }
-			SyntaxKind kind = hash->kind == TokenKind::Hash ? SyntaxKind::DelayControl : SyntaxKind::CycleDelay;
+            SyntaxKind kind = hash->kind == TokenKind::Hash ? SyntaxKind::DelayControl : SyntaxKind::CycleDelay;
             return alloc.emplace<DelaySyntax>(kind, hash, delayValue);
         }
         case TokenKind::At: {
@@ -1756,7 +1756,7 @@ ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
             openParen,
             list,
             closeParen,
-			[this](bool) { return parseAttributeSpec(); }
+            [this](bool) { return parseAttributeSpec(); }
         );
 
         buffer.append(alloc.emplace<AttributeInstanceSyntax>(openParen, list, closeParen));
@@ -1788,7 +1788,7 @@ ArrayRef<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
             TokenKind::Semicolon,
             TokenKind::Comma,
             semi,
-			[this](bool) { return parsePackageImportItem(); }
+            [this](bool) { return parsePackageImportItem(); }
         );
 
         buffer.append(alloc.emplace<PackageImportDeclarationSyntax>(keyword, items.copy(alloc), semi));
@@ -1858,7 +1858,7 @@ HierarchicalInstanceSyntax* Parser::parseHierarchicalInstance() {
         openParen,
         items,
         closeParen,
-		[this](bool) { return parsePortConnection(); }
+        [this](bool) { return parsePortConnection(); }
     );
 
     return alloc.emplace<HierarchicalInstanceSyntax>(name, dimensions, openParen, items, closeParen);

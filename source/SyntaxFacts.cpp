@@ -256,9 +256,9 @@ bool isPossibleExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::TaggedKeyword:
         case TokenKind::StringLiteral:
-		case TokenKind::UnsignedIntegerLiteral:
-		case TokenKind::UnbasedUnsizedLiteral:
-		case TokenKind::IntegerVectorBase:
+        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::IntegerVectorBase:
         case TokenKind::RealLiteral:
         case TokenKind::NullKeyword:
         case TokenKind::Dollar:
@@ -458,212 +458,212 @@ bool isPortDirection(TokenKind kind) {
 }
 
 bool isPossibleArgument(TokenKind kind) {
-	// allow a comma here to handle cases like:  foo(, 3);
-	switch (kind) {
-		case TokenKind::Dot:
-		case TokenKind::Comma:
-			return true;
-		default:
-			return isPossibleExpression(kind);
-	}
+    // allow a comma here to handle cases like:  foo(, 3);
+    switch (kind) {
+        case TokenKind::Dot:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
 }
 
 bool isPossibleNonAnsiPort(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::Dot:
-		case TokenKind::Comma:
-		case TokenKind::Identifier:
-		case TokenKind::OpenBrace:
-			return true;
-		default:
-			return false;
-	}
+    switch (kind) {
+        case TokenKind::Dot:
+        case TokenKind::Comma:
+        case TokenKind::Identifier:
+        case TokenKind::OpenBrace:
+            return true;
+        default:
+            return false;
+    }
 }
 
 bool isPossibleAnsiPort(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::InterconnectKeyword:
-		case TokenKind::InterfaceKeyword:
-		case TokenKind::Identifier:
-		case TokenKind::Dot:
-		case TokenKind::Comma:
-		case TokenKind::InputKeyword:
-		case TokenKind::OutputKeyword:
-		case TokenKind::InOutKeyword:
-		case TokenKind::RefKeyword:
-		case TokenKind::VarKeyword:
-			return true;
-	}
-	return isNetType(kind) || isPossibleDataType(kind);
+    switch (kind) {
+        case TokenKind::InterconnectKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::Identifier:
+        case TokenKind::Dot:
+        case TokenKind::Comma:
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
+        case TokenKind::VarKeyword:
+            return true;
+    }
+    return isNetType(kind) || isPossibleDataType(kind);
 }
 
 bool isComma(TokenKind kind) {
-	return kind == TokenKind::Comma;
+    return kind == TokenKind::Comma;
 }
 
 bool isSemicolon(TokenKind kind) {
-	return kind == TokenKind::Semicolon;
+    return kind == TokenKind::Semicolon;
 }
 
 bool isCloseBrace(TokenKind kind) {
-	return kind == TokenKind::CloseBrace;
+    return kind == TokenKind::CloseBrace;
 }
 
 bool isIdentifierOrComma(TokenKind kind) {
-	return kind == TokenKind::Identifier || kind == TokenKind::Comma;
+    return kind == TokenKind::Identifier || kind == TokenKind::Comma;
 }
 
 bool isPossibleExpressionOrComma(TokenKind kind) {
-	return kind == TokenKind::Comma || isPossibleExpression(kind);
+    return kind == TokenKind::Comma || isPossibleExpression(kind);
 }
 
 bool isPossibleExpressionOrTripleAnd(TokenKind kind) {
-	return kind == TokenKind::TripleAnd || isPossibleExpression(kind);
+    return kind == TokenKind::TripleAnd || isPossibleExpression(kind);
 }
 
 bool isPossibleInsideElement(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::OpenBracket:
-		case TokenKind::Comma:
-			return true;
-		default:
-			return isPossibleExpression(kind);
-	}
+    switch (kind) {
+        case TokenKind::OpenBracket:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
 }
 
 bool isPossiblePattern(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::Dot:
-		case TokenKind::DotStar:
-		case TokenKind::ApostropheOpenBrace:
-			return true;
-		default:
-			return isPossibleExpression(kind);
-	}
+    switch (kind) {
+        case TokenKind::Dot:
+        case TokenKind::DotStar:
+        case TokenKind::ApostropheOpenBrace:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
 }
 
 bool isPossibleDelayOrEventControl(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::Hash:
-		case TokenKind::At:
-		case TokenKind::AtStar:
-		case TokenKind::RepeatKeyword:
-			return true;
-	}
-	return false;
+    switch (kind) {
+        case TokenKind::Hash:
+        case TokenKind::At:
+        case TokenKind::AtStar:
+        case TokenKind::RepeatKeyword:
+            return true;
+    }
+    return false;
 }
 
 bool isPossibleParameter(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::ParameterKeyword:
-		case TokenKind::LocalParamKeyword:
-		case TokenKind::TypeKeyword:
-		case TokenKind::Comma:
-			return true;
-	}
-	return isPossibleDataType(kind);
+    switch (kind) {
+        case TokenKind::ParameterKeyword:
+        case TokenKind::LocalParamKeyword:
+        case TokenKind::TypeKeyword:
+        case TokenKind::Comma:
+            return true;
+    }
+    return isPossibleDataType(kind);
 }
 
 bool isPossiblePortConnection(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::OpenParenthesisStar:
-		case TokenKind::DotStar:
-		case TokenKind::Dot:
-		case TokenKind::Comma:
-			return true;
-		default:
-			return isPossibleExpression(kind);
-	}
+    switch (kind) {
+        case TokenKind::OpenParenthesisStar:
+        case TokenKind::DotStar:
+        case TokenKind::Dot:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return isPossibleExpression(kind);
+    }
 }
 
 bool isEndKeyword(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::EndKeyword:
-		case TokenKind::EndCaseKeyword:
-		case TokenKind::EndCheckerKeyword:
-		case TokenKind::EndClassKeyword:
-		case TokenKind::EndClockingKeyword:
-		case TokenKind::EndConfigKeyword:
-		case TokenKind::EndFunctionKeyword:
-		case TokenKind::EndGenerateKeyword:
-		case TokenKind::EndGroupKeyword:
-		case TokenKind::EndInterfaceKeyword:
-		case TokenKind::EndModuleKeyword:
-		case TokenKind::EndPackageKeyword:
-		case TokenKind::EndPrimitiveKeyword:
-		case TokenKind::EndProgramKeyword:
-		case TokenKind::EndPropertyKeyword:
-		case TokenKind::EndSpecifyKeyword:
-		case TokenKind::EndSequenceKeyword:
-		case TokenKind::EndTableKeyword:
-		case TokenKind::EndTaskKeyword:
-			return true;
-	}
-	return false;
+    switch (kind) {
+        case TokenKind::EndKeyword:
+        case TokenKind::EndCaseKeyword:
+        case TokenKind::EndCheckerKeyword:
+        case TokenKind::EndClassKeyword:
+        case TokenKind::EndClockingKeyword:
+        case TokenKind::EndConfigKeyword:
+        case TokenKind::EndFunctionKeyword:
+        case TokenKind::EndGenerateKeyword:
+        case TokenKind::EndGroupKeyword:
+        case TokenKind::EndInterfaceKeyword:
+        case TokenKind::EndModuleKeyword:
+        case TokenKind::EndPackageKeyword:
+        case TokenKind::EndPrimitiveKeyword:
+        case TokenKind::EndProgramKeyword:
+        case TokenKind::EndPropertyKeyword:
+        case TokenKind::EndSpecifyKeyword:
+        case TokenKind::EndSequenceKeyword:
+        case TokenKind::EndTableKeyword:
+        case TokenKind::EndTaskKeyword:
+            return true;
+    }
+    return false;
 }
 
 bool isDeclarationModifier(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::ConstKeyword:
-		case TokenKind::VarKeyword:
-		case TokenKind::StaticKeyword:
-		case TokenKind::AutomaticKeyword:
-			return true;
-	}
-	return false;
+    switch (kind) {
+        case TokenKind::ConstKeyword:
+        case TokenKind::VarKeyword:
+        case TokenKind::StaticKeyword:
+        case TokenKind::AutomaticKeyword:
+            return true;
+    }
+    return false;
 }
 
 bool isEndOfParenList(TokenKind kind) {
-	return kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
+    return kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
 }
 
 bool isEndOfBracedList(TokenKind kind) {
-	return kind == TokenKind::CloseBrace || kind == TokenKind::Semicolon;
+    return kind == TokenKind::CloseBrace || kind == TokenKind::Semicolon;
 }
 
 bool isEndOfCaseItem(TokenKind kind) {
-	return kind == TokenKind::Colon || kind == TokenKind::Semicolon;
+    return kind == TokenKind::Colon || kind == TokenKind::Semicolon;
 }
 
 bool isEndOfConditionalPredicate(TokenKind kind) {
-	return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::BeginKeyword || kind == TokenKind::Semicolon;
+    return kind == TokenKind::Question || kind == TokenKind::CloseParenthesis || kind == TokenKind::BeginKeyword || kind == TokenKind::Semicolon;
 }
 
 bool isEndOfAttribute(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::StarCloseParenthesis:
-			// these indicate a missing *) somewhere
-		case TokenKind::Semicolon:
-		case TokenKind::PrimitiveKeyword:
-		case TokenKind::ProgramKeyword:
-		case TokenKind::InterfaceKeyword:
-		case TokenKind::PackageKeyword:
-		case TokenKind::CheckerKeyword:
-		case TokenKind::GenerateKeyword:
-		case TokenKind::ModuleKeyword:
-		case TokenKind::ClassKeyword:
-			return true;
-		default:
-			return false;
-	}
+    switch (kind) {
+        case TokenKind::StarCloseParenthesis:
+            // these indicate a missing *) somewhere
+        case TokenKind::Semicolon:
+        case TokenKind::PrimitiveKeyword:
+        case TokenKind::ProgramKeyword:
+        case TokenKind::InterfaceKeyword:
+        case TokenKind::PackageKeyword:
+        case TokenKind::CheckerKeyword:
+        case TokenKind::GenerateKeyword:
+        case TokenKind::ModuleKeyword:
+        case TokenKind::ClassKeyword:
+            return true;
+        default:
+            return false;
+    }
 }
 
 bool isEndOfParameterList(TokenKind kind) {
-	return kind == TokenKind::CloseParenthesis || kind == TokenKind::OpenParenthesis || kind == TokenKind::Semicolon;
+    return kind == TokenKind::CloseParenthesis || kind == TokenKind::OpenParenthesis || kind == TokenKind::Semicolon;
 }
 
 bool isNotInType(TokenKind kind) {
-	switch (kind) {
-		case TokenKind::Semicolon:
-		case TokenKind::EndOfFile:
-			return true;
-		default:
-			return isEndKeyword(kind);
-	}
+    switch (kind) {
+        case TokenKind::Semicolon:
+        case TokenKind::EndOfFile:
+            return true;
+        default:
+            return isEndKeyword(kind);
+    }
 }
 
 bool isNotInPortReference(TokenKind kind) {
-	return kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
+    return kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
 }
 
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
@@ -937,8 +937,8 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(NamedPortConnection);
         CASE(WildcardPortConnection);
         CASE(HierarchicalInstance);
-		CASE(HierarchyInstantiation);
-		CASE(IncompleteMember);
+        CASE(HierarchyInstantiation);
+        CASE(IncompleteMember);
         CASE(CompilationUnit);
         default: ASSERT(false && "Missing case");
     }

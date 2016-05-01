@@ -10,12 +10,12 @@ Diagnostics diagnostics;
 SourceManager sourceManager;
 
 ModuleDeclarationSyntax* parse(const SourceText& text) {
-	diagnostics.clear();
+    diagnostics.clear();
 
-	Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-	preprocessor.pushSource(text);
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
+    preprocessor.pushSource(text);
 
-	Parser parser(preprocessor);
+    Parser parser(preprocessor);
     auto node = parser.parseModule();
     REQUIRE(node);
     return node;

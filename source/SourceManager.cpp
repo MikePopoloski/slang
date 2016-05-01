@@ -17,7 +17,7 @@ SourceManager::SourceManager() {
     workingDir = fs::current_path();
 
     // add a dummy entry to the start of the directory list so that our file IDs line up
-	bufferEntries.push_back({});
+    bufferEntries.push_back({});
 }
 
 std::string SourceManager::makeAbsolutePath(StringRef path) const {
@@ -38,58 +38,58 @@ void SourceManager::addUserDirectory(StringRef path) {
 }
 
 uint32_t SourceManager::getLineNumber(SourceLocation location) {
-	if (!location.file)
-		return 0;
+    if (!location.file)
+        return 0;
 
-	ASSERT(location.file.id < bufferEntries.size());
-	BufferEntry& entry = bufferEntries[location.file.id];
+    ASSERT(location.file.id < bufferEntries.size());
+    BufferEntry& entry = bufferEntries[location.file.id];
 
-	// compute line offsets if we haven't already
-	if (entry.lineOffsets.empty())
-		computeLineOffsets(entry.buffer->data, entry.lineOffsets);
+    // compute line offsets if we haven't already
+    if (entry.lineOffsets.empty())
+        computeLineOffsets(entry.buffer->data, entry.lineOffsets);
 
-	auto it = std::lower_bound(entry.lineOffsets.begin(), entry.lineOffsets.end(), location.offset);
-	return (uint32_t)(it - entry.lineOffsets.begin());
+    auto it = std::lower_bound(entry.lineOffsets.begin(), entry.lineOffsets.end(), location.offset);
+    return (uint32_t)(it - entry.lineOffsets.begin());
 }
 
 uint32_t SourceManager::getColumnNumber(SourceLocation location) {
-	if (!location.file)
-		return 0;
+    if (!location.file)
+        return 0;
 
-	ASSERT(location.file.id < bufferEntries.size());
-	BufferEntry& entry = bufferEntries[location.file.id];
-	Buffer<char>& data = entry.buffer->data;
+    ASSERT(location.file.id < bufferEntries.size());
+    BufferEntry& entry = bufferEntries[location.file.id];
+    Buffer<char>& data = entry.buffer->data;
 
-	// walk backward to find start of line
-	uint32_t lineStart = location.offset;
-	ASSERT(lineStart < data.count());
-	while (lineStart > 0 && data[lineStart - 1] != '\n' && data[lineStart - 1] != 'r')
-		lineStart--;
+    // walk backward to find start of line
+    uint32_t lineStart = location.offset;
+    ASSERT(lineStart < data.count());
+    while (lineStart > 0 && data[lineStart - 1] != '\n' && data[lineStart - 1] != 'r')
+        lineStart--;
 
-	return location.offset - lineStart + 1;
+    return location.offset - lineStart + 1;
 }
 
 StringRef SourceManager::getFileName(FileID file) {
-	if (!file)
-		return nullptr;
+    if (!file)
+        return nullptr;
 
-	ASSERT(file.id < bufferEntries.size());
-	return bufferEntries[file.id].name;
+    ASSERT(file.id < bufferEntries.size());
+    return bufferEntries[file.id].name;
 }
 
 SourceBuffer* SourceManager::getBuffer(FileID id) {
-	if (!id)
-		return nullptr;
+    if (!id)
+        return nullptr;
 
-	ASSERT(id.id < bufferEntries.size());
-	return bufferEntries[id.id].buffer;
+    ASSERT(id.id < bufferEntries.size());
+    return bufferEntries[id.id].buffer;
 }
 
 SourceBuffer* SourceManager::readSource(StringRef path) {
     // ensure that we have an absolute path
     ASSERT(path);
     path_type absPath = fs::absolute(path_type(path.begin(), path.end()), workingDir);
-	return openCached(absPath);
+    return openCached(absPath);
 }
 
 SourceBuffer* SourceManager::readHeader(StringRef path, FileID includedFrom, bool isSystemPath) {
@@ -110,16 +110,16 @@ SourceBuffer* SourceManager::readHeader(StringRef path, FileID includedFrom, boo
     }
 
     // search relative to the current file
-	const path_type* dir = bufferEntries[includedFrom.getValue()].directory;
-	if (dir) {
-		SourceBuffer* result = openCached((*dir) / p);
-		if (result)
-			return result;
-	}
+    const path_type* dir = bufferEntries[includedFrom.getValue()].directory;
+    if (dir) {
+        SourceBuffer* result = openCached((*dir) / p);
+        if (result)
+            return result;
+    }
 
     // search additional include directories
     for (auto& d : userDirectories) {
-		SourceBuffer* result = openCached(d / p);
+        SourceBuffer* result = openCached(d / p);
         if (result)
             return result;
     }
@@ -142,17 +142,17 @@ SourceBuffer* SourceManager::openCached(path_type fullPath) {
         return nullptr;
     }
 
-	// cache the file
-	FileID id = FileID::get(nextFileID++);
-	auto result = lookupCache.emplace(std::move(canonicalStr), std::make_unique<SourceBuffer>(id, std::move(buffer))).first->second.get();
-	
-	BufferEntry entry;
-	entry.buffer = result;
-	entry.name = fullPath.filename().string();
-	entry.directory = &*directories.insert(fullPath.remove_filename()).first;
-	bufferEntries.push_back(std::move(entry));
+    // cache the file
+    FileID id = FileID::get(nextFileID++);
+    auto result = lookupCache.emplace(std::move(canonicalStr), std::make_unique<SourceBuffer>(id, std::move(buffer))).first->second.get();
+    
+    BufferEntry entry;
+    entry.buffer = result;
+    entry.name = fullPath.filename().string();
+    entry.directory = &*directories.insert(fullPath.remove_filename()).first;
+    bufferEntries.push_back(std::move(entry));
 
-	return result;
+    return result;
 }
 
 bool SourceManager::readFile(const path_type& path, Buffer<char>& buffer) {
@@ -172,23 +172,23 @@ bool SourceManager::readFile(const path_type& path, Buffer<char>& buffer) {
 }
 
 void SourceManager::computeLineOffsets(const Buffer<char>& buffer, std::vector<uint32_t>& offsets) {
-	// first line always starts at offset 0
-	offsets.push_back(0);
+    // first line always starts at offset 0
+    offsets.push_back(0);
 
-	const char* ptr = buffer.begin();
-	const char* end = buffer.end();
-	while (ptr != end) {
-		if (ptr[0] == '\n' || ptr[0] == '\r') {
-			// if we see \r\n or \n\r skip both chars
-			if ((ptr[1] == '\n' || ptr[1] == '\r') && ptr[0] != ptr[1])
-				ptr++;
-			ptr++;
-			offsets.push_back((uint32_t)(ptr - buffer.begin()));
-		}
-		else {
-			ptr++;
-		}
-	}
+    const char* ptr = buffer.begin();
+    const char* end = buffer.end();
+    while (ptr != end) {
+        if (ptr[0] == '\n' || ptr[0] == '\r') {
+            // if we see \r\n or \n\r skip both chars
+            if ((ptr[1] == '\n' || ptr[1] == '\r') && ptr[0] != ptr[1])
+                ptr++;
+            ptr++;
+            offsets.push_back((uint32_t)(ptr - buffer.begin()));
+        }
+        else {
+            ptr++;
+        }
+    }
 }
 
 }

@@ -5,9 +5,9 @@ namespace slang {
 struct SourceText;
 
 enum class LexerMode {
-	Normal,
-	Directive,
-	IncludeFileName
+    Normal,
+    Directive,
+    IncludeFileName
 };
 
 class Lexer {
@@ -23,14 +23,14 @@ public:
     Token* lex(LexerMode mode = LexerMode::Normal);
 
     FileID getFile() const { return file; }
-	BumpAllocator& getAllocator() { return alloc; }
-	Diagnostics& getDiagnostics() { return diagnostics; }
+    BumpAllocator& getAllocator() { return alloc; }
+    Diagnostics& getDiagnostics() { return diagnostics; }
 
 private:
     struct TokenInfo {
         StringRef niceText;
         NumericValue numericValue;
-		uint32_t offset;
+        uint32_t offset;
         SyntaxKind directiveKind;
         IdentifierType identifierType;
     };
@@ -42,14 +42,14 @@ private:
     TokenKind lexDirective(TokenInfo& info);
     TokenKind lexApostrophe(TokenInfo& info);
 
-	Token* lexIncludeFileName();
+    Token* lexIncludeFileName();
 
     void lexStringLiteral(TokenInfo& info);
     void lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent);
 
     bool lexTrivia(Buffer<Trivia>& buffer, bool directiveMode);
-	char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
-	
+    char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
+    
     bool scanBlockComment(Buffer<Trivia>& buffer, bool directiveMode);
     void scanWhitespace(Buffer<Trivia>& buffer);
     void scanLineComment(Buffer<Trivia>& buffer);
@@ -67,7 +67,7 @@ private:
     void advance(int count) { sourceBuffer += count; }
     char peek() { return *sourceBuffer; }
     char peek(int offset) { return sourceBuffer[offset]; }
-	uint32_t currentOffset() { return (uint32_t)(sourceBuffer - startPointer); }
+    uint32_t currentOffset() { return (uint32_t)(sourceBuffer - startPointer); }
 
     // in order to detect embedded nulls gracefully, we call this whenever we
     // encounter a null to check whether we really are at the end of the buffer
@@ -87,8 +87,8 @@ private:
     Buffer<char> stringBuffer;
     BufferPool<Trivia> triviaPool;
     BumpAllocator& alloc;
-	Diagnostics& diagnostics;
-	const char* const startPointer;
+    Diagnostics& diagnostics;
+    const char* const startPointer;
     const char* sourceBuffer;
     const char* sourceEnd;
     const char* marker;

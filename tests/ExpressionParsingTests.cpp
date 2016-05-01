@@ -12,8 +12,8 @@ SourceManager sourceManager;
 ExpressionSyntax* parse(const SourceText& text) {
     diagnostics.clear();
 
-	Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-	preprocessor.pushSource(text);
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
+    preprocessor.pushSource(text);
 
     Parser parser(preprocessor);
     auto node = parser.parseExpression();
