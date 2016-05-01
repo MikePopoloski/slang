@@ -63,7 +63,8 @@ Token* Preprocessor::next(LexerMode mode) {
             case SyntaxKind::ResetAllDirective: trivia.append(handleResetAllDirective(token)); break;
             case SyntaxKind::DefineDirective: trivia.append(handleDefineDirective(token)); break;
             case SyntaxKind::MacroUsage: trivia.append(handleMacroUsage(token)); break;
-            case SyntaxKind::IfDefDirective: trivia.append(handleIfDefDirective(token)); break;
+            case SyntaxKind::IfDefDirective: trivia.append(handleIfDefDirective(token, false)); break;
+            case SyntaxKind::IfNDefDirective: trivia.append(handleIfDefDirective(token, true)); break;
             case SyntaxKind::ElseIfDirective: trivia.append(handleElseIfDirective(token)); break;
             case SyntaxKind::ElseDirective: trivia.append(handleElseDirective(token)); break;
             case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
@@ -333,12 +334,15 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
     return Trivia(TriviaKind::Directive, syntax);
 }
 
-Trivia Preprocessor::handleIfDefDirective(Token* directive) {
+Trivia Preprocessor::handleIfDefDirective(Token* directive, bool not) {
     // next token should be the macro name
     auto name = expect(TokenKind::Identifier);
     bool take = false;
-    if (branchStack.empty() || branchStack.back().currentActive)
+    if (branchStack.empty() || branchStack.back().currentActive) {
         take = macros.find(name->valueText()) != macros.end();
+        if (not)
+            take = !take;
+    }
 
     branchStack.push_back(BranchEntry(take));
 

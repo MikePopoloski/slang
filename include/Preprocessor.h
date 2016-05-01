@@ -46,7 +46,7 @@ private:
     Trivia handleResetAllDirective(Token* directive);
     Trivia handleDefineDirective(Token* directive);
     Trivia handleMacroUsage(Token* directive);
-    Trivia handleIfDefDirective(Token* directive);
+    Trivia handleIfDefDirective(Token* directive, bool not);
     Trivia handleElseIfDirective(Token* directive);
     Trivia handleElseDirective(Token* directive);
     Trivia handleEndIfDirective(Token* directive);
