@@ -1765,11 +1765,11 @@ struct PortHeaderSyntax : public SyntaxNode {
 
 struct PortDeclarationSyntax : public MemberSyntax {
     PortHeaderSyntax* header;
-    VariableDeclaratorSyntax* declarator;
+    SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
     Token* semi;
 
-    PortDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax* header, VariableDeclaratorSyntax* declarator, Token* semi) :
-        MemberSyntax(SyntaxKind::PortDeclaration, attributes), header(header), declarator(declarator), semi(semi)
+    PortDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax* header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+        MemberSyntax(SyntaxKind::PortDeclaration, attributes), header(header), declarators(declarators), semi(semi)
     {
         childCount += 3;
     }
@@ -1779,7 +1779,7 @@ protected:
         switch(index) {
             case 0: return &attributes;
             case 1: return header;
-            case 2: return declarator;
+            case 2: return &declarators;
             case 3: return semi;
             default: return nullptr;
         }

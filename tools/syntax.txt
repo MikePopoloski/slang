@@ -416,7 +416,7 @@ empty
 
 PortDeclarationSyntax base=MemberSyntax kind=PortDeclaration
 PortHeaderSyntax header
-VariableDeclaratorSyntax declarator
+separated_list<VariableDeclaratorSyntax> declarators
 token semi
 
 // ----- TYPES -----

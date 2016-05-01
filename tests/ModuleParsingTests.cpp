@@ -108,6 +108,7 @@ TEST_CASE("Simple members", "[parser:modules]") {
     parseMember("final begin logic foo = 4; end", SyntaxKind::FinalBlock);
     parseMember("always @* begin logic foo = 4; end", SyntaxKind::AlwaysBlock);
     parseMember("always_ff @(posedge clk) begin logic foo = 4; end", SyntaxKind::AlwaysFFBlock);
+    parseMember("input [31:0] foo, bar;", SyntaxKind::PortDeclaration);
 }
 
 }

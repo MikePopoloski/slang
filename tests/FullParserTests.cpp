@@ -39,7 +39,7 @@ TEST_CASE("External files", "[parser:full]") {
     for (auto& p : fs::directory_iterator(RelativeTestPath)) {
         INFO("Parsing '" + p.path().string() + "'");
 
-        if (p.path().string().find("or1200_ctrl") != std::string::npos) {
+        if (p.path().string().find("or1200_fpu_fcmp") != std::string::npos) {
             int i = 4;
             i++;
         }

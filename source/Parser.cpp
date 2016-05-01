@@ -203,8 +203,10 @@ PortDeclarationSyntax* Parser::parsePortDeclaration(ArrayRef<AttributeInstanceSy
         direction = consume();
 
     auto header = parsePortHeader(direction);
-    auto declarator = parseVariableDeclarator<false>(/* isFirst */ true);
-    return alloc.emplace<PortDeclarationSyntax>(attributes, header, declarator, expect(TokenKind::Semicolon));
+
+    Token* semi;
+    auto declarators = parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+    return alloc.emplace<PortDeclarationSyntax>(attributes, header, declarators, semi);
 }
 
 bool Parser::isPlainPortName() {
