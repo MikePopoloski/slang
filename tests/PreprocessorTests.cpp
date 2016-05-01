@@ -91,7 +91,7 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     CHECK(def->directive);
     CHECK(!def->formalArguments);
     REQUIRE(def->body.count() == 3);
-    CHECK(def->body[1]->kind == TokenKind::IntegerLiteral);
+    CHECK(def->body[1]->kind == TokenKind::UnsignedIntegerLiteral);
 }
 
 TEST_CASE("Macro define (function-like)", "[preprocessor]") {
@@ -112,7 +112,7 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     CHECK(def->formalArguments->args.count() == 1);
     CHECK(def->formalArguments->args[0]->name->valueText() == "a");
     REQUIRE(def->body.count() == 3);
-    CHECK(def->body[2]->kind == TokenKind::IntegerLiteral);
+    CHECK(def->body[2]->kind == TokenKind::UnsignedIntegerLiteral);
 }
 
 TEST_CASE("Macro usage (undefined)", "[preprocessor]") {
@@ -127,7 +127,7 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
     auto& text = "`define FOO 42\n`FOO";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
     CHECK(token.numericValue().integer == 42);
     CHECK(diagnostics.empty());
 }
@@ -136,7 +136,7 @@ TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
 	auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
 	auto& token = lexToken(text);
 
-	CHECK(token.kind == TokenKind::IntegerLiteral);
+	CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
 	CHECK(token.numericValue().integer == 42);
 	CHECK(diagnostics.empty());
 }
@@ -153,7 +153,7 @@ TEST_CASE("ElseIf branch", "[preprocessor]") {
 	auto& text = "`define FOO\n`ifdef BAR\n42\n`elseif FOO\n99`else\n1000`endif";
 	auto& token = lexToken(text);
 
-	CHECK(token.kind == TokenKind::IntegerLiteral);
+	CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
 	CHECK(token.numericValue().integer == 99);
 	CHECK(diagnostics.empty());
 }
@@ -192,7 +192,7 @@ TEST_CASE("Nested branches", "[preprocessor]") {
 "`endif";
 	auto& token = lexToken(text);
 
-	CHECK(token.kind == TokenKind::IntegerLiteral);
+	CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
 	CHECK(token.numericValue().integer == 99);
 	CHECK(diagnostics.empty());
 }

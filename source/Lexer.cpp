@@ -183,11 +183,10 @@ TokenKind Lexer::lexToken(TokenInfo& info, bool directiveMode) {
             }
             return TokenKind::And;
         case '\'':
-            // either an unsized numeric literal, or a '{ range open sequence
             if (consume('{'))
                 return TokenKind::ApostropheOpenBrace;
             else
-                return lexUnsizedNumericLiteral(info);
+                return lexApostrophe(info);
         case '(':
             if (!consume('*'))
                 return TokenKind::OpenParenthesis;
@@ -606,20 +605,8 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     int digits = 0;
     c = scanUnsignedNumber(c, unsignedVal, digits);
 
-    // whitespace normally ends a numeric literal, but it's allowed between
-    // the size and the base specifier in vector literals, so check if that's what we have here
-    int lookahead = findNextNonWhitespace();
-    if (lookahead > 0 && peek(lookahead) == '\'') {
-        advance(lookahead + 1);
-        lexVectorLiteral(info, unsignedVal);
-        return TokenKind::IntegerLiteral;
-    }
-
+	// check if we have a fractional number here
     switch (peek()) {
-        case '\'':
-            advance();
-            lexVectorLiteral(info, unsignedVal);
-            return TokenKind::IntegerLiteral;
         case '.': {
             // fractional digits
             int decPoint = digits;
@@ -636,12 +623,6 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
                 digits,
                 c == 'e' || c == 'E'
             );
-
-            uint8_t timeUnit = lexTimeUnit();
-            if (timeUnit) {
-                info.numericValue = NumericValue(info.numericValue.real, timeUnit);
-                return TokenKind::TimeLiteral;
-            }
             return TokenKind::RealLiteral;
         }
         case 'e':
@@ -656,19 +637,13 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
             return TokenKind::RealLiteral;
         default:
             // normal signed numeric literal; check for 32-bit overflow
+			// TODO: support literals larger than 32 bits? Standard only requires 32...
             if (unsignedVal > INT32_MAX) {
                 unsignedVal = INT32_MAX;
                 addError(DiagCode::SignedLiteralTooLarge, startOfNumberOffset);
             }
-            uint8_t timeUnit = lexTimeUnit();
-            if (timeUnit) {
-                info.numericValue = NumericValue((int32_t)unsignedVal, timeUnit);
-                return TokenKind::TimeLiteral;
-            }
-            else {
-                info.numericValue = (int32_t)unsignedVal;
-                return TokenKind::IntegerLiteral;
-            }
+			info.numericValue = (int32_t)unsignedVal;
+            return TokenKind::UnsignedIntegerLiteral;
     }
 }
 
@@ -715,182 +690,41 @@ void Lexer::lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int di
     info.numericValue = result;
 }
 
-uint8_t Lexer::lexTimeUnit() {
-    char c = peek();
+TokenKind Lexer::lexApostrophe(TokenInfo& info) {
+	char c = peek();
     switch (c) {
-        case 's':
-            advance();
-            return NumericValue::Seconds;
-        case 'm':
-            if (peek(1) == 's') {
-                advance(2);
-                return NumericValue::Milliseconds;
-            }
-            break;
-        case 'u':
-            if (peek(1) == 's') {
-                advance(2);
-                return NumericValue::Microseconds;
-            }
-            break;
-        case 'n':
-            if (peek(1) == 's') {
-                advance(2);
-                return NumericValue::Nanoseconds;
-            }
-            break;
-        case 'p':
-            if (peek(1) == 's') {
-                advance(2);
-                return NumericValue::Picoseconds;
-            }
-            break;
-        case 'f':
-            if (peek(1) == 's') {
-                advance(2);
-                return NumericValue::Femtoseconds;
-            }
-            break;
-    }
-    return 0;
-}
-
-void Lexer::lexVectorLiteral(TokenInfo& info, uint64_t size64) {
-    // error checking on the size, plus coerce to 32-bit
-    uint32_t size32 = 0;
-    if (size64 == 0)
-        addError(DiagCode::IntegerSizeZero, info.offset);
-    else {
-        if (size64 > UINT32_MAX) {
-            size64 = UINT32_MAX;
-            addError(DiagCode::IntegerSizeTooLarge, info.offset);
-        }
-        size32 = (uint32_t)size64;
-    }
-
-    // check for signed specifier
-    bool isSigned = false;
-    char c = peek();
-    if (c == 's' || c == 'S') {
-        isSigned = true;
-        advance();
-        c = peek();
-    }
-
-    vectorBuilder.start(size32, isSigned);
-
-    // next character needs to be the base
-    switch (c) {
+		case 's':
+		case 'S':
+			advance();
+			// TODO: check base
         case 'd':
         case 'D':
-            advance();
-            lexVectorDigits<isDecimalDigit, getDigitValue>(info);
-            break;
         case 'o':
         case 'O':
-            advance();
-            lexVectorDigits<isOctalDigit, getDigitValue>(info);
-            break;
         case 'h':
         case 'H':
-            advance();
-            lexVectorDigits<isHexDigit, getHexDigitValue>(info);
-            break;
         case 'b':
         case 'B':
             advance();
-            lexVectorDigits<isBinaryDigit, getDigitValue>(info);
-            break;
-        default:
-            // error case
-            addError(DiagCode::MissingVectorBase, currentOffset());
-            info.numericValue = 0;
-            break;
-    }
-}
-
-TokenKind Lexer::lexUnsizedNumericLiteral(TokenInfo& info) {
-    vectorBuilder.startUnsized();
-    char c = peek();
-    switch (c) {
-        case 'd':
-        case 'D':
-            advance();
-            lexVectorDigits<isDecimalDigit, getDigitValue>(info);
-            break;
-        case 'o':
-        case 'O':
-            advance();
-            lexVectorDigits<isOctalDigit, getDigitValue>(info);
-            break;
-        case 'h':
-        case 'H':
-            advance();
-            lexVectorDigits<isHexDigit, getHexDigitValue>(info);
-            break;
-        case 'b':
-        case 'B':
-            advance();
-            lexVectorDigits<isBinaryDigit, getDigitValue>(info);
-            break;
+			return TokenKind::IntegerVectorBase;
         case '0':
         case '1':
             advance();
             info.numericValue = (logic_t)(uint8_t)getDigitValue(c);
-            break;
+            return TokenKind::UnbasedUnsizedLiteral;
         case 'x':
         case 'X':
             advance();
             info.numericValue = logic_t::x;
-            break;
+			return TokenKind::UnbasedUnsizedLiteral;
         case 'Z':
         case 'z':
             advance();
             info.numericValue = logic_t::z;
-            break;
+			return TokenKind::UnbasedUnsizedLiteral;
         default:
             // just an apostrophe token
             return TokenKind::Apostrophe;
-    }
-    return TokenKind::IntegerLiteral;
-}
-
-template<bool(*IsDigitFunc)(char), uint32_t(*ValueFunc)(char)>
-void Lexer::lexVectorDigits(TokenInfo& info) {
-    // skip leading whitespace
-    int lookahead = findNextNonWhitespace();
-    char c = peek(lookahead);
-    if (!IsDigitFunc(c) && !isLogicDigit(c)) {
-        addError(DiagCode::MissingVectorDigits, currentOffset());
-        info.numericValue = 0;
-        return;
-    }
-
-    advance(lookahead);
-
-    while (true) {
-        c = peek();
-        switch (c) {
-            case '_':
-                break;
-            case 'z':
-            case 'Z':
-            case '?':
-                vectorBuilder.addDigit(logic_t::z);
-                break;
-            case 'x':
-            case 'X':
-                vectorBuilder.addDigit(logic_t::x);
-                break;
-            default:
-                if (IsDigitFunc(c))
-                    vectorBuilder.addDigit((char)ValueFunc(c));
-                else {
-                    info.numericValue = vectorBuilder.toVector();
-                    return;
-                }
-        }
-        advance();
     }
 }
 
@@ -1068,9 +902,10 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
             return Token::createIdentifier(alloc, kind, location, trivia, lexeme(), info.identifierType);
-        case TokenKind::IntegerLiteral:
-        case TokenKind::RealLiteral:
-        case TokenKind::TimeLiteral:
+		case TokenKind::UnsignedIntegerLiteral:
+		case TokenKind::IntegerVectorBase:
+		case TokenKind::UnbasedUnsizedLiteral:
+		case TokenKind::RealLiteral:
             return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);

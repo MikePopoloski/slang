@@ -308,6 +308,17 @@ const StringTable<TokenKind>* getKeywordTable() {
     return &allKeywords;
 }
 
+bool isNumericLiteralToken(TokenKind kind) {
+	switch (kind) {
+		case TokenKind::UnsignedIntegerLiteral:
+		case TokenKind::IntegerVectorBase:
+		case TokenKind::UnbasedUnsizedLiteral:
+		case TokenKind::RealLiteral:
+			return true;
+	}
+	return false;
+}
+
 StringRef getDirectiveText(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::BeginKeywordsDirective: return "`begin_keywords";
@@ -696,9 +707,10 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         CASE(Identifier);
         CASE(SystemIdentifier);
         CASE(StringLiteral);
-        CASE(IntegerLiteral);
+		CASE(UnsignedIntegerLiteral);
+		CASE(IntegerVectorBase);
+		CASE(UnbasedUnsizedLiteral);
         CASE(RealLiteral);
-        CASE(TimeLiteral);
         CASE(Apostrophe);
         CASE(ApostropheOpenBrace);
         CASE(OpenBrace);

@@ -40,21 +40,16 @@ private:
     TokenKind lexEscapeSequence(TokenInfo& info);
     TokenKind lexDollarSign(TokenInfo& info);
     TokenKind lexDirective(TokenInfo& info);
+    TokenKind lexApostrophe(TokenInfo& info);
 
 	Token* lexIncludeFileName();
 
     void lexStringLiteral(TokenInfo& info);
     void lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent);
-    void lexVectorLiteral(TokenInfo& info, uint64_t size);
-    TokenKind lexUnsizedNumericLiteral(TokenInfo& info);
-    uint8_t lexTimeUnit();
-
-    template<bool (*IsDigitFunc)(char), uint32_t (*ValueFunc)(char)>
-    void lexVectorDigits(TokenInfo& info);
 
     bool lexTrivia(Buffer<Trivia>& buffer, bool directiveMode);
-    char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
-
+	char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
+	
     bool scanBlockComment(Buffer<Trivia>& buffer, bool directiveMode);
     void scanWhitespace(Buffer<Trivia>& buffer);
     void scanLineComment(Buffer<Trivia>& buffer);
@@ -91,7 +86,6 @@ private:
 
     Buffer<char> stringBuffer;
     BufferPool<Trivia> triviaPool;
-    VectorBuilder vectorBuilder;
     BumpAllocator& alloc;
 	Diagnostics& diagnostics;
 	const char* const startPointer;

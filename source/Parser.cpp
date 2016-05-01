@@ -372,13 +372,14 @@ TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<Attribute
     if (kind != TokenKind::TimeUnitKeyword && kind != TokenKind::TimePrecisionKeyword)
         return nullptr;
 
+	// TODO: fix this up to use time units
     auto keyword = consume();
-    auto time = expect(TokenKind::TimeLiteral);
+    auto time = expect(TokenKind::Identifier); // expect(TokenKind::TimeLiteral);
 
     DividerClauseSyntax* divider = nullptr;
     if (peek(TokenKind::Slash)) {
         auto divide = consume();
-        divider = alloc.emplace<DividerClauseSyntax>(divide, expect(TokenKind::TimeLiteral));
+		divider = alloc.emplace<DividerClauseSyntax>(divide, expect(TokenKind::Identifier)); // TimeLiteral);
     }
 
     return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
@@ -914,15 +915,18 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
     TokenKind kind = peek()->kind;
     switch (kind) {
         case TokenKind::StringLiteral:
-        case TokenKind::IntegerLiteral:
-        case TokenKind::RealLiteral:
-        case TokenKind::TimeLiteral:
         case TokenKind::NullKeyword:
         case TokenKind::Dollar: {
             auto literal = consume();
             expr = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
             break;
         }
+		case TokenKind::RealLiteral:
+		case TokenKind::UnsignedIntegerLiteral:
+		case TokenKind::UnbasedUnsizedLiteral:
+		case TokenKind::IntegerVectorBase:
+			expr = parseNumericExpression();
+			break;
         case TokenKind::SystemIdentifier: {
             auto identifier = consume();
             expr = alloc.emplace<KeywordNameSyntax>(SyntaxKind::SystemName, identifier);
@@ -980,6 +984,64 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             break;
     }
     return parsePostfixExpression(expr);
+}
+
+// TODO: move this somewhere else
+bool isPotentialVectorDigitKind(TokenKind kind) {
+	switch (kind) {
+		case TokenKind::UnsignedIntegerLiteral:
+		case TokenKind::Question:
+		case TokenKind::Identifier:
+			return true;
+	}
+	return false;
+}
+
+Token* Parser::joinVectorDigits() {
+	// We need to parse vector digits, which may have hex characters (a-f), x's, z's, and ?'s.
+	// The lexer splits these into identifier tokens and question mark tokens, so we consume
+	// adjacent tokens and form them into a new one.
+	auto first = peek();
+	if (!isPotentialVectorDigitKind(first->kind)) {
+		// TODO: error
+		return expect(TokenKind::UnsignedIntegerLiteral);
+	}
+
+	// only look at further tokens if they're literally adjacent (no trivia in between)
+	consume();
+	Token* next;
+	while ((next = peek())->trivia.empty()) {
+		if (!isPotentialVectorDigitKind(next->kind))
+			break;
+
+		// TODO: concat
+		consume();
+	}
+	return first;
+}
+
+ExpressionSyntax* Parser::parseNumericExpression() {
+	// TODO: error checking
+	Token* token = consume();
+	switch (token->kind) {
+		case TokenKind::RealLiteral:
+			return alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::RealLiteralExpression, token);
+		case TokenKind::UnbasedUnsizedLiteral:
+			return alloc.emplace<IntegerExpressionSyntax>(nullptr, nullptr, token);
+		case TokenKind::IntegerVectorBase:
+			return alloc.emplace<IntegerExpressionSyntax>(nullptr, token, joinVectorDigits());
+		case TokenKind::UnsignedIntegerLiteral:
+			if (!peek(TokenKind::IntegerVectorBase))
+				return alloc.emplace<IntegerExpressionSyntax>(nullptr, nullptr, token);
+			else {
+				auto base = consume();
+				return alloc.emplace<IntegerExpressionSyntax>(token, base, joinVectorDigits());
+			}
+		default:
+			ASSERT(false && "Unknown integer type");
+	}
+	// silence warnings
+	return nullptr;
 }
 
 ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
@@ -1360,18 +1422,22 @@ ExpressionSyntax* Parser::parseAssignmentExpression() {
 
 TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
     switch (peek()->kind) {
-        case TokenKind::Hash: {
+        case TokenKind::Hash:
+		case TokenKind::DoubleHash: {
             auto hash = consume();
             ExpressionSyntax* delayValue;
             switch (peek()->kind) {
-                case TokenKind::IntegerLiteral:
-                case TokenKind::RealLiteral:
-                case TokenKind::TimeLiteral:
                 case TokenKind::OneStep: {
                     auto literal = consume();
-                    delayValue = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
+                    delayValue = alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::OneStepLiteralExpression, literal);
                     break;
                 }
+				case TokenKind::RealLiteral:
+				case TokenKind::UnsignedIntegerLiteral:
+				case TokenKind::UnbasedUnsizedLiteral:
+				case TokenKind::IntegerVectorBase:
+					delayValue = parseNumericExpression();
+					break;
                 case TokenKind::OpenParenthesis: {
                     auto openParen = consume();
                     auto expr = parseMinTypMaxExpression();
@@ -1383,27 +1449,8 @@ TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
                     delayValue = parseName();
                     break;
             }
-            return alloc.emplace<DelayControlSyntax>(hash, delayValue);
-        }
-        case TokenKind::DoubleHash: {
-            auto doubleHash = consume();
-            ExpressionSyntax* delayValue;
-            switch (peek()->kind) {
-                case TokenKind::IntegerLiteral:
-                    delayValue = alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::IntegerLiteralExpression, consume());
-                    break;
-                case TokenKind::OpenParenthesis: {
-                    auto openParen = consume();
-                    auto expr = parseExpression();
-                    auto closeParen = expect(TokenKind::CloseParenthesis);
-                    delayValue = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, closeParen);
-                    break;
-                }
-                default:
-                    delayValue = alloc.emplace<IdentifierNameSyntax>(expect(TokenKind::Identifier));
-                    break;
-            }
-            return alloc.emplace<CycleDelaySyntax>(doubleHash, delayValue);
+			SyntaxKind kind = hash->kind == TokenKind::Hash ? SyntaxKind::DelayControl : SyntaxKind::CycleDelay;
+            return alloc.emplace<DelaySyntax>(kind, hash, delayValue);
         }
         case TokenKind::At: {
             auto at = consume();

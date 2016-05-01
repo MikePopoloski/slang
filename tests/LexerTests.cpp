@@ -347,46 +347,64 @@ TEST_CASE("String literal (unknown escape)", "[lexer]") {
     CHECK(diagnostics.last().code == DiagCode::UnknownEscapeCode);
 }
 
-TEST_CASE("Signed integer literal", "[lexer]") {
+TEST_CASE("Unsigned integer literal", "[lexer]") {
     auto& text = "19248";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::SignedInteger);
-    CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Signed integer literal (trailing whitespace)", "[lexer]") {
-    // based numeric literals can have whitespace between them and the base,
-    // token so the literal lexer needs to handle that speculatively
-    auto& text = "192__48         \v\t ";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString() != text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::SignedInteger);
+    CHECK(value.type == NumericValue::Integer);
     CHECK(value.integer == 19248);
 }
 
 TEST_CASE("Signed integer literal (overflow)", "[lexer]") {
+	// TODO: update overflow checking
     auto& text = "9999999999";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::SignedLiteralTooLarge);
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::SignedInteger);
+    CHECK(value.type == NumericValue::Integer);
     CHECK(value.integer == 2147483647);
+}
+
+void checkVectorBase(const std::string& s) {
+	auto& token = lexToken(s);
+
+	CHECK(token.kind == TokenKind::IntegerVectorBase);
+	CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
+	CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Vector bases", "[lexer]") {
+	checkVectorBase("'d");
+	checkVectorBase("'D");
+	checkVectorBase("'b");
+	checkVectorBase("'B");
+	checkVectorBase("'o");
+	checkVectorBase("'O");
+	checkVectorBase("'h");
+	checkVectorBase("'H");
+}
+
+TEST_CASE("Unbased unsized literal", "[lexer]") {
+	auto& text = "'1";
+	auto& token = lexToken(text);
+
+	CHECK(token.kind == TokenKind::UnbasedUnsizedLiteral);
+	CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+	CHECK(diagnostics.empty());
+
+	auto& value = token.numericValue();
+	CHECK(value.type == NumericValue::UnsizedBit);
+	//CHECK(value.integer == 19248);
 }
 
 TEST_CASE("Real literal (fraction)", "[lexer]") {
@@ -509,266 +527,6 @@ TEST_CASE("Real literal (digit overflow)", "[lexer]") {
     auto& value = token.numericValue();
     CHECK(value.type == NumericValue::Real);
     CHECK(std::isinf(value.real));
-}
-
-TEST_CASE("Vector literal (zero size)", "[lexer]") {
-    auto& text = "0'd34";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::IntegerSizeZero);
-}
-
-TEST_CASE("Vector literal (size overflow)", "[lexer]") {
-    auto& text = "9999999999999999999'd34";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::IntegerSizeTooLarge);
-}
-
-TEST_CASE("Vector literal (missing base)", "[lexer]") {
-    auto& text = "12'34";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "12'");
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::MissingVectorBase);
-}
-
-TEST_CASE("Decimal vector literal", "[lexer]") {
-    auto& text = "123'd34_562xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Decimal vector literal (with whitespace)", "[lexer]") {
-    auto& text = "123   'D   34_562xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Decimal vector literal (missing digits)", "[lexer]") {
-    auto& text = "4'dggg";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "4'd");
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
-}
-
-TEST_CASE("Decimal vector literal (unsized)", "[lexer]") {
-    auto& text = "'d34_562xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Octal vector literal", "[lexer]") {
-    auto& text = "123'o34_562xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Octal vector literal (with whitespace)", "[lexer]") {
-    auto& text = "123   'O   34_562xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Octal vector literal (missing digits)", "[lexer]") {
-    auto& text = "4'o9";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "4'o");
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
-}
-
-TEST_CASE("Octal vector literal (unsized)", "[lexer]") {
-    auto& text = "'o34_562xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Hex vector literal", "[lexer]") {
-    auto& text = "123'h3f4_56aA02xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Hex vector literal (with whitespace)", "[lexer]") {
-    auto& text = "123   'H   ffF_a562xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Hex vector literal (missing digits)", "[lexer]") {
-    auto& text = "4'hG";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "4'h");
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
-}
-
-TEST_CASE("Hex vector literal (unsized)", "[lexer]") {
-    auto& text = "'h3f4_56aA02xXz??";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Binary vector literal", "[lexer]") {
-    auto& text = "123'b1101_xX?zZ";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Binary vector literal (with whitespace)", "[lexer]") {
-    auto& text = "123   'B   1101_xX??zZ";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-TEST_CASE("Binary vector literal (missing digits)", "[lexer]") {
-    auto& text = "4'b2";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "4'b");
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::MissingVectorDigits);
-}
-
-TEST_CASE("Binary vector literal (unsized)", "[lexer]") {
-    auto& text = "'b1101_xX?zZ";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Vector);
-    //CHECK(value.integer == 19248);
-}
-
-void testTimeLiteral(uint8_t type, std::string text) {
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::TimeLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.isTimeValue());
-    CHECK(value.type == type);
-}
-
-TEST_CASE("Time literals", "[lexer]") {
-    testTimeLiteral(NumericValue::Seconds, "32.3s");
-    testTimeLiteral(NumericValue::Milliseconds, "49ms");
-    testTimeLiteral(NumericValue::Microseconds, "109.109us");
-    testTimeLiteral(NumericValue::Nanoseconds, "17ns");
-    testTimeLiteral(NumericValue::Picoseconds, "17ps");
-    testTimeLiteral(NumericValue::Femtoseconds, "17fs");
-}
-
-TEST_CASE("Unsized unbased literal", "[lexer]") {
-    auto& text = "'1";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::UnsizedBit);
-    //CHECK(value.integer == 19248);
 }
 
 TEST_CASE("Misplaced directive char", "[lexer]") {

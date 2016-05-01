@@ -858,6 +858,28 @@ protected:
     }
 };
 
+struct IntegerExpressionSyntax : public PrimaryExpressionSyntax {
+    Token* size;
+    Token* base;
+    Token* digits;
+
+    IntegerExpressionSyntax(Token* size, Token* base, Token* digits) :
+        PrimaryExpressionSyntax(SyntaxKind::IntegerLiteralExpression), size(size), base(base), digits(digits)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return size;
+            case 1: return base;
+            case 2: return digits;
+            default: return nullptr;
+        }
+    }
+};
+
 struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
     Token* openBrace;
     Token* closeBrace;
@@ -1140,12 +1162,12 @@ struct TimingControlSyntax : public SyntaxNode {
     }
 };
 
-struct DelayControlSyntax : public TimingControlSyntax {
+struct DelaySyntax : public TimingControlSyntax {
     Token* hash;
     ExpressionSyntax* delayValue;
 
-    DelayControlSyntax(Token* hash, ExpressionSyntax* delayValue) :
-        TimingControlSyntax(SyntaxKind::DelayControl), hash(hash), delayValue(delayValue)
+    DelaySyntax(SyntaxKind kind, Token* hash, ExpressionSyntax* delayValue) :
+        TimingControlSyntax(kind), hash(hash), delayValue(delayValue)
     {
         childCount += 2;
     }
@@ -1154,26 +1176,6 @@ protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return hash;
-            case 1: return delayValue;
-            default: return nullptr;
-        }
-    }
-};
-
-struct CycleDelaySyntax : public TimingControlSyntax {
-    Token* doubleHash;
-    ExpressionSyntax* delayValue;
-
-    CycleDelaySyntax(Token* doubleHash, ExpressionSyntax* delayValue) :
-        TimingControlSyntax(SyntaxKind::CycleDelay), doubleHash(doubleHash), delayValue(delayValue)
-    {
-        childCount += 2;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return doubleHash;
             case 1: return delayValue;
             default: return nullptr;
         }

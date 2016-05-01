@@ -200,6 +200,11 @@ empty
 LiteralExpressionSyntax base=PrimaryExpressionSyntax
 token literal
 
+IntegerExpressionSyntax base=PrimaryExpressionSyntax kind=IntegerLiteralExpression
+token size
+token base
+token digits
+
 EmptyQueueExpressionSyntax base=PrimaryExpressionSyntax kind=EmptyQueueExpression
 token openBrace
 token closeBrace
@@ -270,12 +275,8 @@ ArgumentListSyntax arguments
 TimingControlSyntax final=false
 empty
 
-DelayControlSyntax base=TimingControlSyntax kind=DelayControl
+DelaySyntax base=TimingControlSyntax
 token hash
-ExpressionSyntax delayValue
-
-CycleDelaySyntax base=TimingControlSyntax kind=CycleDelay
-token doubleHash
 ExpressionSyntax delayValue
 
 EventControlSyntax base=TimingControlSyntax kind=EventControl

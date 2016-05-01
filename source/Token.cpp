@@ -44,15 +44,21 @@ void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
             case TokenKind::StringLiteral:
                 buffer.appendRange(((StringLiteralInfo*)(this + 1))->rawText);
                 break;
-            case TokenKind::IntegerLiteral:
-            case TokenKind::RealLiteral:
-            case TokenKind::TimeLiteral:
+			case TokenKind::UnsignedIntegerLiteral:
+			case TokenKind::IntegerVectorBase:
+			case TokenKind::UnbasedUnsizedLiteral:
+			case TokenKind::RealLiteral:
                 buffer.appendRange(((NumericLiteralInfo*)(this + 1))->rawText);
                 break;
             case TokenKind::Directive:
             case TokenKind::MacroUsage:
                 buffer.appendRange(((DirectiveInfo*)(this + 1))->rawText);
                 break;
+			case TokenKind::EndOfDirective:
+			case TokenKind::EndOfFile:
+				break;
+			default:
+				ASSERT(false && "What is this?");
         }
     }
 }
@@ -95,7 +101,7 @@ std::string Token::toString(uint8_t writeFlags) const {
 }
 
 const NumericValue& Token::numericValue() const {
-    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
+	ASSERT(isNumericLiteralToken(kind));
     return ((NumericLiteralInfo*)(this + 1))->value;
 }
 
@@ -124,9 +130,10 @@ size_t Token::getAllocSize(TokenKind kind) {
 		case TokenKind::Identifier:
 		case TokenKind::SystemIdentifier:
 			return sizeof(Token) + sizeof(IdentifierInfo);
-		case TokenKind::IntegerLiteral:
+		case TokenKind::UnsignedIntegerLiteral:
+		case TokenKind::IntegerVectorBase:
+		case TokenKind::UnbasedUnsizedLiteral:
 		case TokenKind::RealLiteral:
-		case TokenKind::TimeLiteral:
 			return sizeof(Token) + sizeof(NumericLiteralInfo);
 		case TokenKind::StringLiteral:
 		case TokenKind::IncludeFileName:
@@ -139,7 +146,7 @@ size_t Token::getAllocSize(TokenKind kind) {
 }
 
 Token* Token::create(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags) {
-	Token* token = (Token*)alloc.allocate(getAllocSize(kind));
+	Token* token = (Token*)alloc.allocate((uint32_t)getAllocSize(kind));
 	return new (token) Token(kind, location, trivia, flags);
 }
 
@@ -204,9 +211,10 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
             return createIdentifier(alloc, kind, location, trivia, nullptr, IdentifierType::Unknown, TokenFlags::Missing);
-        case TokenKind::IntegerLiteral:
+		case TokenKind::UnsignedIntegerLiteral:
+		case TokenKind::IntegerVectorBase:
+		case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
-        case TokenKind::TimeLiteral:
             return createNumericLiteral(alloc, kind, location, trivia, nullptr, 0, TokenFlags::Missing);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:
@@ -220,7 +228,7 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
 
 Token* Token::clone(BumpAllocator& alloc) const {
 	size_t size = getAllocSize(kind);
-	auto cloned = (Token*)alloc.allocate(size);
+	auto cloned = (Token*)alloc.allocate((uint32_t)size);
 	memcpy(cloned, this, size);
 
 	return cloned;

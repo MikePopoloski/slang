@@ -40,32 +40,24 @@ struct NumericValue {
         logic_t bit;
         int32_t integer;
         double real;
-        LogicVector vector;
-    };
+	};
 
     uint8_t type;
 
     NumericValue() : type(Unknown), bit(0) {}
     NumericValue(double real) : type(Real), real(real) {}
-    NumericValue(int32_t integer) : type(SignedInteger), integer(integer) {}
+    NumericValue(int32_t integer) : type(Integer), integer(integer) {}
     NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
-    NumericValue(LogicVector vector) : type(Vector), vector(vector) {}
-    NumericValue(double real, uint8_t timeUnit) : type(timeUnit), real(real) {}
-
-    bool isTimeValue() const { return type >= Seconds; }
 
     enum {
         Unknown,
         Real,
-        SignedInteger,
-        Vector,
+        Integer,
         UnsizedBit,
-        Seconds,
-        Milliseconds,
-        Microseconds,
-        Nanoseconds,
-        Picoseconds,
-        Femtoseconds
+		DecimalBase,
+		OctalBase,
+		BinaryBase,
+		HexBase
     };
 };
 
@@ -143,6 +135,7 @@ private:
 
 TokenKind getSystemKeywordKind(StringRef text);
 StringRef getTokenKindText(TokenKind kind);
+bool isNumericLiteralToken(TokenKind kind);
 const StringTable<TokenKind>* getKeywordTable();
 
 std::ostream& operator<<(std::ostream& os, TokenKind kind);
@@ -154,9 +147,10 @@ enum class TokenKind : uint16_t {
     Identifier,
     SystemIdentifier,
     StringLiteral,
-    IntegerLiteral,
+	UnsignedIntegerLiteral,
+	IntegerVectorBase,
+	UnbasedUnsizedLiteral,
     RealLiteral,
-    TimeLiteral,
 
     // punctuation
     Apostrophe,
