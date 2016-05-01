@@ -594,7 +594,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     }
 
     // skip over leading zeros
-    uint32_t startOfNumberOffset = currentOffset();
+//    uint32_t startOfNumberOffset = currentOffset();
     char c;
     while ((c = peek()) == '0')
         advance();
@@ -637,10 +637,10 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
             return TokenKind::RealLiteral;
         default:
             // normal signed numeric literal; check for 32-bit overflow
-            // TODO: support literals larger than 32 bits? Standard only requires 32...
             if (unsignedVal > INT32_MAX) {
                 unsignedVal = INT32_MAX;
-                addError(DiagCode::SignedLiteralTooLarge, startOfNumberOffset);
+                // TODO: move all numeric computation out of the lexer
+                //addError(DiagCode::SignedLiteralTooLarge, startOfNumberOffset);
             }
             info.numericValue = (int32_t)unsignedVal;
             return TokenKind::UnsignedIntegerLiteral;
@@ -692,11 +692,13 @@ void Lexer::lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int di
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {
     char c = peek();
+    bool isSigned = false;
+    if (c == 's' || c == 'S') {
+        isSigned = true;
+        advance();
+    }
+
     switch (c) {
-        case 's':
-        case 'S':
-            advance();
-            // TODO: check base
         case 'd':
         case 'D':
         case 'o':
@@ -707,6 +709,13 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
         case 'B':
             advance();
             return TokenKind::IntegerVectorBase;
+    }
+
+    if (isSigned) {
+        // TODO: error
+    }
+
+    switch (c) {
         case '0':
         case '1':
             advance();

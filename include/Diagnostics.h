@@ -22,11 +22,6 @@ enum class DiagCode : uint8_t {
     InvalidHexEscapeCode,
     UnknownEscapeCode,
     RealExponentTooLarge,
-    SignedLiteralTooLarge,
-    IntegerSizeZero,
-    IntegerSizeTooLarge,
-    MissingVectorBase,
-    MissingVectorDigits,
     ExpectedIncludeFileName,
 
     // preprocessor

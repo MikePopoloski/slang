@@ -360,21 +360,6 @@ TEST_CASE("Unsigned integer literal", "[lexer]") {
     CHECK(value.integer == 19248);
 }
 
-TEST_CASE("Signed integer literal (overflow)", "[lexer]") {
-    // TODO: update overflow checking
-    auto& text = "9999999999";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::UnsignedIntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::SignedLiteralTooLarge);
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Integer);
-    CHECK(value.integer == 2147483647);
-}
-
 void checkVectorBase(const std::string& s) {
     auto& token = lexToken(s);
 
@@ -384,6 +369,7 @@ void checkVectorBase(const std::string& s) {
 }
 
 TEST_CASE("Vector bases", "[lexer]") {
+    // TODO: test signedness
     checkVectorBase("'d");
     checkVectorBase("'D");
     checkVectorBase("'b");
