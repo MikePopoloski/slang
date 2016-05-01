@@ -1693,10 +1693,10 @@ struct ParameterPortDeclarationSyntax : public SyntaxNode {
 struct ParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
     Token* keyword;
     DataTypeSyntax* type;
-    VariableDeclaratorSyntax* declarator;
+    SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
 
-    ParameterDeclarationSyntax(Token* keyword, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
-        ParameterPortDeclarationSyntax(SyntaxKind::ParameterDeclaration), keyword(keyword), type(type), declarator(declarator)
+    ParameterDeclarationSyntax(Token* keyword, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
+        ParameterPortDeclarationSyntax(SyntaxKind::ParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
     {
         childCount += 3;
     }
@@ -1706,7 +1706,7 @@ protected:
         switch(index) {
             case 0: return keyword;
             case 1: return type;
-            case 2: return declarator;
+            case 2: return &declarators;
             default: return nullptr;
         }
     }
@@ -1715,10 +1715,10 @@ protected:
 struct TypeParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
     Token* keyword;
     Token* type;
-    VariableDeclaratorSyntax* declarator;
+    SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
 
-    TypeParameterDeclarationSyntax(Token* keyword, Token* type, VariableDeclaratorSyntax* declarator) :
-        ParameterPortDeclarationSyntax(SyntaxKind::TypeParameterDeclaration), keyword(keyword), type(type), declarator(declarator)
+    TypeParameterDeclarationSyntax(Token* keyword, Token* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
+        ParameterPortDeclarationSyntax(SyntaxKind::TypeParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
     {
         childCount += 3;
     }
@@ -1728,7 +1728,7 @@ protected:
         switch(index) {
             case 0: return keyword;
             case 1: return type;
-            case 2: return declarator;
+            case 2: return &declarators;
             default: return nullptr;
         }
     }

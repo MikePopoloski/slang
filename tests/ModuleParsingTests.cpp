@@ -77,10 +77,10 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[2]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(((ParameterDeclarationSyntax*)parameters[2])->declarator->name->valueText() == "blah");
+    CHECK(((ParameterDeclarationSyntax*)parameters[2])->declarators[0]->name->valueText() == "blah");
     CHECK(parameters[3]->kind == SyntaxKind::TypeParameterDeclaration);
-    CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarator->name->valueText() == "blah");
-    CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarator->initializer->expr->kind == SyntaxKind::ShortIntType);
+    CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarators[0]->name->valueText() == "blah");
+    CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarators[0]->initializer->expr->kind == SyntaxKind::ShortIntType);
 }
 
 const MemberSyntax* parseMember(const std::string& text, SyntaxKind kind) {
@@ -109,6 +109,7 @@ TEST_CASE("Simple members", "[parser:modules]") {
     parseMember("always @* begin logic foo = 4; end", SyntaxKind::AlwaysBlock);
     parseMember("always_ff @(posedge clk) begin logic foo = 4; end", SyntaxKind::AlwaysFFBlock);
     parseMember("input [31:0] foo, bar;", SyntaxKind::PortDeclaration);
+    parseMember("parameter foo = 1, bar = 2;", SyntaxKind::ParameterDeclarationStatement);
 }
 
 }

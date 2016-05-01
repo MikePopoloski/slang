@@ -400,12 +400,12 @@ empty
 ParameterDeclarationSyntax base=ParameterPortDeclarationSyntax kind=ParameterDeclaration
 token keyword
 DataTypeSyntax type
-VariableDeclaratorSyntax declarator
+separated_list<VariableDeclaratorSyntax> declarators
 
 TypeParameterDeclarationSyntax base=ParameterPortDeclarationSyntax kind=TypeParameterDeclaration
 token keyword
 token type
-VariableDeclaratorSyntax declarator
+separated_list<VariableDeclaratorSyntax> declarators
 
 ParameterDeclarationStatementSyntax base=MemberSyntax kind=ParameterDeclarationStatement
 ParameterPortDeclarationSyntax parameter

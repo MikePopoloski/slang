@@ -205,7 +205,7 @@ PortDeclarationSyntax* Parser::parsePortDeclaration(ArrayRef<AttributeInstanceSy
     auto header = parsePortHeader(direction);
 
     Token* semi;
-    auto declarators = parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+    auto declarators = parseVariableDeclarators(semi);
     return alloc.emplace<PortDeclarationSyntax>(attributes, header, declarators, semi);
 }
 
@@ -1577,7 +1577,7 @@ StructUnionTypeSyntax* Parser::parseStructUnion(SyntaxKind syntaxKind) {
             auto type = parseDataType(/* allowImplicit */ false);
 
             Token* semi;
-            auto declarators = parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+            auto declarators = parseVariableDeclarators(semi);
 
             buffer.append(alloc.emplace<StructUnionMemberSyntax>(attributes, randomQualifier, type, declarators, semi));
             kind = peek()->kind;
@@ -1688,15 +1688,28 @@ MemberSyntax* Parser::parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> att
     // TODO: delay control
 
     Token* semi;
-    auto declarators = parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+    auto declarators = parseVariableDeclarators(semi);
 
     return alloc.emplace<NetDeclarationSyntax>(attributes, netType, strength, expansionHint, type, declarators, semi);
 }
 
 MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
-        auto parameter = parseParameterPort();
-        return alloc.emplace<ParameterDeclarationStatementSyntax>(attributes, parameter, expect(TokenKind::Semicolon));
+        auto keyword = consume();
+
+        Token* semi;
+        ParameterPortDeclarationSyntax* parameter;
+
+        if (peek(TokenKind::TypeKeyword)) {
+            auto typeKeyword = consume();
+            parameter = alloc.emplace<TypeParameterDeclarationSyntax>(keyword, typeKeyword, parseVariableDeclarators(semi));
+        }
+        else {
+            auto type = parseDataType(/* allowImplicit */ true);
+            parameter = alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseVariableDeclarators(semi));
+        }
+
+        return alloc.emplace<ParameterDeclarationStatementSyntax>(attributes, parameter, semi);
     }
 
     // TODO: other kinds of declarations besides data
@@ -1714,7 +1727,7 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
     auto dataType = parseDataType(/* allowImplicit */ hasVar);
 
     Token* semi;
-    auto declarators = parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
+    auto declarators = parseVariableDeclarators(semi);
 
     return alloc.emplace<DataDeclarationSyntax>(attributes, modifiers.copy(alloc), dataType, declarators, semi);
 }
@@ -1740,12 +1753,22 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     return alloc.emplace<VariableDeclaratorSyntax>(name, dimensions, initializer);
 }
 
+ArrayRef<TokenOrSyntax> Parser::parseOneVariableDeclarator() {
+    auto buffer = tosPool.get();
+    buffer.append(parseVariableDeclarator<true>(/* isFirst */ true));
+    return buffer.copy(alloc);
+}
+
 template<bool(*IsEnd)(TokenKind)>
 ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Token*& end) {
     auto buffer = tosPool.get();
     parseSeparatedList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end, [this](bool first) { return parseVariableDeclarator<false>(first); });
 
     return buffer.copy(alloc);
+}
+
+ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(Token*& semi) {
+    return parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
 }
 
 ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
@@ -1821,21 +1844,21 @@ ParameterPortDeclarationSyntax* Parser::parseParameterPort() {
 
         if (peek(TokenKind::TypeKeyword)) {
             auto typeKeyword = consume();
-            return alloc.emplace<TypeParameterDeclarationSyntax>(keyword, typeKeyword, parseVariableDeclarator<true>(/* isFirst */ true));
+            return alloc.emplace<TypeParameterDeclarationSyntax>(keyword, typeKeyword, parseOneVariableDeclarator());
         }
 
         auto type = parseDataType(/* allowImplicit */ true);
-        return alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseVariableDeclarator<true>(/* isFirst */ true));
+        return alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseOneVariableDeclarator());
     }
 
     if (peek(TokenKind::TypeKeyword)) {
         auto typeKeyword = consume();
-        return alloc.emplace<TypeParameterDeclarationSyntax>(nullptr, typeKeyword, parseVariableDeclarator<true>(/* isFirst */ true));
+        return alloc.emplace<TypeParameterDeclarationSyntax>(nullptr, typeKeyword, parseOneVariableDeclarator());
     }
 
     // this is a normal parameter without the actual parameter keyword (stupid implicit nonsense)
     auto type = parseDataType(/* allowImplicit */ true);
-    return alloc.emplace<ParameterDeclarationSyntax>(nullptr, type, parseVariableDeclarator<true>(/* isFirst */ true));
+    return alloc.emplace<ParameterDeclarationSyntax>(nullptr, type, parseOneVariableDeclarator());
 }
 
 HierarchyInstantiationSyntax* Parser::parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes) {

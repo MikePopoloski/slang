@@ -97,9 +97,11 @@ private:
 
     template<bool(*IsEnd)(TokenKind)>
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token*& end);
+    ArrayRef<TokenOrSyntax> parseVariableDeclarators(Token*& semi);
 
     template<bool AllowMinTypMax>
     VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
+    ArrayRef<TokenOrSyntax> parseOneVariableDeclarator();
 
     template<bool AllowMinTypeMax>
     ExpressionSyntax* parseAssignmentExpression();
