@@ -272,6 +272,15 @@ TEST_CASE("Concatenation", "[parser:expressions]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Concatenation (single)", "[parser:expressions]") {
+    auto& text = "{3+4}";
+    auto expr = parse(text);
+
+    REQUIRE(expr->kind == SyntaxKind::ConcatenationExpression);
+    CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(diagnostics.empty());
+}
+
 TEST_CASE("Multiple concatenation", "[parser:expressions]") {
     auto& text = "{3+4 {foo.bar, 9**22}}";
     auto expr = parse(text);

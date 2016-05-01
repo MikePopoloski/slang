@@ -1072,7 +1072,11 @@ ExpressionSyntax* Parser::parseInsideElement() {
 ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, ExpressionSyntax* first) {
     auto buffer = tosPool.get();
     if (first) {
+        // it's possible to have just one element in the concatenation list, so check for a close brace
         buffer.append(first);
+        if (peek(TokenKind::CloseBrace))
+            return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), consume());
+
         buffer.append(expect(TokenKind::Comma));
     }
 
