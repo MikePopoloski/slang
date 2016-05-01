@@ -819,3 +819,11 @@ token closeParen
 
 MacroUsageSyntax base=DirectiveSyntax kind=MacroUsage
 MacroActualArgumentListSyntax args
+
+TimescaleDirectiveSyntax base=DirectiveSyntax kind=TimescaleDirective
+token timeUnit
+token timeUnitUnit
+token slash
+token timePrecision
+token timePrecisionUnit
+token endOfDirective

@@ -4,6 +4,7 @@
 * Stop lexing if too many errors
 * Start of line check for directives
 * Test escaped identifiers are not keywords
+* Move numeric computation out of lexer
 
 [Preprocessor]
 * Different keyword sets
@@ -12,6 +13,7 @@
 * Pragmas
 * Other directives
 * Controlling macros on includes
+* Macro replace include file
 
 [Parser]
 * Stack overflow prevention
@@ -25,3 +27,4 @@
 * Type reference expression
 * Assignment patterns
 * Casting
+* Bullet proof integer expressions

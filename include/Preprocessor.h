@@ -50,6 +50,7 @@ private:
     Trivia handleElseIfDirective(Token* directive);
     Trivia handleElseDirective(Token* directive);
     Trivia handleEndIfDirective(Token* directive);
+    Trivia handleTimescaleDirective(Token* directive);
 
     Token* parseEndOfDirective();
 

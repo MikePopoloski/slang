@@ -67,6 +67,7 @@ Token* Preprocessor::next(LexerMode mode) {
             case SyntaxKind::ElseIfDirective: trivia.append(handleElseIfDirective(token)); break;
             case SyntaxKind::ElseDirective: trivia.append(handleElseDirective(token)); break;
             case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
+            case SyntaxKind::TimescaleDirective: trivia.append(handleTimescaleDirective(token)); break;
             case SyntaxKind::UndefineAllDirective:
             case SyntaxKind::UnconnectedDriveDirective:
             case SyntaxKind::NoUnconnectedDriveDirective:
@@ -448,6 +449,19 @@ Trivia Preprocessor::handleEndIfDirective(Token* directive) {
             taken = false;
     }
     return parseBranchDirective(directive, nullptr, taken);
+}
+
+Trivia Preprocessor::handleTimescaleDirective(Token* directive) {
+    // TODO: error checking
+    auto timeUnit = expect(TokenKind::UnsignedIntegerLiteral);
+    auto timeUnitUnit = expect(TokenKind::Identifier);
+    auto slash = expect(TokenKind::Slash);
+    auto timePrecision = expect(TokenKind::UnsignedIntegerLiteral);
+    auto timePrecisionUnit = expect(TokenKind::Identifier);
+    auto eod = parseEndOfDirective();
+
+    auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, timeUnit, timeUnitUnit, slash, timePrecision, timePrecisionUnit, eod);
+    return Trivia(TriviaKind::Directive, timescale);
 }
 
 Token* Preprocessor::parseEndOfDirective() {

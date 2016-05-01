@@ -3496,4 +3496,33 @@ protected:
     }
 };
 
+struct TimescaleDirectiveSyntax : public DirectiveSyntax {
+    Token* timeUnit;
+    Token* timeUnitUnit;
+    Token* slash;
+    Token* timePrecision;
+    Token* timePrecisionUnit;
+    Token* endOfDirective;
+
+    TimescaleDirectiveSyntax(Token* directive, Token* timeUnit, Token* timeUnitUnit, Token* slash, Token* timePrecision, Token* timePrecisionUnit, Token* endOfDirective) :
+        DirectiveSyntax(SyntaxKind::TimescaleDirective, directive), timeUnit(timeUnit), timeUnitUnit(timeUnitUnit), slash(slash), timePrecision(timePrecision), timePrecisionUnit(timePrecisionUnit), endOfDirective(endOfDirective)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return directive;
+            case 1: return timeUnit;
+            case 2: return timeUnitUnit;
+            case 3: return slash;
+            case 4: return timePrecision;
+            case 5: return timePrecisionUnit;
+            case 6: return endOfDirective;
+            default: return nullptr;
+        }
+    }
+};
+
 }
