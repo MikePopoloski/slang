@@ -893,14 +893,6 @@ bool Lexer::scanBlockComment(Buffer<Trivia>& buffer, bool directiveMode) {
     return eod;
 }
 
-int Lexer::findNextNonWhitespace() {
-    int lookahead = 0;
-    char c;
-    while (isHorizontalWhitespace(c = peek(lookahead)))
-        lookahead++;
-    return lookahead;
-}
-
 Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer) {
     auto trivia = triviaBuffer.copy(alloc);
     auto location = SourceLocation(file, info.offset);

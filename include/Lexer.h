@@ -55,8 +55,6 @@ private:
     void scanLineComment(Buffer<Trivia>& buffer);
     void scanIdentifier();
 
-    int findNextNonWhitespace();
-
     Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer);
     void addTrivia(TriviaKind kind, Buffer<Trivia>& buffer);
     void addError(DiagCode code, uint32_t offset);
