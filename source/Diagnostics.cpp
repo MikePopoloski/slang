@@ -45,12 +45,11 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "block comment unclosed at end of file" },
     { "nested block comments are disallowed by SystemVerilog" },
     { "block comments on the same line as a directive must also be terminated on that line" },
-    { "expected exponent digits" },
-    { "expected fractional digits" },
+    { "expected integer base specifier after signed specifier" },
+    { "expected fractional digits after decimal" },
     { "octal escape code is too large to be an ASCII character" },
     { "invalid hexadecimal number" },
     { "unknown character escape sequence" },
-    { "literal exponent is too large" },
     { "expected an include file name" },
     
     // preprocessor
@@ -160,12 +159,11 @@ std::ostream& operator<<(std::ostream& os, DiagCode code) {
         CASE(UnterminatedBlockComment);
         CASE(NestedBlockComment);
         CASE(SplitBlockCommentInDirective);
-        CASE(MissingExponentDigits);
+        CASE(ExpectedIntegerBaseAfterSigned);
         CASE(MissingFractionalDigits);
         CASE(OctalEscapeCodeTooBig);
         CASE(InvalidHexEscapeCode);
         CASE(UnknownEscapeCode);
-        CASE(RealExponentTooLarge);
         CASE(ExpectedIncludeFileName);
         CASE(CouldNotOpenIncludeFile);
         CASE(ExceededMaxIncludeDepth);

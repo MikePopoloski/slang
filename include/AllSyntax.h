@@ -858,28 +858,6 @@ protected:
     }
 };
 
-struct IntegerExpressionSyntax : public PrimaryExpressionSyntax {
-    Token* size;
-    Token* base;
-    Token* digits;
-
-    IntegerExpressionSyntax(Token* size, Token* base, Token* digits) :
-        PrimaryExpressionSyntax(SyntaxKind::IntegerLiteralExpression), size(size), base(base), digits(digits)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return size;
-            case 1: return base;
-            case 2: return digits;
-            default: return nullptr;
-        }
-    }
-};
-
 struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
     Token* openBrace;
     Token* closeBrace;

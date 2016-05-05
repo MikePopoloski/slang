@@ -44,10 +44,11 @@ void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
             case TokenKind::StringLiteral:
                 buffer.appendRange(((StringLiteralInfo*)(this + 1))->rawText);
                 break;
-            case TokenKind::UnsignedIntegerLiteral:
+            case TokenKind::IntegerLiteral:
             case TokenKind::IntegerVectorBase:
             case TokenKind::UnbasedUnsizedLiteral:
             case TokenKind::RealLiteral:
+            case TokenKind::TimeLiteral:
                 buffer.appendRange(((NumericLiteralInfo*)(this + 1))->rawText);
                 break;
             case TokenKind::Directive:
@@ -100,9 +101,12 @@ std::string Token::toString(uint8_t writeFlags) const {
     return std::string(buffer.begin(), buffer.end());
 }
 
-const NumericValue& Token::numericValue() const {
-    ASSERT(isNumericLiteralToken(kind));
-    return ((NumericLiteralInfo*)(this + 1))->value;
+uint8_t Token::numericFlags() const {
+    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::IntegerVectorBase ||
+           kind == TokenKind::UnbasedUnsizedLiteral || kind == TokenKind::RealLiteral ||
+           kind == TokenKind::TimeLiteral);
+
+    return ((NumericLiteralInfo*)(this + 1))->flags;
 }
 
 IdentifierType Token::identifierType() const {
@@ -130,10 +134,11 @@ size_t Token::getAllocSize(TokenKind kind) {
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
             return sizeof(Token) + sizeof(IdentifierInfo);
-        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::IntegerLiteral:
         case TokenKind::IntegerVectorBase:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
             return sizeof(Token) + sizeof(NumericLiteralInfo);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:
@@ -184,12 +189,12 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLo
     return token;
 }
 
-Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags) {
+Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t numericFlags, uint8_t flags) {
     auto token = create(alloc, kind, location, trivia, flags);
 
     NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
     info->rawText = rawText;
-    info->value = value;
+    info->flags = numericFlags;
 
     return token;
 }
@@ -211,11 +216,12 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
             return createIdentifier(alloc, kind, location, trivia, nullptr, IdentifierType::Unknown, TokenFlags::Missing);
-        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::IntegerLiteral:
         case TokenKind::IntegerVectorBase:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
-            return createNumericLiteral(alloc, kind, location, trivia, nullptr, 0, TokenFlags::Missing);
+        case TokenKind::TimeLiteral:
+            return createNumericLiteral(alloc, kind, location, trivia, nullptr, NumericTokenFlags::None, TokenFlags::Missing);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:
             return createStringLiteral(alloc, kind, location, trivia, nullptr, nullptr, TokenFlags::Missing);

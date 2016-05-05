@@ -18,50 +18,6 @@
 #include "CharInfo.h"
 #include "StringTable.h"
 
-namespace {
-
-const int MaxMantissaDigits = 18;
-const int MaxExponent = 511;
-
-const double powersOf10[] = {
-    10.0,
-    100.0,
-    1.0e4,
-    1.0e8,
-    1.0e16,
-    1.0e32,
-    1.0e64,
-    1.0e128,
-    1.0e256
-};
-
-bool composeDouble(double fraction, int exp, double& result) {
-    bool neg = false;
-    if (exp < 0) {
-        neg = true;
-        exp = -exp;
-    }
-
-    if (exp > MaxExponent)
-        exp = MaxExponent;
-
-    double dblExp = 1.0;
-    for (auto d = powersOf10; exp != 0; exp >>= 1, d++) {
-        if (exp & 0x1)
-            dblExp *= *d;
-    }
-
-    if (neg)
-        fraction /= dblExp;
-    else
-        fraction *= dblExp;
-
-    result = fraction;
-    return std::isfinite(result);
-}
-
-} // anonymous namespace
-
 namespace slang {
 
 SyntaxKind getDirectiveKind(StringRef directive);
@@ -593,148 +549,88 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
         }
     }
 
-    // skip over leading zeros
-//    uint32_t startOfNumberOffset = currentOffset();
-    char c;
-    while ((c = peek()) == '0')
-        advance();
-
-    // scan past leading decimal digits; these might be the first part of
-    // a fractional number, the size of a vector, or a plain unsigned integer
-    uint64_t unsignedVal = 0;
-    int digits = 0;
-    c = scanUnsignedNumber(c, unsignedVal, digits);
+    // scan past leading decimal digits; we know we have at least one if we got here
+    scanUnsignedNumber();
 
     // check if we have a fractional number here
+	info.numericFlags = NumericTokenFlags::None;
     switch (peek()) {
         case '.': {
             // fractional digits
-            int decPoint = digits;
             advance();
-            c = peek();
-            if (!isDecimalDigit(c))
+            if (!isDecimalDigit(peek()))
                 addError(DiagCode::MissingFractionalDigits, currentOffset());
 
-            c = scanUnsignedNumber(peek(), unsignedVal, digits);
-            lexRealLiteral(
-                info,
-                unsignedVal,
-                decPoint,
-                digits,
-                c == 'e' || c == 'E'
-            );
+            scanUnsignedNumber();
+			char c = peek();
+			if (c == 'e' || c == 'E')
+				scanExponent();
+
+			info.numericFlags = NumericTokenFlags::IsFractional;
             return TokenKind::RealLiteral;
         }
         case 'e':
         case 'E':
-            lexRealLiteral(
-                info,
-                unsignedVal,
-                digits,     // decimal point is after all digits
-                digits,
-                true        // yep, we have an exponent
-            );
-            return TokenKind::RealLiteral;
+			// Check if this is an exponent or just something like a hex digit.
+			// We disambiguate by always choosing a real if possible; someone
+			// downstream might need to fix it up later.
+			if (scanExponent())
+				return TokenKind::RealLiteral;
+			else
+				return TokenKind::IntegerLiteral;
         default:
-            // normal signed numeric literal; check for 32-bit overflow
-            if (unsignedVal > INT32_MAX) {
-                unsignedVal = INT32_MAX;
-                // TODO: move all numeric computation out of the lexer
-                //addError(DiagCode::SignedLiteralTooLarge, startOfNumberOffset);
-            }
-            info.numericValue = (int32_t)unsignedVal;
-            return TokenKind::UnsignedIntegerLiteral;
+            return TokenKind::IntegerLiteral;
     }
 }
 
-void Lexer::lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent) {
-    bool neg = false;
-    uint64_t expVal = 0;
-    uint32_t startOfExponent = currentOffset();
+bool Lexer::scanExponent() {
+	// skip over leading sign
+	int index = 1;
+	char c = peek(index);
+	if (c == '+' || c == '-') {
+		index++;
+		c = peek(index);
+	}
 
-    if (exponent) {
-        advance();
+	// need at least one decimal digit
+	if (!isDecimalDigit(c))
+		return false;
 
-        // skip over leading zeros
-        char c = peek();
-        while ((c = peek()) == '0')
-            advance();
-
-        if (c == '+')
-            advance();
-        else if (c == '-') {
-            neg = true;
-            advance();
-        }
-
-        c = peek();
-        if (!isDecimalDigit(c))
-            addError(DiagCode::MissingExponentDigits, currentOffset());
-        else {
-            int unusedDigits = 0;
-            scanUnsignedNumber(c, expVal, unusedDigits);
-        }
-    }
-
-    int fracExp = decPoint - std::min(digits, MaxMantissaDigits);
-    int exp;
-    if (neg)
-        exp = fracExp - int(expVal);
-    else
-        exp = fracExp + int(expVal);
-
-    double result;
-    if (!composeDouble(double(value), exp, result))
-        addError(DiagCode::RealExponentTooLarge, startOfExponent);
-
-    info.numericValue = result;
+	// otherwise, we have a real exponent, so skip remaining digits
+	advance(index);
+	scanUnsignedNumber();
+	return true;
 }
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {
-    char c = peek();
-    bool isSigned = false;
-    if (c == 's' || c == 'S') {
-        isSigned = true;
-        advance();
-    }
+	info.numericFlags = NumericTokenFlags::None;
+	switch (peek()) {
+		case '0':
+		case '1':
+		case 'x':
+		case 'X':
+		case 'Z':
+		case 'z':
+		case '?':
+			advance();
+			return TokenKind::UnbasedUnsizedLiteral;
 
-    switch (c) {
-        case 'd':
-        case 'D':
-        case 'o':
-        case 'O':
-        case 'h':
-        case 'H':
-        case 'b':
-        case 'B':
-            advance();
-            return TokenKind::IntegerVectorBase;
-    }
+		case 's':
+		case 'S':
+			advance();
+			if (!lexVectorBase(info))
+				addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
 
-    if (isSigned) {
-        // TODO: error
-    }
+			info.numericFlags |= NumericTokenFlags::IsSigned;
+			return TokenKind::IntegerVectorBase;
 
-    switch (c) {
-        case '0':
-        case '1':
-            advance();
-            info.numericValue = (logic_t)(uint8_t)getDigitValue(c);
-            return TokenKind::UnbasedUnsizedLiteral;
-        case 'x':
-        case 'X':
-            advance();
-            info.numericValue = logic_t::x;
-            return TokenKind::UnbasedUnsizedLiteral;
-        case 'Z':
-        case 'z':
-            advance();
-            info.numericValue = logic_t::z;
-            return TokenKind::UnbasedUnsizedLiteral;
-        default:
-            // just an apostrophe token
-            return TokenKind::Apostrophe;
-    }
+		default:
+			if (lexVectorBase(info))
+				return TokenKind::IntegerVectorBase;
+
+			// otherwise just an apostrophe token
+			return TokenKind::Apostrophe;
+	}
 }
 
 bool Lexer::lexTrivia(Buffer<Trivia>& buffer, bool directiveMode) {
@@ -801,22 +697,14 @@ void Lexer::scanIdentifier() {
     }
 }
 
-char Lexer::scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits) {
-    while (true) {
-        if (isDecimalDigit(c)) {
-            // After 18 digits, stop caring. For normal integers, we're going to truncate
-            // to 32-bits anyway. For reals, later digits won't have any effect on the result.
-            if (digits < MaxMantissaDigits)
-                unsignedVal = (unsignedVal * 10) + getDigitValue(c);
-            digits++;
-        }
-        else if (c != '_')
-            break;
-
-        advance();
-        c = peek();
-    }
-    return c;
+void Lexer::scanUnsignedNumber() {
+	while (true) {
+		char c = peek();
+		if (isDecimalDigit(c) || c == '_')
+			advance();
+		else
+			return;
+	}
 }
 
 void Lexer::scanWhitespace(Buffer<Trivia>& buffer) {
@@ -903,11 +791,12 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::Identifier:
         case TokenKind::SystemIdentifier:
             return Token::createIdentifier(alloc, kind, location, trivia, lexeme(), info.identifierType);
-        case TokenKind::UnsignedIntegerLiteral:
+        case TokenKind::IntegerLiteral:
         case TokenKind::IntegerVectorBase:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
-            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue);
+        case TokenKind::TimeLiteral:
+            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericFlags);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);
         case TokenKind::Directive:

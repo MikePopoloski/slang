@@ -200,11 +200,6 @@ empty
 LiteralExpressionSyntax base=PrimaryExpressionSyntax
 token literal
 
-IntegerExpressionSyntax base=PrimaryExpressionSyntax kind=IntegerLiteralExpression
-token size
-token base
-token digits
-
 EmptyQueueExpressionSyntax base=PrimaryExpressionSyntax kind=EmptyQueueExpression
 token openBrace
 token closeBrace

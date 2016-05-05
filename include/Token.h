@@ -35,30 +35,20 @@ enum class IdentifierType : uint8_t {
     System
 };
 
-struct NumericValue {
-    union {
-        logic_t bit;
-        int32_t integer;
-        double real;
-    };
+struct NumericTokenFlags {
+	enum {
+		None = 0,
 
-    uint8_t type;
+		// first two bits: indicate kind of base
+		DecimalBase = 0,
+		HexBase = 1,
+		OctalBase = 2,
+		BinaryBase = 3,
 
-    NumericValue() : type(Unknown), bit(0) {}
-    NumericValue(double real) : type(Real), real(real) {}
-    NumericValue(int32_t integer) : type(Integer), integer(integer) {}
-    NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
-
-    enum {
-        Unknown,
-        Real,
-        Integer,
-        UnsizedBit,
-        DecimalBase,
-        OctalBase,
-        BinaryBase,
-        HexBase
-    };
+		// bits 3+ are flags
+		IsFractional = 1 << 2,
+		IsSigned = 1 << 3
+	};
 };
 
 class Token {
@@ -86,7 +76,7 @@ public:
 
     // data accessors for specific kinds of tokens
     // these will generally assert if the kind is wrong
-    const NumericValue& numericValue() const;
+	uint8_t numericFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
 
@@ -98,7 +88,7 @@ public:
     static Token* createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags = 0);
     static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);
     static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags = 0);
-    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags = 0);
+    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t numericFlags, uint8_t flags = 0);
     static Token* createDirective(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags = 0);
     static Token* missing(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia = nullptr);
 
@@ -121,7 +111,7 @@ private:
 
     struct NumericLiteralInfo {
         StringRef rawText;
-        NumericValue value;
+		uint8_t flags;
     };
 
     struct DirectiveInfo {
@@ -135,7 +125,6 @@ private:
 
 TokenKind getSystemKeywordKind(StringRef text);
 StringRef getTokenKindText(TokenKind kind);
-bool isNumericLiteralToken(TokenKind kind);
 const StringTable<TokenKind>* getKeywordTable();
 
 std::ostream& operator<<(std::ostream& os, TokenKind kind);
@@ -147,10 +136,11 @@ enum class TokenKind : uint16_t {
     Identifier,
     SystemIdentifier,
     StringLiteral,
-    UnsignedIntegerLiteral,
+    IntegerLiteral,
     IntegerVectorBase,
     UnbasedUnsizedLiteral,
     RealLiteral,
+    TimeLiteral,
 
     // punctuation
     Apostrophe,

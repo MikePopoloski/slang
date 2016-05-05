@@ -44,7 +44,16 @@ FileID Preprocessor::getCurrentFile() {
 }
 
 Token* Preprocessor::next() {
-    return next(LexerMode::Normal);
+    auto token = next(LexerMode::Normal);
+	switch (token->kind) {
+		case TokenKind::IntegerLiteral:
+		case TokenKind::UnbasedUnsizedLiteral:
+		case TokenKind::IntegerVectorBase:
+		case TokenKind::RealLiteral:
+			return handleNumericToken(token);
+		default:
+			return token;
+	}
 }
 
 Token* Preprocessor::next(LexerMode mode) {
@@ -457,10 +466,10 @@ Trivia Preprocessor::handleEndIfDirective(Token* directive) {
 
 Trivia Preprocessor::handleTimescaleDirective(Token* directive) {
     // TODO: error checking
-    auto timeUnit = expect(TokenKind::UnsignedIntegerLiteral);
+    auto timeUnit = expect(TokenKind::IntegerLiteral);
     auto timeUnitUnit = expect(TokenKind::Identifier);
     auto slash = expect(TokenKind::Slash);
-    auto timePrecision = expect(TokenKind::UnsignedIntegerLiteral);
+    auto timePrecision = expect(TokenKind::IntegerLiteral);
     auto timePrecisionUnit = expect(TokenKind::Identifier);
     auto eod = parseEndOfDirective();
 
