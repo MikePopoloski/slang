@@ -353,7 +353,7 @@ TEST_CASE("Unsigned integer literal", "[lexer]") {
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-	CHECK(token.numericFlags() == NumericTokenFlags::None);
+    CHECK(token.numericFlags() == NumericTokenFlags::None);
     CHECK(diagnostics.empty());
 }
 
@@ -362,8 +362,8 @@ void checkVectorBase(const std::string& s, uint8_t flagCheck) {
 
     CHECK(token.kind == TokenKind::IntegerVectorBase);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
-	CHECK(token.numericFlags() == flagCheck);
-	CHECK(diagnostics.empty());
+    CHECK(token.numericFlags() == flagCheck);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Vector bases", "[lexer]") {
@@ -392,8 +392,8 @@ TEST_CASE("Real literal (fraction)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-	CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
-	CHECK(diagnostics.empty());
+    CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Real literal (missing fraction)", "[lexer]") {
@@ -402,7 +402,7 @@ TEST_CASE("Real literal (missing fraction)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-	CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
+    CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::MissingFractionalDigits);
 }
@@ -413,8 +413,8 @@ TEST_CASE("Real literal (exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-	CHECK(token.numericFlags() == NumericTokenFlags::None);
-	CHECK(diagnostics.empty());
+    CHECK(token.numericFlags() == NumericTokenFlags::None);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Real literal (plus exponent)", "[lexer]") {
@@ -423,8 +423,8 @@ TEST_CASE("Real literal (plus exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-	CHECK(token.numericFlags() == NumericTokenFlags::None);
-	CHECK(diagnostics.empty());
+    CHECK(token.numericFlags() == NumericTokenFlags::None);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Real literal (minus exponent)", "[lexer]") {
@@ -433,8 +433,8 @@ TEST_CASE("Real literal (minus exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-	CHECK(token.numericFlags() == NumericTokenFlags::None);
-	CHECK(diagnostics.empty());
+    CHECK(token.numericFlags() == NumericTokenFlags::None);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
@@ -443,8 +443,8 @@ TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-	CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
-	CHECK(diagnostics.empty());
+    CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Integer literal (illegitimate exponent)", "[lexer]") {
@@ -453,8 +453,8 @@ TEST_CASE("Integer literal (illegitimate exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "32");
-	CHECK(token.numericFlags() == NumericTokenFlags::None);
-	CHECK(diagnostics.empty());
+    CHECK(token.numericFlags() == NumericTokenFlags::None);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Misplaced directive char", "[lexer]") {

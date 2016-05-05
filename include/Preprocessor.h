@@ -42,7 +42,7 @@ private:
     Token* next(LexerMode mode);
     Token* nextRaw(LexerMode mode);
 
-	Token* handleNumericToken(Token* token);
+    Token* handleNumericToken(Token* token);
 
     Trivia handleIncludeDirective(Token* directive);
     Trivia handleResetAllDirective(Token* directive);

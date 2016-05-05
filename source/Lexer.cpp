@@ -553,7 +553,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     scanUnsignedNumber();
 
     // check if we have a fractional number here
-	info.numericFlags = NumericTokenFlags::None;
+    info.numericFlags = NumericTokenFlags::None;
     switch (peek()) {
         case '.': {
             // fractional digits
@@ -562,75 +562,75 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
                 addError(DiagCode::MissingFractionalDigits, currentOffset());
 
             scanUnsignedNumber();
-			char c = peek();
-			if (c == 'e' || c == 'E')
-				scanExponent();
+            char c = peek();
+            if (c == 'e' || c == 'E')
+                scanExponent();
 
-			info.numericFlags = NumericTokenFlags::IsFractional;
+            info.numericFlags = NumericTokenFlags::IsFractional;
             return TokenKind::RealLiteral;
         }
         case 'e':
         case 'E':
-			// Check if this is an exponent or just something like a hex digit.
-			// We disambiguate by always choosing a real if possible; someone
-			// downstream might need to fix it up later.
-			if (scanExponent())
-				return TokenKind::RealLiteral;
-			else
-				return TokenKind::IntegerLiteral;
+            // Check if this is an exponent or just something like a hex digit.
+            // We disambiguate by always choosing a real if possible; someone
+            // downstream might need to fix it up later.
+            if (scanExponent())
+                return TokenKind::RealLiteral;
+            else
+                return TokenKind::IntegerLiteral;
         default:
             return TokenKind::IntegerLiteral;
     }
 }
 
 bool Lexer::scanExponent() {
-	// skip over leading sign
-	int index = 1;
-	char c = peek(index);
-	if (c == '+' || c == '-') {
-		index++;
-		c = peek(index);
-	}
+    // skip over leading sign
+    int index = 1;
+    char c = peek(index);
+    if (c == '+' || c == '-') {
+        index++;
+        c = peek(index);
+    }
 
-	// need at least one decimal digit
-	if (!isDecimalDigit(c))
-		return false;
+    // need at least one decimal digit
+    if (!isDecimalDigit(c))
+        return false;
 
-	// otherwise, we have a real exponent, so skip remaining digits
-	advance(index);
-	scanUnsignedNumber();
-	return true;
+    // otherwise, we have a real exponent, so skip remaining digits
+    advance(index);
+    scanUnsignedNumber();
+    return true;
 }
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {
-	info.numericFlags = NumericTokenFlags::None;
-	switch (peek()) {
-		case '0':
-		case '1':
-		case 'x':
-		case 'X':
-		case 'Z':
-		case 'z':
-		case '?':
-			advance();
-			return TokenKind::UnbasedUnsizedLiteral;
+    info.numericFlags = NumericTokenFlags::None;
+    switch (peek()) {
+        case '0':
+        case '1':
+        case 'x':
+        case 'X':
+        case 'Z':
+        case 'z':
+        case '?':
+            advance();
+            return TokenKind::UnbasedUnsizedLiteral;
 
-		case 's':
-		case 'S':
-			advance();
-			if (!lexVectorBase(info))
-				addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
+        case 's':
+        case 'S':
+            advance();
+            if (!lexVectorBase(info))
+                addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
 
-			info.numericFlags |= NumericTokenFlags::IsSigned;
-			return TokenKind::IntegerVectorBase;
+            info.numericFlags |= NumericTokenFlags::IsSigned;
+            return TokenKind::IntegerVectorBase;
 
-		default:
-			if (lexVectorBase(info))
-				return TokenKind::IntegerVectorBase;
+        default:
+            if (lexVectorBase(info))
+                return TokenKind::IntegerVectorBase;
 
-			// otherwise just an apostrophe token
-			return TokenKind::Apostrophe;
-	}
+            // otherwise just an apostrophe token
+            return TokenKind::Apostrophe;
+    }
 }
 
 bool Lexer::lexTrivia(Buffer<Trivia>& buffer, bool directiveMode) {
@@ -698,13 +698,13 @@ void Lexer::scanIdentifier() {
 }
 
 void Lexer::scanUnsignedNumber() {
-	while (true) {
-		char c = peek();
-		if (isDecimalDigit(c) || c == '_')
-			advance();
-		else
-			return;
-	}
+    while (true) {
+        char c = peek();
+        if (isDecimalDigit(c) || c == '_')
+            advance();
+        else
+            return;
+    }
 }
 
 void Lexer::scanWhitespace(Buffer<Trivia>& buffer) {

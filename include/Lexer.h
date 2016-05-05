@@ -30,7 +30,7 @@ private:
     struct TokenInfo {
         StringRef niceText;
         uint32_t offset;
-		uint8_t numericFlags;
+        uint8_t numericFlags;
         SyntaxKind directiveKind;
         IdentifierType identifierType;
     };
@@ -45,7 +45,7 @@ private:
     Token* lexIncludeFileName();
 
     void lexStringLiteral(TokenInfo& info);
-	bool lexVectorBase(TokenInfo& info);
+    bool lexVectorBase(TokenInfo& info);
 
     bool lexTrivia(Buffer<Trivia>& buffer, bool directiveMode);
     
@@ -53,8 +53,8 @@ private:
     void scanWhitespace(Buffer<Trivia>& buffer);
     void scanLineComment(Buffer<Trivia>& buffer);
     void scanIdentifier();
-	void scanUnsignedNumber();
-	bool scanExponent();
+    void scanUnsignedNumber();
+    bool scanExponent();
 
     Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer);
     void addTrivia(TriviaKind kind, Buffer<Trivia>& buffer);

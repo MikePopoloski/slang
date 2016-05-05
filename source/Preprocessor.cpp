@@ -45,15 +45,15 @@ FileID Preprocessor::getCurrentFile() {
 
 Token* Preprocessor::next() {
     auto token = next(LexerMode::Normal);
-	switch (token->kind) {
-		case TokenKind::IntegerLiteral:
-		case TokenKind::UnbasedUnsizedLiteral:
-		case TokenKind::IntegerVectorBase:
-		case TokenKind::RealLiteral:
-			return handleNumericToken(token);
-		default:
-			return token;
-	}
+    switch (token->kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::IntegerVectorBase:
+        case TokenKind::RealLiteral:
+            return handleNumericToken(token);
+        default:
+            return token;
+    }
 }
 
 Token* Preprocessor::next(LexerMode mode) {

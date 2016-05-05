@@ -36,19 +36,19 @@ enum class IdentifierType : uint8_t {
 };
 
 struct NumericTokenFlags {
-	enum {
-		None = 0,
+    enum {
+        None = 0,
 
-		// first two bits: indicate kind of base
-		DecimalBase = 0,
-		HexBase = 1,
-		OctalBase = 2,
-		BinaryBase = 3,
+        // first two bits: indicate kind of base
+        DecimalBase = 0,
+        HexBase = 1,
+        OctalBase = 2,
+        BinaryBase = 3,
 
-		// bits 3+ are flags
-		IsFractional = 1 << 2,
-		IsSigned = 1 << 3
-	};
+        // bits 3+ are flags
+        IsFractional = 1 << 2,
+        IsSigned = 1 << 3
+    };
 };
 
 class Token {
@@ -76,7 +76,7 @@ public:
 
     // data accessors for specific kinds of tokens
     // these will generally assert if the kind is wrong
-	uint8_t numericFlags() const;
+    uint8_t numericFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
 
@@ -111,7 +111,7 @@ private:
 
     struct NumericLiteralInfo {
         StringRef rawText;
-		uint8_t flags;
+        uint8_t flags;
     };
 
     struct DirectiveInfo {
