@@ -617,22 +617,22 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
         case 's':
         case 'S':
             advance();
-            if (!lexVectorBase(info))
+            if (!lexIntegerBase(info))
                 addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
 
             info.numericBaseFlags |= NumericBaseFlags::IsSigned;
-            return TokenKind::IntegerVectorBase;
+            return TokenKind::IntegerBase;
 
         default:
-            if (lexVectorBase(info))
-                return TokenKind::IntegerVectorBase;
+            if (lexIntegerBase(info))
+                return TokenKind::IntegerBase;
 
             // otherwise just an apostrophe token
             return TokenKind::Apostrophe;
     }
 }
 
-bool Lexer::lexVectorBase(TokenInfo& info) {
+bool Lexer::lexIntegerBase(TokenInfo& info) {
     switch (peek()) {
         case 'd':
         case 'D':
@@ -817,7 +817,7 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::SystemIdentifier:
             return Token::createIdentifier(alloc, kind, location, trivia, lexeme(), info.identifierType);
         case TokenKind::IntegerLiteral:
-        case TokenKind::IntegerVectorBase:
+        case TokenKind::IntegerBase:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:

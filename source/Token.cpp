@@ -17,53 +17,6 @@ Token::Token(TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, u
 {
 }
 
-void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
-    if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
-        return;
-
-    if (writeFlags & SyntaxToStringFlags::IncludeTrivia) {
-        for (const auto& t : trivia)
-            t.writeTo(buffer, writeFlags);
-    }
-
-    if (!(writeFlags & SyntaxToStringFlags::IncludeMissing) && isMissing())
-        return;
-
-    StringRef text = getTokenKindText(kind);
-    if (text)
-        buffer.appendRange(text);
-    else {
-        // not a simple token, so extract info from our data pointer
-        switch (kind) {
-            case TokenKind::Unknown:
-            case TokenKind::Identifier:
-            case TokenKind::SystemIdentifier:
-                buffer.appendRange(((IdentifierInfo*)(this + 1))->rawText);
-                break;
-            case TokenKind::IncludeFileName:
-            case TokenKind::StringLiteral:
-                buffer.appendRange(((StringLiteralInfo*)(this + 1))->rawText);
-                break;
-            case TokenKind::IntegerLiteral:
-            case TokenKind::IntegerVectorBase:
-            case TokenKind::UnbasedUnsizedLiteral:
-            case TokenKind::RealLiteral:
-            case TokenKind::TimeLiteral:
-                buffer.appendRange(((NumericLiteralInfo*)(this + 1))->rawText);
-                break;
-            case TokenKind::Directive:
-            case TokenKind::MacroUsage:
-                buffer.appendRange(((DirectiveInfo*)(this + 1))->rawText);
-                break;
-            case TokenKind::EndOfDirective:
-            case TokenKind::EndOfFile:
-                break;
-            default:
-                ASSERT(false && "What is this?");
-        }
-    }
-}
-
 StringRef Token::valueText() const {
     StringRef text = getTokenKindText(kind);
     if (text)
@@ -95,6 +48,54 @@ StringRef Token::valueText() const {
     }
 }
 
+StringRef Token::rawText() const {
+    StringRef text = getTokenKindText(kind);
+    if (text)
+        return text;
+    else {
+        // not a simple token, so extract info from our data pointer
+        switch (kind) {
+            case TokenKind::Unknown:
+            case TokenKind::Identifier:
+            case TokenKind::SystemIdentifier:
+                return ((IdentifierInfo*)(this + 1))->rawText;
+            case TokenKind::IncludeFileName:
+            case TokenKind::StringLiteral:
+                return ((StringLiteralInfo*)(this + 1))->rawText;
+            case TokenKind::IntegerLiteral:
+            case TokenKind::IntegerBase:
+            case TokenKind::UnbasedUnsizedLiteral:
+            case TokenKind::RealLiteral:
+            case TokenKind::TimeLiteral:
+                return ((NumericLiteralInfo*)(this + 1))->rawText;
+            case TokenKind::Directive:
+            case TokenKind::MacroUsage:
+                return ((DirectiveInfo*)(this + 1))->rawText;
+            case TokenKind::EndOfDirective:
+            case TokenKind::EndOfFile:
+                break;
+            default:
+                ASSERT(false && "What is this?");
+        }
+    }
+    return nullptr;
+}
+
+void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
+    if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
+        return;
+
+    if (writeFlags & SyntaxToStringFlags::IncludeTrivia) {
+        for (const auto& t : trivia)
+            t.writeTo(buffer, writeFlags);
+    }
+
+    if (!(writeFlags & SyntaxToStringFlags::IncludeMissing) && isMissing())
+        return;
+
+    buffer.appendRange(rawText());
+}
+
 std::string Token::toString(uint8_t writeFlags) const {
     Buffer<char> buffer;
     writeTo(buffer, writeFlags);
@@ -109,7 +110,7 @@ const NumericValue& Token::numericValue() const {
 }
 
 uint8_t Token::numericBaseFlags() const {
-    ASSERT(kind == TokenKind::IntegerVectorBase);
+    ASSERT(kind == TokenKind::IntegerBase);
 
     return ((NumericLiteralInfo*)(this + 1))->baseFlags;
 }
@@ -123,6 +124,11 @@ IdentifierType Token::identifierType() const {
 SyntaxKind Token::directiveKind() const {
     ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
     return ((DirectiveInfo*)(this + 1))->kind;
+}
+
+void Token::setNumericValue(const NumericValue& value) {
+    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::UnbasedUnsizedLiteral ||
+           kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
 }
 
 bool Token::hasTrivia(TriviaKind triviaKind) const {
@@ -140,7 +146,7 @@ size_t Token::getAllocSize(TokenKind kind) {
         case TokenKind::SystemIdentifier:
             return sizeof(Token) + sizeof(IdentifierInfo);
         case TokenKind::IntegerLiteral:
-        case TokenKind::IntegerVectorBase:
+        case TokenKind::IntegerBase:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
@@ -223,7 +229,7 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
         case TokenKind::SystemIdentifier:
             return createIdentifier(alloc, kind, location, trivia, nullptr, IdentifierType::Unknown, TokenFlags::Missing);
         case TokenKind::IntegerLiteral:
-        case TokenKind::IntegerVectorBase:
+        case TokenKind::IntegerBase:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:

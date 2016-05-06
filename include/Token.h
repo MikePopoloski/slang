@@ -85,6 +85,8 @@ public:
     // for example, in string literals, escape sequences are converted appropriately
     StringRef valueText() const;
 
+    StringRef rawText() const;
+
     // convenience method that wraps writeTo
     std::string toString(uint8_t flags = 0) const;
 
@@ -97,6 +99,8 @@ public:
     uint8_t numericBaseFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
+
+    void setNumericValue(const NumericValue& value);
 
     bool hasTrivia(TriviaKind triviaKind) const;
 
@@ -156,7 +160,7 @@ enum class TokenKind : uint16_t {
     SystemIdentifier,
     StringLiteral,
     IntegerLiteral,
-    IntegerVectorBase,
+    IntegerBase,
     UnbasedUnsizedLiteral,
     RealLiteral,
     TimeLiteral,

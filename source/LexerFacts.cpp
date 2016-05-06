@@ -697,7 +697,7 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         CASE(SystemIdentifier);
         CASE(StringLiteral);
         CASE(IntegerLiteral);
-        CASE(IntegerVectorBase);
+        CASE(IntegerBase);
         CASE(UnbasedUnsizedLiteral);
         CASE(RealLiteral);
         CASE(TimeLiteral);

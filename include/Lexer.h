@@ -45,7 +45,7 @@ private:
     Token* lexIncludeFileName();
 
     void lexStringLiteral(TokenInfo& info);
-    bool lexVectorBase(TokenInfo& info);
+    bool lexIntegerBase(TokenInfo& info);
 
     bool lexTrivia(Buffer<Trivia>& buffer, bool directiveMode);
     

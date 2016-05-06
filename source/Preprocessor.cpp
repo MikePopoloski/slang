@@ -48,7 +48,7 @@ Token* Preprocessor::next() {
     switch (token->kind) {
         case TokenKind::IntegerLiteral:
         case TokenKind::UnbasedUnsizedLiteral:
-        case TokenKind::IntegerVectorBase:
+        case TokenKind::IntegerBase:
         case TokenKind::RealLiteral:
             return handleNumericToken(token);
         default:
@@ -105,7 +105,7 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
 
     // if this assert fires, the user disregarded an EoF and kept calling next()
     ASSERT(!sourceStack.empty());
-    
+
     // Pull the next token from the active source (macro or file).
     // This is the common case.
     Token* token = nullptr;
@@ -174,7 +174,62 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
 }
 
 Token* Preprocessor::handleNumericToken(Token* token) {
-    return token;
+    switch (token->kind) {
+        case TokenKind::UnbasedUnsizedLiteral:
+            setUnbasedUnsizedValue(token);
+            return token;
+        case TokenKind::RealLiteral: {
+            auto time = checkTimeLiteral(token);
+            if (time)
+                return time;
+
+            setRealValue(token);
+            return token;
+        }
+        case TokenKind::IntegerLiteral:
+            if (peek(TokenKind::IntegerBase))
+                return buildBasedInteger(token, consume());
+            else {
+                auto time = checkTimeLiteral(token);
+                if (time)
+                    return time;
+
+                setIntegerValue(token);
+                return token;
+            }
+        case TokenKind::IntegerBase:
+            return buildBasedInteger(nullptr, token);
+        default:
+            return token;
+    }
+}
+
+void Preprocessor::setUnbasedUnsizedValue(Token* token) {
+    switch (token->rawText()[1]) {
+        case 'x':
+        case 'X':
+            token->setNumericValue(logic_t::x);
+            break;
+        case 'z':
+        case 'Z':
+        case '?':
+            token->setNumericValue(logic_t::z);
+            break;
+        case '0':
+            token->setNumericValue((logic_t)0);
+            break;
+        case '1':
+            token->setNumericValue((logic_t)1);
+            break;
+        default:
+            ASSERT(false && "Should never have any other unbased unsized literal types");
+    }
+}
+
+void Preprocessor::setIntegerValue(Token* token) {
+}
+
+void Preprocessor::setRealValue(Token* token) {
 }
 
 Trivia Preprocessor::handleIncludeDirective(Token* directive) {

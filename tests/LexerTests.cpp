@@ -359,7 +359,7 @@ TEST_CASE("Integer literal", "[lexer]") {
 void checkVectorBase(const std::string& s, uint8_t flagCheck) {
     auto& token = lexToken(s);
 
-    CHECK(token.kind == TokenKind::IntegerVectorBase);
+    CHECK(token.kind == TokenKind::IntegerBase);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
     CHECK(token.numericBaseFlags() == flagCheck);
     CHECK(diagnostics.empty());
