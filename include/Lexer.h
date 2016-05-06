@@ -33,6 +33,7 @@ private:
         uint32_t offset;
         SyntaxKind directiveKind;
         IdentifierType identifierType;
+        uint8_t numericBaseFlags;
     };
 
     TokenKind lexToken(TokenInfo& info, bool directiveMode);

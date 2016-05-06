@@ -553,6 +553,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     scanUnsignedNumber();
 
     // check if we have a fractional number here
+    info.numericBaseFlags = 0;
     switch (peek()) {
         case '.': {
             // fractional digits
@@ -601,6 +602,7 @@ bool Lexer::scanExponent() {
 }
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {
+    info.numericBaseFlags = 0;
     switch (peek()) {
         case '0':
         case '1':
@@ -627,6 +629,28 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
             // otherwise just an apostrophe token
             return TokenKind::Apostrophe;
     }
+}
+
+bool Lexer::lexVectorBase(TokenInfo& info) {
+    switch (peek()) {
+        case 'd':
+        case 'D':
+            info.numericBaseFlags = NumericBaseFlags::DecimalBase;
+            return true;
+        case 'b':
+        case 'B':
+            info.numericBaseFlags = NumericBaseFlags::BinaryBase;
+            return true;
+        case 'o':
+        case 'O':
+            info.numericBaseFlags = NumericBaseFlags::OctalBase;
+            return true;
+        case 'h':
+        case 'H':
+            info.numericBaseFlags = NumericBaseFlags::HexBase;
+            return true;
+    }
+    return false;
 }
 
 bool Lexer::lexTrivia(Buffer<Trivia>& buffer, bool directiveMode) {
