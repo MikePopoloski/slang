@@ -620,6 +620,7 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
             if (!lexVectorBase(info))
                 addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
 
+            info.numericBaseFlags |= NumericBaseFlags::IsSigned;
             return TokenKind::IntegerVectorBase;
 
         default:
@@ -635,18 +636,22 @@ bool Lexer::lexVectorBase(TokenInfo& info) {
     switch (peek()) {
         case 'd':
         case 'D':
+            advance();
             info.numericBaseFlags = NumericBaseFlags::DecimalBase;
             return true;
         case 'b':
         case 'B':
+            advance();
             info.numericBaseFlags = NumericBaseFlags::BinaryBase;
             return true;
         case 'o':
         case 'O':
+            advance();
             info.numericBaseFlags = NumericBaseFlags::OctalBase;
             return true;
         case 'h':
         case 'H':
+            advance();
             info.numericBaseFlags = NumericBaseFlags::HexBase;
             return true;
     }
@@ -816,7 +821,7 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue);
+            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), 0.0, info.numericBaseFlags);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);
         case TokenKind::Directive:

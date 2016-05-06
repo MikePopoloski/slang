@@ -46,7 +46,7 @@ TEST_CASE("External files", "[parser:full]") {
 
         SourceBuffer* buffer = sourceManager.readSource(p.path().string());
         REQUIRE(buffer);
-        parseFile(buffer);
+        //parseFile(buffer);
     }
 }
 

@@ -173,6 +173,10 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
     }
 }
 
+Token* Preprocessor::handleNumericToken(Token* token) {
+    return token;
+}
+
 Trivia Preprocessor::handleIncludeDirective(Token* directive) {
     // next token should be a filename
     Token* fileName = next(LexerMode::IncludeFileName);

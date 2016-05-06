@@ -29,11 +29,10 @@ public:
 private:
     struct TokenInfo {
         StringRef niceText;
-        NumericValue numericValue;
-        uint32_t offset;
-        SyntaxKind directiveKind;
-        IdentifierType identifierType;
-        uint8_t numericBaseFlags;
+        SyntaxKind directiveKind = SyntaxKind::Unknown;
+        IdentifierType identifierType = IdentifierType::Unknown;
+        uint32_t offset = 0;
+        uint8_t numericBaseFlags = 0;
     };
 
     TokenKind lexToken(TokenInfo& info, bool directiveMode);

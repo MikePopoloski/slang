@@ -55,7 +55,7 @@ struct NumericValue {
     };
     uint8_t type;
 
-    NumericValue() : type(Unknown), bit(0) {}
+    NumericValue() : type(Unknown), real(0.0) {}
     NumericValue(double real) : type(Real), real(real) {}
     NumericValue(int32_t integer) : type(Integer), integer(integer) {}
     NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
@@ -106,7 +106,7 @@ public:
     static Token* createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags = 0);
     static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);
     static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags = 0);
-    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags = 0);
+    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t baseFlags, uint8_t flags = 0);
     static Token* createDirective(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags = 0);
     static Token* missing(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia = nullptr);
 
