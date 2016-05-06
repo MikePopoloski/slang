@@ -821,7 +821,7 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), 0.0, info.numericBaseFlags);
+            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericBaseFlags);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);
         case TokenKind::Directive:
