@@ -347,13 +347,12 @@ TEST_CASE("String literal (unknown escape)", "[lexer]") {
     CHECK(diagnostics.last().code == DiagCode::UnknownEscapeCode);
 }
 
-TEST_CASE("Unsigned integer literal", "[lexer]") {
+TEST_CASE("Integer literal", "[lexer]") {
     auto& text = "19248";
     auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.numericFlags() == NumericTokenFlags::None);
     CHECK(diagnostics.empty());
 }
 
@@ -362,19 +361,19 @@ void checkVectorBase(const std::string& s, uint8_t flagCheck) {
 
     CHECK(token.kind == TokenKind::IntegerVectorBase);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
-    CHECK(token.numericFlags() == flagCheck);
+    CHECK(token.numericBaseFlags() == flagCheck);
     CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Vector bases", "[lexer]") {
-    checkVectorBase("'d", NumericTokenFlags::DecimalBase);
-    checkVectorBase("'sD", NumericTokenFlags::DecimalBase | NumericTokenFlags::IsSigned);
-    checkVectorBase("'Sb", NumericTokenFlags::BinaryBase | NumericTokenFlags::IsSigned);
-    checkVectorBase("'B", NumericTokenFlags::BinaryBase);
-    checkVectorBase("'so", NumericTokenFlags::OctalBase | NumericTokenFlags::IsSigned);
-    checkVectorBase("'O", NumericTokenFlags::OctalBase);
-    checkVectorBase("'h", NumericTokenFlags::HexBase);
-    checkVectorBase("'SH", NumericTokenFlags::HexBase | NumericTokenFlags::IsSigned);
+    checkVectorBase("'d", NumericBaseFlags::DecimalBase);
+    checkVectorBase("'sD", NumericBaseFlags::DecimalBase | NumericBaseFlags::IsSigned);
+    checkVectorBase("'Sb", NumericBaseFlags::BinaryBase | NumericBaseFlags::IsSigned);
+    checkVectorBase("'B", NumericBaseFlags::BinaryBase);
+    checkVectorBase("'so", NumericBaseFlags::OctalBase | NumericBaseFlags::IsSigned);
+    checkVectorBase("'O", NumericBaseFlags::OctalBase);
+    checkVectorBase("'h", NumericBaseFlags::HexBase);
+    checkVectorBase("'SH", NumericBaseFlags::HexBase | NumericBaseFlags::IsSigned);
 }
 
 TEST_CASE("Unbased unsized literal", "[lexer]") {
@@ -392,7 +391,6 @@ TEST_CASE("Real literal (fraction)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
     CHECK(diagnostics.empty());
 }
 
@@ -402,7 +400,6 @@ TEST_CASE("Real literal (missing fraction)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::MissingFractionalDigits);
 }
@@ -413,7 +410,6 @@ TEST_CASE("Real literal (exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.numericFlags() == NumericTokenFlags::None);
     CHECK(diagnostics.empty());
 }
 
@@ -423,7 +419,6 @@ TEST_CASE("Real literal (plus exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.numericFlags() == NumericTokenFlags::None);
     CHECK(diagnostics.empty());
 }
 
@@ -433,7 +428,6 @@ TEST_CASE("Real literal (minus exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.numericFlags() == NumericTokenFlags::None);
     CHECK(diagnostics.empty());
 }
 
@@ -443,7 +437,6 @@ TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.numericFlags() == NumericTokenFlags::IsFractional);
     CHECK(diagnostics.empty());
 }
 
@@ -453,7 +446,6 @@ TEST_CASE("Integer literal (illegitimate exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "32");
-    CHECK(token.numericFlags() == NumericTokenFlags::None);
     CHECK(diagnostics.empty());
 }
 

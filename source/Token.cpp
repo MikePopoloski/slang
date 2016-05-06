@@ -101,12 +101,17 @@ std::string Token::toString(uint8_t writeFlags) const {
     return std::string(buffer.begin(), buffer.end());
 }
 
-uint8_t Token::numericFlags() const {
-    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::IntegerVectorBase ||
-           kind == TokenKind::UnbasedUnsizedLiteral || kind == TokenKind::RealLiteral ||
-           kind == TokenKind::TimeLiteral);
+const NumericValue& Token::numericValue() const {
+    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::UnbasedUnsizedLiteral ||
+           kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
 
-    return ((NumericLiteralInfo*)(this + 1))->flags;
+    return ((NumericLiteralInfo*)(this + 1))->value;
+}
+
+uint8_t Token::numericBaseFlags() const {
+    ASSERT(kind == TokenKind::IntegerVectorBase);
+
+    return ((NumericLiteralInfo*)(this + 1))->baseFlags;
 }
 
 IdentifierType Token::identifierType() const {
@@ -189,12 +194,12 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLo
     return token;
 }
 
-Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t numericFlags, uint8_t flags) {
+Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags) {
     auto token = create(alloc, kind, location, trivia, flags);
 
     NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
     info->rawText = rawText;
-    info->flags = numericFlags;
+    info->value = value;
 
     return token;
 }
@@ -221,7 +226,7 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-            return createNumericLiteral(alloc, kind, location, trivia, nullptr, NumericTokenFlags::None, TokenFlags::Missing);
+            return createNumericLiteral(alloc, kind, location, trivia, nullptr, 0, TokenFlags::Missing);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:
             return createStringLiteral(alloc, kind, location, trivia, nullptr, nullptr, TokenFlags::Missing);

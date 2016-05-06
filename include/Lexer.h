@@ -29,8 +29,8 @@ public:
 private:
     struct TokenInfo {
         StringRef niceText;
+        NumericValue numericValue;
         uint32_t offset;
-        uint8_t numericFlags;
         SyntaxKind directiveKind;
         IdentifierType identifierType;
     };

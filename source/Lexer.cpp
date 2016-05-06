@@ -553,7 +553,6 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     scanUnsignedNumber();
 
     // check if we have a fractional number here
-    info.numericFlags = NumericTokenFlags::None;
     switch (peek()) {
         case '.': {
             // fractional digits
@@ -566,7 +565,6 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
             if (c == 'e' || c == 'E')
                 scanExponent();
 
-            info.numericFlags = NumericTokenFlags::IsFractional;
             return TokenKind::RealLiteral;
         }
         case 'e':
@@ -603,7 +601,6 @@ bool Lexer::scanExponent() {
 }
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {
-    info.numericFlags = NumericTokenFlags::None;
     switch (peek()) {
         case '0':
         case '1':
@@ -621,7 +618,6 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
             if (!lexVectorBase(info))
                 addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
 
-            info.numericFlags |= NumericTokenFlags::IsSigned;
             return TokenKind::IntegerVectorBase;
 
         default:
@@ -796,7 +792,7 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericFlags);
+            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);
         case TokenKind::Directive:
