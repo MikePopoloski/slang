@@ -16,12 +16,11 @@ enum class DiagCode : uint8_t {
     UnterminatedBlockComment,
     NestedBlockComment,
     SplitBlockCommentInDirective,
-    MissingExponentDigits,
+    ExpectedIntegerBaseAfterSigned,
     MissingFractionalDigits,
     OctalEscapeCodeTooBig,
     InvalidHexEscapeCode,
     UnknownEscapeCode,
-    RealExponentTooLarge,
     ExpectedIncludeFileName,
 
     // preprocessor

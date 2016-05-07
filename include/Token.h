@@ -28,6 +28,18 @@ struct SyntaxToStringFlags {
     };
 };
 
+struct NumericBaseFlags {
+    enum {
+        // first two bits are the base
+        DecimalBase,
+        OctalBase,
+        HexBase,
+        BinaryBase,
+
+        IsSigned = 1 << 2
+    };
+};
+
 enum class IdentifierType : uint8_t {
     Unknown,
     Normal,
@@ -41,10 +53,9 @@ struct NumericValue {
         int32_t integer;
         double real;
     };
-
     uint8_t type;
 
-    NumericValue() : type(Unknown), bit(0) {}
+    NumericValue() : type(Unknown), real(0.0) {}
     NumericValue(double real) : type(Real), real(real) {}
     NumericValue(int32_t integer) : type(Integer), integer(integer) {}
     NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
@@ -53,11 +64,7 @@ struct NumericValue {
         Unknown,
         Real,
         Integer,
-        UnsizedBit,
-        DecimalBase,
-        OctalBase,
-        BinaryBase,
-        HexBase
+        UnsizedBit
     };
 };
 
@@ -78,6 +85,8 @@ public:
     // for example, in string literals, escape sequences are converted appropriately
     StringRef valueText() const;
 
+    StringRef rawText() const;
+
     // convenience method that wraps writeTo
     std::string toString(uint8_t flags = 0) const;
 
@@ -87,8 +96,11 @@ public:
     // data accessors for specific kinds of tokens
     // these will generally assert if the kind is wrong
     const NumericValue& numericValue() const;
+    uint8_t numericBaseFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
+
+    void setNumericValue(const NumericValue& value);
 
     bool hasTrivia(TriviaKind triviaKind) const;
 
@@ -98,7 +110,7 @@ public:
     static Token* createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags = 0);
     static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);
     static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags = 0);
-    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t flags = 0);
+    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t baseFlags, uint8_t flags = 0);
     static Token* createDirective(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags = 0);
     static Token* missing(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia = nullptr);
 
@@ -122,6 +134,7 @@ private:
     struct NumericLiteralInfo {
         StringRef rawText;
         NumericValue value;
+        uint8_t baseFlags;
     };
 
     struct DirectiveInfo {
@@ -135,7 +148,6 @@ private:
 
 TokenKind getSystemKeywordKind(StringRef text);
 StringRef getTokenKindText(TokenKind kind);
-bool isNumericLiteralToken(TokenKind kind);
 const StringTable<TokenKind>* getKeywordTable();
 
 std::ostream& operator<<(std::ostream& os, TokenKind kind);
@@ -147,10 +159,11 @@ enum class TokenKind : uint16_t {
     Identifier,
     SystemIdentifier,
     StringLiteral,
-    UnsignedIntegerLiteral,
-    IntegerVectorBase,
+    IntegerLiteral,
+    IntegerBase,
     UnbasedUnsizedLiteral,
     RealLiteral,
+    TimeLiteral,
 
     // punctuation
     Apostrophe,

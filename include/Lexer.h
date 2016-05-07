@@ -29,10 +29,10 @@ public:
 private:
     struct TokenInfo {
         StringRef niceText;
-        NumericValue numericValue;
-        uint32_t offset;
-        SyntaxKind directiveKind;
-        IdentifierType identifierType;
+        SyntaxKind directiveKind = SyntaxKind::Unknown;
+        IdentifierType identifierType = IdentifierType::Unknown;
+        uint32_t offset = 0;
+        uint8_t numericBaseFlags = 0;
     };
 
     TokenKind lexToken(TokenInfo& info, bool directiveMode);
@@ -45,15 +45,16 @@ private:
     Token* lexIncludeFileName();
 
     void lexStringLiteral(TokenInfo& info);
-    void lexRealLiteral(TokenInfo& info, uint64_t value, int decPoint, int digits, bool exponent);
+    bool lexIntegerBase(TokenInfo& info);
 
     bool lexTrivia(Buffer<Trivia>& buffer, bool directiveMode);
-    char scanUnsignedNumber(char c, uint64_t& unsignedVal, int& digits);
     
     bool scanBlockComment(Buffer<Trivia>& buffer, bool directiveMode);
     void scanWhitespace(Buffer<Trivia>& buffer);
     void scanLineComment(Buffer<Trivia>& buffer);
     void scanIdentifier();
+    void scanUnsignedNumber();
+    bool scanExponent();
 
     Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer);
     void addTrivia(TriviaKind kind, Buffer<Trivia>& buffer);

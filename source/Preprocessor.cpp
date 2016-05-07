@@ -44,7 +44,16 @@ FileID Preprocessor::getCurrentFile() {
 }
 
 Token* Preprocessor::next() {
-    return next(LexerMode::Normal);
+    auto token = next(LexerMode::Normal);
+    switch (token->kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::IntegerBase:
+        case TokenKind::RealLiteral:
+            return handleNumericToken(token);
+        default:
+            return token;
+    }
 }
 
 Token* Preprocessor::next(LexerMode mode) {
@@ -96,7 +105,7 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
 
     // if this assert fires, the user disregarded an EoF and kept calling next()
     ASSERT(!sourceStack.empty());
-    
+
     // Pull the next token from the active source (macro or file).
     // This is the common case.
     Token* token = nullptr;
@@ -162,6 +171,65 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
             return token;
         }
     }
+}
+
+Token* Preprocessor::handleNumericToken(Token* token) {
+    switch (token->kind) {
+        case TokenKind::UnbasedUnsizedLiteral:
+            setUnbasedUnsizedValue(token);
+            return token;
+        case TokenKind::RealLiteral: {
+            auto time = checkTimeLiteral(token);
+            if (time)
+                return time;
+
+            setRealValue(token);
+            return token;
+        }
+        case TokenKind::IntegerLiteral:
+            if (peek(TokenKind::IntegerBase))
+                return buildBasedInteger(token, consume());
+            else {
+                auto time = checkTimeLiteral(token);
+                if (time)
+                    return time;
+
+                setIntegerValue(token);
+                return token;
+            }
+        case TokenKind::IntegerBase:
+            return buildBasedInteger(nullptr, token);
+        default:
+            return token;
+    }
+}
+
+void Preprocessor::setUnbasedUnsizedValue(Token* token) {
+    switch (token->rawText()[1]) {
+        case 'x':
+        case 'X':
+            token->setNumericValue(logic_t::x);
+            break;
+        case 'z':
+        case 'Z':
+        case '?':
+            token->setNumericValue(logic_t::z);
+            break;
+        case '0':
+            token->setNumericValue((logic_t)0);
+            break;
+        case '1':
+            token->setNumericValue((logic_t)1);
+            break;
+        default:
+            ASSERT(false && "Should never have any other unbased unsized literal types");
+    }
+}
+
+void Preprocessor::setIntegerValue(Token* token) {
+}
+
+void Preprocessor::setRealValue(Token* token) {
 }
 
 Trivia Preprocessor::handleIncludeDirective(Token* directive) {
@@ -457,10 +525,10 @@ Trivia Preprocessor::handleEndIfDirective(Token* directive) {
 
 Trivia Preprocessor::handleTimescaleDirective(Token* directive) {
     // TODO: error checking
-    auto timeUnit = expect(TokenKind::UnsignedIntegerLiteral);
+    auto timeUnit = expect(TokenKind::IntegerLiteral);
     auto timeUnitUnit = expect(TokenKind::Identifier);
     auto slash = expect(TokenKind::Slash);
-    auto timePrecision = expect(TokenKind::UnsignedIntegerLiteral);
+    auto timePrecision = expect(TokenKind::IntegerLiteral);
     auto timePrecisionUnit = expect(TokenKind::Identifier);
     auto eod = parseEndOfDirective();
 

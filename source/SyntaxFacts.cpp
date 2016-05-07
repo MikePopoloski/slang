@@ -42,7 +42,9 @@ SyntaxKind getUnaryPostfixExpression(TokenKind kind) {
 SyntaxKind getLiteralExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::StringLiteral: return SyntaxKind::StringLiteralExpression;
+        case TokenKind::IntegerLiteral: return SyntaxKind::IntegerLiteralExpression;
         case TokenKind::RealLiteral: return SyntaxKind::RealLiteralExpression;
+        case TokenKind::TimeLiteral: return SyntaxKind::TimeLiteralExpression;
         case TokenKind::NullKeyword: return SyntaxKind::NullLiteralExpression;
         case TokenKind::Dollar: return SyntaxKind::WildcardLiteralExpression;
         case TokenKind::OneStep: return SyntaxKind::OneStepLiteralExpression;
@@ -256,10 +258,9 @@ bool isPossibleExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::TaggedKeyword:
         case TokenKind::StringLiteral:
-        case TokenKind::UnsignedIntegerLiteral:
-        case TokenKind::UnbasedUnsizedLiteral:
-        case TokenKind::IntegerVectorBase:
+        case TokenKind::IntegerLiteral:
         case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
         case TokenKind::NullKeyword:
         case TokenKind::Dollar:
         case TokenKind::SystemIdentifier:

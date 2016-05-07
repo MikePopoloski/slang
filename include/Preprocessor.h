@@ -42,6 +42,14 @@ private:
     Token* next(LexerMode mode);
     Token* nextRaw(LexerMode mode);
 
+    Token* handleNumericToken(Token* token);
+    Token* checkTimeLiteral(Token* token);
+    Token* buildBasedInteger(Token* size, Token* base);
+    void setUnbasedUnsizedValue(Token* token);
+    void setIntegerValue(Token* token);
+    void setRealValue(Token* token);
+
+
     Trivia handleIncludeDirective(Token* directive);
     Trivia handleResetAllDirective(Token* directive);
     Trivia handleDefineDirective(Token* directive);
