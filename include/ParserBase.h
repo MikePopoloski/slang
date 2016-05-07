@@ -78,12 +78,13 @@ protected:
         Token*& openToken,
         ArrayRef<TokenOrSyntax>& list,
         Token*& closeToken,
+        DiagCode code,
         TParserFunc&& parseItem
     ) {
         openToken = expect(openKind);
 
         auto buffer = tosPool.get();
-        parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken, std::forward<TParserFunc>(parseItem));
+        parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken, code, std::forward<TParserFunc>(parseItem));
         list = buffer.copy(alloc);
     }
 
@@ -93,6 +94,7 @@ protected:
         TokenKind closeKind,
         TokenKind separatorKind,
         Token*& closeToken,
+        DiagCode code,
         TParserFunc&& parseItem
     ) {
         Trivia skippedTokens;
@@ -112,13 +114,13 @@ protected:
                             continue;
                         }
 
-                        if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens) == SkipAction::Abort)
+                        if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens, code) == SkipAction::Abort)
                             break;
                     }
                     // found the end
                     break;
                 }
-                else if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens) == SkipAction::Abort)
+                else if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens, code) == SkipAction::Abort)
                     break;
                 else
                     current = peek();
@@ -128,11 +130,18 @@ protected:
     }
 
     template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
-    SkipAction skipBadTokens(Trivia* skippedTokens) {
+    SkipAction skipBadTokens(Trivia* skippedTokens, DiagCode code) {
         auto tokens = tokenPool.get();
         auto result = SkipAction::Continue;
         auto current = peek();
+        bool error = false;
+
         while (!IsExpected(current->kind)) {
+            if (!error) {
+                addError(code, current->location);
+                error = true;
+            }
+
             if (current->kind == TokenKind::EndOfFile || IsAbort(current->kind)) {
                 result = SkipAction::Abort;
                 break;

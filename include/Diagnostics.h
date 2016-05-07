@@ -42,7 +42,24 @@ enum class DiagCode : uint8_t {
     ImplicitNotAllowed,
     MultipleTypesInDeclaration,
     DirectionOnInterfacePort,
-    ColonShouldBeDot
+    ColonShouldBeDot,
+    InvalidTokenInMemberList,
+    InvalidTokenInSequentialBlock,
+    ExpectedStatement,
+    ExpectedParameterPort,
+    ExpectedNonAnsiPort,
+    ExpectedAnsiPort,
+    ExpectedForInitializer,
+    ExpectedExpression,
+    ExpectedInsideElement,
+    ExpectedStreamExpression,
+    ExpectedArgument,
+    ExpectedVariableDeclarator,
+    ExpectedConditionalPattern,
+    ExpectedAttribute,
+    ExpectedPackageImport,
+    ExpectedHierarchicalInstantiation,
+    ExpectedPortConnection
 };
 
 std::ostream& operator<<(std::ostream& os, DiagCode code);

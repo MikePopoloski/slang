@@ -71,7 +71,24 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "ImplicitNotAllowed" },
     { "MultipleTypesInDeclaration" },
     { "DirectionOnInterfacePort" },
-    { "ColonShouldBeDot" }
+    { "ColonShouldBeDot" },
+    { "InvalidTokenInMemberList" },
+    { "InvalidTokenInSequentialBlock" },
+    { "ExpectedStatement" },
+    { "ExpectedParameterPort" },
+    { "ExpectedNonAnsiPort" },
+    { "ExpectedAnsiPort" },
+    { "ExpectedForInitializer" },
+    { "ExpectedExpression" },
+    { "ExpectedInsideElement" },
+    { "ExpectedStreamExpression" },
+    { "ExpectedArgument" },
+    { "ExpectedVariableDeclarator" },
+    { "ExpectedConditionalPattern" },
+    { "ExpectedAttribute" },
+    { "ExpectedPackageImport" },
+    { "ExpectedHierarchicalInstantiation" },
+    { "ExpectedPortConnection" }
 };
 
 static StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col);

@@ -75,6 +75,7 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
             openParen,
             parameters,
             closeParen,
+            DiagCode::ExpectedParameterPort,
             [this](bool) { return parseParameterPort(); }
         );
 
@@ -94,15 +95,27 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
         else if (isNonAnsiPort()) {
             Token* closeParen;
             auto buffer = tosPool.get();
-            parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, [this](bool) { return parseNonAnsiPort(); });
-
+            parseSeparatedList<isPossibleNonAnsiPort, isEndOfParenList>(
+                buffer,
+                TokenKind::CloseParenthesis,
+                TokenKind::Comma,
+                closeParen,
+                DiagCode::ExpectedNonAnsiPort,
+                [this](bool) { return parseNonAnsiPort(); }
+            );
             ports = alloc.emplace<NonAnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
         }
         else {
             Token* closeParen;
             auto buffer = tosPool.get();
-            parseSeparatedList<isPossibleAnsiPort, isEndOfParenList>(buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, [this](bool) { return parseAnsiPort(); });
-
+            parseSeparatedList<isPossibleAnsiPort, isEndOfParenList>(
+                buffer,
+                TokenKind::CloseParenthesis,
+                TokenKind::Comma,
+                closeParen,
+                DiagCode::ExpectedAnsiPort,
+                [this](bool) { return parseAnsiPort(); }
+            );
             ports = alloc.emplace<AnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
         }
     }
@@ -337,6 +350,7 @@ ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endTo
     auto members = nodePool.getAs<MemberSyntax*>();
     auto skipped = tokenPool.get();
     auto trivia = triviaPool.get();
+    bool error = false;
 
     while (true) {
         auto kind = peek()->kind;
@@ -346,20 +360,30 @@ ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endTo
         auto member = parseMember();
         if (!member) {
             // couldn't parse anything, skip a token and try again
-            skipped.append(consume());
+            auto token = consume();
+            skipped.append(token);
+            if (!error) {
+                addError(DiagCode::InvalidTokenInMemberList, token->location);
+                error = true;
+            }
         }
         else if (member->kind == SyntaxKind::IncompleteMember) {
             // we got what looked like the start of a member but nothing after it
             // skip it and try again
             reduceSkippedTokens(skipped, trivia);
             trivia.append(Trivia(TriviaKind::SkippedSyntax, member));
-            skipped.append(consume());
+
+            auto token = consume();
+            skipped.append(token);
+            addError(DiagCode::InvalidTokenInMemberList, token->location);
+            error = true;
         }
         else {
             // got a real member; make sure not to lose the trivia
             reduceSkippedTokens(skipped, trivia);
             prependTrivia(member, trivia);
             members.append(member);
+            error = false;
         }
     }
     
@@ -465,6 +489,7 @@ StatementSyntax* Parser::parseStatement() {
     if (isPossibleExpression(peek()->kind))
         return parseAssignmentStatement(label, attributes);
 
+    addError(DiagCode::ExpectedStatement, peek()->location);
     return nullptr;
 }
 
@@ -547,9 +572,9 @@ CaseStatementSyntax* Parser::parseCaseStatement(StatementLabelSyntax* label, Arr
                         TokenKind::Colon,
                         TokenKind::Comma,
                         colon,
+                        DiagCode::ExpectedInsideElement,
                         [this](bool) { return parseInsideElement(); }
                     );
-
                     itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
                 }
                 else {
@@ -574,9 +599,9 @@ CaseStatementSyntax* Parser::parseCaseStatement(StatementLabelSyntax* label, Arr
                         TokenKind::Colon,
                         TokenKind::Comma,
                         colon,
+                        DiagCode::ExpectedExpression,
                         [this](bool) { return parseExpression(); }
                     );
-
                     itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
                 }
                 else {
@@ -651,14 +676,28 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(StatementLabelSyntax* labe
 
     Token* semi1;
     auto initializers = tosPool.get();
-    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(initializers, TokenKind::Semicolon, TokenKind::Comma, semi1, [this](bool) { return parseForInitializer(); });
+    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
+        initializers,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        semi1,
+        DiagCode::ExpectedForInitializer,
+        [this](bool) { return parseForInitializer(); }
+    );
 
     auto stopExpr = parseExpression();
     auto semi2 = expect(TokenKind::Semicolon);
 
     Token* closeParen;
     auto steps = tosPool.get();
-    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(steps, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, [this](bool) { return parseExpression(); });
+    parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
+        steps,
+        TokenKind::CloseParenthesis,
+        TokenKind::Comma,
+        closeParen,
+        DiagCode::ExpectedExpression,
+        [this](bool) { return parseExpression(); }
+    );
 
     return alloc.emplace<ForLoopStatementSyntax>(
         label,
@@ -801,17 +840,27 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock(StatementLabelSynta
     auto buffer = nodePool.get();
     auto skipped = tokenPool.get();
     auto kind = peek()->kind;
+    bool error = false;
+
     while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
         SyntaxNode* newNode = nullptr;
         if (isVariableDeclaration())
             newNode = parseVariableDeclaration(parseAttributes());
         else if (isPossibleStatement(kind))
             newNode = parseStatement();
-        else
-            skipped.append(consume());
+        else {
+            auto token = consume();
+            skipped.append(token);
+            if (!error) {
+                addError(DiagCode::InvalidTokenInSequentialBlock, token->location);
+                error = true;
+            }
+        }
 
-        if (newNode)
+        if (newNode) {
             buffer.append(prependSkippedTokens(newNode, skipped));
+            error = false;
+        }
         kind = peek()->kind;
     }
 
@@ -1060,6 +1109,7 @@ ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
         openBrace,
         list,
         closeBrace,
+        DiagCode::ExpectedInsideElement,
         [this](bool) { return parseInsideElement(); }
     );
     return alloc.emplace<InsideExpressionSyntax>(expr, inside, openBrace, list, closeBrace);
@@ -1088,9 +1138,9 @@ ConcatenationExpressionSyntax* Parser::parseConcatenation(Token* openBrace, Expr
         TokenKind::CloseBrace,
         TokenKind::Comma,
         closeBrace,
+        DiagCode::ExpectedExpression,
         [this](bool) { return parseExpression(); }
     );
-
     return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
 }
 
@@ -1111,6 +1161,7 @@ StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token* 
         openBraceInner,
         list,
         closeBraceInner,
+        DiagCode::ExpectedStreamExpression,
         [this](bool) { return parseStreamExpression(); }
     );
 
@@ -1276,6 +1327,7 @@ ArgumentListSyntax* Parser::parseArgumentList() {
         openParen,
         list,
         closeParen,
+        DiagCode::ExpectedArgument,
         [this](bool) { return parseArgument(); }
     );
 
@@ -1339,6 +1391,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
         endKind,
         TokenKind::TripleAnd,
         end,
+        DiagCode::ExpectedConditionalPattern,
         [this](bool) { return parseConditionalPattern(); }
     );
 
@@ -1762,7 +1815,14 @@ ArrayRef<TokenOrSyntax> Parser::parseOneVariableDeclarator() {
 template<bool(*IsEnd)(TokenKind)>
 ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Token*& end) {
     auto buffer = tosPool.get();
-    parseSeparatedList<isIdentifierOrComma, IsEnd>(buffer, endKind, TokenKind::Comma, end, [this](bool first) { return parseVariableDeclarator<false>(first); });
+    parseSeparatedList<isIdentifierOrComma, IsEnd>(
+        buffer,
+        endKind,
+        TokenKind::Comma,
+        end,
+        DiagCode::ExpectedVariableDeclarator,
+        [this](bool first) { return parseVariableDeclarator<false>(first); }
+    );
 
     return buffer.copy(alloc);
 }
@@ -1785,6 +1845,7 @@ ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
             openParen,
             list,
             closeParen,
+            DiagCode::ExpectedAttribute,
             [this](bool) { return parseAttributeSpec(); }
         );
 
@@ -1817,6 +1878,7 @@ ArrayRef<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
             TokenKind::Semicolon,
             TokenKind::Comma,
             semi,
+            DiagCode::ExpectedPackageImport,
             [this](bool) { return parsePackageImportItem(); }
         );
 
@@ -1867,7 +1929,14 @@ HierarchyInstantiationSyntax* Parser::parseHierarchyInstantiation(ArrayRef<Attri
 
     Token* semi;
     auto items = tosPool.get();
-    parseSeparatedList<isIdentifierOrComma, isSemicolon>(items, TokenKind::Semicolon, TokenKind::Comma, semi, [this](bool) { return parseHierarchicalInstance(); });
+    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
+        items,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        semi,
+        DiagCode::ExpectedHierarchicalInstantiation,
+        [this](bool) { return parseHierarchicalInstance(); }
+    );
 
     return alloc.emplace<HierarchyInstantiationSyntax>(attributes, type, parameters, items.copy(alloc), semi);
 }
@@ -1887,6 +1956,7 @@ HierarchicalInstanceSyntax* Parser::parseHierarchicalInstance() {
         openParen,
         items,
         closeParen,
+        DiagCode::ExpectedPortConnection,
         [this](bool) { return parsePortConnection(); }
     );
 
