@@ -232,6 +232,14 @@ void Preprocessor::setIntegerValue(Token* token) {
 void Preprocessor::setRealValue(Token* token) {
 }
 
+Token* Preprocessor::checkTimeLiteral(Token* token) {
+    return nullptr;
+}
+
+Token* Preprocessor::buildBasedInteger(Token* size, Token* base) {
+    return base;
+}
+
 Trivia Preprocessor::handleIncludeDirective(Token* directive) {
     // next token should be a filename
     Token* fileName = next(LexerMode::IncludeFileName);
