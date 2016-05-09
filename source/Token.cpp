@@ -126,11 +126,6 @@ SyntaxKind Token::directiveKind() const {
     return ((DirectiveInfo*)(this + 1))->kind;
 }
 
-void Token::setNumericValue(const NumericValue& value) {
-    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::UnbasedUnsizedLiteral ||
-           kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
-}
-
 bool Token::hasTrivia(TriviaKind triviaKind) const {
     for (const auto& t : trivia) {
         if (t.kind == triviaKind)
@@ -200,12 +195,12 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLo
     return token;
 }
 
-Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t baseFlags, uint8_t flags) {
+Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t baseFlags, uint8_t flags) {
     auto token = create(alloc, kind, location, trivia, flags);
 
     NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
     info->rawText = rawText;
-    info->value = 0.0;
+    info->value = value;
     info->baseFlags = baseFlags;
 
     return token;
@@ -233,7 +228,7 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-            return createNumericLiteral(alloc, kind, location, trivia, nullptr, 0, TokenFlags::Missing);
+            return createNumericLiteral(alloc, kind, location, trivia, nullptr, 0.0, 0, TokenFlags::Missing);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:
             return createStringLiteral(alloc, kind, location, trivia, nullptr, nullptr, TokenFlags::Missing);

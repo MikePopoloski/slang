@@ -43,6 +43,7 @@ SyntaxKind getLiteralExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::StringLiteral: return SyntaxKind::StringLiteralExpression;
         case TokenKind::IntegerLiteral: return SyntaxKind::IntegerLiteralExpression;
+        case TokenKind::UnbasedUnsizedLiteral: return SyntaxKind::UnbasedUnsizedLiteralExpression;
         case TokenKind::RealLiteral: return SyntaxKind::RealLiteralExpression;
         case TokenKind::TimeLiteral: return SyntaxKind::TimeLiteralExpression;
         case TokenKind::NullKeyword: return SyntaxKind::NullLiteralExpression;
@@ -259,6 +260,8 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::TaggedKeyword:
         case TokenKind::StringLiteral:
         case TokenKind::IntegerLiteral:
+        case TokenKind::UnbasedUnsizedLiteral:
+        case TokenKind::IntegerBase:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
         case TokenKind::NullKeyword:
@@ -729,6 +732,8 @@ std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
         CASE(NullLiteralExpression);
         CASE(StringLiteralExpression);
         CASE(IntegerLiteralExpression);
+        CASE(UnbasedUnsizedLiteralExpression);
+        CASE(IntegerVectorExpression);
         CASE(RealLiteralExpression);
         CASE(TimeLiteralExpression);
         CASE(WildcardLiteralExpression);

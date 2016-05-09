@@ -79,6 +79,8 @@ enum class SyntaxKind : uint16_t {
     NullLiteralExpression,
     StringLiteralExpression,
     IntegerLiteralExpression,
+    IntegerVectorExpression,
+    UnbasedUnsizedLiteralExpression,
     RealLiteralExpression,
     TimeLiteralExpression,
     WildcardLiteralExpression,

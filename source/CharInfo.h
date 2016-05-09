@@ -98,3 +98,43 @@ inline int utf8SeqBytes(char c) {
     // 5 and 6 byte sequences are disallowed by the UTF-8 spec
     return 0;
 }
+
+static const int MaxMantissaDigits = 18;
+
+inline bool composeDouble(double fraction, int exp, double& result) {
+    static const double powersOf10[] = {
+        10.0,
+        100.0,
+        1.0e4,
+        1.0e8,
+        1.0e16,
+        1.0e32,
+        1.0e64,
+        1.0e128,
+        1.0e256
+    };
+
+    bool neg = false;
+    if (exp < 0) {
+        neg = true;
+        exp = -exp;
+    }
+
+    static const int MaxExponent = 511;
+    if (exp > MaxExponent)
+        exp = MaxExponent;
+
+    double dblExp = 1.0;
+    for (auto d = powersOf10; exp != 0; exp >>= 1, d++) {
+        if (exp & 0x1)
+            dblExp *= *d;
+    }
+
+    if (neg)
+        fraction /= dblExp;
+    else
+        fraction *= dblExp;
+
+    result = fraction;
+    return std::isfinite(result);
+}

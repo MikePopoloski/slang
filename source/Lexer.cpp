@@ -549,44 +549,74 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
         }
     }
 
+    // scan past leading zeros
+    uint32_t startOfNumberOffset = currentOffset();
+    while (peek() == '0')
+        advance();
+
     // scan past leading decimal digits; we know we have at least one if we got here
-    scanUnsignedNumber();
+    uint64_t value = 0;
+    int digits = 0;
+    scanUnsignedNumber(value, digits);
 
     // check if we have a fractional number here
     info.numericBaseFlags = 0;
     switch (peek()) {
         case '.': {
             // fractional digits
+            int decPoint = digits;
             advance();
             if (!isDecimalDigit(peek()))
                 addError(DiagCode::MissingFractionalDigits, currentOffset());
+            scanUnsignedNumber(value, digits);
 
-            scanUnsignedNumber();
+            uint64_t exp = 0;
+            bool neg = false;
+            uint32_t startOfExponent = currentOffset() + 1;
+
             char c = peek();
-            if (c == 'e' || c == 'E')
-                scanExponent();
-
+            if (c == 'e' || c == 'E') {
+                if (!scanExponent(exp, neg))
+                    addError(DiagCode::MissingExponentDigits, startOfExponent);
+            }
+            info.numericValue = computeRealValue(value, decPoint, digits, exp, neg, startOfExponent);
             return TokenKind::RealLiteral;
         }
         case 'e':
-        case 'E':
+        case 'E': {
             // Check if this is an exponent or just something like a hex digit.
             // We disambiguate by always choosing a real if possible; someone
             // downstream might need to fix it up later.
-            if (scanExponent())
+            uint64_t exp;
+            bool neg;
+            uint32_t startOfExponent = currentOffset() + 1;
+
+            if (scanExponent(exp, neg)) {
+                info.numericValue = computeRealValue(value, digits, digits, exp, neg, startOfExponent);
                 return TokenKind::RealLiteral;
-            else
-                return TokenKind::IntegerLiteral;
-        default:
-            return TokenKind::IntegerLiteral;
+            }
+            break;
+        }
     }
+
+    // normal signed numeric literal; check for overflow
+    if (value > INT32_MAX) {
+        value = INT32_MAX;
+        addError(DiagCode::SignedLiteralTooLarge, startOfNumberOffset);
+    }
+    info.numericValue = (int32_t)value;
+    return TokenKind::IntegerLiteral;
 }
 
-bool Lexer::scanExponent() {
+bool Lexer::scanExponent(uint64_t& value, bool& negative) {
+    value = 0;
+    negative = false;
+
     // skip over leading sign
     int index = 1;
     char c = peek(index);
     if (c == '+' || c == '-') {
+        negative = c == '-';
         index++;
         c = peek(index);
     }
@@ -596,22 +626,46 @@ bool Lexer::scanExponent() {
         return false;
 
     // otherwise, we have a real exponent, so skip remaining digits
+    int unused = 0;
     advance(index);
-    scanUnsignedNumber();
+    scanUnsignedNumber(value, unused);
     return true;
+}
+
+double Lexer::computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue, bool negative, uint32_t startOfExponent) {
+    int fracExp = decPoint - std::min(digits, MaxMantissaDigits);
+    int exp;
+    if (negative)
+        exp = fracExp - int(expValue);
+    else
+        exp = fracExp + int(expValue);
+
+    double result;
+    if (!composeDouble(double(value), exp, result))
+        addError(DiagCode::RealExponentTooLarge, startOfExponent);
+
+    return result;
 }
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {
     info.numericBaseFlags = 0;
-    switch (peek()) {
+    char c = peek();
+    switch (c) {
         case '0':
         case '1':
+            advance();
+            info.numericValue = (logic_t)(uint8_t)getDigitValue(c);
+            return TokenKind::UnbasedUnsizedLiteral;
         case 'x':
         case 'X':
+            advance();
+            info.numericValue = logic_t::x;
+            return TokenKind::UnbasedUnsizedLiteral;
         case 'Z':
         case 'z':
         case '?':
             advance();
+            info.numericValue = logic_t::z;
             return TokenKind::UnbasedUnsizedLiteral;
 
         case 's':
@@ -722,13 +776,21 @@ void Lexer::scanIdentifier() {
     }
 }
 
-void Lexer::scanUnsignedNumber() {
+void Lexer::scanUnsignedNumber(uint64_t& value, int& digits) {
     while (true) {
         char c = peek();
-        if (isDecimalDigit(c) || c == '_')
+        if (c == '_')
             advance();
-        else
+        else if (!isDecimalDigit(c))
             return;
+        else {
+            // After 18 digits stop caring. For normal integers we're going to truncate
+            // to 32-bits anyway. For reals, later digits won't have any effect on the result.
+            if (digits < MaxMantissaDigits)
+                value = (value * 10) + getDigitValue(c);
+            digits++;
+            advance();
+        }
     }
 }
 
@@ -821,7 +883,7 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericBaseFlags);
+            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue, info.numericBaseFlags);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);
         case TokenKind::Directive:

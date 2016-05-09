@@ -51,6 +51,9 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "invalid hexadecimal number" },
     { "unknown character escape sequence" },
     { "expected an include file name" },
+    { "literal exponent is too large" },
+    { "signed integer constant is too large (max is 2147483647)" },
+    { "expected exponent digits" },
     
     // preprocessor
     { "CouldNotOpenIncludeFile" },

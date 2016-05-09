@@ -44,16 +44,7 @@ FileID Preprocessor::getCurrentFile() {
 }
 
 Token* Preprocessor::next() {
-    auto token = next(LexerMode::Normal);
-    switch (token->kind) {
-        case TokenKind::IntegerLiteral:
-        case TokenKind::UnbasedUnsizedLiteral:
-        case TokenKind::IntegerBase:
-        case TokenKind::RealLiteral:
-            return handleNumericToken(token);
-        default:
-            return token;
-    }
+    return next(LexerMode::Normal);
 }
 
 Token* Preprocessor::next(LexerMode mode) {
@@ -171,73 +162,6 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
             return token;
         }
     }
-}
-
-Token* Preprocessor::handleNumericToken(Token* token) {
-    switch (token->kind) {
-        case TokenKind::UnbasedUnsizedLiteral:
-            setUnbasedUnsizedValue(token);
-            return token;
-        case TokenKind::RealLiteral: {
-            auto time = checkTimeLiteral(token);
-            if (time)
-                return time;
-
-            setRealValue(token);
-            return token;
-        }
-        case TokenKind::IntegerLiteral:
-            if (peek(TokenKind::IntegerBase))
-                return buildBasedInteger(token, consume());
-            else {
-                auto time = checkTimeLiteral(token);
-                if (time)
-                    return time;
-
-                setIntegerValue(token);
-                return token;
-            }
-        case TokenKind::IntegerBase:
-            return buildBasedInteger(nullptr, token);
-        default:
-            return token;
-    }
-}
-
-void Preprocessor::setUnbasedUnsizedValue(Token* token) {
-    switch (token->rawText()[1]) {
-        case 'x':
-        case 'X':
-            token->setNumericValue(logic_t::x);
-            break;
-        case 'z':
-        case 'Z':
-        case '?':
-            token->setNumericValue(logic_t::z);
-            break;
-        case '0':
-            token->setNumericValue((logic_t)0);
-            break;
-        case '1':
-            token->setNumericValue((logic_t)1);
-            break;
-        default:
-            ASSERT(false && "Should never have any other unbased unsized literal types");
-    }
-}
-
-void Preprocessor::setIntegerValue(Token* token) {
-}
-
-void Preprocessor::setRealValue(Token* token) {
-}
-
-Token* Preprocessor::checkTimeLiteral(Token* token) {
-    return nullptr;
-}
-
-Token* Preprocessor::buildBasedInteger(Token* size, Token* base) {
-    return base;
 }
 
 Trivia Preprocessor::handleIncludeDirective(Token* directive) {
