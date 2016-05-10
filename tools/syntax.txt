@@ -200,6 +200,11 @@ empty
 LiteralExpressionSyntax base=PrimaryExpressionSyntax
 token literal
 
+IntegerVectorExpressionSyntax base=PrimaryExpressionSyntax kind=IntegerVectorExpression
+token size
+token base
+token value
+
 EmptyQueueExpressionSyntax base=PrimaryExpressionSyntax kind=EmptyQueueExpression
 token openBrace
 token closeBrace

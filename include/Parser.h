@@ -20,6 +20,7 @@ public:
 private:    
     ExpressionSyntax* parseMinTypMaxExpression();
     ExpressionSyntax* parsePrimaryExpression();
+    ExpressionSyntax* parseIntegerExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
@@ -87,6 +88,8 @@ private:
     bool isNonAnsiPort();
     bool isPlainPortName();
     bool scanDimensionList(int& index);
+
+    bool checkVectorDigits(Token* token);
 
     template<bool AllowPatternMatch>
     ExpressionSyntax* parseSubExpression(int precedence);

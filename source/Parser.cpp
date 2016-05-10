@@ -965,15 +965,18 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
     TokenKind kind = peek()->kind;
     switch (kind) {
         case TokenKind::StringLiteral:
-        case TokenKind::IntegerLiteral:
         case TokenKind::RealLiteral:
-        case TokenKind::TimeLiteral:
+        case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::NullKeyword:
         case TokenKind::Dollar: {
             auto literal = consume();
             expr = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
             break;
         }
+        case TokenKind::IntegerLiteral:
+        case TokenKind::IntegerBase:
+            expr = parseIntegerExpression();
+            break;
         case TokenKind::SystemIdentifier: {
             auto identifier = consume();
             expr = alloc.emplace<KeywordNameSyntax>(SyntaxKind::SystemName, identifier);
@@ -1031,6 +1034,66 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             break;
     }
     return parsePostfixExpression(expr);
+}
+
+// TODO: move this
+bool isPossibleVectorDigit(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::Question:
+        case TokenKind::RealLiteral:
+        case TokenKind::Identifier:
+            return true;
+    }
+    return false;
+}
+
+ExpressionSyntax* Parser::parseIntegerExpression() {
+    Token* size = nullptr;
+    Token* base = nullptr;
+
+    auto token = consume();
+    if (token->kind == TokenKind::IntegerBase)
+        base = token;
+    else {
+        if (!peek(TokenKind::IntegerBase))
+            return alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::IntegerLiteralExpression, token);
+        size = token;
+        base = consume();
+    }
+
+    // at this point we expect to see vector digits, but they could be split out into other token types
+    // because of hex literals
+    auto first = peek();
+    if (!isPossibleVectorDigit(first->kind)) {
+        // TODO: error
+    }
+    else {
+        uint32_t length = first->rawText().length();
+        consume();
+
+        if (checkVectorDigits(first)) {
+            auto next = peek();
+            while (isPossibleVectorDigit(next->kind) && next->trivia.empty()) {
+                consume();
+                length += next->rawText().length();
+                if (!checkVectorDigits(next))
+                    break;
+
+                next = peek();
+            }
+        }
+
+        StringRef rawText(first->rawText().begin(), length);
+        NumericValue value;
+
+        auto digits = Token::createNumericLiteral(alloc, TokenKind::IntegerLiteral, first->location, first->trivia, rawText, value, 0);
+        return alloc.emplace<IntegerVectorExpressionSyntax>(size, base, digits);
+    }
+}
+
+bool Parser::checkVectorDigits(Token* token) {
+    return true;
 }
 
 ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
@@ -1421,28 +1484,9 @@ TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
     switch (peek()->kind) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash: {
+            // TODO: make sure primary expression ends up being the right type
             auto hash = consume();
-            ExpressionSyntax* delayValue;
-            switch (peek()->kind) {
-                case TokenKind::IntegerLiteral:
-                case TokenKind::RealLiteral:
-                case TokenKind::TimeLiteral:
-                case TokenKind::OneStep: {
-                    auto literal = consume();
-                    delayValue = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
-                    break;
-                }
-                case TokenKind::OpenParenthesis: {
-                    auto openParen = consume();
-                    auto expr = parseMinTypMaxExpression();
-                    auto closeParen = expect(TokenKind::CloseParenthesis);
-                    delayValue = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, closeParen);
-                    break;
-                }
-                default:
-                    delayValue = parseName();
-                    break;
-            }
+            auto delayValue = parsePrimaryExpression();
             SyntaxKind kind = hash->kind == TokenKind::Hash ? SyntaxKind::DelayControl : SyntaxKind::CycleDelay;
             return alloc.emplace<DelaySyntax>(kind, hash, delayValue);
         }

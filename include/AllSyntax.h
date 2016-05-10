@@ -858,6 +858,28 @@ protected:
     }
 };
 
+struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
+    Token* size;
+    Token* base;
+    Token* value;
+
+    IntegerVectorExpressionSyntax(Token* size, Token* base, Token* value) :
+        PrimaryExpressionSyntax(SyntaxKind::IntegerVectorExpression), size(size), base(base), value(value)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return size;
+            case 1: return base;
+            case 2: return value;
+            default: return nullptr;
+        }
+    }
+};
+
 struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
     Token* openBrace;
     Token* closeBrace;
