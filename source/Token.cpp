@@ -66,6 +66,7 @@ StringRef Token::rawText() const {
             case TokenKind::IntegerBase:
             case TokenKind::UnbasedUnsizedLiteral:
             case TokenKind::RealLiteral:
+            case TokenKind::TimeLiteral:
                 return ((NumericLiteralInfo*)(this + 1))->rawText;
             case TokenKind::Directive:
             case TokenKind::MacroUsage:
@@ -102,7 +103,8 @@ std::string Token::toString(uint8_t writeFlags) const {
 }
 
 const NumericValue& Token::numericValue() const {
-    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::UnbasedUnsizedLiteral || kind == TokenKind::RealLiteral);
+    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::UnbasedUnsizedLiteral ||
+           kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
 
     return ((NumericLiteralInfo*)(this + 1))->value;
 }
@@ -142,6 +144,7 @@ size_t Token::getAllocSize(TokenKind kind) {
         case TokenKind::IntegerBase:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
             return sizeof(Token) + sizeof(NumericLiteralInfo);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:
@@ -224,6 +227,7 @@ Token* Token::missing(BumpAllocator& alloc, TokenKind kind, SourceLocation locat
         case TokenKind::IntegerBase:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
             return createNumericLiteral(alloc, kind, location, trivia, nullptr, 0.0, 0, TokenFlags::Missing);
         case TokenKind::StringLiteral:
         case TokenKind::IncludeFileName:

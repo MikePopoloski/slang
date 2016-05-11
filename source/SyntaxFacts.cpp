@@ -45,6 +45,7 @@ SyntaxKind getLiteralExpression(TokenKind kind) {
         case TokenKind::IntegerLiteral: return SyntaxKind::IntegerLiteralExpression;
         case TokenKind::UnbasedUnsizedLiteral: return SyntaxKind::UnbasedUnsizedLiteralExpression;
         case TokenKind::RealLiteral: return SyntaxKind::RealLiteralExpression;
+        case TokenKind::TimeLiteral: return SyntaxKind::TimeLiteralExpression;
         case TokenKind::NullKeyword: return SyntaxKind::NullLiteralExpression;
         case TokenKind::Dollar: return SyntaxKind::WildcardLiteralExpression;
         case TokenKind::OneStep: return SyntaxKind::OneStepLiteralExpression;
@@ -262,6 +263,7 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::IntegerBase:
         case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
         case TokenKind::NullKeyword:
         case TokenKind::Dollar:
         case TokenKind::SystemIdentifier:

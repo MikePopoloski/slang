@@ -394,7 +394,7 @@ ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endTo
 }
 
 TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    /*auto kind = peek()->kind;
+    auto kind = peek()->kind;
     if (kind != TokenKind::TimeUnitKeyword && kind != TokenKind::TimePrecisionKeyword)
         return nullptr;
 
@@ -407,8 +407,7 @@ TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<Attribute
         divider = alloc.emplace<DividerClauseSyntax>(divide, expect(TokenKind::TimeLiteral));
     }
 
-    return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));*/
-    return nullptr;
+    return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
 }
 
 StatementSyntax* Parser::parseStatement() {
