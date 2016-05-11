@@ -4,12 +4,10 @@
 * Stop lexing if too many errors
 * Start of line check for directives
 * Test escaped identifiers are not keywords
-* Move numeric computation out of lexer
 
 [Preprocessor]
 * Different keyword sets
 * Finish macros
-* Conditional directives
 * Pragmas
 * Other directives
 * Controlling macros on includes

@@ -57,8 +57,6 @@ private:
     void scanUnsignedNumber(uint64_t& value, int& digits);
     bool scanExponent(uint64_t& value, bool& negative);
 
-    double computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue, bool negative, uint32_t startOfExponent);
-
     Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer);
     void addTrivia(TriviaKind kind, Buffer<Trivia>& buffer);
     void addError(DiagCode code, uint32_t offset);

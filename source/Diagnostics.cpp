@@ -51,8 +51,6 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "invalid hexadecimal number" },
     { "unknown character escape sequence" },
     { "expected an include file name" },
-    { "literal exponent is too large" },
-    { "signed integer constant is too large (max is 2147483647)" },
     { "expected exponent digits" },
     
     // preprocessor
@@ -186,8 +184,6 @@ std::ostream& operator<<(std::ostream& os, DiagCode code) {
         CASE(InvalidHexEscapeCode);
         CASE(UnknownEscapeCode);
         CASE(ExpectedIncludeFileName);
-        CASE(RealExponentTooLarge);
-        CASE(SignedLiteralTooLarge);
         CASE(MissingExponentDigits);
         CASE(CouldNotOpenIncludeFile);
         CASE(ExceededMaxIncludeDepth);

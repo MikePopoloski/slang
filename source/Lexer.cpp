@@ -579,7 +579,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
                 if (!scanExponent(exp, neg))
                     addError(DiagCode::MissingExponentDigits, startOfExponent);
             }
-            info.numericValue = computeRealValue(value, decPoint, digits, exp, neg, startOfExponent);
+            info.numericValue = computeRealValue(value, decPoint, digits, exp, neg);
             return TokenKind::RealLiteral;
         }
         case 'e':
@@ -589,10 +589,8 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
             // downstream might need to fix it up later.
             uint64_t exp;
             bool neg;
-            uint32_t startOfExponent = currentOffset() + 1;
-
             if (scanExponent(exp, neg)) {
-                info.numericValue = computeRealValue(value, digits, digits, exp, neg, startOfExponent);
+                info.numericValue = computeRealValue(value, digits, digits, exp, neg);
                 return TokenKind::RealLiteral;
             }
             break;
@@ -600,10 +598,8 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     }
 
     // normal signed numeric literal; check for overflow
-    if (value > INT32_MAX) {
+    if (value > INT32_MAX)
         value = INT32_MAX;
-        addError(DiagCode::SignedLiteralTooLarge, startOfNumberOffset);
-    }
     info.numericValue = (int32_t)value;
     return TokenKind::IntegerLiteral;
 }
@@ -630,21 +626,6 @@ bool Lexer::scanExponent(uint64_t& value, bool& negative) {
     advance(index);
     scanUnsignedNumber(value, unused);
     return true;
-}
-
-double Lexer::computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue, bool negative, uint32_t startOfExponent) {
-    int fracExp = decPoint - std::min(digits, MaxMantissaDigits);
-    int exp;
-    if (negative)
-        exp = fracExp - int(expValue);
-    else
-        exp = fracExp + int(expValue);
-
-    double result;
-    if (!composeDouble(double(value), exp, result))
-        addError(DiagCode::RealExponentTooLarge, startOfExponent);
-
-    return result;
 }
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {

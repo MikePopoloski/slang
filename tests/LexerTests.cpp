@@ -360,20 +360,6 @@ TEST_CASE("Integer literal", "[lexer]") {
     CHECK(value.integer == 19248);
 }
 
-TEST_CASE("Signed integer (overflow)", "[lexer]") {
-    auto& text = "99999999999999999";
-    auto& token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::IntegerLiteral);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::SignedLiteralTooLarge);
-
-    auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Integer);
-    CHECK(value.integer == INT32_MAX);
-}
-
 void checkVectorBase(const std::string& s, uint8_t flagCheck) {
     auto& token = lexToken(s);
 
@@ -492,8 +478,7 @@ TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::RealExponentTooLarge);
+    CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
     CHECK(value.type == NumericValue::Real);
@@ -506,8 +491,7 @@ TEST_CASE("Real literal (digit overflow)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::RealExponentTooLarge);
+    CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
     CHECK(value.type == NumericValue::Real);

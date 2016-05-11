@@ -138,3 +138,17 @@ inline bool composeDouble(double fraction, int exp, double& result) {
     result = fraction;
     return std::isfinite(result);
 }
+
+inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_t expValue, bool negative) {
+    int fracExp = decPoint - std::min(digits, MaxMantissaDigits);
+    int exp;
+    if (negative)
+        exp = fracExp - int(expValue);
+    else
+        exp = fracExp + int(expValue);
+
+    double result;
+    composeDouble(double(value), exp, result);
+
+    return result;
+}
