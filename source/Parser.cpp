@@ -968,6 +968,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
         case TokenKind::RealLiteral:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::NullKeyword:
+        case TokenKind::OneStep:
         case TokenKind::Dollar: {
             auto literal = consume();
             expr = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal->kind), literal);
