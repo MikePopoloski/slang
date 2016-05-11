@@ -85,7 +85,7 @@ TEST_CASE("Integer literal expression", "[parser:expressions]") {
     auto& text = "34'd56";
     auto expr = parse(text);
 
-    REQUIRE(expr->kind == SyntaxKind::IntegerLiteralExpression);
+    REQUIRE(expr->kind == SyntaxKind::IntegerVectorExpression);
     CHECK(expr->toString() == text);
     CHECK(diagnostics.empty());
 }

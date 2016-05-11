@@ -354,6 +354,24 @@ TEST_CASE("Integer literal", "[lexer]") {
     CHECK(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Integer);
+    CHECK(value.integer == 19248);
+}
+
+TEST_CASE("Signed integer (overflow)", "[lexer]") {
+    auto& text = "99999999999999999";
+    auto& token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::SignedLiteralTooLarge);
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Integer);
+    CHECK(value.integer == INT32_MAX);
 }
 
 void checkVectorBase(const std::string& s, uint8_t flagCheck) {
@@ -383,6 +401,10 @@ TEST_CASE("Unbased unsized literal", "[lexer]") {
     CHECK(token.kind == TokenKind::UnbasedUnsizedLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::UnsizedBit);
+    CHECK(value.bit.value == 1);
 }
 
 TEST_CASE("Real literal (fraction)", "[lexer]") {
@@ -392,6 +414,10 @@ TEST_CASE("Real literal (fraction)", "[lexer]") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(withinUlp(value.real, 32.57));
 }
 
 TEST_CASE("Real literal (missing fraction)", "[lexer]") {
@@ -402,6 +428,10 @@ TEST_CASE("Real literal (missing fraction)", "[lexer]") {
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.last().code == DiagCode::MissingFractionalDigits);
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(value.real == 32);
 }
 
 TEST_CASE("Real literal (exponent)", "[lexer]") {
@@ -411,6 +441,10 @@ TEST_CASE("Real literal (exponent)", "[lexer]") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(withinUlp(value.real, 32e57));
 }
 
 TEST_CASE("Real literal (plus exponent)", "[lexer]") {
@@ -420,6 +454,10 @@ TEST_CASE("Real literal (plus exponent)", "[lexer]") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(withinUlp(value.real, 32e57));
 }
 
 TEST_CASE("Real literal (minus exponent)", "[lexer]") {
@@ -429,6 +467,10 @@ TEST_CASE("Real literal (minus exponent)", "[lexer]") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(withinUlp(value.real, 32e-57));
 }
 
 TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
@@ -438,9 +480,41 @@ TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(withinUlp(value.real, 32.3456e57));
 }
 
-TEST_CASE("Integer literal (illegitimate exponent)", "[lexer]") {
+TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
+    auto& text = "32e9000";
+    auto& token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::RealExponentTooLarge);
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(std::isinf(value.real));
+}
+
+TEST_CASE("Real literal (digit overflow)", "[lexer]") {
+    auto& text = std::string(400, '9') + ".0";
+    auto& token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.last().code == DiagCode::RealExponentTooLarge);
+
+    auto& value = token.numericValue();
+    CHECK(value.type == NumericValue::Real);
+    CHECK(std::isinf(value.real));
+}
+
+TEST_CASE("Integer literal (not an exponent)", "[lexer]") {
     auto& text = "32e_9";
     auto& token = lexToken(text);
 

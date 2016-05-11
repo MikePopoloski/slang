@@ -186,6 +186,9 @@ std::ostream& operator<<(std::ostream& os, DiagCode code) {
         CASE(InvalidHexEscapeCode);
         CASE(UnknownEscapeCode);
         CASE(ExpectedIncludeFileName);
+        CASE(RealExponentTooLarge);
+        CASE(SignedLiteralTooLarge);
+        CASE(MissingExponentDigits);
         CASE(CouldNotOpenIncludeFile);
         CASE(ExceededMaxIncludeDepth);
         CASE(UnknownDirective);
@@ -202,6 +205,24 @@ std::ostream& operator<<(std::ostream& os, DiagCode code) {
         CASE(MultipleTypesInDeclaration);
         CASE(DirectionOnInterfacePort);
         CASE(ColonShouldBeDot);
+        CASE(InvalidTokenInMemberList);
+        CASE(InvalidTokenInSequentialBlock);
+        CASE(ExpectedStatement);
+        CASE(ExpectedParameterPort);
+        CASE(ExpectedNonAnsiPort);
+        CASE(ExpectedAnsiPort);
+        CASE(ExpectedForInitializer);
+        CASE(ExpectedExpression);
+        CASE(ExpectedInsideElement);
+        CASE(ExpectedStreamExpression);
+        CASE(ExpectedArgument);
+        CASE(ExpectedVariableDeclarator);
+        CASE(ExpectedConditionalPattern);
+        CASE(ExpectedAttribute);
+        CASE(ExpectedPackageImport);
+        CASE(ExpectedHierarchicalInstantiation);
+        CASE(ExpectedPortConnection);
+        CASE(ExpectedVectorDigits);
         default: ASSERT(false && "Missing case");
     }
     return os;
