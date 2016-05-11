@@ -580,6 +580,17 @@ bool isPossiblePortConnection(TokenKind kind) {
     }
 }
 
+bool isPossibleVectorDigit(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::Question:
+        case TokenKind::RealLiteral:
+        case TokenKind::Identifier:
+            return true;
+    }
+    return false;
+}
+
 bool isEndKeyword(TokenKind kind) {
     switch (kind) {
         case TokenKind::EndKeyword:

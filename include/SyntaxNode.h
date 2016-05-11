@@ -367,6 +367,7 @@ bool isPossibleAnsiPort(TokenKind kind);
 bool isPossibleNonAnsiPort(TokenKind kind);
 bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);
+bool isPossibleVectorDigit(TokenKind kind);
 
 std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
 

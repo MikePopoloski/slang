@@ -61,7 +61,8 @@ enum class DiagCode : uint8_t {
     ExpectedAttribute,
     ExpectedPackageImport,
     ExpectedHierarchicalInstantiation,
-    ExpectedPortConnection
+    ExpectedPortConnection,
+    ExpectedVectorDigits
 };
 
 std::ostream& operator<<(std::ostream& os, DiagCode code);

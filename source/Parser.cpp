@@ -1037,18 +1037,6 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
     return parsePostfixExpression(expr);
 }
 
-// TODO: move this
-bool isPossibleVectorDigit(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::IntegerLiteral:
-        case TokenKind::Question:
-        case TokenKind::RealLiteral:
-        case TokenKind::Identifier:
-            return true;
-    }
-    return false;
-}
-
 ExpressionSyntax* Parser::parseIntegerExpression() {
     Token* size = nullptr;
     Token* base = nullptr;
@@ -1067,33 +1055,35 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     // because of hex literals
     auto first = peek();
     if (!isPossibleVectorDigit(first->kind)) {
-        // TODO: error
+        addError(DiagCode::ExpectedVectorDigits, first->location);
+        return alloc.emplace<IntegerVectorExpressionSyntax>(size, base, Token::missing(alloc, TokenKind::IntegerLiteral, first->location));
     }
-    else {
-        uint32_t length = first->rawText().length();
-        consume();
 
-        if (checkVectorDigits(first)) {
-            auto next = peek();
-            while (isPossibleVectorDigit(next->kind) && next->trivia.empty()) {
-                consume();
-                length += next->rawText().length();
-                if (!checkVectorDigits(next))
-                    break;
+    uint32_t length = first->rawText().length();
+    consume();
 
-                next = peek();
-            }
+    if (checkVectorDigits(first)) {
+        auto next = peek();
+        while (isPossibleVectorDigit(next->kind) && next->trivia.empty()) {
+            consume();
+            length += next->rawText().length();
+            if (!checkVectorDigits(next))
+                break;
+
+            next = peek();
         }
-
-        StringRef rawText(first->rawText().begin(), length);
-        NumericValue value;
-
-        auto digits = Token::createNumericLiteral(alloc, TokenKind::IntegerLiteral, first->location, first->trivia, rawText, value, 0);
-        return alloc.emplace<IntegerVectorExpressionSyntax>(size, base, digits);
     }
+
+    // TODO: compute value
+    StringRef rawText(first->rawText().begin(), length);
+    NumericValue value;
+
+    auto digits = Token::createNumericLiteral(alloc, TokenKind::IntegerLiteral, first->location, first->trivia, rawText, value, 0);
+    return alloc.emplace<IntegerVectorExpressionSyntax>(size, base, digits);
 }
 
 bool Parser::checkVectorDigits(Token* token) {
+    // TODO:
     return true;
 }
 
