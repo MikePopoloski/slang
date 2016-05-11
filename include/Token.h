@@ -161,7 +161,6 @@ enum class TokenKind : uint16_t {
     IntegerBase,
     UnbasedUnsizedLiteral,
     RealLiteral,
-    TimeLiteral,
 
     // punctuation
     Apostrophe,

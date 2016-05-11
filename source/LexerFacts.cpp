@@ -700,7 +700,6 @@ std::ostream& operator<<(std::ostream& os, TokenKind kind) {
         CASE(IntegerBase);
         CASE(UnbasedUnsizedLiteral);
         CASE(RealLiteral);
-        CASE(TimeLiteral);
         CASE(Apostrophe);
         CASE(ApostropheOpenBrace);
         CASE(OpenBrace);
