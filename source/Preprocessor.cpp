@@ -455,16 +455,34 @@ Trivia Preprocessor::handleEndIfDirective(Token* directive) {
     return parseBranchDirective(directive, nullptr, taken);
 }
 
+void Preprocessor::expectTimescaleSpecifier(Token*& value, Token*& unit) {
+    // TODO: check for allowed values
+    auto token = peek();
+    if (token->kind == TokenKind::IntegerLiteral) {
+        value = consume();
+        unit = expect(TokenKind::Identifier);
+    }
+    else if (token->kind == TokenKind::TimeLiteral) {
+        // TODO: split the token
+        value = consume();
+        unit = nullptr;
+    }
+    else {
+        value = nullptr;
+        unit = nullptr;
+    }
+}
+
 Trivia Preprocessor::handleTimescaleDirective(Token* directive) {
     // TODO: error checking
-    auto timeUnit = expect(TokenKind::IntegerLiteral);
-    auto timeUnitUnit = expect(TokenKind::Identifier);
-    auto slash = expect(TokenKind::Slash);
-    auto timePrecision = expect(TokenKind::IntegerLiteral);
-    auto timePrecisionUnit = expect(TokenKind::Identifier);
-    auto eod = parseEndOfDirective();
+    Token *value, *valueUnit, *precision, *precisionUnit;
+    expectTimescaleSpecifier(value, valueUnit);
 
-    auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, timeUnit, timeUnitUnit, slash, timePrecision, timePrecisionUnit, eod);
+    auto slash = expect(TokenKind::Slash);
+    expectTimescaleSpecifier(precision, precisionUnit);
+
+    auto eod = parseEndOfDirective();
+    auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash, precision, precisionUnit, eod);
     return Trivia(TriviaKind::Directive, timescale);
 }
 

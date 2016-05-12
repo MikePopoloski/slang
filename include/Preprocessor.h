@@ -61,6 +61,8 @@ private:
     bool shouldTakeElseBranch(bool isElseIf, StringRef macroName);
     Trivia parseBranchDirective(Token* directive, Token* condition, bool taken);
 
+    void expectTimescaleSpecifier(Token*& unit, Token*& precision);
+
     Token* peek();
     Token* consume();
     Token* expect(TokenKind kind);
