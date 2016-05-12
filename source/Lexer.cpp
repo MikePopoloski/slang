@@ -550,17 +550,16 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     }
 
     // scan past leading zeros
-    uint32_t startOfNumberOffset = currentOffset();
     while (peek() == '0')
         advance();
 
-    // scan past leading decimal digits; we know we have at least one if we got here
+    // scan past decimal digits; we know we have at least one if we got here
     uint64_t value = 0;
     int digits = 0;
     scanUnsignedNumber(value, digits);
 
     // check if we have a fractional number here
-    info.numericBaseFlags = 0;
+    info.numericFlags = 0;
     switch (peek()) {
         case '.': {
             // fractional digits
@@ -570,17 +569,21 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
                 addError(DiagCode::MissingFractionalDigits, currentOffset());
             scanUnsignedNumber(value, digits);
 
+            TokenKind result = TokenKind::RealLiteral;
             uint64_t exp = 0;
             bool neg = false;
-            uint32_t startOfExponent = currentOffset() + 1;
 
             char c = peek();
             if (c == 'e' || c == 'E') {
+                uint32_t startOfExponent = currentOffset() + 1;
                 if (!scanExponent(exp, neg))
                     addError(DiagCode::MissingExponentDigits, startOfExponent);
             }
+            else if (lexTimeLiteral(info))
+                result = TokenKind::TimeLiteral;
+
             info.numericValue = computeRealValue(value, decPoint, digits, exp, neg);
-            return TokenKind::RealLiteral;
+            return result;
         }
         case 'e':
         case 'E': {
@@ -601,6 +604,10 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     if (value > INT32_MAX)
         value = INT32_MAX;
     info.numericValue = (int32_t)value;
+
+    if (lexTimeLiteral(info))
+        return TokenKind::TimeLiteral;
+
     return TokenKind::IntegerLiteral;
 }
 
@@ -629,7 +636,7 @@ bool Lexer::scanExponent(uint64_t& value, bool& negative) {
 }
 
 TokenKind Lexer::lexApostrophe(TokenInfo& info) {
-    info.numericBaseFlags = 0;
+    info.numericFlags = 0;
     char c = peek();
     switch (c) {
         case '0':
@@ -655,7 +662,7 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
             if (!lexIntegerBase(info))
                 addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
 
-            info.numericBaseFlags |= NumericBaseFlags::IsSigned;
+            info.numericFlags |= NumericTokenFlags::IsSigned;
             return TokenKind::IntegerBase;
 
         default:
@@ -672,24 +679,49 @@ bool Lexer::lexIntegerBase(TokenInfo& info) {
         case 'd':
         case 'D':
             advance();
-            info.numericBaseFlags = NumericBaseFlags::DecimalBase;
+            info.numericFlags = NumericTokenFlags::DecimalBase;
             return true;
         case 'b':
         case 'B':
             advance();
-            info.numericBaseFlags = NumericBaseFlags::BinaryBase;
+            info.numericFlags = NumericTokenFlags::BinaryBase;
             return true;
         case 'o':
         case 'O':
             advance();
-            info.numericBaseFlags = NumericBaseFlags::OctalBase;
+            info.numericFlags = NumericTokenFlags::OctalBase;
             return true;
         case 'h':
         case 'H':
             advance();
-            info.numericBaseFlags = NumericBaseFlags::HexBase;
+            info.numericFlags = NumericTokenFlags::HexBase;
             return true;
     }
+    return false;
+}
+
+bool Lexer::lexTimeLiteral(TokenInfo& info) {
+#define CASE(c, flag) \
+    case c: if (peek(1) == 's') { \
+        advance(2); \
+        info.numericFlags |= NumericTokenFlags::flag; \
+        return true; \
+    } break;
+
+    switch (peek()) {
+        case 's':
+            advance();
+            info.numericFlags |= NumericTokenFlags::Seconds;
+            return true;
+        CASE('m', Milliseconds);
+        CASE('u', Microseconds);
+        CASE('n', Nanoseconds);
+        CASE('p', Picoseconds);
+        CASE('f', Femtoseconds);
+        default:
+            break;
+    }
+#undef CASE
     return false;
 }
 
@@ -864,7 +896,7 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
-            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue, info.numericBaseFlags);
+            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue, info.numericFlags);
         case TokenKind::StringLiteral:
             return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);
         case TokenKind::Directive:

@@ -28,7 +28,7 @@ struct SyntaxToStringFlags {
     };
 };
 
-struct NumericBaseFlags {
+struct NumericTokenFlags {
     enum {
         // first two bits are the base
         DecimalBase,
@@ -36,7 +36,15 @@ struct NumericBaseFlags {
         HexBase,
         BinaryBase,
 
-        IsSigned = 1 << 2
+        IsSigned = 1 << 2,
+
+        // for time literals, specify the unit
+        Seconds,
+        Milliseconds,
+        Microseconds,
+        Nanoseconds,
+        Picoseconds,
+        Femtoseconds
     };
 };
 
@@ -96,7 +104,7 @@ public:
     // data accessors for specific kinds of tokens
     // these will generally assert if the kind is wrong
     const NumericValue& numericValue() const;
-    uint8_t numericBaseFlags() const;
+    uint8_t numericFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
 
@@ -108,7 +116,7 @@ public:
     static Token* createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags = 0);
     static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);
     static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags = 0);
-    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t baseFlags, uint8_t flags = 0);
+    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t numericFlags, uint8_t flags = 0);
     static Token* createDirective(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags = 0);
     static Token* missing(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia = nullptr);
 
@@ -132,7 +140,7 @@ private:
     struct NumericLiteralInfo {
         StringRef rawText;
         NumericValue value;
-        uint8_t baseFlags;
+        uint8_t numericFlags;
     };
 
     struct DirectiveInfo {

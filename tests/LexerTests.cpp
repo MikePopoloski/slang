@@ -365,19 +365,19 @@ void checkVectorBase(const std::string& s, uint8_t flagCheck) {
 
     CHECK(token.kind == TokenKind::IntegerBase);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
-    CHECK(token.numericBaseFlags() == flagCheck);
+    CHECK(token.numericFlags() == flagCheck);
     CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Vector bases", "[lexer]") {
-    checkVectorBase("'d", NumericBaseFlags::DecimalBase);
-    checkVectorBase("'sD", NumericBaseFlags::DecimalBase | NumericBaseFlags::IsSigned);
-    checkVectorBase("'Sb", NumericBaseFlags::BinaryBase | NumericBaseFlags::IsSigned);
-    checkVectorBase("'B", NumericBaseFlags::BinaryBase);
-    checkVectorBase("'so", NumericBaseFlags::OctalBase | NumericBaseFlags::IsSigned);
-    checkVectorBase("'O", NumericBaseFlags::OctalBase);
-    checkVectorBase("'h", NumericBaseFlags::HexBase);
-    checkVectorBase("'SH", NumericBaseFlags::HexBase | NumericBaseFlags::IsSigned);
+    checkVectorBase("'d", NumericTokenFlags::DecimalBase);
+    checkVectorBase("'sD", NumericTokenFlags::DecimalBase | NumericTokenFlags::IsSigned);
+    checkVectorBase("'Sb", NumericTokenFlags::BinaryBase | NumericTokenFlags::IsSigned);
+    checkVectorBase("'B", NumericTokenFlags::BinaryBase);
+    checkVectorBase("'so", NumericTokenFlags::OctalBase | NumericTokenFlags::IsSigned);
+    checkVectorBase("'O", NumericTokenFlags::OctalBase);
+    checkVectorBase("'h", NumericTokenFlags::HexBase);
+    checkVectorBase("'SH", NumericTokenFlags::HexBase | NumericTokenFlags::IsSigned);
 }
 
 TEST_CASE("Unbased unsized literal", "[lexer]") {
@@ -505,6 +505,24 @@ TEST_CASE("Integer literal (not an exponent)", "[lexer]") {
     CHECK(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "32");
     CHECK(diagnostics.empty());
+}
+
+void checkTimeLiteral(const std::string& s, uint8_t flagCheck) {
+    auto& token = lexToken(s);
+
+    CHECK(token.kind == TokenKind::TimeLiteral);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
+    CHECK(token.numericFlags() == flagCheck);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Time literals", "[lexer]") {
+    checkTimeLiteral("3.4s", NumericTokenFlags::Seconds);
+    checkTimeLiteral("9999ms", NumericTokenFlags::Milliseconds);
+    checkTimeLiteral("572.234us", NumericTokenFlags::Microseconds);
+    checkTimeLiteral("97ns", NumericTokenFlags::Nanoseconds);
+    checkTimeLiteral("42ps", NumericTokenFlags::Picoseconds);
+    checkTimeLiteral("42fs", NumericTokenFlags::Femtoseconds);
 }
 
 TEST_CASE("Misplaced directive char", "[lexer]") {

@@ -33,7 +33,7 @@ private:
         SyntaxKind directiveKind = SyntaxKind::Unknown;
         IdentifierType identifierType = IdentifierType::Unknown;
         uint32_t offset = 0;
-        uint8_t numericBaseFlags = 0;
+        uint8_t numericFlags = 0;
     };
 
     TokenKind lexToken(TokenInfo& info, bool directiveMode);
@@ -47,6 +47,7 @@ private:
 
     void lexStringLiteral(TokenInfo& info);
     bool lexIntegerBase(TokenInfo& info);
+    bool lexTimeLiteral(TokenInfo& info);
 
     bool lexTrivia(Buffer<Trivia>& buffer, bool directiveMode);
     

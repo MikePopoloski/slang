@@ -109,10 +109,10 @@ const NumericValue& Token::numericValue() const {
     return ((NumericLiteralInfo*)(this + 1))->value;
 }
 
-uint8_t Token::numericBaseFlags() const {
-    ASSERT(kind == TokenKind::IntegerBase);
+uint8_t Token::numericFlags() const {
+    ASSERT(kind == TokenKind::IntegerBase || kind == TokenKind::TimeLiteral);
 
-    return ((NumericLiteralInfo*)(this + 1))->baseFlags;
+    return ((NumericLiteralInfo*)(this + 1))->numericFlags;
 }
 
 IdentifierType Token::identifierType() const {
@@ -195,13 +195,13 @@ Token* Token::createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLo
     return token;
 }
 
-Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t baseFlags, uint8_t flags) {
+Token* Token::createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t numericFlags, uint8_t flags) {
     auto token = create(alloc, kind, location, trivia, flags);
 
     NumericLiteralInfo* info = (NumericLiteralInfo*)(token + 1);
     info->rawText = rawText;
     info->value = value;
-    info->baseFlags = baseFlags;
+    info->numericFlags = numericFlags;
 
     return token;
 }

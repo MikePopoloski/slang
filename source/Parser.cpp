@@ -966,6 +966,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
     switch (kind) {
         case TokenKind::StringLiteral:
         case TokenKind::RealLiteral:
+        case TokenKind::TimeLiteral:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::NullKeyword:
         case TokenKind::OneStep:
