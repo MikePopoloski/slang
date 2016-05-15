@@ -623,6 +623,23 @@ list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax endBlockName
 
+// ----- ASSERTIONS -----
+
+DeferredAssertionSyntax kind=DeferredAssertion
+token hash
+token zero
+token finalKeyword
+
+ActionBlockSyntax kind=ActionBlock
+StatementSyntax statement
+ElseClauseSyntax elseClause
+
+ImmediateAssertionStatementSyntax base=StatementSyntax
+token keyword
+DeferredAssertionSyntax delay
+ParenthesizedExpressionSyntax expr
+ActionBlockSyntax action
+
 // ----- MODULES -----
 
 PortListSyntax final=false

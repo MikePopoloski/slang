@@ -262,6 +262,13 @@ enum class SyntaxKind : uint16_t {
     NamedBlockClause,
     SequentialBlockStatement,
 
+    // assertions
+    DeferredAssertion,
+    ActionBlock,
+    ImmediateAssertStatement,
+    ImmediateAssumeStatement,
+    ImmediateCoverStatement,
+
     // assignment statements
     NonblockingAssignmentStatement,
     BlockingAssignmentStatement,

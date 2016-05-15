@@ -524,6 +524,12 @@ StatementSyntax* Parser::parseStatement() {
             return parseDisableStatement(label, attributes);
         case TokenKind::BeginKeyword:
             return parseSequentialBlock(label, attributes);
+        case TokenKind::AssertKeyword:
+            return parseAssertionStatement(SyntaxKind::ImmediateAssertStatement, label, attributes);
+        case TokenKind::AssumeKeyword:
+            return parseAssertionStatement(SyntaxKind::ImmediateAssumeStatement, label, attributes);
+        case TokenKind::CoverKeyword:
+            return parseAssertionStatement(SyntaxKind::ImmediateCoverStatement, label, attributes);
         case TokenKind::Semicolon:
             // TODO: no label allowed on semicolon
             return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
@@ -538,6 +544,14 @@ StatementSyntax* Parser::parseStatement() {
     return nullptr;
 }
 
+ElseClauseSyntax* Parser::parseElseClause() {
+    if (peek(TokenKind::ElseKeyword)) {
+        auto elseKeyword = consume();
+        return alloc.emplace<ElseClauseSyntax>(elseKeyword, parseStatement());
+    }
+    return nullptr;
+}
+
 ConditionalStatementSyntax* Parser::parseConditionalStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority) {
     auto ifKeyword = expect(TokenKind::IfKeyword);
     auto openParen = expect(TokenKind::OpenParenthesis);
@@ -545,12 +559,7 @@ ConditionalStatementSyntax* Parser::parseConditionalStatement(StatementLabelSynt
     Token* closeParen;
     auto predicate = parseConditionalPredicate(parseSubExpression<false>(0), TokenKind::CloseParenthesis, closeParen);
     auto statement = parseStatement();
-
-    ElseClauseSyntax* elseClause = nullptr;
-    if (peek(TokenKind::ElseKeyword)) {
-        auto elseKeyword = consume();
-        elseClause = alloc.emplace<ElseClauseSyntax>(elseKeyword, parseStatement());
-    }
+    auto elseClause = parseElseClause();
 
     return alloc.emplace<ConditionalStatementSyntax>(
         label,
@@ -868,6 +877,27 @@ StatementSyntax* Parser::parseDisableStatement(StatementLabelSyntax* label, Arra
 
     auto name = parseName();
     return alloc.emplace<DisableStatementSyntax>(label, attributes, disable, name, expect(TokenKind::Semicolon));
+}
+
+ImmediateAssertionStatementSyntax* Parser::parseAssertionStatement(SyntaxKind assertionKind, StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    // TODO: deferred assertions
+    auto keyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto expr = parseExpression();
+    auto parenExpr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, expect(TokenKind::CloseParenthesis));
+    
+    StatementSyntax* statement = nullptr;
+    ElseClauseSyntax* elseClause = nullptr;
+
+    if (peek(TokenKind::ElseKeyword))
+        elseClause = parseElseClause();
+    else {
+        statement = parseStatement();
+        elseClause = parseElseClause();
+    }
+
+    auto actionBlock = alloc.emplace<ActionBlockSyntax>(statement, elseClause);
+    return alloc.emplace<ImmediateAssertionStatementSyntax>(assertionKind, label, attributes, keyword, nullptr, parenExpr, actionBlock);
 }
 
 NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {

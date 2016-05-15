@@ -158,11 +158,11 @@ StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, u
         return nullptr;
 
     const char* start = buffer->data.begin() + location.offset - (col - 1);
-    uint32_t len = 0;
-    while (start[len] != '\n' && start[len] != '\r')
-        len++;
+    const char* curr = start;
+    while (*curr != '\n' && *curr != '\r' && *curr != '\0')
+        curr++;
 
-    return StringRef(start, len);
+    return StringRef(start, (uint32_t)(curr - start));
 }
 
 std::ostream& operator<<(std::ostream& os, DiagCode code) {

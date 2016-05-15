@@ -2622,6 +2622,76 @@ protected:
     }
 };
 
+// ----- ASSERTIONS -----
+
+struct DeferredAssertionSyntax : public SyntaxNode {
+    Token* hash;
+    Token* zero;
+    Token* finalKeyword;
+
+    DeferredAssertionSyntax(Token* hash, Token* zero, Token* finalKeyword) :
+        SyntaxNode(SyntaxKind::DeferredAssertion), hash(hash), zero(zero), finalKeyword(finalKeyword)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return hash;
+            case 1: return zero;
+            case 2: return finalKeyword;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ActionBlockSyntax : public SyntaxNode {
+    StatementSyntax* statement;
+    ElseClauseSyntax* elseClause;
+
+    ActionBlockSyntax(StatementSyntax* statement, ElseClauseSyntax* elseClause) :
+        SyntaxNode(SyntaxKind::ActionBlock), statement(statement), elseClause(elseClause)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return statement;
+            case 1: return elseClause;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ImmediateAssertionStatementSyntax : public StatementSyntax {
+    Token* keyword;
+    DeferredAssertionSyntax* delay;
+    ParenthesizedExpressionSyntax* expr;
+    ActionBlockSyntax* action;
+
+    ImmediateAssertionStatementSyntax(SyntaxKind kind, StatementLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax* expr, ActionBlockSyntax* action) :
+        StatementSyntax(kind, label, attributes), keyword(keyword), delay(delay), expr(expr), action(action)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return keyword;
+            case 3: return delay;
+            case 4: return expr;
+            case 5: return action;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- MODULES -----
 
 struct PortListSyntax : public SyntaxNode {
