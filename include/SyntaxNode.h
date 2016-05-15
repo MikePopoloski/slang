@@ -317,6 +317,8 @@ enum class SyntaxKind : uint16_t {
     HierarchicalInstance,
     HierarchyInstantiation,
     IncompleteMember,
+    FunctionDeclaration,
+    TaskDeclaration,
 
     // top level
     CompilationUnit

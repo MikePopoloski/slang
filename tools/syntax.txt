@@ -623,54 +623,6 @@ list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax endBlockName
 
-// ----- MEMBERS -----
-
-ProceduralBlockSyntax base=MemberSyntax
-token keyword
-StatementSyntax statement
-
-GenerateBlockSyntax base=MemberSyntax kind=GenerateBlock
-token keyword
-list<MemberSyntax> members
-token endgenerate
-
-DividerClauseSyntax kind=DividerClause
-token divide
-token value
-
-TimeUnitsDeclarationSyntax base=MemberSyntax kind=TimeUnitsDeclaration
-token keyword
-token time
-DividerClauseSyntax divider
-token semi
-
-PortConnectionSyntax final=false
-list<AttributeInstanceSyntax> attributes
-
-OrderedPortConnectionSyntax base=PortConnectionSyntax kind=OrderedPortConnection
-ExpressionSyntax expr
-
-NamedPortConnectionSyntax base=PortConnectionSyntax kind=NamedPortConnection
-token dot
-token name
-ParenthesizedExpressionSyntax connection
-
-WildcardPortConnectionSyntax base=PortConnectionSyntax kind=WildcardPortConnection
-token dotStar
-
-HierarchicalInstanceSyntax kind=HierarchicalInstance
-token name
-list<VariableDimensionSyntax> dimensions
-token openParen
-separated_list<PortConnectionSyntax> connections
-token closeParen
-
-HierarchyInstantiationSyntax base=MemberSyntax kind=HierarchyInstantiation
-token type
-ParameterValueAssignmentSyntax parameters
-separated_list<HierarchicalInstanceSyntax> instances
-token semi
-
 // ----- MODULES -----
 
 PortListSyntax final=false
@@ -762,6 +714,65 @@ NamedBlockClauseSyntax blockName
 ExternModuleSyntax kind=ExternModule
 token externKeyword
 ModuleHeaderSyntax header
+
+// ----- MEMBERS -----
+
+ProceduralBlockSyntax base=MemberSyntax
+token keyword
+StatementSyntax statement
+
+GenerateBlockSyntax base=MemberSyntax kind=GenerateBlock
+token keyword
+list<MemberSyntax> members
+token endgenerate
+
+DividerClauseSyntax kind=DividerClause
+token divide
+token value
+
+TimeUnitsDeclarationSyntax base=MemberSyntax kind=TimeUnitsDeclaration
+token keyword
+token time
+DividerClauseSyntax divider
+token semi
+
+PortConnectionSyntax final=false
+list<AttributeInstanceSyntax> attributes
+
+OrderedPortConnectionSyntax base=PortConnectionSyntax kind=OrderedPortConnection
+ExpressionSyntax expr
+
+NamedPortConnectionSyntax base=PortConnectionSyntax kind=NamedPortConnection
+token dot
+token name
+ParenthesizedExpressionSyntax connection
+
+WildcardPortConnectionSyntax base=PortConnectionSyntax kind=WildcardPortConnection
+token dotStar
+
+HierarchicalInstanceSyntax kind=HierarchicalInstance
+token name
+list<VariableDimensionSyntax> dimensions
+token openParen
+separated_list<PortConnectionSyntax> connections
+token closeParen
+
+HierarchyInstantiationSyntax base=MemberSyntax kind=HierarchyInstantiation
+token type
+ParameterValueAssignmentSyntax parameters
+separated_list<HierarchicalInstanceSyntax> instances
+token semi
+
+FunctionDeclarationSyntax base=MemberSyntax
+token keyword
+token lifetime
+DataTypeSyntax returnType
+NameSyntax name
+AnsiPortListSyntax portList
+token semi
+list<SyntaxNode> items
+token end
+NamedBlockClauseSyntax endBlockName
 
 // ----- TOP LEVEL -----
 

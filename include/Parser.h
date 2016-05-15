@@ -67,6 +67,7 @@ private:
     ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
     NonAnsiPortSyntax* parseNonAnsiPort();
     AnsiPortSyntax* parseAnsiPort();
+    AnsiPortListSyntax* parseAnsiPortList(Token* openParen);
     PortHeaderSyntax* parsePortHeader(Token* direction);
     PortDeclarationSyntax* parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseMember();
@@ -80,6 +81,9 @@ private:
     HierarchyInstantiationSyntax* parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes);
     HierarchicalInstanceSyntax* parseHierarchicalInstance();
     PortConnectionSyntax* parsePortConnection();
+    FunctionDeclarationSyntax* parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
+    Token* parseLifetime();
+    ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token*& end);
 
     bool isPortDeclaration();
     bool isNetDeclaration();
@@ -88,6 +92,7 @@ private:
     bool isNonAnsiPort();
     bool isPlainPortName();
     bool scanDimensionList(int& index);
+    bool scanQualifiedName(int& index);
 
     bool checkVectorDigits(Token* token);
 

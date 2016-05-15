@@ -26,3 +26,6 @@
 * Assignment patterns
 * Casting
 * Bullet proof integer expressions
+
+When skipping to an end keyword, break out if we encounter some other kind of end
+Include and macro directives should come *after* the stuff they insert into the stream

@@ -2622,227 +2622,6 @@ protected:
     }
 };
 
-// ----- MEMBERS -----
-
-struct ProceduralBlockSyntax : public MemberSyntax {
-    Token* keyword;
-    StatementSyntax* statement;
-
-    ProceduralBlockSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, StatementSyntax* statement) :
-        MemberSyntax(kind, attributes), keyword(keyword), statement(statement)
-    {
-        childCount += 2;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return statement;
-            default: return nullptr;
-        }
-    }
-};
-
-struct GenerateBlockSyntax : public MemberSyntax {
-    Token* keyword;
-    SyntaxList<MemberSyntax> members;
-    Token* endgenerate;
-
-    GenerateBlockSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SyntaxList<MemberSyntax> members, Token* endgenerate) :
-        MemberSyntax(SyntaxKind::GenerateBlock, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return &members;
-            case 3: return endgenerate;
-            default: return nullptr;
-        }
-    }
-};
-
-struct DividerClauseSyntax : public SyntaxNode {
-    Token* divide;
-    Token* value;
-
-    DividerClauseSyntax(Token* divide, Token* value) :
-        SyntaxNode(SyntaxKind::DividerClause), divide(divide), value(value)
-    {
-        childCount += 2;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return divide;
-            case 1: return value;
-            default: return nullptr;
-        }
-    }
-};
-
-struct TimeUnitsDeclarationSyntax : public MemberSyntax {
-    Token* keyword;
-    Token* time;
-    DividerClauseSyntax* divider;
-    Token* semi;
-
-    TimeUnitsDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* time, DividerClauseSyntax* divider, Token* semi) :
-        MemberSyntax(SyntaxKind::TimeUnitsDeclaration, attributes), keyword(keyword), time(time), divider(divider), semi(semi)
-    {
-        childCount += 4;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return time;
-            case 3: return divider;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
-};
-
-struct PortConnectionSyntax : public SyntaxNode {
-    SyntaxList<AttributeInstanceSyntax> attributes;
-
-    PortConnectionSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
-        SyntaxNode(kind), attributes(attributes)
-    {
-        childCount += 1;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override {
-        switch(index) {
-            case 0: return &attributes;
-            default: return nullptr;
-        }
-    }
-};
-
-struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
-    ExpressionSyntax* expr;
-
-    OrderedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr) :
-        PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(expr)
-    {
-        childCount += 1;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return &attributes;
-            case 1: return expr;
-            default: return nullptr;
-        }
-    }
-};
-
-struct NamedPortConnectionSyntax : public PortConnectionSyntax {
-    Token* dot;
-    Token* name;
-    ParenthesizedExpressionSyntax* connection;
-
-    NamedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* dot, Token* name, ParenthesizedExpressionSyntax* connection) :
-        PortConnectionSyntax(SyntaxKind::NamedPortConnection, attributes), dot(dot), name(name), connection(connection)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return &attributes;
-            case 1: return dot;
-            case 2: return name;
-            case 3: return connection;
-            default: return nullptr;
-        }
-    }
-};
-
-struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
-    Token* dotStar;
-
-    WildcardPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* dotStar) :
-        PortConnectionSyntax(SyntaxKind::WildcardPortConnection, attributes), dotStar(dotStar)
-    {
-        childCount += 1;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return &attributes;
-            case 1: return dotStar;
-            default: return nullptr;
-        }
-    }
-};
-
-struct HierarchicalInstanceSyntax : public SyntaxNode {
-    Token* name;
-    SyntaxList<VariableDimensionSyntax> dimensions;
-    Token* openParen;
-    SeparatedSyntaxList<PortConnectionSyntax> connections;
-    Token* closeParen;
-
-    HierarchicalInstanceSyntax(Token* name, SyntaxList<VariableDimensionSyntax> dimensions, Token* openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token* closeParen) :
-        SyntaxNode(SyntaxKind::HierarchicalInstance), name(name), dimensions(dimensions), openParen(openParen), connections(connections), closeParen(closeParen)
-    {
-        childCount += 5;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return name;
-            case 1: return &dimensions;
-            case 2: return openParen;
-            case 3: return &connections;
-            case 4: return closeParen;
-            default: return nullptr;
-        }
-    }
-};
-
-struct HierarchyInstantiationSyntax : public MemberSyntax {
-    Token* type;
-    ParameterValueAssignmentSyntax* parameters;
-    SeparatedSyntaxList<HierarchicalInstanceSyntax> instances;
-    Token* semi;
-
-    HierarchyInstantiationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token* semi) :
-        MemberSyntax(SyntaxKind::HierarchyInstantiation, attributes), type(type), parameters(parameters), instances(instances), semi(semi)
-    {
-        childCount += 4;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return &attributes;
-            case 1: return type;
-            case 2: return parameters;
-            case 3: return &instances;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
-};
-
 // ----- MODULES -----
 
 struct PortListSyntax : public SyntaxNode {
@@ -3219,6 +2998,262 @@ protected:
         switch(index) {
             case 0: return externKeyword;
             case 1: return header;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- MEMBERS -----
+
+struct ProceduralBlockSyntax : public MemberSyntax {
+    Token* keyword;
+    StatementSyntax* statement;
+
+    ProceduralBlockSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, StatementSyntax* statement) :
+        MemberSyntax(kind, attributes), keyword(keyword), statement(statement)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct GenerateBlockSyntax : public MemberSyntax {
+    Token* keyword;
+    SyntaxList<MemberSyntax> members;
+    Token* endgenerate;
+
+    GenerateBlockSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SyntaxList<MemberSyntax> members, Token* endgenerate) :
+        MemberSyntax(SyntaxKind::GenerateBlock, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return &members;
+            case 3: return endgenerate;
+            default: return nullptr;
+        }
+    }
+};
+
+struct DividerClauseSyntax : public SyntaxNode {
+    Token* divide;
+    Token* value;
+
+    DividerClauseSyntax(Token* divide, Token* value) :
+        SyntaxNode(SyntaxKind::DividerClause), divide(divide), value(value)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return divide;
+            case 1: return value;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TimeUnitsDeclarationSyntax : public MemberSyntax {
+    Token* keyword;
+    Token* time;
+    DividerClauseSyntax* divider;
+    Token* semi;
+
+    TimeUnitsDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* time, DividerClauseSyntax* divider, Token* semi) :
+        MemberSyntax(SyntaxKind::TimeUnitsDeclaration, attributes), keyword(keyword), time(time), divider(divider), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return time;
+            case 3: return divider;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct PortConnectionSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+
+    PortConnectionSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
+        SyntaxNode(kind), attributes(attributes)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override {
+        switch(index) {
+            case 0: return &attributes;
+            default: return nullptr;
+        }
+    }
+};
+
+struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
+    ExpressionSyntax* expr;
+
+    OrderedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr) :
+        PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct NamedPortConnectionSyntax : public PortConnectionSyntax {
+    Token* dot;
+    Token* name;
+    ParenthesizedExpressionSyntax* connection;
+
+    NamedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* dot, Token* name, ParenthesizedExpressionSyntax* connection) :
+        PortConnectionSyntax(SyntaxKind::NamedPortConnection, attributes), dot(dot), name(name), connection(connection)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return dot;
+            case 2: return name;
+            case 3: return connection;
+            default: return nullptr;
+        }
+    }
+};
+
+struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
+    Token* dotStar;
+
+    WildcardPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* dotStar) :
+        PortConnectionSyntax(SyntaxKind::WildcardPortConnection, attributes), dotStar(dotStar)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return dotStar;
+            default: return nullptr;
+        }
+    }
+};
+
+struct HierarchicalInstanceSyntax : public SyntaxNode {
+    Token* name;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+    Token* openParen;
+    SeparatedSyntaxList<PortConnectionSyntax> connections;
+    Token* closeParen;
+
+    HierarchicalInstanceSyntax(Token* name, SyntaxList<VariableDimensionSyntax> dimensions, Token* openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token* closeParen) :
+        SyntaxNode(SyntaxKind::HierarchicalInstance), name(name), dimensions(dimensions), openParen(openParen), connections(connections), closeParen(closeParen)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return name;
+            case 1: return &dimensions;
+            case 2: return openParen;
+            case 3: return &connections;
+            case 4: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct HierarchyInstantiationSyntax : public MemberSyntax {
+    Token* type;
+    ParameterValueAssignmentSyntax* parameters;
+    SeparatedSyntaxList<HierarchicalInstanceSyntax> instances;
+    Token* semi;
+
+    HierarchyInstantiationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token* semi) :
+        MemberSyntax(SyntaxKind::HierarchyInstantiation, attributes), type(type), parameters(parameters), instances(instances), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return type;
+            case 2: return parameters;
+            case 3: return &instances;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct FunctionDeclarationSyntax : public MemberSyntax {
+    Token* keyword;
+    Token* lifetime;
+    DataTypeSyntax* returnType;
+    NameSyntax* name;
+    AnsiPortListSyntax* portList;
+    Token* semi;
+    SyntaxList<SyntaxNode> items;
+    Token* end;
+    NamedBlockClauseSyntax* endBlockName;
+
+    FunctionDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* lifetime, DataTypeSyntax* returnType, NameSyntax* name, AnsiPortListSyntax* portList, Token* semi, SyntaxList<SyntaxNode> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
+        MemberSyntax(kind, attributes), keyword(keyword), lifetime(lifetime), returnType(returnType), name(name), portList(portList), semi(semi), items(items), end(end), endBlockName(endBlockName)
+    {
+        childCount += 9;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return lifetime;
+            case 3: return returnType;
+            case 4: return name;
+            case 5: return portList;
+            case 6: return semi;
+            case 7: return &items;
+            case 8: return end;
+            case 9: return endBlockName;
             default: return nullptr;
         }
     }

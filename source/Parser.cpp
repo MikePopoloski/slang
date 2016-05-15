@@ -50,14 +50,33 @@ ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> 
     );
 }
 
-ModuleHeaderSyntax* Parser::parseModuleHeader() {
-    auto moduleKeyword = consume();
-
-    Token* lifetime = nullptr;
+Token* Parser::parseLifetime() {
     auto kind = peek()->kind;
     if (kind == TokenKind::StaticKeyword || kind == TokenKind::AutomaticKeyword)
-        lifetime = consume();
+        return consume();
+    return nullptr;
+}
 
+AnsiPortListSyntax* Parser::parseAnsiPortList(Token* openParen) {
+    if (peek(TokenKind::CloseParenthesis))
+        return alloc.emplace<AnsiPortListSyntax>(openParen, nullptr, consume());
+
+    Token* closeParen;
+    auto buffer = tosPool.get();
+    parseSeparatedList<isPossibleAnsiPort, isEndOfParenList>(
+        buffer,
+        TokenKind::CloseParenthesis,
+        TokenKind::Comma,
+        closeParen,
+        DiagCode::ExpectedAnsiPort,
+        [this](bool) { return parseAnsiPort(); }
+    );
+    return alloc.emplace<AnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+}
+
+ModuleHeaderSyntax* Parser::parseModuleHeader() {
+    auto moduleKeyword = consume();
+    auto lifetime = parseLifetime();
     auto name = expect(TokenKind::Identifier);
     auto imports = parsePackageImports();
 
@@ -89,9 +108,6 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
             auto dotStar = consume();
             ports = alloc.emplace<WildcardPortListSyntax>(openParen, dotStar, expect(TokenKind::CloseParenthesis));
         }
-        else if (peek(TokenKind::CloseParenthesis)) {
-            ports = alloc.emplace<AnsiPortListSyntax>(openParen, nullptr, consume());
-        }
         else if (isNonAnsiPort()) {
             Token* closeParen;
             auto buffer = tosPool.get();
@@ -105,19 +121,8 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
             );
             ports = alloc.emplace<NonAnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
         }
-        else {
-            Token* closeParen;
-            auto buffer = tosPool.get();
-            parseSeparatedList<isPossibleAnsiPort, isEndOfParenList>(
-                buffer,
-                TokenKind::CloseParenthesis,
-                TokenKind::Comma,
-                closeParen,
-                DiagCode::ExpectedAnsiPort,
-                [this](bool) { return parseAnsiPort(); }
-            );
-            ports = alloc.emplace<AnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
-        }
+        else
+            ports = parseAnsiPortList(openParen);
     }
 
     auto semi = expect(TokenKind::Semicolon);
@@ -325,14 +330,13 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::IfKeyword:
         case TokenKind::CaseKeyword:
         case TokenKind::GenVarKeyword:
-        case TokenKind::InputKeyword:
-        case TokenKind::OutputKeyword:
-        case TokenKind::InOutKeyword:
-        case TokenKind::RefKeyword:
             break;
 
         case TokenKind::TaskKeyword:
+            return parseFunctionDeclaration(attributes, SyntaxKind::TaskDeclaration, TokenKind::EndTaskKeyword);
         case TokenKind::FunctionKeyword:
+            return parseFunctionDeclaration(attributes, SyntaxKind::FunctionDeclaration, TokenKind::EndFunctionKeyword);
+
         case TokenKind::CheckerKeyword:
             break;
     }
@@ -408,6 +412,48 @@ TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<Attribute
     }
 
     return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
+}
+
+FunctionDeclarationSyntax* Parser::parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind) {
+    auto keyword = consume();
+    auto lifetime = parseLifetime();
+
+    // check for a return type here
+    DataTypeSyntax* returnType = nullptr;
+    int index = 0;
+    if (!scanQualifiedName(index))
+        returnType = parseDataType(/* allowImplicit */ true);
+    else {
+        auto next = peek(index);
+        if (next->kind != TokenKind::Semicolon && next->kind != TokenKind::OpenParenthesis)
+            returnType = parseDataType(/* allowImplicit */ true);
+    }
+
+    auto name = parseName();
+
+    AnsiPortListSyntax* portList = nullptr;
+    if (peek(TokenKind::OpenParenthesis))
+        portList = parseAnsiPortList(consume());
+    
+    auto semi = expect(TokenKind::Semicolon);
+
+    Token* end;
+    auto items = parseBlockItems(endKind, end);
+    auto endBlockName = parseNamedBlockClause();
+
+    return alloc.emplace<FunctionDeclarationSyntax>(
+        functionKind,
+        attributes,
+        keyword,
+        lifetime,
+        returnType,
+        name,
+        portList,
+        semi,
+        items,
+        end,
+        endBlockName
+    );
 }
 
 StatementSyntax* Parser::parseStatement() {
@@ -832,18 +878,18 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
     return nullptr;
 }
 
-SequentialBlockStatementSyntax* Parser::parseSequentialBlock(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto begin = consume();
-    auto name = parseNamedBlockClause();
-
+ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token*& end) {
     auto buffer = nodePool.get();
     auto skipped = tokenPool.get();
     auto kind = peek()->kind;
     bool error = false;
 
     while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
+        // TODO: pull attribute parsing out
         SyntaxNode* newNode = nullptr;
-        if (isVariableDeclaration())
+        if (isPortDeclaration())
+            newNode = parsePortDeclaration(parseAttributes());
+        else if (isVariableDeclaration())
             newNode = parseVariableDeclaration(parseAttributes());
         else if (isPossibleStatement(kind))
             newNode = parseStatement();
@@ -862,10 +908,19 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock(StatementLabelSynta
         }
         kind = peek()->kind;
     }
+    
+    end = prependSkippedTokens(expect(endKind), skipped);
+    return buffer.copy(alloc);
+}
 
-    auto end = prependSkippedTokens(expect(TokenKind::EndKeyword), skipped);
+SequentialBlockStatementSyntax* Parser::parseSequentialBlock(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto begin = consume();
+    auto name = parseNamedBlockClause();
+
+    Token* end;
+    auto items = parseBlockItems(TokenKind::EndKeyword, end);
     auto endName = parseNamedBlockClause();
-    return alloc.emplace<SequentialBlockStatementSyntax>(label, attributes, begin, name, buffer.copy(alloc), end, endName);
+    return alloc.emplace<SequentialBlockStatementSyntax>(label, attributes, begin, name, items, end, endName);
 }
 
 ExpressionSyntax* Parser::parseExpression() {
@@ -1982,7 +2037,7 @@ bool Parser::isVariableDeclaration() {
     }
 
     // decide whether a statement is a declaration or the start of an expression
-    auto kind = peek(index++)->kind;
+    auto kind = peek(index)->kind;
     switch (kind) {
         // some tokens unambiguously start a declaration
         case TokenKind::VarKeyword:
@@ -2018,32 +2073,13 @@ bool Parser::isVariableDeclaration() {
         case TokenKind::ShortRealKeyword:
         case TokenKind::RealKeyword:
         case TokenKind::RealTimeKeyword: {
-            auto next = peek(index)->kind;
+            auto next = peek(++index)->kind;
             return next != TokenKind::Apostrophe && next != TokenKind::ApostropheOpenBrace;
         }
     }
 
-    // scan through tokens until we find one that disambiguates
-    if (kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName)
+    if (!scanQualifiedName(index))
         return false;
-
-    while (true) {
-        if (peek(index)->kind == TokenKind::Hash) {
-            // scan parameter value assignment
-            if (peek(++index)->kind != TokenKind::OpenParenthesis)
-                return false;
-            index++;
-            if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis))
-                return false;
-        }
-
-        if (peek(index)->kind != TokenKind::DoubleColon)
-            break;
-
-        index++;
-        if (peek(index++)->kind != TokenKind::Identifier)
-            return false;
-    }
 
     // might be a list of dimensions here
     if (!scanDimensionList(index))
@@ -2082,6 +2118,32 @@ bool Parser::scanDimensionList(int& index) {
     while (peek(index)->kind == TokenKind::OpenBracket) {
         index++;
         if (!scanTypePart<isNotInType>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
+            return false;
+    }
+    return true;
+}
+
+bool Parser::scanQualifiedName(int& index) {
+    auto next = peek(index);
+    if (next->kind != TokenKind::Identifier && next->kind != TokenKind::UnitSystemName)
+        return false;
+
+    index++;
+    while (true) {
+        if (peek(index)->kind == TokenKind::Hash) {
+            // scan parameter value assignment
+            if (peek(++index)->kind != TokenKind::OpenParenthesis)
+                return false;
+            index++;
+            if (!scanTypePart<isNotInType>(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis))
+                return false;
+        }
+
+        if (peek(index)->kind != TokenKind::DoubleColon)
+            break;
+
+        index++;
+        if (peek(index++)->kind != TokenKind::Identifier)
             return false;
     }
     return true;
