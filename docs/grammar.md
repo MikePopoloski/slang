@@ -684,18 +684,18 @@
 &nbsp;&nbsp;&nbsp;&nbsp;\| [cover_property_statement](#cover_property_statement)  
 &nbsp;&nbsp;&nbsp;&nbsp;\| [cover_sequence_statement](#cover_sequence_statement)  
 &nbsp;&nbsp;&nbsp;&nbsp;\| [restrict_property_statement](#restrict_property_statement)  
-&nbsp;&nbsp;&nbsp;&nbsp;[assert_property_statement](#assert_property_statement)`::=`  
+<a name="assert_property_statement"></a>assert\_property\_statement ::=  
 &nbsp;&nbsp;&nbsp;&nbsp;[assert](#assert) [property](#property) `(` [property_spec](#property_spec) `)` [action_block](#action_block)  
-&nbsp;&nbsp;&nbsp;&nbsp;[assume_property_statement](#assume_property_statement)`::=`  
+<a name="assume_property_statement"></a>assume\_property\_statement ::=  
 &nbsp;&nbsp;&nbsp;&nbsp;[assume](#assume) [property](#property) `(` [property_spec](#property_spec) `)` [action_block](#action_block)  
-&nbsp;&nbsp;&nbsp;&nbsp;[cover_property_statement](#cover_property_statement)`::=`  
+<a name="cover_property_statement"></a>cover\_property\_statement ::=  
 &nbsp;&nbsp;&nbsp;&nbsp;[cover](#cover) [property](#property) `(` [property_spec](#property_spec) `)` [statement_or_null](#statement_or_null)  
 <a name="expect_property_statement"></a>expect\_property\_statement ::=  
 &nbsp;&nbsp;&nbsp;&nbsp;[expect](#expect) `(` [property_spec](#property_spec) `)` [action_block](#action_block)  
-&nbsp;&nbsp;&nbsp;&nbsp;[cover_sequence_statement](#cover_sequence_statement)`::=`  
+<a name="cover_sequence_statement"></a>cover\_sequence\_statement ::=  
 &nbsp;&nbsp;&nbsp;&nbsp;[cover](#cover) [sequence](#sequence) `(` \[[clocking_event](#clocking_event) ] \[ [disable](#disable) [iff](#iff) `(` [expression_or_dist](#expression_or_dist) `)` ]  
 &nbsp;&nbsp;&nbsp;&nbsp;[sequence_expr](#sequence_expr) `)` [statement_or_null](#statement_or_null)  
-&nbsp;&nbsp;&nbsp;&nbsp;[restrict_property_statement](#restrict_property_statement)`::=`  
+<a name="restrict_property_statement"></a>restrict\_property\_statement ::=  
 &nbsp;&nbsp;&nbsp;&nbsp;[restrict](#restrict) [property](#property) `(` [property_spec](#property_spec) `)` `;`  
 <a name="property_instance"></a>property\_instance ::=  
 &nbsp;&nbsp;&nbsp;&nbsp;[ps_or_hierarchical_property_identifier](#ps_or_hierarchical_property_identifier) \[ `(` \[ [property_list_of_arguments](#property_list_of_arguments) ] `)` ]  
@@ -761,7 +761,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;\| [sync_reject_on](#sync_reject_on) `(` [expression_or_dist](#expression_or_dist) `)` [property_expr](#property_expr)  
 &nbsp;&nbsp;&nbsp;&nbsp;\| [property_instance](#property_instance)  
 &nbsp;&nbsp;&nbsp;&nbsp;\| [clocking_event](#clocking_event) [property_expr](#property_expr)  
-&nbsp;&nbsp;&nbsp;&nbsp;[property_case_item](#property_case_item)`::=`  
+<a name="property_case_item"></a>property\_case\_item ::=  
 &nbsp;&nbsp;&nbsp;&nbsp;[expression_or_dist](#expression_or_dist) \{ `,` [expression_or_dist](#expression_or_dist) } `:` [property_expr](#property_expr) \[ `;` ]  
 &nbsp;&nbsp;&nbsp;&nbsp;\| [default](#default) \[ `:` ] [property_expr](#property_expr) \[ `;` ]  
 <a name="sequence_declaration"></a>sequence\_declaration ::=  
@@ -893,7 +893,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;\| \[ [wildcard](#wildcard)] [bins_keyword](#bins_keyword) [bin_identifier](#bin_identifier) \[ \[ ] ] `=` [trans_list](#trans_list) \[ [iff](#iff) `(` [expression](#expression) `)` ]  
 &nbsp;&nbsp;&nbsp;&nbsp;\| [bins_keyword](#bins_keyword) [bin_identifier](#bin_identifier) \[ \[ \[ [covergroup_expression](#covergroup_expression) ] ] ] `=` [default](#default) \[ [iff](#iff) `(` [expression](#expression) `)` ]  
 &nbsp;&nbsp;&nbsp;&nbsp;\| [bins_keyword](#bins_keyword) [bin_identifier](#bin_identifier) `=` [default](#default) [sequence](#sequence) \[ [iff](#iff) `(` [expression](#expression) `)` ]  
-&nbsp;&nbsp;&nbsp;&nbsp;[bins_keyword](#bins_keyword)`::=` [bins](#bins) \| [illegal_bins](#illegal_bins) \| [ignore_bins](#ignore_bins)  
+<a name="bins_keyword"></a>bins\_keyword ::= [bins](#bins) \| [illegal_bins](#illegal_bins) \| [ignore_bins](#ignore_bins)  
 <a name="trans_list"></a>trans\_list ::= `(` [trans_set](#trans_set) `)` \{ `,` `(` [trans_set](#trans_set) `)` }  
 <a name="trans_set"></a>trans\_set ::= [trans_range_list](#trans_range_list) \{ `=>` [trans_range_list](#trans_range_list) }  
 <a name="trans_range_list"></a>trans\_range\_list ::=  

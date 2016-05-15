@@ -728,18 +728,18 @@ assert_property_statement
 | cover_property_statement
 | cover_sequence_statement
 | restrict_property_statement
-assert_property_statement::=
+assert_property_statement ::=
 assert property ( property_spec ) action_block
-assume_property_statement::=
+assume_property_statement ::=
 assume property ( property_spec ) action_block
-cover_property_statement::=
+cover_property_statement ::=
 cover property ( property_spec ) statement_or_null
 expect_property_statement ::=
 expect ( property_spec ) action_block
-cover_sequence_statement::=
+cover_sequence_statement ::=
 cover sequence ( [clocking_event ] [ disable iff ( expression_or_dist ) ]
 sequence_expr ) statement_or_null
-restrict_property_statement::=
+restrict_property_statement ::=
 restrict property ( property_spec ) ;
 property_instance ::=
  ps_or_hierarchical_property_identifier [ ( [ property_list_of_arguments ] ) ]
@@ -808,7 +808,7 @@ sequence_expr
 | sync_reject_on ( expression_or_dist ) property_expr
 | property_instance
 | clocking_event property_expr
-property_case_item::=
+property_case_item ::=
 expression_or_dist { , expression_or_dist } : property_expr [ ; ]
 | default [ : ] property_expr [ ; ]
 sequence_declaration ::=
@@ -949,7 +949,7 @@ set_covergroup_expression [ iff ( expression ) ]
 | [ wildcard] bins_keyword bin_identifier [ [ ] ] = trans_list [ iff ( expression ) ]
 | bins_keyword bin_identifier [ [ [ covergroup_expression ] ] ] = default [ iff ( expression ) ]
 | bins_keyword bin_identifier = default sequence [ iff ( expression ) ]
-bins_keyword::= bins | illegal_bins | ignore_bins
+bins_keyword ::= bins | illegal_bins | ignore_bins
 trans_list ::= ( trans_set ) { , ( trans_set ) }
 trans_set ::= trans_range_list { => trans_range_list }
 trans_range_list ::=
