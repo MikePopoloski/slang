@@ -19,21 +19,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\tests\FileTests.cpp" />
-    <ClCompile Include="..\..\..\tests\FullParserTests.cpp" />
-    <ClCompile Include="..\..\..\tests\LexerTests.cpp" />
-    <ClCompile Include="..\..\..\tests\main.cpp" />
-    <ClCompile Include="..\..\..\tests\ExpressionParsingTests.cpp" />
-    <ClCompile Include="..\..\..\tests\ModuleParsingTests.cpp" />
-    <ClCompile Include="..\..\..\tests\PreprocessorTests.cpp" />
-    <ClCompile Include="..\..\..\tests\StatementParsingTests.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\FileTests.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\FullParserTests.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\LexerTests.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\main.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\ExpressionParsingTests.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\ModuleParsingTests.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\PreprocessorTests.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\StatementParsingTests.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{32EA3BBF-5E07-4307-9C66-D1F0F9566EA9}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>tests</RootNamespace>
+    <RootNamespace>unit_tests</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
-    <ProjectName>tests</ProjectName>
+    <ProjectName>unit_tests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
