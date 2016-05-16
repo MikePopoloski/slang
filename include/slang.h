@@ -6,6 +6,7 @@
 #include <deque>
 #include <unordered_map>
 #include <filesystem>
+#include <set>
 
 #include "Debug.h"
 #include "Hash.h"

@@ -12,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit_tests", "unit_tests\un
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "file_tests", "file_tests\file_tests.vcxproj", "{CDF7D51D-8686-4218-8434-FCB075198CC5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{33FA8F93-1C32-4948-B286-7360668D1124}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -47,5 +49,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{32EA3BBF-5E07-4307-9C66-D1F0F9566EA9} = {33FA8F93-1C32-4948-B286-7360668D1124}
+		{CDF7D51D-8686-4218-8434-FCB075198CC5} = {33FA8F93-1C32-4948-B286-7360668D1124}
 	EndGlobalSection
 EndGlobal
