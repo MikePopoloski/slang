@@ -12,7 +12,7 @@ SourceManager& getSourceManager() {
     static SourceManager* sourceManager = nullptr;
     if (!sourceManager) {
         sourceManager = new SourceManager();
-        sourceManager->addUserDirectory("../../../tests/data/");
+        sourceManager->addUserDirectory("../../../tests/unit_tests/data/");
     }
     return *sourceManager;
 }
