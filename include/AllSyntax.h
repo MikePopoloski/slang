@@ -3098,6 +3098,25 @@ protected:
 
 // ----- MEMBERS -----
 
+struct EmptyMemberSyntax : public MemberSyntax {
+    Token* semi;
+
+    EmptyMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* semi) :
+        MemberSyntax(SyntaxKind::EmptyMember, attributes), semi(semi)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 struct ProceduralBlockSyntax : public MemberSyntax {
     Token* keyword;
     StatementSyntax* statement;

@@ -739,6 +739,9 @@ ModuleHeaderSyntax header
 
 // ----- MEMBERS -----
 
+EmptyMemberSyntax base=MemberSyntax kind=EmptyMember
+token semi
+
 ProceduralBlockSyntax base=MemberSyntax
 token keyword
 StatementSyntax statement

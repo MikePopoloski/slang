@@ -310,6 +310,7 @@ enum class SyntaxKind : uint16_t {
     ExternModule,
 
     // members
+    EmptyMember,
     InitialBlock,
     FinalBlock,
     AlwaysBlock,
@@ -324,7 +325,6 @@ enum class SyntaxKind : uint16_t {
     WildcardPortConnection,
     HierarchicalInstance,
     HierarchyInstantiation,
-    IncompleteMember,
     FunctionDeclaration,
     TaskDeclaration,
 

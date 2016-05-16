@@ -340,12 +340,14 @@ MemberSyntax* Parser::parseMember() {
 
         case TokenKind::CheckerKeyword:
             break;
+
+        case TokenKind::Semicolon:
+            return alloc.emplace<EmptyMemberSyntax>(attributes, consume());
     }
 
-    // if we got attributes but don't know what comes next, we have an "incomplete member"
+    // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (attributes.count())
-        // TODO: error
-        return alloc.emplace<MemberSyntax>(SyntaxKind::IncompleteMember, attributes);
+        return alloc.emplace<EmptyMemberSyntax>(attributes, consume());
 
     // otherwise, we got nothing and should just return null so that are caller will skip and try again.
     return nullptr;
@@ -371,17 +373,6 @@ ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endTo
                 addError(DiagCode::InvalidTokenInMemberList, token->location);
                 error = true;
             }
-        }
-        else if (member->kind == SyntaxKind::IncompleteMember) {
-            // we got what looked like the start of a member but nothing after it
-            // skip it and try again
-            reduceSkippedTokens(skipped, trivia);
-            trivia.append(Trivia(TriviaKind::SkippedSyntax, member));
-
-            auto token = consume();
-            skipped.append(token);
-            addError(DiagCode::InvalidTokenInMemberList, token->location);
-            error = true;
         }
         else {
             // got a real member; make sure not to lose the trivia
@@ -561,7 +552,7 @@ StatementSyntax* Parser::parseStatement() {
         return parseAssignmentStatement(label, attributes);
 
     addError(DiagCode::ExpectedStatement, peek()->location);
-    return nullptr;
+    return alloc.emplace<EmptyStatementSyntax>(label, attributes, expect(TokenKind::Semicolon));
 }
 
 ElseClauseSyntax* Parser::parseElseClause() {
