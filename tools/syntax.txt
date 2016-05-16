@@ -419,6 +419,11 @@ PortHeaderSyntax header
 separated_list<VariableDeclaratorSyntax> declarators
 token semi
 
+GenvarDeclarationSyntax base=MemberSyntax kind=GenvarDeclaration
+token keyword
+separated_list<IdentifierNameSyntax> identifiers
+token semi
+
 // ----- TYPES -----
 
 IntegerTypeSyntax base=DataTypeSyntax

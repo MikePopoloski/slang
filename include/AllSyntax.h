@@ -1786,6 +1786,29 @@ protected:
     }
 };
 
+struct GenvarDeclarationSyntax : public MemberSyntax {
+    Token* keyword;
+    SeparatedSyntaxList<IdentifierNameSyntax> identifiers;
+    Token* semi;
+
+    GenvarDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token* semi) :
+        MemberSyntax(SyntaxKind::GenvarDeclaration, attributes), keyword(keyword), identifiers(identifiers), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return &identifiers;
+            case 3: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- TYPES -----
 
 struct IntegerTypeSyntax : public DataTypeSyntax {

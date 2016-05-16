@@ -329,9 +329,10 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::ForKeyword:
         case TokenKind::IfKeyword:
         case TokenKind::CaseKeyword:
-        case TokenKind::GenVarKeyword:
             break;
 
+        case TokenKind::GenVarKeyword:
+            return parseGenvarDeclaration(attributes);
         case TokenKind::TaskKeyword:
             return parseFunctionDeclaration(attributes, SyntaxKind::TaskDeclaration, TokenKind::EndTaskKeyword);
         case TokenKind::FunctionKeyword:
@@ -454,6 +455,25 @@ FunctionDeclarationSyntax* Parser::parseFunctionDeclaration(ArrayRef<AttributeIn
         end,
         endBlockName
     );
+}
+
+GenvarDeclarationSyntax* Parser::parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    Token* keyword;
+    Token* semi;
+    ArrayRef<TokenOrSyntax> identifiers = nullptr;
+
+    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
+        TokenKind::GenVarKeyword,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        keyword,
+        identifiers,
+        semi,
+        DiagCode::ExpectedIdentifier,
+        [this](bool) { return alloc.emplace<IdentifierNameSyntax>(consume()); }
+    );
+
+    return alloc.emplace<GenvarDeclarationSyntax>(attributes, keyword, identifiers, semi);
 }
 
 StatementSyntax* Parser::parseStatement() {

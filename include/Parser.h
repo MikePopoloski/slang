@@ -86,6 +86,7 @@ private:
     FunctionDeclarationSyntax* parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
     Token* parseLifetime();
     ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token*& end);
+    GenvarDeclarationSyntax* parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
 
     bool isPortDeclaration();
     bool isNetDeclaration();

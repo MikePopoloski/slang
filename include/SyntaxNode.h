@@ -207,6 +207,7 @@ enum class SyntaxKind : uint16_t {
     DriveStrength,
     NetDeclaration,
     PortDeclaration,
+    GenvarDeclaration,
 
     // types
     BitType,
