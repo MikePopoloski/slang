@@ -157,7 +157,8 @@ void ParserBase::Window::addNew() {
             currentOffset = 0;
         }
         else {
-            Token** newBuffer = new Token*[capacity * 2];
+            capacity *= 2;
+            Token** newBuffer = new Token*[capacity];
             memcpy(newBuffer, buffer, count * sizeof(Token*));
 
             delete[] buffer;
