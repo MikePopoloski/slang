@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+#include <initializer_list>
+
 #include "StringRef.h"
 
 // Fixed-sized hash of string to value

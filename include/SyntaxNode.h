@@ -1,5 +1,12 @@
 #pragma once
 
+#include <cstdint>
+#include <cstddef>
+#include <string>
+
+#include "ArrayRef.h"
+#include "Buffer.h"
+
 namespace slang {
 
 class Token;

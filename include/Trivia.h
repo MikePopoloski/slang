@@ -1,7 +1,10 @@
 #pragma once
 
+#include <cstdint>
+
 #include "ArrayRef.h"
 #include "Buffer.h"
+#include "StringRef.h"
 #include "SyntaxNode.h"
 
 namespace slang {
@@ -20,8 +23,6 @@ enum class TriviaKind : uint8_t {
     SkippedSyntax,
     Directive
 };
-
-std::ostream& operator<<(std::ostream& os, TriviaKind kind);
 
 class Trivia {
 public:

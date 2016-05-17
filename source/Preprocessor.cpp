@@ -1,22 +1,8 @@
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <filesystem>
-#include <unordered_map>
-#include <deque>
-#include <set>
-
-#include "BumpAllocator.h"
-#include "Buffer.h"
-#include "BufferPool.h"
-#include "StringRef.h"
-#include "Diagnostics.h"
-#include "SourceManager.h"
-#include "Token.h"
-#include "Lexer.h"
-#include "StringTable.h"
 #include "Preprocessor.h"
+
 #include "AllSyntax.h"
+#include "BumpAllocator.h"
+#include "SourceManager.h"
 
 namespace slang {
 

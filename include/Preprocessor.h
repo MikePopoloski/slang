@@ -1,7 +1,22 @@
 #pragma once
 
+#include <cstdint>
+#include <deque>
+#include <unordered_map>
+
+#include "Buffer.h"
+#include "BufferPool.h"
+#include "Diagnostics.h"
+#include "Lexer.h"
+#include "SourceLocation.h"
+#include "StringRef.h"
+#include "SyntaxNode.h"
+#include "Token.h"
+
 namespace slang {
 
+class BumpAllocator;
+struct SourceBuffer;
 struct DefineDirectiveSyntax;
 struct MacroFormalArgumentSyntax;
 struct MacroActualArgumentListSyntax;

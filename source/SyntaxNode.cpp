@@ -1,12 +1,6 @@
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <algorithm>
-
-#include "Buffer.h"
-#include "StringRef.h"
-#include "Token.h"
 #include "SyntaxNode.h"
+
+#include "Token.h"
 
 namespace slang {
 

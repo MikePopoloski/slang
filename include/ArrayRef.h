@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+#include <cstddef>
+
 #include "Debug.h"
 
 // Wrapper around a {pointer, length} pair to an array on the heap.
@@ -10,11 +13,13 @@ template<typename T>
 class ArrayRef {
 public:
     ArrayRef(std::nullptr_t) :
-        ptr(nullptr), length(0) {
+        ptr(nullptr), length(0)
+    {
     }
 
     ArrayRef(const T* ptr, uint32_t length) :
-        ptr(ptr), length(length) {
+        ptr(ptr), length(length)
+    {
     }
 
     const T* begin() const { return ptr; }

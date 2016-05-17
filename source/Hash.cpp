@@ -1,7 +1,6 @@
-#include <cstdint>
-#include <cstdlib>
-
 #include "Hash.h"
+
+#include <cstdlib>
 
 namespace slang {
 

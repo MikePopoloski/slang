@@ -1,12 +1,6 @@
-#include <cstdint>
-#include <string>
-#include <algorithm>
-
-#include "Debug.h"
-#include "BumpAllocator.h"
-#include "StringRef.h"
-#include "Token.h"
 #include "Trivia.h"
+
+#include "Token.h"
 
 namespace slang {
 

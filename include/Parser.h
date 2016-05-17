@@ -1,11 +1,14 @@
 #pragma once
 
-#include "ParserBase.h"
 #include "AllSyntax.h"
+#include "ArrayRef.h"
+#include "ParserBase.h"
+#include "Token.h"
 
 namespace slang {
 
 class BumpAllocator;
+class Preprocessor;
 
 class Parser : ParserBase {
 public:

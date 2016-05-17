@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace slang {
 
 size_t hash_combine(size_t lhs, size_t rhs);

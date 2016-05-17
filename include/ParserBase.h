@@ -1,6 +1,14 @@
 #pragma once
 
+#include "Buffer.h"
+#include "BufferPool.h"
+#include "Diagnostics.h"
+#include "SourceLocation.h"
+#include "Token.h"
+
 namespace slang {
+
+class Preprocessor;
 
 // Base class for the Parser, which contains helpers and language-agnostic parsing routines.
 // Mostly this helps keep the main Parser smaller and more focused.

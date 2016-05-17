@@ -1,11 +1,14 @@
 #pragma once
 
+#include <cstdint>
+
 #include "ArrayRef.h"
-#include "Buffer.h"
 #include "BitVector.h"
+#include "Buffer.h"
 #include "Trivia.h"
-#include "StringTable.h"
 #include "SourceLocation.h"
+#include "StringRef.h"
+#include "StringTable.h"
 
 namespace slang {
 
@@ -155,8 +158,6 @@ private:
 TokenKind getSystemKeywordKind(StringRef text);
 StringRef getTokenKindText(TokenKind kind);
 const StringTable<TokenKind>* getKeywordTable();
-
-std::ostream& operator<<(std::ostream& os, TokenKind kind);
 
 enum class TokenKind : uint16_t {
     // general

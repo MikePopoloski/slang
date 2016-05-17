@@ -1,21 +1,7 @@
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <filesystem>
-#include <unordered_map>
-#include <deque>
-#include <set>
+#include "ParserBase.h"
 
 #include "BumpAllocator.h"
-#include "Buffer.h"
-#include "BufferPool.h"
-#include "StringRef.h"
-#include "SourceManager.h"
-#include "Token.h"
-#include "Diagnostics.h"
-#include "Lexer.h"
 #include "Preprocessor.h"
-#include "ParserBase.h"
 
 namespace slang {
 
