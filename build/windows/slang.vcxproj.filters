@@ -94,6 +94,9 @@
     <ClInclude Include="..\..\external\cppformat\format.h">
       <Filter>util\3ps</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\external\xxhash\xxhash.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
