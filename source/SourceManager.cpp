@@ -78,6 +78,28 @@ SourceBuffer* SourceManager::getBuffer(FileID id) {
     return bufferEntries[id.id].buffer;
 }
 
+SourceBuffer* SourceManager::assignText(StringRef text) {
+    return assignText("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">", text);
+}
+
+SourceBuffer* SourceManager::assignText(StringRef path, StringRef text) {
+    Buffer<char> buffer;
+    buffer.appendRange(text);
+    if (buffer.empty() || buffer.last() != '\0')
+        buffer.append('\0');
+
+    return assignBuffer(path, std::move(buffer));
+}
+
+SourceBuffer* SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) {
+    auto fullPath = fs::canonical(path.toString());
+    auto canonicalStr = fullPath.string();
+    auto it = lookupCache.find(canonicalStr);
+    ASSERT(it == lookupCache.end());
+
+    return cacheBuffer(std::move(canonicalStr), fullPath, std::move(buffer));
+}
+
 SourceBuffer* SourceManager::readSource(StringRef path) {
     // ensure that we have an absolute path
     ASSERT(path);
@@ -135,14 +157,17 @@ SourceBuffer* SourceManager::openCached(path_type fullPath) {
         return nullptr;
     }
 
-    // cache the file
-    FileID id = FileID::get(nextFileID++);
-    auto result = lookupCache.emplace(std::move(canonicalStr), std::make_unique<SourceBuffer>(id, std::move(buffer))).first->second.get();
-    
+    return cacheBuffer(std::move(canonicalStr), fullPath, std::move(buffer));
+}
+
+SourceBuffer* SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& path, Buffer<char>&& buffer) {
+    auto id = FileID::get(nextFileID++);
+    auto result = lookupCache.emplace(std::move(canonicalPath), std::make_unique<SourceBuffer>(id, std::move(buffer))).first->second.get();
+
     BufferEntry entry;
     entry.buffer = result;
-    entry.name = fullPath.filename().string();
-    entry.directory = &*directories.insert(fullPath.remove_filename()).first;
+    entry.name = path.filename().string();
+    entry.directory = &*directories.insert(path.remove_filename()).first;
     bufferEntries.push_back(std::move(entry));
 
     return result;

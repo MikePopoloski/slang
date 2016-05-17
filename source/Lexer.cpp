@@ -22,24 +22,27 @@ namespace slang {
 
 SyntaxKind getDirectiveKind(StringRef directive);
 
-Lexer::Lexer(FileID file, SourceText source, BumpAllocator& alloc, Diagnostics& diagnostics) :
+Lexer::Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
     diagnostics(diagnostics),
-    startPointer(source.begin()),
-    sourceBuffer(source.begin()),
-    sourceEnd(source.end()),
+    startPointer(buffer->data.begin()),
+    sourceBuffer(buffer->data.begin()),
+    sourceEnd(buffer->data.end()),
     marker(nullptr),
-    file(file)
+    file(buffer->id)
 {
+    ASSERT(buffer->data.count());
+    ASSERT(buffer->data.last() == '\0');
+
     // detect BOMs so we can give nice errors for invaild encoding
-    if (source.length() >= 2) {
+    if (buffer->data.count() >= 2) {
         const unsigned char* ubuf = reinterpret_cast<const unsigned char*>(sourceBuffer);
         if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) ||
             (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
             addError(DiagCode::UnicodeBOM, 0);
             advance(2);
         }
-        else if (source.length() >= 3) {
+        else if (buffer->data.count() >= 3) {
             if (ubuf[0] == 0xEF &&
                 ubuf[1] == 0xBB &&
                 ubuf[2] == 0xBF) {

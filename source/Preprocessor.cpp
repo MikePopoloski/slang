@@ -28,9 +28,14 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, D
     keywordTable = getKeywordTable();
 }
 
-void Preprocessor::pushSource(SourceText source, FileID file) {
+void Preprocessor::pushSource(StringRef source) {
+    auto buffer = sourceManager.assignText(source);
+    pushSource(buffer);
+}
+
+void Preprocessor::pushSource(const SourceBuffer* buffer) {
     ASSERT(sourceStack.size() < MaxSourceDepth);
-    auto lexer = alloc.emplace<Lexer>(file, source, alloc, diagnostics);
+    auto lexer = alloc.emplace<Lexer>(buffer, alloc, diagnostics);
     sourceStack.push_back(lexer);
 }
 
@@ -181,7 +186,7 @@ Trivia Preprocessor::handleIncludeDirective(Token* directive) {
         else if (sourceStack.size() >= MaxSourceDepth)
             addError(DiagCode::ExceededMaxIncludeDepth);
         else
-            pushSource(buffer->data, buffer->id);
+            pushSource(buffer);
     }
 
     auto syntax = alloc.emplace<IncludeDirectiveSyntax>(directive, fileName, end);

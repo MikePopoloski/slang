@@ -28,7 +28,8 @@ class Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-    void pushSource(SourceText source, FileID file = FileID());
+    void pushSource(StringRef source);
+    void pushSource(const SourceBuffer* buffer);
 
     Token* next();
 

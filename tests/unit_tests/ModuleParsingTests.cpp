@@ -9,7 +9,7 @@ BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceManager sourceManager;
 
-ModuleDeclarationSyntax* parse(const SourceText& text) {
+ModuleDeclarationSyntax* parse(StringRef text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);

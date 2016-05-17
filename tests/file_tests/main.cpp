@@ -15,7 +15,7 @@ Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 
 void parseFile(const SourceBuffer* buffer) {
     diagnostics.clear();
-    preprocessor.pushSource(buffer->data, buffer->id);
+    preprocessor.pushSource(buffer);
     Parser parser(preprocessor);
 
     auto tree = parser.parseCompilationUnit();

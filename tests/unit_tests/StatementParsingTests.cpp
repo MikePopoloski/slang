@@ -9,7 +9,7 @@ BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceManager sourceManager;
 
-StatementSyntax* parse(const SourceText& text) {
+StatementSyntax* parse(StringRef text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
@@ -130,7 +130,7 @@ TEST_CASE("Disable fork statement", "[parser:statements]") {
     CHECK(diagnostics.empty());
 }
 
-void testTimingControl(const SourceText& text, SyntaxKind kind) {
+void testTimingControl(StringRef text, SyntaxKind kind) {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == SyntaxKind::TimingControlStatement);
@@ -152,7 +152,7 @@ TEST_CASE("Timing control statements", "[parser:statements]") {
     testTimingControl("@(posedge foo iff foo+92 == 76 or negedge clk, (edge clk)) ;", SyntaxKind::EventControlWithExpression);
 }
 
-void testProceduralAssign(const SourceText& text, SyntaxKind kind) {
+void testProceduralAssign(StringRef text, SyntaxKind kind) {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == kind);

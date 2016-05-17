@@ -7,14 +7,16 @@ namespace {
 
 BumpAllocator alloc;
 Diagnostics diagnostics;
+SourceManager sourceManager;
 
 bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;
 }
 
-const Token& lexToken(const SourceText& text) {
+const Token& lexToken(StringRef text) {
     diagnostics.clear();
-    Lexer lexer(FileID(), text, alloc, diagnostics);
+    auto buffer = sourceManager.assignText(text);
+    Lexer lexer(buffer, alloc, diagnostics);
 
     Token* token = lexer.lex();
     REQUIRE(token != nullptr);
@@ -56,9 +58,9 @@ TEST_CASE("Unicode BOMs", "[lexer]") {
 }
 
 TEST_CASE("Embedded null", "[lexer]") {
-    const char text[] = "\0";
-    auto str = std::string(text, text + sizeof(text) - 1);
-    auto& token = lexToken(str);
+    const char text[] = "\0\0";
+    auto str = std::string(text, text + sizeof(text) - 2);
+    auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == str);
@@ -538,7 +540,7 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
 
 void testKeyword(TokenKind kind) {
     auto text = getTokenKindText(kind);
-    auto& token = lexToken(SourceText::fromNullTerminated(text));
+    auto& token = lexToken(text);
 
     CHECK(token.kind == kind);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -800,7 +802,7 @@ TEST_CASE("All Keywords", "[preprocessor]") {
 
 void testPunctuation(TokenKind kind) {
     auto& text = getTokenKindText(kind);
-    auto& token = lexToken(SourceText::fromNullTerminated(text));
+    auto& token = lexToken(text);
 
     CHECK(token.kind == kind);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -900,7 +902,8 @@ void testDirectivePunctuation(TokenKind kind) {
     auto& text = getTokenKindText(kind);
 
     diagnostics.clear();
-    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), alloc, diagnostics);
+    auto buffer = sourceManager.assignText(text);
+    Lexer lexer(buffer, alloc, diagnostics);
 
     Token* token = lexer.lex(LexerMode::Directive);
 

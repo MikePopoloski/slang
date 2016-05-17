@@ -1,6 +1,5 @@
 [Lexer]
 * Perfect keyword hashing
-* Improve unnamed buffer handling
 * Stop lexing if too many errors
 * Start of line check for directives
 * Test escaped identifiers are not keywords

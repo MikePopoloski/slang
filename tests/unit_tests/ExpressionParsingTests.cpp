@@ -9,7 +9,7 @@ BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceManager sourceManager;
 
-ExpressionSyntax* parse(const SourceText& text) {
+ExpressionSyntax* parse(StringRef text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
@@ -60,7 +60,7 @@ TEST_CASE("MinTypMax expression", "[parser:expressions]") {
 
 void testImplicitClassHandle(TokenKind kind) {
     auto text = getTokenKindText(kind);
-    auto expr = parse(SourceText::fromNullTerminated(text));
+    auto expr = parse(text);
 
     REQUIRE(expr->kind == getKeywordNameExpression(kind));
     CHECK(((KeywordNameSyntax*)expr)->keyword->kind == kind);
@@ -229,7 +229,7 @@ TEST_CASE("Binary operators", "[parser:expression]") {
     testBinaryOperator(TokenKind::TripleRightShiftEqual);
 }
 
-void testScopedName(const SourceText& text) {
+void testScopedName(StringRef text) {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::ScopedName);
@@ -309,7 +309,7 @@ TEST_CASE("Element Access", "[parser:expressions]") {
     CHECK(diagnostics.empty());
 }
 
-void testElementRange(const SourceText& text, SyntaxKind kind) {
+void testElementRange(StringRef text, SyntaxKind kind) {
     auto expr = parse(text);
     REQUIRE(expr->kind == SyntaxKind::ElementSelectExpression);
     CHECK(((ElementSelectExpressionSyntax*)expr)->select->selector->kind == kind);

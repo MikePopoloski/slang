@@ -17,7 +17,7 @@ SourceManager& getSourceManager() {
     return *sourceManager;
 }
 
-const Token& lexToken(const SourceText& text) {
+const Token& lexToken(StringRef text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -41,7 +41,8 @@ void testDirective(SyntaxKind kind) {
     auto& text = getDirectiveText(kind);
 
     diagnostics.clear();
-    Lexer lexer(FileID(), SourceText::fromNullTerminated(text), alloc, diagnostics);
+    auto buffer = getSourceManager().assignText(text);
+    Lexer lexer(buffer, alloc, diagnostics);
 
     Token* token = lexer.lex(LexerMode::Directive);
     REQUIRE(token != nullptr);
