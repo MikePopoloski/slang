@@ -11,6 +11,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit_tests", "unit_tests\un
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "file_tests", "file_tests\file_tests.vcxproj", "{CDF7D51D-8686-4218-8434-FCB075198CC5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{ED4CEA60-96A0-4B04-9036-B8D5869ED8E3} = {ED4CEA60-96A0-4B04-9036-B8D5869ED8E3}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{33FA8F93-1C32-4948-B286-7360668D1124}"
 EndProject
