@@ -1,18 +1,7 @@
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <vector>
-#include <deque>
-#include <unordered_map>
-#include <set>
-#include <algorithm>
-#include <filesystem>
+#include "Diagnostics.h"
 
 #include "../external/cppformat/format.h"
 
-#include "Buffer.h"
-#include "StringRef.h"
-#include "Diagnostics.h"
 #include "SourceManager.h"
 
 namespace slang {
@@ -100,7 +89,7 @@ Diagnostics::Diagnostics() :
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
-    emplace(code, location, 0);
+    emplace(code, location);
     return last();
 }
 
@@ -111,6 +100,35 @@ DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
         descriptor.format,
         descriptor.severity
     };
+}
+
+Diagnostic::Arg::Arg(StringRef strRef) :
+    strRef(strRef), type(STRINGREF)
+{
+}
+
+Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
+    code(code), location(location)
+{
+}
+
+std::ostream& operator <<(std::ostream& os, const Diagnostic::Arg& arg) {
+    switch (arg.type) {
+        case Diagnostic::Arg::STRINGREF: os << arg.strRef; break;
+        default:
+            ASSERT(false && "Unknown arg type. Missing case!");
+    }
+    return os;
+}
+
+Diagnostic& operator <<(Diagnostic& diag, Diagnostic::Arg&& arg) {
+    diag.args.push_back(std::move(arg));
+    return diag;
+}
+
+DiagnosticReport::DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
+    diagnostic(diagnostic), format(format), severity(severity)
+{
 }
 
 std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
@@ -163,66 +181,6 @@ StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, u
         curr++;
 
     return StringRef(start, (uint32_t)(curr - start));
-}
-
-std::ostream& operator<<(std::ostream& os, DiagCode code) {
-#define CASE(name) case DiagCode::name: os << #name; break
-    switch (code) {
-        CASE(NonPrintableChar);
-        CASE(UTF8Char);
-        CASE(UnicodeBOM);
-        CASE(EmbeddedNull);
-        CASE(MisplacedDirectiveChar);
-        CASE(EscapedWhitespace);
-        CASE(ExpectedClosingQuote);
-        CASE(UnterminatedBlockComment);
-        CASE(NestedBlockComment);
-        CASE(SplitBlockCommentInDirective);
-        CASE(ExpectedIntegerBaseAfterSigned);
-        CASE(MissingFractionalDigits);
-        CASE(OctalEscapeCodeTooBig);
-        CASE(InvalidHexEscapeCode);
-        CASE(UnknownEscapeCode);
-        CASE(ExpectedIncludeFileName);
-        CASE(MissingExponentDigits);
-        CASE(CouldNotOpenIncludeFile);
-        CASE(ExceededMaxIncludeDepth);
-        CASE(UnknownDirective);
-        CASE(ExpectedEndOfDirective);
-        CASE(ExpectedEndOfMacroArgs);
-        CASE(ExpectedEndIfDirective);
-        CASE(UnexpectedDirective);
-        CASE(UnbalancedMacroArgDims);
-        CASE(ExpectedMacroArgs);
-        CASE(SyntaxError);
-        CASE(ExpectedIdentifier);
-        CASE(ExpectedToken);
-        CASE(ImplicitNotAllowed);
-        CASE(MultipleTypesInDeclaration);
-        CASE(DirectionOnInterfacePort);
-        CASE(ColonShouldBeDot);
-        CASE(InvalidTokenInMemberList);
-        CASE(InvalidTokenInSequentialBlock);
-        CASE(ExpectedStatement);
-        CASE(ExpectedParameterPort);
-        CASE(ExpectedNonAnsiPort);
-        CASE(ExpectedAnsiPort);
-        CASE(ExpectedForInitializer);
-        CASE(ExpectedExpression);
-        CASE(ExpectedInsideElement);
-        CASE(ExpectedStreamExpression);
-        CASE(ExpectedArgument);
-        CASE(ExpectedVariableDeclarator);
-        CASE(ExpectedConditionalPattern);
-        CASE(ExpectedAttribute);
-        CASE(ExpectedPackageImport);
-        CASE(ExpectedHierarchicalInstantiation);
-        CASE(ExpectedPortConnection);
-        CASE(ExpectedVectorDigits);
-        default: ASSERT(false && "Missing case");
-    }
-    return os;
-#undef CASE
 }
 
 }

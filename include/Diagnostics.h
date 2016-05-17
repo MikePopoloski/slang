@@ -1,8 +1,16 @@
 #pragma once
 
+#include <cstdint>
+#include <deque>
+#include <string>
+
+#include "Buffer.h"
 #include "SourceLocation.h"
+#include "StringRef.h"
 
 namespace slang {
+
+class SourceManager;
 
 enum class DiagCode : uint8_t {
     // lexer
@@ -63,24 +71,15 @@ enum class DiagCode : uint8_t {
     ExpectedVectorDigits
 };
 
-std::ostream& operator<<(std::ostream& os, DiagCode code);
-
 class Diagnostic {
 public:
     struct Arg {
         StringRef strRef;
         uint8_t type;
 
-        Arg(StringRef strRef) : strRef(strRef), type(STRINGREF) {}
+        Arg(StringRef strRef);
 
-        friend std::ostream& operator <<(std::ostream& os, const Arg& arg) {
-            switch (arg.type) {
-                case STRINGREF: os << arg.strRef; break;
-                default:
-                    ASSERT(false && "Unknown arg type. Missing case!");
-            }
-            return os;
-        }
+        friend std::ostream& operator <<(std::ostream& os, const Arg& arg);
 
         enum {
             STRINGREF
@@ -90,17 +89,10 @@ public:
     std::deque<Arg> args;
     DiagCode code;
     SourceLocation location;
-    int width;
 
-    Diagnostic(DiagCode code, SourceLocation location, int width) :
-        code(code), location(location), width(width)
-    {
-    }
+    Diagnostic(DiagCode code, SourceLocation location);
 
-    friend Diagnostic& operator <<(Diagnostic& diag, Arg arg) {
-        diag.args.push_back(std::move(arg));
-        return diag;
-    }
+    friend Diagnostic& operator <<(Diagnostic& diag, Arg&& arg);
 };
 
 enum class DiagnosticSeverity {
@@ -115,10 +107,7 @@ public:
     StringRef format;
     DiagnosticSeverity severity;
 
-    DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
-        diagnostic(diagnostic), format(format), severity(severity)
-    {
-    }
+    DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity);
 
     std::string toString(SourceManager& sourceManager) const;
 };

@@ -54,6 +54,7 @@
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
     <ClCompile Include="..\..\source\Preprocessor.cpp" />
+    <ClCompile Include="..\..\source\StringRef.cpp" />
     <ClCompile Include="..\..\source\SyntaxFacts.cpp" />
     <ClCompile Include="..\..\source\SyntaxNode.cpp" />
     <ClCompile Include="..\..\source\Token.cpp" />

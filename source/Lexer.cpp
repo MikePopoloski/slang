@@ -911,7 +911,7 @@ void Lexer::addTrivia(TriviaKind kind, Buffer<Trivia>& buffer) {
 }
 
 void Lexer::addError(DiagCode code, uint32_t offset) {
-    diagnostics.emplace(code, SourceLocation(file, offset), 0);
+    diagnostics.emplace(code, SourceLocation(file, offset));
 }
 
 } // namespace slang

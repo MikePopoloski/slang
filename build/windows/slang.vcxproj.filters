@@ -135,5 +135,8 @@
     <ClCompile Include="..\..\external\cppformat\format.cc">
       <Filter>util\3ps</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\StringRef.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

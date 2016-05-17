@@ -1,13 +1,6 @@
-#include <fstream>
-#include <deque>
-#include <filesystem>
-#include <unordered_map>
-#include <set>
-
-#include "BumpAllocator.h"
-#include "Buffer.h"
-#include "StringRef.h"
 #include "SourceManager.h"
+
+#include <fstream>
 
 namespace fs = std::tr2::sys;
 

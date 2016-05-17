@@ -1,6 +1,16 @@
 #pragma once
 
+#include <deque>
+#include <filesystem>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "Buffer.h"
+#include "BumpAllocator.h"
 #include "SourceLocation.h"
+#include "StringRef.h"
 
 namespace slang {
 

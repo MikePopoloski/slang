@@ -539,12 +539,12 @@ Token* Preprocessor::expect(TokenKind kind) {
 
 void Preprocessor::addError(DiagCode code) {
     // TODO: location
-    diagnostics.emplace(code, SourceLocation(), 0);
+    diagnostics.emplace(code, SourceLocation());
 }
 
 void Preprocessor::addError(DiagCode code, SourceLocation location) {
     // TODO: location
-    diagnostics.emplace(code, location, 0);
+    diagnostics.emplace(code, location);
 }
 
 MacroExpander::MacroExpander(BumpAllocator& alloc, DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) :
