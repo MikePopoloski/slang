@@ -478,7 +478,7 @@ class BasicArgFormatter : public ArgVisitor<Impl, void> {
     } else {
       out = writer_.grow_buffer(CHAR_WIDTH);
     }
-    *out = internal::CharTraits<Char>::cast(value);
+    *out = internal::CharTraits<Char>::cast((wchar_t)value);
   }
 
   void visit_cstring(const char *value) {
