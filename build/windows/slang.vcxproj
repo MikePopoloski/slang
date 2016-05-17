@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\external\cppformat\format.cc" />
+    <ClCompile Include="..\..\source\BumpAllocator.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
     <ClCompile Include="..\..\source\Parser.cpp" />

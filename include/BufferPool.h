@@ -1,5 +1,7 @@
 #pragma once
 
+#include <deque>
+
 #include "Buffer.h"
 
 namespace slang {

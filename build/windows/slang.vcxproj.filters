@@ -138,5 +138,8 @@
     <ClCompile Include="..\..\source\StringRef.cpp">
       <Filter>util</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\BumpAllocator.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -1,22 +1,8 @@
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <filesystem>
-#include <unordered_map>
-#include <deque>
-#include <set>
+#include "Lexer.h"
 
 #include "BumpAllocator.h"
-#include "Buffer.h"
-#include "BufferPool.h"
-#include "StringRef.h"
-#include "StringTable.h"
-#include "Diagnostics.h"
-#include "SourceManager.h"
-#include "Token.h"
-#include "Lexer.h"
 #include "CharInfo.h"
-#include "StringTable.h"
+#include "SourceManager.h"
 
 namespace slang {
 
@@ -25,11 +11,10 @@ SyntaxKind getDirectiveKind(StringRef directive);
 Lexer::Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
     diagnostics(diagnostics),
-    startPointer(buffer->data.begin()),
+    buffer(buffer),
     sourceBuffer(buffer->data.begin()),
     sourceEnd(buffer->data.end()),
-    marker(nullptr),
-    file(buffer->id)
+    marker(nullptr)
 {
     ASSERT(buffer->data.count());
     ASSERT(buffer->data.last() == '\0');
@@ -522,7 +507,7 @@ Token* Lexer::lexIncludeFileName() {
     char delim = peek();
     if (delim != '"' && delim != '<') {
         addError(DiagCode::ExpectedIncludeFileName, offset);
-        return Token::missing(alloc, TokenKind::IncludeFileName, SourceLocation(file, offset), trivia);
+        return Token::missing(alloc, TokenKind::IncludeFileName, SourceLocation(getFile(), offset), trivia);
     }
 
     advance();
@@ -537,7 +522,7 @@ Token* Lexer::lexIncludeFileName() {
     } while (c != delim);
 
     StringRef rawText = lexeme();
-    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, SourceLocation(file, offset), trivia, rawText, rawText);
+    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, SourceLocation(getFile(), offset), trivia, rawText, rawText);
 }
 
 TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
@@ -728,7 +713,7 @@ bool Lexer::lexTimeLiteral(TokenInfo& info) {
     return false;
 }
 
-bool Lexer::lexTrivia(Buffer<Trivia>& buffer, bool directiveMode) {
+bool Lexer::lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
     while (true) {
         mark();
 
@@ -738,17 +723,17 @@ bool Lexer::lexTrivia(Buffer<Trivia>& buffer, bool directiveMode) {
             case '\v':
             case '\f':
                 advance();
-                scanWhitespace(buffer);
+                scanWhitespace(triviaBuffer);
                 break;
             case '/':
                 switch (peek(1)) {
                     case '/':
                         advance(2);
-                        scanLineComment(buffer);
+                        scanLineComment(triviaBuffer);
                         break;
                     case '*': {
                         advance(2);
-                        if (scanBlockComment(buffer, directiveMode))
+                        if (scanBlockComment(triviaBuffer, directiveMode))
                             return true;
                         break;
                     }
@@ -759,13 +744,13 @@ bool Lexer::lexTrivia(Buffer<Trivia>& buffer, bool directiveMode) {
             case '\r':
                 advance();
                 consume('\n');
-                addTrivia(TriviaKind::EndOfLine, buffer);
+                addTrivia(TriviaKind::EndOfLine, triviaBuffer);
                 if (directiveMode)
                     return true;
                 break;
             case '\n':
                 advance();
-                addTrivia(TriviaKind::EndOfLine, buffer);
+                addTrivia(TriviaKind::EndOfLine, triviaBuffer);
                 if (directiveMode)
                     return true;
                 break;
@@ -774,7 +759,7 @@ bool Lexer::lexTrivia(Buffer<Trivia>& buffer, bool directiveMode) {
                 if (!directiveMode || !isNewline(peek()))
                     return false;
                 advance();
-                addTrivia(TriviaKind::LineContinuation, buffer);
+                addTrivia(TriviaKind::LineContinuation, triviaBuffer);
                 break;
             default:
                 return false;
@@ -810,7 +795,7 @@ void Lexer::scanUnsignedNumber(uint64_t& value, int& digits) {
     }
 }
 
-void Lexer::scanWhitespace(Buffer<Trivia>& buffer) {
+void Lexer::scanWhitespace(Buffer<Trivia>& triviaBuffer) {
     bool done = false;
     while (!done) {
         switch (peek()) {
@@ -825,10 +810,10 @@ void Lexer::scanWhitespace(Buffer<Trivia>& buffer) {
                 break;
         }
     }
-    addTrivia(TriviaKind::Whitespace, buffer);
+    addTrivia(TriviaKind::Whitespace, triviaBuffer);
 }
 
-void Lexer::scanLineComment(Buffer<Trivia>& buffer) {
+void Lexer::scanLineComment(Buffer<Trivia>& triviaBuffer) {
     while (true) {
         char c = peek();
         if (isNewline(c))
@@ -843,10 +828,10 @@ void Lexer::scanLineComment(Buffer<Trivia>& buffer) {
         }
         advance();
     }
-    addTrivia(TriviaKind::LineComment, buffer);
+    addTrivia(TriviaKind::LineComment, triviaBuffer);
 }
 
-bool Lexer::scanBlockComment(Buffer<Trivia>& buffer, bool directiveMode) {
+bool Lexer::scanBlockComment(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
     bool eod = false;
     while (true) {
         char c = peek();
@@ -880,13 +865,13 @@ bool Lexer::scanBlockComment(Buffer<Trivia>& buffer, bool directiveMode) {
         }
     }
     
-    addTrivia(TriviaKind::BlockComment, buffer);
+    addTrivia(TriviaKind::BlockComment, triviaBuffer);
     return eod;
 }
 
 Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer) {
     auto trivia = triviaBuffer.copy(alloc);
-    auto location = SourceLocation(file, info.offset);
+    auto location = SourceLocation(getFile(), info.offset);
 
     switch (kind) {
         case TokenKind::Unknown:
@@ -909,12 +894,20 @@ Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& trivi
     }
 }
 
-void Lexer::addTrivia(TriviaKind kind, Buffer<Trivia>& buffer) {
-    buffer.emplace(kind, lexeme());
+void Lexer::addTrivia(TriviaKind kind, Buffer<Trivia>& triviaBuffer) {
+    triviaBuffer.emplace(kind, lexeme());
 }
 
 void Lexer::addError(DiagCode code, uint32_t offset) {
-    diagnostics.emplace(code, SourceLocation(file, offset));
+    diagnostics.emplace(code, SourceLocation(getFile(), offset));
+}
+
+uint32_t Lexer::currentOffset() {
+    return (uint32_t)(sourceBuffer - buffer->data.begin());
+}
+
+FileID Lexer::getFile() const {
+    return buffer->id;
 }
 
 } // namespace slang

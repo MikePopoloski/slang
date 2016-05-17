@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 // internal header containing various text related helper methods
 
 inline bool isASCII(char c) {
