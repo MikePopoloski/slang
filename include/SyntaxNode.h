@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <cstddef>
 #include <string>
@@ -386,8 +387,6 @@ bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);
 bool isPossibleVectorDigit(TokenKind kind);
 
-std::ostream& operator<<(std::ostream& os, SyntaxKind kind);
-
 // discriminated union of Token and SyntaxNode
 struct TokenOrSyntax {
     union {
@@ -428,7 +427,7 @@ class SyntaxList : public SyntaxNode {
 public:
     SyntaxList(std::nullptr_t) : SyntaxList(ArrayRef<T*>(nullptr)) {}
     SyntaxList(ArrayRef<T*> elements) :
-        SyntaxNode(SyntaxKind::List), 
+        SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
         childCount = elements.count();
@@ -477,7 +476,7 @@ class SeparatedSyntaxList : public SyntaxNode {
 public:
     SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(ArrayRef<TokenOrSyntax>(nullptr)) {}
     SeparatedSyntaxList(ArrayRef<TokenOrSyntax> elements) :
-        SyntaxNode(SyntaxKind::List), 
+        SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
         childCount = elements.count();

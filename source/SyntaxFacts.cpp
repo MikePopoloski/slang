@@ -280,6 +280,8 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::TripleAnd:
         case TokenKind::InsideKeyword:
             return true;
+        default:
+            break;
     }
 
     if (isPossibleDataType(kind))
@@ -451,8 +453,9 @@ bool isPortDirection(TokenKind kind) {
         case TokenKind::InOutKeyword:
         case TokenKind::RefKeyword:
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 bool isPossibleArgument(TokenKind kind) {
@@ -491,8 +494,9 @@ bool isPossibleAnsiPort(TokenKind kind) {
         case TokenKind::RefKeyword:
         case TokenKind::VarKeyword:
             return true;
+        default:
+            return isNetType(kind) || isPossibleDataType(kind);
     }
-    return isNetType(kind) || isPossibleDataType(kind);
 }
 
 bool isComma(TokenKind kind) {
@@ -547,8 +551,9 @@ bool isPossibleDelayOrEventControl(TokenKind kind) {
         case TokenKind::AtStar:
         case TokenKind::RepeatKeyword:
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 bool isPossibleParameter(TokenKind kind) {
@@ -558,8 +563,9 @@ bool isPossibleParameter(TokenKind kind) {
         case TokenKind::TypeKeyword:
         case TokenKind::Comma:
             return true;
+        default:
+            return isPossibleDataType(kind);
     }
-    return isPossibleDataType(kind);
 }
 
 bool isPossiblePortConnection(TokenKind kind) {
@@ -581,8 +587,9 @@ bool isPossibleVectorDigit(TokenKind kind) {
         case TokenKind::RealLiteral:
         case TokenKind::Identifier:
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 bool isEndKeyword(TokenKind kind) {
@@ -607,8 +614,9 @@ bool isEndKeyword(TokenKind kind) {
         case TokenKind::EndTableKeyword:
         case TokenKind::EndTaskKeyword:
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 bool isDeclarationModifier(TokenKind kind) {
@@ -618,8 +626,9 @@ bool isDeclarationModifier(TokenKind kind) {
         case TokenKind::StaticKeyword:
         case TokenKind::AutomaticKeyword:
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 bool isEndOfParenList(TokenKind kind) {
@@ -673,287 +682,6 @@ bool isNotInType(TokenKind kind) {
 
 bool isNotInPortReference(TokenKind kind) {
     return kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
-}
-
-std::ostream& operator<<(std::ostream& os, SyntaxKind kind) {
-#define CASE(name) case SyntaxKind::name: os << #name; break
-    switch (kind) {
-        CASE(Unknown);
-        CASE(List);
-        CASE(BeginKeywordsDirective);
-        CASE(CellDefineDirective);
-        CASE(DefaultNetTypeDirective);
-        CASE(DefineDirective);
-        CASE(ElseDirective);
-        CASE(ElseIfDirective);
-        CASE(EndKeywordsDirective);
-        CASE(EndCellDefineDirective);
-        CASE(EndIfDirective);
-        CASE(IfDefDirective);
-        CASE(IfNDefDirective);
-        CASE(IncludeDirective);
-        CASE(LineDirective);
-        CASE(NoUnconnectedDriveDirective);
-        CASE(PragmaDirective);
-        CASE(ResetAllDirective);
-        CASE(TimescaleDirective);
-        CASE(UnconnectedDriveDirective);
-        CASE(UndefDirective);
-        CASE(UndefineAllDirective);
-        CASE(MacroUsage);
-        CASE(MacroFormalArgumentList);
-        CASE(MacroFormalArgument);
-        CASE(MacroArgumentDefault);
-        CASE(MacroActualArgumentList);
-        CASE(MacroActualArgument);
-        CASE(AttributeSpec);
-        CASE(AttributeInstance);
-        CASE(OrderedArgument);
-        CASE(NamedArgument);
-        CASE(ArgumentList);
-        CASE(ParameterValueAssignment);
-        CASE(VariablePattern);
-        CASE(WildcardPattern);
-        CASE(ExpressionPattern);
-        CASE(TaggedPattern);
-        CASE(OrderedStructurePatternMember);
-        CASE(NamedStructurePatternMember);
-        CASE(StructurePattern);
-        CASE(MatchesClause);
-        CASE(ConditionalPattern);
-        CASE(ConditionalPredicate);
-        CASE(UnaryPlusExpression);
-        CASE(UnaryMinusExpression);
-        CASE(UnaryBitwiseAndExpression);
-        CASE(UnaryBitwiseNandExpression);
-        CASE(UnaryBitwiseOrExpression);
-        CASE(UnaryBitwiseNorExpression);
-        CASE(UnaryBitwiseXorExpression);
-        CASE(UnaryBitwiseXnorExpression);
-        CASE(UnaryPreincrementExpression);
-        CASE(UnaryPredecrementExpression);
-        CASE(UnaryLogicalNotExpression);
-        CASE(UnaryBitwiseNotExpression);
-        CASE(NullLiteralExpression);
-        CASE(StringLiteralExpression);
-        CASE(IntegerLiteralExpression);
-        CASE(UnbasedUnsizedLiteralExpression);
-        CASE(IntegerVectorExpression);
-        CASE(RealLiteralExpression);
-        CASE(TimeLiteralExpression);
-        CASE(WildcardLiteralExpression);
-        CASE(OneStepLiteralExpression);
-        CASE(ParenthesizedExpression);
-        CASE(MinTypMaxExpression);
-        CASE(EmptyQueueExpression);
-        CASE(ConcatenationExpression);
-        CASE(MultipleConcatenationExpression);
-        CASE(StreamingConcatenationExpression);
-        CASE(StreamExpression);
-        CASE(StreamExpressionWithRange);
-        CASE(NewClassExpression);
-        CASE(NewArrayExpression);
-        CASE(BitSelect);
-        CASE(SimpleRangeSelect);
-        CASE(AscendingRangeSelect);
-        CASE(DescendingRangeSelect);
-        CASE(ElementSelect);
-        CASE(ElementSelectExpression);
-        CASE(MemberAccessExpression);
-        CASE(InvocationExpression);
-        CASE(PostincrementExpression);
-        CASE(PostdecrementExpression);
-        CASE(AddExpression);
-        CASE(SubtractExpression);
-        CASE(MultiplyExpression);
-        CASE(DivideExpression);
-        CASE(PowerExpression);
-        CASE(ModExpression);
-        CASE(EqualityExpression);
-        CASE(InequalityExpression);
-        CASE(CaseEqualityExpression);
-        CASE(CaseInequalityExpression);
-        CASE(WildcardEqualityExpression);
-        CASE(WildcardInequalityExpression);
-        CASE(LessThanExpression);
-        CASE(LessThanEqualExpression);
-        CASE(GreaterThanExpression);
-        CASE(GreaterThanEqualExpression);
-        CASE(LogicalAndExpression);
-        CASE(LogicalOrExpression);
-        CASE(BinaryAndExpression);
-        CASE(BinaryOrExpression);
-        CASE(BinaryXorExpression);
-        CASE(BinaryXnorExpression);
-        CASE(LogicalImplicationExpression);
-        CASE(LogicalEquivalenceExpression);
-        CASE(LogicalShiftLeftExpression);
-        CASE(LogicalShiftRightExpression);
-        CASE(ArithmeticShiftLeftExpression);
-        CASE(ArithmeticShiftRightExpression);
-        CASE(TaggedUnionExpression);
-        CASE(InsideExpression);
-        CASE(ConditionalExpression);
-        CASE(AssignmentExpression);
-        CASE(AddAssignmentExpression);
-        CASE(SubtractAssignmentExpression);
-        CASE(MultiplyAssignmentExpression);
-        CASE(DivideAssignmentExpression);
-        CASE(ModAssignmentExpression);
-        CASE(AndAssignmentExpression);
-        CASE(OrAssignmentExpression);
-        CASE(XorAssignmentExpression);
-        CASE(LogicalLeftShiftAssignmentExpression);
-        CASE(LogicalRightShiftAssignmentExpression);
-        CASE(ArithmeticLeftShiftAssignmentExpression);
-        CASE(ArithmeticRightShiftAssignmentExpression);
-        CASE(LocalScope);
-        CASE(UnitScope);
-        CASE(RootScope);
-        CASE(IdentifierName);
-        CASE(IdentifierSelectName);
-        CASE(ClassName);
-        CASE(ScopedName);
-        CASE(SystemName);
-        CASE(ThisHandle);
-        CASE(SuperHandle);
-        CASE(ArrayUniqueMethod);
-        CASE(ArrayAndMethod);
-        CASE(ArrayOrMethod);
-        CASE(ArrayXorMethod);
-        CASE(ClassScope);
-        CASE(DelayControl);
-        CASE(CycleDelay);
-        CASE(EventControl);
-        CASE(IffClause);
-        CASE(SignalEventExpression);
-        CASE(BinaryEventExpression);
-        CASE(ParenthesizedEventExpression);
-        CASE(ImplicitEventControl);
-        CASE(ParenImplicitEventControl);
-        CASE(EventControlWithExpression);
-        CASE(RepeatedEventControl);
-        CASE(RangeDimensionSpecifier);
-        CASE(DataTypeDimensionSpecifier);
-        CASE(WildcardDimensionSpecifier);
-        CASE(ColonExpressionClause);
-        CASE(QueueDimensionSpecifier);
-        CASE(VariableDimension);
-        CASE(EqualsValueClause);
-        CASE(VariableDeclarator);
-        CASE(DataDeclaration);
-        CASE(PackageImportItem);
-        CASE(PackageImportDeclaration);
-        CASE(ParameterDeclaration);
-        CASE(TypeParameterDeclaration);
-        CASE(ParameterDeclarationStatement);
-        CASE(ChargeStrength);
-        CASE(DriveStrength);
-        CASE(NetDeclaration);
-        CASE(PortDeclaration);
-        CASE(BitType);
-        CASE(LogicType);
-        CASE(RegType);
-        CASE(ByteType);
-        CASE(ShortIntType);
-        CASE(IntType);
-        CASE(LongIntType);
-        CASE(IntegerType);
-        CASE(TimeType);
-        CASE(ShortRealType);
-        CASE(RealType);
-        CASE(RealTimeType);
-        CASE(StructType);
-        CASE(UnionType);
-        CASE(EnumType);
-        CASE(StringType);
-        CASE(CHandleType);
-        CASE(VirtualInterfaceType);
-        CASE(NamedType);
-        CASE(EventType);
-        CASE(VoidType);
-        CASE(ImplicitType);
-        CASE(TypeReference);
-        CASE(StructUnionMember);
-        CASE(DotMemberClause);
-        CASE(EmptyStatement);
-        CASE(ElseClause);
-        CASE(ConditionalStatement);
-        CASE(DefaultCaseItem);
-        CASE(PatternCaseItem);
-        CASE(StandardCaseItem);
-        CASE(CaseStatement);
-        CASE(ForeverStatement);
-        CASE(LoopStatement);
-        CASE(DoWhileStatement);
-        CASE(ForVariableDeclaration);
-        CASE(ForVariableAssignment);
-        CASE(ForLoopStatement);
-        CASE(ReturnStatement);
-        CASE(JumpStatement);
-        CASE(TimingControlStatement);
-        CASE(ProceduralAssignStatement);
-        CASE(ProceduralForceStatement);
-        CASE(ProceduralDeassignStatement);
-        CASE(ProceduralReleaseStatement);
-        CASE(DisableStatement);
-        CASE(DisableForkStatement);
-        CASE(NamedBlockClause);
-        CASE(SequentialBlockStatement);
-        CASE(NonblockingAssignmentStatement);
-        CASE(BlockingAssignmentStatement);
-        CASE(AddAssignmentStatement);
-        CASE(SubtractAssignmentStatement);
-        CASE(MultiplyAssignmentStatement);
-        CASE(DivideAssignmentStatement);
-        CASE(ModAssignmentStatement);
-        CASE(AndAssignmentStatement);
-        CASE(OrAssignmentStatement);
-        CASE(XorAssignmentStatement);
-        CASE(LogicalLeftShiftAssignmentStatement);
-        CASE(LogicalRightShiftAssignmentStatement);
-        CASE(ArithmeticLeftShiftAssignmentStatement);
-        CASE(ArithmeticRightShiftAssignmentStatement);
-        CASE(ImplicitNonAnsiPort);
-        CASE(ExplicitNonAnsiPort);
-        CASE(NonAnsiPortList);
-        CASE(InterfacePortHeader);
-        CASE(VariablePortHeader);
-        CASE(SimpleNetPortType);
-        CASE(InterconnectPortHeader);
-        CASE(DataNetPortType);
-        CASE(NetPortHeader);
-        CASE(ImplicitAnsiPort);
-        CASE(ExplicitAnsiPort);
-        CASE(AnsiPortList);
-        CASE(WildcardPortList);
-        CASE(ParameterPortList);
-        CASE(ModuleHeader);
-        CASE(ModuleDeclaration);
-        CASE(InterfaceHeader);
-        CASE(InterfaceDeclaration);
-        CASE(ProgramHeader);
-        CASE(ProgramDeclaration);
-        CASE(ExternModule);
-        CASE(InitialBlock);
-        CASE(FinalBlock);
-        CASE(AlwaysBlock);
-        CASE(AlwaysFFBlock);
-        CASE(AlwaysCombBlock);
-        CASE(AlwaysLatchBlock);
-        CASE(GenerateBlock);
-        CASE(DividerClause);
-        CASE(TimeUnitsDeclaration);
-        CASE(OrderedPortConnection);
-        CASE(NamedPortConnection);
-        CASE(WildcardPortConnection);
-        CASE(HierarchicalInstance);
-        CASE(HierarchyInstantiation);
-        CASE(CompilationUnit);
-        default: ASSERT(false && "Missing case");
-    }
-    return os;
-#undef CASE
 }
 
 }

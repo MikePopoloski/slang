@@ -17,18 +17,18 @@ public:
             delete buffer;
     }
 
-    template<typename T>
+    template<typename TWrapped>
     struct BufferWrapper {
         BufferPool* pool;
-        Buffer<T>* buffer;
+        Buffer<TWrapped>* buffer;
 
-        BufferWrapper(BufferPool* pool, Buffer<T>* buffer) : pool(pool), buffer(buffer) {}
+        BufferWrapper(BufferPool* pool, Buffer<TWrapped>* buffer) : pool(pool), buffer(buffer) {}
         ~BufferWrapper() { pool->free(buffer); }
 
         bool empty() const { return buffer->empty(); }
 
-        void append(const T& item) { buffer->append(item); }
-        void appendRange(const T* begin, const T* end) { buffer->appendRange(begin, end); }
+        void append(const TWrapped& item) { buffer->append(item); }
+        void appendRange(const TWrapped* begin, const TWrapped* end) { buffer->appendRange(begin, end); }
 
         template<typename Container>
         void appendRange(const Container& container) { buffer->appendRange(container); }
@@ -38,11 +38,11 @@ public:
 
         void clear() { buffer->clear(); }
 
-        ArrayRef<T> copy(BumpAllocator& alloc) const { return buffer->copy(alloc); }
+        ArrayRef<TWrapped> copy(BumpAllocator& alloc) const { return buffer->copy(alloc); }
 
-        Buffer<T>& get() { return *buffer; }
+        Buffer<TWrapped>& get() { return *buffer; }
 
-        operator Buffer<T>&() { return *buffer; }
+        operator Buffer<TWrapped>&() { return *buffer; }
     };
 
     BufferWrapper<T> get() {

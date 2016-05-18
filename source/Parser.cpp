@@ -66,7 +66,7 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
     ParameterPortListSyntax* parameterList = nullptr;
     if (peek(TokenKind::Hash)) {
         auto hash = consume();
-        
+
         Token* openParen;
         Token* closeParen;
         ArrayRef<TokenOrSyntax> parameters = nullptr;
@@ -159,11 +159,11 @@ PortHeaderSyntax* Parser::parsePortHeader(Token* direction) {
             auto name = consume();
             return alloc.emplace<InterfacePortHeaderSyntax>(name, parseDotMemberClause());
         }
-        
+
         DataTypeSyntax* type = nullptr;
         if (!isPlainPortName())
             type = parseDataType(/* allowImplicit */ false);
-        
+
         return alloc.emplace<VariablePortHeaderSyntax>(direction, nullptr, type);
     }
 
@@ -225,8 +225,9 @@ bool Parser::isPlainPortName() {
         case TokenKind::CloseParenthesis:
         case TokenKind::Semicolon:
             return true;
+        default:
+            return false;
     }
-    return false;
 }
 
 bool Parser::isNonAnsiPort() {
@@ -326,6 +327,9 @@ MemberSyntax* Parser::parseMember() {
 
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyMemberSyntax>(attributes, consume());
+
+        default:
+            break;
     }
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
@@ -365,7 +369,7 @@ ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endTo
             error = false;
         }
     }
-    
+
     reduceSkippedTokens(skipped, trivia);
     endToken = prependTrivia(expect(endKind), trivia);
 
@@ -409,7 +413,7 @@ FunctionDeclarationSyntax* Parser::parseFunctionDeclaration(ArrayRef<AttributeIn
     AnsiPortListSyntax* portList = nullptr;
     if (peek(TokenKind::OpenParenthesis))
         portList = parseAnsiPortList(consume());
-    
+
     auto semi = expect(TokenKind::Semicolon);
 
     Token* end;
@@ -527,6 +531,8 @@ StatementSyntax* Parser::parseStatement() {
         case TokenKind::Semicolon:
             // TODO: no label allowed on semicolon
             return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
+        default:
+            break;
     }
 
     // everything else is some kind of expression
@@ -879,7 +885,7 @@ ImmediateAssertionStatementSyntax* Parser::parseAssertionStatement(SyntaxKind as
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto expr = parseExpression();
     auto parenExpr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, expect(TokenKind::CloseParenthesis));
-    
+
     StatementSyntax* statement = nullptr;
     ElseClauseSyntax* elseClause = nullptr;
 
@@ -932,7 +938,7 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token*& end) {
         }
         kind = peek()->kind;
     }
-    
+
     end = prependSkippedTokens(expect(endKind), skipped);
     return buffer.copy(alloc);
 }
@@ -1035,7 +1041,7 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
             leftOperand = alloc.emplace<ConditionalExpressionSyntax>(predicate, question, attributes, left, colon, right);
         }
     }
-    
+
     return leftOperand;
 }
 
@@ -1283,8 +1289,9 @@ SelectorSyntax* Parser::parseElementSelector() {
             auto range = consume();
             return alloc.emplace<RangeSelectSyntax>(SyntaxKind::DescendingRangeSelect, expr, range, parseExpression());
         }
+        default:
+            return alloc.emplace<BitSelectSyntax>(expr);
     }
-    return alloc.emplace<BitSelectSyntax>(expr);
 }
 
 ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
@@ -1440,6 +1447,8 @@ PatternSyntax* Parser::parsePattern() {
         case TokenKind::ApostropheOpenBrace:
             // TODO: assignment pattern
             break;
+        default:
+            break;
     }
     // otherwise, it's either an expression or an error (parseExpression will handle that for us)
     return alloc.emplace<ExpressionPatternSyntax>(parseSubExpression<false>(0));
@@ -1472,7 +1481,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
 
 ConditionalPatternSyntax* Parser::parseConditionalPattern() {
     auto expr = parseSubExpression<false>(0);
-    
+
     MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
         auto matches = consume();
@@ -1675,6 +1684,8 @@ StructUnionTypeSyntax* Parser::parseStructUnion(SyntaxKind syntaxKind) {
                 case TokenKind::RandKeyword:
                 case TokenKind::RandCKeyword:
                     randomQualifier = consume();
+                default:
+                    break;
             }
 
             auto type = parseDataType(/* allowImplicit */ false);
@@ -1752,6 +1763,8 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
             auto expr = parseExpression();
             return alloc.emplace<TypeReferenceSyntax>(keyword, openParen, expr, expect(TokenKind::CloseParenthesis));
         }
+        default:
+            break;
     }
 
     if (kind == TokenKind::Identifier) {
@@ -1940,7 +1953,7 @@ ArrayRef<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
 PackageImportItemSyntax* Parser::parsePackageImportItem() {
     auto package = expect(TokenKind::Identifier);
     auto doubleColon = expect(TokenKind::DoubleColon);
-    
+
     Token* item;
     if (peek(TokenKind::Star))
         item = consume();
@@ -2100,6 +2113,8 @@ bool Parser::isVariableDeclaration() {
             auto next = peek(++index)->kind;
             return next != TokenKind::Apostrophe && next != TokenKind::ApostropheOpenBrace;
         }
+        default:
+            break;
     }
 
     if (!scanQualifiedName(index))

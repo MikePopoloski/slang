@@ -1,5 +1,7 @@
 #include "BumpAllocator.h"
 
+#include <cstdlib>
+
 namespace slang {
 
 BumpAllocator::BumpAllocator(uint32_t segmentSize) :

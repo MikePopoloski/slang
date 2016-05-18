@@ -80,7 +80,7 @@ private:
 
     SourceBuffer* openCached(path_type fullPath);
     SourceBuffer* cacheBuffer(std::string&& canonicalPath, path_type& path, Buffer<char>&& buffer);
-    
+
     static void computeLineOffsets(const Buffer<char>& buffer, std::vector<uint32_t>& offsets);
     static bool readFile(const path_type& path, Buffer<char>& buffer);
 };

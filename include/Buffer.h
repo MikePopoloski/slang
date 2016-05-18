@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdlib>
+#include <cstring>
+#include <iterator>
+
 #include "BumpAllocator.h"
 #include "ArrayRef.h"
 
@@ -13,7 +17,7 @@ class Buffer {
 public:
     explicit Buffer(uint32_t capacity = 16) :
         len(0), capacity(capacity) {
-        
+
         data = (T*)malloc(capacity * sizeof(T));
     }
 
