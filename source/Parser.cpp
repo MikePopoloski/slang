@@ -658,6 +658,10 @@ StatementSyntax* Parser::parseStatement() {
             return parseAssertionStatement(SyntaxKind::ImmediateAssumeStatement, label, attributes);
         case TokenKind::CoverKeyword:
             return parseAssertionStatement(SyntaxKind::ImmediateCoverStatement, label, attributes);
+        case TokenKind::WaitKeyword:
+            return parseWaitStatement(label, attributes);
+        case TokenKind::WaitOrderKeyword:
+            return parseWaitOrderStatement(label, attributes);
         case TokenKind::Semicolon:
             // TODO: no label allowed on semicolon
             return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
@@ -1043,7 +1047,11 @@ ImmediateAssertionStatementSyntax* Parser::parseAssertionStatement(SyntaxKind as
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto expr = parseExpression();
     auto parenExpr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, expect(TokenKind::CloseParenthesis));
+    auto actionBlock = parseActionBlock();
+    return alloc.emplace<ImmediateAssertionStatementSyntax>(assertionKind, label, attributes, keyword, nullptr, parenExpr, actionBlock);
+}
 
+ActionBlockSyntax* Parser::parseActionBlock() {
     StatementSyntax* statement = nullptr;
     ElseClauseSyntax* elseClause = nullptr;
 
@@ -1054,8 +1062,7 @@ ImmediateAssertionStatementSyntax* Parser::parseAssertionStatement(SyntaxKind as
         elseClause = parseElseClause();
     }
 
-    auto actionBlock = alloc.emplace<ActionBlockSyntax>(statement, elseClause);
-    return alloc.emplace<ImmediateAssertionStatementSyntax>(assertionKind, label, attributes, keyword, nullptr, parenExpr, actionBlock);
+    return alloc.emplace<ActionBlockSyntax>(statement, elseClause);
 }
 
 NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
@@ -1109,6 +1116,45 @@ SequentialBlockStatementSyntax* Parser::parseSequentialBlock(NamedLabelSyntax* l
     auto items = parseBlockItems(TokenKind::EndKeyword, end);
     auto endName = parseNamedBlockClause();
     return alloc.emplace<SequentialBlockStatementSyntax>(label, attributes, begin, name, items, end, endName);
+}
+
+StatementSyntax* Parser::parseWaitStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto wait = consume();
+    if (peek(TokenKind::ForkKeyword)) {
+        auto fork = consume();
+        return alloc.emplace<WaitForkStatementSyntax>(label, attributes, wait, fork, expect(TokenKind::Semicolon));
+    }
+
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto expr = parseExpression();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return alloc.emplace<WaitStatementSyntax>(label, attributes, wait, openParen, expr, closeParen, parseStatement());
+}
+
+WaitOrderStatementSyntax* Parser::parseWaitOrderStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto buffer = tosPool.get();
+
+    Token* closeParen;
+    parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
+        buffer,
+        TokenKind::CloseParenthesis,
+        TokenKind::Comma,
+        closeParen,
+        DiagCode::ExpectedIdentifier,
+        [this](bool) { return parseName(); }
+    );
+
+    return alloc.emplace<WaitOrderStatementSyntax>(
+        label,
+        attributes,
+        keyword,
+        openParen,
+        buffer.copy(alloc),
+        closeParen,
+        parseActionBlock()
+    );
 }
 
 ExpressionSyntax* Parser::parseExpression() {

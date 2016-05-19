@@ -483,14 +483,31 @@ ImplicitTypeSyntax base=DataTypeSyntax kind=ImplicitType
 token signing
 list<VariableDimensionSyntax> dimensions
 
-// ----- STATEMENTS -----
+// ----- ASSERTIONS -----
 
-EmptyStatementSyntax base=StatementSyntax kind=EmptyStatement
-token semicolon
+DeferredAssertionSyntax kind=DeferredAssertion
+token hash
+token zero
+token finalKeyword
 
 ElseClauseSyntax kind=ElseClause
 token elseKeyword
 SyntaxNode clause
+
+ActionBlockSyntax kind=ActionBlock
+StatementSyntax statement
+ElseClauseSyntax elseClause
+
+ImmediateAssertionStatementSyntax base=StatementSyntax
+token keyword
+DeferredAssertionSyntax delay
+ParenthesizedExpressionSyntax expr
+ActionBlockSyntax action
+
+// ----- STATEMENTS -----
+
+EmptyStatementSyntax base=StatementSyntax kind=EmptyStatement
+token semicolon
 
 ConditionalStatementSyntax base=StatementSyntax kind=ConditionalStatement
 token uniqueOrPriority
@@ -636,21 +653,23 @@ list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax endBlockName
 
-// ----- ASSERTIONS -----
-
-DeferredAssertionSyntax kind=DeferredAssertion
-token hash
-token zero
-token finalKeyword
-
-ActionBlockSyntax kind=ActionBlock
+WaitStatementSyntax base=StatementSyntax kind=WaitStatement
+token wait
+token openParen
+ExpressionSyntax expr
+token closeParen
 StatementSyntax statement
-ElseClauseSyntax elseClause
 
-ImmediateAssertionStatementSyntax base=StatementSyntax
-token keyword
-DeferredAssertionSyntax delay
-ParenthesizedExpressionSyntax expr
+WaitForkStatementSyntax base=StatementSyntax kind=WaitForkStatement
+token wait
+token fork
+token semi
+
+WaitOrderStatementSyntax base=StatementSyntax kind=WaitOrderStatement
+token wait_order
+token openParen
+separated_list<NameSyntax> names
+token closeParen
 ActionBlockSyntax action
 
 // ----- MODULES -----

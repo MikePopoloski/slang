@@ -2045,23 +2045,25 @@ protected:
     }
 };
 
-// ----- STATEMENTS -----
+// ----- ASSERTIONS -----
 
-struct EmptyStatementSyntax : public StatementSyntax {
-    Token* semicolon;
+struct DeferredAssertionSyntax : public SyntaxNode {
+    Token* hash;
+    Token* zero;
+    Token* finalKeyword;
 
-    EmptyStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* semicolon) :
-        StatementSyntax(SyntaxKind::EmptyStatement, label, attributes), semicolon(semicolon)
+    DeferredAssertionSyntax(Token* hash, Token* zero, Token* finalKeyword) :
+        SyntaxNode(SyntaxKind::DeferredAssertion), hash(hash), zero(zero), finalKeyword(finalKeyword)
     {
-        childCount += 1;
+        childCount += 3;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return semicolon;
+            case 0: return hash;
+            case 1: return zero;
+            case 2: return finalKeyword;
             default: return nullptr;
         }
     }
@@ -2082,6 +2084,74 @@ protected:
         switch(index) {
             case 0: return elseKeyword;
             case 1: return clause;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ActionBlockSyntax : public SyntaxNode {
+    StatementSyntax* statement;
+    ElseClauseSyntax* elseClause;
+
+    ActionBlockSyntax(StatementSyntax* statement, ElseClauseSyntax* elseClause) :
+        SyntaxNode(SyntaxKind::ActionBlock), statement(statement), elseClause(elseClause)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return statement;
+            case 1: return elseClause;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ImmediateAssertionStatementSyntax : public StatementSyntax {
+    Token* keyword;
+    DeferredAssertionSyntax* delay;
+    ParenthesizedExpressionSyntax* expr;
+    ActionBlockSyntax* action;
+
+    ImmediateAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax* expr, ActionBlockSyntax* action) :
+        StatementSyntax(kind, label, attributes), keyword(keyword), delay(delay), expr(expr), action(action)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return keyword;
+            case 3: return delay;
+            case 4: return expr;
+            case 5: return action;
+            default: return nullptr;
+        }
+    }
+};
+
+// ----- STATEMENTS -----
+
+struct EmptyStatementSyntax : public StatementSyntax {
+    Token* semicolon;
+
+    EmptyStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* semicolon) :
+        StatementSyntax(SyntaxKind::EmptyStatement, label, attributes), semicolon(semicolon)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return semicolon;
             default: return nullptr;
         }
     }
@@ -2675,60 +2745,17 @@ protected:
     }
 };
 
-// ----- ASSERTIONS -----
-
-struct DeferredAssertionSyntax : public SyntaxNode {
-    Token* hash;
-    Token* zero;
-    Token* finalKeyword;
-
-    DeferredAssertionSyntax(Token* hash, Token* zero, Token* finalKeyword) :
-        SyntaxNode(SyntaxKind::DeferredAssertion), hash(hash), zero(zero), finalKeyword(finalKeyword)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return hash;
-            case 1: return zero;
-            case 2: return finalKeyword;
-            default: return nullptr;
-        }
-    }
-};
-
-struct ActionBlockSyntax : public SyntaxNode {
+struct WaitStatementSyntax : public StatementSyntax {
+    Token* wait;
+    Token* openParen;
+    ExpressionSyntax* expr;
+    Token* closeParen;
     StatementSyntax* statement;
-    ElseClauseSyntax* elseClause;
 
-    ActionBlockSyntax(StatementSyntax* statement, ElseClauseSyntax* elseClause) :
-        SyntaxNode(SyntaxKind::ActionBlock), statement(statement), elseClause(elseClause)
+    WaitStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* wait, Token* openParen, ExpressionSyntax* expr, Token* closeParen, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::WaitStatement, label, attributes), wait(wait), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
     {
-        childCount += 2;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return statement;
-            case 1: return elseClause;
-            default: return nullptr;
-        }
-    }
-};
-
-struct ImmediateAssertionStatementSyntax : public StatementSyntax {
-    Token* keyword;
-    DeferredAssertionSyntax* delay;
-    ParenthesizedExpressionSyntax* expr;
-    ActionBlockSyntax* action;
-
-    ImmediateAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax* expr, ActionBlockSyntax* action) :
-        StatementSyntax(kind, label, attributes), keyword(keyword), delay(delay), expr(expr), action(action)
-    {
-        childCount += 4;
+        childCount += 5;
     }
 
 protected:
@@ -2736,10 +2763,63 @@ protected:
         switch(index) {
             case 0: return label;
             case 1: return &attributes;
-            case 2: return keyword;
-            case 3: return delay;
+            case 2: return wait;
+            case 3: return openParen;
             case 4: return expr;
-            case 5: return action;
+            case 5: return closeParen;
+            case 6: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct WaitForkStatementSyntax : public StatementSyntax {
+    Token* wait;
+    Token* fork;
+    Token* semi;
+
+    WaitForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* wait, Token* fork, Token* semi) :
+        StatementSyntax(SyntaxKind::WaitForkStatement, label, attributes), wait(wait), fork(fork), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return wait;
+            case 3: return fork;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct WaitOrderStatementSyntax : public StatementSyntax {
+    Token* wait_order;
+    Token* openParen;
+    SeparatedSyntaxList<NameSyntax> names;
+    Token* closeParen;
+    ActionBlockSyntax* action;
+
+    WaitOrderStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* wait_order, Token* openParen, SeparatedSyntaxList<NameSyntax> names, Token* closeParen, ActionBlockSyntax* action) :
+        StatementSyntax(SyntaxKind::WaitOrderStatement, label, attributes), wait_order(wait_order), openParen(openParen), names(names), closeParen(closeParen), action(action)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return wait_order;
+            case 3: return openParen;
+            case 4: return &names;
+            case 5: return closeParen;
+            case 6: return action;
             default: return nullptr;
         }
     }
