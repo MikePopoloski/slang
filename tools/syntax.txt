@@ -886,7 +886,7 @@ list<MemberSyntax> items
 token endClass
 NamedBlockClauseSyntax endBlockName
 
-ContinuousAssignSyntax base=MemberSyntax
+ContinuousAssignSyntax base=MemberSyntax kind=ContinuousAssign
 token assign
 separated_list<VariableAssignmentSyntax> assignments
 token semi

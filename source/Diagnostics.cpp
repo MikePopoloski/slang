@@ -78,7 +78,8 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "ExpectedPackageImport" },
     { "ExpectedHierarchicalInstantiation" },
     { "ExpectedPortConnection" },
-    { "ExpectedVectorDigits" }
+    { "ExpectedVectorDigits" },
+    { "ExpectedVariableAssignment" }
 };
 
 static StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col);

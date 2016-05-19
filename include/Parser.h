@@ -100,6 +100,7 @@ private:
     CaseGenerateSyntax* parseCaseGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseGenerateBlock();
     ClassDeclarationSyntax* parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token* virtualOrInterface);
+    ContinuousAssignSyntax* parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes);
 
     bool isPortDeclaration();
     bool isNetDeclaration();

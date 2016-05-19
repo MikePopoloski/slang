@@ -346,6 +346,7 @@ enum class SyntaxKind : uint16_t {
     ExtendsClause,
     ImplementsClause,
     ClassDeclaration,
+    ContinuousAssign,
 
     // top level
     CompilationUnit

@@ -68,7 +68,8 @@ enum class DiagCode : uint8_t {
     ExpectedPackageImport,
     ExpectedHierarchicalInstantiation,
     ExpectedPortConnection,
-    ExpectedVectorDigits
+    ExpectedVectorDigits,
+    ExpectedVariableAssignment
 };
 
 class Diagnostic {

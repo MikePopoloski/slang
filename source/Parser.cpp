@@ -305,10 +305,10 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::DefParamKeyword:
         case TokenKind::Identifier:
         case TokenKind::BindKeyword:
-        case TokenKind::AssignKeyword:
         case TokenKind::AliasKeyword:
             break;
-
+        case TokenKind::AssignKeyword:
+            return parseContinuousAssign(attributes);
         case TokenKind::InitialKeyword:
         case TokenKind::FinalKeyword:
         case TokenKind::AlwaysKeyword:
@@ -593,6 +593,24 @@ MemberSyntax* Parser::parseGenerateBlock() {
 
 ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token* virtualOrInterface) {
     return nullptr;
+}
+
+ContinuousAssignSyntax* Parser::parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    // TODO: timing control
+    auto assign = consume();
+    auto buffer = tosPool.get();
+
+    Token* semi;
+    parseSeparatedList<isPossibleExpressionOrComma, isSemicolon>(
+        buffer,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        semi,
+        DiagCode::ExpectedVariableAssignment,
+        [this](bool) { return parseVariableAssignment(); }
+    );
+
+    return alloc.emplace<ContinuousAssignSyntax>(attributes, assign, buffer.copy(alloc), semi);
 }
 
 StatementSyntax* Parser::parseStatement() {

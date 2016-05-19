@@ -3695,8 +3695,8 @@ struct ContinuousAssignSyntax : public MemberSyntax {
     SeparatedSyntaxList<VariableAssignmentSyntax> assignments;
     Token* semi;
 
-    ContinuousAssignSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* assign, SeparatedSyntaxList<VariableAssignmentSyntax> assignments, Token* semi) :
-        MemberSyntax(kind, attributes), assign(assign), assignments(assignments), semi(semi)
+    ContinuousAssignSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* assign, SeparatedSyntaxList<VariableAssignmentSyntax> assignments, Token* semi) :
+        MemberSyntax(SyntaxKind::ContinuousAssign, attributes), assign(assign), assignments(assignments), semi(semi)
     {
         childCount += 3;
     }
