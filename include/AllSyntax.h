@@ -3138,13 +3138,13 @@ protected:
     }
 };
 
-struct GenerateBlockSyntax : public MemberSyntax {
+struct GenerateRegionSyntax : public MemberSyntax {
     Token* keyword;
     SyntaxList<MemberSyntax> members;
     Token* endgenerate;
 
-    GenerateBlockSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SyntaxList<MemberSyntax> members, Token* endgenerate) :
-        MemberSyntax(SyntaxKind::GenerateBlock, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
+    GenerateRegionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SyntaxList<MemberSyntax> members, Token* endgenerate) :
+        MemberSyntax(SyntaxKind::GenerateRegion, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
     {
         childCount += 3;
     }
@@ -3156,6 +3156,47 @@ protected:
             case 1: return keyword;
             case 2: return &members;
             case 3: return endgenerate;
+            default: return nullptr;
+        }
+    }
+};
+
+struct LoopGenerateSyntax : public MemberSyntax {
+    Token* keyword;
+    Token* openParen;
+    Token* genvar;
+    Token* identifier;
+    Token* equals;
+    ExpressionSyntax* initialExpr;
+    Token* semi1;
+    ExpressionSyntax* stopExpr;
+    Token* semi2;
+    ExpressionSyntax* iterationExpr;
+    Token* closeParen;
+    MemberSyntax* block;
+
+    LoopGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* openParen, Token* genvar, Token* identifier, Token* equals, ExpressionSyntax* initialExpr, Token* semi1, ExpressionSyntax* stopExpr, Token* semi2, ExpressionSyntax* iterationExpr, Token* closeParen, MemberSyntax* block) :
+        MemberSyntax(SyntaxKind::LoopGenerate, attributes), keyword(keyword), openParen(openParen), genvar(genvar), identifier(identifier), equals(equals), initialExpr(initialExpr), semi1(semi1), stopExpr(stopExpr), semi2(semi2), iterationExpr(iterationExpr), closeParen(closeParen), block(block)
+    {
+        childCount += 12;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return openParen;
+            case 3: return genvar;
+            case 4: return identifier;
+            case 5: return equals;
+            case 6: return initialExpr;
+            case 7: return semi1;
+            case 8: return stopExpr;
+            case 9: return semi2;
+            case 10: return iterationExpr;
+            case 11: return closeParen;
+            case 12: return block;
             default: return nullptr;
         }
     }

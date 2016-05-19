@@ -746,10 +746,24 @@ ProceduralBlockSyntax base=MemberSyntax
 token keyword
 StatementSyntax statement
 
-GenerateBlockSyntax base=MemberSyntax kind=GenerateBlock
+GenerateRegionSyntax base=MemberSyntax kind=GenerateRegion
 token keyword
 list<MemberSyntax> members
 token endgenerate
+
+LoopGenerateSyntax base=MemberSyntax kind=LoopGenerate
+token keyword
+token openParen
+token genvar
+token identifier
+token equals
+ExpressionSyntax initialExpr
+token semi1
+ExpressionSyntax stopExpr
+token semi2
+ExpressionSyntax iterationExpr
+token closeParen
+MemberSyntax block
 
 DividerClauseSyntax kind=DividerClause
 token divide

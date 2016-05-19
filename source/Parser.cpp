@@ -278,7 +278,7 @@ MemberSyntax* Parser::parseMember() {
 
             Token* endgenerate;
             auto members = parseMemberList(TokenKind::EndGenerateKeyword, endgenerate);
-            return alloc.emplace<GenerateBlockSyntax>(attributes, keyword, members, endgenerate);
+            return alloc.emplace<GenerateRegionSyntax>(attributes, keyword, members, endgenerate);
         }
 
         case TokenKind::SpecifyKeyword:

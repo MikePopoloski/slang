@@ -103,7 +103,7 @@ TEST_CASE("Simple members", "[parser:modules]") {
     parseMember("module foo; endmodule", SyntaxKind::ModuleDeclaration);
     parseMember("interface foo; endinterface", SyntaxKind::InterfaceDeclaration);
     parseMember("program foo; endprogram", SyntaxKind::ProgramDeclaration);
-    parseMember("generate logic foo = 4; endgenerate", SyntaxKind::GenerateBlock);
+    parseMember("generate logic foo = 4; endgenerate", SyntaxKind::GenerateRegion);
     parseMember("initial begin logic foo = 4; end", SyntaxKind::InitialBlock);
     parseMember("final begin logic foo = 4; end", SyntaxKind::FinalBlock);
     parseMember("always @* begin logic foo = 4; end", SyntaxKind::AlwaysBlock);
