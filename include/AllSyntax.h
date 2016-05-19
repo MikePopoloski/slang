@@ -2383,21 +2383,13 @@ protected:
     }
 };
 
-struct ForInitializerSyntax : public SyntaxNode {
-
-    ForInitializerSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {
-    }
-};
-
-struct ForVariableDeclarationSyntax : public ForInitializerSyntax {
+struct ForVariableDeclarationSyntax : public SyntaxNode {
     Token* varKeyword;
     DataTypeSyntax* type;
     VariableDeclaratorSyntax* declarator;
 
     ForVariableDeclarationSyntax(Token* varKeyword, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
-        ForInitializerSyntax(SyntaxKind::ForVariableDeclaration), varKeyword(varKeyword), type(type), declarator(declarator)
+        SyntaxNode(SyntaxKind::ForVariableDeclaration), varKeyword(varKeyword), type(type), declarator(declarator)
     {
         childCount += 3;
     }
@@ -2413,32 +2405,10 @@ protected:
     }
 };
 
-struct VariableAssignmentSyntax : public ForInitializerSyntax {
-    ExpressionSyntax* left;
-    Token* equals;
-    ExpressionSyntax* expr;
-
-    VariableAssignmentSyntax(ExpressionSyntax* left, Token* equals, ExpressionSyntax* expr) :
-        ForInitializerSyntax(SyntaxKind::VariableAssignment), left(left), equals(equals), expr(expr)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
-            case 0: return left;
-            case 1: return equals;
-            case 2: return expr;
-            default: return nullptr;
-        }
-    }
-};
-
 struct ForLoopStatementSyntax : public StatementSyntax {
     Token* forKeyword;
     Token* openParen;
-    SeparatedSyntaxList<ForInitializerSyntax> initializers;
+    SeparatedSyntaxList<SyntaxNode> initializers;
     Token* semi1;
     ExpressionSyntax* stopExpr;
     Token* semi2;
@@ -2446,7 +2416,7 @@ struct ForLoopStatementSyntax : public StatementSyntax {
     Token* closeParen;
     StatementSyntax* statement;
 
-    ForLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* forKeyword, Token* openParen, SeparatedSyntaxList<ForInitializerSyntax> initializers, Token* semi1, ExpressionSyntax* stopExpr, Token* semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token* closeParen, StatementSyntax* statement) :
+    ForLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* forKeyword, Token* openParen, SeparatedSyntaxList<SyntaxNode> initializers, Token* semi1, ExpressionSyntax* stopExpr, Token* semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token* closeParen, StatementSyntax* statement) :
         StatementSyntax(SyntaxKind::ForLoopStatement, label, attributes), forKeyword(forKeyword), openParen(openParen), initializers(initializers), semi1(semi1), stopExpr(stopExpr), semi2(semi2), steps(steps), closeParen(closeParen), statement(statement)
     {
         childCount += 9;
@@ -3692,10 +3662,10 @@ protected:
 
 struct ContinuousAssignSyntax : public MemberSyntax {
     Token* assign;
-    SeparatedSyntaxList<VariableAssignmentSyntax> assignments;
+    SeparatedSyntaxList<ExpressionSyntax> assignments;
     Token* semi;
 
-    ContinuousAssignSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* assign, SeparatedSyntaxList<VariableAssignmentSyntax> assignments, Token* semi) :
+    ContinuousAssignSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* assign, SeparatedSyntaxList<ExpressionSyntax> assignments, Token* semi) :
         MemberSyntax(SyntaxKind::ContinuousAssign, attributes), assign(assign), assignments(assignments), semi(semi)
     {
         childCount += 3;

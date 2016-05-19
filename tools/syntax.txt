@@ -568,23 +568,15 @@ ExpressionSyntax expr
 token closeParen
 token semi
 
-ForInitializerSyntax final=false
-empty
-
-ForVariableDeclarationSyntax base=ForInitializerSyntax kind=ForVariableDeclaration
+ForVariableDeclarationSyntax kind=ForVariableDeclaration
 token varKeyword
 DataTypeSyntax type
 VariableDeclaratorSyntax declarator
 
-VariableAssignmentSyntax base=ForInitializerSyntax kind=VariableAssignment
-ExpressionSyntax left
-token equals
-ExpressionSyntax expr
-
 ForLoopStatementSyntax base=StatementSyntax kind=ForLoopStatement
 token forKeyword
 token openParen
-separated_list<ForInitializerSyntax> initializers
+separated_list<SyntaxNode> initializers
 token semi1
 ExpressionSyntax stopExpr
 token semi2
@@ -888,7 +880,7 @@ NamedBlockClauseSyntax endBlockName
 
 ContinuousAssignSyntax base=MemberSyntax kind=ContinuousAssign
 token assign
-separated_list<VariableAssignmentSyntax> assignments
+separated_list<ExpressionSyntax> assignments
 token semi
 
 // ----- TOP LEVEL -----

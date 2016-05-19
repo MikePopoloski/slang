@@ -607,7 +607,7 @@ ContinuousAssignSyntax* Parser::parseContinuousAssign(ArrayRef<AttributeInstance
         TokenKind::Comma,
         semi,
         DiagCode::ExpectedVariableAssignment,
-        [this](bool) { return parseVariableAssignment(); }
+        [this](bool) { return parseExpression(); }
     );
 
     return alloc.emplace<ContinuousAssignSyntax>(attributes, assign, buffer.copy(alloc), semi);
@@ -876,20 +876,13 @@ DoWhileStatementSyntax* Parser::parseDoWhileStatement(NamedLabelSyntax* label, A
     return alloc.emplace<DoWhileStatementSyntax>(label, attributes, doKeyword, statement, whileKeyword, openParen, expr, closeParen, semi);
 }
 
-ForInitializerSyntax* Parser::parseForInitializer() {
+SyntaxNode* Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto type = parseDataType(/* allowImplicit */ false);
         return alloc.emplace<ForVariableDeclarationSyntax>(varKeyword, type, parseVariableDeclarator<true>(/* isFirst */ true));
     }
-    return parseVariableAssignment();
-}
-
-VariableAssignmentSyntax* Parser::parseVariableAssignment() {
-    auto left = parseExpression();
-    auto equals = expect(TokenKind::Equals);
-    auto right = parseExpression();
-    return alloc.emplace<VariableAssignmentSyntax>(left, equals, right);
+    return parseExpression();
 }
 
 ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {

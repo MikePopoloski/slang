@@ -257,7 +257,6 @@ enum class SyntaxKind : uint16_t {
     LoopStatement,
     DoWhileStatement,
     ForVariableDeclaration,
-    VariableAssignment,
     ForLoopStatement,
     ForeachLoopStatement,
     ReturnStatement,
