@@ -321,9 +321,9 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::ForKeyword:
             return parseLoopGenerateConstruct(attributes);
         case TokenKind::IfKeyword:
+            return parseIfGenerateConstruct(attributes);
         case TokenKind::CaseKeyword:
-            break;
-
+            return parseCaseGenerateConstruct(attributes);
         case TokenKind::GenVarKeyword:
             return parseGenvarDeclaration(attributes);
         case TokenKind::TaskKeyword:

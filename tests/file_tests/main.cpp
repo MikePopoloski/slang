@@ -43,5 +43,5 @@ int main() {
     }
 
     printf("\n\n");
-    printf("Parsed %d files; %d errors found\n", files, errors);
+    printf("Finished parsing %d files; %d errors found\n\n", files, errors);
 }
