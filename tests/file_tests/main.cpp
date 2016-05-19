@@ -34,6 +34,9 @@ int main() {
     int errors = 0;
     int files = 0;
     for (auto& p : fs::directory_iterator(RelativeTestPath)) {
+        if (p.status().type() != fs::file_type::regular)
+            continue;
+
         printf("Parsing '%s'\n", p.path().string().c_str());
 
         auto buffer = sourceManager.readSource(p.path().string());
