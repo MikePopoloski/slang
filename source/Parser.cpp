@@ -282,6 +282,7 @@ MemberSyntax* Parser::parseMember() {
         }
 
         case TokenKind::SpecifyKeyword:
+            break;
 
         case TokenKind::TimeUnitKeyword:
         case TokenKind::TimePrecisionKeyword:
@@ -300,6 +301,7 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::BindKeyword:
         case TokenKind::AssignKeyword:
         case TokenKind::AliasKeyword:
+            break;
 
         case TokenKind::InitialKeyword:
         case TokenKind::FinalKeyword:
@@ -311,6 +313,7 @@ MemberSyntax* Parser::parseMember() {
             return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword->kind), attributes, keyword, parseStatement());
         }
         case TokenKind::ForKeyword:
+            return parseLoopGenerateConstruct(attributes);
         case TokenKind::IfKeyword:
         case TokenKind::CaseKeyword:
             break;
@@ -452,6 +455,35 @@ GenvarDeclarationSyntax* Parser::parseGenvarDeclaration(ArrayRef<AttributeInstan
     );
 
     return alloc.emplace<GenvarDeclarationSyntax>(attributes, keyword, identifiers, semi);
+}
+
+LoopGenerateSyntax* Parser::parseLoopGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto genvar = consumeIf(TokenKind::GenVarKeyword);
+    auto identifier = expect(TokenKind::Identifier);
+    auto equals = expect(TokenKind::Equals);
+    auto initialExpr = parseExpression();
+    auto semi1 = expect(TokenKind::Semicolon);
+    auto stopExpr = parseExpression();
+    auto semi2 = expect(TokenKind::Semicolon);
+    auto iterationExpr = parseExpression();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return alloc.emplace<LoopGenerateSyntax>(
+        attributes,
+        keyword,
+        openParen,
+        genvar,
+        identifier,
+        equals,
+        initialExpr,
+        semi1,
+        stopExpr,
+        semi2,
+        iterationExpr,
+        closeParen,
+        parseMember()
+    );
 }
 
 StatementSyntax* Parser::parseStatement() {

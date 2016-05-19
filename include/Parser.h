@@ -90,6 +90,7 @@ private:
     Token* parseLifetime();
     ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token*& end);
     GenvarDeclarationSyntax* parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    LoopGenerateSyntax* parseLoopGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
 
     bool isPortDeclaration();
     bool isNetDeclaration();

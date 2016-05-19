@@ -110,6 +110,7 @@ TEST_CASE("Simple members", "[parser:modules]") {
     parseMember("always_ff @(posedge clk) begin logic foo = 4; end", SyntaxKind::AlwaysFFBlock);
     parseMember("input [31:0] foo, bar;", SyntaxKind::PortDeclaration);
     parseMember("parameter foo = 1, bar = 2;", SyntaxKind::ParameterDeclarationStatement);
+    parseMember("for (genvar i = 1; i != 10; i++) parameter foo = i;", SyntaxKind::LoopGenerate);
 }
 
 }
