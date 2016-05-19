@@ -19,10 +19,10 @@ public:
 
     template<typename TWrapped>
     struct BufferWrapper {
-        BufferPool* pool;
+        BufferPool<T>* pool;
         Buffer<TWrapped>* buffer;
 
-        BufferWrapper(BufferPool* pool, Buffer<TWrapped>* buffer) : pool(pool), buffer(buffer) {}
+        BufferWrapper(BufferPool<T>* pool, Buffer<TWrapped>* buffer) : pool(pool), buffer(buffer) {}
         ~BufferWrapper() { pool->free(buffer); }
 
         bool empty() const { return buffer->empty(); }

@@ -245,7 +245,7 @@ enum class SyntaxKind : uint16_t {
     DotMemberClause,
 
     // statements
-    StatementLabel,
+    NamedLabel,
     EmptyStatement,
     ElseClause,
     ConditionalStatement,
@@ -327,6 +327,9 @@ enum class SyntaxKind : uint16_t {
     AlwaysLatchBlock,
     GenerateRegion,
     LoopGenerate,
+    IfGenerate,
+    CaseGenerate,
+    GenerateBlock,
     DividerClause,
     TimeUnitsDeclaration,
     OrderedPortConnection,

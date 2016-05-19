@@ -19,12 +19,12 @@ token openParen
 separated_list<AttributeSpecSyntax> specs
 token closeParen
 
-StatementLabelSyntax kind=StatementLabel
+NamedLabelSyntax kind=NamedLabel
 token name
 token colon
 
 StatementSyntax final=false
-StatementLabelSyntax label
+NamedLabelSyntax label
 list<AttributeInstanceSyntax> attributes
 
 MemberSyntax final=false
@@ -490,7 +490,7 @@ token semicolon
 
 ElseClauseSyntax kind=ElseClause
 token elseKeyword
-StatementSyntax statement
+SyntaxNode clause
 
 ConditionalStatementSyntax base=StatementSyntax kind=ConditionalStatement
 token uniqueOrPriority
@@ -507,7 +507,7 @@ empty
 DefaultCaseItemSyntax base=CaseItemSyntax kind=DefaultCaseItem
 token defaultKeyword
 token colon
-StatementSyntax statement
+SyntaxNode clause
 
 PatternCaseItemSyntax base=CaseItemSyntax kind=PatternCaseItem
 PatternSyntax pattern
@@ -519,7 +519,7 @@ StatementSyntax statement
 StandardCaseItemSyntax base=CaseItemSyntax kind=StandardCaseItem
 separated_list<ExpressionSyntax> expressions
 token colon
-StatementSyntax statement
+SyntaxNode clause
 
 CaseStatementSyntax base=StatementSyntax kind=CaseStatement
 token uniqueOrPriority
@@ -765,6 +765,30 @@ ExpressionSyntax iterationExpr
 token closeParen
 MemberSyntax block
 
+IfGenerateSyntax base=MemberSyntax kind=IfGenerate
+token keyword
+token openParen
+ExpressionSyntax condition
+token closeParen
+MemberSyntax block
+ElseClauseSyntax elseClause
+
+CaseGenerateSyntax base=MemberSyntax kind=CaseGenerate
+token keyword
+token openParen
+ExpressionSyntax condition
+token closeParen
+list<CaseItemSyntax> items
+token endCase
+
+GenerateBlockSyntax base=MemberSyntax kind=GenerateBlock
+NamedLabelSyntax label
+token begin
+NamedBlockClauseSyntax beginName
+list<MemberSyntax> members
+token end
+NamedBlockClauseSyntax endName
+
 DividerClauseSyntax kind=DividerClause
 token divide
 token value
@@ -811,6 +835,28 @@ AnsiPortListSyntax portList
 token semi
 list<SyntaxNode> items
 token end
+NamedBlockClauseSyntax endBlockName
+
+ExtendsClauseSyntax kind=ExtendsClause
+token keyword
+NameSyntax baseName
+ArgumentListSyntax arguments
+
+ImplementsClauseSyntax kind=ImplementsClause
+token keyword
+separated_list<NameSyntax> interfaces
+
+ClassDeclarationSyntax base=MemberSyntax
+token virtualOrInterface
+token classKeyword
+token lifetime
+token name
+ParameterPortListSyntax parameters
+ExtendsClauseSyntax extendsClause
+ImplementsClauseSyntax implementsClause
+token semi
+list<MemberSyntax> items
+token endClass
 NamedBlockClauseSyntax endBlockName
 
 // ----- TOP LEVEL -----

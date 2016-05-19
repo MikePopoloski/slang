@@ -20,7 +20,7 @@ public:
     StatementSyntax* parseStatement();
     ModuleDeclarationSyntax* parseModule();
 
-private:    
+private:
     ExpressionSyntax* parseMinTypMaxExpression();
     ExpressionSyntax* parsePrimaryExpression();
     ExpressionSyntax* parseIntegerExpression();
@@ -43,22 +43,22 @@ private:
     TimingControlSyntax* parseTimingControl(bool allowRepeat);
     ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
     ConditionalPatternSyntax* parseConditionalPattern();
-    ConditionalStatementSyntax* parseConditionalStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority);
+    ConditionalStatementSyntax* parseConditionalStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority);
     ElseClauseSyntax* parseElseClause();
-    CaseStatementSyntax* parseCaseStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority, Token* caseKeyword);
+    CaseStatementSyntax* parseCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority, Token* caseKeyword);
     DefaultCaseItemSyntax* parseDefaultCaseItem();
-    LoopStatementSyntax* parseLoopStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    DoWhileStatementSyntax* parseDoWhileStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    ForLoopStatementSyntax* parseForLoopStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    LoopStatementSyntax* parseLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    DoWhileStatementSyntax* parseDoWhileStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    ForLoopStatementSyntax* parseForLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     ForInitializerSyntax* parseForInitializer();
-    ReturnStatementSyntax* parseReturnStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    JumpStatementSyntax* parseJumpStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    AssignmentStatementSyntax* parseAssignmentStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    ProceduralAssignStatementSyntax* parseProceduralAssignStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind);
-    ProceduralDeassignStatementSyntax* parseProceduralDeassignStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind);
-    StatementSyntax* parseDisableStatement(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    ImmediateAssertionStatementSyntax* parseAssertionStatement(SyntaxKind assertionKind, StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    SequentialBlockStatementSyntax* parseSequentialBlock(StatementLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    ReturnStatementSyntax* parseReturnStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    JumpStatementSyntax* parseJumpStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    AssignmentStatementSyntax* parseAssignmentStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    ProceduralAssignStatementSyntax* parseProceduralAssignStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind);
+    ProceduralDeassignStatementSyntax* parseProceduralDeassignStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind);
+    StatementSyntax* parseDisableStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    ImmediateAssertionStatementSyntax* parseAssertionStatement(SyntaxKind assertionKind, NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    SequentialBlockStatementSyntax* parseSequentialBlock(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     Token* parseSigning();
     VariableDimensionSyntax* parseDimension();
     ArrayRef<VariableDimensionSyntax*> parseDimensionList();
@@ -91,6 +91,9 @@ private:
     ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token*& end);
     GenvarDeclarationSyntax* parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     LoopGenerateSyntax* parseLoopGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
+    IfGenerateSyntax* parseIfGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
+    CaseGenerateSyntax* parseCaseGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
+    MemberSyntax* parseGenerateBlock();
 
     bool isPortDeclaration();
     bool isNetDeclaration();

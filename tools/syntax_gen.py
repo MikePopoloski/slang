@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # This script generates C++ source for parse tree syntax nodes from a data file.
 
 import os
@@ -20,6 +21,8 @@ namespace slang {
 ''')
 
 	currtype = None
+	currtype_name = None
+	tags = None
 	alltypes = {}
 
 	for line in [x.strip('\n') for x in inf]:
@@ -44,7 +47,7 @@ namespace slang {
 			currtype = []
 
 	if currtype:
-		generate(outf, currtype_name, tags, currtype, alltypes)		
+		generate(outf, currtype_name, tags, currtype, alltypes)
 	outf.write('}')
 
 def generate(outf, name, tags, members, alltypes):
