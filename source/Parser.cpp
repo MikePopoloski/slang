@@ -291,9 +291,15 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::ModuleKeyword:
         case TokenKind::MacromoduleKeyword:
         case TokenKind::ProgramKeyword:
-        case TokenKind::InterfaceKeyword:
             // modules, interfaces, and programs share the same syntax
             return parseModule(attributes);
+
+        case TokenKind::InterfaceKeyword:
+            // an interface class is different from an interface
+            if (peek(1)->kind == TokenKind::ClassKeyword)
+                return parseClassDeclaration(attributes, consume());
+            else
+                return parseModule(attributes);
 
         case TokenKind::SpecParamKeyword:
         case TokenKind::DefParamKeyword:
@@ -328,9 +334,12 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::CheckerKeyword:
             break;
 
+        case TokenKind::ClassKeyword:
+            return parseClassDeclaration(attributes, nullptr);
+        case TokenKind::VirtualKeyword:
+            return parseClassDeclaration(attributes, consume());
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyMemberSyntax>(attributes, consume());
-
         default:
             break;
     }
@@ -580,6 +589,10 @@ MemberSyntax* Parser::parseGenerateBlock() {
         end,
         endName
     );
+}
+
+ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token* virtualOrInterface) {
+    return nullptr;
 }
 
 StatementSyntax* Parser::parseStatement() {

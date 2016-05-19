@@ -13,7 +13,7 @@ Diagnostics diagnostics;
 SourceManager sourceManager;
 Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 
-void parseFile(const SourceBuffer* buffer) {
+int parseFile(const SourceBuffer* buffer) {
     diagnostics.clear();
     preprocessor.pushSource(buffer);
     Parser parser(preprocessor);
@@ -26,15 +26,22 @@ void parseFile(const SourceBuffer* buffer) {
         }
         printf("\n");
     }
+    return diagnostics.count();
 }
 
 int main() {
     // run through all external files in our corpus and make sure they parse without error
+    int errors = 0;
+    int files = 0;
     for (auto& p : fs::directory_iterator(RelativeTestPath)) {
         printf("Parsing '%s'\n", p.path().string().c_str());
 
         auto buffer = sourceManager.readSource(p.path().string());
-        parseFile(buffer);
+        errors += parseFile(buffer);
+        files++;
         printf("\n");
     }
+
+    printf("\n\n");
+    printf("Parsed %d files; %d errors found\n", files, errors);
 }

@@ -98,6 +98,7 @@ private:
     IfGenerateSyntax* parseIfGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     CaseGenerateSyntax* parseCaseGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseGenerateBlock();
+    ClassDeclarationSyntax* parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token* virtualOrInterface);
 
     bool isPortDeclaration();
     bool isNetDeclaration();
