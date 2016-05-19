@@ -575,6 +575,14 @@ separated_list<ExpressionSyntax> steps
 token closeParen
 StatementSyntax statement
 
+ForeachLoopStatementSyntax base=StatementSyntax kind=ForeachLoopStatement
+token keyword
+token openParen
+NameSyntax arrayName
+separated_list<NameSyntax> loopVariables
+token closeParen
+StatementSyntax statement
+
 ReturnStatementSyntax base=StatementSyntax kind=ReturnStatement
 token returnKeyword
 ExpressionSyntax returnValue

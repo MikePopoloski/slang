@@ -2401,6 +2401,36 @@ protected:
     }
 };
 
+struct ForeachLoopStatementSyntax : public StatementSyntax {
+    Token* keyword;
+    Token* openParen;
+    NameSyntax* arrayName;
+    SeparatedSyntaxList<NameSyntax> loopVariables;
+    Token* closeParen;
+    StatementSyntax* statement;
+
+    ForeachLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* openParen, NameSyntax* arrayName, SeparatedSyntaxList<NameSyntax> loopVariables, Token* closeParen, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::ForeachLoopStatement, label, attributes), keyword(keyword), openParen(openParen), arrayName(arrayName), loopVariables(loopVariables), closeParen(closeParen), statement(statement)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return keyword;
+            case 3: return openParen;
+            case 4: return arrayName;
+            case 5: return &loopVariables;
+            case 6: return closeParen;
+            case 7: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
 struct ReturnStatementSyntax : public StatementSyntax {
     Token* returnKeyword;
     ExpressionSyntax* returnValue;
@@ -3494,6 +3524,87 @@ protected:
             case 7: return &items;
             case 8: return end;
             case 9: return endBlockName;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ExtendsClauseSyntax : public SyntaxNode {
+    Token* keyword;
+    NameSyntax* baseName;
+    ArgumentListSyntax* arguments;
+
+    ExtendsClauseSyntax(Token* keyword, NameSyntax* baseName, ArgumentListSyntax* arguments) :
+        SyntaxNode(SyntaxKind::ExtendsClause), keyword(keyword), baseName(baseName), arguments(arguments)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return baseName;
+            case 2: return arguments;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ImplementsClauseSyntax : public SyntaxNode {
+    Token* keyword;
+    SeparatedSyntaxList<NameSyntax> interfaces;
+
+    ImplementsClauseSyntax(Token* keyword, SeparatedSyntaxList<NameSyntax> interfaces) :
+        SyntaxNode(SyntaxKind::ImplementsClause), keyword(keyword), interfaces(interfaces)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return &interfaces;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ClassDeclarationSyntax : public MemberSyntax {
+    Token* virtualOrInterface;
+    Token* classKeyword;
+    Token* lifetime;
+    Token* name;
+    ParameterPortListSyntax* parameters;
+    ExtendsClauseSyntax* extendsClause;
+    ImplementsClauseSyntax* implementsClause;
+    Token* semi;
+    SyntaxList<MemberSyntax> items;
+    Token* endClass;
+    NamedBlockClauseSyntax* endBlockName;
+
+    ClassDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* virtualOrInterface, Token* classKeyword, Token* lifetime, Token* name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token* semi, SyntaxList<MemberSyntax> items, Token* endClass, NamedBlockClauseSyntax* endBlockName) :
+        MemberSyntax(kind, attributes), virtualOrInterface(virtualOrInterface), classKeyword(classKeyword), lifetime(lifetime), name(name), parameters(parameters), extendsClause(extendsClause), implementsClause(implementsClause), semi(semi), items(items), endClass(endClass), endBlockName(endBlockName)
+    {
+        childCount += 11;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return virtualOrInterface;
+            case 2: return classKeyword;
+            case 3: return lifetime;
+            case 4: return name;
+            case 5: return parameters;
+            case 6: return extendsClause;
+            case 7: return implementsClause;
+            case 8: return semi;
+            case 9: return &items;
+            case 10: return endClass;
+            case 11: return endBlockName;
             default: return nullptr;
         }
     }

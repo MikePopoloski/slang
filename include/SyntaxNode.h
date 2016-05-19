@@ -259,6 +259,7 @@ enum class SyntaxKind : uint16_t {
     ForVariableDeclaration,
     ForVariableAssignment,
     ForLoopStatement,
+    ForeachLoopStatement,
     ReturnStatement,
     JumpStatement,
     TimingControlStatement,
@@ -339,6 +340,9 @@ enum class SyntaxKind : uint16_t {
     HierarchyInstantiation,
     FunctionDeclaration,
     TaskDeclaration,
+    ExtendsClause,
+    ImplementsClause,
+    ClassDeclaration,
 
     // top level
     CompilationUnit

@@ -626,6 +626,8 @@ StatementSyntax* Parser::parseStatement() {
             return parseDoWhileStatement(label, attributes);
         case TokenKind::ForKeyword:
             return parseForLoopStatement(label, attributes);
+        case TokenKind::ForeachKeyword:
+            return parseForeachLoopStatement(label, attributes);
         case TokenKind::ReturnKeyword:
             return parseReturnStatement(label, attributes);
         case TokenKind::BreakKeyword:
@@ -891,6 +893,34 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
         stopExpr,
         semi2,
         steps.copy(alloc),
+        closeParen,
+        parseStatement()
+    );
+}
+
+ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto arrayName = parseName();
+    auto buffer = tosPool.get();
+
+    Token* closeParen;
+    parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
+        buffer,
+        TokenKind::CloseParenthesis,
+        TokenKind::Comma,
+        closeParen,
+        DiagCode::ExpectedIdentifier,
+        [this](bool) { return parseName(); }
+    );
+
+    return alloc.emplace<ForeachLoopStatementSyntax>(
+        label,
+        attributes,
+        keyword,
+        openParen,
+        arrayName,
+        buffer.copy(alloc),
         closeParen,
         parseStatement()
     );

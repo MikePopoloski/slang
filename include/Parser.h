@@ -51,6 +51,7 @@ private:
     DoWhileStatementSyntax* parseDoWhileStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     ForLoopStatementSyntax* parseForLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     ForInitializerSyntax* parseForInitializer();
+    ForeachLoopStatementSyntax* parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     ReturnStatementSyntax* parseReturnStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     JumpStatementSyntax* parseJumpStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     AssignmentStatementSyntax* parseAssignmentStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
