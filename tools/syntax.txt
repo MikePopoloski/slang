@@ -576,7 +576,7 @@ token varKeyword
 DataTypeSyntax type
 VariableDeclaratorSyntax declarator
 
-ForVariableAssignmentSyntax base=ForInitializerSyntax kind=ForVariableAssignment
+VariableAssignmentSyntax base=ForInitializerSyntax kind=VariableAssignment
 ExpressionSyntax left
 token equals
 ExpressionSyntax expr
@@ -885,6 +885,11 @@ token semi
 list<MemberSyntax> items
 token endClass
 NamedBlockClauseSyntax endBlockName
+
+ContinuousAssignSyntax base=MemberSyntax
+token assign
+separated_list<VariableAssignmentSyntax> assignments
+token semi
 
 // ----- TOP LEVEL -----
 

@@ -864,11 +864,14 @@ ForInitializerSyntax* Parser::parseForInitializer() {
         auto type = parseDataType(/* allowImplicit */ false);
         return alloc.emplace<ForVariableDeclarationSyntax>(varKeyword, type, parseVariableDeclarator<true>(/* isFirst */ true));
     }
+    return parseVariableAssignment();
+}
 
+VariableAssignmentSyntax* Parser::parseVariableAssignment() {
     auto left = parseExpression();
     auto equals = expect(TokenKind::Equals);
     auto right = parseExpression();
-    return alloc.emplace<ForVariableAssignmentSyntax>(left, equals, right);
+    return alloc.emplace<VariableAssignmentSyntax>(left, equals, right);
 }
 
 ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {

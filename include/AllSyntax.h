@@ -2413,13 +2413,13 @@ protected:
     }
 };
 
-struct ForVariableAssignmentSyntax : public ForInitializerSyntax {
+struct VariableAssignmentSyntax : public ForInitializerSyntax {
     ExpressionSyntax* left;
     Token* equals;
     ExpressionSyntax* expr;
 
-    ForVariableAssignmentSyntax(ExpressionSyntax* left, Token* equals, ExpressionSyntax* expr) :
-        ForInitializerSyntax(SyntaxKind::ForVariableAssignment), left(left), equals(equals), expr(expr)
+    VariableAssignmentSyntax(ExpressionSyntax* left, Token* equals, ExpressionSyntax* expr) :
+        ForInitializerSyntax(SyntaxKind::VariableAssignment), left(left), equals(equals), expr(expr)
     {
         childCount += 3;
     }
@@ -3685,6 +3685,29 @@ protected:
             case 9: return &items;
             case 10: return endClass;
             case 11: return endBlockName;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ContinuousAssignSyntax : public MemberSyntax {
+    Token* assign;
+    SeparatedSyntaxList<VariableAssignmentSyntax> assignments;
+    Token* semi;
+
+    ContinuousAssignSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* assign, SeparatedSyntaxList<VariableAssignmentSyntax> assignments, Token* semi) :
+        MemberSyntax(kind, attributes), assign(assign), assignments(assignments), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return assign;
+            case 2: return &assignments;
+            case 3: return semi;
             default: return nullptr;
         }
     }
