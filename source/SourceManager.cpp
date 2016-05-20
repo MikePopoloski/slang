@@ -56,7 +56,7 @@ uint32_t SourceManager::getColumnNumber(SourceLocation location) {
     // walk backward to find start of line
     uint32_t lineStart = location.offset;
     ASSERT(lineStart < data.count());
-    while (lineStart > 0 && data[lineStart - 1] != '\n' && data[lineStart - 1] != 'r')
+    while (lineStart > 0 && data[lineStart - 1] != '\n' && data[lineStart - 1] != '\r')
         lineStart--;
 
     return location.offset - lineStart + 1;
