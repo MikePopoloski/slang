@@ -865,7 +865,7 @@ ImplementsClauseSyntax kind=ImplementsClause
 token keyword
 separated_list<NameSyntax> interfaces
 
-ClassDeclarationSyntax base=MemberSyntax
+ClassDeclarationSyntax base=MemberSyntax kind=ClassDeclaration
 token virtualOrInterface
 token classKeyword
 token lifetime

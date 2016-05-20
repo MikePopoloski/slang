@@ -79,7 +79,8 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "ExpectedHierarchicalInstantiation" },
     { "ExpectedPortConnection" },
     { "ExpectedVectorDigits" },
-    { "ExpectedVariableAssignment" }
+    { "ExpectedVariableAssignment" },
+    { "ExpectedInterfaceClassName" }
 };
 
 static StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col);

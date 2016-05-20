@@ -73,6 +73,7 @@ private:
     ArrayRef<AttributeInstanceSyntax*> parseAttributes();
     AttributeSpecSyntax* parseAttributeSpec();
     ModuleHeaderSyntax* parseModuleHeader();
+    ParameterPortListSyntax* parseParameterPortList();
     ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
     NonAnsiPortSyntax* parseNonAnsiPort();
     AnsiPortSyntax* parseAnsiPort();
@@ -80,7 +81,6 @@ private:
     PortHeaderSyntax* parsePortHeader(Token* direction);
     PortDeclarationSyntax* parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseMember();
-    ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind, Token*& endToken);
     TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportItemSyntax* parsePackageImportItem();
@@ -98,7 +98,9 @@ private:
     IfGenerateSyntax* parseIfGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     CaseGenerateSyntax* parseCaseGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseGenerateBlock();
+    ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token*& semi);
     ClassDeclarationSyntax* parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token* virtualOrInterface);
+    MemberSyntax* parseClassMember();
     ContinuousAssignSyntax* parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes);
 
     bool isPortDeclaration();
@@ -125,6 +127,9 @@ private:
 
     template<bool AllowMinTypeMax>
     ExpressionSyntax* parseAssignmentExpression();
+
+    template<typename TParseFunc>
+    ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind, Token*& endToken, TParseFunc&& parseFunc);
 
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);

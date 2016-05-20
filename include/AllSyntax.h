@@ -3634,8 +3634,8 @@ struct ClassDeclarationSyntax : public MemberSyntax {
     Token* endClass;
     NamedBlockClauseSyntax* endBlockName;
 
-    ClassDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* virtualOrInterface, Token* classKeyword, Token* lifetime, Token* name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token* semi, SyntaxList<MemberSyntax> items, Token* endClass, NamedBlockClauseSyntax* endBlockName) :
-        MemberSyntax(kind, attributes), virtualOrInterface(virtualOrInterface), classKeyword(classKeyword), lifetime(lifetime), name(name), parameters(parameters), extendsClause(extendsClause), implementsClause(implementsClause), semi(semi), items(items), endClass(endClass), endBlockName(endBlockName)
+    ClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* virtualOrInterface, Token* classKeyword, Token* lifetime, Token* name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token* semi, SyntaxList<MemberSyntax> items, Token* endClass, NamedBlockClauseSyntax* endBlockName) :
+        MemberSyntax(SyntaxKind::ClassDeclaration, attributes), virtualOrInterface(virtualOrInterface), classKeyword(classKeyword), lifetime(lifetime), name(name), parameters(parameters), extendsClause(extendsClause), implementsClause(implementsClause), semi(semi), items(items), endClass(endClass), endBlockName(endBlockName)
     {
         childCount += 11;
     }

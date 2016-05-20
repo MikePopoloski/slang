@@ -9,7 +9,7 @@ Parser::Parser(Preprocessor& preprocessor) :
 
 CompilationUnitSyntax* Parser::parseCompilationUnit() {
     Token* eof;
-    auto members = parseMemberList(TokenKind::EndOfFile, eof);
+    auto members = parseMemberList(TokenKind::EndOfFile, eof, [this]() { return parseMember(); });
     return alloc.emplace<CompilationUnitSyntax>(members, eof);
 }
 
@@ -22,7 +22,7 @@ ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> 
     auto endKind = getModuleEndKind(header->moduleKeyword->kind);
 
     Token* endmodule;
-    auto members = parseMemberList(endKind, endmodule);
+    auto members = parseMemberList(endKind, endmodule, [this]() { return parseMember(); });
     return alloc.emplace<ModuleDeclarationSyntax>(
         getModuleDeclarationKind(header->moduleKeyword->kind),
         attributes,
@@ -62,27 +62,7 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
     auto lifetime = parseLifetime();
     auto name = expect(TokenKind::Identifier);
     auto imports = parsePackageImports();
-
-    ParameterPortListSyntax* parameterList = nullptr;
-    if (peek(TokenKind::Hash)) {
-        auto hash = consume();
-
-        Token* openParen;
-        Token* closeParen;
-        ArrayRef<TokenOrSyntax> parameters = nullptr;
-        parseSeparatedList<isPossibleParameter, isEndOfParameterList>(
-            TokenKind::OpenParenthesis,
-            TokenKind::CloseParenthesis,
-            TokenKind::Comma,
-            openParen,
-            parameters,
-            closeParen,
-            DiagCode::ExpectedParameterPort,
-            [this](bool) { return parseParameterPort(); }
-        );
-
-        parameterList = alloc.emplace<ParameterPortListSyntax>(hash, openParen, parameters, closeParen);
-    }
+    auto parameterList = parseParameterPortList();
 
     PortListSyntax* ports = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
@@ -110,6 +90,29 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
 
     auto semi = expect(TokenKind::Semicolon);
     return alloc.emplace<ModuleHeaderSyntax>(getModuleHeaderKind(moduleKeyword->kind), moduleKeyword, lifetime, name, imports, parameterList, ports, semi);
+}
+
+ParameterPortListSyntax* Parser::parseParameterPortList() {
+    if (!peek(TokenKind::Hash))
+        return nullptr;
+
+    auto hash = consume();
+
+    Token* openParen;
+    Token* closeParen;
+    ArrayRef<TokenOrSyntax> parameters = nullptr;
+    parseSeparatedList<isPossibleParameter, isEndOfParameterList>(
+        TokenKind::OpenParenthesis,
+        TokenKind::CloseParenthesis,
+        TokenKind::Comma,
+        openParen,
+        parameters,
+        closeParen,
+        DiagCode::ExpectedParameterPort,
+        [this](bool) { return parseParameterPort(); }
+    );
+
+    return alloc.emplace<ParameterPortListSyntax>(hash, openParen, parameters, closeParen);
 }
 
 NonAnsiPortSyntax* Parser::parseNonAnsiPort() {
@@ -277,7 +280,7 @@ MemberSyntax* Parser::parseMember() {
             auto keyword = consume();
 
             Token* endgenerate;
-            auto members = parseMemberList(TokenKind::EndGenerateKeyword, endgenerate);
+            auto members = parseMemberList(TokenKind::EndGenerateKeyword, endgenerate, [this]() { return parseMember(); });
             return alloc.emplace<GenerateRegionSyntax>(attributes, keyword, members, endgenerate);
         }
 
@@ -346,13 +349,14 @@ MemberSyntax* Parser::parseMember() {
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (attributes.count())
-        return alloc.emplace<EmptyMemberSyntax>(attributes, consume());
+        return alloc.emplace<EmptyMemberSyntax>(attributes, expect(TokenKind::Semicolon));
 
     // otherwise, we got nothing and should just return null so that are caller will skip and try again.
     return nullptr;
 }
 
-ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endToken) {
+template<typename TParseFunc>
+ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endToken, TParseFunc&& parseFunc) {
     auto members = nodePool.getAs<MemberSyntax*>();
     auto skipped = tokenPool.get();
     auto trivia = triviaPool.get();
@@ -363,7 +367,7 @@ ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token*& endTo
         if (kind == TokenKind::EndOfFile || kind == endKind)
             break;
 
-        auto member = parseMember();
+        auto member = parseFunc();
         if (!member) {
             // couldn't parse anything, skip a token and try again
             auto token = consume();
@@ -577,7 +581,7 @@ MemberSyntax* Parser::parseGenerateBlock() {
     auto beginName = parseNamedBlockClause();
 
     Token* end;
-    auto members = parseMemberList(TokenKind::EndKeyword, end);
+    auto members = parseMemberList(TokenKind::EndKeyword, end, [this]() { return parseMember(); });
     auto endName = parseNamedBlockClause();
 
     return alloc.emplace<GenerateBlockSyntax>(
@@ -591,7 +595,98 @@ MemberSyntax* Parser::parseGenerateBlock() {
     );
 }
 
+ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Token*& semi) {
+    if (!peek(keywordKind)) {
+        semi = expect(TokenKind::Semicolon);
+        return nullptr;
+    }
+
+    auto implements = consume();
+    auto buffer = tosPool.get();
+    parseSeparatedList<isPossibleExpressionOrComma, isSemicolon>(
+        buffer,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        semi,
+        DiagCode::ExpectedInterfaceClassName,
+        [this](bool) { return parseName(); }
+    );
+
+    return alloc.emplace<ImplementsClauseSyntax>(implements, buffer.copy(alloc));
+}
+
 ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token* virtualOrInterface) {
+    auto classKeyword = consume();
+    auto lifetime = parseLifetime();
+    auto name = expect(TokenKind::Identifier);
+    auto parameterList = parseParameterPortList();
+
+    Token* semi = nullptr;
+    ExtendsClauseSyntax* extendsClause = nullptr;
+    ImplementsClauseSyntax* implementsClause = nullptr;
+
+    // interface classes treat "extends" as the implements list
+    if (virtualOrInterface && virtualOrInterface->kind == TokenKind::InterfaceKeyword)
+        implementsClause = parseImplementsClause(TokenKind::ExtendsKeyword, semi);
+    else {
+        if (peek(TokenKind::ExtendsKeyword)) {
+            auto extends = consume();
+            auto baseName = parseName();
+
+            ArgumentListSyntax* arguments = nullptr;
+            if (peek(TokenKind::OpenParenthesis))
+                arguments = parseArgumentList();
+            extendsClause = alloc.emplace<ExtendsClauseSyntax>(extends, baseName, arguments);
+        }
+        implementsClause = parseImplementsClause(TokenKind::ImplementsKeyword, semi);
+    }
+
+    Token* endClass;
+    auto members = parseMemberList(TokenKind::EndClassKeyword, endClass, [this]() { return parseClassMember(); });
+    auto endBlockName = parseNamedBlockClause();
+    return alloc.emplace<ClassDeclarationSyntax>(
+        attributes,
+        virtualOrInterface,
+        classKeyword,
+        lifetime,
+        name,
+        parameterList,
+        extendsClause,
+        implementsClause,
+        semi,
+        members,
+        endClass,
+        endBlockName
+    );
+}
+
+MemberSyntax* Parser::parseClassMember() {
+    auto attributes = parseAttributes();
+    if (isVariableDeclaration())
+        return parseVariableDeclaration(attributes);
+
+    // TODO: error on attributes that don't attach to a valid construct
+
+    switch (peek()->kind) {
+        case TokenKind::TaskKeyword:
+            return parseFunctionDeclaration(attributes, SyntaxKind::TaskDeclaration, TokenKind::EndTaskKeyword);
+        case TokenKind::FunctionKeyword:
+            return parseFunctionDeclaration(attributes, SyntaxKind::FunctionDeclaration, TokenKind::EndFunctionKeyword);
+        case TokenKind::ClassKeyword:
+            return parseClassDeclaration(attributes, nullptr);
+        case TokenKind::VirtualKeyword:
+            return parseClassDeclaration(attributes, consume());
+        case TokenKind::Semicolon:
+            return alloc.emplace<EmptyMemberSyntax>(attributes, consume());
+        default:
+            break;
+    }
+
+    // if we got attributes but don't know what comes next, we have some kind of nonsense
+    if (attributes.count())
+        return alloc.emplace<EmptyMemberSyntax>(attributes, expect(TokenKind::Semicolon));
+
+    // otherwise, we got nothing and should just return null so that are caller will skip and try again.
     return nullptr;
 }
 
