@@ -350,6 +350,7 @@ bool isPossibleStatement(TokenKind kind) {
         case TokenKind::RandCaseKeyword:
         case TokenKind::ExpectKeyword:
         case TokenKind::OpenParenthesisStar:
+        case TokenKind::Semicolon:
             return true;
         default:
             return false;

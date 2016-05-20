@@ -37,6 +37,9 @@ int main() {
         if (p.status().type() != fs::file_type::regular)
             continue;
 
+        if (errors > 100)
+            break;
+
         printf("Parsing '%s'\n", p.path().string().c_str());
 
         auto buffer = sourceManager.readSource(p.path().string());
