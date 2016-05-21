@@ -5,6 +5,23 @@
 
 namespace slang {
 
+static bool reportErrorAdjacent(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenBracket:
+        case TokenKind::OpenParenthesis:
+        case TokenKind::OpenParenthesisStar:
+        case TokenKind::OpenParenthesisStarCloseParenthesis:
+        case TokenKind::Semicolon:
+        case TokenKind::Colon:
+        case TokenKind::DoubleColon:
+        case TokenKind::Comma:
+        case TokenKind::Dot:
+            return true;
+        default:
+            return false;
+    }
+}
+
 ParserBase::ParserBase(Preprocessor& preprocessor) :
     window(preprocessor),
     alloc(preprocessor.getAllocator())
@@ -123,12 +140,20 @@ Token* ParserBase::expect(TokenKind kind) {
 }
 
 Token* ParserBase::createExpectedToken(Token* actual, TokenKind expected) {
+    SourceLocation location;
+    if (!window.lastConsumed || !reportErrorAdjacent(expected))
+        location = actual->location;
+    else {
+        location = window.lastConsumed->location;
+        location.offset += window.lastConsumed->rawText().length();
+    }
+
     // report an error here for the missing token
     switch (expected) {
-        case TokenKind::Identifier: addError(DiagCode::ExpectedIdentifier, actual->location); break;
-        default: addError(DiagCode::ExpectedToken, actual->location) << getTokenKindText(expected); break;
+        case TokenKind::Identifier: addError(DiagCode::ExpectedIdentifier, location); break;
+        default: addError(DiagCode::ExpectedToken, location) << getTokenKindText(expected); break;
     }
-    return Token::missing(alloc, expected, actual->location);
+    return Token::missing(alloc, expected, location);
 }
 
 void ParserBase::Window::addNew() {
@@ -156,6 +181,7 @@ void ParserBase::Window::addNew() {
 }
 
 void ParserBase::Window::moveToNext() {
+    lastConsumed = currentToken;
     currentToken = nullptr;
     currentOffset++;
 }

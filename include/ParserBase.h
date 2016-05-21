@@ -57,6 +57,7 @@ protected:
         Preprocessor& tokenSource;
         Token** buffer = nullptr;
         Token* currentToken = nullptr;
+        Token* lastConsumed = nullptr;
         int currentOffset = 0;
         int count = 0;
         int capacity = 0;
