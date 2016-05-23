@@ -196,6 +196,7 @@ enum class SyntaxKind : uint16_t {
     ParenImplicitEventControl,
     EventControlWithExpression,
     RepeatedEventControl,
+    TimingControlExpression,
 
     // declarations
     RangeDimensionSpecifier,

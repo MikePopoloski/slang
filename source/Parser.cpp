@@ -763,7 +763,7 @@ StatementSyntax* Parser::parseStatement() {
         case TokenKind::DoubleHash:
         case TokenKind::At:
         case TokenKind::AtStar: {
-            auto timingControl = parseTimingControl(/* allowRepeat */ false);
+            auto timingControl = parseTimingControl();
             return alloc.emplace<TimingControlStatementSyntax>(label, attributes, timingControl, parseStatement());
         }
         case TokenKind::AssignKeyword:
@@ -1075,7 +1075,7 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement(NamedLabelSyntax* la
     auto kind = peek()->kind;
     if (kind == TokenKind::LessThanEquals) {
         auto op = consume();
-        auto timingControl = parseTimingControl(/* allowRepeat */ true);
+        auto timingControl = parseTimingControl();
         auto expr = parseExpression();
         return alloc.emplace<AssignmentStatementSyntax>(
             SyntaxKind::NonblockingAssignmentStatement,
@@ -1094,7 +1094,7 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement(NamedLabelSyntax* la
         auto op = consume();
         kind = peek()->kind;
         if (isPossibleDelayOrEventControl(kind)) {
-            auto timingControl = parseTimingControl(/* allowRepeat */ true);
+            auto timingControl = parseTimingControl();
             auto expr = parseExpression();
             return alloc.emplace<AssignmentStatementSyntax>(
                 SyntaxKind::BlockingAssignmentStatement,
@@ -1302,6 +1302,10 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     auto current = peek();
     if (current->kind == TokenKind::NewKeyword)
         return parseNewExpression();
+    else if (isPossibleDelayOrEventControl(current->kind)) {
+        auto timingControl = parseTimingControl();
+        return alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
+    }
     else if (current->kind == TokenKind::TaggedKeyword) {
         // TODO: check for trailing expression
         auto tagged = consume();
@@ -1884,7 +1888,7 @@ ExpressionSyntax* Parser::parseNewExpression() {
     return alloc.emplace<NewClassExpressionSyntax>(nullptr, newKeyword, arguments);
 }
 
-TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
+TimingControlSyntax* Parser::parseTimingControl() {
     switch (peek()->kind) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash: {
@@ -1910,13 +1914,11 @@ TimingControlSyntax* Parser::parseTimingControl(bool allowRepeat) {
         case TokenKind::AtStar:
             return alloc.emplace<ImplicitEventControlSyntax>(consume());
         case TokenKind::RepeatKeyword: {
-            if (!allowRepeat)
-                return nullptr;
             auto repeat = consume();
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto expr = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            return alloc.emplace<RepeatedEventControlSyntax>(repeat, openParen, expr, closeParen, parseTimingControl(/* allowRepeat */ false));
+            return alloc.emplace<RepeatedEventControlSyntax>(repeat, openParen, expr, closeParen, parseTimingControl());
         }
         default:
             return nullptr;

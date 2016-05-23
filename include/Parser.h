@@ -41,7 +41,7 @@ private:
     PatternSyntax* parsePattern();
     EventExpressionSyntax* parseEventExpression();
     NamedBlockClauseSyntax* parseNamedBlockClause();
-    TimingControlSyntax* parseTimingControl(bool allowRepeat);
+    TimingControlSyntax* parseTimingControl();
     ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
     ConditionalPatternSyntax* parseConditionalPattern();
     ConditionalStatementSyntax* parseConditionalStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority);

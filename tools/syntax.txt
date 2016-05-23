@@ -323,6 +323,10 @@ ExpressionSyntax expr
 token closeParen
 TimingControlSyntax eventControl
 
+TimingControlExpressionSyntax base=ExpressionSyntax kind=TimingControlExpression
+TimingControlSyntax timing
+ExpressionSyntax expr
+
 // ----- DECLARATIONS -----
 
 DimensionSpecifierSyntax final=false

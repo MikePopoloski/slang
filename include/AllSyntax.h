@@ -1380,6 +1380,26 @@ protected:
     }
 };
 
+struct TimingControlExpressionSyntax : public ExpressionSyntax {
+    TimingControlSyntax* timing;
+    ExpressionSyntax* expr;
+
+    TimingControlExpressionSyntax(TimingControlSyntax* timing, ExpressionSyntax* expr) :
+        ExpressionSyntax(SyntaxKind::TimingControlExpression), timing(timing), expr(expr)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return timing;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- DECLARATIONS -----
 
 struct DimensionSpecifierSyntax : public SyntaxNode {
