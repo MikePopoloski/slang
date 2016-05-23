@@ -114,8 +114,15 @@ private:
 
     bool checkVectorDigits(Token* token);
 
-    template<bool AllowPatternMatch>
-    ExpressionSyntax* parseSubExpression(int precedence);
+    struct ExpressionOptions {
+        enum Enum {
+            None = 0,
+            AllowPatternMatch = 1,
+            ProceduralAssignmentContext = 2
+        };
+    };
+
+    ExpressionSyntax* parseSubExpression(ExpressionOptions::Enum options, int precedence);
 
     template<bool(*IsEnd)(TokenKind)>
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token*& end);

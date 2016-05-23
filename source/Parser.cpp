@@ -817,7 +817,7 @@ ConditionalStatementSyntax* Parser::parseConditionalStatement(NamedLabelSyntax* 
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token* closeParen;
-    auto predicate = parseConditionalPredicate(parseSubExpression<false>(0), TokenKind::CloseParenthesis, closeParen);
+    auto predicate = parseConditionalPredicate(parseSubExpression(ExpressionOptions::None, 0), TokenKind::CloseParenthesis, closeParen);
     auto statement = parseStatement();
     auto elseClause = parseElseClause();
 
@@ -1280,24 +1280,23 @@ WaitOrderStatementSyntax* Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
 }
 
 ExpressionSyntax* Parser::parseExpression() {
-    return parseSubExpression<true>(0);
+    return parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
 }
 
 ExpressionSyntax* Parser::parseMinTypMaxExpression() {
-    ExpressionSyntax* first = parseSubExpression<true>(0);
+    ExpressionSyntax* first = parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
     if (!peek(TokenKind::Colon))
         return first;
 
     auto colon1 = consume();
-    auto typ = parseSubExpression<true>(0);
+    auto typ = parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
     auto colon2 = expect(TokenKind::Colon);
-    auto max = parseSubExpression<true>(0);
+    auto max = parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
 
     return alloc.emplace<MinTypMaxExpressionSyntax>(first, colon1, typ, colon2, max);
 }
 
-template<bool AllowPatternMatch>
-ExpressionSyntax* Parser::parseSubExpression(int precedence) {
+ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, int precedence) {
     ExpressionSyntax* leftOperand = nullptr;
     int newPrecedence = 0;
 
@@ -1315,7 +1314,7 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
         auto attributes = parseAttributes();
 
         newPrecedence = getPrecedence(opKind);
-        ExpressionSyntax* operand = parseSubExpression<AllowPatternMatch>(newPrecedence);
+        ExpressionSyntax* operand = parseSubExpression(options, newPrecedence);
         leftOperand = alloc.emplace<PrefixUnaryExpressionSyntax>(opKind, opToken, attributes, operand);
     }
     else {
@@ -1345,13 +1344,13 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
         else {
             auto opToken = consume();
             auto attributes = parseAttributes();
-            auto rightOperand = parseSubExpression<AllowPatternMatch>(newPrecedence);
+            auto rightOperand = parseSubExpression(options, newPrecedence);
             leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, attributes, rightOperand);
         }
     }
 
     // can't nest pattern matching expressions
-    if (AllowPatternMatch) {
+    if (options & ExpressionOptions::AllowPatternMatch) {
         // if we see the matches keyword or &&& we're in a pattern conditional predicate
         // if we see a question mark, we were in a simple conditional predicate (at the precedence level one beneath logical-or)
         auto logicalOrPrecedence = getPrecedence(SyntaxKind::LogicalOrExpression);
@@ -1361,9 +1360,9 @@ ExpressionSyntax* Parser::parseSubExpression(int precedence) {
             Token* question;
             auto predicate = parseConditionalPredicate(leftOperand, TokenKind::Question, question);
             auto attributes = parseAttributes();
-            auto left = parseSubExpression<AllowPatternMatch>(logicalOrPrecedence - 1);
+            auto left = parseSubExpression(options, logicalOrPrecedence - 1);
             auto colon = expect(TokenKind::Colon);
-            auto right = parseSubExpression<AllowPatternMatch>(logicalOrPrecedence - 1);
+            auto right = parseSubExpression(options, logicalOrPrecedence - 1);
             leftOperand = alloc.emplace<ConditionalExpressionSyntax>(predicate, question, attributes, left, colon, right);
         }
     }
@@ -1777,7 +1776,7 @@ PatternSyntax* Parser::parsePattern() {
             break;
     }
     // otherwise, it's either an expression or an error (parseExpression will handle that for us)
-    return alloc.emplace<ExpressionPatternSyntax>(parseSubExpression<false>(0));
+    return alloc.emplace<ExpressionPatternSyntax>(parseSubExpression(ExpressionOptions::None, 0));
 }
 
 ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end) {
@@ -1806,7 +1805,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
 }
 
 ConditionalPatternSyntax* Parser::parseConditionalPattern() {
-    auto expr = parseSubExpression<false>(0);
+    auto expr = parseSubExpression(ExpressionOptions::None, 0);
 
     MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
