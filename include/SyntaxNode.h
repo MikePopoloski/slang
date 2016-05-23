@@ -264,6 +264,7 @@ enum class SyntaxKind : uint16_t {
     ReturnStatement,
     JumpStatement,
     TimingControlStatement,
+    ExpressionStatement,
     ProceduralAssignStatement,
     ProceduralForceStatement,
     ProceduralDeassignStatement,
@@ -282,22 +283,6 @@ enum class SyntaxKind : uint16_t {
     ImmediateAssertStatement,
     ImmediateAssumeStatement,
     ImmediateCoverStatement,
-
-    // assignment statements
-    NonblockingAssignmentStatement,
-    BlockingAssignmentStatement,
-    AddAssignmentStatement,
-    SubtractAssignmentStatement,
-    MultiplyAssignmentStatement,
-    DivideAssignmentStatement,
-    ModAssignmentStatement,
-    AndAssignmentStatement,
-    OrAssignmentStatement,
-    XorAssignmentStatement,
-    LogicalLeftShiftAssignmentStatement,
-    LogicalRightShiftAssignmentStatement,
-    ArithmeticLeftShiftAssignmentStatement,
-    ArithmeticRightShiftAssignmentStatement,
 
     // modules
     ImplicitNonAnsiPort,
@@ -360,7 +345,6 @@ SyntaxKind getUnaryPostfixExpression(TokenKind kind);
 SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
-SyntaxKind getAssignmentStatement(TokenKind kind);
 SyntaxKind getIntegerType(TokenKind kind);
 SyntaxKind getKeywordType(TokenKind kind);
 SyntaxKind getProceduralBlockKind(TokenKind kind);

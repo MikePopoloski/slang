@@ -796,8 +796,10 @@ StatementSyntax* Parser::parseStatement() {
     }
 
     // everything else should be some kind of expression
-    if (isPossibleExpression(peek()->kind))
-        return parseAssignmentStatement(label, attributes);
+    if (isPossibleExpression(peek()->kind)) {
+        auto expr = parseExpression();
+        return alloc.emplace<ExpressionStatementSyntax>(label, attributes, expr, expect(TokenKind::Semicolon));
+    }
 
     addError(DiagCode::ExpectedStatement, peek()->location);
     return alloc.emplace<EmptyStatementSyntax>(label, attributes, expect(TokenKind::Semicolon));
@@ -1066,73 +1068,6 @@ JumpStatementSyntax* Parser::parseJumpStatement(NamedLabelSyntax* label, ArrayRe
     auto keyword = consume();
     auto semi = expect(TokenKind::Semicolon);
     return alloc.emplace<JumpStatementSyntax>(label, attributes, keyword, semi);
-}
-
-AssignmentStatementSyntax* Parser::parseAssignmentStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
-    ExpressionSyntax* lvalue = parsePrimaryExpression();
-
-    // non-blocking assignments
-    auto kind = peek()->kind;
-    if (kind == TokenKind::LessThanEquals) {
-        auto op = consume();
-        auto timingControl = parseTimingControl();
-        auto expr = parseExpression();
-        return alloc.emplace<AssignmentStatementSyntax>(
-            SyntaxKind::NonblockingAssignmentStatement,
-            label,
-            attributes,
-            lvalue,
-            op,
-            timingControl,
-            expr,
-            expect(TokenKind::Semicolon)
-        );
-    }
-
-    // special case blocking assignments
-    if (kind == TokenKind::Equals) {
-        auto op = consume();
-        kind = peek()->kind;
-        if (isPossibleDelayOrEventControl(kind)) {
-            auto timingControl = parseTimingControl();
-            auto expr = parseExpression();
-            return alloc.emplace<AssignmentStatementSyntax>(
-                SyntaxKind::BlockingAssignmentStatement,
-                label,
-                attributes,
-                lvalue,
-                op,
-                timingControl,
-                expr,
-                expect(TokenKind::Semicolon)
-            );
-        }
-
-        auto expr = parseExpression();
-        return alloc.emplace<AssignmentStatementSyntax>(
-            SyntaxKind::BlockingAssignmentStatement,
-            label,
-            attributes,
-            lvalue,
-            op,
-            nullptr,
-            expr,
-            expect(TokenKind::Semicolon)
-        );
-    }
-
-    // TODO: handle error case where operator is missing
-    auto op = consume();
-    return alloc.emplace<AssignmentStatementSyntax>(
-        getAssignmentStatement(kind),
-        label,
-        attributes,
-        lvalue,
-        op,
-        nullptr,
-        parseExpression(),
-        expect(TokenKind::Semicolon)
-    );
 }
 
 ProceduralAssignStatementSyntax* Parser::parseProceduralAssignStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {

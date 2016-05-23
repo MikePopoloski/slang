@@ -2559,17 +2559,14 @@ protected:
     }
 };
 
-struct AssignmentStatementSyntax : public StatementSyntax {
-    ExpressionSyntax* left;
-    Token* operatorToken;
-    TimingControlSyntax* timingControl;
+struct ExpressionStatementSyntax : public StatementSyntax {
     ExpressionSyntax* expr;
     Token* semi;
 
-    AssignmentStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* left, Token* operatorToken, TimingControlSyntax* timingControl, ExpressionSyntax* expr, Token* semi) :
-        StatementSyntax(kind, label, attributes), left(left), operatorToken(operatorToken), timingControl(timingControl), expr(expr), semi(semi)
+    ExpressionStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr, Token* semi) :
+        StatementSyntax(SyntaxKind::ExpressionStatement, label, attributes), expr(expr), semi(semi)
     {
-        childCount += 5;
+        childCount += 2;
     }
 
 protected:
@@ -2577,11 +2574,8 @@ protected:
         switch(index) {
             case 0: return label;
             case 1: return &attributes;
-            case 2: return left;
-            case 3: return operatorToken;
-            case 4: return timingControl;
-            case 5: return expr;
-            case 6: return semi;
+            case 2: return expr;
+            case 3: return semi;
             default: return nullptr;
         }
     }

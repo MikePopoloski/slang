@@ -609,10 +609,7 @@ TimingControlStatementSyntax base=StatementSyntax kind=TimingControlStatement
 TimingControlSyntax timingControl
 StatementSyntax statement
 
-AssignmentStatementSyntax base=StatementSyntax
-ExpressionSyntax left
-token operatorToken
-TimingControlSyntax timingControl
+ExpressionStatementSyntax base=StatementSyntax kind=ExpressionStatement
 ExpressionSyntax expr
 token semi
 

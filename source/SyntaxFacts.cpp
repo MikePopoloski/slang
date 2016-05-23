@@ -111,25 +111,6 @@ SyntaxKind getKeywordNameExpression(TokenKind kind) {
     }
 }
 
-SyntaxKind getAssignmentStatement(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::Equals: return SyntaxKind::BlockingAssignmentStatement;
-        case TokenKind::PlusEqual: return SyntaxKind::AddAssignmentStatement;
-        case TokenKind::MinusEqual: return SyntaxKind::SubtractAssignmentStatement;
-        case TokenKind::StarEqual: return SyntaxKind::MultiplyAssignmentStatement;
-        case TokenKind::SlashEqual: return SyntaxKind::DivideAssignmentStatement;
-        case TokenKind::PercentEqual: return SyntaxKind::ModAssignmentStatement;
-        case TokenKind::AndEqual: return SyntaxKind::AndAssignmentStatement;
-        case TokenKind::OrEqual: return SyntaxKind::OrAssignmentStatement;
-        case TokenKind::XorEqual: return SyntaxKind::XorAssignmentStatement;
-        case TokenKind::LeftShiftEqual: return SyntaxKind::LogicalLeftShiftAssignmentStatement;
-        case TokenKind::TripleLeftShiftEqual: return SyntaxKind::ArithmeticLeftShiftAssignmentStatement;
-        case TokenKind::RightShiftEqual: return SyntaxKind::LogicalRightShiftAssignmentStatement;
-        case TokenKind::TripleRightShiftEqual: return SyntaxKind::ArithmeticRightShiftAssignmentStatement;
-        default: return SyntaxKind::Unknown;
-    }
-}
-
 int getPrecedence(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::AssignmentExpression:
