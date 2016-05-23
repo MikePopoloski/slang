@@ -795,8 +795,7 @@ StatementSyntax* Parser::parseStatement() {
             break;
     }
 
-    // everything else is some kind of expression
-    // TODO: expand this to other kinds of expression statements
+    // everything else should be some kind of expression
     if (isPossibleExpression(peek()->kind))
         return parseAssignmentStatement(label, attributes);
 
@@ -1328,6 +1327,12 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
         opKind = getBinaryExpression(current->kind);
         if (opKind == SyntaxKind::Unknown)
             break;
+
+        // we have to special case '<=', which can be less than or nonblocking assignment depending on context
+        if (opKind == SyntaxKind::LessThanEqualExpression && (options & ExpressionOptions::ProceduralAssignmentContext)) {
+            options = (ExpressionOptions::Enum)(options & ~ExpressionOptions::ProceduralAssignmentContext);
+            opKind = SyntaxKind::NonblockingAssignmentExpression;
+        }
 
         // see if we should take this operator or if it's part of our parent due to precedence
         newPrecedence = getPrecedence(opKind);

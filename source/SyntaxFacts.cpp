@@ -145,6 +145,7 @@ int getPrecedence(SyntaxKind kind) {
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+        case SyntaxKind::NonblockingAssignmentExpression:
             return 1;
         case SyntaxKind::LogicalImplicationExpression:
         case SyntaxKind::LogicalEquivalenceExpression:

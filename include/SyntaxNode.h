@@ -165,6 +165,7 @@ enum class SyntaxKind : uint16_t {
     LogicalRightShiftAssignmentExpression,
     ArithmeticLeftShiftAssignmentExpression,
     ArithmeticRightShiftAssignmentExpression,
+    NonblockingAssignmentExpression,
 
     // names
     LocalScope,
