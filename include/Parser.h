@@ -26,6 +26,7 @@ private:
     ExpressionSyntax* parseIntegerExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
+    ExpressionSyntax* parseNewExpression();
     ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token* openBrace);
     StreamExpressionSyntax* parseStreamExpression();
@@ -102,6 +103,8 @@ private:
     ClassDeclarationSyntax* parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token* virtualOrInterface);
     MemberSyntax* parseClassMember();
     ContinuousAssignSyntax* parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes);
+    VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
+    ArrayRef<TokenOrSyntax> parseOneVariableDeclarator();
 
     bool isPortDeclaration();
     bool isNetDeclaration();
@@ -127,13 +130,6 @@ private:
     template<bool(*IsEnd)(TokenKind)>
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token*& end);
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(Token*& semi);
-
-    template<bool AllowMinTypMax>
-    VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
-    ArrayRef<TokenOrSyntax> parseOneVariableDeclarator();
-
-    template<bool AllowMinTypeMax>
-    ExpressionSyntax* parseAssignmentExpression();
 
     template<typename TParseFunc>
     ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind, Token*& endToken, TParseFunc&& parseFunc);

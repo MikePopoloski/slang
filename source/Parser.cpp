@@ -197,7 +197,7 @@ AnsiPortSyntax* Parser::parseAnsiPort() {
     }
 
     auto header = parsePortHeader(direction);
-    auto declarator = parseVariableDeclarator<false>(/* isFirst */ true);
+    auto declarator = parseVariableDeclarator(/* isFirst */ true);
     return alloc.emplace<ImplicitAnsiPortSyntax>(attributes, header, declarator);
 }
 
@@ -974,7 +974,7 @@ SyntaxNode* Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto type = parseDataType(/* allowImplicit */ false);
-        return alloc.emplace<ForVariableDeclarationSyntax>(varKeyword, type, parseVariableDeclarator<true>(/* isFirst */ true));
+        return alloc.emplace<ForVariableDeclarationSyntax>(varKeyword, type, parseVariableDeclarator(/* isFirst */ true));
     }
     return parseExpression();
 }
@@ -1108,7 +1108,7 @@ AssignmentStatementSyntax* Parser::parseAssignmentStatement(NamedLabelSyntax* la
             );
         }
 
-        auto expr = parseAssignmentExpression<false>();
+        auto expr = parseExpression();
         return alloc.emplace<AssignmentStatementSyntax>(
             SyntaxKind::BlockingAssignmentStatement,
             label,
@@ -1300,12 +1300,14 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     int newPrecedence = 0;
 
     auto current = peek();
-    if (current->kind == TokenKind::TaggedKeyword) {
+    if (current->kind == TokenKind::NewKeyword)
+        return parseNewExpression();
+    else if (current->kind == TokenKind::TaggedKeyword) {
         // TODO: check for trailing expression
         auto tagged = consume();
         auto member = expect(TokenKind::Identifier);
         return alloc.emplace<TaggedUnionExpressionSyntax>(tagged, member, nullptr);
-    }
+    } 
 
     SyntaxKind opKind = getUnaryPrefixExpression(current->kind);
     if (opKind != SyntaxKind::Unknown) {
@@ -1854,15 +1856,7 @@ EventExpressionSyntax* Parser::parseEventExpression() {
     return left;
 }
 
-template<bool AllowMinTypeMax>
-ExpressionSyntax* Parser::parseAssignmentExpression() {
-    if (!peek(TokenKind::NewKeyword)) {
-        if (AllowMinTypeMax)
-            return parseMinTypMaxExpression();
-        else
-            return parseExpression();
-    }
-
+ExpressionSyntax* Parser::parseNewExpression() {
     auto newKeyword = consume();
     auto kind = peek()->kind;
 
@@ -2178,7 +2172,6 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
     return alloc.emplace<DataDeclarationSyntax>(attributes, modifiers.copy(alloc), dataType, declarators, semi);
 }
 
-template<bool AllowMinTypMax>
 VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     auto name = expect(TokenKind::Identifier);
 
@@ -2193,7 +2186,7 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     EqualsValueClauseSyntax* initializer = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseAssignmentExpression<AllowMinTypMax>());
+        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseMinTypMaxExpression());
     }
 
     return alloc.emplace<VariableDeclaratorSyntax>(name, dimensions, initializer);
@@ -2201,7 +2194,7 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
 
 ArrayRef<TokenOrSyntax> Parser::parseOneVariableDeclarator() {
     auto buffer = tosPool.get();
-    buffer.append(parseVariableDeclarator<true>(/* isFirst */ true));
+    buffer.append(parseVariableDeclarator(/* isFirst */ true));
     return buffer.copy(alloc);
 }
 
@@ -2214,7 +2207,7 @@ ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Toke
         TokenKind::Comma,
         end,
         DiagCode::ExpectedVariableDeclarator,
-        [this](bool first) { return parseVariableDeclarator<false>(first); }
+        [this](bool first) { return parseVariableDeclarator(first); }
     );
 
     return buffer.copy(alloc);
