@@ -65,6 +65,7 @@ private:
     SequentialBlockStatementSyntax* parseSequentialBlock(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     StatementSyntax* parseWaitStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     WaitOrderStatementSyntax* parseWaitOrderStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    RandCaseStatementSyntax* parseRandCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     Token* parseSigning();
     VariableDimensionSyntax* parseDimension();
     ArrayRef<VariableDimensionSyntax*> parseDimensionList();

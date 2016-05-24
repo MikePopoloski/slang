@@ -282,6 +282,8 @@ enum class SyntaxKind : uint16_t {
     WaitStatement,
     WaitForkStatement,
     WaitOrderStatement,
+    RandCaseItem,
+    RandCaseStatement,
 
     // assertions
     DeferredAssertion,

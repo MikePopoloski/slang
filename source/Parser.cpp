@@ -810,6 +810,8 @@ StatementSyntax* Parser::parseStatement() {
             return parseWaitStatement(label, attributes);
         case TokenKind::WaitOrderKeyword:
             return parseWaitOrderStatement(label, attributes);
+        case TokenKind::RandCaseKeyword:
+            return parseRandCaseStatement(label, attributes);
         case TokenKind::Semicolon:
             // TODO: no label allowed on semicolon
             return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
@@ -931,7 +933,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                     Token* colon;
                     auto buffer = tosPool.get();
 
-                    parseSeparatedList<isPossibleInsideElement, isEndOfCaseItem>(
+                    parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                         buffer,
                         TokenKind::Colon,
                         TokenKind::Comma,
@@ -1232,6 +1234,26 @@ WaitOrderStatementSyntax* Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
         buffer.copy(alloc),
         closeParen,
         parseActionBlock()
+    );
+}
+
+RandCaseStatementSyntax* Parser::parseRandCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto randCase = consume();
+    auto itemBuffer = nodePool.getAs<RandCaseItemSyntax*>();
+
+    while (isPossibleExpression(peek()->kind)) {
+        auto expr = parseExpression();
+        auto colon = expect(TokenKind::Colon);
+        itemBuffer.append(alloc.emplace<RandCaseItemSyntax>(expr, colon, parseStatement()));
+    }
+
+    auto endcase = expect(TokenKind::EndCaseKeyword);
+    return alloc.emplace<RandCaseStatementSyntax>(
+        label,
+        attributes,
+        randCase,
+        itemBuffer.copy(alloc),
+        endcase
     );
 }
 

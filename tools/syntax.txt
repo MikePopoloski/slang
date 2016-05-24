@@ -695,6 +695,16 @@ separated_list<NameSyntax> names
 token closeParen
 ActionBlockSyntax action
 
+RandCaseItemSyntax kind=RandCaseItem
+ExpressionSyntax expr
+token colon
+StatementSyntax statement
+
+RandCaseStatementSyntax base=StatementSyntax kind=RandCaseStatement
+token randCase
+list<RandCaseItemSyntax> items
+token endCase
+
 // ----- MODULES -----
 
 PortListSyntax final=false

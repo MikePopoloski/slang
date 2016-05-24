@@ -2931,6 +2931,52 @@ protected:
     }
 };
 
+struct RandCaseItemSyntax : public SyntaxNode {
+    ExpressionSyntax* expr;
+    Token* colon;
+    StatementSyntax* statement;
+
+    RandCaseItemSyntax(ExpressionSyntax* expr, Token* colon, StatementSyntax* statement) :
+        SyntaxNode(SyntaxKind::RandCaseItem), expr(expr), colon(colon), statement(statement)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return expr;
+            case 1: return colon;
+            case 2: return statement;
+            default: return nullptr;
+        }
+    }
+};
+
+struct RandCaseStatementSyntax : public StatementSyntax {
+    Token* randCase;
+    SyntaxList<RandCaseItemSyntax> items;
+    Token* endCase;
+
+    RandCaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* randCase, SyntaxList<RandCaseItemSyntax> items, Token* endCase) :
+        StatementSyntax(SyntaxKind::RandCaseStatement, label, attributes), randCase(randCase), items(items), endCase(endCase)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return randCase;
+            case 3: return &items;
+            case 4: return endCase;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- MODULES -----
 
 struct PortListSyntax : public SyntaxNode {
