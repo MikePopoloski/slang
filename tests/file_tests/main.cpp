@@ -38,7 +38,7 @@ int main() {
             continue;
 
         //if (errors > 100)
-          //  break;
+            //break;
 
         printf("Parsing '%s'\n", p.path().string().c_str());
 

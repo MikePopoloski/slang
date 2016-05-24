@@ -107,6 +107,7 @@ SyntaxKind getKeywordNameExpression(TokenKind kind) {
         case TokenKind::AndKeyword: return SyntaxKind::ArrayAndMethod;
         case TokenKind::OrKeyword: return SyntaxKind::ArrayOrMethod;
         case TokenKind::XorKeyword: return SyntaxKind::ArrayXorMethod;
+        case TokenKind::NewKeyword: return SyntaxKind::ConstructorName;
         default: return SyntaxKind::Unknown;
     }
 }

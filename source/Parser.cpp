@@ -1148,7 +1148,15 @@ ActionBlockSyntax* Parser::parseActionBlock() {
 NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
     if (peek(TokenKind::Colon)) {
         auto colon = consume();
-        return alloc.emplace<NamedBlockClauseSyntax>(colon, expect(TokenKind::Identifier));
+
+        // allow the new keyword here to end constructor declarations
+        Token* name;
+        if (peek(TokenKind::NewKeyword))
+            name = consume();
+        else
+            name = expect(TokenKind::Identifier);
+
+        return alloc.emplace<NamedBlockClauseSyntax>(colon, name);
     }
     return nullptr;
 }

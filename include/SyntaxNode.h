@@ -189,6 +189,7 @@ enum class SyntaxKind : uint16_t {
     ArrayOrMethod,
     ArrayXorMethod,
     ClassScope,
+    ConstructorName,
 
     // timing control
     DelayControl,
