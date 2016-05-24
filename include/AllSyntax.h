@@ -4249,4 +4249,25 @@ protected:
     }
 };
 
+struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
+    Token* netType;
+    Token* endOfDirective;
+
+    DefaultNetTypeDirectiveSyntax(Token* directive, Token* netType, Token* endOfDirective) :
+        DirectiveSyntax(SyntaxKind::DefaultNetTypeDirective, directive), netType(netType), endOfDirective(endOfDirective)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return directive;
+            case 1: return netType;
+            case 2: return endOfDirective;
+            default: return nullptr;
+        }
+    }
+};
+
 }

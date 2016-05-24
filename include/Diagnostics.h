@@ -42,6 +42,7 @@ enum class DiagCode : uint8_t {
     UnexpectedDirective,
     UnbalancedMacroArgDims,
     ExpectedMacroArgs,
+    ExpectedNetType,
 
     // parser
     SyntaxError,

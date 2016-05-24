@@ -67,6 +67,7 @@ private:
     Trivia handleElseDirective(Token* directive);
     Trivia handleEndIfDirective(Token* directive);
     Trivia handleTimescaleDirective(Token* directive);
+    Trivia handleDefaultNetTypeDirective(Token* directive);
 
     Token* parseEndOfDirective(bool suppressError = false);
 

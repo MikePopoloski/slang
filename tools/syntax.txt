@@ -1004,3 +1004,7 @@ token slash
 token timePrecision
 token timePrecisionUnit
 token endOfDirective
+
+DefaultNetTypeDirectiveSyntax base=DirectiveSyntax kind=DefaultNetTypeDirective
+token netType
+token endOfDirective

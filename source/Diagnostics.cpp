@@ -52,6 +52,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "UnexpectedDirective" },
     { "UnbalancedMacroArgDims" },
     { "ExpectedMacroArgs" },
+    { "expected net type specifier" },
 
     // parser
     { "SyntaxError" },

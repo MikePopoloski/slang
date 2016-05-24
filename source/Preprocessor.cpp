@@ -60,6 +60,7 @@ Token* Preprocessor::next(LexerMode mode) {
             case SyntaxKind::ElseDirective: trivia.append(handleElseDirective(token)); break;
             case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
             case SyntaxKind::TimescaleDirective: trivia.append(handleTimescaleDirective(token)); break;
+            case SyntaxKind::DefaultNetTypeDirective: trivia.append(handleDefaultNetTypeDirective(token)); break;
             case SyntaxKind::UndefineAllDirective:
             case SyntaxKind::UnconnectedDriveDirective:
             case SyntaxKind::NoUnconnectedDriveDirective:
@@ -475,6 +476,38 @@ Trivia Preprocessor::handleTimescaleDirective(Token* directive) {
     auto eod = parseEndOfDirective();
     auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash, precision, precisionUnit, eod);
     return Trivia(TriviaKind::Directive, timescale);
+}
+
+Trivia Preprocessor::handleDefaultNetTypeDirective(Token* directive) {
+    Token* netType = nullptr;
+    switch (peek()->kind) {
+        case TokenKind::WireKeyword:
+        case TokenKind::UWireKeyword:
+        case TokenKind::WAndKeyword:
+        case TokenKind::WOrKeyword:
+        case TokenKind::TriKeyword:
+        case TokenKind::Tri0Keyword:
+        case TokenKind::Tri1Keyword:
+        case TokenKind::TriAndKeyword:
+        case TokenKind::TriOrKeyword:
+        case TokenKind::TriRegKeyword:
+            netType = consume();
+            break;
+        case TokenKind::Identifier:
+            if (peek()->rawText() == "none")
+                netType = consume();
+            break;
+        default:
+            break;
+    }
+
+    if (!netType) {
+        addError(DiagCode::ExpectedNetType, peek()->location);
+        netType = Token::missing(alloc, TokenKind::WireKeyword, peek()->location);
+    }
+
+    auto result = alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType, parseEndOfDirective());
+    return Trivia(TriviaKind::Directive, result);
 }
 
 Token* Preprocessor::parseEndOfDirective(bool suppressError) {
