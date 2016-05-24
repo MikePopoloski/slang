@@ -45,7 +45,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     // preprocessor
     { "CouldNotOpenIncludeFile" },
     { "ExceededMaxIncludeDepth" },
-    { "UnknownDirective" },
+    { "unknown macro or compiler directive" },
     { "expected end of directive (missing newline?)" },
     { "ExpectedEndOfMacroArgs" },
     { "ExpectedEndIfDirective" },

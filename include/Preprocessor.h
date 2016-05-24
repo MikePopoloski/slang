@@ -68,9 +68,9 @@ private:
     Trivia handleEndIfDirective(Token* directive);
     Trivia handleTimescaleDirective(Token* directive);
 
-    Token* parseEndOfDirective();
+    Token* parseEndOfDirective(bool suppressError = false);
 
-    Trivia createSimpleDirective(Token* directive);
+    Trivia createSimpleDirective(Token* directive, bool suppressError = false);
 
     ArrayRef<Token*> parseMacroArg();
 

@@ -282,8 +282,8 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
     // try to look up the macro in our map
     auto it = macros.find(directive->valueText().subString(1));
     if (it == macros.end()) {
-        addError(DiagCode::UnknownDirective);
-        return createSimpleDirective(directive);
+        addError(DiagCode::UnknownDirective, directive->location);
+        return createSimpleDirective(directive, /* suppressError */ true);
     }
 
     DefineDirectiveSyntax* macro = it->second;
@@ -477,11 +477,12 @@ Trivia Preprocessor::handleTimescaleDirective(Token* directive) {
     return Trivia(TriviaKind::Directive, timescale);
 }
 
-Token* Preprocessor::parseEndOfDirective() {
+Token* Preprocessor::parseEndOfDirective(bool suppressError) {
     // consume all extraneous tokens as SkippedToken trivia
     auto skipped = tokenPool.get();
     if (!peek(TokenKind::EndOfDirective)) {
-        addError(DiagCode::ExpectedEndOfDirective, peek()->location);
+        if (!suppressError)
+            addError(DiagCode::ExpectedEndOfDirective, peek()->location);
         do {
             skipped.append(consume());
         } while (!peek(TokenKind::EndOfDirective));
@@ -499,8 +500,8 @@ Token* Preprocessor::parseEndOfDirective() {
     return eod;
 }
 
-Trivia Preprocessor::createSimpleDirective(Token* directive) {
-    DirectiveSyntax* syntax = alloc.emplace<SimpleDirectiveSyntax>(directive->directiveKind(), directive, parseEndOfDirective());
+Trivia Preprocessor::createSimpleDirective(Token* directive, bool suppressError) {
+    DirectiveSyntax* syntax = alloc.emplace<SimpleDirectiveSyntax>(directive->directiveKind(), directive, parseEndOfDirective(suppressError));
     return Trivia(TriviaKind::Directive, syntax);
 }
 
