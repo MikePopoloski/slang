@@ -1348,6 +1348,8 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             expr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, closeParen);
             break;
         }
+        case TokenKind::ApostropheOpenBrace:
+            return parseAssignmentPatternExpression(nullptr);
         case TokenKind::OpenBrace: {
             // several different things this could be:
             // 1. empty queue expression { }
@@ -1383,12 +1385,24 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             // 1. data type
             // 2. qualified name
             // 3. implicit class handles
-            // 4. error
-            if (isPossibleDataType(kind) && kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName)
-                return parseDataType(/* allowImplicit */ false);
+            // 4. any of [1-3] with an assignment pattern
+            // 5. any of [1-3] with a cast expression
+            // 6. error
+            if (isPossibleDataType(kind) && kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName) {
+                auto type = parseDataType(/* allowImplicit */ false);
+                if (peek(TokenKind::ApostropheOpenBrace))
+                    return parseAssignmentPatternExpression(type);
+                else
+                    return type;
+            }
 
             // parseName() will insert a missing identifier token for the error case
-            expr = parseName();
+            auto name = parseName();
+            if (peek(TokenKind::ApostropheOpenBrace))
+                return parseAssignmentPatternExpression(alloc.emplace<NamedTypeSyntax>(name));
+
+            // otherwise just a name expression, break out and handle postfix's
+            expr = name;
             break;
     }
     return parsePostfixExpression(expr);
@@ -1536,6 +1550,85 @@ StreamExpressionSyntax* Parser::parseStreamExpression() {
     }
 
     return alloc.emplace<StreamExpressionSyntax>(expr, withRange);
+}
+
+AssignmentPatternExpressionSyntax* Parser::parseAssignmentPatternExpression(DataTypeSyntax* type) {
+    auto openBrace = expect(TokenKind::ApostropheOpenBrace);
+
+    // we either have an expression here, or the default keyword for a pattern key
+    ExpressionSyntax* firstExpr;
+    if (peek(TokenKind::DefaultKeyword))
+        firstExpr = alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::DefaultPatternKeyExpression, consume());
+    else
+        firstExpr = parseExpression();
+
+    Token* closeBrace;
+    AssignmentPatternSyntax* pattern;
+    auto buffer = tosPool.get();
+
+    switch (peek()->kind) {
+        case TokenKind::Colon:
+            buffer.append(parseAssignmentPatternItem(firstExpr));
+            parseSeparatedList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
+                buffer,
+                TokenKind::CloseBrace,
+                TokenKind::Comma,
+                closeBrace,
+                DiagCode::ExpectedAssignmentKey,
+                [this](bool) { return parseAssignmentPatternItem(nullptr); }
+            );
+            pattern = alloc.emplace<StructuredAssignmentPatternSyntax>(
+                openBrace,
+                buffer.copy(alloc),
+                closeBrace
+            );
+            break;
+        case TokenKind::OpenBrace: {
+            auto innerOpenBrace = consume();
+            parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
+                buffer,
+                TokenKind::CloseBrace,
+                TokenKind::Comma,
+                closeBrace,
+                DiagCode::ExpectedExpression,
+                [this](bool) { return parseExpression(); }
+            );
+            pattern = alloc.emplace<ReplicatedAssignmentPatternSyntax>(
+                openBrace,
+                firstExpr,
+                innerOpenBrace,
+                buffer.copy(alloc),
+                closeBrace,
+                expect(TokenKind::CloseBrace)
+            );
+            break;
+        }
+        default:
+            buffer.append(firstExpr);
+            parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
+                buffer,
+                TokenKind::CloseBrace,
+                TokenKind::Comma,
+                closeBrace,
+                DiagCode::ExpectedExpression,
+                [this](bool) { return parseExpression(); }
+            );
+            pattern = alloc.emplace<SimpleAssignmentPatternSyntax>(
+                openBrace,
+                buffer.copy(alloc),
+                closeBrace
+            );
+            break;
+    }
+    return alloc.emplace<AssignmentPatternExpressionSyntax>(type, pattern);
+}
+
+AssignmentPatternItemSyntax* Parser::parseAssignmentPatternItem(ExpressionSyntax* key) {
+    if (!key)
+        key = parseExpression();
+
+    auto colon = expect(TokenKind::Colon);
+    return alloc.emplace<AssignmentPatternItemSyntax>(key, colon, parseExpression());
 }
 
 ElementSelectSyntax* Parser::parseElementSelect() {

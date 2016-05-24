@@ -70,7 +70,8 @@ enum class DiagCode : uint8_t {
     ExpectedPortConnection,
     ExpectedVectorDigits,
     ExpectedVariableAssignment,
-    ExpectedInterfaceClassName
+    ExpectedInterfaceClassName,
+    ExpectedAssignmentKey
 };
 
 class Diagnostic {

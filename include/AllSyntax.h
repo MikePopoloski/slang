@@ -458,7 +458,117 @@ protected:
     }
 };
 
+struct AssignmentPatternSyntax : public SyntaxNode {
+
+    AssignmentPatternSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
+    Token* openBrace;
+    SeparatedSyntaxList<ExpressionSyntax> items;
+    Token* closeBrace;
+
+    SimpleAssignmentPatternSyntax(Token* openBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token* closeBrace) :
+        AssignmentPatternSyntax(SyntaxKind::SimpleAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openBrace;
+            case 1: return &items;
+            case 2: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
+struct AssignmentPatternItemSyntax : public SyntaxNode {
+    ExpressionSyntax* key;
+    Token* colon;
+    ExpressionSyntax* expr;
+
+    AssignmentPatternItemSyntax(ExpressionSyntax* key, Token* colon, ExpressionSyntax* expr) :
+        SyntaxNode(SyntaxKind::AssignmentPatternItem), key(key), colon(colon), expr(expr)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return key;
+            case 1: return colon;
+            case 2: return expr;
+            default: return nullptr;
+        }
+    }
+};
+
+struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
+    Token* openBrace;
+    SeparatedSyntaxList<AssignmentPatternItemSyntax> items;
+    Token* closeBrace;
+
+    StructuredAssignmentPatternSyntax(Token* openBrace, SeparatedSyntaxList<AssignmentPatternItemSyntax> items, Token* closeBrace) :
+        AssignmentPatternSyntax(SyntaxKind::StructuredAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openBrace;
+            case 1: return &items;
+            case 2: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
+    Token* openBrace;
+    ExpressionSyntax* countExpr;
+    Token* innerOpenBrace;
+    SeparatedSyntaxList<ExpressionSyntax> items;
+    Token* innerCloseBrace;
+    Token* closeBrace;
+
+    ReplicatedAssignmentPatternSyntax(Token* openBrace, ExpressionSyntax* countExpr, Token* innerOpenBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token* innerCloseBrace, Token* closeBrace) :
+        AssignmentPatternSyntax(SyntaxKind::ReplicatedAssignmentPattern), openBrace(openBrace), countExpr(countExpr), innerOpenBrace(innerOpenBrace), items(items), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return openBrace;
+            case 1: return countExpr;
+            case 2: return innerOpenBrace;
+            case 3: return &items;
+            case 4: return innerCloseBrace;
+            case 5: return closeBrace;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- EXPRESSIONS -----
+
+struct PrimaryExpressionSyntax : public ExpressionSyntax {
+
+    PrimaryExpressionSyntax(SyntaxKind kind) :
+        ExpressionSyntax(kind)
+    {
+    }
+};
 
 struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
     Token* operatorToken;
@@ -625,6 +735,26 @@ protected:
             case 3: return left;
             case 4: return colon;
             case 5: return right;
+            default: return nullptr;
+        }
+    }
+};
+
+struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
+    DataTypeSyntax* type;
+    AssignmentPatternSyntax* pattern;
+
+    AssignmentPatternExpressionSyntax(DataTypeSyntax* type, AssignmentPatternSyntax* pattern) :
+        PrimaryExpressionSyntax(SyntaxKind::AssignmentPatternExpression), type(type), pattern(pattern)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return type;
+            case 1: return pattern;
             default: return nullptr;
         }
     }
@@ -831,14 +961,6 @@ protected:
 };
 
 // ----- PRIMARY EXPRESSIONS -----
-
-struct PrimaryExpressionSyntax : public ExpressionSyntax {
-
-    PrimaryExpressionSyntax(SyntaxKind kind) :
-        ExpressionSyntax(kind)
-    {
-    }
-};
 
 struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
     Token* literal;

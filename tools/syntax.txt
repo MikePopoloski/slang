@@ -101,7 +101,36 @@ MatchesClauseSyntax matchesClause
 ConditionalPredicateSyntax kind=ConditionalPredicate
 separated_list<ConditionalPatternSyntax> conditions
 
+AssignmentPatternSyntax final=false
+empty
+
+SimpleAssignmentPatternSyntax base=AssignmentPatternSyntax kind=SimpleAssignmentPattern
+token openBrace
+separated_list<ExpressionSyntax> items
+token closeBrace
+
+AssignmentPatternItemSyntax kind=AssignmentPatternItem
+ExpressionSyntax key
+token colon
+ExpressionSyntax expr
+
+StructuredAssignmentPatternSyntax base=AssignmentPatternSyntax kind=StructuredAssignmentPattern
+token openBrace
+separated_list<AssignmentPatternItemSyntax> items
+token closeBrace
+
+ReplicatedAssignmentPatternSyntax base=AssignmentPatternSyntax kind=ReplicatedAssignmentPattern
+token openBrace
+ExpressionSyntax countExpr
+token innerOpenBrace
+separated_list<ExpressionSyntax> items
+token innerCloseBrace
+token closeBrace
+
 // ----- EXPRESSIONS -----
+
+PrimaryExpressionSyntax base=ExpressionSyntax
+empty
 
 PrefixUnaryExpressionSyntax base=ExpressionSyntax
 token operatorToken
@@ -145,6 +174,10 @@ list<AttributeInstanceSyntax> attributes
 ExpressionSyntax left
 token colon
 ExpressionSyntax right
+
+AssignmentPatternExpressionSyntax base=PrimaryExpressionSyntax kind=AssignmentPatternExpression
+DataTypeSyntax type
+AssignmentPatternSyntax pattern
 
 // ----- SELECTORS -----
 
@@ -193,9 +226,6 @@ NameSyntax left
 token separator
 
 // ----- PRIMARY EXPRESSIONS -----
-
-PrimaryExpressionSyntax base=ExpressionSyntax
-empty
 
 LiteralExpressionSyntax base=PrimaryExpressionSyntax
 token literal

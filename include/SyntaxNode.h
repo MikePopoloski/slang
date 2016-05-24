@@ -68,6 +68,10 @@ enum class SyntaxKind : uint16_t {
     MatchesClause,
     ConditionalPattern,
     ConditionalPredicate,
+    SimpleAssignmentPattern,
+    AssignmentPatternItem,
+    StructuredAssignmentPattern,
+    ReplicatedAssignmentPattern,
 
     // unary expressions
     UnaryPlusExpression,
@@ -103,6 +107,8 @@ enum class SyntaxKind : uint16_t {
     StreamExpressionWithRange,
     NewClassExpression,
     NewArrayExpression,
+    AssignmentPatternExpression,
+    DefaultPatternKeyExpression,
 
     // selectors
     BitSelect,
@@ -364,6 +370,7 @@ bool isSemicolon(TokenKind kind);
 bool isCloseBrace(TokenKind kind);
 bool isIdentifierOrComma(TokenKind kind);
 bool isPossibleExpressionOrComma(TokenKind kind);
+bool isPossibleExpressionOrCommaOrDefault(TokenKind kind);
 bool isPossibleExpressionOrTripleAnd(TokenKind kind);
 bool isPossibleInsideElement(TokenKind kind);
 bool isPossiblePattern(TokenKind kind);

@@ -502,6 +502,10 @@ bool isPossibleExpressionOrComma(TokenKind kind) {
     return kind == TokenKind::Comma || isPossibleExpression(kind);
 }
 
+bool isPossibleExpressionOrCommaOrDefault(TokenKind kind) {
+    return kind == TokenKind::Comma || kind == TokenKind::DefaultKeyword || isPossibleExpression(kind);
+}
+
 bool isPossibleExpressionOrTripleAnd(TokenKind kind) {
     return kind == TokenKind::TripleAnd || isPossibleExpression(kind);
 }

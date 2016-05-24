@@ -39,6 +39,8 @@ private:
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
     PatternSyntax* parsePattern();
+    AssignmentPatternExpressionSyntax* parseAssignmentPatternExpression(DataTypeSyntax* type);
+    AssignmentPatternItemSyntax* parseAssignmentPatternItem(ExpressionSyntax* key);
     EventExpressionSyntax* parseEventExpression();
     NamedBlockClauseSyntax* parseNamedBlockClause();
     TimingControlSyntax* parseTimingControl();
