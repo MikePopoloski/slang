@@ -3315,19 +3315,21 @@ protected:
 // ----- MEMBERS -----
 
 struct EmptyMemberSyntax : public MemberSyntax {
+    TokenList qualifiers;
     Token* semi;
 
-    EmptyMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* semi) :
-        MemberSyntax(SyntaxKind::EmptyMember, attributes), semi(semi)
+    EmptyMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token* semi) :
+        MemberSyntax(SyntaxKind::EmptyMember, attributes), qualifiers(qualifiers), semi(semi)
     {
-        childCount += 1;
+        childCount += 2;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return &attributes;
-            case 1: return semi;
+            case 1: return &qualifiers;
+            case 2: return semi;
             default: return nullptr;
         }
     }
@@ -3809,6 +3811,69 @@ protected:
             case 9: return &items;
             case 10: return endClass;
             case 11: return endBlockName;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ClassPropertyDeclarationSyntax : public MemberSyntax {
+    TokenList qualifiers;
+    MemberSyntax* declaration;
+
+    ClassPropertyDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, MemberSyntax* declaration) :
+        MemberSyntax(SyntaxKind::ClassPropertyDeclaration, attributes), qualifiers(qualifiers), declaration(declaration)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return &qualifiers;
+            case 2: return declaration;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ClassMethodDeclarationSyntax : public MemberSyntax {
+    TokenList qualifiers;
+    FunctionDeclarationSyntax* declaration;
+
+    ClassMethodDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionDeclarationSyntax* declaration) :
+        MemberSyntax(SyntaxKind::ClassMethodDeclaration, attributes), qualifiers(qualifiers), declaration(declaration)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return &qualifiers;
+            case 2: return declaration;
+            default: return nullptr;
+        }
+    }
+};
+
+struct ClassMethodPrototypeSyntax : public MemberSyntax {
+    TokenList qualifiers;
+    FunctionPrototypeSyntax* prototype;
+
+    ClassMethodPrototypeSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionPrototypeSyntax* prototype) :
+        MemberSyntax(SyntaxKind::ClassMethodPrototype, attributes), qualifiers(qualifiers), prototype(prototype)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return &qualifiers;
+            case 2: return prototype;
             default: return nullptr;
         }
     }

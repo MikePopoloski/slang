@@ -339,6 +339,9 @@ enum class SyntaxKind : uint16_t {
     ExtendsClause,
     ImplementsClause,
     ClassDeclaration,
+    ClassPropertyDeclaration,
+    ClassMethodDeclaration,
+    ClassMethodPrototype,
     ContinuousAssign,
 
     // top level
@@ -378,6 +381,7 @@ bool isPossiblePattern(TokenKind kind);
 bool isPossibleDelayOrEventControl(TokenKind kind);
 bool isEndKeyword(TokenKind kind);
 bool isDeclarationModifier(TokenKind kind);
+bool isMemberQualifier(TokenKind kind);
 bool isEndOfParenList(TokenKind kind);
 bool isEndOfBracedList(TokenKind kind);
 bool isEndOfCaseItem(TokenKind kind);

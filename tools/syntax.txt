@@ -790,6 +790,7 @@ ModuleHeaderSyntax header
 // ----- MEMBERS -----
 
 EmptyMemberSyntax base=MemberSyntax kind=EmptyMember
+tokenlist qualifiers
 token semi
 
 ProceduralBlockSyntax base=MemberSyntax
@@ -911,6 +912,18 @@ token semi
 list<MemberSyntax> items
 token endClass
 NamedBlockClauseSyntax endBlockName
+
+ClassPropertyDeclarationSyntax base=MemberSyntax kind=ClassPropertyDeclaration
+tokenlist qualifiers
+MemberSyntax declaration
+
+ClassMethodDeclarationSyntax base=MemberSyntax kind=ClassMethodDeclaration
+tokenlist qualifiers
+FunctionDeclarationSyntax declaration
+
+ClassMethodPrototypeSyntax base=MemberSyntax kind=ClassMethodPrototype
+tokenlist qualifiers
+FunctionPrototypeSyntax prototype
 
 ContinuousAssignSyntax base=MemberSyntax kind=ContinuousAssign
 token assign

@@ -342,16 +342,16 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::VirtualKeyword:
             return parseClassDeclaration(attributes, consume());
         case TokenKind::Semicolon:
-            return alloc.emplace<EmptyMemberSyntax>(attributes, consume());
+            return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, consume());
         default:
             break;
     }
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (attributes.count())
-        return alloc.emplace<EmptyMemberSyntax>(attributes, expect(TokenKind::Semicolon));
+        return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, expect(TokenKind::Semicolon));
 
-    // otherwise, we got nothing and should just return null so that are caller will skip and try again.
+    // otherwise, we got nothing and should just return null so that our caller will skip and try again.
     return nullptr;
 }
 
@@ -653,32 +653,62 @@ ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstance
 }
 
 MemberSyntax* Parser::parseClassMember() {
-    auto attributes = parseAttributes();
-    if (isVariableDeclaration())
-        return parseVariableDeclaration(attributes);
-
     // TODO: error on attributes that don't attach to a valid construct
+    auto attributes = parseAttributes();
 
-    switch (peek()->kind) {
-        case TokenKind::TaskKeyword:
-            return parseFunctionDeclaration(attributes, SyntaxKind::TaskDeclaration, TokenKind::EndTaskKeyword);
-        case TokenKind::FunctionKeyword:
-            return parseFunctionDeclaration(attributes, SyntaxKind::FunctionDeclaration, TokenKind::EndFunctionKeyword);
+    // virtual keyword can either be a class decl or a method qualifier; early out here if it's a class
+    if (peek(TokenKind::VirtualKeyword) && peek(1)->kind == TokenKind::ClassKeyword)
+        return parseClassDeclaration(attributes, consume());
+
+    bool isPureOrExtern = false;
+    auto qualifierBuffer = tokenPool.get();
+    auto kind = peek()->kind;
+    while (isMemberQualifier(kind)) {
+        // TODO: error on bad combination / ordering
+        qualifierBuffer.append(consume());
+        if (kind == TokenKind::PureKeyword || kind == TokenKind::ExternKeyword)
+            isPureOrExtern = true;
+        kind = peek()->kind;
+    }
+    auto qualifiers = qualifierBuffer.copy(alloc);
+
+    if (isVariableDeclaration())
+        return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, qualifiers, parseVariableDeclaration(nullptr));
+
+    if (kind == TokenKind::TaskKeyword || kind == TokenKind::FunctionKeyword) {
+        if (isPureOrExtern)
+            return alloc.emplace<ClassMethodPrototypeSyntax>(attributes, qualifiers, parseFunctionPrototype());
+        else {
+            auto declKind = kind == TokenKind::TaskKeyword ? SyntaxKind::TaskDeclaration : SyntaxKind::FunctionDeclaration;
+            auto endKind = kind == TokenKind::TaskKeyword ? TokenKind::EndTaskKeyword : TokenKind::EndFunctionKeyword;
+            return alloc.emplace<ClassMethodDeclarationSyntax>(
+                attributes,
+                qualifiers,
+                parseFunctionDeclaration(nullptr, declKind, endKind)
+            );
+        }
+    }
+
+    // qualifiers aren't allowed past this point, so return an empty member to hold them
+    // TODO: specific error code for this
+    // TODO: don't expect semi, just making it missing
+    if (qualifiers.count())
+        return alloc.emplace<EmptyMemberSyntax>(attributes, qualifiers, expect(TokenKind::Semicolon));
+
+    switch (kind) {
         case TokenKind::ClassKeyword:
             return parseClassDeclaration(attributes, nullptr);
-        case TokenKind::VirtualKeyword:
-            return parseClassDeclaration(attributes, consume());
         case TokenKind::Semicolon:
-            return alloc.emplace<EmptyMemberSyntax>(attributes, consume());
+            return alloc.emplace<EmptyMemberSyntax>(attributes, qualifiers, consume());
         default:
             break;
     }
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (attributes.count())
-        return alloc.emplace<EmptyMemberSyntax>(attributes, expect(TokenKind::Semicolon));
+        return alloc.emplace<EmptyMemberSyntax>(attributes, qualifiers, expect(TokenKind::Semicolon));
 
-    // otherwise, we got nothing and should just return null so that are caller will skip and try again.
+    // otherwise, we got nothing and should just return null so that our caller will skip and try again.
     return nullptr;
 }
 

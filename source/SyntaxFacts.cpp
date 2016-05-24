@@ -618,6 +618,23 @@ bool isDeclarationModifier(TokenKind kind) {
     }
 }
 
+bool isMemberQualifier(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::ConstKeyword:
+        case TokenKind::RandKeyword:
+        case TokenKind::RandCKeyword:
+        case TokenKind::PureKeyword:
+        case TokenKind::VirtualKeyword:
+        case TokenKind::ExternKeyword:
+        case TokenKind::StaticKeyword:
+        case TokenKind::LocalKeyword:
+        case TokenKind::ProtectedKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool isEndOfParenList(TokenKind kind) {
     return kind == TokenKind::CloseParenthesis || kind == TokenKind::Semicolon;
 }
