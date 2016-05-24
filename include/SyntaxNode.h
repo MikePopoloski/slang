@@ -333,6 +333,7 @@ enum class SyntaxKind : uint16_t {
     WildcardPortConnection,
     HierarchicalInstance,
     HierarchyInstantiation,
+    FunctionPrototype,
     FunctionDeclaration,
     TaskDeclaration,
     ExtendsClause,

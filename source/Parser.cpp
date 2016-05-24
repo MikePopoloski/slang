@@ -409,7 +409,7 @@ TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<Attribute
     return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
 }
 
-FunctionDeclarationSyntax* Parser::parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind) {
+FunctionPrototypeSyntax* Parser::parseFunctionPrototype() {
     auto keyword = consume();
     auto lifetime = parseLifetime();
 
@@ -431,24 +431,16 @@ FunctionDeclarationSyntax* Parser::parseFunctionDeclaration(ArrayRef<AttributeIn
         portList = parseAnsiPortList(consume());
 
     auto semi = expect(TokenKind::Semicolon);
+    return alloc.emplace<FunctionPrototypeSyntax>(keyword, lifetime, returnType, name, portList, semi);
+}
 
+FunctionDeclarationSyntax* Parser::parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind) {
     Token* end;
+    auto prototype = parseFunctionPrototype();
     auto items = parseBlockItems(endKind, end);
     auto endBlockName = parseNamedBlockClause();
 
-    return alloc.emplace<FunctionDeclarationSyntax>(
-        functionKind,
-        attributes,
-        keyword,
-        lifetime,
-        returnType,
-        name,
-        portList,
-        semi,
-        items,
-        end,
-        endBlockName
-    );
+    return alloc.emplace<FunctionDeclarationSyntax>(functionKind, attributes, prototype, items, end, endBlockName);
 }
 
 GenvarDeclarationSyntax* Parser::parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {

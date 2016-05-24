@@ -92,6 +92,7 @@ private:
     HierarchyInstantiationSyntax* parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes);
     HierarchicalInstanceSyntax* parseHierarchicalInstance();
     PortConnectionSyntax* parsePortConnection();
+    FunctionPrototypeSyntax* parseFunctionPrototype();
     FunctionDeclarationSyntax* parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
     Token* parseLifetime();
     ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token*& end);

@@ -3680,36 +3680,54 @@ protected:
     }
 };
 
-struct FunctionDeclarationSyntax : public MemberSyntax {
+struct FunctionPrototypeSyntax : public SyntaxNode {
     Token* keyword;
     Token* lifetime;
     DataTypeSyntax* returnType;
     NameSyntax* name;
     AnsiPortListSyntax* portList;
     Token* semi;
+
+    FunctionPrototypeSyntax(Token* keyword, Token* lifetime, DataTypeSyntax* returnType, NameSyntax* name, AnsiPortListSyntax* portList, Token* semi) :
+        SyntaxNode(SyntaxKind::FunctionPrototype), keyword(keyword), lifetime(lifetime), returnType(returnType), name(name), portList(portList), semi(semi)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return lifetime;
+            case 2: return returnType;
+            case 3: return name;
+            case 4: return portList;
+            case 5: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct FunctionDeclarationSyntax : public MemberSyntax {
+    FunctionPrototypeSyntax* prototype;
     SyntaxList<SyntaxNode> items;
     Token* end;
     NamedBlockClauseSyntax* endBlockName;
 
-    FunctionDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* lifetime, DataTypeSyntax* returnType, NameSyntax* name, AnsiPortListSyntax* portList, Token* semi, SyntaxList<SyntaxNode> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
-        MemberSyntax(kind, attributes), keyword(keyword), lifetime(lifetime), returnType(returnType), name(name), portList(portList), semi(semi), items(items), end(end), endBlockName(endBlockName)
+    FunctionDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, FunctionPrototypeSyntax* prototype, SyntaxList<SyntaxNode> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
+        MemberSyntax(kind, attributes), prototype(prototype), items(items), end(end), endBlockName(endBlockName)
     {
-        childCount += 9;
+        childCount += 4;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return lifetime;
-            case 3: return returnType;
-            case 4: return name;
-            case 5: return portList;
-            case 6: return semi;
-            case 7: return &items;
-            case 8: return end;
-            case 9: return endBlockName;
+            case 1: return prototype;
+            case 2: return &items;
+            case 3: return end;
+            case 4: return endBlockName;
             default: return nullptr;
         }
     }

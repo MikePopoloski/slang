@@ -876,13 +876,16 @@ ParameterValueAssignmentSyntax parameters
 separated_list<HierarchicalInstanceSyntax> instances
 token semi
 
-FunctionDeclarationSyntax base=MemberSyntax
+FunctionPrototypeSyntax kind=FunctionPrototype
 token keyword
 token lifetime
 DataTypeSyntax returnType
 NameSyntax name
 AnsiPortListSyntax portList
 token semi
+
+FunctionDeclarationSyntax base=MemberSyntax
+FunctionPrototypeSyntax prototype
 list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax endBlockName
