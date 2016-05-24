@@ -43,7 +43,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "expected exponent digits" },
     
     // preprocessor
-    { "CouldNotOpenIncludeFile" },
+    { "could not find or open include file" },
     { "ExceededMaxIncludeDepth" },
     { "unknown macro or compiler directive" },
     { "expected end of directive (missing newline?)" },

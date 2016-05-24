@@ -168,7 +168,7 @@ Trivia Preprocessor::handleIncludeDirective(Token* directive) {
         path = path.subString(1, path.length() - 2);
         SourceBuffer* buffer = sourceManager.readHeader(path, getCurrentFile(), false);
         if (!buffer)
-            addError(DiagCode::CouldNotOpenIncludeFile);
+            addError(DiagCode::CouldNotOpenIncludeFile, fileName->location);
         else if (sourceStack.size() >= MaxSourceDepth)
             addError(DiagCode::ExceededMaxIncludeDepth);
         else

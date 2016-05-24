@@ -42,7 +42,7 @@
 
 
 //-- sequence lib
-`include "seq_lib/hmc_seq_lib.sv"
+`include "hmc_seq_lib.sv"
 
 //-- the init sequence
 `include "openhmc_init_seq.sv"
@@ -53,54 +53,51 @@
 //-- check registers after test ends
 `include "openhmc_check_seq.sv"
 
-`include "simple_test/simple_test_seq.sv"
-`include "simple_test/simple_test.sv"
+`include "simple_test_seq.sv"
+`include "simple_test.sv"
 
-`include "single_pkt_test/single_pkt_test_seq.sv"
-`include "single_pkt_test/single_pkt_test.sv"
+`include "single_pkt_test_seq.sv"
+`include "single_pkt_test.sv"
 
-`include "sleep_mode_test/sleep_mode_test_seq.sv"
-`include "sleep_mode_test/sleep_mode_test.sv"
+`include "sleep_mode_test_seq.sv"
+`include "sleep_mode_test.sv"
 
-`include "atomic_pkt_test/atomic_pkt_test.sv"
-`include "atomic_pkt_test/atomic_pkt_test_seq.sv"
+`include "atomic_pkt_test.sv"
+`include "atomic_pkt_test_seq.sv"
 
-`include "big_pkt_hdelay_test/big_pkt_hdelay_test.sv"
-`include "big_pkt_hdelay_test/big_pkt_hdelay_test_seq.sv"
+`include "big_pkt_test.sv"
+`include "big_pkt_test_seq.sv"
 
-`include "big_pkt_test/big_pkt_test.sv"
-`include "big_pkt_test/big_pkt_test_seq.sv"
+`include "small_pkt_test.sv"
+`include "small_pkt_test_seq.sv"
 
-`include "small_pkt_test/small_pkt_test.sv"
-`include "small_pkt_test/small_pkt_test_seq.sv"
+`include "big_pkt_zdelay_test.sv"
+`include "big_pkt_zdelay_test_seq.sv"
 
-`include "big_pkt_zdelay_test/big_pkt_zdelay_test.sv"
-`include "big_pkt_zdelay_test/big_pkt_zdelay_test_seq.sv"
+`include "high_delay_pkt_test.sv"
+`include "high_delay_pkt_test_seq.sv"
 
-`include "high_delay_pkt_test/high_delay_pkt_test.sv"
-`include "high_delay_pkt_test/high_delay_pkt_test_seq.sv"
+`include "zero_delay_pkt_test.sv"
+`include "zero_delay_pkt_test_seq.sv"
 
-`include "zero_delay_pkt_test/zero_delay_pkt_test.sv"
-`include "zero_delay_pkt_test/zero_delay_pkt_test_seq.sv"
+`include "non_posted_pkt_test.sv"
+`include "non_posted_pkt_test_seq.sv"
 
-`include "non_posted_pkt_test/non_posted_pkt_test.sv"
-`include "non_posted_pkt_test/non_posted_pkt_test_seq.sv"
+`include "posted_pkt_test.sv"
+`include "posted_pkt_test_seq.sv"
 
-`include "posted_pkt_test/posted_pkt_test.sv"
-`include "posted_pkt_test/posted_pkt_test_seq.sv"
+`include "small_pkt_hdelay_test.sv"
+`include "small_pkt_hdelay_test_seq.sv"
 
-`include "small_pkt_hdelay_test/small_pkt_hdelay_test.sv"
-`include "small_pkt_hdelay_test/small_pkt_hdelay_test_seq.sv"
+`include "small_pkt_zdelay_test.sv"
+`include "small_pkt_zdelay_test_seq.sv"
 
-`include "small_pkt_zdelay_test/small_pkt_zdelay_test.sv"
-`include "small_pkt_zdelay_test/small_pkt_zdelay_test_seq.sv"
-
-`include "init_test/init_test.sv"
-`include "init_test/init_test_seq.sv"
+`include "init_test.sv"
+`include "init_test_seq.sv"
 
 `ifdef HMC_UVC
-	`include "error_pkt_test/error_pkt_test.sv"
-	`include "error_pkt_test/error_pkt_test_seq.sv"
-	`include "bit_error_test/bit_error_test.sv"
-	`include "bit_error_test/bit_error_test_seq.sv"
+	`include "error_pkt_test.sv"
+	`include "error_pkt_test_seq.sv"
+	`include "bit_error_test.sv"
+	`include "bit_error_test_seq.sv"
 `endif
