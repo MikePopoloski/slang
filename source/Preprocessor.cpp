@@ -344,24 +344,26 @@ Trivia Preprocessor::handleIfDefDirective(Token* directive, bool not) {
 Trivia Preprocessor::handleElseIfDirective(Token* directive) {
     // next token should be the macro name
     auto name = expect(TokenKind::Identifier);
-    return parseBranchDirective(directive, name, shouldTakeElseBranch(true, name->valueText()));
+    bool take = shouldTakeElseBranch(directive->location, true, name->valueText());
+    return parseBranchDirective(directive, name, take);
 }
 
 Trivia Preprocessor::handleElseDirective(Token* directive) {
-    return parseBranchDirective(directive, nullptr, shouldTakeElseBranch(false, nullptr));
+    bool take = shouldTakeElseBranch(directive->location, false, nullptr);
+    return parseBranchDirective(directive, nullptr, take);
 }
 
-bool Preprocessor::shouldTakeElseBranch(bool isElseIf, StringRef macroName) {
+bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName) {
     // empty stack is an error
     if (branchStack.empty()) {
-        addError(DiagCode::UnexpectedDirective);
+        addError(DiagCode::UnexpectedConditionalDirective, location);
         return true;
     }
 
     // if we already had an else for this branch, we can't have any more elseifs
     BranchEntry& branch = branchStack.back();
     if (branch.hasElse) {
-        addError(DiagCode::UnexpectedDirective);
+        addError(DiagCode::UnexpectedConditionalDirective, location);
         return true;
     }
 
@@ -396,6 +398,7 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
             else if (token->kind == TokenKind::Directive) {
                 switch (token->directiveKind()) {
                     case SyntaxKind::IfDefDirective:
+                    case SyntaxKind::IfNDefDirective:
                     case SyntaxKind::ElseIfDirective:
                     case SyntaxKind::ElseDirective:
                     case SyntaxKind::EndIfDirective:
@@ -438,7 +441,7 @@ Trivia Preprocessor::handleEndIfDirective(Token* directive) {
     // pop the active branch off the stack
     bool taken = true;
     if (branchStack.empty())
-        addError(DiagCode::UnexpectedDirective);
+        addError(DiagCode::UnexpectedConditionalDirective, directive->location);
     else {
         branchStack.pop_back();
         if (!branchStack.empty() && !branchStack.back().currentActive)

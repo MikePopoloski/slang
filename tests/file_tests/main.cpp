@@ -15,18 +15,19 @@ Diagnostics diagnostics;
 SourceManager sourceManager;
 Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 
-int parseFile(const SourceBuffer* buffer) {
+int parseFile(const SourceBuffer* buffer, const char* path) {
     diagnostics.clear();
     preprocessor.pushSource(buffer);
     Parser parser(preprocessor);
 
     auto tree = parser.parseCompilationUnit();
     if (!diagnostics.empty()) {
+        printf("Parsing '%s'\n", path);
         for (auto& diag : diagnostics) {
             auto report = diagnostics.getReport(diag);
             printf("%s\n", report.toString(sourceManager).c_str());
         }
-        printf("\n");
+        printf("\n\n");
     }
     return diagnostics.count();
 }
@@ -43,14 +44,11 @@ int main() {
         //if (errors > 100)
             //break;
 
-        printf("Parsing '%s'\n", p.path().string().c_str());
-
         auto buffer = sourceManager.readSource(p.path().string());
-        errors += parseFile(buffer);
+        errors += parseFile(buffer, p.path().string().c_str());
         files++;
-        printf("\n");
     }
 
-    printf("\n\n");
+    printf("\n");
     printf("Finished parsing %d files; %d errors found\n\n", files, errors);
 }

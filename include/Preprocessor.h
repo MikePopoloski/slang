@@ -75,7 +75,7 @@ private:
 
     ArrayRef<Token*> parseMacroArg();
 
-    bool shouldTakeElseBranch(bool isElseIf, StringRef macroName);
+    bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName);
     Trivia parseBranchDirective(Token* directive, Token* condition, bool taken);
 
     void expectTimescaleSpecifier(Token*& unit, Token*& precision);

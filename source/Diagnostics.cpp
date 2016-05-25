@@ -49,7 +49,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "expected end of directive (missing newline?)" },
     { "ExpectedEndOfMacroArgs" },
     { "ExpectedEndIfDirective" },
-    { "UnexpectedDirective" },
+    { "unexpected conditional directive" },
     { "UnbalancedMacroArgDims" },
     { "ExpectedMacroArgs" },
     { "expected net type specifier" },
