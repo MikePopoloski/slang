@@ -13,7 +13,7 @@ const static StringTable<SyntaxKind> directiveTable = {
     { "`default_nettype", SyntaxKind::DefaultNetTypeDirective },
     { "`define", SyntaxKind::DefineDirective },
     { "`else", SyntaxKind::ElseDirective },
-    { "`elseif", SyntaxKind::ElseIfDirective },
+    { "`elsif", SyntaxKind::ElsIfDirective },
     { "`end_keywords", SyntaxKind::EndKeywordsDirective },
     { "`endcelldefine", SyntaxKind::EndCellDefineDirective },
     { "`endif", SyntaxKind::EndIfDirective },
@@ -306,7 +306,7 @@ StringRef getDirectiveText(SyntaxKind kind) {
         case SyntaxKind::DefaultNetTypeDirective: return "`default_nettype";
         case SyntaxKind::DefineDirective: return "`define";
         case SyntaxKind::ElseDirective: return "`else";
-        case SyntaxKind::ElseIfDirective: return "`elseif";
+        case SyntaxKind::ElsIfDirective: return "`elsif";
         case SyntaxKind::EndKeywordsDirective: return "`end_keywords";
         case SyntaxKind::EndCellDefineDirective: return "`endcelldefine";
         case SyntaxKind::EndIfDirective: return "`endif";

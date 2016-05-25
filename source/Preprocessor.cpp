@@ -56,7 +56,7 @@ Token* Preprocessor::next(LexerMode mode) {
             case SyntaxKind::MacroUsage: trivia.append(handleMacroUsage(token)); break;
             case SyntaxKind::IfDefDirective: trivia.append(handleIfDefDirective(token, false)); break;
             case SyntaxKind::IfNDefDirective: trivia.append(handleIfDefDirective(token, true)); break;
-            case SyntaxKind::ElseIfDirective: trivia.append(handleElseIfDirective(token)); break;
+            case SyntaxKind::ElsIfDirective: trivia.append(handleElsIfDirective(token)); break;
             case SyntaxKind::ElseDirective: trivia.append(handleElseDirective(token)); break;
             case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
             case SyntaxKind::TimescaleDirective: trivia.append(handleTimescaleDirective(token)); break;
@@ -341,7 +341,7 @@ Trivia Preprocessor::handleIfDefDirective(Token* directive, bool not) {
     return parseBranchDirective(directive, name, take);
 }
 
-Trivia Preprocessor::handleElseIfDirective(Token* directive) {
+Trivia Preprocessor::handleElsIfDirective(Token* directive) {
     // next token should be the macro name
     auto name = expect(TokenKind::Identifier);
     bool take = shouldTakeElseBranch(directive->location, true, name->valueText());
@@ -399,7 +399,7 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
                 switch (token->directiveKind()) {
                     case SyntaxKind::IfDefDirective:
                     case SyntaxKind::IfNDefDirective:
-                    case SyntaxKind::ElseIfDirective:
+                    case SyntaxKind::ElsIfDirective:
                     case SyntaxKind::ElseDirective:
                     case SyntaxKind::EndIfDirective:
                         done = true;

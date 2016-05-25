@@ -23,7 +23,7 @@ enum class SyntaxKind : uint16_t {
     DefaultNetTypeDirective,
     DefineDirective,
     ElseDirective,
-    ElseIfDirective,
+    ElsIfDirective,
     EndKeywordsDirective,
     EndCellDefineDirective,
     EndIfDirective,

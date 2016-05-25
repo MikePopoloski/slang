@@ -59,7 +59,7 @@ TEST_CASE("Directives", "[preprocessor]") {
     testDirective(SyntaxKind::DefaultNetTypeDirective);
     testDirective(SyntaxKind::DefineDirective);
     testDirective(SyntaxKind::ElseDirective);
-    testDirective(SyntaxKind::ElseIfDirective);
+    testDirective(SyntaxKind::ElsIfDirective);
     testDirective(SyntaxKind::EndKeywordsDirective);
     testDirective(SyntaxKind::EndCellDefineDirective);
     testDirective(SyntaxKind::EndIfDirective);
