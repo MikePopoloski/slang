@@ -94,7 +94,7 @@ Diagnostics::Diagnostics() :
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
     emplace(code, location);
-    return last();
+    return back();
 }
 
 DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {

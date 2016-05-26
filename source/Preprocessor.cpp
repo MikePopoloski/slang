@@ -206,7 +206,7 @@ ArrayRef<Token*> Preprocessor::parseMacroArg() {
             if ((kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis))
                 break;
         }
-        else if (delimPairStack.last() == kind)
+        else if (delimPairStack.back() == kind)
             delimPairStack.pop();
 
         tokens.append(consume());

@@ -85,7 +85,7 @@ SourceBuffer* SourceManager::assignText(StringRef text) {
 SourceBuffer* SourceManager::assignText(StringRef path, StringRef text) {
     Buffer<char> buffer;
     buffer.appendRange(text);
-    if (buffer.empty() || buffer.last() != '\0')
+    if (buffer.empty() || buffer.back() != '\0')
         buffer.append('\0');
 
     return assignBuffer(path, std::move(buffer));

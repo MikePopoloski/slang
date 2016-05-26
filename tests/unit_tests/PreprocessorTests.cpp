@@ -121,7 +121,7 @@ TEST_CASE("Macro usage (undefined)", "[preprocessor]") {
     auto& token = lexToken(text);
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::UnknownDirective);
+    CHECK(diagnostics.back().code == DiagCode::UnknownDirective);
 }
 
 TEST_CASE("Macro usage (simple)", "[preprocessor]") {

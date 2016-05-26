@@ -30,7 +30,7 @@ TEST_CASE("Invalid chars", "[lexer]") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::NonPrintableChar);
+    CHECK(diagnostics.back().code == DiagCode::NonPrintableChar);
 }
 
 TEST_CASE("UTF8 chars", "[lexer]") {
@@ -40,21 +40,21 @@ TEST_CASE("UTF8 chars", "[lexer]") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::UTF8Char);
+    CHECK(diagnostics.back().code == DiagCode::UTF8Char);
 }
 
 TEST_CASE("Unicode BOMs", "[lexer]") {
     lexToken("\xEF\xBB\xBF ");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
+    CHECK(diagnostics.back().code == DiagCode::UnicodeBOM);
 
     lexToken("\xFE\xFF ");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
+    CHECK(diagnostics.back().code == DiagCode::UnicodeBOM);
 
     lexToken("\xFF\xFE ");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::UnicodeBOM);
+    CHECK(diagnostics.back().code == DiagCode::UnicodeBOM);
 }
 
 TEST_CASE("Embedded null", "[lexer]") {
@@ -65,7 +65,7 @@ TEST_CASE("Embedded null", "[lexer]") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == str);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::EmbeddedNull);
+    CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
 }
 
 TEST_CASE("Line Comment", "[lexer]") {
@@ -114,7 +114,7 @@ TEST_CASE("Block Comment (unterminated)", "[lexer]") {
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::UnterminatedBlockComment);
+    CHECK(diagnostics.back().code == DiagCode::UnterminatedBlockComment);
 }
 
 TEST_CASE("Block Comment (nested)", "[lexer]") {
@@ -126,7 +126,7 @@ TEST_CASE("Block Comment (nested)", "[lexer]") {
     CHECK(token.trivia.count() == 1);
     CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::NestedBlockComment);
+    CHECK(diagnostics.back().code == DiagCode::NestedBlockComment);
 }
 
 TEST_CASE("Whitespace", "[lexer]") {
@@ -233,13 +233,13 @@ TEST_CASE("Invalid escapes", "[lexer]") {
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::EscapedWhitespace);
+    CHECK(diagnostics.back().code == DiagCode::EscapedWhitespace);
 
     auto& token2 = lexToken("\\  ");
     CHECK(token2.kind == TokenKind::Unknown);
     CHECK(token2.toString() == "\\");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::EscapedWhitespace);
+    CHECK(diagnostics.back().code == DiagCode::EscapedWhitespace);
 }
 
 TEST_CASE("String literal", "[lexer]") {
@@ -261,7 +261,7 @@ TEST_CASE("String literal (newline)", "[lexer]") {
     CHECK(token.valueText() == "literal");
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::ExpectedClosingQuote);
+    CHECK(diagnostics.back().code == DiagCode::ExpectedClosingQuote);
 }
 
 TEST_CASE("String literal (escaped newline)", "[lexer]") {
@@ -283,7 +283,7 @@ TEST_CASE("String literal (unterminated)", "[lexer]") {
     CHECK(token.valueText() == "literal");
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::ExpectedClosingQuote);
+    CHECK(diagnostics.back().code == DiagCode::ExpectedClosingQuote);
 }
 
 TEST_CASE("String literal (escapes)", "[lexer]") {
@@ -314,7 +314,7 @@ TEST_CASE("String literal (bad octal escape)", "[lexer]") {
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(token.valueText() == "literal");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::OctalEscapeCodeTooBig);
+    CHECK(diagnostics.back().code == DiagCode::OctalEscapeCodeTooBig);
 }
 
 TEST_CASE("String literal with hex escape", "[lexer]") {
@@ -335,7 +335,7 @@ TEST_CASE("String literal (bad hex escape)", "[lexer]") {
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(token.valueText() == "literalz");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::InvalidHexEscapeCode);
+    CHECK(diagnostics.back().code == DiagCode::InvalidHexEscapeCode);
 }
 
 TEST_CASE("String literal (unknown escape)", "[lexer]") {
@@ -346,7 +346,7 @@ TEST_CASE("String literal (unknown escape)", "[lexer]") {
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(token.valueText() == "literali");
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::UnknownEscapeCode);
+    CHECK(diagnostics.back().code == DiagCode::UnknownEscapeCode);
 }
 
 TEST_CASE("Integer literal", "[lexer]") {
@@ -415,7 +415,7 @@ TEST_CASE("Real literal (missing fraction)", "[lexer]") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::MissingFractionalDigits);
+    CHECK(diagnostics.back().code == DiagCode::MissingFractionalDigits);
 
     auto& value = token.numericValue();
     CHECK(value.type == NumericValue::Real);
@@ -535,7 +535,7 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
     CHECK(token.directiveKind() == SyntaxKind::Unknown);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.last().code == DiagCode::MisplacedDirectiveChar);
+    CHECK(diagnostics.back().code == DiagCode::MisplacedDirectiveChar);
 }
 
 void testKeyword(TokenKind kind) {

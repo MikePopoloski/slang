@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Buffer.h
+// Implements fast resizable buffer template.
+//
+// File is under the MIT license:
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <cstdlib>
@@ -7,23 +13,25 @@
 #include "BumpAllocator.h"
 #include "ArrayRef.h"
 
-// Simple resizable buffer that can only be appended and cleared.
-// It makes no attempt at being exception safe.
-
 namespace slang {
 
+/// Buffer<T> - A fast growable array.
+///
+/// In the name of performance and simplicity, we avoid adding lots of junk
+/// that comes with std::vector, such as exception safety, inserting in the
+/// middle, copy constructors, etc.
 template<typename T>
 class Buffer {
 public:
     explicit Buffer(uint32_t capacity = 16) :
-        len(0), capacity(capacity) {
-
+        len(0), capacity(capacity)
+    {
         data = (T*)malloc(capacity * sizeof(T));
     }
 
     Buffer(Buffer&& other) :
-        data(other.data), len(other.len), capacity(other.capacity) {
-
+        data(other.data), len(other.len), capacity(other.capacity)
+    {
         other.data = nullptr;
         other.len = 0;
         other.capacity = 0;
@@ -33,6 +41,7 @@ public:
         cleanup();
     }
 
+    // not copyable
     Buffer(const Buffer&) = delete;
     Buffer& operator=(const Buffer&) = delete;
 
@@ -57,8 +66,26 @@ public:
     const T* end() const { return data + len; }
     const T* cbegin() const { return data; }
     const T* cend() const { return data + len; }
-    const T& last() const { return data[len - 1]; } // TODO: assert not empty
-    T& last() { return data[len - 1]; } // TODO: assert not empty
+
+    const T& front() const {
+        ASSERT(length);
+        return data[0];
+    }
+
+    const T& back() const {
+        ASSERT(length);
+        return data[len - 1];
+    }
+
+    T& front() {
+        ASSERT(length);
+        return data[0];
+    }
+
+    T& back() {
+        ASSERT(length);
+        return data[len - 1];
+    }
 
     uint32_t count() const { return len; }
     bool empty() const { return len == 0; }
@@ -130,8 +157,8 @@ public:
         return ArrayRef<T>(dest, len);
     }
 
-    T& operator [](int index) { return data[index]; }
-    const T& operator [](int index) const { return data[index]; }
+    T& operator[](int index) { return data[index]; }
+    const T& operator[](int index) const { return data[index]; }
 
 private:
     T* data;
