@@ -34,7 +34,7 @@ public:
         void appendRange(const Container& container) { buffer->appendRange(container); }
 
         template<typename... Args>
-        void emplace(Args&&... args) { buffer->emplace<Args...>(std::forward<Args>(args)...); }
+        void emplace(Args&&... args) { buffer->emplace(std::forward<Args>(args)...); }
 
         void clear() { buffer->clear(); }
 
