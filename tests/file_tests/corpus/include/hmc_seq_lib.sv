@@ -40,18 +40,18 @@
 `define HMC_PACKET_SEQ_LIB
 
 
-`include "seq_lib/hmc_base_pkt_seq.sv"
-`include "seq_lib/hmc_small_pkts_seq.sv"
-`include "seq_lib/hmc_big_pkts_seq.sv"
-`include "seq_lib/hmc_hdelay_seq.sv"
-`include "seq_lib/hmc_zdelay_seq.sv"
+`include "hmc_base_pkt_seq.sv"
+`include "hmc_small_pkts_seq.sv"
+`include "hmc_big_pkts_seq.sv"
+`include "hmc_hdelay_seq.sv"
+`include "hmc_zdelay_seq.sv"
 
-`include "seq_lib/hmc_big_pkts_zdelay_seq.sv"
-`include "seq_lib/hmc_small_pkts_zdelay_seq.sv"
+`include "hmc_big_pkts_zdelay_seq.sv"
+`include "hmc_small_pkts_zdelay_seq.sv"
 
-`include  "seq_lib/hmc_big_pkts_hdelay_seq.sv"
-`include  "seq_lib/hmc_small_pkts_hdelay_seq.sv"
+`include  "hmc_big_pkts_hdelay_seq.sv"
+`include  "hmc_small_pkts_hdelay_seq.sv"
 
-`include "seq_lib/hmc_single_pkt_cycle_seq.sv"
+`include "hmc_single_pkt_cycle_seq.sv"
 
 `endif
