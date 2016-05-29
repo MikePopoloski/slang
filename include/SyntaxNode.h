@@ -280,6 +280,7 @@ enum class SyntaxKind : uint16_t {
     DisableForkStatement,
     NamedBlockClause,
     SequentialBlockStatement,
+    ParallelBlockStatement,
     WaitStatement,
     WaitForkStatement,
     WaitOrderStatement,

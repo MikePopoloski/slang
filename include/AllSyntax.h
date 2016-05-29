@@ -2823,15 +2823,15 @@ protected:
     }
 };
 
-struct SequentialBlockStatementSyntax : public StatementSyntax {
+struct BlockStatementSyntax : public StatementSyntax {
     Token* begin;
     NamedBlockClauseSyntax* blockName;
     SyntaxList<SyntaxNode> items;
     Token* end;
     NamedBlockClauseSyntax* endBlockName;
 
-    SequentialBlockStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
-        StatementSyntax(SyntaxKind::SequentialBlockStatement, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
+    BlockStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
+        StatementSyntax(kind, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
     {
         childCount += 5;
     }

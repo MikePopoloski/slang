@@ -601,6 +601,9 @@ bool isEndKeyword(TokenKind kind) {
         case TokenKind::EndSequenceKeyword:
         case TokenKind::EndTableKeyword:
         case TokenKind::EndTaskKeyword:
+        case TokenKind::JoinAnyKeyword:
+        case TokenKind::JoinKeyword:
+        case TokenKind::JoinNoneKeyword:
             return true;
         default:
             return false;

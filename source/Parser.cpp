@@ -799,7 +799,9 @@ StatementSyntax* Parser::parseStatement() {
         case TokenKind::DisableKeyword:
             return parseDisableStatement(label, attributes);
         case TokenKind::BeginKeyword:
-            return parseSequentialBlock(label, attributes);
+            return parseBlock(SyntaxKind::SequentialBlockStatement, TokenKind::EndKeyword, label, attributes);
+        case TokenKind::ForkKeyword:
+            return parseBlock(SyntaxKind::ParallelBlockStatement, TokenKind::JoinKeyword, label, attributes);
         case TokenKind::AssertKeyword:
             return parseAssertionStatement(SyntaxKind::ImmediateAssertStatement, label, attributes);
         case TokenKind::AssumeKeyword:
@@ -1192,18 +1194,35 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token*& end) {
         kind = peek()->kind;
     }
 
-    end = prependSkippedTokens(expect(endKind), skipped);
+    // parallel blocks can end in one of three join keywords
+    if (endKind == TokenKind::JoinKeyword) {
+        switch (kind) {
+            case TokenKind::JoinKeyword:
+            case TokenKind::JoinAnyKeyword:
+            case TokenKind::JoinNoneKeyword:
+                end = consume();
+                break;
+            default:
+                end = expect(endKind);
+                break;
+        }
+    }
+    else {
+        end = expect(endKind);
+    }
+
+    end = prependSkippedTokens(end, skipped);
     return buffer.copy(alloc);
 }
 
-SequentialBlockStatementSyntax* Parser::parseSequentialBlock(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+BlockStatementSyntax* Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind, NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto begin = consume();
     auto name = parseNamedBlockClause();
 
     Token* end;
-    auto items = parseBlockItems(TokenKind::EndKeyword, end);
+    auto items = parseBlockItems(endKind, end);
     auto endName = parseNamedBlockClause();
-    return alloc.emplace<SequentialBlockStatementSyntax>(label, attributes, begin, name, items, end, endName);
+    return alloc.emplace<BlockStatementSyntax>(blockKind, label, attributes, begin, name, items, end, endName);
 }
 
 StatementSyntax* Parser::parseWaitStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {

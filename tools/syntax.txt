@@ -669,7 +669,7 @@ NamedBlockClauseSyntax kind=NamedBlockClause
 token colon
 token name
 
-SequentialBlockStatementSyntax base=StatementSyntax kind=SequentialBlockStatement
+BlockStatementSyntax base=StatementSyntax
 token begin
 NamedBlockClauseSyntax blockName
 list<SyntaxNode> items

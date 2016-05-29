@@ -175,7 +175,7 @@ DataDeclarationSyntax* parseBlockDeclaration(const std::string& text) {
     CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
     CHECK(diagnostics.empty());
 
-    auto block = (SequentialBlockStatementSyntax*)stmt;
+    auto block = (BlockStatementSyntax*)stmt;
     REQUIRE(block->items.count() == 1);
     REQUIRE(block->items[0]->kind == SyntaxKind::DataDeclaration);
 
