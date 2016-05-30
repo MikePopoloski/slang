@@ -319,8 +319,10 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
         actualArgs = alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(alloc), closeParen);
     }
 
+    // push a new source onto the preprocessor stack, but only if there are tokens to consume
     auto macroSource = alloc.emplace<MacroExpander>(alloc, macro, actualArgs);
-    sourceStack.push_back(macroSource);
+    if (!macroSource->done())
+        sourceStack.push_back(macroSource);
 
     auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
     return Trivia(TriviaKind::Directive, syntax);
