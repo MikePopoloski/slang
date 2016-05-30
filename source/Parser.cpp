@@ -337,6 +337,8 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::CheckerKeyword:
             break;
 
+        case TokenKind::CoverGroupKeyword:
+            return parseCovergroupDeclaration(attributes);
         case TokenKind::ClassKeyword:
             return parseClassDeclaration(attributes, nullptr);
         case TokenKind::VirtualKeyword:
@@ -703,6 +705,8 @@ MemberSyntax* Parser::parseClassMember() {
     switch (kind) {
         case TokenKind::ClassKeyword:
             return parseClassDeclaration(attributes, nullptr);
+        case TokenKind::CoverGroupKeyword:
+            return parseCovergroupDeclaration(attributes);
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyMemberSyntax>(attributes, qualifiers, consume());
         default:
@@ -733,6 +737,90 @@ ContinuousAssignSyntax* Parser::parseContinuousAssign(ArrayRef<AttributeInstance
     );
 
     return alloc.emplace<ContinuousAssignSyntax>(attributes, assign, buffer.copy(alloc), semi);
+}
+
+MemberSyntax* Parser::parseCoverageMember() {
+    // TODO: error on attributes that don't attach to a valid construct
+    auto attributes = parseAttributes();
+
+    // if we got attributes but don't know what comes next, we have some kind of nonsense
+    if (attributes.count())
+        return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, expect(TokenKind::Semicolon));
+
+    // otherwise, we got nothing and should just return null so that our caller will skip and try again.
+    return nullptr;
+}
+
+BlockEventExpressionSyntax* Parser::parseBlockEventExpression() {
+    Token* keyword;
+    switch (peek()->kind) {
+        case TokenKind::BeginKeyword:
+        case TokenKind::EndKeyword:
+            keyword = consume();
+            break;
+        default:
+            // TODO: better error message here? begin or end expected
+            keyword = expect(TokenKind::BeginKeyword);
+            break;
+    }
+
+    auto name = parseName();
+    auto left = alloc.emplace<PrimaryBlockEventExpressionSyntax>(keyword, name);
+
+    if (peek(TokenKind::OrKeyword)) {
+        auto op = consume();
+        auto right = parseBlockEventExpression();
+        return alloc.emplace<BinaryBlockEventExpressionSyntax>(left, op, right);
+    }
+    return left;
+}
+
+CovergroupDeclarationSyntax* Parser::parseCovergroupDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+    auto name = expect(TokenKind::Identifier);
+
+    AnsiPortListSyntax* portList = nullptr;
+    if (peek(TokenKind::OpenParenthesis))
+        portList = parseAnsiPortList(consume());
+
+    SyntaxNode* event = nullptr;
+    switch (peek()->kind) {
+        case TokenKind::At: {
+            auto at = consume();
+            event = alloc.emplace<EventControlWithExpressionSyntax>(at, parseEventExpression());
+            break;
+        }
+        case TokenKind::DoubleAt:
+            event = parseBlockEventExpression();
+            break;
+        case TokenKind::WithKeyword: {
+            auto with = consume();
+            auto function = expect(TokenKind::FunctionKeyword);
+            auto sample = expect(TokenKind::Identifier); // TODO: make sure this is "sample" (maybe in the binder?)
+            auto samplePortList = parseAnsiPortList(expect(TokenKind::OpenParenthesis));
+            event = alloc.emplace<WithFunctionSampleSyntax>(with, function, sample, samplePortList);
+            break;
+        }
+        default:
+            break;
+    }
+
+    auto semi = expect(TokenKind::Semicolon);
+
+    Token* endGroup;
+    auto members = parseMemberList(TokenKind::EndGroupKeyword, endGroup, [this]() { return parseCoverageMember(); });
+    auto endBlockName = parseNamedBlockClause();
+    return alloc.emplace<CovergroupDeclarationSyntax>(
+        attributes,
+        keyword,
+        name,
+        portList,
+        event,
+        semi,
+        members,
+        endGroup,
+        endBlockName
+    );
 }
 
 StatementSyntax* Parser::parseStatement() {

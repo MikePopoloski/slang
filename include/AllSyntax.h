@@ -3948,6 +3948,168 @@ protected:
     }
 };
 
+// ----- COVER GROUPS -----
+
+struct WithFunctionSampleSyntax : public SyntaxNode {
+    Token* with;
+    Token* function;
+    Token* sample;
+    AnsiPortListSyntax* portList;
+
+    WithFunctionSampleSyntax(Token* with, Token* function, Token* sample, AnsiPortListSyntax* portList) :
+        SyntaxNode(SyntaxKind::WithFunctionSample), with(with), function(function), sample(sample), portList(portList)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return with;
+            case 1: return function;
+            case 2: return sample;
+            case 3: return portList;
+            default: return nullptr;
+        }
+    }
+};
+
+struct BlockEventExpressionSyntax : public SyntaxNode {
+
+    BlockEventExpressionSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
+    BlockEventExpressionSyntax* left;
+    Token* or;
+    BlockEventExpressionSyntax* right;
+
+    BinaryBlockEventExpressionSyntax(BlockEventExpressionSyntax* left, Token* or, BlockEventExpressionSyntax* right) :
+        BlockEventExpressionSyntax(SyntaxKind::BinaryBlockEventExpression), left(left), or(or), right(right)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return left;
+            case 1: return or;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+};
+
+struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
+    Token* keyword;
+    NameSyntax* name;
+
+    PrimaryBlockEventExpressionSyntax(Token* keyword, NameSyntax* name) :
+        BlockEventExpressionSyntax(SyntaxKind::PrimaryBlockEventExpression), keyword(keyword), name(name)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return keyword;
+            case 1: return name;
+            default: return nullptr;
+        }
+    }
+};
+
+struct BlockCoverageEventSyntax : public SyntaxNode {
+    Token* atat;
+    Token* openParen;
+    BlockEventExpressionSyntax* expr;
+    Token* closeParen;
+
+    BlockCoverageEventSyntax(Token* atat, Token* openParen, BlockEventExpressionSyntax* expr, Token* closeParen) :
+        SyntaxNode(SyntaxKind::BlockCoverageEvent), atat(atat), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return atat;
+            case 1: return openParen;
+            case 2: return expr;
+            case 3: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct CovergroupDeclarationSyntax : public MemberSyntax {
+    Token* covergroup;
+    Token* name;
+    AnsiPortListSyntax* portList;
+    SyntaxNode* event;
+    Token* semi;
+    SyntaxList<MemberSyntax> members;
+    Token* endgroup;
+    NamedBlockClauseSyntax* endBlockName;
+
+    CovergroupDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* covergroup, Token* name, AnsiPortListSyntax* portList, SyntaxNode* event, Token* semi, SyntaxList<MemberSyntax> members, Token* endgroup, NamedBlockClauseSyntax* endBlockName) :
+        MemberSyntax(SyntaxKind::CovergroupDeclaration, attributes), covergroup(covergroup), name(name), portList(portList), event(event), semi(semi), members(members), endgroup(endgroup), endBlockName(endBlockName)
+    {
+        childCount += 8;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return covergroup;
+            case 2: return name;
+            case 3: return portList;
+            case 4: return event;
+            case 5: return semi;
+            case 6: return &members;
+            case 7: return endgroup;
+            case 8: return endBlockName;
+            default: return nullptr;
+        }
+    }
+};
+
+struct CoverageOptionSyntax : public MemberSyntax {
+    Token* option;
+    Token* dot;
+    Token* name;
+    Token* equals;
+    ExpressionSyntax* expr;
+    Token* semi;
+
+    CoverageOptionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* option, Token* dot, Token* name, Token* equals, ExpressionSyntax* expr, Token* semi) :
+        MemberSyntax(SyntaxKind::CoverageOption, attributes), option(option), dot(dot), name(name), equals(equals), expr(expr), semi(semi)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return option;
+            case 2: return dot;
+            case 3: return name;
+            case 4: return equals;
+            case 5: return expr;
+            case 6: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 // ----- TOP LEVEL -----
 
 struct CompilationUnitSyntax : public SyntaxNode {

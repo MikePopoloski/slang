@@ -108,6 +108,9 @@ private:
     ContinuousAssignSyntax* parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes);
     VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
     ArrayRef<TokenOrSyntax> parseOneVariableDeclarator();
+    MemberSyntax* parseCoverageMember();
+    BlockEventExpressionSyntax* parseBlockEventExpression();
+    CovergroupDeclarationSyntax* parseCovergroupDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
 
     bool isPortDeclaration();
     bool isNetDeclaration();

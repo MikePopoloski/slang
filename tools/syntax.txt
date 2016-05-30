@@ -940,6 +940,50 @@ token assign
 separated_list<ExpressionSyntax> assignments
 token semi
 
+// ----- COVER GROUPS -----
+
+WithFunctionSampleSyntax kind=WithFunctionSample
+token with
+token function
+token sample
+AnsiPortListSyntax portList
+
+BlockEventExpressionSyntax final=false
+empty
+
+BinaryBlockEventExpressionSyntax base=BlockEventExpressionSyntax kind=BinaryBlockEventExpression
+BlockEventExpressionSyntax left
+token or
+BlockEventExpressionSyntax right
+
+PrimaryBlockEventExpressionSyntax base=BlockEventExpressionSyntax kind=PrimaryBlockEventExpression
+token keyword
+NameSyntax name
+
+BlockCoverageEventSyntax kind=BlockCoverageEvent
+token atat
+token openParen
+BlockEventExpressionSyntax expr
+token closeParen
+
+CovergroupDeclarationSyntax base=MemberSyntax kind=CovergroupDeclaration
+token covergroup
+token name
+AnsiPortListSyntax portList
+SyntaxNode event
+token semi
+list<MemberSyntax> members
+token endgroup
+NamedBlockClauseSyntax endBlockName
+
+CoverageOptionSyntax base=MemberSyntax kind=CoverageOption
+token option
+token dot
+token name
+token equals
+ExpressionSyntax expr
+token semi
+
 // ----- TOP LEVEL -----
 
 CompilationUnitSyntax kind=CompilationUnit

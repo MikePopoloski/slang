@@ -348,6 +348,14 @@ enum class SyntaxKind : uint16_t {
     ClassMethodPrototype,
     ContinuousAssign,
 
+    // covergroups
+    WithFunctionSample,
+    BinaryBlockEventExpression,
+    PrimaryBlockEventExpression,
+    BlockCoverageEvent,
+    CovergroupDeclaration,
+    CoverageOption,
+
     // top level
     CompilationUnit
 };
