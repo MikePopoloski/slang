@@ -656,9 +656,14 @@ MemberSyntax* Parser::parseClassMember() {
     // TODO: error on attributes that don't attach to a valid construct
     auto attributes = parseAttributes();
 
-    // virtual keyword can either be a class decl or a method qualifier; early out here if it's a class
+    // virtual keyword can either be a class decl, virtual interface, or a method qualifier;
+    // early out here if it's a class
     if (peek(TokenKind::VirtualKeyword) && peek(1)->kind == TokenKind::ClassKeyword)
         return parseClassDeclaration(attributes, consume());
+
+    // because of the virtual keyword, we need to check for a variable decl before and after consuming qualifiers
+    if (isVariableDeclaration())
+        return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, nullptr, parseVariableDeclaration(nullptr));
 
     bool isPureOrExtern = false;
     auto qualifierBuffer = tokenPool.get();
@@ -2505,7 +2510,6 @@ bool Parser::isVariableDeclaration() {
         case TokenKind::AutomaticKeyword:
         case TokenKind::StaticKeyword:
         case TokenKind::CHandleKeyword:
-        case TokenKind::VirtualKeyword:
         case TokenKind::EventKeyword:
         case TokenKind::StructKeyword:
         case TokenKind::UnionKeyword:
@@ -2518,6 +2522,16 @@ bool Parser::isVariableDeclaration() {
         case TokenKind::BindKeyword:
         case TokenKind::LetKeyword:
             return true;
+
+        // this could be a virtual interface, a virtual class declaration, or a virtual function
+        case TokenKind::VirtualKeyword:
+            if (peek(++index)->kind == TokenKind::InterfaceKeyword)
+                return true;
+            if (!scanQualifiedName(index))
+                return false;
+            if (peek(index)->kind == TokenKind::Dot)
+                return true;
+            break;
 
         // some cases might be a cast expression
         case TokenKind::StringKeyword:
