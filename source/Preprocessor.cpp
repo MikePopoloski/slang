@@ -41,7 +41,7 @@ Token* Preprocessor::next() {
 Token* Preprocessor::next(LexerMode mode) {
     // common case: lex a token and return it
     auto token = nextRaw(mode);
-    if (token->kind != TokenKind::Directive)
+    if (token->kind != TokenKind::Directive || inMacroBody)
         return token;
 
     // burn through any preprocessor directives we find and convert them to trivia
@@ -265,8 +265,10 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
     
     // consume all remaining tokens as macro text
     auto body = tokenPool.get();
+    inMacroBody = true;
     while (!peek(TokenKind::EndOfDirective))
         body.append(consume());
+    inMacroBody = false;
 
     auto result = alloc.emplace<DefineDirectiveSyntax>(
         directive,

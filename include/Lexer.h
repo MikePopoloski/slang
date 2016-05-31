@@ -62,8 +62,8 @@ private:
     bool lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode);
     
     bool scanBlockComment(Buffer<Trivia>& triviaBuffer, bool directiveMode);
+    void scanLineComment(Buffer<Trivia>& triviaBuffer, bool directiveMode);
     void scanWhitespace(Buffer<Trivia>& triviaBuffer);
-    void scanLineComment(Buffer<Trivia>& triviaBuffer);
     void scanIdentifier();
     void scanUnsignedNumber(uint64_t& value, int& digits);
     bool scanExponent(uint64_t& value, bool& negative);

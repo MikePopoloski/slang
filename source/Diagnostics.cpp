@@ -29,7 +29,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "Unicode BOM at start of source text; SystemVerilog only supports ASCII text" },
     { "embedded NUL in source text; are you sure this is source code?" },
     { "expected directive name" },
-    { "expected newline after escape sequence; remove trailing whitespace" },
+    { "unexpected whitespace after escape character" },
     { "missing closing quote" },
     { "block comment unclosed at end of file" },
     { "nested block comments are disallowed by SystemVerilog" },

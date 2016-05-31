@@ -126,6 +126,8 @@ private:
 
     Token* currentToken;
 
+    bool inMacroBody = false;
+
     const StringTable<TokenKind>* keywordTable;
 
     static constexpr int MaxSourceDepth = 8192;

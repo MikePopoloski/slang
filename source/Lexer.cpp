@@ -729,7 +729,7 @@ bool Lexer::lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
                 switch (peek(1)) {
                     case '/':
                         advance(2);
-                        scanLineComment(triviaBuffer);
+                        scanLineComment(triviaBuffer, directiveMode);
                         break;
                     case '*': {
                         advance(2);
@@ -754,13 +754,19 @@ bool Lexer::lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
                 if (directiveMode)
                     return true;
                 break;
-            case '\\':
+            case '\\': {
                 // if we're lexing a directive, this might escape a newline
-                if (!directiveMode || !isNewline(peek()))
+                char n = peek(1);
+                if (!directiveMode || !isNewline(n))
                     return false;
-                advance();
+
+                advance(2);
+                if (n == '\r')
+                    consume('\n');
+
                 addTrivia(TriviaKind::LineContinuation, triviaBuffer);
                 break;
+            }
             default:
                 return false;
         }
@@ -813,11 +819,16 @@ void Lexer::scanWhitespace(Buffer<Trivia>& triviaBuffer) {
     addTrivia(TriviaKind::Whitespace, triviaBuffer);
 }
 
-void Lexer::scanLineComment(Buffer<Trivia>& triviaBuffer) {
+void Lexer::scanLineComment(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
     while (true) {
         char c = peek();
         if (isNewline(c))
             break;
+
+        if (c == '\\' && directiveMode) {
+            if (isNewline(peek(1)))
+                break;
+        }
 
         if (c == '\0') {
             if (reallyAtEnd())
