@@ -158,6 +158,7 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
 
 Trivia Preprocessor::handleIncludeDirective(Token* directive) {
     // next token should be a filename
+    // TODO: handle macro replaced include file name
     Token* fileName = next(LexerMode::IncludeFileName);
     Token* end = parseEndOfDirective();
 
@@ -185,14 +186,14 @@ Trivia Preprocessor::handleResetAllDirective(Token* directive) {
     return createSimpleDirective(directive);
 }
 
-ArrayRef<Token*> Preprocessor::parseMacroArg() {
+ArrayRef<Token*> Preprocessor::parseMacroArg(LexerMode mode) {
     auto tokens = tokenPool.get();
 
     // comma and right parenthesis only end the default token list if they are
     // not inside a nested pair of (), [], or {}
     // otherwise, keep swallowing tokens as part of the default
     while (true) {
-        auto kind = peek()->kind;
+        auto kind = peek(mode)->kind;
         if (kind == TokenKind::EndOfDirective) {
             if (delimPairStack.empty())
                 addError(DiagCode::ExpectedEndOfMacroArgs);
@@ -209,7 +210,7 @@ ArrayRef<Token*> Preprocessor::parseMacroArg() {
         else if (delimPairStack.back() == kind)
             delimPairStack.pop();
 
-        tokens.append(consume());
+        tokens.append(consume(mode));
         switch (kind) {
             case TokenKind::OpenParenthesis:
                 delimPairStack.append(TokenKind::CloseParenthesis);
@@ -241,7 +242,7 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
             MacroArgumentDefaultSyntax* argDef = nullptr;
             if (peek(TokenKind::Equals)) {
                 auto equals = consume();
-                argDef = alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseMacroArg());
+                argDef = alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseMacroArg(LexerMode::Directive));
             }
 
             arguments.append(alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef));
@@ -280,6 +281,8 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 }
 
 Trivia Preprocessor::handleMacroUsage(Token* directive) {
+    // TODO: don't call createsimpledirective in here
+
     // try to look up the macro in our map
     auto it = macros.find(directive->valueText().subString(1));
     if (it == macros.end()) {
@@ -287,35 +290,34 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
         return createSimpleDirective(directive, /* suppressError */ true);
     }
 
+    // NOTE: make sure you always pass a LexerMode to the token functions in this function,
+    // since we don't want the default of lexing in directive mode
     DefineDirectiveSyntax* macro = it->second;
-
-    // TODO: don't lex in directive mode here
-
     MacroActualArgumentListSyntax* actualArgs = nullptr;
     if (macro->formalArguments) {
         // macro has arguments, so we expect to see them here
-        if (!peek(TokenKind::OpenParenthesis)) {
+        if (!peek(TokenKind::OpenParenthesis, LexerMode::Normal)) {
             addError(DiagCode::ExpectedMacroArgs);
             return createSimpleDirective(directive);
         }
 
-        auto openParen = consume();
+        auto openParen = consume(LexerMode::Normal);
         auto arguments = syntaxPool.get();
         while (true) {
-            auto arg = parseMacroArg();
+            auto arg = parseMacroArg(LexerMode::Normal);
             arguments.append(alloc.emplace<MacroActualArgumentSyntax>(arg));
 
-            auto kind = peek()->kind;
+            auto kind = peek(LexerMode::Normal)->kind;
             if (kind == TokenKind::CloseParenthesis)
                 break;
             else if (kind == TokenKind::Comma)
-                arguments.append(consume());
+                arguments.append(consume(LexerMode::Normal));
             else {
                 // TODO: skipped tokens
             }
         }
 
-        auto closeParen = expect(TokenKind::CloseParenthesis);
+        auto closeParen = expect(TokenKind::CloseParenthesis, LexerMode::Normal);
         actualArgs = alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(alloc), closeParen);
     }
 
@@ -543,20 +545,20 @@ Trivia Preprocessor::createSimpleDirective(Token* directive, bool suppressError)
     return Trivia(TriviaKind::Directive, syntax);
 }
 
-Token* Preprocessor::peek() {
+Token* Preprocessor::peek(LexerMode mode) {
     if (!currentToken)
-        currentToken = next(LexerMode::Directive);
+        currentToken = next(mode);
     return currentToken;
 }
 
-Token* Preprocessor::consume() {
-    auto result = peek();
+Token* Preprocessor::consume(LexerMode mode) {
+    auto result = peek(mode);
     currentToken = nullptr;
     return result;
 }
 
-Token* Preprocessor::expect(TokenKind kind) {
-    auto result = peek();
+Token* Preprocessor::expect(TokenKind kind, LexerMode mode) {
+    auto result = peek(mode);
     if (result->kind != kind) {
         // report an error here for the missing token
         addError(DiagCode::SyntaxError);

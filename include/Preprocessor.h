@@ -73,17 +73,17 @@ private:
 
     Trivia createSimpleDirective(Token* directive, bool suppressError = false);
 
-    ArrayRef<Token*> parseMacroArg();
+    ArrayRef<Token*> parseMacroArg(LexerMode mode);
 
     bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName);
     Trivia parseBranchDirective(Token* directive, Token* condition, bool taken);
 
     void expectTimescaleSpecifier(Token*& unit, Token*& precision);
 
-    Token* peek();
-    Token* consume();
-    Token* expect(TokenKind kind);
-    bool peek(TokenKind kind) { return peek()->kind == kind; }
+    Token* peek(LexerMode mode = LexerMode::Directive);
+    Token* consume(LexerMode mode = LexerMode::Directive);
+    Token* expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
+    bool peek(TokenKind kind, LexerMode mode = LexerMode::Directive) { return peek(mode)->kind == kind; }
 
     void addError(DiagCode code);
     void addError(DiagCode code, SourceLocation location);
