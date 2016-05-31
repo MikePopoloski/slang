@@ -37,6 +37,8 @@
  *
  */
 
+ `include "uvm_macros.svh"
+
 class cag_rgm_base extends uvm_object;
 
 	protected CAG_RGM_TYPE m_type = NONE;
