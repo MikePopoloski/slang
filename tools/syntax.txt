@@ -395,6 +395,32 @@ DataTypeSyntax type
 separated_list<VariableDeclaratorSyntax> declarators
 token semi
 
+TypedefDeclarationSyntax base=MemberSyntax kind=TypedefDeclaration
+token typedefKeyword
+DataTypeSyntax type
+token name
+list<VariableDimensionSyntax> dimensions
+token semi
+
+TypedefModportDeclarationSyntax base=MemberSyntax kind=TypedefKeywordDeclaration
+token typedefKeyword
+NameSyntax modportName
+token name
+token semi
+
+TypedefKeywordDeclarationSyntax base=MemberSyntax kind=TypedefKeywordDeclaration
+token typedefKeyword
+token keyword
+token name
+token semi
+
+TypedefInterfaceClassDeclarationSyntax base=MemberSyntax kind=TypedefInterfaceClassDeclaration
+token typedefKeyword
+token interfaceKeyword
+token classKeyword
+token name
+token semi
+
 NetStrengthSyntax final=false
 empty
 

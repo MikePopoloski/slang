@@ -2328,6 +2328,52 @@ MemberSyntax* Parser::parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> att
 }
 
 MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    if (peek(TokenKind::TypedefKeyword)) {
+        auto typedefKeyword = consume();
+        switch (peek()->kind) {
+            case TokenKind::EnumKeyword:
+            case TokenKind::StructKeyword:
+            case TokenKind::UnionKeyword:
+            case TokenKind::ClassKeyword:
+                if (peek(1)->kind == TokenKind::Identifier && peek(2)->kind == TokenKind::Semicolon)
+                    return alloc.emplace<TypedefKeywordDeclarationSyntax>(
+                        attributes,
+                        typedefKeyword,
+                        consume(),
+                        consume(),
+                        consume()
+                    );
+                break;
+            case TokenKind::InterfaceKeyword:
+                return alloc.emplace<TypedefInterfaceClassDeclarationSyntax>(
+                    attributes,
+                    typedefKeyword,
+                    consume(),
+                    expect(TokenKind::ClassKeyword),
+                    expect(TokenKind::Identifier),
+                    expect(TokenKind::Semicolon)
+                );
+            default:
+                if (isVariableDeclaration())
+                    return alloc.emplace<TypedefDeclarationSyntax>(
+                        attributes,
+                        typedefKeyword,
+                        parseDataType(/* allowImplicit */ false),
+                        expect(TokenKind::Identifier),
+                        parseDimensionList(),
+                        expect(TokenKind::Semicolon)
+                    );
+                else
+                    return alloc.emplace<TypedefModportDeclarationSyntax>(
+                        attributes,
+                        typedefKeyword,
+                        parseName(),
+                        expect(TokenKind::Identifier),
+                        expect(TokenKind::Semicolon)
+                    );
+        }
+    }
+
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
         auto keyword = consume();
 

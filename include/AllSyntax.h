@@ -1695,6 +1695,110 @@ protected:
     }
 };
 
+struct TypedefDeclarationSyntax : public MemberSyntax {
+    Token* typedefKeyword;
+    DataTypeSyntax* type;
+    Token* name;
+    SyntaxList<VariableDimensionSyntax> dimensions;
+    Token* semi;
+
+    TypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* typedefKeyword, DataTypeSyntax* type, Token* name, SyntaxList<VariableDimensionSyntax> dimensions, Token* semi) :
+        MemberSyntax(SyntaxKind::TypedefDeclaration, attributes), typedefKeyword(typedefKeyword), type(type), name(name), dimensions(dimensions), semi(semi)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return typedefKeyword;
+            case 2: return type;
+            case 3: return name;
+            case 4: return &dimensions;
+            case 5: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TypedefModportDeclarationSyntax : public MemberSyntax {
+    Token* typedefKeyword;
+    NameSyntax* modportName;
+    Token* name;
+    Token* semi;
+
+    TypedefModportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* typedefKeyword, NameSyntax* modportName, Token* name, Token* semi) :
+        MemberSyntax(SyntaxKind::TypedefKeywordDeclaration, attributes), typedefKeyword(typedefKeyword), modportName(modportName), name(name), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return typedefKeyword;
+            case 2: return modportName;
+            case 3: return name;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TypedefKeywordDeclarationSyntax : public MemberSyntax {
+    Token* typedefKeyword;
+    Token* keyword;
+    Token* name;
+    Token* semi;
+
+    TypedefKeywordDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* typedefKeyword, Token* keyword, Token* name, Token* semi) :
+        MemberSyntax(SyntaxKind::TypedefKeywordDeclaration, attributes), typedefKeyword(typedefKeyword), keyword(keyword), name(name), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return typedefKeyword;
+            case 2: return keyword;
+            case 3: return name;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TypedefInterfaceClassDeclarationSyntax : public MemberSyntax {
+    Token* typedefKeyword;
+    Token* interfaceKeyword;
+    Token* classKeyword;
+    Token* name;
+    Token* semi;
+
+    TypedefInterfaceClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* typedefKeyword, Token* interfaceKeyword, Token* classKeyword, Token* name, Token* semi) :
+        MemberSyntax(SyntaxKind::TypedefInterfaceClassDeclaration, attributes), typedefKeyword(typedefKeyword), interfaceKeyword(interfaceKeyword), classKeyword(classKeyword), name(name), semi(semi)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch(index) {
+            case 0: return &attributes;
+            case 1: return typedefKeyword;
+            case 2: return interfaceKeyword;
+            case 3: return classKeyword;
+            case 4: return name;
+            case 5: return semi;
+            default: return nullptr;
+        }
+    }
+};
+
 struct NetStrengthSyntax : public SyntaxNode {
 
     NetStrengthSyntax(SyntaxKind kind) :
