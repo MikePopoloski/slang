@@ -58,11 +58,41 @@ private:
     uint32_t nextFileID = 1;
     uint32_t unnamedBufferCount = 0;
 
-    struct BufferEntry {
+    struct FileInfo {
         SourceBuffer* buffer = nullptr;
         const path_type* directory = nullptr;
         std::string name;
         std::vector<uint32_t> lineOffsets;
+    };
+
+    struct ExpansionInfo {
+        SourceLocation originalLocation;
+        SourceLocation expansionLocationStart;
+        SourceLocation expansionLocationEnd;
+    };
+
+    struct BufferEntry {
+        bool isFile;
+        union {
+            FileInfo file;
+            ExpansionInfo expansion;
+        };
+
+        BufferEntry(FileInfo f) : isFile(true), file(f) {}
+        BufferEntry(ExpansionInfo e) : isFile(false), expansion(e) {}
+
+        BufferEntry(const BufferEntry& e) {
+            isFile = e.isFile;
+            if (isFile)
+                file = e.file;
+            else
+                expansion = e.expansion;
+        }
+
+        ~BufferEntry() {
+            if (isFile) file.~FileInfo();
+            else expansion.~ExpansionInfo();
+        }
     };
 
     // index from FileID to buffer metadata

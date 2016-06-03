@@ -10,7 +10,8 @@ SourceManager::SourceManager() {
     workingDir = fs::current_path();
 
     // add a dummy entry to the start of the directory list so that our file IDs line up
-    bufferEntries.push_back({});
+    FileInfo file;
+    bufferEntries.emplace_back(file);
 }
 
 std::string SourceManager::makeAbsolutePath(StringRef path) const {
@@ -38,11 +39,11 @@ uint32_t SourceManager::getLineNumber(SourceLocation location) {
     BufferEntry& entry = bufferEntries[location.file.id];
 
     // compute line offsets if we haven't already
-    if (entry.lineOffsets.empty())
-        computeLineOffsets(entry.buffer->data, entry.lineOffsets);
+    if (entry.file.lineOffsets.empty())
+        computeLineOffsets(entry.file.buffer->data, entry.file.lineOffsets);
 
-    auto it = std::lower_bound(entry.lineOffsets.begin(), entry.lineOffsets.end(), location.offset);
-    return (uint32_t)(it - entry.lineOffsets.begin());
+    auto it = std::lower_bound(entry.file.lineOffsets.begin(), entry.file.lineOffsets.end(), location.offset);
+    return (uint32_t)(it - entry.file.lineOffsets.begin());
 }
 
 uint32_t SourceManager::getColumnNumber(SourceLocation location) {
@@ -51,7 +52,7 @@ uint32_t SourceManager::getColumnNumber(SourceLocation location) {
 
     ASSERT(location.file.id < bufferEntries.size());
     BufferEntry& entry = bufferEntries[location.file.id];
-    Buffer<char>& data = entry.buffer->data;
+    Buffer<char>& data = entry.file.buffer->data;
 
     // walk backward to find start of line
     uint32_t lineStart = location.offset;
@@ -67,7 +68,7 @@ StringRef SourceManager::getFileName(FileID file) {
         return nullptr;
 
     ASSERT(file.id < bufferEntries.size());
-    return bufferEntries[file.id].name;
+    return bufferEntries[file.id].file.name;
 }
 
 SourceBuffer* SourceManager::getBuffer(FileID id) {
@@ -75,7 +76,7 @@ SourceBuffer* SourceManager::getBuffer(FileID id) {
         return nullptr;
 
     ASSERT(id.id < bufferEntries.size());
-    return bufferEntries[id.id].buffer;
+    return bufferEntries[id.id].file.buffer;
 }
 
 SourceBuffer* SourceManager::assignText(StringRef text) {
@@ -125,7 +126,7 @@ SourceBuffer* SourceManager::readHeader(StringRef path, FileID includedFrom, boo
     }
 
     // search relative to the current file
-    const path_type* dir = bufferEntries[includedFrom.getValue()].directory;
+    const path_type* dir = bufferEntries[includedFrom.getValue()].file.directory;
     if (dir) {
         SourceBuffer* result = openCached((*dir) / p);
         if (result)
@@ -164,11 +165,11 @@ SourceBuffer* SourceManager::cacheBuffer(std::string&& canonicalPath, path_type&
     auto id = FileID::get(nextFileID++);
     auto result = lookupCache.emplace(std::move(canonicalPath), std::make_unique<SourceBuffer>(id, std::move(buffer))).first->second.get();
 
-    BufferEntry entry;
-    entry.buffer = result;
-    entry.name = path.filename().string();
-    entry.directory = &*directories.insert(path.remove_filename()).first;
-    bufferEntries.push_back(std::move(entry));
+    FileInfo file;
+    file.buffer = result;
+    file.name = path.filename().string();
+    file.directory = &*directories.insert(path.remove_filename()).first;
+    bufferEntries.emplace_back(file);
 
     return result;
 }
