@@ -1,12 +1,28 @@
 #pragma once
 
-#include "Handle.h"
-
 namespace slang {
 
 class SourceManager;
 
-struct FileID : public HandleBase<FileID> {
+struct FileID {
+    bool valid() const { return id != 0; }
+    bool operator==(const FileID& rhs) const { return id == rhs.id; }
+    bool operator!=(const FileID& rhs) const { return !(*this == rhs); }
+
+    explicit operator bool() const {
+        return valid();
+    }
+    uint32_t id = 0;
+
+protected:
+    static FileID get(uint32_t value) {
+        FileID result;
+        result.id = value;
+        return result;
+    }
+    uint32_t getValue() const { return id; }
+
+private:
     friend class SourceManager;
 };
 

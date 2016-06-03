@@ -32,7 +32,6 @@
     <ClInclude Include="..\..\include\ParserBase.h" />
     <ClInclude Include="..\..\include\SourceLocation.h" />
     <ClInclude Include="..\..\include\SourceManager.h" />
-    <ClInclude Include="..\..\include\Handle.h" />
     <ClInclude Include="..\..\include\Hash.h" />
     <ClInclude Include="..\..\include\Lexer.h" />
     <ClInclude Include="..\..\include\BumpAllocator.h" />

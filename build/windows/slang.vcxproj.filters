@@ -55,9 +55,6 @@
     <ClInclude Include="..\..\include\Hash.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\Handle.h">
-      <Filter>util</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\BumpAllocator.h">
       <Filter>util</Filter>
     </ClInclude>
