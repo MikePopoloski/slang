@@ -449,7 +449,7 @@ token package
 token doubleColon
 token item
 
-PackageImportDeclarationSyntax kind=PackageImportDeclaration
+PackageImportDeclarationSyntax base=MemberSyntax kind=PackageImportDeclaration
 token keyword
 separated_list<PackageImportItemSyntax> items
 token semi

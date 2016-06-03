@@ -386,6 +386,7 @@ SyntaxKind getModuleHeaderKind(TokenKind kind) {
         case TokenKind::MacromoduleKeyword: return SyntaxKind::ModuleHeader;
         case TokenKind::ProgramKeyword: return SyntaxKind::ProgramHeader;
         case TokenKind::InterfaceKeyword: return SyntaxKind::InterfaceHeader;
+        case TokenKind::PackageKeyword: return SyntaxKind::PackageHeader;
         default: return SyntaxKind::Unknown;
     }
 }
@@ -396,6 +397,7 @@ SyntaxKind getModuleDeclarationKind(TokenKind kind) {
         case TokenKind::MacromoduleKeyword: return SyntaxKind::ModuleDeclaration;
         case TokenKind::ProgramKeyword: return SyntaxKind::ProgramDeclaration;
         case TokenKind::InterfaceKeyword: return SyntaxKind::InterfaceDeclaration;
+        case TokenKind::PackageKeyword: return SyntaxKind::PackageDeclaration;
         default: return SyntaxKind::Unknown;
     }
 }

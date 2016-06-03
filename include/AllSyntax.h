@@ -1906,13 +1906,13 @@ protected:
     }
 };
 
-struct PackageImportDeclarationSyntax : public SyntaxNode {
+struct PackageImportDeclarationSyntax : public MemberSyntax {
     Token* keyword;
     SeparatedSyntaxList<PackageImportItemSyntax> items;
     Token* semi;
 
-    PackageImportDeclarationSyntax(Token* keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token* semi) :
-        SyntaxNode(SyntaxKind::PackageImportDeclaration), keyword(keyword), items(items), semi(semi)
+    PackageImportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token* semi) :
+        MemberSyntax(SyntaxKind::PackageImportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
     {
         childCount += 3;
     }
@@ -1920,9 +1920,10 @@ struct PackageImportDeclarationSyntax : public SyntaxNode {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
-            case 0: return keyword;
-            case 1: return &items;
-            case 2: return semi;
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return &items;
+            case 3: return semi;
             default: return nullptr;
         }
     }

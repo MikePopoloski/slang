@@ -86,6 +86,7 @@ private:
     MemberSyntax* parseMember();
     TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
+    PackageImportDeclarationSyntax* parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     PackageImportItemSyntax* parsePackageImportItem();
     ParameterPortDeclarationSyntax* parseParameterPort();
     MemberSyntax* parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);

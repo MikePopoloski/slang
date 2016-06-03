@@ -319,6 +319,8 @@ enum class SyntaxKind : uint16_t {
     InterfaceDeclaration,
     ProgramHeader,
     ProgramDeclaration,
+    PackageHeader,
+    PackageDeclaration,
     ExternModule,
 
     // members

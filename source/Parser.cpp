@@ -294,6 +294,7 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::ModuleKeyword:
         case TokenKind::MacromoduleKeyword:
         case TokenKind::ProgramKeyword:
+        case TokenKind::PackageKeyword:
             // modules, interfaces, and programs share the same syntax
             return parseModule(attributes);
 
@@ -304,6 +305,8 @@ MemberSyntax* Parser::parseMember() {
             else
                 return parseModule(attributes);
 
+        case TokenKind::ImportKeyword:
+            return parseImportDeclaration(attributes);
         case TokenKind::SpecParamKeyword:
         case TokenKind::DefParamKeyword:
         case TokenKind::Identifier:
@@ -2494,23 +2497,26 @@ AttributeSpecSyntax* Parser::parseAttributeSpec() {
 
 ArrayRef<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
     auto buffer = nodePool.getAs<PackageImportDeclarationSyntax*>();
-    while (peek(TokenKind::ImportKeyword)) {
-        auto keyword = consume();
-
-        Token* semi;
-        auto items = tosPool.get();
-        parseSeparatedList<isIdentifierOrComma, isSemicolon>(
-            items,
-            TokenKind::Semicolon,
-            TokenKind::Comma,
-            semi,
-            DiagCode::ExpectedPackageImport,
-            [this](bool) { return parsePackageImportItem(); }
-        );
-
-        buffer.append(alloc.emplace<PackageImportDeclarationSyntax>(keyword, items.copy(alloc), semi));
-    }
+    while (peek(TokenKind::ImportKeyword))
+        buffer.append(parseImportDeclaration(nullptr));
     return buffer.copy(alloc);
+}
+
+PackageImportDeclarationSyntax* Parser::parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+
+    Token* semi;
+    auto items = tosPool.get();
+    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
+        items,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        semi,
+        DiagCode::ExpectedPackageImport,
+        [this](bool) { return parsePackageImportItem(); }
+    );
+
+    return alloc.emplace<PackageImportDeclarationSyntax>(attributes, keyword, items.copy(alloc), semi);
 }
 
 PackageImportItemSyntax* Parser::parsePackageImportItem() {
@@ -2649,7 +2655,6 @@ bool Parser::isVariableDeclaration() {
         case TokenKind::UnionKeyword:
         case TokenKind::EnumKeyword:
         case TokenKind::TypedefKeyword:
-        case TokenKind::ImportKeyword:
         case TokenKind::NetTypeKeyword:
         case TokenKind::LocalParamKeyword:
         case TokenKind::ParameterKeyword:
