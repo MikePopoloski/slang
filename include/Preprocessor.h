@@ -18,7 +18,6 @@ namespace slang {
 struct DefineDirectiveSyntax;
 class MacroExpander;
 
-SyntaxKind getDirectiveKind(StringRef directive);
 StringRef getDirectiveText(SyntaxKind kind);
 
 class Preprocessor {

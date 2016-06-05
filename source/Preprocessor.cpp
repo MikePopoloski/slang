@@ -7,6 +7,8 @@
 
 namespace slang {
 
+SyntaxKind getDirectiveKind(StringRef directive);
+
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics) :
     sourceManager(sourceManager),
     alloc(alloc),
@@ -228,40 +230,48 @@ ArrayRef<Token*> Preprocessor::parseMacroArg(LexerMode mode) {
 }
 
 Trivia Preprocessor::handleDefineDirective(Token* directive) {
+    MacroFormalArgumentListSyntax* formalArguments = nullptr;
+    bool noErrors = false;
+
     // next token should be the macro name
     auto name = expect(TokenKind::Identifier);
+    if (!name->isMissing()) {
+        if (getDirectiveKind(name->valueText()) != SyntaxKind::MacroUsage)
+            addError(DiagCode::InvalidMacroName, name->location);
+        else {
+            // check if this is a function-like macro, which requires an opening paren with no leading space
+            if (peek(TokenKind::OpenParenthesis) && peek()->trivia.empty()) {
+                // parse all formal arguments
+                auto openParen = consume();
+                auto arguments = syntaxPool.get();
+                while (true) {
+                    auto arg = expect(TokenKind::Identifier);
 
-    // check if this is a function-like macro, which requires an opening paren with no leading space
-    MacroFormalArgumentListSyntax* formalArguments = nullptr;
-    if (peek(TokenKind::OpenParenthesis) && peek()->trivia.empty()) {
-        // parse all formal arguments
-        auto openParen = consume();
-        auto arguments = syntaxPool.get();
-        while (true) {
-            auto arg = expect(TokenKind::Identifier);
+                    MacroArgumentDefaultSyntax* argDef = nullptr;
+                    if (peek(TokenKind::Equals)) {
+                        auto equals = consume();
+                        argDef = alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseMacroArg(LexerMode::Directive));
+                    }
 
-            MacroArgumentDefaultSyntax* argDef = nullptr;
-            if (peek(TokenKind::Equals)) {
-                auto equals = consume();
-                argDef = alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseMacroArg(LexerMode::Directive));
+                    arguments.append(alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef));
+
+                    auto kind = peek()->kind;
+                    if (kind == TokenKind::CloseParenthesis)
+                        break;
+                    else if (kind == TokenKind::Comma)
+                        arguments.append(consume());
+                    else {
+                        // TODO: skipped tokens
+                    }
+                }
+                formalArguments = alloc.emplace<MacroFormalArgumentListSyntax>(
+                    openParen,
+                    arguments.copy(alloc),
+                    expect(TokenKind::CloseParenthesis)
+                );
             }
-
-            arguments.append(alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef));
-
-            auto kind = peek()->kind;
-            if (kind == TokenKind::CloseParenthesis)
-                break;
-            else if (kind == TokenKind::Comma)
-                arguments.append(consume());
-            else {
-                // TODO: skipped tokens
-            }
+            noErrors = true;
         }
-        formalArguments = alloc.emplace<MacroFormalArgumentListSyntax>(
-            openParen,
-            arguments.copy(alloc),
-            expect(TokenKind::CloseParenthesis)
-            );
     }
 
     // consume all remaining tokens as macro text
@@ -277,9 +287,10 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
         formalArguments,
         body.copy(alloc),
         consume()
-        );
+    );
 
-    macros.emplace(name->valueText().intern(alloc), result);
+    if (noErrors)
+        macros.emplace(name->valueText().intern(alloc), result);
     return Trivia(TriviaKind::Directive, result);
 }
 
@@ -431,7 +442,7 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
             condition,
             eod,
             skipped.copy(alloc)
-            );
+        );
     }
     else {
         syntax = alloc.emplace<UnconditionalBranchDirectiveSyntax>(
@@ -439,7 +450,7 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
             directive,
             eod,
             skipped.copy(alloc)
-            );
+        );
     }
     return Trivia(TriviaKind::Directive, syntax);
 }

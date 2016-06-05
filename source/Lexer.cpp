@@ -488,7 +488,7 @@ TokenKind Lexer::lexDirective(TokenInfo& info) {
         return TokenKind::Directive;
     }
 
-    info.directiveKind = getDirectiveKind(lexeme());
+    info.directiveKind = getDirectiveKind(lexeme().subString(1));
     return TokenKind::Directive;
 }
 

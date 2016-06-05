@@ -8,26 +8,26 @@ const static StringTable<TokenKind> systemIdentifierKeywords = {
 };
 
 const static StringTable<SyntaxKind> directiveTable = {
-    { "`begin_keywords", SyntaxKind::BeginKeywordsDirective },
-    { "`celldefine", SyntaxKind::CellDefineDirective },
-    { "`default_nettype", SyntaxKind::DefaultNetTypeDirective },
-    { "`define", SyntaxKind::DefineDirective },
-    { "`else", SyntaxKind::ElseDirective },
-    { "`elsif", SyntaxKind::ElsIfDirective },
-    { "`end_keywords", SyntaxKind::EndKeywordsDirective },
-    { "`endcelldefine", SyntaxKind::EndCellDefineDirective },
-    { "`endif", SyntaxKind::EndIfDirective },
-    { "`ifdef", SyntaxKind::IfDefDirective },
-    { "`ifndef", SyntaxKind::IfNDefDirective },
-    { "`include", SyntaxKind::IncludeDirective },
-    { "`line", SyntaxKind::LineDirective },
-    { "`nounconnected_drive", SyntaxKind::NoUnconnectedDriveDirective },
-    { "`pragma", SyntaxKind::PragmaDirective },
-    { "`resetall", SyntaxKind::ResetAllDirective },
-    { "`timescale", SyntaxKind::TimescaleDirective },
-    { "`unconnected_drive", SyntaxKind::UnconnectedDriveDirective },
-    { "`undef", SyntaxKind::UndefDirective },
-    { "`undefineall", SyntaxKind::UndefineAllDirective }
+    { "begin_keywords", SyntaxKind::BeginKeywordsDirective },
+    { "celldefine", SyntaxKind::CellDefineDirective },
+    { "default_nettype", SyntaxKind::DefaultNetTypeDirective },
+    { "define", SyntaxKind::DefineDirective },
+    { "else", SyntaxKind::ElseDirective },
+    { "elsif", SyntaxKind::ElsIfDirective },
+    { "end_keywords", SyntaxKind::EndKeywordsDirective },
+    { "endcelldefine", SyntaxKind::EndCellDefineDirective },
+    { "endif", SyntaxKind::EndIfDirective },
+    { "ifdef", SyntaxKind::IfDefDirective },
+    { "ifndef", SyntaxKind::IfNDefDirective },
+    { "include", SyntaxKind::IncludeDirective },
+    { "line", SyntaxKind::LineDirective },
+    { "nounconnected_drive", SyntaxKind::NoUnconnectedDriveDirective },
+    { "pragma", SyntaxKind::PragmaDirective },
+    { "resetall", SyntaxKind::ResetAllDirective },
+    { "timescale", SyntaxKind::TimescaleDirective },
+    { "unconnected_drive", SyntaxKind::UnconnectedDriveDirective },
+    { "undef", SyntaxKind::UndefDirective },
+    { "undefineall", SyntaxKind::UndefineAllDirective }
 };
 
 const static StringTable<TokenKind> allKeywords = {

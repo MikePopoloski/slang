@@ -53,6 +53,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "UnbalancedMacroArgDims" },
     { "ExpectedMacroArgs" },
     { "expected net type specifier" },
+    { "can't redefine compiler directive as a macro" },
 
     // parser
     { "SyntaxError" },
