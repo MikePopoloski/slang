@@ -2,6 +2,7 @@
 
 #include "AllSyntax.h"
 #include "BumpAllocator.h"
+#include "MacroExpander.h"
 #include "SourceManager.h"
 
 namespace slang {
@@ -260,9 +261,9 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
             openParen,
             arguments.copy(alloc),
             expect(TokenKind::CloseParenthesis)
-        );
+            );
     }
-    
+
     // consume all remaining tokens as macro text
     auto body = tokenPool.get();
     inMacroBody = true;
@@ -276,7 +277,7 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
         formalArguments,
         body.copy(alloc),
         consume()
-    );
+        );
 
     macros.emplace(name->valueText().intern(alloc), result);
     return Trivia(TriviaKind::Directive, result);
@@ -430,7 +431,7 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
             condition,
             eod,
             skipped.copy(alloc)
-        );
+            );
     }
     else {
         syntax = alloc.emplace<UnconditionalBranchDirectiveSyntax>(
@@ -438,7 +439,7 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
             directive,
             eod,
             skipped.copy(alloc)
-        );
+            );
     }
     return Trivia(TriviaKind::Directive, syntax);
 }
@@ -579,37 +580,6 @@ void Preprocessor::addError(DiagCode code) {
 void Preprocessor::addError(DiagCode code, SourceLocation location) {
     // TODO: location
     diagnostics.emplace(code, location);
-}
-
-MacroExpander::MacroExpander(BumpAllocator& alloc, DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) :
-    alloc(alloc)
-{
-    // expand all tokens recursively and store them in our buffer
-    expand(macro, actualArgs);
-    current = tokens.begin();
-    if (current == tokens.end())
-        current = nullptr;
-}
-
-Token* MacroExpander::next() {
-    Token* result = (*current)->clone(alloc);
-    current++;
-    if (current == tokens.end())
-        current = nullptr;
-
-    return result;
-}
-
-bool MacroExpander::done() const {
-    return current == nullptr;
-}
-
-void MacroExpander::expand(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
-    if (!macro->formalArguments) {
-        // simple macro; just take body tokens
-        tokens.appendRange(macro->body);
-        return;
-    }
 }
 
 }

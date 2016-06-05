@@ -28,6 +28,7 @@
     <ClInclude Include="..\..\include\BitVector.h" />
     <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
+    <ClInclude Include="..\..\include\MacroExpander.h" />
     <ClInclude Include="..\..\include\Parser.h" />
     <ClInclude Include="..\..\include\ParserBase.h" />
     <ClInclude Include="..\..\include\SourceLocation.h" />
@@ -49,6 +50,7 @@
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
+    <ClCompile Include="..\..\source\MacroExpander.cpp" />
     <ClCompile Include="..\..\source\Parser.cpp" />
     <ClCompile Include="..\..\source\ParserBase.cpp" />
     <ClCompile Include="..\..\source\SourceManager.cpp" />
