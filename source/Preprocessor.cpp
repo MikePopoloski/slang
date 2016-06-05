@@ -290,7 +290,7 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
     );
 
     if (noErrors)
-        macros.emplace(name->valueText().intern(alloc), result);
+        macros[name->valueText().intern(alloc)] = result;
     return Trivia(TriviaKind::Directive, result);
 }
 
