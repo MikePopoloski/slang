@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "Token.h"
 
 namespace slang {
@@ -20,6 +22,7 @@ public:
 private:
     BumpAllocator& alloc;
     Buffer<Token*> tokens;
+    std::unordered_map<StringRef, const TokenList*> argumentMap;
     Token** current = nullptr;
 
     void expand(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);

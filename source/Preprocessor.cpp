@@ -407,7 +407,7 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
     auto skipped = tokenPool.get();
     if (!taken) {
         while (true) {
-            auto token = nextRaw(LexerMode::Directive);
+            auto token = nextRaw(LexerMode::Normal);
 
             // EoF or conditional directive stops the skipping process
             bool done = false;
