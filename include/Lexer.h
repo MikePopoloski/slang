@@ -95,13 +95,21 @@ private:
         return false;
     }
 
-    Buffer<char> stringBuffer;
-    BufferPool<Trivia> triviaPool;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
+
+    // buffer for building string literals
+    Buffer<char> stringBuffer;
+
+    // pool of trivia buffers
+    BufferPool<Trivia> triviaPool;
+
+    // the source text and start and end pointers within it
     const SourceBuffer* buffer;
     const char* sourceBuffer;
     const char* sourceEnd;
+
+    // save our place in the buffer to measure out the current lexeme
     const char* marker;
 };
 

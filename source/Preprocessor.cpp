@@ -415,6 +415,14 @@ Trivia Preprocessor::parseBranchDirective(Token* directive, Token* condition, bo
                 done = true;
             else if (token->kind == TokenKind::Directive) {
                 switch (token->directiveKind()) {
+                    // we still need to handle line continuations correctly for macro defines
+                    case SyntaxKind::DefineDirective:
+                        do {
+                            skipped.append(token);
+                            token = nextRaw(LexerMode::Directive);
+                        } while (token->kind != TokenKind::EndOfDirective);
+                        break;
+
                     case SyntaxKind::IfDefDirective:
                     case SyntaxKind::IfNDefDirective:
                     case SyntaxKind::ElsIfDirective:
