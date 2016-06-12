@@ -2,7 +2,6 @@
 
 #include "AllSyntax.h"
 #include "BumpAllocator.h"
-#include "MacroExpander.h"
 #include "SourceManager.h"
 
 namespace slang {
@@ -23,18 +22,15 @@ void Preprocessor::pushSource(StringRef source) {
 }
 
 void Preprocessor::pushSource(const SourceBuffer* buffer) {
-    ASSERT(sourceStack.size() < MaxSourceDepth);
+    ASSERT(lexerStack.size() < MaxIncludeDepth);
     auto lexer = alloc.emplace<Lexer>(buffer, alloc, diagnostics);
-    sourceStack.push_back(lexer);
+    lexerStack.push_back(lexer);
 }
 
 FileID Preprocessor::getCurrentFile() {
-    // figure out which lexer is highest in our source stack
-    for (auto it = sourceStack.rbegin(); it != sourceStack.rend(); it++) {
-        if (it->kind == Source::LEXER)
-            return it->lexer->getFile();
-    }
-    return FileID();
+    if (lexerStack.empty())
+        return FileID();
+    return lexerStack.back()->getFile();
 }
 
 Token* Preprocessor::next() {
@@ -89,36 +85,36 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
         return result;
     }
 
-    // if this assert fires, the user disregarded an EoF and kept calling next()
-    ASSERT(!sourceStack.empty());
+    // if we just expanded a macro we'll have tokens from that to return
+    if (currentMacroToken) {
+        auto result = *currentMacroToken;
+        currentMacroToken++;
+        if (currentMacroToken == expandedTokens.end())
+            currentMacroToken = nullptr;
 
-    // Pull the next token from the active source (macro or file).
-    // This is the common case.
-    Token* token = nullptr;
-    auto& source = sourceStack.back();
-    switch (source.kind) {
-        case Source::MACRO:
-            token = source.macro->next();
-            if (source.macro->done())
-                sourceStack.pop_back();
-            token->markAsPreprocessed();
-            return token;
-        case Source::LEXER:
-            token = source.lexer->lex(mode);
-            if (token->kind != TokenKind::EndOfFile) {
-                // The idea here is that if we have more things on the stack,
-                // the current lexer must be for an include file
-                if (sourceStack.size() > 1)
-                    token->markAsPreprocessed();
-                return token;
-            }
-
-            // don't return EndOfFile tokens for included files, fall
-            // through to loop to merge trivia
-            sourceStack.pop_back();
-            if (sourceStack.empty())
-                return token;
+        return result;
     }
+
+    // if this assert fires, the user disregarded an EoF and kept calling next()
+    ASSERT(!lexerStack.empty());
+
+    // Pull the next token from the active source.
+    // This is the common case.
+    auto& source = lexerStack.back();
+    auto token = source->lex(mode);
+    if (token->kind != TokenKind::EndOfFile) {
+        // The idea here is that if we have more things on the stack,
+        // the current lexer must be for an include file
+        if (lexerStack.size() > 1)
+            token->markAsPreprocessed();
+        return token;
+    }
+
+    // don't return EndOfFile tokens for included files, fall
+    // through to loop to merge trivia
+    lexerStack.pop_back();
+    if (lexerStack.empty())
+        return token;
 
     // Rare case: we have an EoF from an include file... we don't want to return
     // that one, but we do want to merge its trivia with whatever comes next.
@@ -126,37 +122,22 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
     trivia.appendRange(token->trivia);
 
     while (true) {
-        bool keepGoing = false;
-        auto& nextSource = sourceStack.back();
-        switch (nextSource.kind) {
-            case Source::MACRO:
-                token = nextSource.macro->next();
-                if (nextSource.macro->done())
-                    sourceStack.pop_back();
-                token->markAsPreprocessed();
-                break;
-            case Source::LEXER: {
-                token = nextSource.lexer->lex(mode);
-                if (token->kind != TokenKind::EndOfFile)
-                    break;
-
-                sourceStack.pop_back();
-                if (sourceStack.empty())
-                    break;
-
-                // if we have another `include EoF, just append the trivia and keep going
-                keepGoing = true;
-            }
-        }
+        auto& nextSource = lexerStack.back();
+        token = nextSource->lex(mode);
         trivia.appendRange(token->trivia);
-        if (!keepGoing) {
-            // finally found a real token to return, so update trivia and get out of here
-            token->trivia = trivia.copy(alloc);
-            if (sourceStack.size() > 1)
-                token->markAsPreprocessed();
-            return token;
-        }
+        if (token->kind != TokenKind::EndOfFile)
+            break;
+
+        lexerStack.pop_back();
+        if (lexerStack.empty())
+            break;
     }
+
+    // finally found a real token to return, so update trivia and get out of here
+    token->trivia = trivia.copy(alloc);
+    if (lexerStack.size() > 1)
+        token->markAsPreprocessed();
+    return token;
 }
 
 Trivia Preprocessor::handleIncludeDirective(Token* directive) {
@@ -174,7 +155,7 @@ Trivia Preprocessor::handleIncludeDirective(Token* directive) {
         SourceBuffer* buffer = sourceManager.readHeader(path, getCurrentFile(), false);
         if (!buffer)
             addError(DiagCode::CouldNotOpenIncludeFile, fileName->location);
-        else if (sourceStack.size() >= MaxSourceDepth)
+        else if (lexerStack.size() >= MaxIncludeDepth)
             addError(DiagCode::ExceededMaxIncludeDepth);
         else
             pushSource(buffer);
@@ -335,10 +316,7 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
         actualArgs = alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(alloc), closeParen);
     }
 
-    // push a new source onto the preprocessor stack, but only if there are tokens to consume
-    auto macroSource = alloc.emplace<MacroExpander>(alloc, macro, actualArgs);
-    if (!macroSource->done())
-        sourceStack.push_back(macroSource);
+    expandMacro(macro, actualArgs);
 
     auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
     return Trivia(TriviaKind::Directive, syntax);
@@ -565,6 +543,66 @@ Token* Preprocessor::parseEndOfDirective(bool suppressError) {
 Trivia Preprocessor::createSimpleDirective(Token* directive, bool suppressError) {
     DirectiveSyntax* syntax = alloc.emplace<SimpleDirectiveSyntax>(directive->directiveKind(), directive, parseEndOfDirective(suppressError));
     return Trivia(TriviaKind::Directive, syntax);
+}
+
+void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
+    ASSERT(expandedTokens.empty());
+    expandedTokens.clear();
+
+    if (!macro->formalArguments) {
+        // simple macro; just take body tokens
+        expandedTokens.appendRange(macro->body);
+    }
+    else {
+        // match up actual arguments with formal parameters
+        ASSERT(actualArgs);
+        auto& formalList = macro->formalArguments->args;
+        auto& actualList = actualArgs->args;
+        if (actualList.count() > formalList.count()) {
+            // TODO: error
+        }
+
+        argumentMap.clear();
+        for (uint32_t i = 0; i < formalList.count(); i++) {
+            auto formal = formalList[i];
+            auto name = formal->name->valueText();
+
+            const TokenList* tokenList = nullptr;
+            if (actualList.count() > i) {
+                // if our actual argument is empty and we have a default, take that
+                tokenList = &actualList[i]->tokens;
+                if (tokenList->count() == 0 && formal->defaultValue)
+                    tokenList = &formal->defaultValue->tokens;
+            }
+            else {
+                // if we've run out of actual args make sure we have a default for this one
+                if (formal->defaultValue)
+                    tokenList = &formal->defaultValue->tokens;
+                else {
+                    // TODO: error
+                    return;
+                }
+            }
+            argumentMap[name] = tokenList;
+        }
+
+        // now add each body token, substituting arguments as necessary
+        for (auto& token : macro->body) {
+            if (token->kind != TokenKind::Identifier)
+                expandedTokens.append(token);
+            else {
+                // check for formal param
+                auto it = argumentMap.find(token->valueText());
+                if (it == argumentMap.end())
+                    expandedTokens.append(token);
+                else
+                    expandedTokens.appendRange(*it->second);
+            }
+        }
+    }
+
+    if (!expandedTokens.empty())
+        currentMacroToken = expandedTokens.begin();
 }
 
 Token* Preprocessor::peek(LexerMode mode) {

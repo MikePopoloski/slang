@@ -17,7 +17,7 @@ Lexer::Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diag
     marker(nullptr)
 {
     ASSERT(buffer->data.count());
-    ASSERT(buffer->data.last() == '\0');
+    ASSERT(buffer->data.back() == '\0');
 
     // detect BOMs so we can give nice errors for invaild encoding
     if (buffer->data.count() >= 2) {

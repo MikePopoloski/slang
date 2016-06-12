@@ -94,9 +94,6 @@
     <ClInclude Include="..\..\external\xxhash\xxhash.h">
       <Filter>util\3ps</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\MacroExpander.h">
-      <Filter>lexing</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -143,9 +140,6 @@
     </ClCompile>
     <ClCompile Include="..\..\source\BumpAllocator.cpp">
       <Filter>util</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\MacroExpander.cpp">
-      <Filter>lexing</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

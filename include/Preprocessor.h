@@ -16,7 +16,7 @@
 namespace slang {
 
 struct DefineDirectiveSyntax;
-class MacroExpander;
+struct MacroActualArgumentListSyntax;
 
 StringRef getDirectiveText(SyntaxKind kind);
 
@@ -61,6 +61,8 @@ private:
 
     void expectTimescaleSpecifier(Token*& unit, Token*& precision);
 
+    void expandMacro(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
+
     Token* peek(LexerMode mode = LexerMode::Directive);
     Token* consume(LexerMode mode = LexerMode::Directive);
     Token* expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
@@ -68,21 +70,6 @@ private:
 
     void addError(DiagCode code);
     void addError(DiagCode code, SourceLocation location);
-
-    struct Source {
-        enum {
-            LEXER,
-            MACRO
-        };
-        uint8_t kind;
-        union {
-            Lexer* lexer;
-            MacroExpander* macro;
-        };
-
-        Source(Lexer* lexer) : kind(LEXER), lexer(lexer) {}
-        Source(MacroExpander* macro) : kind(MACRO), macro(macro) {}
-    };
 
     struct BranchEntry {
         bool anyTaken;
@@ -96,22 +83,41 @@ private:
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
 
-    std::deque<Source> sourceStack;
+    // stack of active lexers; each `include pushes a new lexer
+    std::deque<Lexer*> lexerStack;
+
+    // keep track of nested processor branches (ifdef, ifndef, else, elsif, endif)
     std::deque<BranchEntry> branchStack;
+
+    // map from macro name to macro definition
     std::unordered_map<StringRef, DefineDirectiveSyntax*> macros;
 
+    // when parsing macros, keep track of paired delimiters
     Buffer<TokenKind> delimPairStack;
+
+    // scratch space for mapping macro formal parameters to argument values
+    std::unordered_map<StringRef, const TokenList*> argumentMap;
+
+    // list of expanded macro tokens to drain before continuing with active lexer
+    Buffer<Token*> expandedTokens;
+    Token** currentMacroToken = nullptr;
+
+    // pools for constructing lists of trivia, tokens, syntax nodes
     BufferPool<Trivia> triviaPool;
     BufferPool<Token*> tokenPool;
     BufferPool<TokenOrSyntax> syntaxPool;
 
+    // the latest token pulled from a lexer
     Token* currentToken;
 
+    // we adjust lexing behavior slightly when lexing within a macro body
     bool inMacroBody = false;
 
+    // the currently active set of keywords; this can be changed by compilation directives
     const StringTable<TokenKind>* keywordTable;
 
-    static constexpr int MaxSourceDepth = 8192;
+    // maximum number of nested includes
+    static constexpr int MaxIncludeDepth = 1024;
 };
 
 }

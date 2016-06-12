@@ -73,17 +73,17 @@ public:
     }
 
     const T& back() const {
-        ASSERT(length);
+        ASSERT(len);
         return data[len - 1];
     }
 
     T& front() {
-        ASSERT(length);
+        ASSERT(len);
         return data[0];
     }
 
     T& back() {
-        ASSERT(length);
+        ASSERT(len);
         return data[len - 1];
     }
 

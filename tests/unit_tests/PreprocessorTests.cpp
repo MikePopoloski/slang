@@ -160,7 +160,7 @@ TEST_CASE("IfNDef branch", "[preprocessor]") {
 }
 
 TEST_CASE("ElseIf branch", "[preprocessor]") {
-    auto& text = "`define FOO\n`ifdef BAR\n42\n`elseif FOO\n99`else\n1000`endif";
+    auto& text = "`define FOO\n`ifdef BAR\n42\n`elsif FOO\n99`else\n1000`endif";
     auto& token = lexToken(text);
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
@@ -182,7 +182,7 @@ TEST_CASE("Nested branches", "[preprocessor]") {
 "`define FOO\n"
 "`ifdef BLAH\n"
 "   `define BAZ\n"
-"`elseif BAZ\n"
+"`elsif BAZ\n"
 "   42\n"
 "`else\n"
 "   `define YEP\n"
@@ -190,9 +190,9 @@ TEST_CASE("Nested branches", "[preprocessor]") {
 "       `ifdef FOO\n"
 "           `ifdef NOPE1\n"
 "               blahblah\n"
-"           `elseif NOPE2\n"
+"           `elsif NOPE2\n"
 "               blahblah2\n"
-"           `elseif YEP\n"
+"           `elsif YEP\n"
 "               `ifdef FOO\n"
 "                   99\n"
 "               `endif\n"
