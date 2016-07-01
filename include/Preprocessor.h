@@ -51,18 +51,18 @@ private:
     Trivia handleDefaultNetTypeDirective(Token* directive);
 
     Token* parseEndOfDirective(bool suppressError = false);
-
     Trivia createSimpleDirective(Token* directive, bool suppressError = false);
-
-    ArrayRef<Token*> parseMacroArg(LexerMode mode);
 
     bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName);
     Trivia parseBranchDirective(Token* directive, Token* condition, bool taken);
 
     void expectTimescaleSpecifier(Token*& unit, Token*& precision);
 
-    void expandMacro(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs);
+    DefineDirectiveSyntax* findMacro(Token* directive);
+    void expandMacro(DefineDirectiveSyntax* definition, MacroActualArgumentListSyntax* actualArgs, Buffer<Token*>& dest);
+    void expandReplacementList(ArrayRef<Token*> tokens, Buffer<Token*>& dest);
 
+    // functions to advance the underlying token stream
     Token* peek(LexerMode mode = LexerMode::Directive);
     Token* consume(LexerMode mode = LexerMode::Directive);
     Token* expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
@@ -77,6 +77,35 @@ private:
         bool hasElse = false;
 
         BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
+    };
+
+    // helper class for parsing macro arguments
+    class MacroParser {
+    public:
+        MacroParser(Preprocessor& preprocessor) : pp(preprocessor) {}
+
+        void setBuffer(ArrayRef<Token*> buffer) { this->buffer = buffer; }
+
+        Token* next();
+
+        MacroActualArgumentListSyntax* parseActualArgumentList();
+        MacroFormalArgumentListSyntax* parseFormalArgumentList();
+
+    private:
+        template<typename TFunc>
+        void parseArgumentList(Buffer<TokenOrSyntax>& buffer, TFunc&& parseItem);
+
+        MacroActualArgumentSyntax* parseActualArgument();
+        MacroFormalArgumentSyntax* parseFormalArgument();
+        ArrayRef<Token*> parseTokenList();
+
+        Token* peek();
+        Token* consume();
+        Token* expect(TokenKind kind);
+        bool peek(TokenKind kind) { return peek()->kind == kind; }
+
+        Preprocessor& pp;
+        ArrayRef<Token*> buffer;
     };
 
     SourceManager& sourceManager;

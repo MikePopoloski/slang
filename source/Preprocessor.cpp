@@ -170,46 +170,6 @@ Trivia Preprocessor::handleResetAllDirective(Token* directive) {
     return createSimpleDirective(directive);
 }
 
-ArrayRef<Token*> Preprocessor::parseMacroArg(LexerMode mode) {
-    auto tokens = tokenPool.get();
-
-    // comma and right parenthesis only end the default token list if they are
-    // not inside a nested pair of (), [], or {}
-    // otherwise, keep swallowing tokens as part of the default
-    while (true) {
-        auto kind = peek(mode)->kind;
-        if (kind == TokenKind::EndOfDirective) {
-            if (delimPairStack.empty())
-                addError(DiagCode::ExpectedEndOfMacroArgs);
-            else
-                addError(DiagCode::UnbalancedMacroArgDims);
-            delimPairStack.clear();
-            break;
-        }
-
-        if (delimPairStack.empty()) {
-            if ((kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis))
-                break;
-        }
-        else if (delimPairStack.back() == kind)
-            delimPairStack.pop();
-
-        tokens.append(consume(mode));
-        switch (kind) {
-            case TokenKind::OpenParenthesis:
-                delimPairStack.append(TokenKind::CloseParenthesis);
-                break;
-            case TokenKind::OpenBrace:
-                delimPairStack.append(TokenKind::CloseBrace);
-                break;
-            case TokenKind::OpenBracket:
-                delimPairStack.append(TokenKind::CloseBracket);
-                break;
-        }
-    }
-    return tokens.copy(alloc);
-}
-
 Trivia Preprocessor::handleDefineDirective(Token* directive) {
     MacroFormalArgumentListSyntax* formalArguments = nullptr;
     bool noErrors = false;
@@ -222,34 +182,8 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
         else {
             // check if this is a function-like macro, which requires an opening paren with no leading space
             if (peek(TokenKind::OpenParenthesis) && peek()->trivia.empty()) {
-                // parse all formal arguments
-                auto openParen = consume();
-                auto arguments = syntaxPool.get();
-                while (true) {
-                    auto arg = expect(TokenKind::Identifier);
-
-                    MacroArgumentDefaultSyntax* argDef = nullptr;
-                    if (peek(TokenKind::Equals)) {
-                        auto equals = consume();
-                        argDef = alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseMacroArg(LexerMode::Directive));
-                    }
-
-                    arguments.append(alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef));
-
-                    auto kind = peek()->kind;
-                    if (kind == TokenKind::CloseParenthesis)
-                        break;
-                    else if (kind == TokenKind::Comma)
-                        arguments.append(consume());
-                    else {
-                        // TODO: skipped tokens
-                    }
-                }
-                formalArguments = alloc.emplace<MacroFormalArgumentListSyntax>(
-                    openParen,
-                    arguments.copy(alloc),
-                    expect(TokenKind::CloseParenthesis)
-                );
+                MacroParser parser(*this);
+                formalArguments = parser.parseFormalArgumentList();
             }
             noErrors = true;
         }
@@ -278,47 +212,26 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 Trivia Preprocessor::handleMacroUsage(Token* directive) {
     // TODO: don't call createsimpledirective in here
 
-    // try to look up the macro in our map
-    auto it = macros.find(directive->valueText().subString(1));
-    if (it == macros.end()) {
-        addError(DiagCode::UnknownDirective, directive->location);
-        return createSimpleDirective(directive, /* suppressError */ true);
+    // lookup the macro definition
+    auto definition = findMacro(directive);
+    if (!definition) {
+        // TODO:
     }
 
-    // NOTE: make sure you always pass a LexerMode to the token functions in this function,
-    // since we don't want the default of lexing in directive mode
-    DefineDirectiveSyntax* macro = it->second;
+    // parse arguments if necessary
     MacroActualArgumentListSyntax* actualArgs = nullptr;
-    if (macro->formalArguments) {
-        // macro has arguments, so we expect to see them here
-        if (!peek(TokenKind::OpenParenthesis, LexerMode::Normal)) {
-            addError(DiagCode::ExpectedMacroArgs);
-            return createSimpleDirective(directive);
+    if (definition->formalArguments) {
+        actualArgs = parser.parseActualArgumentList();
+        if (!actualArgs) {
+            // TODO:
         }
-
-        auto openParen = consume(LexerMode::Normal);
-        auto arguments = syntaxPool.get();
-        while (true) {
-            auto arg = parseMacroArg(LexerMode::Normal);
-            arguments.append(alloc.emplace<MacroActualArgumentSyntax>(arg));
-
-            auto kind = peek(LexerMode::Normal)->kind;
-            if (kind == TokenKind::CloseParenthesis)
-                break;
-            else if (kind == TokenKind::Comma)
-                arguments.append(consume(LexerMode::Normal));
-            else {
-                // TODO: skipped tokens
-            }
-        }
-
-        auto closeParen = expect(TokenKind::CloseParenthesis, LexerMode::Normal);
-        actualArgs = alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(alloc), closeParen);
     }
 
-    expandMacro(macro, actualArgs);
+    expandMacro(definition, actualArgs, dest);
+    expandReplacementList(dest, finalTokens);
 
-    auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
+    // TODO: concatenate, stringize, etc
+    
     return Trivia(TriviaKind::Directive, syntax);
 }
 
@@ -545,64 +458,102 @@ Trivia Preprocessor::createSimpleDirective(Token* directive, bool suppressError)
     return Trivia(TriviaKind::Directive, syntax);
 }
 
-void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs) {
-    ASSERT(expandedTokens.empty());
-    expandedTokens.clear();
+DefineDirectiveSyntax* Preprocessor::findMacro(Token* directive) {
+    auto it = macros.find(directive->valueText().subString(1));
+    if (it == macros.end()) {
+        addError(DiagCode::UnknownDirective, directive->location);
+        return nullptr;
+    }
+    return it->second;
+}
 
+void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs, Buffer<Token*>& dest) {
     if (!macro->formalArguments) {
         // simple macro; just take body tokens
-        expandedTokens.appendRange(macro->body);
+        dest.appendRange(macro->body);
+        return;
     }
-    else {
-        // match up actual arguments with formal parameters
-        ASSERT(actualArgs);
-        auto& formalList = macro->formalArguments->args;
-        auto& actualList = actualArgs->args;
-        if (actualList.count() > formalList.count()) {
-            // TODO: error
+
+    // match up actual arguments with formal parameters
+    ASSERT(actualArgs);
+    auto& formalList = macro->formalArguments->args;
+    auto& actualList = actualArgs->args;
+    if (actualList.count() > formalList.count()) {
+        // TODO: error
+    }
+
+    argumentMap.clear();
+    for (uint32_t i = 0; i < formalList.count(); i++) {
+        auto formal = formalList[i];
+        auto name = formal->name->valueText();
+
+        const TokenList* tokenList = nullptr;
+        if (actualList.count() > i) {
+            // if our actual argument is empty and we have a default, take that
+            tokenList = &actualList[i]->tokens;
+            if (tokenList->count() == 0 && formal->defaultValue)
+                tokenList = &formal->defaultValue->tokens;
+        }
+        else {
+            // if we've run out of actual args make sure we have a default for this one
+            if (formal->defaultValue)
+                tokenList = &formal->defaultValue->tokens;
+            else {
+                // TODO: error
+                return;
+            }
         }
 
-        argumentMap.clear();
-        for (uint32_t i = 0; i < formalList.count(); i++) {
-            auto formal = formalList[i];
-            auto name = formal->name->valueText();
+        // fully expand the argument's tokens before substitution
+        if (!expandReplacementList(tokenList))
+            return;
 
-            const TokenList* tokenList = nullptr;
-            if (actualList.count() > i) {
-                // if our actual argument is empty and we have a default, take that
-                tokenList = &actualList[i]->tokens;
-                if (tokenList->count() == 0 && formal->defaultValue)
-                    tokenList = &formal->defaultValue->tokens;
+        argumentMap[name] = tokenList;
+    }
+
+    // now add each body token, substituting arguments as necessary
+    for (auto& token : macro->body) {
+        if (token->kind != TokenKind::Identifier)
+            expandedTokens.append(token);
+        else {
+            // check for formal param
+            auto it = argumentMap.find(token->valueText());
+            if (it == argumentMap.end())
+                dest.append(token);
+            else
+                dest.appendRange(*it->second);
+        }
+    }
+}
+
+void Preprocessor::expandReplacementList(ArrayRef<Token*> tokens, Buffer<Token*>& dest) {
+    MacroParser parser(*this);
+    parser.setBuffer(tokens);
+
+    // loop through each token in the replacement list and expand it if it's a nested macro
+    Token* token;
+    while ((token = parser.next()) != nullptr) {
+        if (token->kind != TokenKind::Directive || token->directiveKind() != SyntaxKind::MacroUsage)
+            dest.append(token);
+        else {
+            // lookup the macro definition
+            auto definition = findMacro(token);
+            if (!definition) {
+                // TODO:
             }
-            else {
-                // if we've run out of actual args make sure we have a default for this one
-                if (formal->defaultValue)
-                    tokenList = &formal->defaultValue->tokens;
-                else {
-                    // TODO: error
-                    return;
+
+            // parse arguments if necessary
+            MacroActualArgumentListSyntax* actualArgs = nullptr;
+            if (definition->formalArguments) {
+                actualArgs = parser.parseActualArgumentList();
+                if (!actualArgs) {
+                    // TODO:
                 }
             }
-            argumentMap[name] = tokenList;
-        }
 
-        // now add each body token, substituting arguments as necessary
-        for (auto& token : macro->body) {
-            if (token->kind != TokenKind::Identifier)
-                expandedTokens.append(token);
-            else {
-                // check for formal param
-                auto it = argumentMap.find(token->valueText());
-                if (it == argumentMap.end())
-                    expandedTokens.append(token);
-                else
-                    expandedTokens.appendRange(*it->second);
-            }
+            expandMacro(definition, actualArgs, dest);
         }
     }
-
-    if (!expandedTokens.empty())
-        currentMacroToken = expandedTokens.begin();
 }
 
 Token* Preprocessor::peek(LexerMode mode) {
@@ -637,6 +588,107 @@ void Preprocessor::addError(DiagCode code) {
 void Preprocessor::addError(DiagCode code, SourceLocation location) {
     // TODO: location
     diagnostics.emplace(code, location);
+}
+
+MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentList() {
+    // parse all formal arguments
+    auto openParen = consume();
+    auto arguments = pp.syntaxPool.get();
+    parseArgumentList(arguments, [this]() { return parseFormalArgument(); });
+
+    return pp.alloc.emplace<MacroFormalArgumentListSyntax>(
+        openParen,
+        arguments.copy(pp.alloc),
+        expect(TokenKind::CloseParenthesis)
+    );
+}
+
+MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentList() {
+    // macro has arguments, so we expect to see them here
+    if (!peek(TokenKind::OpenParenthesis)) {
+        pp.addError(DiagCode::ExpectedMacroArgs);
+        return nullptr;
+    }
+
+    auto openParen = consume();
+    auto arguments = pp.syntaxPool.get();
+    parseArgumentList(arguments, [this]() { return parseActualArgument(); });
+
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return pp.alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(pp.alloc), closeParen);
+}
+
+template<typename TFunc>
+void Preprocessor::MacroParser::parseArgumentList(Buffer<TokenOrSyntax>& buffer, TFunc&& parseItem) {
+    while (true) {
+        buffer.append(parseItem());
+
+        auto kind = peek()->kind;
+        if (kind == TokenKind::CloseParenthesis)
+            break;
+        else if (kind == TokenKind::Comma)
+            arguments.append(consume());
+        else {
+            // TODO: skipped tokens
+        }
+    }
+}
+
+MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
+    auto arg = parseTokenList();
+    return pp.alloc.emplace<MacroActualArgumentSyntax>(arg);
+}
+
+MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
+    auto arg = expect(TokenKind::Identifier);
+
+    MacroArgumentDefaultSyntax* argDef = nullptr;
+    if (peek(TokenKind::Equals)) {
+        auto equals = consume();
+        argDef = pp.alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseTokenList());
+    }
+
+    return pp.alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef);
+}
+
+ArrayRef<Token*> Preprocessor::MacroParser::parseTokenList() {
+    auto tokens = pp.tokenPool.get();
+
+    // comma and right parenthesis only end the default token list if they are
+    // not inside a nested pair of (), [], or {}
+    // otherwise, keep swallowing tokens as part of the default
+    while (true) {
+        auto kind = peek()->kind;
+        if (kind == TokenKind::EndOfDirective) {
+            if (pp.delimPairStack.empty())
+                pp.addError(DiagCode::ExpectedEndOfMacroArgs);
+            else
+                pp.addError(DiagCode::UnbalancedMacroArgDims);
+            pp.delimPairStack.clear();
+            break;
+        }
+
+        if (pp.delimPairStack.empty()) {
+            if ((kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis))
+                break;
+        }
+        else if (pp.delimPairStack.back() == kind)
+            pp.delimPairStack.pop();
+
+        tokens.append(consume());
+        switch (kind) {
+            case TokenKind::OpenParenthesis:
+                pp.delimPairStack.append(TokenKind::CloseParenthesis);
+                break;
+            case TokenKind::OpenBrace:
+                pp.delimPairStack.append(TokenKind::CloseBrace);
+                break;
+            case TokenKind::OpenBracket:
+                pp.delimPairStack.append(TokenKind::CloseBracket);
+                break;
+        }
+    }
+    return tokens.copy(pp.alloc);
 }
 
 }
