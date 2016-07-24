@@ -20,6 +20,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\external\cppformat\format.h" />
+    <ClInclude Include="..\..\external\fmt\ostream.h" />
+    <ClInclude Include="..\..\external\fmt\posix.h" />
+    <ClInclude Include="..\..\external\fmt\printf.h" />
+    <ClInclude Include="..\..\external\fmt\string.h" />
+    <ClInclude Include="..\..\external\fmt\time.h" />
     <ClInclude Include="..\..\external\xxhash\xxhash.h" />
     <ClInclude Include="..\..\include\AllSyntax.h" />
     <ClInclude Include="..\..\include\ArrayRef.h" />
@@ -45,7 +50,9 @@
     <ClInclude Include="..\..\source\CharInfo.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\external\cppformat\format.cc" />
+    <ClCompile Include="..\..\external\fmt\format.cc" />
+    <ClCompile Include="..\..\external\fmt\ostream.cc" />
+    <ClCompile Include="..\..\external\fmt\posix.cc" />
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
@@ -136,7 +143,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);PLATFORM_X86</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)../../include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)../../external;$(SolutionDir)../../include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <DisableSpecificWarnings>4127</DisableSpecificWarnings>
     </ClCompile>
@@ -153,7 +160,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions);PLATFORM_X64</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)../../include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)../../external;$(SolutionDir)../../include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <DisableSpecificWarnings>4127</DisableSpecificWarnings>
     </ClCompile>
@@ -172,7 +179,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions);PLATFORM_X86</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)../../include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)../../external;$(SolutionDir)../../include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <DisableSpecificWarnings>4127</DisableSpecificWarnings>
     </ClCompile>
@@ -193,7 +200,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions);PLATFORM_X64</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)../../include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)../../external;$(SolutionDir)../../include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <DisableSpecificWarnings>4127</DisableSpecificWarnings>
     </ClCompile>

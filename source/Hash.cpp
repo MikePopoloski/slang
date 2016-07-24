@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 #define XXH_PRIVATE_API
-#include "../external/xxhash/xxhash.c"
+#include "../external/xxhash/xxhash.h"
 
 namespace slang {
 

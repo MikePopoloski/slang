@@ -94,6 +94,21 @@
     <ClInclude Include="..\..\external\xxhash\xxhash.h">
       <Filter>util\3ps</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\external\fmt\ostream.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\posix.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\printf.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\string.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\time.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -132,14 +147,20 @@
     <ClCompile Include="..\..\source\SourceManager.cpp">
       <Filter>text</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\external\cppformat\format.cc">
-      <Filter>util\3ps</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\StringRef.cpp">
       <Filter>util</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\BumpAllocator.cpp">
       <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\fmt\format.cc">
+      <Filter>util\3ps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\fmt\ostream.cc">
+      <Filter>util\3ps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\fmt\posix.cc">
+      <Filter>util\3ps</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
