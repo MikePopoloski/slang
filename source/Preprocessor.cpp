@@ -211,28 +211,29 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 
 Trivia Preprocessor::handleMacroUsage(Token* directive) {
     // TODO: don't call createsimpledirective in here
+    return createSimpleDirective(directive);
 
     // lookup the macro definition
-    auto definition = findMacro(directive);
-    if (!definition) {
-        // TODO:
-    }
+    //auto definition = findMacro(directive);
+    //if (!definition) {
+    //    // TODO:
+    //}
 
-    // parse arguments if necessary
-    MacroActualArgumentListSyntax* actualArgs = nullptr;
-    if (definition->formalArguments) {
-        actualArgs = parser.parseActualArgumentList();
-        if (!actualArgs) {
-            // TODO:
-        }
-    }
+    //// parse arguments if necessary
+    //MacroActualArgumentListSyntax* actualArgs = nullptr;
+    //if (definition->formalArguments) {
+    //    actualArgs = parser.parseActualArgumentList();
+    //    if (!actualArgs) {
+    //        // TODO:
+    //    }
+    //}
 
-    expandMacro(definition, actualArgs, dest);
-    expandReplacementList(dest, finalTokens);
+    //expandMacro(definition, actualArgs, dest);
+    //expandReplacementList(dest, finalTokens);
 
-    // TODO: concatenate, stringize, etc
-    
-    return Trivia(TriviaKind::Directive, syntax);
+    //// TODO: concatenate, stringize, etc
+    //
+    //return Trivia(TriviaKind::Directive, syntax);
 }
 
 Trivia Preprocessor::handleIfDefDirective(Token* directive, bool not) {
@@ -505,8 +506,9 @@ void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgument
         }
 
         // fully expand the argument's tokens before substitution
-        if (!expandReplacementList(tokenList))
-            return;
+        // TODO:
+        //if (!expandReplacementList(tokenList))
+        //    return;
 
         argumentMap[name] = tokenList;
     }
@@ -592,6 +594,7 @@ void Preprocessor::addError(DiagCode code, SourceLocation location) {
 
 MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentList() {
     // parse all formal arguments
+    currentMode = LexerMode::Directive;
     auto openParen = consume();
     auto arguments = pp.syntaxPool.get();
     parseArgumentList(arguments, [this]() { return parseFormalArgument(); });
@@ -605,6 +608,7 @@ MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentLis
 
 MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentList() {
     // macro has arguments, so we expect to see them here
+    currentMode = LexerMode::Normal;
     if (!peek(TokenKind::OpenParenthesis)) {
         pp.addError(DiagCode::ExpectedMacroArgs);
         return nullptr;
@@ -627,7 +631,7 @@ void Preprocessor::MacroParser::parseArgumentList(Buffer<TokenOrSyntax>& buffer,
         if (kind == TokenKind::CloseParenthesis)
             break;
         else if (kind == TokenKind::Comma)
-            arguments.append(consume());
+            buffer.append(consume());
         else {
             // TODO: skipped tokens
         }

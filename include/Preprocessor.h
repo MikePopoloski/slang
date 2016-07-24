@@ -17,6 +17,9 @@ namespace slang {
 
 struct DefineDirectiveSyntax;
 struct MacroActualArgumentListSyntax;
+struct MacroFormalArgumentListSyntax;
+struct MacroActualArgumentSyntax;
+struct MacroFormalArgumentSyntax;
 
 StringRef getDirectiveText(SyntaxKind kind);
 
@@ -84,9 +87,14 @@ private:
     public:
         MacroParser(Preprocessor& preprocessor) : pp(preprocessor) {}
 
-        void setBuffer(ArrayRef<Token*> buffer) { this->buffer = buffer; }
+        void setBuffer(ArrayRef<Token*> newBuffer) {
+            this->buffer = newBuffer;
 
-        Token* next();
+        }
+
+        Token* next() {
+            return nullptr;
+        }
 
         MacroActualArgumentListSyntax* parseActualArgumentList();
         MacroFormalArgumentListSyntax* parseFormalArgumentList();
@@ -99,13 +107,15 @@ private:
         MacroFormalArgumentSyntax* parseFormalArgument();
         ArrayRef<Token*> parseTokenList();
 
-        Token* peek();
-        Token* consume();
-        Token* expect(TokenKind kind);
+        Token* peek() { return pp.peek(currentMode); }
+        Token* consume() { return pp.consume(currentMode); }
+        Token* expect(TokenKind kind) { return pp.expect(kind, currentMode); }
         bool peek(TokenKind kind) { return peek()->kind == kind; }
 
         Preprocessor& pp;
         ArrayRef<Token*> buffer;
+        Token* currentToken;
+        LexerMode currentMode;
     };
 
     SourceManager& sourceManager;
