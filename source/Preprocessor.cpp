@@ -211,29 +211,29 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 
 Trivia Preprocessor::handleMacroUsage(Token* directive) {
     // TODO: don't call createsimpledirective in here
-    return createSimpleDirective(directive);
 
     // lookup the macro definition
-    //auto definition = findMacro(directive);
-    //if (!definition) {
-    //    // TODO:
-    //}
+    auto definition = findMacro(directive);
+    if (!definition) {
+        // TODO:
+    }
 
-    //// parse arguments if necessary
-    //MacroActualArgumentListSyntax* actualArgs = nullptr;
-    //if (definition->formalArguments) {
-    //    actualArgs = parser.parseActualArgumentList();
-    //    if (!actualArgs) {
-    //        // TODO:
-    //    }
-    //}
+    // parse arguments if necessary
+    MacroActualArgumentListSyntax* actualArgs = nullptr;
+    if (definition->formalArguments) {
+        MacroParser parser(*this);
+        actualArgs = parser.parseActualArgumentList();
+        if (!actualArgs) {
+            // TODO:
+        }
+    }
 
-    //expandMacro(definition, actualArgs, dest);
-    //expandReplacementList(dest, finalTokens);
+    expandMacro(definition, actualArgs, dest);
+    expandReplacementList(dest, finalTokens);
 
-    //// TODO: concatenate, stringize, etc
-    //
-    //return Trivia(TriviaKind::Directive, syntax);
+    // TODO: concatenate, stringize, etc
+    
+    return Trivia(TriviaKind::Directive, syntax);
 }
 
 Trivia Preprocessor::handleIfDefDirective(Token* directive, bool not) {

@@ -128,7 +128,7 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
     auto& text = "`define FOO 42\n`FOO";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::IntegerLiteral);
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 42);
     CHECK(diagnostics.empty());
 }
@@ -137,7 +137,7 @@ TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::IntegerLiteral);
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 42);
     CHECK(diagnostics.empty());
 }
@@ -154,7 +154,7 @@ TEST_CASE("IfNDef branch", "[preprocessor]") {
     auto& text = "`ifndef BAR\n42\n`endif";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::IntegerLiteral);
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 42);
     CHECK(diagnostics.empty());
 }
@@ -163,7 +163,7 @@ TEST_CASE("ElseIf branch", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef BAR\n42\n`elsif FOO\n99`else\n1000`endif";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::IntegerLiteral);
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 99);
     CHECK(diagnostics.empty());
 }
@@ -202,7 +202,7 @@ TEST_CASE("Nested branches", "[preprocessor]") {
 "`endif";
     auto& token = lexToken(text);
 
-    CHECK(token.kind == TokenKind::IntegerLiteral);
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 99);
     CHECK(diagnostics.empty());
 }
