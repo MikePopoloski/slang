@@ -29,7 +29,7 @@ public:
     }
 
     ArrayRef(const T* begin, const T* end) :
-        ptr(ptr), len(end - begin)
+        ptr(begin), len((uint32_t)(end - begin))
     {
     }
 

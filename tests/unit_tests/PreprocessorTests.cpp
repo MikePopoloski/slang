@@ -133,6 +133,50 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Function macro (simple)", "[preprocessor]") {
+    auto& text = "`define FOO(x) x\n`FOO(3)";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.numericValue().integer == 3);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Function macro (defaults)", "[preprocessor]") {
+    auto& text = "`define FOO(x=9(,), y=2) x\n`FOO()";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.numericValue().integer == 9);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Function macro (no tokens)", "[preprocessor]") {
+    auto& text = "`define FOO(x=) x\n`FOO()";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::EndOfFile);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Function macro (simple nesting)", "[preprocessor]") {
+    auto& text = "`define BLAHBLAH(x) x\n`define BAR(x) `BLAHBLAH(x)\n`define BAZ(x) `BAR(x)\n`define FOO(y) `BAZ(y)\n`FOO(15)";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.numericValue().integer == 15);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
+    auto& text = "`define FOO(x) x\n`FOO(`FOO(3))";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.numericValue().integer == 3);
+    CHECK(diagnostics.empty());
+}
+
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     auto& token = lexToken(text);

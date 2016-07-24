@@ -89,8 +89,10 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
     if (currentMacroToken) {
         auto result = *currentMacroToken;
         currentMacroToken++;
-        if (currentMacroToken == expandedTokens.end())
+        if (currentMacroToken == expandedTokens.end()) {
             currentMacroToken = nullptr;
+            expandedTokens.clear();
+        }
 
         return result;
     }
@@ -210,11 +212,15 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 }
 
 Trivia Preprocessor::handleMacroUsage(Token* directive) {
+    // if this assert fires, we failed to fully expand nested macros
+    ASSERT(expandedTokens.empty());
+
     // TODO: don't call createsimpledirective in here
 
     // lookup the macro definition
     auto definition = findMacro(directive);
     if (!definition) {
+        return createSimpleDirective(directive);
         // TODO:
     }
 
@@ -228,11 +234,22 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
         }
     }
 
-    expandMacro(definition, actualArgs, dest);
-    expandReplacementList(dest, finalTokens);
+    auto buffer = tokenPool.get();
+    expandMacro(definition, actualArgs, buffer);
+
+    auto finalTokens = tokenPool.get();
+    expandReplacementList(ArrayRef<Token*>(buffer.begin(), buffer.end()), finalTokens);
 
     // TODO: concatenate, stringize, etc
+    expandedTokens.clear();
+    for (auto& token : finalTokens)
+        expandedTokens.append(token);
+
+    // if the macro expanded into any tokens at all, set the pointer so that we'll pull from them next
+    if (!expandedTokens.empty())
+        currentMacroToken = expandedTokens.begin();
     
+    auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
     return Trivia(TriviaKind::Directive, syntax);
 }
 
@@ -505,18 +522,17 @@ void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgument
             }
         }
 
-        // fully expand the argument's tokens before substitution
-        // TODO:
-        //if (!expandReplacementList(tokenList))
-        //    return;
-
+        // The C preprocessor would fully pre-expand and mark any macro usage in the arguments here;
+        // because SystemVerilog macros are different tokens than identifiers (backtick character differentiates)
+        // we don't have to bother doing that. All macros either fully expand or we have an error if we detect
+        // recursive usage.
         argumentMap[name] = tokenList;
     }
 
     // now add each body token, substituting arguments as necessary
     for (auto& token : macro->body) {
         if (token->kind != TokenKind::Identifier)
-            expandedTokens.append(token);
+            dest.append(token);
         else {
             // check for formal param
             auto it = argumentMap.find(token->valueText());
@@ -552,7 +568,6 @@ void Preprocessor::expandReplacementList(ArrayRef<Token*> tokens, Buffer<Token*>
                     // TODO:
                 }
             }
-
             expandMacro(definition, actualArgs, dest);
         }
     }
@@ -693,6 +708,42 @@ ArrayRef<Token*> Preprocessor::MacroParser::parseTokenList() {
         }
     }
     return tokens.copy(pp.alloc);
+}
+
+void Preprocessor::MacroParser::setBuffer(ArrayRef<Token*> newBuffer) {
+    buffer = newBuffer;
+    currentIndex = 0;
+}
+
+Token* Preprocessor::MacroParser::next() {
+    if (currentIndex < buffer.count())
+        return buffer[currentIndex++];
+    return nullptr;
+}
+
+Token* Preprocessor::MacroParser::peek() {
+    if (currentIndex < buffer.count())
+        return buffer[currentIndex];
+    return pp.peek(currentMode);
+}
+
+Token* Preprocessor::MacroParser::consume() {
+    auto result = next();
+    if (result)
+        return result;
+    return pp.consume(currentMode);
+}
+
+Token* Preprocessor::MacroParser::expect(TokenKind kind) {
+    if (currentIndex >= buffer.count())
+        return pp.expect(kind, currentMode);
+
+    if (buffer[currentIndex]->kind != kind) {
+        // report an error here for the missing token
+        pp.addError(DiagCode::SyntaxError);
+        return Token::missing(pp.alloc, kind, buffer[currentIndex]->location);
+    }
+    return next();
 }
 
 }

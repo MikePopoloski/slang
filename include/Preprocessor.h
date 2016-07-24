@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Preprocessor.h
+// SystemVerilog preprocessor and directive support.
+//
+// File is under the MIT license:
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <cstdint>
@@ -23,6 +29,11 @@ struct MacroFormalArgumentSyntax;
 
 StringRef getDirectiveText(SyntaxKind kind);
 
+/// Preprocessor - Interface between lexer and parser
+///
+/// This class handles the messy interface between various source file lexers, include directives,
+/// and macro expansion, and the actual SystemVerilog parser that wants a nice coherent stream
+/// of tokens to consume.
 class Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
@@ -74,27 +85,38 @@ private:
     void addError(DiagCode code);
     void addError(DiagCode code, SourceLocation location);
 
+    // This is a small collection of state used to keep track of where we are in a tree of
+    // nested conditional directives.
     struct BranchEntry {
+        // Whether any of the sibling directives in this branch have been taken; used to decide whether
+        // to take an `elsif or `else branch.
         bool anyTaken;
+
+        // Whether the current branch is active.
         bool currentActive;
+
+        // Has this chain of conditional directives had an `else directive yet; it's an error
+        // for any other directives in the current level to come after that.
         bool hasElse = false;
 
         BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
     };
 
-    // helper class for parsing macro arguments
+    // Helper class for parsing macro arguments. There's a lot of otherwise overlapping code that this
+    // class consolidates, but it makes it a little confusing. If a buffer is provided via setBuffer(),
+    // tokens are pulled from there first. Otherwise it just pulls from the main preprocessor stream.
     class MacroParser {
     public:
         MacroParser(Preprocessor& preprocessor) : pp(preprocessor) {}
 
-        void setBuffer(ArrayRef<Token*> newBuffer) {
-            this->buffer = newBuffer;
+        // Set a buffer to use first, in order, before looking at an underlying preprocessor
+        // stream for macro argument lists.
+        void setBuffer(ArrayRef<Token*> newBuffer);
 
-        }
-
-        Token* next() {
-            return nullptr;
-        }
+        // Pull tokens one at a time from a previously set buffer. Note that this won't pull
+        // from the underlying preprocessor stream; its purpose is to allow stepping through
+        // a macro replacement list.
+        Token* next();
 
         MacroActualArgumentListSyntax* parseActualArgumentList();
         MacroFormalArgumentListSyntax* parseFormalArgumentList();
@@ -107,14 +129,18 @@ private:
         MacroFormalArgumentSyntax* parseFormalArgument();
         ArrayRef<Token*> parseTokenList();
 
-        Token* peek() { return pp.peek(currentMode); }
-        Token* consume() { return pp.consume(currentMode); }
-        Token* expect(TokenKind kind) { return pp.expect(kind, currentMode); }
+        Token* peek();
+        Token* consume();
+        Token* expect(TokenKind kind);
         bool peek(TokenKind kind) { return peek()->kind == kind; }
 
         Preprocessor& pp;
         ArrayRef<Token*> buffer;
-        Token* currentToken;
+        uint32_t currentIndex = 0;
+
+        // When we're parsing formal arguments, we're in directive mode since the macro needs to
+        // end at the current line (unless there's a continuation character). For actual arguments,
+        // we want to freely span multiple lines.
         LexerMode currentMode;
     };
 

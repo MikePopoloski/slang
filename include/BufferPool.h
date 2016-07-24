@@ -26,6 +26,8 @@ public:
         ~BufferWrapper() { pool->free(buffer); }
 
         bool empty() const { return buffer->empty(); }
+        T* begin() { return buffer->begin(); }
+        T* end() { return buffer->end(); }
 
         void append(const TWrapped& item) { buffer->append(item); }
         void appendRange(const TWrapped* begin, const TWrapped* end) { buffer->appendRange(begin, end); }

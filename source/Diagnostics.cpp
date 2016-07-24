@@ -1,6 +1,7 @@
 #include "Diagnostics.h"
 
-#include "../external/cppformat/format.h"
+#include "../external/fmt/format.h"
+#include "../external/fmt/ostream.h"
 
 #include "SourceManager.h"
 
