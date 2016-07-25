@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "Catch/catch.hpp"
 #include "slang.h"
 
 using namespace slang;

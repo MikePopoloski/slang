@@ -109,6 +109,9 @@
     <ClInclude Include="..\..\external\fmt\time.h">
       <Filter>util\3ps</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\external\pempek_assert\pempek_assert.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -160,6 +163,9 @@
       <Filter>util\3ps</Filter>
     </ClCompile>
     <ClCompile Include="..\..\external\fmt\posix.cc">
+      <Filter>util\3ps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp">
       <Filter>util\3ps</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "Catch/catch.hpp"
 
 // This file contains the Catch unit testing framework implementation
 // as well as the main() function, with command line arg parsing.

@@ -68,7 +68,7 @@ public:
     const T* cend() const { return data + len; }
 
     const T& front() const {
-        ASSERT(length);
+        ASSERT(len);
         return data[0];
     }
 
