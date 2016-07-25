@@ -35,3 +35,5 @@ Error on recursive macros
 Mark tokens from arguments as being ok to "recursively" expand
 Warn on redefining macros
 Stringifying and concatenating tokens
+Include directive macros
+Macros that have other directives in their bodies?

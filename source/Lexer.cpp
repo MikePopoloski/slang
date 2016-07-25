@@ -38,6 +38,10 @@ Lexer::Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diag
     }
 }
 
+Token* Lexer::concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right) {
+
+}
+
 Token* Lexer::lex(LexerMode mode) {
     if (mode == LexerMode::IncludeFileName)
         return lexIncludeFileName();

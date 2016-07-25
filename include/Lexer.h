@@ -36,6 +36,9 @@ public:
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
 
+    // Concatenate two tokens together; used for macro pasting
+    static Token* concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right);
+
 private:
     struct TokenInfo {
         StringRef niceText;

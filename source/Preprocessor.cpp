@@ -479,6 +479,20 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token* directiv
 
     // TODO: concatenate, stringize, etc
     expandedTokens.clear();
+    for (uint32_t i = 0; i < tokens.count(); i++) {
+        Token* token = tokens[i];
+        if (token->kind != TokenKind::MacroPaste)
+            expandedTokens.append(token);
+        else {
+            // Paste together previous token and next token; a macro paste on either end
+            // of the buffer results in nothing happening. This isn't specified in the
+            // standard so I'm just guessing.
+            if (i != 0 && i != tokens.count() - 1) {
+                token = tokens[++i];
+                expandedTokens.back() = Lexer::concatenateTokens(alloc, expandedTokens.back(), token);
+            }
+        }
+    }
     for (auto& token : tokens)
         expandedTokens.append(token);
 
