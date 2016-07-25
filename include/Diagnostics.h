@@ -44,6 +44,8 @@ enum class DiagCode : uint8_t {
     ExpectedMacroArgs,
     ExpectedNetType,
     InvalidMacroName,
+    TooManyActualMacroArgs,
+    NotEnoughMacroArgs,
 
     // parser
     SyntaxError,

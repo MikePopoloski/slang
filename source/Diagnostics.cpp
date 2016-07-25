@@ -55,6 +55,8 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "ExpectedMacroArgs" },
     { "expected net type specifier" },
     { "can't redefine compiler directive as a macro" },
+    { "too many arguments provided to function-like macro" },
+    { "not enough arguments provided to function-like macro" },
 
     // parser
     { "SyntaxError" },

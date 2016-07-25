@@ -466,6 +466,7 @@ public:
     T* const* end() const { return elements.end(); }
 
     const T* operator[](uint32_t index) const { return elements[index]; }
+    T* operator[](uint32_t index) { return elements[index]; }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
@@ -490,6 +491,7 @@ public:
     Token* const* end() const { return elements.end(); }
 
     const Token* operator[](uint32_t index) const { return elements[index]; }
+    Token* operator[](uint32_t index) { return elements[index]; }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
@@ -512,9 +514,13 @@ public:
     uint32_t count() const { return (uint32_t)std::ceil(elements.count() / 2.0); }
 
     const T* operator[](uint32_t index) const {
+        return const_cast<SeparatedSyntaxList*>(this)->operator[](index);
+    }
+
+    T* operator[](uint32_t index) {
         index <<= 1;
         ASSERT(!elements[index].isToken);
-        return static_cast<const T*>(elements[index].node);
+        return static_cast<T*>(elements[index].node);
     }
 
 protected:

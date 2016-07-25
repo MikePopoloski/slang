@@ -212,43 +212,8 @@ Trivia Preprocessor::handleDefineDirective(Token* directive) {
 }
 
 Trivia Preprocessor::handleMacroUsage(Token* directive) {
-    // if this assert fires, we failed to fully expand nested macros
-    ASSERT(expandedTokens.empty());
-
-    // TODO: don't call createsimpledirective in here
-
-    // lookup the macro definition
-    auto definition = findMacro(directive);
-    if (!definition) {
-        return createSimpleDirective(directive);
-        // TODO:
-    }
-
-    // parse arguments if necessary
-    MacroActualArgumentListSyntax* actualArgs = nullptr;
-    if (definition->formalArguments) {
-        MacroParser parser(*this);
-        actualArgs = parser.parseActualArgumentList();
-        if (!actualArgs) {
-            // TODO:
-        }
-    }
-
-    auto buffer = tokenPool.get();
-    expandMacro(definition, actualArgs, buffer);
-
-    ArrayRef<Token*> tokens {buffer.begin(), buffer.end()};
-    expandReplacementList(tokens);
-
-    // TODO: concatenate, stringize, etc
-    expandedTokens.clear();
-    for (auto& token : tokens)
-        expandedTokens.append(token);
-
-    // if the macro expanded into any tokens at all, set the pointer so that we'll pull from them next
-    if (!expandedTokens.empty())
-        currentMacroToken = expandedTokens.begin();
-    
+    // delegate to a nested function to simplify the error handling paths
+    auto actualArgs = handleTopLevelMacro(directive);    
     auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
     return Trivia(TriviaKind::Directive, syntax);
 }
@@ -485,11 +450,50 @@ DefineDirectiveSyntax* Preprocessor::findMacro(Token* directive) {
     return it->second;
 }
 
-void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs, Buffer<Token*>& dest) {
+MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token* directive) {
+    // if this assert fires, we failed to fully expand nested macros at a previous point
+    ASSERT(expandedTokens.empty());
+
+    // lookup the macro definition; findMacro will report an error for us if
+    // the directive is not found
+    auto definition = findMacro(directive);
+    if (!definition)
+        return nullptr;
+
+    // parse arguments if necessary
+    MacroActualArgumentListSyntax* actualArgs = nullptr;
+    if (definition->formalArguments) {
+        MacroParser parser(*this);
+        actualArgs = parser.parseActualArgumentList();
+        if (!actualArgs)
+            return actualArgs;
+    }
+
+    auto buffer = tokenPool.get();
+    if (!expandMacro(definition, actualArgs, buffer))
+        return actualArgs;
+
+    ArrayRef<Token*> tokens{ buffer.begin(), buffer.end() };
+    if (!expandReplacementList(tokens))
+        return actualArgs;
+
+    // TODO: concatenate, stringize, etc
+    expandedTokens.clear();
+    for (auto& token : tokens)
+        expandedTokens.append(token);
+
+    // if the macro expanded into any tokens at all, set the pointer so that we'll pull from them next
+    if (!expandedTokens.empty())
+        currentMacroToken = expandedTokens.begin();
+
+    return actualArgs;
+}
+
+bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs, Buffer<Token*>& dest) {
     if (!macro->formalArguments) {
         // simple macro; just take body tokens
         dest.appendRange(macro->body);
-        return;
+        return true;
     }
 
     // match up actual arguments with formal parameters
@@ -497,7 +501,8 @@ void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgument
     auto& formalList = macro->formalArguments->args;
     auto& actualList = actualArgs->args;
     if (actualList.count() > formalList.count()) {
-        // TODO: error
+        addError(DiagCode::TooManyActualMacroArgs, actualArgs->args[formalList.count()]->getFirstToken()->location);
+        return false;
     }
 
     argumentMap.clear();
@@ -517,8 +522,8 @@ void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgument
             if (formal->defaultValue)
                 tokenList = &formal->defaultValue->tokens;
             else {
-                // TODO: error
-                return;
+                addError(DiagCode::NotEnoughMacroArgs, actualArgs->closeParen->location);
+                return false;
             }
         }
 
@@ -542,9 +547,11 @@ void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgument
                 dest.appendRange(*it->second);
         }
     }
+
+    return true;
 }
 
-void Preprocessor::expandReplacementList(ArrayRef<Token*>& tokens) {
+bool Preprocessor::expandReplacementList(ArrayRef<Token*>& tokens) {
     // keep expanding macros in the replacement list until we've got them all
     // use two alternating buffers to hold the tokens
     auto buffer1 = tokenPool.get();
@@ -567,19 +574,20 @@ void Preprocessor::expandReplacementList(ArrayRef<Token*>& tokens) {
             else {
                 // lookup the macro definition
                 auto definition = findMacro(token);
-                if (!definition) {
-                    // TODO:
-                }
+                if (!definition)
+                    return false;
 
                 // parse arguments if necessary
                 MacroActualArgumentListSyntax* actualArgs = nullptr;
                 if (definition->formalArguments) {
                     actualArgs = parser.parseActualArgumentList();
-                    if (!actualArgs) {
-                        // TODO:
-                    }
+                    if (!actualArgs)
+                        return false;
                 }
-                expandMacro(definition, actualArgs, *currentBuffer);
+                
+                if (!expandMacro(definition, actualArgs, *currentBuffer))
+                    return false;
+
                 expandedSomething = true;
             }
         }
@@ -589,6 +597,8 @@ void Preprocessor::expandReplacementList(ArrayRef<Token*>& tokens) {
         currentBuffer->clear();
 
     } while (expandedSomething);
+
+    return true;
 }
 
 Token* Preprocessor::peek(LexerMode mode) {

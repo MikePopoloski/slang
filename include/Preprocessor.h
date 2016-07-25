@@ -73,8 +73,9 @@ private:
     void expectTimescaleSpecifier(Token*& unit, Token*& precision);
 
     DefineDirectiveSyntax* findMacro(Token* directive);
-    void expandMacro(DefineDirectiveSyntax* definition, MacroActualArgumentListSyntax* actualArgs, Buffer<Token*>& dest);
-    void expandReplacementList(ArrayRef<Token*>& tokens);
+    MacroActualArgumentListSyntax* handleTopLevelMacro(Token* directive);
+    bool expandMacro(DefineDirectiveSyntax* definition, MacroActualArgumentListSyntax* actualArgs, Buffer<Token*>& dest);
+    bool expandReplacementList(ArrayRef<Token*>& tokens);
 
     // functions to advance the underlying token stream
     Token* peek(LexerMode mode = LexerMode::Directive);
