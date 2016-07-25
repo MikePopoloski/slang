@@ -74,7 +74,7 @@ private:
 
     DefineDirectiveSyntax* findMacro(Token* directive);
     void expandMacro(DefineDirectiveSyntax* definition, MacroActualArgumentListSyntax* actualArgs, Buffer<Token*>& dest);
-    void expandReplacementList(ArrayRef<Token*> tokens, Buffer<Token*>& dest);
+    void expandReplacementList(ArrayRef<Token*>& tokens);
 
     // functions to advance the underlying token stream
     Token* peek(LexerMode mode = LexerMode::Directive);

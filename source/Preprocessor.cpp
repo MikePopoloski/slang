@@ -237,12 +237,12 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
     auto buffer = tokenPool.get();
     expandMacro(definition, actualArgs, buffer);
 
-    auto finalTokens = tokenPool.get();
-    expandReplacementList(ArrayRef<Token*>(buffer.begin(), buffer.end()), finalTokens);
+    ArrayRef<Token*> tokens {buffer.begin(), buffer.end()};
+    expandReplacementList(tokens);
 
     // TODO: concatenate, stringize, etc
     expandedTokens.clear();
-    for (auto& token : finalTokens)
+    for (auto& token : tokens)
         expandedTokens.append(token);
 
     // if the macro expanded into any tokens at all, set the pointer so that we'll pull from them next
@@ -544,33 +544,51 @@ void Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgument
     }
 }
 
-void Preprocessor::expandReplacementList(ArrayRef<Token*> tokens, Buffer<Token*>& dest) {
-    MacroParser parser(*this);
-    parser.setBuffer(tokens);
+void Preprocessor::expandReplacementList(ArrayRef<Token*>& tokens) {
+    // keep expanding macros in the replacement list until we've got them all
+    // use two alternating buffers to hold the tokens
+    auto buffer1 = tokenPool.get();
+    auto buffer2 = tokenPool.get();
 
-    // loop through each token in the replacement list and expand it if it's a nested macro
-    Token* token;
-    while ((token = parser.next()) != nullptr) {
-        if (token->kind != TokenKind::Directive || token->directiveKind() != SyntaxKind::MacroUsage)
-            dest.append(token);
-        else {
-            // lookup the macro definition
-            auto definition = findMacro(token);
-            if (!definition) {
-                // TODO:
-            }
+    Buffer<Token*>* currentBuffer = &buffer1.get();
+    Buffer<Token*>* nextBuffer = &buffer2.get();
 
-            // parse arguments if necessary
-            MacroActualArgumentListSyntax* actualArgs = nullptr;
-            if (definition->formalArguments) {
-                actualArgs = parser.parseActualArgumentList();
-                if (!actualArgs) {
+    bool expandedSomething;
+    do {
+        expandedSomething = false;
+        MacroParser parser(*this);
+        parser.setBuffer(tokens);
+
+        // loop through each token in the replacement list and expand it if it's a nested macro
+        Token* token;
+        while ((token = parser.next()) != nullptr) {
+            if (token->kind != TokenKind::Directive || token->directiveKind() != SyntaxKind::MacroUsage)
+                currentBuffer->append(token);
+            else {
+                // lookup the macro definition
+                auto definition = findMacro(token);
+                if (!definition) {
                     // TODO:
                 }
+
+                // parse arguments if necessary
+                MacroActualArgumentListSyntax* actualArgs = nullptr;
+                if (definition->formalArguments) {
+                    actualArgs = parser.parseActualArgumentList();
+                    if (!actualArgs) {
+                        // TODO:
+                    }
+                }
+                expandMacro(definition, actualArgs, *currentBuffer);
+                expandedSomething = true;
             }
-            expandMacro(definition, actualArgs, dest);
         }
-    }
+
+        tokens = ArrayRef<Token*>(currentBuffer->begin(), currentBuffer->end());
+        std::swap(currentBuffer, nextBuffer);
+        currentBuffer->clear();
+
+    } while (expandedSomething);
 }
 
 Token* Preprocessor::peek(LexerMode mode) {
