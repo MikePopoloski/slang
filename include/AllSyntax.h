@@ -4089,11 +4089,11 @@ struct BlockEventExpressionSyntax : public SyntaxNode {
 
 struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
     BlockEventExpressionSyntax* left;
-    Token* or;
+    Token* orKeyword;
     BlockEventExpressionSyntax* right;
 
-    BinaryBlockEventExpressionSyntax(BlockEventExpressionSyntax* left, Token* or, BlockEventExpressionSyntax* right) :
-        BlockEventExpressionSyntax(SyntaxKind::BinaryBlockEventExpression), left(left), or(or), right(right)
+    BinaryBlockEventExpressionSyntax(BlockEventExpressionSyntax* left, Token* orKeyword, BlockEventExpressionSyntax* right) :
+        BlockEventExpressionSyntax(SyntaxKind::BinaryBlockEventExpression), left(left), orKeyword(orKeyword), right(right)
     {
         childCount += 3;
     }
@@ -4102,7 +4102,7 @@ protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch(index) {
             case 0: return left;
-            case 1: return or;
+            case 1: return orKeyword;
             case 2: return right;
             default: return nullptr;
         }

@@ -253,13 +253,13 @@ Trivia Preprocessor::handleMacroUsage(Token* directive) {
     return Trivia(TriviaKind::Directive, syntax);
 }
 
-Trivia Preprocessor::handleIfDefDirective(Token* directive, bool not) {
+Trivia Preprocessor::handleIfDefDirective(Token* directive, bool inverted) {
     // next token should be the macro name
     auto name = expect(TokenKind::Identifier);
     bool take = false;
     if (branchStack.empty() || branchStack.back().currentActive) {
         take = macros.find(name->valueText()) != macros.end();
-        if (not)
+        if (inverted)
             take = !take;
     }
 

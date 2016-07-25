@@ -979,7 +979,7 @@ empty
 
 BinaryBlockEventExpressionSyntax base=BlockEventExpressionSyntax kind=BinaryBlockEventExpression
 BlockEventExpressionSyntax left
-token or
+token orKeyword
 BlockEventExpressionSyntax right
 
 PrimaryBlockEventExpressionSyntax base=BlockEventExpressionSyntax kind=PrimaryBlockEventExpression
