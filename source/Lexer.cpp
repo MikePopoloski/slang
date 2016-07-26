@@ -9,25 +9,32 @@ namespace slang {
 SyntaxKind getDirectiveKind(StringRef directive);
 
 Lexer::Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diagnostics) :
+    Lexer(buffer->id, buffer->data.begin(), buffer->data.end(), alloc, diagnostics)
+{
+}
+
+Lexer::Lexer(FileID bufferId, const char* sourceBuffer, const char* sourceEnd, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
     diagnostics(diagnostics),
-    buffer(buffer),
-    sourceBuffer(buffer->data.begin()),
-    sourceEnd(buffer->data.end()),
+    bufferId(bufferId),
+    originalBegin(sourceBuffer),
+    sourceBuffer(sourceBuffer),
+    sourceEnd(sourceEnd),
     marker(nullptr)
 {
-    ASSERT(buffer->data.count());
-    ASSERT(buffer->data.back() == '\0');
+    ptrdiff_t count = sourceEnd - sourceBuffer;
+    ASSERT(count);
+    ASSERT(sourceEnd[-1] == '\0');
 
     // detect BOMs so we can give nice errors for invaild encoding
-    if (buffer->data.count() >= 2) {
+    if (count >= 2) {
         const unsigned char* ubuf = reinterpret_cast<const unsigned char*>(sourceBuffer);
         if ((ubuf[0] == 0xFF && ubuf[1] == 0xFE) ||
             (ubuf[0] == 0xFE && ubuf[1] == 0xFF)) {
             addError(DiagCode::UnicodeBOM, 0);
             advance(2);
         }
-        else if (buffer->data.count() >= 3) {
+        else if (count >= 3) {
             if (ubuf[0] == 0xEF &&
                 ubuf[1] == 0xBB &&
                 ubuf[2] == 0xBF) {
@@ -39,7 +46,46 @@ Lexer::Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diag
 }
 
 Token* Lexer::concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right) {
+    // TODO: think about what happens if there is trivia in right token
+    // TODO: think about what we should set the resulting location to be in order to capture expansion info
+    auto location = left->location;
+    auto trivia = left->trivia;
 
+    // if either side is empty, we have an error; the user tried to concatenate some weird kind of token
+    auto leftText = left->rawText();
+    auto rightText = right->rawText();
+    if (!leftText || !rightText)
+        return nullptr;
+
+    // combine the text for both sides; make sure to include room for a null
+    uint32_t newLength = leftText.length() + rightText.length() + 1;
+    uint8_t* mem = alloc.allocate(newLength);
+    memcpy(mem, leftText.begin(), leftText.length());
+    memcpy(mem + leftText.length(), rightText.begin(), rightText.length());
+    mem[newLength - 1] = '\0';
+    StringRef combined{ (char*)mem, newLength };
+
+    // common case: identifier + identifier
+    // TODO: test that this works for all kinds of identifiers
+    if (left->kind == TokenKind::Identifier && right->kind == TokenKind::Identifier) {
+        return Token::createIdentifier(alloc, TokenKind::Identifier, location, trivia, combined.subString(0, newLength - 1), IdentifierType::Normal);
+    }
+
+    // slow path: spin up a new lexer and lex the combined text
+    Diagnostics unused;
+    Lexer lexer{ FileID(), combined.begin(), combined.end(), alloc, unused };
+
+    auto token = lexer.lex();
+    if (token->kind == TokenKind::Unknown || !token->rawText())
+        return nullptr;
+
+    // make sure the next token is an EoF, otherwise there is junk left in the buffer
+    if (lexer.lex()->kind != TokenKind::EndOfFile)
+        return nullptr;
+
+    token->location = location;
+    token->trivia = trivia;
+    return token;
 }
 
 Token* Lexer::lex(LexerMode mode) {
@@ -918,11 +964,11 @@ void Lexer::addError(DiagCode code, uint32_t offset) {
 }
 
 uint32_t Lexer::currentOffset() {
-    return (uint32_t)(sourceBuffer - buffer->data.begin());
+    return (uint32_t)(sourceBuffer - originalBegin);
 }
 
 FileID Lexer::getFile() const {
-    return buffer->id;
+    return bufferId;
 }
 
 } // namespace slang

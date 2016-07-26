@@ -102,11 +102,7 @@ public:
     }
 
     void append(const T& item) {
-        if (len == capacity) {
-            capacity = (uint32_t)(capacity * 1.5);
-            resize();
-        }
-
+        amortizeCapacity();
         new (&data[len++]) T(item);
     }
 
@@ -133,11 +129,7 @@ public:
 
     template<typename... Args>
     void emplace(Args&&... args) {
-        if (len == capacity) {
-            capacity = (uint32_t)(capacity * 1.5);
-            resize();
-        }
-
+        amortizeCapacity();
         new (&data[len++]) T(std::forward<Args>(args)...);
     }
 
@@ -176,6 +168,15 @@ private:
 
         cleanup();
         data = newData;
+    }
+
+    void amortizeCapacity() {
+        if (len == capacity) {
+            capacity = (uint32_t)(capacity * 1.5);
+            if (capacity == 0)
+                capacity = 4;
+            resize();
+        }
     }
 
     void ensureSize(uint32_t size) {

@@ -40,6 +40,8 @@ public:
     static Token* concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right);
 
 private:
+    Lexer(FileID bufferId, const char* sourceBuffer, const char* sourceEnd, BumpAllocator& alloc, Diagnostics& diagnostics);
+
     struct TokenInfo {
         StringRef niceText;
         NumericValue numericValue;
@@ -108,7 +110,8 @@ private:
     BufferPool<Trivia> triviaPool;
 
     // the source text and start and end pointers within it
-    const SourceBuffer* buffer;
+    FileID bufferId;
+    const char* originalBegin;
     const char* sourceBuffer;
     const char* sourceEnd;
 

@@ -177,6 +177,32 @@ TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
+    auto& text = "`define FOO(x,y) x   ``   _blah``y\n`FOO(   bar,    _BAZ)";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "bar_blah_BAZ");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro pasting (operator)", "[preprocessor]") {
+    auto& text = "`define FOO(x) x``+\n`FOO(+)";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::DoublePlus);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
+    auto& text = "`define FOO(x,y) x``foo``y``42\n`FOO(bar_, 32)";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "bar_foo3242");
+    CHECK(diagnostics.empty());
+}
+
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     auto& token = lexToken(text);

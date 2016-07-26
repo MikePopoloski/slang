@@ -488,13 +488,16 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token* directiv
             // of the buffer results in nothing happening. This isn't specified in the
             // standard so I'm just guessing.
             if (i != 0 && i != tokens.count() - 1) {
-                token = tokens[++i];
-                expandedTokens.back() = Lexer::concatenateTokens(alloc, expandedTokens.back(), token);
+                token = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[++i]);
+                if (!token) {
+                    // TODO:
+                }
+                else {
+                    expandedTokens.back() = token;
+                }
             }
         }
     }
-    for (auto& token : tokens)
-        expandedTokens.append(token);
 
     // if the macro expanded into any tokens at all, set the pointer so that we'll pull from them next
     if (!expandedTokens.empty())
