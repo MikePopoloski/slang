@@ -40,6 +40,12 @@
 `default_nettype none
 `timescale 100ps/1ps
 
+`define LOG_NUM_LANES 1
+`define LOG_FPW 1
+`define FPW 1
+`define OPENHMC_ASYNC_FIFOS 1
+`define OPEN_RSP_MODE 1
+
 module dut #(
     //*************************Don't touch! Control the design with arguments when executing run.sh
 	parameter LOG_NUM_LANES             = `LOG_NUM_LANES,

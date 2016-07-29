@@ -43,6 +43,12 @@
 
 `timescale 100ps/10ps
 
+`define LOG_NUM_LANES 1
+`define LOG_FPW 1
+`define FPW 1
+`define OPENHMC_ASYNC_FIFOS 1
+`define OPEN_RSP_MODE 1
+
 module tb_top ();
 
 	import uvm_pkg::*;

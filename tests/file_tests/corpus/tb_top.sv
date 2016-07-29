@@ -42,7 +42,11 @@
 `include "hmc_module_pkg.sv"
 `include "cag_rgm_rfs_if.sv"
 
-
+`define LOG_NUM_LANES 1
+`define LOG_FPW 1
+`define FPW 1
+`define OPENHMC_ASYNC_FIFOS 1
+`define OPEN_RSP_MODE 1
 
 `timescale 100ps/1ps
 
