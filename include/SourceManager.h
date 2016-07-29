@@ -32,10 +32,11 @@ public:
     // SourceLocation and FileID query methods
     uint32_t getLineNumber(SourceLocation location);
     uint32_t getColumnNumber(SourceLocation location);
-    StringRef getBufferName(BufferID id);
+    StringRef getBufferName(BufferID buffer);
+    SourceLocation getIncludedFrom(BufferID buffer);
 
     // get the buffer for the given file ID
-    const Buffer<char>& getBufferMemory(BufferID id);
+    const Buffer<char>* getBufferMemory(BufferID buffer);
 
     // Give ownership of source code to the manager and refer to it by the given path.
     // This method will fail if the given path is already loaded.

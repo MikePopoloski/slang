@@ -23,11 +23,7 @@ int parseFile(SourceBuffer buffer, const char* path) {
     auto tree = parser.parseCompilationUnit();
     if (!diagnostics.empty()) {
         printf("Parsing '%s'\n", path);
-        for (auto& diag : diagnostics) {
-            auto report = diagnostics.getReport(diag);
-            printf("%s\n", report.toString(sourceManager).c_str());
-        }
-        printf("\n\n");
+        printf("%s\n\n", diagnostics.reportAll(sourceManager).c_str());
     }
     return diagnostics.count();
 }
@@ -41,8 +37,8 @@ int main() {
         if (p.status().type() != fs::file_type::regular)
             continue;
 
-        //if (errors > 100)
-            //break;
+        if (errors > 100)
+            break;
 
         auto buffer = sourceManager.readSource(p.path().string());
         errors += parseFile(buffer, p.path().string().c_str());

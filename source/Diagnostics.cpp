@@ -91,20 +91,52 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
 
 static StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col);
 
-Diagnostics::Diagnostics() :
-    Buffer::Buffer(128)
+DiagnosticReport::DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
+    diagnostic(diagnostic), format(format), severity(severity)
 {
 }
 
-Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
-    emplace(code, location);
-    return back();
+std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
+    auto location = diagnostic.location;
+    uint32_t col = sourceManager.getColumnNumber(location);
+
+    fmt::MemoryWriter writer;
+    writer.write("{}:{}:{}: {}: ",
+        sourceManager.getBufferName(location.buffer),
+        sourceManager.getLineNumber(location),
+        col,
+        severityToString[(int)severity]
+    );
+
+    // build the error message from arguments, if we have any
+    switch (diagnostic.args.size()) {
+        case 0: writer << format.toString(); break;
+        case 1: writer.write(format.toString(), diagnostic.args[0]); break;
+        case 2: writer.write(format.toString(), diagnostic.args[0], diagnostic.args[1]); break;
+        default:
+            ASSERT(false && "Too many arguments to diagnostic format. Add another switch case!");
+    }
+
+    // print out the source line, if possible
+    StringRef line = getBufferLine(sourceManager, location, col);
+    if (line) {
+        writer.write("\n{}\n", line);
+        for (unsigned i = 0; i < col - 1; i++) {
+            if (line[i] == '\t')
+                writer << '\t';
+            else
+                writer << ' ';
+        }
+        writer << '^';
+    }
+
+    return writer.str();
 }
 
-DiagnosticReport Diagnostics::getReport(const Diagnostic& diagnostic) const {
-    auto& descriptor = diagnosticDescriptors[(int)diagnostic.code];
-    return {
-        diagnostic,
+DiagnosticReport Diagnostic::toReport() const {
+    auto& descriptor = diagnosticDescriptors[(int)code];
+    return{
+        *this,
         descriptor.format,
         descriptor.severity
     };
@@ -134,53 +166,36 @@ Diagnostic& operator <<(Diagnostic& diag, Diagnostic::Arg&& arg) {
     return diag;
 }
 
-DiagnosticReport::DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
-    diagnostic(diagnostic), format(format), severity(severity)
+Diagnostics::Diagnostics() :
+    Buffer::Buffer(128)
 {
 }
 
-std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
-    auto location = diagnostic.location;
-    uint32_t col = sourceManager.getColumnNumber(location);
+Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
+    emplace(code, location);
+    return back();
+}
 
-    fmt::MemoryWriter writer;
-    writer.write("{}:{}:{}: {}: ",
-        sourceManager.getBufferName(location.buffer),
-        sourceManager.getLineNumber(location),
-        col,
-        severityToString[(int)severity]
-    );
+std::string Diagnostics::reportAll(SourceManager& sourceManager) {
+    // first sort diagnostics by file so that we can cut down
+    // on the amount of include information we print out
+    std::sort(begin(), end(), [](auto& x, auto& y) { return x.location.buffer.id < y.location.buffer.id; });
 
-    // build the error message from arguments, if we have any
-    switch (diagnostic.args.size()) {
-        case 0: writer << format.toString(); break;
-        case 1: writer.write(format.toString(), diagnostic.args[0]); break;
-        case 2: writer.write(format.toString(), diagnostic.args[0], diagnostic.args[1]); break;
-        default:
-            ASSERT(false && "Too many arguments to diagnostic format. Add another switch case!");
+    std::string result;
+    for (auto& diag : *this) {
+        result += diag.toReport().toString(sourceManager);
+        result += '\n';
     }
 
-    // print out the source line, if possible
-    StringRef line = getBufferLine(sourceManager, location, col);
-    if (!line)
-        writer << '\n';
-    else {
-        writer.write("\n{}\n", line);
-        for (unsigned i = 0; i < col - 1; i++) {
-            if (line[i] == '\t')
-                writer << '\t';
-            else
-                writer << ' ';
-        }
-        writer << '^';
-    }
-
-    return writer.str();
+    return result;
 }
 
 StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
-    const Buffer<char>& buffer = sourceManager.getBufferMemory(location.buffer);
-    const char* start = buffer.begin() + location.offset - (col - 1);
+    const Buffer<char>* buffer = sourceManager.getBufferMemory(location.buffer);
+    if (!buffer)
+        return nullptr;
+
+    const char* start = buffer->begin() + location.offset - (col - 1);
     const char* curr = start;
     while (*curr != '\n' && *curr != '\r' && *curr != '\0')
         curr++;

@@ -33,7 +33,8 @@ void SourceManager::addUserDirectory(StringRef path) {
 
 uint32_t SourceManager::getLineNumber(SourceLocation location) {
     FileData* fd = getFileData(location.buffer);
-    ASSERT(fd);
+    if (!fd)
+        return 0;
 
     // compute line offsets if we haven't already
     if (fd->lineOffsets.empty())
@@ -45,7 +46,8 @@ uint32_t SourceManager::getLineNumber(SourceLocation location) {
 
 uint32_t SourceManager::getColumnNumber(SourceLocation location) {
     FileData* fd = getFileData(location.buffer);
-    ASSERT(fd);
+    if (!fd)
+        return 0;
 
     // walk backward to find start of line
     uint32_t lineStart = location.offset;
@@ -58,16 +60,29 @@ uint32_t SourceManager::getColumnNumber(SourceLocation location) {
 
 StringRef SourceManager::getBufferName(BufferID buffer) {
     FileData* fd = getFileData(buffer);
-    ASSERT(fd);
+    if (!fd)
+        return nullptr;
 
     return fd->name;
 }
 
-const Buffer<char>& SourceManager::getBufferMemory(BufferID buffer) {
-    FileData* fd = getFileData(buffer);
-    ASSERT(fd);
+SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
+    if (!buffer)
+        return SourceLocation();
 
-    return fd->mem;
+    ASSERT(buffer.id < bufferEntries.size());
+    BufferEntry& entry = bufferEntries[buffer.id];
+
+    ASSERT(entry.isFile);
+    return entry.file.includedFrom;
+}
+
+const Buffer<char>* SourceManager::getBufferMemory(BufferID buffer) {
+    FileData* fd = getFileData(buffer);
+    if (!fd)
+        return nullptr;
+
+    return &fd->mem;
 }
 
 SourceBuffer SourceManager::assignText(StringRef text) {

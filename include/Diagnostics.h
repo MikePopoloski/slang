@@ -78,6 +78,25 @@ enum class DiagCode : uint8_t {
     ExpectedAssignmentKey
 };
 
+class Diagnostic;
+
+enum class DiagnosticSeverity {
+    Info,
+    Warning,
+    Error
+};
+
+class DiagnosticReport {
+public:
+    const Diagnostic& diagnostic;
+    StringRef format;
+    DiagnosticSeverity severity;
+
+    DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity);
+
+    std::string toString(SourceManager& sourceManager) const;
+};
+
 class Diagnostic {
 public:
     struct Arg {
@@ -99,24 +118,9 @@ public:
 
     Diagnostic(DiagCode code, SourceLocation location);
 
+    DiagnosticReport toReport() const;
+
     friend Diagnostic& operator <<(Diagnostic& diag, Arg&& arg);
-};
-
-enum class DiagnosticSeverity {
-    Info,
-    Warning,
-    Error
-};
-
-class DiagnosticReport {
-public:
-    const Diagnostic& diagnostic;
-    StringRef format;
-    DiagnosticSeverity severity;
-
-    DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity);
-
-    std::string toString(SourceManager& sourceManager) const;
 };
 
 class Diagnostics : public Buffer<Diagnostic> {
@@ -124,7 +128,8 @@ public:
     Diagnostics();
 
     Diagnostic& add(DiagCode code, SourceLocation location);
-    DiagnosticReport getReport(const Diagnostic& diagnostic) const;
+
+    std::string reportAll(SourceManager& sourceManager);
 };
 
 }
