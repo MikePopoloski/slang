@@ -173,6 +173,8 @@ SourceBuffer SourceManager::openCached(path_type fullPath, SourceLocation includ
     auto it = lookupCache.find(canonicalStr);
     if (it != lookupCache.end()) {
         FileData* fd = it->second.get();
+        if (!fd)
+            return SourceBuffer();
         return createBufferEntry(fd, includedFrom);
     }
 
@@ -187,9 +189,10 @@ SourceBuffer SourceManager::openCached(path_type fullPath, SourceLocation includ
 }
 
 SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& path, Buffer<char>&& buffer) {
+    std::string name = path.filename().string();
     auto fd = std::make_unique<FileData>(
         &*directories.insert(path.remove_filename()).first,
-        path.filename().string(),
+        name,
         std::move(buffer)
     );
 

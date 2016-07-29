@@ -5,6 +5,37 @@
 
 #include "SourceManager.h"
 
+namespace {
+
+using namespace slang;
+
+StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
+    const Buffer<char>* buffer = sourceManager.getBufferMemory(location.buffer);
+    if (!buffer)
+        return nullptr;
+
+    const char* start = buffer->begin() + location.offset - (col - 1);
+    const char* curr = start;
+    while (*curr != '\n' && *curr != '\r' && *curr != '\0')
+        curr++;
+
+    return StringRef(start, (uint32_t)(curr - start));
+}
+
+void getIncludeStack(SourceManager& sourceManager, BufferID buffer, std::deque<SourceLocation>& stack) {
+    stack.clear();
+    while (buffer) {
+        SourceLocation loc = sourceManager.getIncludedFrom(buffer);
+        if (!loc.buffer)
+            break;
+
+        stack.push_front(loc);
+        buffer = loc.buffer;
+    }
+}
+
+}
+
 namespace slang {
 
 struct DiagnosticDescriptor {
@@ -88,8 +119,6 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "ExpectedInterfaceClassName" },
     { "ExpectedAssignmentKey" }
 };
-
-static StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col);
 
 DiagnosticReport::DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
     diagnostic(diagnostic), format(format), severity(severity)
@@ -181,26 +210,28 @@ std::string Diagnostics::reportAll(SourceManager& sourceManager) {
     // on the amount of include information we print out
     std::sort(begin(), end(), [](auto& x, auto& y) { return x.location.buffer.id < y.location.buffer.id; });
 
-    std::string result;
+    std::deque<SourceLocation> includeStack;
+    BufferID lastBuffer;
+    fmt::MemoryWriter writer;
+
     for (auto& diag : *this) {
-        result += diag.toReport().toString(sourceManager);
-        result += '\n';
+        // We're looking at diagnostics from another file now. See if we should print
+        // include stack info before we go on with the reports.
+        if (diag.location.buffer != lastBuffer) {
+            lastBuffer = diag.location.buffer;
+            getIncludeStack(sourceManager, lastBuffer, includeStack);
+
+            for (auto& loc : includeStack) {
+                writer.write("In file included from {}:{}:\n",
+                    sourceManager.getBufferName(loc.buffer),
+                    sourceManager.getLineNumber(loc)
+                );
+            }
+        }
+        writer << diag.toReport().toString(sourceManager);
+        writer << '\n';
     }
-
-    return result;
-}
-
-StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
-    const Buffer<char>* buffer = sourceManager.getBufferMemory(location.buffer);
-    if (!buffer)
-        return nullptr;
-
-    const char* start = buffer->begin() + location.offset - (col - 1);
-    const char* curr = start;
-    while (*curr != '\n' && *curr != '\r' && *curr != '\0')
-        curr++;
-
-    return StringRef(start, (uint32_t)(curr - start));
+    return writer.str();
 }
 
 }
