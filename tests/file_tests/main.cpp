@@ -15,7 +15,7 @@ Diagnostics diagnostics;
 SourceManager sourceManager;
 Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 
-int parseFile(const SourceBuffer* buffer, const char* path) {
+int parseFile(SourceBuffer buffer, const char* path) {
     diagnostics.clear();
     preprocessor.pushSource(buffer);
     Parser parser(preprocessor);

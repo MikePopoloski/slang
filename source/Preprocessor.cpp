@@ -21,16 +21,12 @@ void Preprocessor::pushSource(StringRef source) {
     pushSource(buffer);
 }
 
-void Preprocessor::pushSource(const SourceBuffer* buffer) {
+void Preprocessor::pushSource(SourceBuffer buffer) {
     ASSERT(lexerStack.size() < MaxIncludeDepth);
+    ASSERT(buffer.id);
+
     auto lexer = alloc.emplace<Lexer>(buffer, alloc, diagnostics);
     lexerStack.push_back(lexer);
-}
-
-BufferID Preprocessor::getCurrentBuffer() {
-    if (lexerStack.empty())
-        return BufferID();
-    return lexerStack.back()->getBufferID();
 }
 
 Token* Preprocessor::next() {
@@ -154,8 +150,8 @@ Trivia Preprocessor::handleIncludeDirective(Token* directive) {
     else {
         // remove delimiters
         path = path.subString(1, path.length() - 2);
-        SourceBuffer* buffer = sourceManager.readHeader(path, getCurrentBuffer(), false);
-        if (!buffer)
+        SourceBuffer buffer = sourceManager.readHeader(path, directive->location, false);
+        if (!buffer.id)
             addError(DiagCode::CouldNotOpenIncludeFile, fileName->location);
         else if (lexerStack.size() >= MaxIncludeDepth)
             addError(DiagCode::ExceededMaxIncludeDepth);

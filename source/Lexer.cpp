@@ -8,18 +8,18 @@ namespace slang {
 
 SyntaxKind getDirectiveKind(StringRef directive);
 
-Lexer::Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    Lexer(buffer->id, buffer->data.begin(), buffer->data.end(), alloc, diagnostics)
+Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics) :
+    Lexer(buffer.id, buffer.data, alloc, diagnostics)
 {
 }
 
-Lexer::Lexer(BufferID bufferId, const char* sourceBuffer, const char* sourceEnd, BumpAllocator& alloc, Diagnostics& diagnostics) :
+Lexer::Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
     diagnostics(diagnostics),
     bufferId(bufferId),
-    originalBegin(sourceBuffer),
-    sourceBuffer(sourceBuffer),
-    sourceEnd(sourceEnd),
+    originalBegin(source.begin()),
+    sourceBuffer(source.begin()),
+    sourceEnd(source.end()),
     marker(nullptr)
 {
     ptrdiff_t count = sourceEnd - sourceBuffer;
@@ -73,7 +73,7 @@ Token* Lexer::concatenateTokens(BumpAllocator& alloc, const Token* left, const T
 
     // slow path: spin up a new lexer and lex the combined text
     Diagnostics unused;
-    Lexer lexer{ BufferID(), combined.begin(), combined.end(), alloc, unused };
+    Lexer lexer { BufferID(), combined, alloc, unused };
 
     auto token = lexer.lex();
     if (token->kind == TokenKind::Unknown || !token->rawText())

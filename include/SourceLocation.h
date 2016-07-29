@@ -32,8 +32,8 @@ private:
 class SourceLocation {
 public:
     SourceLocation() : offset(0) {}
-    SourceLocation(BufferID file, uint32_t offset) :
-        file(file), offset(offset)
+    SourceLocation(BufferID buffer, uint32_t offset) :
+        buffer(buffer), offset(offset)
     {
     }
 
@@ -50,7 +50,7 @@ public:
     bool operator <(const SourceLocation& rhs) {
         return offset < rhs.offset;
     }
-    BufferID file;
+    BufferID buffer;
     uint32_t offset;
 
 private:

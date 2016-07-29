@@ -39,11 +39,9 @@ public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     void pushSource(StringRef source);
-    void pushSource(const SourceBuffer* buffer);
+    void pushSource(SourceBuffer buffer);
 
     Token* next();
-
-    BufferID getCurrentBuffer();
 
     SourceManager& getSourceManager() const { return sourceManager; }
     BumpAllocator& getAllocator() const { return alloc; }

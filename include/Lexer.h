@@ -22,7 +22,7 @@ enum class LexerMode {
 
 class Lexer {
 public:
-    Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
@@ -40,7 +40,7 @@ public:
     static Token* concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right);
 
 private:
-    Lexer(BufferID bufferId, const char* sourceBuffer, const char* sourceEnd, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     struct TokenInfo {
         StringRef niceText;

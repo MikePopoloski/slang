@@ -145,7 +145,7 @@ std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
 
     fmt::MemoryWriter writer;
     writer.write("{}:{}:{}: {}: ",
-        sourceManager.getBufferName(location.file),
+        sourceManager.getBufferName(location.buffer),
         sourceManager.getLineNumber(location),
         col,
         severityToString[(int)severity]
@@ -179,11 +179,8 @@ std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
 }
 
 StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
-    auto buffer = sourceManager.getBuffer(location.file);
-    if (!buffer)
-        return nullptr;
-
-    const char* start = buffer->data.begin() + location.offset - (col - 1);
+    const Buffer<char>& buffer = sourceManager.getBufferMemory(location.buffer);
+    const char* start = buffer.begin() + location.offset - (col - 1);
     const char* curr = start;
     while (*curr != '\n' && *curr != '\r' && *curr != '\0')
         curr++;

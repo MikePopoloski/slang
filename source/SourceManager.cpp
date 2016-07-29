@@ -32,58 +32,49 @@ void SourceManager::addUserDirectory(StringRef path) {
 }
 
 uint32_t SourceManager::getLineNumber(SourceLocation location) {
-    if (!location.file)
-        return 0;
-
-    ASSERT(location.file.id < bufferEntries.size());
-    BufferEntry& entry = bufferEntries[location.file.id];
+    FileData* fd = getFileData(location.buffer);
+    ASSERT(fd);
 
     // compute line offsets if we haven't already
-    if (entry.file.lineOffsets.empty())
-        computeLineOffsets(entry.file.buffer->data, entry.file.lineOffsets);
+    if (fd->lineOffsets.empty())
+        computeLineOffsets(fd->mem, fd->lineOffsets);
 
-    auto it = std::lower_bound(entry.file.lineOffsets.begin(), entry.file.lineOffsets.end(), location.offset);
-    return (uint32_t)(it - entry.file.lineOffsets.begin());
+    auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset);
+    return (uint32_t)(it - fd->lineOffsets.begin());
 }
 
 uint32_t SourceManager::getColumnNumber(SourceLocation location) {
-    if (!location.file)
-        return 0;
-
-    ASSERT(location.file.id < bufferEntries.size());
-    BufferEntry& entry = bufferEntries[location.file.id];
-    Buffer<char>& data = entry.file.buffer->data;
+    FileData* fd = getFileData(location.buffer);
+    ASSERT(fd);
 
     // walk backward to find start of line
     uint32_t lineStart = location.offset;
-    ASSERT(lineStart < data.count());
-    while (lineStart > 0 && data[lineStart - 1] != '\n' && data[lineStart - 1] != '\r')
+    ASSERT(lineStart < fd->mem.count());
+    while (lineStart > 0 && fd->mem[lineStart - 1] != '\n' && fd->mem[lineStart - 1] != '\r')
         lineStart--;
 
     return location.offset - lineStart + 1;
 }
 
 StringRef SourceManager::getBufferName(BufferID buffer) {
-    if (!buffer)
-        return nullptr;
+    FileData* fd = getFileData(buffer);
+    ASSERT(fd);
 
-    ASSERT(buffer.id < bufferEntries.size());
-    return bufferEntries[buffer.id].file.name;
+    return fd->name;
 }
 
-SourceBuffer* SourceManager::getBuffer(BufferID id) {
-    if (!id)
-        return nullptr;
+const Buffer<char>& SourceManager::getBufferMemory(BufferID buffer) {
+    FileData* fd = getFileData(buffer);
+    ASSERT(fd);
 
-    ASSERT(id.id < bufferEntries.size());
-    return bufferEntries[id.id].file.buffer;
+    return fd->mem;
 }
 
-SourceBuffer* SourceManager::assignText(StringRef text) {
+SourceBuffer SourceManager::assignText(StringRef text) {
     return assignText("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">", text);
 }
 
-SourceBuffer* SourceManager::assignText(StringRef path, StringRef text) {
+SourceBuffer SourceManager::assignText(StringRef path, StringRef text) {
     Buffer<char> buffer;
     buffer.appendRange(text);
     if (buffer.empty() || buffer.back() != '\0')
@@ -92,7 +83,7 @@ SourceBuffer* SourceManager::assignText(StringRef path, StringRef text) {
     return assignBuffer(path, std::move(buffer));
 }
 
-SourceBuffer* SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) {
+SourceBuffer SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) {
     auto fullPath = fs::canonical(path.toString());
     auto canonicalStr = fullPath.string();
     auto it = lookupCache.find(canonicalStr);
@@ -101,77 +92,94 @@ SourceBuffer* SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer)
     return cacheBuffer(std::move(canonicalStr), fullPath, std::move(buffer));
 }
 
-SourceBuffer* SourceManager::readSource(StringRef path) {
+SourceBuffer SourceManager::readSource(StringRef path) {
     // ensure that we have an absolute path
     ASSERT(path);
     path_type absPath = fs::absolute(path_type(path.begin(), path.end()), workingDir);
-    return openCached(absPath);
+    return openCached(absPath, SourceLocation());
 }
 
-SourceBuffer* SourceManager::readHeader(StringRef path, BufferID includedFrom, bool isSystemPath) {
+SourceBuffer SourceManager::readHeader(StringRef path, SourceLocation includedFrom, bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     ASSERT(path);
     path_type p(path.begin(), path.end());
     if (p.is_absolute())
-        return openCached(p);
+        return openCached(p, includedFrom);
 
     // system path lookups only look in system directories
     if (isSystemPath) {
         for (auto& d : systemDirectories) {
-            SourceBuffer* result = openCached(d / p);
-            if (result)
+            SourceBuffer result = openCached(d / p, includedFrom);
+            if (result.id)
                 return result;
         }
-        return nullptr;
+        return SourceBuffer();
     }
 
     // search relative to the current file
-    const path_type* dir = bufferEntries[includedFrom.getValue()].file.directory;
-    if (dir) {
-        SourceBuffer* result = openCached((*dir) / p);
-        if (result)
+    FileData* fd = getFileData(includedFrom.buffer);
+    if (fd && fd->directory) {
+        SourceBuffer result = openCached((*fd->directory) / p, includedFrom);
+        if (result.id)
             return result;
     }
 
     // search additional include directories
     for (auto& d : userDirectories) {
-        SourceBuffer* result = openCached(d / p);
-        if (result)
+        SourceBuffer result = openCached(d / p, includedFrom);
+        if (result.id)
             return result;
     }
 
-    return nullptr;
+    return SourceBuffer();
 }
 
-SourceBuffer* SourceManager::openCached(path_type fullPath) {
-    // first see if we have this cached
+SourceManager::FileData* SourceManager::getFileData(BufferID buffer) {
+    if (!buffer)
+        return nullptr;
+
+    ASSERT(buffer.id < bufferEntries.size());
+    BufferEntry& entry = bufferEntries[buffer.id];
+
+    ASSERT(entry.isFile);
+    return entry.file.data;
+}
+
+SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom) {
+    ASSERT(fd);
+    bufferEntries.emplace_back(FileInfo(fd, includedFrom));
+    return SourceBuffer { StringRef(fd->mem), BufferID::get(nextBufferID++) };
+}
+
+SourceBuffer SourceManager::openCached(path_type fullPath, SourceLocation includedFrom) {
+    // first see if we have this file cached
     fullPath = fs::canonical(fullPath);
     auto canonicalStr = fullPath.string();
     auto it = lookupCache.find(canonicalStr);
-    if (it != lookupCache.end())
-        return it->second.get();
+    if (it != lookupCache.end()) {
+        FileData* fd = it->second.get();
+        return createBufferEntry(fd, includedFrom);
+    }
 
     // do the read
     Buffer<char> buffer(0);
     if (!readFile(fullPath, buffer)) {
         lookupCache.emplace(std::move(canonicalStr), nullptr);
-        return nullptr;
+        return SourceBuffer();
     }
 
     return cacheBuffer(std::move(canonicalStr), fullPath, std::move(buffer));
 }
 
-SourceBuffer* SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& path, Buffer<char>&& buffer) {
-    auto id = BufferID::get(nextBufferID++);
-    auto result = lookupCache.emplace(std::move(canonicalPath), std::make_unique<SourceBuffer>(id, std::move(buffer))).first->second.get();
+SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& path, Buffer<char>&& buffer) {
+    auto fd = std::make_unique<FileData>(
+        &*directories.insert(path.remove_filename()).first,
+        path.filename().string(),
+        std::move(buffer)
+    );
 
-    FileInfo file;
-    file.buffer = result;
-    file.name = path.filename().string();
-    file.directory = &*directories.insert(path.remove_filename()).first;
-    bufferEntries.emplace_back(file);
-
-    return result;
+    FileData* fdPtr = lookupCache.emplace(std::move(canonicalPath), std::move(fd)).first->second.get();
+    return createBufferEntry(fdPtr, SourceLocation());
 }
 
 bool SourceManager::readFile(const path_type& path, Buffer<char>& buffer) {
