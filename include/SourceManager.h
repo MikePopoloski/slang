@@ -16,10 +16,10 @@ namespace slang {
 
 struct SourceBuffer {
     Buffer<char> data;
-    FileID id;
+    BufferID id;
 
     SourceBuffer() : data(0) {}
-    SourceBuffer(FileID id, Buffer<char>&& data) :
+    SourceBuffer(BufferID id, Buffer<char>&& data) :
         id(id), data(std::move(data)) {
     }
 };
@@ -35,10 +35,10 @@ public:
     // SourceLocation and FileID query methods
     uint32_t getLineNumber(SourceLocation location);
     uint32_t getColumnNumber(SourceLocation location);
-    StringRef getFileName(FileID file);
+    StringRef getBufferName(BufferID id);
 
     // get the buffer for the given file ID
-    SourceBuffer* getBuffer(FileID id);
+    SourceBuffer* getBuffer(BufferID id);
 
     // Give ownership of source code to the manager and refer to it by the given path.
     // This method will fail if the given path is already loaded.
@@ -48,14 +48,14 @@ public:
 
     // get the source buffer for the file at the specified path
     SourceBuffer* readSource(StringRef path);
-    SourceBuffer* readHeader(StringRef path, FileID includedFrom, bool isSystemPath);
+    SourceBuffer* readHeader(StringRef path, BufferID includedFrom, bool isSystemPath);
 
 private:
     using path_type = std::tr2::sys::path;
 
     BumpAllocator alloc;
     path_type workingDir;
-    uint32_t nextFileID = 1;
+    uint32_t nextBufferID = 1;
     uint32_t unnamedBufferCount = 0;
 
     struct FileInfo {

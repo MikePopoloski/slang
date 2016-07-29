@@ -145,7 +145,7 @@ std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
 
     fmt::MemoryWriter writer;
     writer.write("{}:{}:{}: {}: ",
-        sourceManager.getFileName(location.file),
+        sourceManager.getBufferName(location.file),
         sourceManager.getLineNumber(location),
         col,
         severityToString[(int)severity]

@@ -43,7 +43,7 @@ public:
 
     Token* next();
 
-    FileID getCurrentFile();
+    BufferID getCurrentBuffer();
 
     SourceManager& getSourceManager() const { return sourceManager; }
     BumpAllocator& getAllocator() const { return alloc; }

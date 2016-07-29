@@ -4,10 +4,10 @@ namespace slang {
 
 class SourceManager;
 
-struct FileID {
+struct BufferID {
     bool valid() const { return id != 0; }
-    bool operator==(const FileID& rhs) const { return id == rhs.id; }
-    bool operator!=(const FileID& rhs) const { return !(*this == rhs); }
+    bool operator==(const BufferID& rhs) const { return id == rhs.id; }
+    bool operator!=(const BufferID& rhs) const { return !(*this == rhs); }
 
     explicit operator bool() const {
         return valid();
@@ -15,8 +15,8 @@ struct FileID {
     uint32_t id = 0;
 
 protected:
-    static FileID get(uint32_t value) {
-        FileID result;
+    static BufferID get(uint32_t value) {
+        BufferID result;
         result.id = value;
         return result;
     }
@@ -32,7 +32,7 @@ private:
 class SourceLocation {
 public:
     SourceLocation() : offset(0) {}
-    SourceLocation(FileID file, uint32_t offset) :
+    SourceLocation(BufferID file, uint32_t offset) :
         file(file), offset(offset)
     {
     }
@@ -50,7 +50,7 @@ public:
     bool operator <(const SourceLocation& rhs) {
         return offset < rhs.offset;
     }
-    FileID file;
+    BufferID file;
     uint32_t offset;
 
 private:

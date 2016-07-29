@@ -63,15 +63,15 @@ uint32_t SourceManager::getColumnNumber(SourceLocation location) {
     return location.offset - lineStart + 1;
 }
 
-StringRef SourceManager::getFileName(FileID file) {
-    if (!file)
+StringRef SourceManager::getBufferName(BufferID buffer) {
+    if (!buffer)
         return nullptr;
 
-    ASSERT(file.id < bufferEntries.size());
-    return bufferEntries[file.id].file.name;
+    ASSERT(buffer.id < bufferEntries.size());
+    return bufferEntries[buffer.id].file.name;
 }
 
-SourceBuffer* SourceManager::getBuffer(FileID id) {
+SourceBuffer* SourceManager::getBuffer(BufferID id) {
     if (!id)
         return nullptr;
 
@@ -108,7 +108,7 @@ SourceBuffer* SourceManager::readSource(StringRef path) {
     return openCached(absPath);
 }
 
-SourceBuffer* SourceManager::readHeader(StringRef path, FileID includedFrom, bool isSystemPath) {
+SourceBuffer* SourceManager::readHeader(StringRef path, BufferID includedFrom, bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     ASSERT(path);
     path_type p(path.begin(), path.end());
@@ -162,7 +162,7 @@ SourceBuffer* SourceManager::openCached(path_type fullPath) {
 }
 
 SourceBuffer* SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& path, Buffer<char>&& buffer) {
-    auto id = FileID::get(nextFileID++);
+    auto id = BufferID::get(nextBufferID++);
     auto result = lookupCache.emplace(std::move(canonicalPath), std::make_unique<SourceBuffer>(id, std::move(buffer))).first->second.get();
 
     FileInfo file;

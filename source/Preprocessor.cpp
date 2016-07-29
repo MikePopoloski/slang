@@ -27,10 +27,10 @@ void Preprocessor::pushSource(const SourceBuffer* buffer) {
     lexerStack.push_back(lexer);
 }
 
-FileID Preprocessor::getCurrentFile() {
+BufferID Preprocessor::getCurrentBuffer() {
     if (lexerStack.empty())
-        return FileID();
-    return lexerStack.back()->getFile();
+        return BufferID();
+    return lexerStack.back()->getBufferID();
 }
 
 Token* Preprocessor::next() {
@@ -154,7 +154,7 @@ Trivia Preprocessor::handleIncludeDirective(Token* directive) {
     else {
         // remove delimiters
         path = path.subString(1, path.length() - 2);
-        SourceBuffer* buffer = sourceManager.readHeader(path, getCurrentFile(), false);
+        SourceBuffer* buffer = sourceManager.readHeader(path, getCurrentBuffer(), false);
         if (!buffer)
             addError(DiagCode::CouldNotOpenIncludeFile, fileName->location);
         else if (lexerStack.size() >= MaxIncludeDepth)

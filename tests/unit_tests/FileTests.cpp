@@ -23,17 +23,17 @@ TEST_CASE("Read header (absolute)", "[files]") {
     std::string testPath = manager.makeAbsolutePath(RelativeTestPath);
 
     // check load failure
-    CHECK(manager.readHeader("X:\\nonsense.txt", FileID(), false) == nullptr);
+    CHECK(manager.readHeader("X:\\nonsense.txt", BufferID(), false) == nullptr);
 
     // successful load
-    SourceBuffer* buffer = manager.readHeader(testPath, FileID(), false);
+    SourceBuffer* buffer = manager.readHeader(testPath, BufferID(), false);
     REQUIRE(buffer);
     CHECK(!buffer->data.empty());
     CHECK(buffer->id);
 
     // next load should be cached
-    FileID id1 = buffer->id;
-    buffer = manager.readHeader(testPath, FileID(), false);
+    BufferID id1 = buffer->id;
+    buffer = manager.readHeader(testPath, BufferID(), false);
     REQUIRE(buffer);
     CHECK(!buffer->data.empty());
     CHECK(buffer->id == id1);
@@ -43,10 +43,10 @@ TEST_CASE("Read header (relative)", "[files]") {
     SourceManager manager;
 
     // relative to nothing should never return anything
-    CHECK(!manager.readHeader("relative", FileID(), false));
+    CHECK(!manager.readHeader("relative", BufferID(), false));
 
     // get a file ID to load relative to
-    SourceBuffer* buffer1 = manager.readHeader(manager.makeAbsolutePath(RelativeTestPath), FileID(), false);
+    SourceBuffer* buffer1 = manager.readHeader(manager.makeAbsolutePath(RelativeTestPath), BufferID(), false);
     REQUIRE(buffer1);
     REQUIRE(buffer1->id);
 
@@ -68,7 +68,7 @@ TEST_CASE("Read header (include dirs)", "[files]") {
     SourceManager manager;
     manager.addSystemDirectory(manager.makeAbsolutePath("../../../tests/unit_tests/data/"));
 
-    SourceBuffer* buffer = manager.readHeader("include.svh", FileID(),true);
+    SourceBuffer* buffer = manager.readHeader("include.svh", BufferID(), true);
     REQUIRE(buffer);
 
     manager.addUserDirectory(manager.makeAbsolutePath("../../../tests/unit_tests/data/nested"));

@@ -32,7 +32,7 @@ public:
     // an infinite stream of EndOfFile tokens will be generated
     Token* lex(LexerMode mode = LexerMode::Normal);
 
-    FileID getFile() const;
+    BufferID getBufferID() const;
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
 
@@ -40,7 +40,7 @@ public:
     static Token* concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right);
 
 private:
-    Lexer(FileID bufferId, const char* sourceBuffer, const char* sourceEnd, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(BufferID bufferId, const char* sourceBuffer, const char* sourceEnd, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     struct TokenInfo {
         StringRef niceText;
@@ -110,7 +110,7 @@ private:
     BufferPool<Trivia> triviaPool;
 
     // the source text and start and end pointers within it
-    FileID bufferId;
+    BufferID bufferId;
     const char* originalBegin;
     const char* sourceBuffer;
     const char* sourceEnd;

@@ -13,7 +13,7 @@ Lexer::Lexer(const SourceBuffer* buffer, BumpAllocator& alloc, Diagnostics& diag
 {
 }
 
-Lexer::Lexer(FileID bufferId, const char* sourceBuffer, const char* sourceEnd, BumpAllocator& alloc, Diagnostics& diagnostics) :
+Lexer::Lexer(BufferID bufferId, const char* sourceBuffer, const char* sourceEnd, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
     diagnostics(diagnostics),
     bufferId(bufferId),
@@ -73,7 +73,7 @@ Token* Lexer::concatenateTokens(BumpAllocator& alloc, const Token* left, const T
 
     // slow path: spin up a new lexer and lex the combined text
     Diagnostics unused;
-    Lexer lexer{ FileID(), combined.begin(), combined.end(), alloc, unused };
+    Lexer lexer{ BufferID(), combined.begin(), combined.end(), alloc, unused };
 
     auto token = lexer.lex();
     if (token->kind == TokenKind::Unknown || !token->rawText())
@@ -557,7 +557,7 @@ Token* Lexer::lexIncludeFileName() {
     char delim = peek();
     if (delim != '"' && delim != '<') {
         addError(DiagCode::ExpectedIncludeFileName, offset);
-        return Token::missing(alloc, TokenKind::IncludeFileName, SourceLocation(getFile(), offset), trivia);
+        return Token::missing(alloc, TokenKind::IncludeFileName, SourceLocation(getBufferID(), offset), trivia);
     }
 
     advance();
@@ -572,7 +572,7 @@ Token* Lexer::lexIncludeFileName() {
     } while (c != delim);
 
     StringRef rawText = lexeme();
-    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, SourceLocation(getFile(), offset), trivia, rawText, rawText);
+    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, SourceLocation(getBufferID(), offset), trivia, rawText, rawText);
 }
 
 TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
@@ -932,7 +932,7 @@ bool Lexer::scanBlockComment(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
 
 Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer) {
     auto trivia = triviaBuffer.copy(alloc);
-    auto location = SourceLocation(getFile(), info.offset);
+    auto location = SourceLocation(getBufferID(), info.offset);
 
     switch (kind) {
         case TokenKind::Unknown:
@@ -960,14 +960,14 @@ void Lexer::addTrivia(TriviaKind kind, Buffer<Trivia>& triviaBuffer) {
 }
 
 void Lexer::addError(DiagCode code, uint32_t offset) {
-    diagnostics.emplace(code, SourceLocation(getFile(), offset));
+    diagnostics.emplace(code, SourceLocation(getBufferID(), offset));
 }
 
 uint32_t Lexer::currentOffset() {
     return (uint32_t)(sourceBuffer - originalBegin);
 }
 
-FileID Lexer::getFile() const {
+BufferID Lexer::getBufferID() const {
     return bufferId;
 }
 
