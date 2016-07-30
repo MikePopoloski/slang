@@ -2303,7 +2303,7 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
     auto dimensions = parseDimensionList();
 
     if (!allowImplicit)
-        addError(DiagCode::ImplicitNotAllowed);
+        addError(DiagCode::ImplicitNotAllowed, peek()->location);
 
     return alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
 }

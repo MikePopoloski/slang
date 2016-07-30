@@ -93,7 +93,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "SyntaxError" },
     { "expected identifier" },
     { "expected '{}'" },
-    { "ImplicitNotAllowed" },
+    { "expected data type (implicit type name not allowed)" },
     { "MultipleTypesInDeclaration" },
     { "DirectionOnInterfacePort" },
     { "ColonShouldBeDot" },
