@@ -104,7 +104,7 @@ SourceBuffer SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) 
     auto it = lookupCache.find(canonicalStr);
     ASSERT(it == lookupCache.end());
 
-    return cacheBuffer(std::move(canonicalStr), fullPath, std::move(buffer));
+    return cacheBuffer(std::move(canonicalStr), fullPath, SourceLocation(), std::move(buffer));
 }
 
 SourceBuffer SourceManager::readSource(StringRef path) {
@@ -185,10 +185,10 @@ SourceBuffer SourceManager::openCached(path_type fullPath, SourceLocation includ
         return SourceBuffer();
     }
 
-    return cacheBuffer(std::move(canonicalStr), fullPath, std::move(buffer));
+    return cacheBuffer(std::move(canonicalStr), fullPath, includedFrom, std::move(buffer));
 }
 
-SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& path, Buffer<char>&& buffer) {
+SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& path, SourceLocation includedFrom, Buffer<char>&& buffer) {
     std::string name = path.filename().string();
     auto fd = std::make_unique<FileData>(
         &*directories.insert(path.remove_filename()).first,
@@ -197,7 +197,7 @@ SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& 
     );
 
     FileData* fdPtr = lookupCache.emplace(std::move(canonicalPath), std::move(fd)).first->second.get();
-    return createBufferEntry(fdPtr, SourceLocation());
+    return createBufferEntry(fdPtr, includedFrom);
 }
 
 bool SourceManager::readFile(const path_type& path, Buffer<char>& buffer) {
