@@ -203,6 +203,15 @@ TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Macro stringify", "[preprocessor]") {
+    auto& text = "`define FOO(x) `\" `\\`\" x``foo``42 `\\`\" `\"\n`FOO(bar_)";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == " \" bar_foo42 \"");
+    CHECK(diagnostics.empty());
+}
+
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     auto& token = lexToken(text);

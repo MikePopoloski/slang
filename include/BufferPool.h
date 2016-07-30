@@ -29,6 +29,14 @@ public:
         T* begin() { return buffer->begin(); }
         T* end() { return buffer->end(); }
 
+        T& back() {
+            return buffer->back();
+        }
+
+        void pop() {
+            buffer->pop();
+        }
+
         void append(const TWrapped& item) { buffer->append(item); }
         void appendRange(const TWrapped* begin, const TWrapped* end) { buffer->appendRange(begin, end); }
 

@@ -93,7 +93,8 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
         return result;
     }
 
-    // if this assert fires, the user disregarded an EoF and kept calling next()
+    // if this assert fires, the user disregarded an EoF and kept calling
+    // next()
     ASSERT(!lexerStack.empty());
 
     // Pull the next token from the active source.
@@ -114,8 +115,9 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
     if (lexerStack.empty())
         return token;
 
-    // Rare case: we have an EoF from an include file... we don't want to return
-    // that one, but we do want to merge its trivia with whatever comes next.
+    // Rare case: we have an EoF from an include file... we don't want to
+    // return that one, but we do want to merge its trivia with whatever comes
+    // next.
     auto trivia = triviaPool.get();
     trivia.appendRange(token->trivia);
 
@@ -131,7 +133,8 @@ Token* Preprocessor::nextRaw(LexerMode mode) {
             break;
     }
 
-    // finally found a real token to return, so update trivia and get out of here
+    // finally found a real token to return, so update trivia and get out of
+    // here
     token->trivia = trivia.copy(alloc);
     if (lexerStack.size() > 1)
         token->markAsPreprocessed();
@@ -473,27 +476,82 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token* directiv
     if (!expandReplacementList(tokens))
         return actualArgs;
 
-    // TODO: concatenate, stringize, etc
+    Token* stringify = nullptr;
+    buffer.clear();
     expandedTokens.clear();
     for (uint32_t i = 0; i < tokens.count(); i++) {
         Token* token = tokens[i];
-        if (token->kind != TokenKind::MacroPaste)
-            expandedTokens.append(token);
-        else {
-            // Paste together previous token and next token; a macro paste on either end
-            // of the buffer results in nothing happening. This isn't specified in the
-            // standard so I'm just guessing.
-            if (i != 0 && i != tokens.count() - 1) {
-                token = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[++i]);
-                if (!token) {
-                    // TODO:
+        Token* newToken = nullptr;
+
+        // Once we see a `" token, we start collecting tokens into their own
+        // buffer for stringification. Otherwise, just add them to the final
+        // expansion buffer.
+        switch (token->kind) {
+            case TokenKind::MacroQuote:
+                if (!stringify)
+                    stringify = token;
+                else {
+                    // all done stringifying; convert saved tokens to string   
+                    newToken = Lexer::stringify(alloc, stringify->location, stringify->trivia, buffer.begin(), buffer.end());
+                    if (!newToken) {
+                        // TODO: error
+                    }
+                    stringify = nullptr;
+                }
+                break;
+            case TokenKind::MacroEscapedQuote:
+                if (!stringify) {
+                    // TODO: error
                 }
                 else {
-                    expandedTokens.back() = token;
+                    // plop this into our stringify buffer; we'll handle it later
+                    newToken = token;
                 }
-            }
+                break;
+            case TokenKind::MacroPaste:
+                // Paste together previous token and next token; a macro paste on either end
+                // of the buffer is an error. This isn't specified in the standard so I'm just guessing.
+                if (i == 0 || i == tokens.count() - 1) {
+                    // TODO: error
+                }
+                else if (stringify) {
+                    // if this is right after the opening quote or right before the closing quote, we're
+                    // trying to concatenate something with nothing, so assume an error
+                    if (buffer.empty() || tokens[i + 1]->kind == TokenKind::MacroQuote) {
+                        // TODO: error
+                    }
+                    else {
+                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[++i]);
+                        if (newToken)
+                            buffer.pop();
+                        else {
+                            // TODO: handle error cases
+                        }
+                    }
+                }
+                else {
+                    newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[++i]);
+                    if (newToken)
+                        expandedTokens.pop();
+                    else {
+                        // TODO: handle error cases
+                    }
+                }
+                break;
+            default:
+                newToken = token;
+                break;
+        }
+
+        if (newToken) {
+            // if we're stringifying, save this in a temporary buffer
+            if (stringify)
+                buffer.append(newToken);
+            else
+                expandedTokens.append(newToken);
         }
     }
+
 
     // if the macro expanded into any tokens at all, set the pointer so that we'll pull from them next
     if (!expandedTokens.empty())
@@ -556,8 +614,20 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgument
             auto it = argumentMap.find(token->valueText());
             if (it == argumentMap.end())
                 dest.append(token);
-            else
-                dest.appendRange(*it->second);
+            else {
+                // we need to ensure that we get correct spacing for the leading token here;
+                // it needs to come from the *formal* parameter used in the macro body, not
+                // from the argument iself
+                auto begin = it->second->begin();
+                auto end = it->second->end();
+                if (begin != end) {
+                    (*begin)->trivia = token->trivia;
+                    dest.append(*begin);
+
+                    // append the rest of them in one go
+                    dest.appendRange(++begin, end);
+                }
+            }
         }
     }
 

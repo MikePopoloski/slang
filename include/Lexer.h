@@ -39,6 +39,9 @@ public:
     // Concatenate two tokens together; used for macro pasting
     static Token* concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right);
 
+    // Convert a range of tokens into a string literal; used for macro stringification
+    static Token* stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token** begin, Token** end);
+
 private:
     Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
 

@@ -71,12 +71,53 @@ Token* Lexer::concatenateTokens(BumpAllocator& alloc, const Token* left, const T
         return Token::createIdentifier(alloc, TokenKind::Identifier, location, trivia, combined.subString(0, newLength - 1), IdentifierType::Normal);
     }
 
+    // TODO: handle other kinds of errors and invalid combinations
+
     // slow path: spin up a new lexer and lex the combined text
     Diagnostics unused;
     Lexer lexer { BufferID(), combined, alloc, unused };
 
     auto token = lexer.lex();
     if (token->kind == TokenKind::Unknown || !token->rawText())
+        return nullptr;
+
+    // make sure the next token is an EoF, otherwise there is junk left in the buffer
+    if (lexer.lex()->kind != TokenKind::EndOfFile)
+        return nullptr;
+
+    token->location = location;
+    token->trivia = trivia;
+    return token;
+}
+
+Token* Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token** begin, Token** end) {
+    Buffer<char> text;
+    text.append('"');
+
+    // TODO: need to think a lot more about where and how much we insert spacing
+    while (begin != end) {
+        Token* cur = *begin;
+        if (cur->hasTrivia(TriviaKind::Whitespace))
+            text.append(' ');
+
+        if (cur->kind == TokenKind::MacroEscapedQuote) {
+            text.append('\\');
+            text.append('"');
+        }
+        else {
+            text.appendRange((*begin)->rawText());
+        }
+        begin++;
+    }
+    text.append('"');
+    text.append('\0');
+
+    Diagnostics unused;
+    Lexer lexer { BufferID(), StringRef(text), alloc, unused };
+
+    // TODO: handle more error cases
+    auto token = lexer.lex();
+    if (token->kind != TokenKind::StringLiteral)
         return nullptr;
 
     // make sure the next token is an EoF, otherwise there is junk left in the buffer
