@@ -279,6 +279,16 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::GenerateKeyword: {
             auto keyword = consume();
 
+            // It's definitely not legal to have a generate block here on its own (without an if or for loop)
+            // but some simulators seems to accept it and I've found code in the wild that depends on it.
+            // We'll parse it here and then issue a diagnostic about how it's not kosher.
+            if (peek(TokenKind::BeginKeyword)) {
+                // TODO: error
+                MemberSyntax* member = parseGenerateBlock();
+                ArrayRef<MemberSyntax*> members { &member, 1 };
+                return alloc.emplace<GenerateRegionSyntax>(attributes, keyword, members, expect(TokenKind::EndGenerateKeyword));
+            }
+
             Token* endgenerate;
             auto members = parseMemberList(TokenKind::EndGenerateKeyword, endgenerate, [this]() { return parseMember(); });
             return alloc.emplace<GenerateRegionSyntax>(attributes, keyword, members, endgenerate);
