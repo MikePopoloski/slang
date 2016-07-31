@@ -28,7 +28,7 @@ TEST_CASE("Simple module", "[parser:modules]") {
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    CHECK(module->header->name->valueText() == "foo");
+    CHECK(module->header->name.valueText() == "foo");
 }
 
 TEST_CASE("Simple interface", "[parser:modules]") {
@@ -38,7 +38,7 @@ TEST_CASE("Simple interface", "[parser:modules]") {
     REQUIRE(module->kind == SyntaxKind::InterfaceDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    CHECK(module->header->name->valueText() == "foo");
+    CHECK(module->header->name.valueText() == "foo");
 }
 
 TEST_CASE("Simple program", "[parser:modules]") {
@@ -48,7 +48,7 @@ TEST_CASE("Simple program", "[parser:modules]") {
     REQUIRE(module->kind == SyntaxKind::ProgramDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    CHECK(module->header->name->valueText() == "foo");
+    CHECK(module->header->name.valueText() == "foo");
 }
 
 TEST_CASE("Complex header", "[parser:modules]") {
@@ -58,7 +58,7 @@ TEST_CASE("Complex header", "[parser:modules]") {
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    CHECK(module->header->name->valueText() == "foo");
+    CHECK(module->header->name.valueText() == "foo");
     CHECK(module->attributes.count() == 1);
     CHECK(module->header->imports[0]->items.count() == 2);
     CHECK(module->header->parameters->declarations.count() == 3);
@@ -77,9 +77,9 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[2]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(((ParameterDeclarationSyntax*)parameters[2])->declarators[0]->name->valueText() == "blah");
+    CHECK(((ParameterDeclarationSyntax*)parameters[2])->declarators[0]->name.valueText() == "blah");
     CHECK(parameters[3]->kind == SyntaxKind::TypeParameterDeclaration);
-    CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarators[0]->name->valueText() == "blah");
+    CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarators[0]->name.valueText() == "blah");
     CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarators[0]->initializer->expr->kind == SyntaxKind::ShortIntType);
 }
 

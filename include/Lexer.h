@@ -30,42 +30,33 @@ public:
     // lex the next token from the source code
     // will never return a null pointer; at the end of the buffer,
     // an infinite stream of EndOfFile tokens will be generated
-    Token* lex(LexerMode mode = LexerMode::Normal);
+    Token lex(LexerMode mode = LexerMode::Normal);
 
     BufferID getBufferID() const;
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
 
     // Concatenate two tokens together; used for macro pasting
-    static Token* concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right);
+    static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
     // Convert a range of tokens into a string literal; used for macro stringification
-    static Token* stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token** begin, Token** end);
+    static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end);
 
 private:
     Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-    struct TokenInfo {
-        StringRef niceText;
-        NumericValue numericValue;
-        SyntaxKind directiveKind = SyntaxKind::Unknown;
-        IdentifierType identifierType = IdentifierType::Unknown;
-        uint32_t offset = 0;
-        uint8_t numericFlags = 0;
-    };
+    TokenKind lexToken(Token::Info* info, bool directiveMode);
+    TokenKind lexNumericLiteral(Token::Info* info);
+    TokenKind lexEscapeSequence(Token::Info* info);
+    TokenKind lexDollarSign(Token::Info* info);
+    TokenKind lexDirective(Token::Info* info);
+    TokenKind lexApostrophe(Token::Info* info);
 
-    TokenKind lexToken(TokenInfo& info, bool directiveMode);
-    TokenKind lexNumericLiteral(TokenInfo& info);
-    TokenKind lexEscapeSequence(TokenInfo& info);
-    TokenKind lexDollarSign(TokenInfo& info);
-    TokenKind lexDirective(TokenInfo& info);
-    TokenKind lexApostrophe(TokenInfo& info);
+    Token lexIncludeFileName();
 
-    Token* lexIncludeFileName();
-
-    void lexStringLiteral(TokenInfo& info);
-    bool lexIntegerBase(TokenInfo& info);
-    bool lexTimeLiteral(TokenInfo& info);
+    void lexStringLiteral(Token::Info* info);
+    bool lexIntegerBase(Token::Info* info);
+    bool lexTimeLiteral(Token::Info* info);
 
     bool lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode);
     
@@ -75,8 +66,7 @@ private:
     void scanIdentifier();
     void scanUnsignedNumber(uint64_t& value, int& digits);
     bool scanExponent(uint64_t& value, bool& negative);
-
-    Token* createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer);
+    
     void addTrivia(TriviaKind kind, Buffer<Trivia>& triviaBuffer);
     void addError(DiagCode code, uint32_t offset);
 

@@ -17,15 +17,15 @@ SourceManager& getSourceManager() {
     return *sourceManager;
 }
 
-const Token& lexToken(StringRef text) {
+Token lexToken(StringRef text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
     preprocessor.pushSource(text);
 
-    Token* token = preprocessor.next();
-    REQUIRE(token != nullptr);
-    return *token;
+    Token token = preprocessor.next();
+    REQUIRE(token);
+    return token;
 }
 
 TEST_CASE("Include File", "[preprocessor]") {
@@ -44,12 +44,12 @@ void testDirective(SyntaxKind kind) {
     auto buffer = getSourceManager().assignText(text);
     Lexer lexer(buffer, alloc, diagnostics);
 
-    Token* token = lexer.lex(LexerMode::Directive);
-    REQUIRE(token != nullptr);
+    Token token = lexer.lex(LexerMode::Directive);
+    REQUIRE(token);
 
-    CHECK(token->kind == TokenKind::Directive);
-    CHECK(token->toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token->valueText() == text);
+    CHECK(token.kind == TokenKind::Directive);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(token.valueText() == text);
     CHECK(diagnostics.empty());
 }
 
@@ -83,16 +83,16 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    REQUIRE(token.trivia.count() == 1);
-    REQUIRE(token.trivia[0].kind == TriviaKind::Directive);
+    REQUIRE(token.trivia().count() == 1);
+    REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
 
-    auto def = token.trivia[0].syntax()->as<DefineDirectiveSyntax>();
-    CHECK(def->name->valueText() == "FOO");
+    auto def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
+    CHECK(def->name.valueText() == "FOO");
     CHECK(def->endOfDirective);
     CHECK(def->directive);
     CHECK(!def->formalArguments);
     REQUIRE(def->body.count() == 3);
-    CHECK(def->body[1]->kind == TokenKind::IntegerLiteral);
+    CHECK(def->body[1].kind == TokenKind::IntegerLiteral);
 }
 
 TEST_CASE("Macro define (function-like)", "[preprocessor]") {
@@ -102,18 +102,18 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    REQUIRE(token.trivia.count() == 1);
-    REQUIRE(token.trivia[0].kind == TriviaKind::Directive);
+    REQUIRE(token.trivia().count() == 1);
+    REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
 
-    auto def = token.trivia[0].syntax()->as<DefineDirectiveSyntax>();
-    CHECK(def->name->valueText() == "FOO");
+    auto def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
+    CHECK(def->name.valueText() == "FOO");
     CHECK(def->endOfDirective);
     CHECK(def->directive);
     CHECK(def->formalArguments);
     CHECK(def->formalArguments->args.count() == 1);
-    CHECK(def->formalArguments->args[0]->name->valueText() == "a");
+    CHECK(def->formalArguments->args[0]->name.valueText() == "a");
     REQUIRE(def->body.count() == 3);
-    CHECK(def->body[2]->kind == TokenKind::IntegerLiteral);
+    CHECK(def->body[2].kind == TokenKind::IntegerLiteral);
 }
 
 TEST_CASE("Macro usage (undefined)", "[preprocessor]") {

@@ -5,11 +5,11 @@
 #include "ArrayRef.h"
 #include "Buffer.h"
 #include "StringRef.h"
-#include "SyntaxNode.h"
 
 namespace slang {
 
 class Token;
+class SyntaxNode;
 
 enum class TriviaKind : uint8_t {
     Unknown,
@@ -30,7 +30,7 @@ public:
 
     Trivia() : kind(TriviaKind::Unknown), rawText(nullptr) {}
     Trivia(TriviaKind kind, StringRef rawText) : kind(kind), rawText(rawText) {}
-    Trivia(TriviaKind kind, ArrayRef<Token*> tokens) : kind(kind), tokens(tokens) {}
+    Trivia(TriviaKind kind, ArrayRef<Token> tokens) : kind(kind), tokens(tokens) {}
     Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
 
     void writeTo(Buffer<char>& buffer, uint8_t flags = 0) const;
@@ -42,7 +42,7 @@ public:
 private:
     union {
         StringRef rawText;
-        ArrayRef<Token*> tokens;
+        ArrayRef<Token> tokens;
         SyntaxNode* syntaxNode;
     };
 };

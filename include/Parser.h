@@ -27,8 +27,8 @@ private:
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parseNewExpression();
-    ConcatenationExpressionSyntax* parseConcatenation(Token* openBrace, ExpressionSyntax* first);
-    StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token* openBrace);
+    ConcatenationExpressionSyntax* parseConcatenation(Token openBrace, ExpressionSyntax* first);
+    StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token openBrace);
     StreamExpressionSyntax* parseStreamExpression();
     ExpressionSyntax* parseInsideElement();
     ElementSelectSyntax* parseElementSelect();
@@ -44,11 +44,11 @@ private:
     EventExpressionSyntax* parseEventExpression();
     NamedBlockClauseSyntax* parseNamedBlockClause();
     TimingControlSyntax* parseTimingControl();
-    ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token*& end);
+    ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token& end);
     ConditionalPatternSyntax* parseConditionalPattern();
-    ConditionalStatementSyntax* parseConditionalStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority);
+    ConditionalStatementSyntax* parseConditionalStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority);
     ElseClauseSyntax* parseElseClause();
-    CaseStatementSyntax* parseCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token* uniqueOrPriority, Token* caseKeyword);
+    CaseStatementSyntax* parseCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority, Token caseKeyword);
     DefaultCaseItemSyntax* parseDefaultCaseItem();
     LoopStatementSyntax* parseLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     DoWhileStatementSyntax* parseDoWhileStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
@@ -66,7 +66,7 @@ private:
     StatementSyntax* parseWaitStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     WaitOrderStatementSyntax* parseWaitOrderStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     RandCaseStatementSyntax* parseRandCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    Token* parseSigning();
+    Token parseSigning();
     VariableDimensionSyntax* parseDimension();
     ArrayRef<VariableDimensionSyntax*> parseDimensionList();
     StructUnionTypeSyntax* parseStructUnion(SyntaxKind syntaxKind);
@@ -80,8 +80,8 @@ private:
     ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
     NonAnsiPortSyntax* parseNonAnsiPort();
     AnsiPortSyntax* parseAnsiPort();
-    AnsiPortListSyntax* parseAnsiPortList(Token* openParen);
-    PortHeaderSyntax* parsePortHeader(Token* direction);
+    AnsiPortListSyntax* parseAnsiPortList(Token openParen);
+    PortHeaderSyntax* parsePortHeader(Token direction);
     PortDeclarationSyntax* parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseMember();
     TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
@@ -96,15 +96,15 @@ private:
     PortConnectionSyntax* parsePortConnection();
     FunctionPrototypeSyntax* parseFunctionPrototype();
     FunctionDeclarationSyntax* parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
-    Token* parseLifetime();
-    ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token*& end);
+    Token parseLifetime();
+    ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end);
     GenvarDeclarationSyntax* parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     LoopGenerateSyntax* parseLoopGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     IfGenerateSyntax* parseIfGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     CaseGenerateSyntax* parseCaseGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseGenerateBlock();
-    ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token*& semi);
-    ClassDeclarationSyntax* parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token* virtualOrInterface);
+    ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token& semi);
+    ClassDeclarationSyntax* parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token virtualOrInterface);
     MemberSyntax* parseClassMember();
     ContinuousAssignSyntax* parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes);
     VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
@@ -122,7 +122,7 @@ private:
     bool scanDimensionList(int& index);
     bool scanQualifiedName(int& index);
 
-    bool checkVectorDigits(Token* token);
+    bool checkVectorDigits(Token token);
 
     struct ExpressionOptions {
         enum Enum {
@@ -135,11 +135,11 @@ private:
     ExpressionSyntax* parseSubExpression(ExpressionOptions::Enum options, int precedence);
 
     template<bool(*IsEnd)(TokenKind)>
-    ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token*& end);
-    ArrayRef<TokenOrSyntax> parseVariableDeclarators(Token*& semi);
+    ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token& end);
+    ArrayRef<TokenOrSyntax> parseVariableDeclarators(Token& semi);
 
     template<typename TParseFunc>
-    ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind, Token*& endToken, TParseFunc&& parseFunc);
+    ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
 
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);

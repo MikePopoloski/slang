@@ -27,10 +27,10 @@ struct DataTypeSyntax : public ExpressionSyntax {
 // ----- ATTRIBUTES -----
 
 struct EqualsValueClauseSyntax : public SyntaxNode {
-    Token* equals;
+    Token equals;
     ExpressionSyntax* expr;
 
-    EqualsValueClauseSyntax(Token* equals, ExpressionSyntax* expr) :
+    EqualsValueClauseSyntax(Token equals, ExpressionSyntax* expr) :
         SyntaxNode(SyntaxKind::EqualsValueClause), equals(equals), expr(expr)
     {
         childCount += 2;
@@ -47,10 +47,10 @@ protected:
 };
 
 struct AttributeSpecSyntax : public SyntaxNode {
-    Token* name;
+    Token name;
     EqualsValueClauseSyntax* value;
 
-    AttributeSpecSyntax(Token* name, EqualsValueClauseSyntax* value) :
+    AttributeSpecSyntax(Token name, EqualsValueClauseSyntax* value) :
         SyntaxNode(SyntaxKind::AttributeSpec), name(name), value(value)
     {
         childCount += 2;
@@ -67,11 +67,11 @@ protected:
 };
 
 struct AttributeInstanceSyntax : public SyntaxNode {
-    Token* openParen;
+    Token openParen;
     SeparatedSyntaxList<AttributeSpecSyntax> specs;
-    Token* closeParen;
+    Token closeParen;
 
-    AttributeInstanceSyntax(Token* openParen, SeparatedSyntaxList<AttributeSpecSyntax> specs, Token* closeParen) :
+    AttributeInstanceSyntax(Token openParen, SeparatedSyntaxList<AttributeSpecSyntax> specs, Token closeParen) :
         SyntaxNode(SyntaxKind::AttributeInstance), openParen(openParen), specs(specs), closeParen(closeParen)
     {
         childCount += 3;
@@ -89,10 +89,10 @@ protected:
 };
 
 struct NamedLabelSyntax : public SyntaxNode {
-    Token* name;
-    Token* colon;
+    Token name;
+    Token colon;
 
-    NamedLabelSyntax(Token* name, Token* colon) :
+    NamedLabelSyntax(Token name, Token colon) :
         SyntaxNode(SyntaxKind::NamedLabel), name(name), colon(colon)
     {
         childCount += 2;
@@ -175,13 +175,13 @@ protected:
 };
 
 struct NamedArgumentSyntax : public ArgumentSyntax {
-    Token* dot;
-    Token* name;
-    Token* openParen;
+    Token dot;
+    Token name;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
 
-    NamedArgumentSyntax(Token* dot, Token* name, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+    NamedArgumentSyntax(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
         ArgumentSyntax(SyntaxKind::NamedArgument), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 5;
@@ -201,11 +201,11 @@ protected:
 };
 
 struct ArgumentListSyntax : public SyntaxNode {
-    Token* openParen;
+    Token openParen;
     SeparatedSyntaxList<ArgumentSyntax> parameters;
-    Token* closeParen;
+    Token closeParen;
 
-    ArgumentListSyntax(Token* openParen, SeparatedSyntaxList<ArgumentSyntax> parameters, Token* closeParen) :
+    ArgumentListSyntax(Token openParen, SeparatedSyntaxList<ArgumentSyntax> parameters, Token closeParen) :
         SyntaxNode(SyntaxKind::ArgumentList), openParen(openParen), parameters(parameters), closeParen(closeParen)
     {
         childCount += 3;
@@ -223,10 +223,10 @@ protected:
 };
 
 struct ParameterValueAssignmentSyntax : public SyntaxNode {
-    Token* hash;
+    Token hash;
     ArgumentListSyntax* parameters;
 
-    ParameterValueAssignmentSyntax(Token* hash, ArgumentListSyntax* parameters) :
+    ParameterValueAssignmentSyntax(Token hash, ArgumentListSyntax* parameters) :
         SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), parameters(parameters)
     {
         childCount += 2;
@@ -253,10 +253,10 @@ struct PatternSyntax : public SyntaxNode {
 };
 
 struct VariablePatternSyntax : public PatternSyntax {
-    Token* dot;
-    Token* variableName;
+    Token dot;
+    Token variableName;
 
-    VariablePatternSyntax(Token* dot, Token* variableName) :
+    VariablePatternSyntax(Token dot, Token variableName) :
         PatternSyntax(SyntaxKind::VariablePattern), dot(dot), variableName(variableName)
     {
         childCount += 2;
@@ -273,9 +273,9 @@ protected:
 };
 
 struct WildcardPatternSyntax : public PatternSyntax {
-    Token* dotStar;
+    Token dotStar;
 
-    WildcardPatternSyntax(Token* dotStar) :
+    WildcardPatternSyntax(Token dotStar) :
         PatternSyntax(SyntaxKind::WildcardPattern), dotStar(dotStar)
     {
         childCount += 1;
@@ -309,11 +309,11 @@ protected:
 };
 
 struct TaggedPatternSyntax : public PatternSyntax {
-    Token* tagged;
-    Token* memberName;
+    Token tagged;
+    Token memberName;
     PatternSyntax* pattern;
 
-    TaggedPatternSyntax(Token* tagged, Token* memberName, PatternSyntax* pattern) :
+    TaggedPatternSyntax(Token tagged, Token memberName, PatternSyntax* pattern) :
         PatternSyntax(SyntaxKind::TaggedPattern), tagged(tagged), memberName(memberName), pattern(pattern)
     {
         childCount += 3;
@@ -357,11 +357,11 @@ protected:
 };
 
 struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
-    Token* name;
-    Token* colon;
+    Token name;
+    Token colon;
     PatternSyntax* pattern;
 
-    NamedStructurePatternMemberSyntax(Token* name, Token* colon, PatternSyntax* pattern) :
+    NamedStructurePatternMemberSyntax(Token name, Token colon, PatternSyntax* pattern) :
         StructurePatternMemberSyntax(SyntaxKind::NamedStructurePatternMember), name(name), colon(colon), pattern(pattern)
     {
         childCount += 3;
@@ -379,11 +379,11 @@ protected:
 };
 
 struct StructurePatternSyntax : public PatternSyntax {
-    Token* openBrace;
+    Token openBrace;
     SeparatedSyntaxList<StructurePatternMemberSyntax> members;
-    Token* closeBrace;
+    Token closeBrace;
 
-    StructurePatternSyntax(Token* openBrace, SeparatedSyntaxList<StructurePatternMemberSyntax> members, Token* closeBrace) :
+    StructurePatternSyntax(Token openBrace, SeparatedSyntaxList<StructurePatternMemberSyntax> members, Token closeBrace) :
         PatternSyntax(SyntaxKind::StructurePattern), openBrace(openBrace), members(members), closeBrace(closeBrace)
     {
         childCount += 3;
@@ -401,10 +401,10 @@ protected:
 };
 
 struct MatchesClauseSyntax : public SyntaxNode {
-    Token* matchesKeyword;
+    Token matchesKeyword;
     PatternSyntax* pattern;
 
-    MatchesClauseSyntax(Token* matchesKeyword, PatternSyntax* pattern) :
+    MatchesClauseSyntax(Token matchesKeyword, PatternSyntax* pattern) :
         SyntaxNode(SyntaxKind::MatchesClause), matchesKeyword(matchesKeyword), pattern(pattern)
     {
         childCount += 2;
@@ -467,11 +467,11 @@ struct AssignmentPatternSyntax : public SyntaxNode {
 };
 
 struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
-    Token* openBrace;
+    Token openBrace;
     SeparatedSyntaxList<ExpressionSyntax> items;
-    Token* closeBrace;
+    Token closeBrace;
 
-    SimpleAssignmentPatternSyntax(Token* openBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token* closeBrace) :
+    SimpleAssignmentPatternSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token closeBrace) :
         AssignmentPatternSyntax(SyntaxKind::SimpleAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
     {
         childCount += 3;
@@ -490,10 +490,10 @@ protected:
 
 struct AssignmentPatternItemSyntax : public SyntaxNode {
     ExpressionSyntax* key;
-    Token* colon;
+    Token colon;
     ExpressionSyntax* expr;
 
-    AssignmentPatternItemSyntax(ExpressionSyntax* key, Token* colon, ExpressionSyntax* expr) :
+    AssignmentPatternItemSyntax(ExpressionSyntax* key, Token colon, ExpressionSyntax* expr) :
         SyntaxNode(SyntaxKind::AssignmentPatternItem), key(key), colon(colon), expr(expr)
     {
         childCount += 3;
@@ -511,11 +511,11 @@ protected:
 };
 
 struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
-    Token* openBrace;
+    Token openBrace;
     SeparatedSyntaxList<AssignmentPatternItemSyntax> items;
-    Token* closeBrace;
+    Token closeBrace;
 
-    StructuredAssignmentPatternSyntax(Token* openBrace, SeparatedSyntaxList<AssignmentPatternItemSyntax> items, Token* closeBrace) :
+    StructuredAssignmentPatternSyntax(Token openBrace, SeparatedSyntaxList<AssignmentPatternItemSyntax> items, Token closeBrace) :
         AssignmentPatternSyntax(SyntaxKind::StructuredAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
     {
         childCount += 3;
@@ -533,14 +533,14 @@ protected:
 };
 
 struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
-    Token* openBrace;
+    Token openBrace;
     ExpressionSyntax* countExpr;
-    Token* innerOpenBrace;
+    Token innerOpenBrace;
     SeparatedSyntaxList<ExpressionSyntax> items;
-    Token* innerCloseBrace;
-    Token* closeBrace;
+    Token innerCloseBrace;
+    Token closeBrace;
 
-    ReplicatedAssignmentPatternSyntax(Token* openBrace, ExpressionSyntax* countExpr, Token* innerOpenBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token* innerCloseBrace, Token* closeBrace) :
+    ReplicatedAssignmentPatternSyntax(Token openBrace, ExpressionSyntax* countExpr, Token innerOpenBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token innerCloseBrace, Token closeBrace) :
         AssignmentPatternSyntax(SyntaxKind::ReplicatedAssignmentPattern), openBrace(openBrace), countExpr(countExpr), innerOpenBrace(innerOpenBrace), items(items), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
     {
         childCount += 6;
@@ -571,11 +571,11 @@ struct PrimaryExpressionSyntax : public ExpressionSyntax {
 };
 
 struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
-    Token* operatorToken;
+    Token operatorToken;
     SyntaxList<AttributeInstanceSyntax> attributes;
     ExpressionSyntax* operand;
 
-    PrefixUnaryExpressionSyntax(SyntaxKind kind, Token* operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* operand) :
+    PrefixUnaryExpressionSyntax(SyntaxKind kind, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* operand) :
         ExpressionSyntax(kind), operatorToken(operatorToken), attributes(attributes), operand(operand)
     {
         childCount += 3;
@@ -595,9 +595,9 @@ protected:
 struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* operand;
     SyntaxList<AttributeInstanceSyntax> attributes;
-    Token* operatorToken;
+    Token operatorToken;
 
-    PostfixUnaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* operand, SyntaxList<AttributeInstanceSyntax> attributes, Token* operatorToken) :
+    PostfixUnaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* operand, SyntaxList<AttributeInstanceSyntax> attributes, Token operatorToken) :
         ExpressionSyntax(kind), operand(operand), attributes(attributes), operatorToken(operatorToken)
     {
         childCount += 3;
@@ -616,11 +616,11 @@ protected:
 
 struct BinaryExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* left;
-    Token* operatorToken;
+    Token operatorToken;
     SyntaxList<AttributeInstanceSyntax> attributes;
     ExpressionSyntax* right;
 
-    BinaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* right) :
+    BinaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax* left, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* right) :
         ExpressionSyntax(kind), left(left), operatorToken(operatorToken), attributes(attributes), right(right)
     {
         childCount += 4;
@@ -640,12 +640,12 @@ protected:
 
 struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* min;
-    Token* colon1;
+    Token colon1;
     ExpressionSyntax* typ;
-    Token* colon2;
+    Token colon2;
     ExpressionSyntax* max;
 
-    MinTypMaxExpressionSyntax(ExpressionSyntax* min, Token* colon1, ExpressionSyntax* typ, Token* colon2, ExpressionSyntax* max) :
+    MinTypMaxExpressionSyntax(ExpressionSyntax* min, Token colon1, ExpressionSyntax* typ, Token colon2, ExpressionSyntax* max) :
         ExpressionSyntax(SyntaxKind::MinTypMaxExpression), min(min), colon1(colon1), typ(typ), colon2(colon2), max(max)
     {
         childCount += 5;
@@ -665,11 +665,11 @@ protected:
 };
 
 struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
-    Token* tagged;
-    Token* member;
+    Token tagged;
+    Token member;
     ExpressionSyntax* expr;
 
-    TaggedUnionExpressionSyntax(Token* tagged, Token* member, ExpressionSyntax* expr) :
+    TaggedUnionExpressionSyntax(Token tagged, Token member, ExpressionSyntax* expr) :
         ExpressionSyntax(SyntaxKind::TaggedUnionExpression), tagged(tagged), member(member), expr(expr)
     {
         childCount += 3;
@@ -688,12 +688,12 @@ protected:
 
 struct InsideExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* expr;
-    Token* inside;
-    Token* openBrace;
+    Token inside;
+    Token openBrace;
     SeparatedSyntaxList<ExpressionSyntax> valueRanges;
-    Token* closeBrace;
+    Token closeBrace;
 
-    InsideExpressionSyntax(ExpressionSyntax* expr, Token* inside, Token* openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token* closeBrace) :
+    InsideExpressionSyntax(ExpressionSyntax* expr, Token inside, Token openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token closeBrace) :
         ExpressionSyntax(SyntaxKind::InsideExpression), expr(expr), inside(inside), openBrace(openBrace), valueRanges(valueRanges), closeBrace(closeBrace)
     {
         childCount += 5;
@@ -714,13 +714,13 @@ protected:
 
 struct ConditionalExpressionSyntax : public ExpressionSyntax {
     ConditionalPredicateSyntax* predicate;
-    Token* question;
+    Token question;
     SyntaxList<AttributeInstanceSyntax> attributes;
     ExpressionSyntax* left;
-    Token* colon;
+    Token colon;
     ExpressionSyntax* right;
 
-    ConditionalExpressionSyntax(ConditionalPredicateSyntax* predicate, Token* question, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* left, Token* colon, ExpressionSyntax* right) :
+    ConditionalExpressionSyntax(ConditionalPredicateSyntax* predicate, Token question, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* left, Token colon, ExpressionSyntax* right) :
         ExpressionSyntax(SyntaxKind::ConditionalExpression), predicate(predicate), question(question), attributes(attributes), left(left), colon(colon), right(right)
     {
         childCount += 6;
@@ -790,10 +790,10 @@ protected:
 
 struct RangeSelectSyntax : public SelectorSyntax {
     ExpressionSyntax* left;
-    Token* range;
+    Token range;
     ExpressionSyntax* right;
 
-    RangeSelectSyntax(SyntaxKind kind, ExpressionSyntax* left, Token* range, ExpressionSyntax* right) :
+    RangeSelectSyntax(SyntaxKind kind, ExpressionSyntax* left, Token range, ExpressionSyntax* right) :
         SelectorSyntax(kind), left(left), range(range), right(right)
     {
         childCount += 3;
@@ -811,11 +811,11 @@ protected:
 };
 
 struct ElementSelectSyntax : public ExpressionSyntax {
-    Token* openBracket;
+    Token openBracket;
     SelectorSyntax* selector;
-    Token* closeBracket;
+    Token closeBracket;
 
-    ElementSelectSyntax(Token* openBracket, SelectorSyntax* selector, Token* closeBracket) :
+    ElementSelectSyntax(Token openBracket, SelectorSyntax* selector, Token closeBracket) :
         ExpressionSyntax(SyntaxKind::ElementSelect), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
     {
         childCount += 3;
@@ -843,9 +843,9 @@ struct NameSyntax : public ExpressionSyntax {
 };
 
 struct IdentifierNameSyntax : public NameSyntax {
-    Token* identifier;
+    Token identifier;
 
-    IdentifierNameSyntax(Token* identifier) :
+    IdentifierNameSyntax(Token identifier) :
         NameSyntax(SyntaxKind::IdentifierName), identifier(identifier)
     {
         childCount += 1;
@@ -861,10 +861,10 @@ protected:
 };
 
 struct IdentifierSelectNameSyntax : public NameSyntax {
-    Token* identifier;
+    Token identifier;
     SyntaxList<ElementSelectSyntax> selectors;
 
-    IdentifierSelectNameSyntax(Token* identifier, SyntaxList<ElementSelectSyntax> selectors) :
+    IdentifierSelectNameSyntax(Token identifier, SyntaxList<ElementSelectSyntax> selectors) :
         NameSyntax(SyntaxKind::IdentifierSelectName), identifier(identifier), selectors(selectors)
     {
         childCount += 2;
@@ -881,9 +881,9 @@ protected:
 };
 
 struct KeywordNameSyntax : public NameSyntax {
-    Token* keyword;
+    Token keyword;
 
-    KeywordNameSyntax(SyntaxKind kind, Token* keyword) :
+    KeywordNameSyntax(SyntaxKind kind, Token keyword) :
         NameSyntax(kind), keyword(keyword)
     {
         childCount += 1;
@@ -899,10 +899,10 @@ protected:
 };
 
 struct ClassNameSyntax : public NameSyntax {
-    Token* identifier;
+    Token identifier;
     ParameterValueAssignmentSyntax* parameters;
 
-    ClassNameSyntax(Token* identifier, ParameterValueAssignmentSyntax* parameters) :
+    ClassNameSyntax(Token identifier, ParameterValueAssignmentSyntax* parameters) :
         NameSyntax(SyntaxKind::ClassName), identifier(identifier), parameters(parameters)
     {
         childCount += 2;
@@ -920,10 +920,10 @@ protected:
 
 struct ScopedNameSyntax : public NameSyntax {
     NameSyntax* left;
-    Token* separator;
+    Token separator;
     NameSyntax* right;
 
-    ScopedNameSyntax(NameSyntax* left, Token* separator, NameSyntax* right) :
+    ScopedNameSyntax(NameSyntax* left, Token separator, NameSyntax* right) :
         NameSyntax(SyntaxKind::ScopedName), left(left), separator(separator), right(right)
     {
         childCount += 3;
@@ -942,9 +942,9 @@ protected:
 
 struct ClassScopeSyntax : public SyntaxNode {
     NameSyntax* left;
-    Token* separator;
+    Token separator;
 
-    ClassScopeSyntax(NameSyntax* left, Token* separator) :
+    ClassScopeSyntax(NameSyntax* left, Token separator) :
         SyntaxNode(SyntaxKind::ClassScope), left(left), separator(separator)
     {
         childCount += 2;
@@ -963,9 +963,9 @@ protected:
 // ----- PRIMARY EXPRESSIONS -----
 
 struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
-    Token* literal;
+    Token literal;
 
-    LiteralExpressionSyntax(SyntaxKind kind, Token* literal) :
+    LiteralExpressionSyntax(SyntaxKind kind, Token literal) :
         PrimaryExpressionSyntax(kind), literal(literal)
     {
         childCount += 1;
@@ -981,11 +981,11 @@ protected:
 };
 
 struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
-    Token* size;
-    Token* base;
-    Token* value;
+    Token size;
+    Token base;
+    Token value;
 
-    IntegerVectorExpressionSyntax(Token* size, Token* base, Token* value) :
+    IntegerVectorExpressionSyntax(Token size, Token base, Token value) :
         PrimaryExpressionSyntax(SyntaxKind::IntegerVectorExpression), size(size), base(base), value(value)
     {
         childCount += 3;
@@ -1003,10 +1003,10 @@ protected:
 };
 
 struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
-    Token* openBrace;
-    Token* closeBrace;
+    Token openBrace;
+    Token closeBrace;
 
-    EmptyQueueExpressionSyntax(Token* openBrace, Token* closeBrace) :
+    EmptyQueueExpressionSyntax(Token openBrace, Token closeBrace) :
         PrimaryExpressionSyntax(SyntaxKind::EmptyQueueExpression), openBrace(openBrace), closeBrace(closeBrace)
     {
         childCount += 2;
@@ -1023,11 +1023,11 @@ protected:
 };
 
 struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
-    Token* openBrace;
+    Token openBrace;
     SeparatedSyntaxList<ExpressionSyntax> expressions;
-    Token* closeBrace;
+    Token closeBrace;
 
-    ConcatenationExpressionSyntax(Token* openBrace, SeparatedSyntaxList<ExpressionSyntax> expressions, Token* closeBrace) :
+    ConcatenationExpressionSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> expressions, Token closeBrace) :
         PrimaryExpressionSyntax(SyntaxKind::ConcatenationExpression), openBrace(openBrace), expressions(expressions), closeBrace(closeBrace)
     {
         childCount += 3;
@@ -1045,12 +1045,12 @@ protected:
 };
 
 struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
-    Token* openBrace;
+    Token openBrace;
     ExpressionSyntax* expression;
     ConcatenationExpressionSyntax* concatenation;
-    Token* closeBrace;
+    Token closeBrace;
 
-    MultipleConcatenationExpressionSyntax(Token* openBrace, ExpressionSyntax* expression, ConcatenationExpressionSyntax* concatenation, Token* closeBrace) :
+    MultipleConcatenationExpressionSyntax(Token openBrace, ExpressionSyntax* expression, ConcatenationExpressionSyntax* concatenation, Token closeBrace) :
         PrimaryExpressionSyntax(SyntaxKind::MultipleConcatenationExpression), openBrace(openBrace), expression(expression), concatenation(concatenation), closeBrace(closeBrace)
     {
         childCount += 4;
@@ -1069,10 +1069,10 @@ protected:
 };
 
 struct StreamExpressionWithRange : public SyntaxNode {
-    Token* withKeyword;
+    Token withKeyword;
     ElementSelectSyntax* range;
 
-    StreamExpressionWithRange(Token* withKeyword, ElementSelectSyntax* range) :
+    StreamExpressionWithRange(Token withKeyword, ElementSelectSyntax* range) :
         SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), range(range)
     {
         childCount += 2;
@@ -1109,15 +1109,15 @@ protected:
 };
 
 struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
-    Token* openBrace;
-    Token* operatorToken;
+    Token openBrace;
+    Token operatorToken;
     ExpressionSyntax* sliceSize;
-    Token* innerOpenBrace;
+    Token innerOpenBrace;
     SeparatedSyntaxList<StreamExpressionSyntax> expressions;
-    Token* innerCloseBrace;
-    Token* closeBrace;
+    Token innerCloseBrace;
+    Token closeBrace;
 
-    StreamingConcatenationExpressionSyntax(Token* openBrace, Token* operatorToken, ExpressionSyntax* sliceSize, Token* innerOpenBrace, SeparatedSyntaxList<StreamExpressionSyntax> expressions, Token* innerCloseBrace, Token* closeBrace) :
+    StreamingConcatenationExpressionSyntax(Token openBrace, Token operatorToken, ExpressionSyntax* sliceSize, Token innerOpenBrace, SeparatedSyntaxList<StreamExpressionSyntax> expressions, Token innerCloseBrace, Token closeBrace) :
         PrimaryExpressionSyntax(SyntaxKind::StreamingConcatenationExpression), openBrace(openBrace), operatorToken(operatorToken), sliceSize(sliceSize), innerOpenBrace(innerOpenBrace), expressions(expressions), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
     {
         childCount += 7;
@@ -1139,11 +1139,11 @@ protected:
 };
 
 struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
-    Token* openParen;
+    Token openParen;
     ExpressionSyntax* expression;
-    Token* closeParen;
+    Token closeParen;
 
-    ParenthesizedExpressionSyntax(Token* openParen, ExpressionSyntax* expression, Token* closeParen) :
+    ParenthesizedExpressionSyntax(Token openParen, ExpressionSyntax* expression, Token closeParen) :
         PrimaryExpressionSyntax(SyntaxKind::ParenthesizedExpression), openParen(openParen), expression(expression), closeParen(closeParen)
     {
         childCount += 3;
@@ -1162,10 +1162,10 @@ protected:
 
 struct NewClassExpressionSyntax : public ExpressionSyntax {
     ClassScopeSyntax* classScope;
-    Token* newKeyword;
+    Token newKeyword;
     ArgumentListSyntax* arguments;
 
-    NewClassExpressionSyntax(ClassScopeSyntax* classScope, Token* newKeyword, ArgumentListSyntax* arguments) :
+    NewClassExpressionSyntax(ClassScopeSyntax* classScope, Token newKeyword, ArgumentListSyntax* arguments) :
         ExpressionSyntax(SyntaxKind::NewClassExpression), classScope(classScope), newKeyword(newKeyword), arguments(arguments)
     {
         childCount += 3;
@@ -1183,13 +1183,13 @@ protected:
 };
 
 struct NewArrayExpressionSyntax : public ExpressionSyntax {
-    Token* newKeyword;
-    Token* openBracket;
+    Token newKeyword;
+    Token openBracket;
     ExpressionSyntax* sizeExpr;
-    Token* closeBracket;
+    Token closeBracket;
     ParenthesizedExpressionSyntax* initializer;
 
-    NewArrayExpressionSyntax(Token* newKeyword, Token* openBracket, ExpressionSyntax* sizeExpr, Token* closeBracket, ParenthesizedExpressionSyntax* initializer) :
+    NewArrayExpressionSyntax(Token newKeyword, Token openBracket, ExpressionSyntax* sizeExpr, Token closeBracket, ParenthesizedExpressionSyntax* initializer) :
         ExpressionSyntax(SyntaxKind::NewArrayExpression), newKeyword(newKeyword), openBracket(openBracket), sizeExpr(sizeExpr), closeBracket(closeBracket), initializer(initializer)
     {
         childCount += 5;
@@ -1232,10 +1232,10 @@ protected:
 
 struct MemberAccessExpressionSyntax : public ExpressionSyntax {
     ExpressionSyntax* left;
-    Token* dot;
-    Token* name;
+    Token dot;
+    Token name;
 
-    MemberAccessExpressionSyntax(ExpressionSyntax* left, Token* dot, Token* name) :
+    MemberAccessExpressionSyntax(ExpressionSyntax* left, Token dot, Token name) :
         ExpressionSyntax(SyntaxKind::MemberAccessExpression), left(left), dot(dot), name(name)
     {
         childCount += 3;
@@ -1285,10 +1285,10 @@ struct TimingControlSyntax : public SyntaxNode {
 };
 
 struct DelaySyntax : public TimingControlSyntax {
-    Token* hash;
+    Token hash;
     ExpressionSyntax* delayValue;
 
-    DelaySyntax(SyntaxKind kind, Token* hash, ExpressionSyntax* delayValue) :
+    DelaySyntax(SyntaxKind kind, Token hash, ExpressionSyntax* delayValue) :
         TimingControlSyntax(kind), hash(hash), delayValue(delayValue)
     {
         childCount += 2;
@@ -1305,10 +1305,10 @@ protected:
 };
 
 struct EventControlSyntax : public TimingControlSyntax {
-    Token* at;
+    Token at;
     NameSyntax* eventName;
 
-    EventControlSyntax(Token* at, NameSyntax* eventName) :
+    EventControlSyntax(Token at, NameSyntax* eventName) :
         TimingControlSyntax(SyntaxKind::EventControl), at(at), eventName(eventName)
     {
         childCount += 2;
@@ -1333,10 +1333,10 @@ struct EventExpressionSyntax : public SyntaxNode {
 };
 
 struct IffClauseSyntax : public SyntaxNode {
-    Token* iff;
+    Token iff;
     ExpressionSyntax* expr;
 
-    IffClauseSyntax(Token* iff, ExpressionSyntax* expr) :
+    IffClauseSyntax(Token iff, ExpressionSyntax* expr) :
         SyntaxNode(SyntaxKind::IffClause), iff(iff), expr(expr)
     {
         childCount += 2;
@@ -1353,11 +1353,11 @@ protected:
 };
 
 struct SignalEventExpressionSyntax : public EventExpressionSyntax {
-    Token* edge;
+    Token edge;
     ExpressionSyntax* expr;
     IffClauseSyntax* iffClause;
 
-    SignalEventExpressionSyntax(Token* edge, ExpressionSyntax* expr, IffClauseSyntax* iffClause) :
+    SignalEventExpressionSyntax(Token edge, ExpressionSyntax* expr, IffClauseSyntax* iffClause) :
         EventExpressionSyntax(SyntaxKind::SignalEventExpression), edge(edge), expr(expr), iffClause(iffClause)
     {
         childCount += 3;
@@ -1376,10 +1376,10 @@ protected:
 
 struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
     EventExpressionSyntax* left;
-    Token* operatorToken;
+    Token operatorToken;
     EventExpressionSyntax* right;
 
-    BinaryEventExpressionSyntax(EventExpressionSyntax* left, Token* operatorToken, EventExpressionSyntax* right) :
+    BinaryEventExpressionSyntax(EventExpressionSyntax* left, Token operatorToken, EventExpressionSyntax* right) :
         EventExpressionSyntax(SyntaxKind::BinaryEventExpression), left(left), operatorToken(operatorToken), right(right)
     {
         childCount += 3;
@@ -1397,11 +1397,11 @@ protected:
 };
 
 struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
-    Token* openParen;
+    Token openParen;
     EventExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
 
-    ParenthesizedEventExpressionSyntax(Token* openParen, EventExpressionSyntax* expr, Token* closeParen) :
+    ParenthesizedEventExpressionSyntax(Token openParen, EventExpressionSyntax* expr, Token closeParen) :
         EventExpressionSyntax(SyntaxKind::ParenthesizedEventExpression), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 3;
@@ -1419,9 +1419,9 @@ protected:
 };
 
 struct ImplicitEventControlSyntax : public TimingControlSyntax {
-    Token* atStar;
+    Token atStar;
 
-    ImplicitEventControlSyntax(Token* atStar) :
+    ImplicitEventControlSyntax(Token atStar) :
         TimingControlSyntax(SyntaxKind::ImplicitEventControl), atStar(atStar)
     {
         childCount += 1;
@@ -1437,10 +1437,10 @@ protected:
 };
 
 struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
-    Token* at;
-    Token* openParenStarCloseParen;
+    Token at;
+    Token openParenStarCloseParen;
 
-    ParenImplicitEventControlSyntax(Token* at, Token* openParenStarCloseParen) :
+    ParenImplicitEventControlSyntax(Token at, Token openParenStarCloseParen) :
         TimingControlSyntax(SyntaxKind::ParenImplicitEventControl), at(at), openParenStarCloseParen(openParenStarCloseParen)
     {
         childCount += 2;
@@ -1457,10 +1457,10 @@ protected:
 };
 
 struct EventControlWithExpressionSyntax : public TimingControlSyntax {
-    Token* at;
+    Token at;
     EventExpressionSyntax* expr;
 
-    EventControlWithExpressionSyntax(Token* at, EventExpressionSyntax* expr) :
+    EventControlWithExpressionSyntax(Token at, EventExpressionSyntax* expr) :
         TimingControlSyntax(SyntaxKind::EventControlWithExpression), at(at), expr(expr)
     {
         childCount += 2;
@@ -1477,13 +1477,13 @@ protected:
 };
 
 struct RepeatedEventControlSyntax : public TimingControlSyntax {
-    Token* repeat;
-    Token* openParen;
+    Token repeat;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
     TimingControlSyntax* eventControl;
 
-    RepeatedEventControlSyntax(Token* repeat, Token* openParen, ExpressionSyntax* expr, Token* closeParen, TimingControlSyntax* eventControl) :
+    RepeatedEventControlSyntax(Token repeat, Token openParen, ExpressionSyntax* expr, Token closeParen, TimingControlSyntax* eventControl) :
         TimingControlSyntax(SyntaxKind::RepeatedEventControl), repeat(repeat), openParen(openParen), expr(expr), closeParen(closeParen), eventControl(eventControl)
     {
         childCount += 5;
@@ -1569,9 +1569,9 @@ protected:
 };
 
 struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
-    Token* star;
+    Token star;
 
-    WildcardDimensionSpecifierSyntax(Token* star) :
+    WildcardDimensionSpecifierSyntax(Token star) :
         DimensionSpecifierSyntax(SyntaxKind::WildcardDimensionSpecifier), star(star)
     {
         childCount += 1;
@@ -1587,10 +1587,10 @@ protected:
 };
 
 struct ColonExpressionClauseSyntax : public SyntaxNode {
-    Token* colon;
+    Token colon;
     ExpressionSyntax* expr;
 
-    ColonExpressionClauseSyntax(Token* colon, ExpressionSyntax* expr) :
+    ColonExpressionClauseSyntax(Token colon, ExpressionSyntax* expr) :
         SyntaxNode(SyntaxKind::ColonExpressionClause), colon(colon), expr(expr)
     {
         childCount += 2;
@@ -1607,10 +1607,10 @@ protected:
 };
 
 struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
-    Token* dollar;
+    Token dollar;
     ColonExpressionClauseSyntax* maxSizeClause;
 
-    QueueDimensionSpecifierSyntax(Token* dollar, ColonExpressionClauseSyntax* maxSizeClause) :
+    QueueDimensionSpecifierSyntax(Token dollar, ColonExpressionClauseSyntax* maxSizeClause) :
         DimensionSpecifierSyntax(SyntaxKind::QueueDimensionSpecifier), dollar(dollar), maxSizeClause(maxSizeClause)
     {
         childCount += 2;
@@ -1627,11 +1627,11 @@ protected:
 };
 
 struct VariableDimensionSyntax : public SyntaxNode {
-    Token* openBracket;
+    Token openBracket;
     DimensionSpecifierSyntax* specifier;
-    Token* closeBracket;
+    Token closeBracket;
 
-    VariableDimensionSyntax(Token* openBracket, DimensionSpecifierSyntax* specifier, Token* closeBracket) :
+    VariableDimensionSyntax(Token openBracket, DimensionSpecifierSyntax* specifier, Token closeBracket) :
         SyntaxNode(SyntaxKind::VariableDimension), openBracket(openBracket), specifier(specifier), closeBracket(closeBracket)
     {
         childCount += 3;
@@ -1649,11 +1649,11 @@ protected:
 };
 
 struct VariableDeclaratorSyntax : public SyntaxNode {
-    Token* name;
+    Token name;
     SyntaxList<VariableDimensionSyntax> dimensions;
     EqualsValueClauseSyntax* initializer;
 
-    VariableDeclaratorSyntax(Token* name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer) :
+    VariableDeclaratorSyntax(Token name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer) :
         SyntaxNode(SyntaxKind::VariableDeclarator), name(name), dimensions(dimensions), initializer(initializer)
     {
         childCount += 3;
@@ -1674,9 +1674,9 @@ struct DataDeclarationSyntax : public MemberSyntax {
     TokenList modifiers;
     DataTypeSyntax* type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
-    Token* semi;
+    Token semi;
 
-    DataDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+    DataDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
         MemberSyntax(SyntaxKind::DataDeclaration, attributes), modifiers(modifiers), type(type), declarators(declarators), semi(semi)
     {
         childCount += 4;
@@ -1696,13 +1696,13 @@ protected:
 };
 
 struct TypedefDeclarationSyntax : public MemberSyntax {
-    Token* typedefKeyword;
+    Token typedefKeyword;
     DataTypeSyntax* type;
-    Token* name;
+    Token name;
     SyntaxList<VariableDimensionSyntax> dimensions;
-    Token* semi;
+    Token semi;
 
-    TypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* typedefKeyword, DataTypeSyntax* type, Token* name, SyntaxList<VariableDimensionSyntax> dimensions, Token* semi) :
+    TypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, DataTypeSyntax* type, Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token semi) :
         MemberSyntax(SyntaxKind::TypedefDeclaration, attributes), typedefKeyword(typedefKeyword), type(type), name(name), dimensions(dimensions), semi(semi)
     {
         childCount += 5;
@@ -1723,12 +1723,12 @@ protected:
 };
 
 struct TypedefModportDeclarationSyntax : public MemberSyntax {
-    Token* typedefKeyword;
+    Token typedefKeyword;
     NameSyntax* modportName;
-    Token* name;
-    Token* semi;
+    Token name;
+    Token semi;
 
-    TypedefModportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* typedefKeyword, NameSyntax* modportName, Token* name, Token* semi) :
+    TypedefModportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, NameSyntax* modportName, Token name, Token semi) :
         MemberSyntax(SyntaxKind::TypedefKeywordDeclaration, attributes), typedefKeyword(typedefKeyword), modportName(modportName), name(name), semi(semi)
     {
         childCount += 4;
@@ -1748,12 +1748,12 @@ protected:
 };
 
 struct TypedefKeywordDeclarationSyntax : public MemberSyntax {
-    Token* typedefKeyword;
-    Token* keyword;
-    Token* name;
-    Token* semi;
+    Token typedefKeyword;
+    Token keyword;
+    Token name;
+    Token semi;
 
-    TypedefKeywordDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* typedefKeyword, Token* keyword, Token* name, Token* semi) :
+    TypedefKeywordDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi) :
         MemberSyntax(SyntaxKind::TypedefKeywordDeclaration, attributes), typedefKeyword(typedefKeyword), keyword(keyword), name(name), semi(semi)
     {
         childCount += 4;
@@ -1773,13 +1773,13 @@ protected:
 };
 
 struct TypedefInterfaceClassDeclarationSyntax : public MemberSyntax {
-    Token* typedefKeyword;
-    Token* interfaceKeyword;
-    Token* classKeyword;
-    Token* name;
-    Token* semi;
+    Token typedefKeyword;
+    Token interfaceKeyword;
+    Token classKeyword;
+    Token name;
+    Token semi;
 
-    TypedefInterfaceClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* typedefKeyword, Token* interfaceKeyword, Token* classKeyword, Token* name, Token* semi) :
+    TypedefInterfaceClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi) :
         MemberSyntax(SyntaxKind::TypedefInterfaceClassDeclaration, attributes), typedefKeyword(typedefKeyword), interfaceKeyword(interfaceKeyword), classKeyword(classKeyword), name(name), semi(semi)
     {
         childCount += 5;
@@ -1808,11 +1808,11 @@ struct NetStrengthSyntax : public SyntaxNode {
 };
 
 struct ChargeStrengthSyntax : public NetStrengthSyntax {
-    Token* openParen;
-    Token* strength;
-    Token* closeParen;
+    Token openParen;
+    Token strength;
+    Token closeParen;
 
-    ChargeStrengthSyntax(Token* openParen, Token* strength, Token* closeParen) :
+    ChargeStrengthSyntax(Token openParen, Token strength, Token closeParen) :
         NetStrengthSyntax(SyntaxKind::ChargeStrength), openParen(openParen), strength(strength), closeParen(closeParen)
     {
         childCount += 3;
@@ -1830,13 +1830,13 @@ protected:
 };
 
 struct DriveStrengthSyntax : public NetStrengthSyntax {
-    Token* openParen;
-    Token* strength0;
-    Token* comma;
-    Token* strength1;
-    Token* closeParen;
+    Token openParen;
+    Token strength0;
+    Token comma;
+    Token strength1;
+    Token closeParen;
 
-    DriveStrengthSyntax(Token* openParen, Token* strength0, Token* comma, Token* strength1, Token* closeParen) :
+    DriveStrengthSyntax(Token openParen, Token strength0, Token comma, Token strength1, Token closeParen) :
         NetStrengthSyntax(SyntaxKind::DriveStrength), openParen(openParen), strength0(strength0), comma(comma), strength1(strength1), closeParen(closeParen)
     {
         childCount += 5;
@@ -1856,14 +1856,14 @@ protected:
 };
 
 struct NetDeclarationSyntax : public MemberSyntax {
-    Token* netType;
+    Token netType;
     NetStrengthSyntax* strength;
-    Token* expansionHint;
+    Token expansionHint;
     DataTypeSyntax* type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
-    Token* semi;
+    Token semi;
 
-    NetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* netType, NetStrengthSyntax* strength, Token* expansionHint, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+    NetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token netType, NetStrengthSyntax* strength, Token expansionHint, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
         MemberSyntax(SyntaxKind::NetDeclaration, attributes), netType(netType), strength(strength), expansionHint(expansionHint), type(type), declarators(declarators), semi(semi)
     {
         childCount += 6;
@@ -1885,11 +1885,11 @@ protected:
 };
 
 struct PackageImportItemSyntax : public SyntaxNode {
-    Token* package;
-    Token* doubleColon;
-    Token* item;
+    Token package;
+    Token doubleColon;
+    Token item;
 
-    PackageImportItemSyntax(Token* package, Token* doubleColon, Token* item) :
+    PackageImportItemSyntax(Token package, Token doubleColon, Token item) :
         SyntaxNode(SyntaxKind::PackageImportItem), package(package), doubleColon(doubleColon), item(item)
     {
         childCount += 3;
@@ -1907,11 +1907,11 @@ protected:
 };
 
 struct PackageImportDeclarationSyntax : public MemberSyntax {
-    Token* keyword;
+    Token keyword;
     SeparatedSyntaxList<PackageImportItemSyntax> items;
-    Token* semi;
+    Token semi;
 
-    PackageImportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token* semi) :
+    PackageImportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token semi) :
         MemberSyntax(SyntaxKind::PackageImportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
     {
         childCount += 3;
@@ -1938,11 +1938,11 @@ struct ParameterPortDeclarationSyntax : public SyntaxNode {
 };
 
 struct ParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
-    Token* keyword;
+    Token keyword;
     DataTypeSyntax* type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
 
-    ParameterDeclarationSyntax(Token* keyword, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
+    ParameterDeclarationSyntax(Token keyword, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
         ParameterPortDeclarationSyntax(SyntaxKind::ParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
     {
         childCount += 3;
@@ -1960,11 +1960,11 @@ protected:
 };
 
 struct TypeParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
-    Token* keyword;
-    Token* type;
+    Token keyword;
+    Token type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
 
-    TypeParameterDeclarationSyntax(Token* keyword, Token* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
+    TypeParameterDeclarationSyntax(Token keyword, Token type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
         ParameterPortDeclarationSyntax(SyntaxKind::TypeParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
     {
         childCount += 3;
@@ -1983,9 +1983,9 @@ protected:
 
 struct ParameterDeclarationStatementSyntax : public MemberSyntax {
     ParameterPortDeclarationSyntax* parameter;
-    Token* semi;
+    Token semi;
 
-    ParameterDeclarationStatementSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ParameterPortDeclarationSyntax* parameter, Token* semi) :
+    ParameterDeclarationStatementSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ParameterPortDeclarationSyntax* parameter, Token semi) :
         MemberSyntax(SyntaxKind::ParameterDeclarationStatement, attributes), parameter(parameter), semi(semi)
     {
         childCount += 2;
@@ -2013,9 +2013,9 @@ struct PortHeaderSyntax : public SyntaxNode {
 struct PortDeclarationSyntax : public MemberSyntax {
     PortHeaderSyntax* header;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
-    Token* semi;
+    Token semi;
 
-    PortDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax* header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+    PortDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax* header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
         MemberSyntax(SyntaxKind::PortDeclaration, attributes), header(header), declarators(declarators), semi(semi)
     {
         childCount += 3;
@@ -2034,11 +2034,11 @@ protected:
 };
 
 struct GenvarDeclarationSyntax : public MemberSyntax {
-    Token* keyword;
+    Token keyword;
     SeparatedSyntaxList<IdentifierNameSyntax> identifiers;
-    Token* semi;
+    Token semi;
 
-    GenvarDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token* semi) :
+    GenvarDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token semi) :
         MemberSyntax(SyntaxKind::GenvarDeclaration, attributes), keyword(keyword), identifiers(identifiers), semi(semi)
     {
         childCount += 3;
@@ -2059,11 +2059,11 @@ protected:
 // ----- TYPES -----
 
 struct IntegerTypeSyntax : public DataTypeSyntax {
-    Token* keyword;
-    Token* signing;
+    Token keyword;
+    Token signing;
     SyntaxList<VariableDimensionSyntax> dimensions;
 
-    IntegerTypeSyntax(SyntaxKind kind, Token* keyword, Token* signing, SyntaxList<VariableDimensionSyntax> dimensions) :
+    IntegerTypeSyntax(SyntaxKind kind, Token keyword, Token signing, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(kind), keyword(keyword), signing(signing), dimensions(dimensions)
     {
         childCount += 3;
@@ -2081,9 +2081,9 @@ protected:
 };
 
 struct KeywordTypeSyntax : public DataTypeSyntax {
-    Token* keyword;
+    Token keyword;
 
-    KeywordTypeSyntax(SyntaxKind kind, Token* keyword) :
+    KeywordTypeSyntax(SyntaxKind kind, Token keyword) :
         DataTypeSyntax(kind), keyword(keyword)
     {
         childCount += 1;
@@ -2118,12 +2118,12 @@ protected:
 
 struct StructUnionMemberSyntax : public SyntaxNode {
     SyntaxList<AttributeInstanceSyntax> attributes;
-    Token* randomQualifier;
+    Token randomQualifier;
     DataTypeSyntax* type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
-    Token* semi;
+    Token semi;
 
-    StructUnionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* randomQualifier, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token* semi) :
+    StructUnionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token randomQualifier, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
         SyntaxNode(SyntaxKind::StructUnionMember), attributes(attributes), randomQualifier(randomQualifier), type(type), declarators(declarators), semi(semi)
     {
         childCount += 5;
@@ -2143,16 +2143,16 @@ protected:
 };
 
 struct StructUnionTypeSyntax : public DataTypeSyntax {
-    Token* keyword;
-    Token* tagged;
-    Token* packed;
-    Token* signing;
-    Token* openBrace;
+    Token keyword;
+    Token tagged;
+    Token packed;
+    Token signing;
+    Token openBrace;
     SyntaxList<StructUnionMemberSyntax> members;
-    Token* closeBrace;
+    Token closeBrace;
     SyntaxList<VariableDimensionSyntax> dimensions;
 
-    StructUnionTypeSyntax(SyntaxKind kind, Token* keyword, Token* tagged, Token* packed, Token* signing, Token* openBrace, SyntaxList<StructUnionMemberSyntax> members, Token* closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
+    StructUnionTypeSyntax(SyntaxKind kind, Token keyword, Token tagged, Token packed, Token signing, Token openBrace, SyntaxList<StructUnionMemberSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(kind), keyword(keyword), tagged(tagged), packed(packed), signing(signing), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
     {
         childCount += 8;
@@ -2175,14 +2175,14 @@ protected:
 };
 
 struct EnumTypeSyntax : public DataTypeSyntax {
-    Token* keyword;
+    Token keyword;
     DataTypeSyntax* baseType;
-    Token* openBrace;
+    Token openBrace;
     SeparatedSyntaxList<VariableDeclaratorSyntax> members;
-    Token* closeBrace;
+    Token closeBrace;
     SyntaxList<VariableDimensionSyntax> dimensions;
 
-    EnumTypeSyntax(Token* keyword, DataTypeSyntax* baseType, Token* openBrace, SeparatedSyntaxList<VariableDeclaratorSyntax> members, Token* closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
+    EnumTypeSyntax(Token keyword, DataTypeSyntax* baseType, Token openBrace, SeparatedSyntaxList<VariableDeclaratorSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(SyntaxKind::EnumType), keyword(keyword), baseType(baseType), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
     {
         childCount += 6;
@@ -2203,12 +2203,12 @@ protected:
 };
 
 struct TypeReferenceSyntax : public DataTypeSyntax {
-    Token* typeKeyword;
-    Token* openParen;
+    Token typeKeyword;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
 
-    TypeReferenceSyntax(Token* typeKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+    TypeReferenceSyntax(Token typeKeyword, Token openParen, ExpressionSyntax* expr, Token closeParen) :
         DataTypeSyntax(SyntaxKind::TypeReference), typeKeyword(typeKeyword), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 4;
@@ -2227,10 +2227,10 @@ protected:
 };
 
 struct DotMemberClauseSyntax : public SyntaxNode {
-    Token* dot;
-    Token* member;
+    Token dot;
+    Token member;
 
-    DotMemberClauseSyntax(Token* dot, Token* member) :
+    DotMemberClauseSyntax(Token dot, Token member) :
         SyntaxNode(SyntaxKind::DotMemberClause), dot(dot), member(member)
     {
         childCount += 2;
@@ -2247,13 +2247,13 @@ protected:
 };
 
 struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
-    Token* virtualKeyword;
-    Token* interfaceKeyword;
-    Token* name;
+    Token virtualKeyword;
+    Token interfaceKeyword;
+    Token name;
     ParameterValueAssignmentSyntax* parameters;
     DotMemberClauseSyntax* modport;
 
-    VirtualInterfaceTypeSyntax(Token* virtualKeyword, Token* interfaceKeyword, Token* name, ParameterValueAssignmentSyntax* parameters, DotMemberClauseSyntax* modport) :
+    VirtualInterfaceTypeSyntax(Token virtualKeyword, Token interfaceKeyword, Token name, ParameterValueAssignmentSyntax* parameters, DotMemberClauseSyntax* modport) :
         DataTypeSyntax(SyntaxKind::VirtualInterfaceType), virtualKeyword(virtualKeyword), interfaceKeyword(interfaceKeyword), name(name), parameters(parameters), modport(modport)
     {
         childCount += 5;
@@ -2273,10 +2273,10 @@ protected:
 };
 
 struct ImplicitTypeSyntax : public DataTypeSyntax {
-    Token* signing;
+    Token signing;
     SyntaxList<VariableDimensionSyntax> dimensions;
 
-    ImplicitTypeSyntax(Token* signing, SyntaxList<VariableDimensionSyntax> dimensions) :
+    ImplicitTypeSyntax(Token signing, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(SyntaxKind::ImplicitType), signing(signing), dimensions(dimensions)
     {
         childCount += 2;
@@ -2295,11 +2295,11 @@ protected:
 // ----- ASSERTIONS -----
 
 struct DeferredAssertionSyntax : public SyntaxNode {
-    Token* hash;
-    Token* zero;
-    Token* finalKeyword;
+    Token hash;
+    Token zero;
+    Token finalKeyword;
 
-    DeferredAssertionSyntax(Token* hash, Token* zero, Token* finalKeyword) :
+    DeferredAssertionSyntax(Token hash, Token zero, Token finalKeyword) :
         SyntaxNode(SyntaxKind::DeferredAssertion), hash(hash), zero(zero), finalKeyword(finalKeyword)
     {
         childCount += 3;
@@ -2317,10 +2317,10 @@ protected:
 };
 
 struct ElseClauseSyntax : public SyntaxNode {
-    Token* elseKeyword;
+    Token elseKeyword;
     SyntaxNode* clause;
 
-    ElseClauseSyntax(Token* elseKeyword, SyntaxNode* clause) :
+    ElseClauseSyntax(Token elseKeyword, SyntaxNode* clause) :
         SyntaxNode(SyntaxKind::ElseClause), elseKeyword(elseKeyword), clause(clause)
     {
         childCount += 2;
@@ -2357,12 +2357,12 @@ protected:
 };
 
 struct ImmediateAssertionStatementSyntax : public StatementSyntax {
-    Token* keyword;
+    Token keyword;
     DeferredAssertionSyntax* delay;
     ParenthesizedExpressionSyntax* expr;
     ActionBlockSyntax* action;
 
-    ImmediateAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax* expr, ActionBlockSyntax* action) :
+    ImmediateAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax* expr, ActionBlockSyntax* action) :
         StatementSyntax(kind, label, attributes), keyword(keyword), delay(delay), expr(expr), action(action)
     {
         childCount += 4;
@@ -2385,9 +2385,9 @@ protected:
 // ----- STATEMENTS -----
 
 struct EmptyStatementSyntax : public StatementSyntax {
-    Token* semicolon;
+    Token semicolon;
 
-    EmptyStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* semicolon) :
+    EmptyStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token semicolon) :
         StatementSyntax(SyntaxKind::EmptyStatement, label, attributes), semicolon(semicolon)
     {
         childCount += 1;
@@ -2405,15 +2405,15 @@ protected:
 };
 
 struct ConditionalStatementSyntax : public StatementSyntax {
-    Token* uniqueOrPriority;
-    Token* ifKeyword;
-    Token* openParen;
+    Token uniqueOrPriority;
+    Token ifKeyword;
+    Token openParen;
     ConditionalPredicateSyntax* predicate;
-    Token* closeParen;
+    Token closeParen;
     StatementSyntax* statement;
     ElseClauseSyntax* elseClause;
 
-    ConditionalStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* uniqueOrPriority, Token* ifKeyword, Token* openParen, ConditionalPredicateSyntax* predicate, Token* closeParen, StatementSyntax* statement, ElseClauseSyntax* elseClause) :
+    ConditionalStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token ifKeyword, Token openParen, ConditionalPredicateSyntax* predicate, Token closeParen, StatementSyntax* statement, ElseClauseSyntax* elseClause) :
         StatementSyntax(SyntaxKind::ConditionalStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(predicate), closeParen(closeParen), statement(statement), elseClause(elseClause)
     {
         childCount += 7;
@@ -2445,11 +2445,11 @@ struct CaseItemSyntax : public SyntaxNode {
 };
 
 struct DefaultCaseItemSyntax : public CaseItemSyntax {
-    Token* defaultKeyword;
-    Token* colon;
+    Token defaultKeyword;
+    Token colon;
     SyntaxNode* clause;
 
-    DefaultCaseItemSyntax(Token* defaultKeyword, Token* colon, SyntaxNode* clause) :
+    DefaultCaseItemSyntax(Token defaultKeyword, Token colon, SyntaxNode* clause) :
         CaseItemSyntax(SyntaxKind::DefaultCaseItem), defaultKeyword(defaultKeyword), colon(colon), clause(clause)
     {
         childCount += 3;
@@ -2468,12 +2468,12 @@ protected:
 
 struct PatternCaseItemSyntax : public CaseItemSyntax {
     PatternSyntax* pattern;
-    Token* tripleAnd;
+    Token tripleAnd;
     ExpressionSyntax* expr;
-    Token* colon;
+    Token colon;
     StatementSyntax* statement;
 
-    PatternCaseItemSyntax(PatternSyntax* pattern, Token* tripleAnd, ExpressionSyntax* expr, Token* colon, StatementSyntax* statement) :
+    PatternCaseItemSyntax(PatternSyntax* pattern, Token tripleAnd, ExpressionSyntax* expr, Token colon, StatementSyntax* statement) :
         CaseItemSyntax(SyntaxKind::PatternCaseItem), pattern(pattern), tripleAnd(tripleAnd), expr(expr), colon(colon), statement(statement)
     {
         childCount += 5;
@@ -2494,10 +2494,10 @@ protected:
 
 struct StandardCaseItemSyntax : public CaseItemSyntax {
     SeparatedSyntaxList<ExpressionSyntax> expressions;
-    Token* colon;
+    Token colon;
     SyntaxNode* clause;
 
-    StandardCaseItemSyntax(SeparatedSyntaxList<ExpressionSyntax> expressions, Token* colon, SyntaxNode* clause) :
+    StandardCaseItemSyntax(SeparatedSyntaxList<ExpressionSyntax> expressions, Token colon, SyntaxNode* clause) :
         CaseItemSyntax(SyntaxKind::StandardCaseItem), expressions(expressions), colon(colon), clause(clause)
     {
         childCount += 3;
@@ -2515,16 +2515,16 @@ protected:
 };
 
 struct CaseStatementSyntax : public StatementSyntax {
-    Token* uniqueOrPriority;
-    Token* caseKeyword;
-    Token* openParen;
+    Token uniqueOrPriority;
+    Token caseKeyword;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
-    Token* matchesOrInside;
+    Token closeParen;
+    Token matchesOrInside;
     SyntaxList<CaseItemSyntax> items;
-    Token* endcase;
+    Token endcase;
 
-    CaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* uniqueOrPriority, Token* caseKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen, Token* matchesOrInside, SyntaxList<CaseItemSyntax> items, Token* endcase) :
+    CaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token caseKeyword, Token openParen, ExpressionSyntax* expr, Token closeParen, Token matchesOrInside, SyntaxList<CaseItemSyntax> items, Token endcase) :
         StatementSyntax(SyntaxKind::CaseStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), caseKeyword(caseKeyword), openParen(openParen), expr(expr), closeParen(closeParen), matchesOrInside(matchesOrInside), items(items), endcase(endcase)
     {
         childCount += 8;
@@ -2549,10 +2549,10 @@ protected:
 };
 
 struct ForeverStatementSyntax : public StatementSyntax {
-    Token* foreverKeyword;
+    Token foreverKeyword;
     StatementSyntax* statement;
 
-    ForeverStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* foreverKeyword, StatementSyntax* statement) :
+    ForeverStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token foreverKeyword, StatementSyntax* statement) :
         StatementSyntax(SyntaxKind::ForeverStatement, label, attributes), foreverKeyword(foreverKeyword), statement(statement)
     {
         childCount += 2;
@@ -2571,13 +2571,13 @@ protected:
 };
 
 struct LoopStatementSyntax : public StatementSyntax {
-    Token* repeatOrWhile;
-    Token* openParen;
+    Token repeatOrWhile;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
     StatementSyntax* statement;
 
-    LoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* repeatOrWhile, Token* openParen, ExpressionSyntax* expr, Token* closeParen, StatementSyntax* statement) :
+    LoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token repeatOrWhile, Token openParen, ExpressionSyntax* expr, Token closeParen, StatementSyntax* statement) :
         StatementSyntax(SyntaxKind::LoopStatement, label, attributes), repeatOrWhile(repeatOrWhile), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
     {
         childCount += 5;
@@ -2599,15 +2599,15 @@ protected:
 };
 
 struct DoWhileStatementSyntax : public StatementSyntax {
-    Token* doKeyword;
+    Token doKeyword;
     StatementSyntax* statement;
-    Token* whileKeyword;
-    Token* openParen;
+    Token whileKeyword;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
-    Token* semi;
+    Token closeParen;
+    Token semi;
 
-    DoWhileStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* doKeyword, StatementSyntax* statement, Token* whileKeyword, Token* openParen, ExpressionSyntax* expr, Token* closeParen, Token* semi) :
+    DoWhileStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token doKeyword, StatementSyntax* statement, Token whileKeyword, Token openParen, ExpressionSyntax* expr, Token closeParen, Token semi) :
         StatementSyntax(SyntaxKind::DoWhileStatement, label, attributes), doKeyword(doKeyword), statement(statement), whileKeyword(whileKeyword), openParen(openParen), expr(expr), closeParen(closeParen), semi(semi)
     {
         childCount += 7;
@@ -2631,11 +2631,11 @@ protected:
 };
 
 struct ForVariableDeclarationSyntax : public SyntaxNode {
-    Token* varKeyword;
+    Token varKeyword;
     DataTypeSyntax* type;
     VariableDeclaratorSyntax* declarator;
 
-    ForVariableDeclarationSyntax(Token* varKeyword, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
+    ForVariableDeclarationSyntax(Token varKeyword, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
         SyntaxNode(SyntaxKind::ForVariableDeclaration), varKeyword(varKeyword), type(type), declarator(declarator)
     {
         childCount += 3;
@@ -2653,17 +2653,17 @@ protected:
 };
 
 struct ForLoopStatementSyntax : public StatementSyntax {
-    Token* forKeyword;
-    Token* openParen;
+    Token forKeyword;
+    Token openParen;
     SeparatedSyntaxList<SyntaxNode> initializers;
-    Token* semi1;
+    Token semi1;
     ExpressionSyntax* stopExpr;
-    Token* semi2;
+    Token semi2;
     SeparatedSyntaxList<ExpressionSyntax> steps;
-    Token* closeParen;
+    Token closeParen;
     StatementSyntax* statement;
 
-    ForLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* forKeyword, Token* openParen, SeparatedSyntaxList<SyntaxNode> initializers, Token* semi1, ExpressionSyntax* stopExpr, Token* semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token* closeParen, StatementSyntax* statement) :
+    ForLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token forKeyword, Token openParen, SeparatedSyntaxList<SyntaxNode> initializers, Token semi1, ExpressionSyntax* stopExpr, Token semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token closeParen, StatementSyntax* statement) :
         StatementSyntax(SyntaxKind::ForLoopStatement, label, attributes), forKeyword(forKeyword), openParen(openParen), initializers(initializers), semi1(semi1), stopExpr(stopExpr), semi2(semi2), steps(steps), closeParen(closeParen), statement(statement)
     {
         childCount += 9;
@@ -2689,14 +2689,14 @@ protected:
 };
 
 struct ForeachLoopStatementSyntax : public StatementSyntax {
-    Token* keyword;
-    Token* openParen;
+    Token keyword;
+    Token openParen;
     NameSyntax* arrayName;
     SeparatedSyntaxList<NameSyntax> loopVariables;
-    Token* closeParen;
+    Token closeParen;
     StatementSyntax* statement;
 
-    ForeachLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* openParen, NameSyntax* arrayName, SeparatedSyntaxList<NameSyntax> loopVariables, Token* closeParen, StatementSyntax* statement) :
+    ForeachLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, NameSyntax* arrayName, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeParen, StatementSyntax* statement) :
         StatementSyntax(SyntaxKind::ForeachLoopStatement, label, attributes), keyword(keyword), openParen(openParen), arrayName(arrayName), loopVariables(loopVariables), closeParen(closeParen), statement(statement)
     {
         childCount += 6;
@@ -2719,11 +2719,11 @@ protected:
 };
 
 struct ReturnStatementSyntax : public StatementSyntax {
-    Token* returnKeyword;
+    Token returnKeyword;
     ExpressionSyntax* returnValue;
-    Token* semi;
+    Token semi;
 
-    ReturnStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* returnKeyword, ExpressionSyntax* returnValue, Token* semi) :
+    ReturnStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token returnKeyword, ExpressionSyntax* returnValue, Token semi) :
         StatementSyntax(SyntaxKind::ReturnStatement, label, attributes), returnKeyword(returnKeyword), returnValue(returnValue), semi(semi)
     {
         childCount += 3;
@@ -2743,10 +2743,10 @@ protected:
 };
 
 struct JumpStatementSyntax : public StatementSyntax {
-    Token* breakOrContinue;
-    Token* semi;
+    Token breakOrContinue;
+    Token semi;
 
-    JumpStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* breakOrContinue, Token* semi) :
+    JumpStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token breakOrContinue, Token semi) :
         StatementSyntax(SyntaxKind::JumpStatement, label, attributes), breakOrContinue(breakOrContinue), semi(semi)
     {
         childCount += 2;
@@ -2788,9 +2788,9 @@ protected:
 
 struct ExpressionStatementSyntax : public StatementSyntax {
     ExpressionSyntax* expr;
-    Token* semi;
+    Token semi;
 
-    ExpressionStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr, Token* semi) :
+    ExpressionStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax* expr, Token semi) :
         StatementSyntax(SyntaxKind::ExpressionStatement, label, attributes), expr(expr), semi(semi)
     {
         childCount += 2;
@@ -2809,13 +2809,13 @@ protected:
 };
 
 struct ProceduralAssignStatementSyntax : public StatementSyntax {
-    Token* keyword;
+    Token keyword;
     ExpressionSyntax* lvalue;
-    Token* equals;
+    Token equals;
     ExpressionSyntax* value;
-    Token* semi;
+    Token semi;
 
-    ProceduralAssignStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, ExpressionSyntax* lvalue, Token* equals, ExpressionSyntax* value, Token* semi) :
+    ProceduralAssignStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax* lvalue, Token equals, ExpressionSyntax* value, Token semi) :
         StatementSyntax(kind, label, attributes), keyword(keyword), lvalue(lvalue), equals(equals), value(value), semi(semi)
     {
         childCount += 5;
@@ -2837,11 +2837,11 @@ protected:
 };
 
 struct ProceduralDeassignStatementSyntax : public StatementSyntax {
-    Token* keyword;
+    Token keyword;
     ExpressionSyntax* variable;
-    Token* semi;
+    Token semi;
 
-    ProceduralDeassignStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, ExpressionSyntax* variable, Token* semi) :
+    ProceduralDeassignStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax* variable, Token semi) :
         StatementSyntax(kind, label, attributes), keyword(keyword), variable(variable), semi(semi)
     {
         childCount += 3;
@@ -2861,11 +2861,11 @@ protected:
 };
 
 struct DisableStatementSyntax : public StatementSyntax {
-    Token* disable;
+    Token disable;
     NameSyntax* name;
-    Token* semi;
+    Token semi;
 
-    DisableStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* disable, NameSyntax* name, Token* semi) :
+    DisableStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, NameSyntax* name, Token semi) :
         StatementSyntax(SyntaxKind::DisableStatement, label, attributes), disable(disable), name(name), semi(semi)
     {
         childCount += 3;
@@ -2885,11 +2885,11 @@ protected:
 };
 
 struct DisableForkStatementSyntax : public StatementSyntax {
-    Token* disable;
-    Token* fork;
-    Token* semi;
+    Token disable;
+    Token fork;
+    Token semi;
 
-    DisableForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* disable, Token* fork, Token* semi) :
+    DisableForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, Token fork, Token semi) :
         StatementSyntax(SyntaxKind::DisableForkStatement, label, attributes), disable(disable), fork(fork), semi(semi)
     {
         childCount += 3;
@@ -2909,10 +2909,10 @@ protected:
 };
 
 struct NamedBlockClauseSyntax : public SyntaxNode {
-    Token* colon;
-    Token* name;
+    Token colon;
+    Token name;
 
-    NamedBlockClauseSyntax(Token* colon, Token* name) :
+    NamedBlockClauseSyntax(Token colon, Token name) :
         SyntaxNode(SyntaxKind::NamedBlockClause), colon(colon), name(name)
     {
         childCount += 2;
@@ -2929,13 +2929,13 @@ protected:
 };
 
 struct BlockStatementSyntax : public StatementSyntax {
-    Token* begin;
+    Token begin;
     NamedBlockClauseSyntax* blockName;
     SyntaxList<SyntaxNode> items;
-    Token* end;
+    Token end;
     NamedBlockClauseSyntax* endBlockName;
 
-    BlockStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
+    BlockStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) :
         StatementSyntax(kind, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
     {
         childCount += 5;
@@ -2957,13 +2957,13 @@ protected:
 };
 
 struct WaitStatementSyntax : public StatementSyntax {
-    Token* wait;
-    Token* openParen;
+    Token wait;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
     StatementSyntax* statement;
 
-    WaitStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* wait, Token* openParen, ExpressionSyntax* expr, Token* closeParen, StatementSyntax* statement) :
+    WaitStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait, Token openParen, ExpressionSyntax* expr, Token closeParen, StatementSyntax* statement) :
         StatementSyntax(SyntaxKind::WaitStatement, label, attributes), wait(wait), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
     {
         childCount += 5;
@@ -2985,11 +2985,11 @@ protected:
 };
 
 struct WaitForkStatementSyntax : public StatementSyntax {
-    Token* wait;
-    Token* fork;
-    Token* semi;
+    Token wait;
+    Token fork;
+    Token semi;
 
-    WaitForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* wait, Token* fork, Token* semi) :
+    WaitForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait, Token fork, Token semi) :
         StatementSyntax(SyntaxKind::WaitForkStatement, label, attributes), wait(wait), fork(fork), semi(semi)
     {
         childCount += 3;
@@ -3009,13 +3009,13 @@ protected:
 };
 
 struct WaitOrderStatementSyntax : public StatementSyntax {
-    Token* wait_order;
-    Token* openParen;
+    Token wait_order;
+    Token openParen;
     SeparatedSyntaxList<NameSyntax> names;
-    Token* closeParen;
+    Token closeParen;
     ActionBlockSyntax* action;
 
-    WaitOrderStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* wait_order, Token* openParen, SeparatedSyntaxList<NameSyntax> names, Token* closeParen, ActionBlockSyntax* action) :
+    WaitOrderStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait_order, Token openParen, SeparatedSyntaxList<NameSyntax> names, Token closeParen, ActionBlockSyntax* action) :
         StatementSyntax(SyntaxKind::WaitOrderStatement, label, attributes), wait_order(wait_order), openParen(openParen), names(names), closeParen(closeParen), action(action)
     {
         childCount += 5;
@@ -3038,10 +3038,10 @@ protected:
 
 struct RandCaseItemSyntax : public SyntaxNode {
     ExpressionSyntax* expr;
-    Token* colon;
+    Token colon;
     StatementSyntax* statement;
 
-    RandCaseItemSyntax(ExpressionSyntax* expr, Token* colon, StatementSyntax* statement) :
+    RandCaseItemSyntax(ExpressionSyntax* expr, Token colon, StatementSyntax* statement) :
         SyntaxNode(SyntaxKind::RandCaseItem), expr(expr), colon(colon), statement(statement)
     {
         childCount += 3;
@@ -3059,11 +3059,11 @@ protected:
 };
 
 struct RandCaseStatementSyntax : public StatementSyntax {
-    Token* randCase;
+    Token randCase;
     SyntaxList<RandCaseItemSyntax> items;
-    Token* endCase;
+    Token endCase;
 
-    RandCaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token* randCase, SyntaxList<RandCaseItemSyntax> items, Token* endCase) :
+    RandCaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token randCase, SyntaxList<RandCaseItemSyntax> items, Token endCase) :
         StatementSyntax(SyntaxKind::RandCaseStatement, label, attributes), randCase(randCase), items(items), endCase(endCase)
     {
         childCount += 3;
@@ -3119,13 +3119,13 @@ protected:
 };
 
 struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
-    Token* dot;
-    Token* name;
-    Token* openParen;
+    Token dot;
+    Token name;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
 
-    ExplicitNonAnsiPortSyntax(Token* dot, Token* name, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+    ExplicitNonAnsiPortSyntax(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
         NonAnsiPortSyntax(SyntaxKind::ExplicitNonAnsiPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 5;
@@ -3145,11 +3145,11 @@ protected:
 };
 
 struct NonAnsiPortListSyntax : public PortListSyntax {
-    Token* openParen;
+    Token openParen;
     SeparatedSyntaxList<NonAnsiPortSyntax> ports;
-    Token* closeParen;
+    Token closeParen;
 
-    NonAnsiPortListSyntax(Token* openParen, SeparatedSyntaxList<NonAnsiPortSyntax> ports, Token* closeParen) :
+    NonAnsiPortListSyntax(Token openParen, SeparatedSyntaxList<NonAnsiPortSyntax> ports, Token closeParen) :
         PortListSyntax(SyntaxKind::NonAnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
     {
         childCount += 3;
@@ -3185,10 +3185,10 @@ protected:
 };
 
 struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
-    Token* nameOrKeyword;
+    Token nameOrKeyword;
     DotMemberClauseSyntax* modport;
 
-    InterfacePortHeaderSyntax(Token* nameOrKeyword, DotMemberClauseSyntax* modport) :
+    InterfacePortHeaderSyntax(Token nameOrKeyword, DotMemberClauseSyntax* modport) :
         PortHeaderSyntax(SyntaxKind::InterfacePortHeader), nameOrKeyword(nameOrKeyword), modport(modport)
     {
         childCount += 2;
@@ -3205,11 +3205,11 @@ protected:
 };
 
 struct VariablePortHeaderSyntax : public PortHeaderSyntax {
-    Token* direction;
-    Token* varKeyword;
+    Token direction;
+    Token varKeyword;
     DataTypeSyntax* type;
 
-    VariablePortHeaderSyntax(Token* direction, Token* varKeyword, DataTypeSyntax* type) :
+    VariablePortHeaderSyntax(Token direction, Token varKeyword, DataTypeSyntax* type) :
         PortHeaderSyntax(SyntaxKind::VariablePortHeader), direction(direction), varKeyword(varKeyword), type(type)
     {
         childCount += 3;
@@ -3227,11 +3227,11 @@ protected:
 };
 
 struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
-    Token* direction;
-    Token* interconnect;
+    Token direction;
+    Token interconnect;
     DataTypeSyntax* type;
 
-    InterconnectPortHeaderSyntax(Token* direction, Token* interconnect, DataTypeSyntax* type) :
+    InterconnectPortHeaderSyntax(Token direction, Token interconnect, DataTypeSyntax* type) :
         PortHeaderSyntax(SyntaxKind::InterconnectPortHeader), direction(direction), interconnect(interconnect), type(type)
     {
         childCount += 3;
@@ -3249,11 +3249,11 @@ protected:
 };
 
 struct NetPortHeaderSyntax : public PortHeaderSyntax {
-    Token* direction;
-    Token* netType;
+    Token direction;
+    Token netType;
     DataTypeSyntax* dataType;
 
-    NetPortHeaderSyntax(Token* direction, Token* netType, DataTypeSyntax* dataType) :
+    NetPortHeaderSyntax(Token direction, Token netType, DataTypeSyntax* dataType) :
         PortHeaderSyntax(SyntaxKind::NetPortHeader), direction(direction), netType(netType), dataType(dataType)
     {
         childCount += 3;
@@ -3292,14 +3292,14 @@ protected:
 };
 
 struct ExplicitAnsiPortSyntax : public AnsiPortSyntax {
-    Token* direction;
-    Token* dot;
-    Token* name;
-    Token* openParen;
+    Token direction;
+    Token dot;
+    Token name;
+    Token openParen;
     ExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
 
-    ExplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* direction, Token* dot, Token* name, Token* openParen, ExpressionSyntax* expr, Token* closeParen) :
+    ExplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token direction, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
         AnsiPortSyntax(SyntaxKind::ExplicitAnsiPort, attributes), direction(direction), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 6;
@@ -3321,11 +3321,11 @@ protected:
 };
 
 struct AnsiPortListSyntax : public PortListSyntax {
-    Token* openParen;
+    Token openParen;
     SeparatedSyntaxList<MemberSyntax> ports;
-    Token* closeParen;
+    Token closeParen;
 
-    AnsiPortListSyntax(Token* openParen, SeparatedSyntaxList<MemberSyntax> ports, Token* closeParen) :
+    AnsiPortListSyntax(Token openParen, SeparatedSyntaxList<MemberSyntax> ports, Token closeParen) :
         PortListSyntax(SyntaxKind::AnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
     {
         childCount += 3;
@@ -3343,11 +3343,11 @@ protected:
 };
 
 struct WildcardPortListSyntax : public PortListSyntax {
-    Token* openParen;
-    Token* dotStar;
-    Token* closeParen;
+    Token openParen;
+    Token dotStar;
+    Token closeParen;
 
-    WildcardPortListSyntax(Token* openParen, Token* dotStar, Token* closeParen) :
+    WildcardPortListSyntax(Token openParen, Token dotStar, Token closeParen) :
         PortListSyntax(SyntaxKind::WildcardPortList), openParen(openParen), dotStar(dotStar), closeParen(closeParen)
     {
         childCount += 3;
@@ -3365,12 +3365,12 @@ protected:
 };
 
 struct ParameterPortListSyntax : public SyntaxNode {
-    Token* hash;
-    Token* openParen;
+    Token hash;
+    Token openParen;
     SeparatedSyntaxList<ParameterPortDeclarationSyntax> declarations;
-    Token* closeParen;
+    Token closeParen;
 
-    ParameterPortListSyntax(Token* hash, Token* openParen, SeparatedSyntaxList<ParameterPortDeclarationSyntax> declarations, Token* closeParen) :
+    ParameterPortListSyntax(Token hash, Token openParen, SeparatedSyntaxList<ParameterPortDeclarationSyntax> declarations, Token closeParen) :
         SyntaxNode(SyntaxKind::ParameterPortList), hash(hash), openParen(openParen), declarations(declarations), closeParen(closeParen)
     {
         childCount += 4;
@@ -3389,15 +3389,15 @@ protected:
 };
 
 struct ModuleHeaderSyntax : public SyntaxNode {
-    Token* moduleKeyword;
-    Token* lifetime;
-    Token* name;
+    Token moduleKeyword;
+    Token lifetime;
+    Token name;
     SyntaxList<PackageImportDeclarationSyntax> imports;
     ParameterPortListSyntax* parameters;
     PortListSyntax* ports;
-    Token* semi;
+    Token semi;
 
-    ModuleHeaderSyntax(SyntaxKind kind, Token* moduleKeyword, Token* lifetime, Token* name, SyntaxList<PackageImportDeclarationSyntax> imports, ParameterPortListSyntax* parameters, PortListSyntax* ports, Token* semi) :
+    ModuleHeaderSyntax(SyntaxKind kind, Token moduleKeyword, Token lifetime, Token name, SyntaxList<PackageImportDeclarationSyntax> imports, ParameterPortListSyntax* parameters, PortListSyntax* ports, Token semi) :
         SyntaxNode(kind), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), imports(imports), parameters(parameters), ports(ports), semi(semi)
     {
         childCount += 7;
@@ -3421,10 +3421,10 @@ protected:
 struct ModuleDeclarationSyntax : public MemberSyntax {
     ModuleHeaderSyntax* header;
     SyntaxList<MemberSyntax> members;
-    Token* endmodule;
+    Token endmodule;
     NamedBlockClauseSyntax* blockName;
 
-    ModuleDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax* header, SyntaxList<MemberSyntax> members, Token* endmodule, NamedBlockClauseSyntax* blockName) :
+    ModuleDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax* header, SyntaxList<MemberSyntax> members, Token endmodule, NamedBlockClauseSyntax* blockName) :
         MemberSyntax(kind, attributes), header(header), members(members), endmodule(endmodule), blockName(blockName)
     {
         childCount += 4;
@@ -3444,10 +3444,10 @@ protected:
 };
 
 struct ExternModuleSyntax : public SyntaxNode {
-    Token* externKeyword;
+    Token externKeyword;
     ModuleHeaderSyntax* header;
 
-    ExternModuleSyntax(Token* externKeyword, ModuleHeaderSyntax* header) :
+    ExternModuleSyntax(Token externKeyword, ModuleHeaderSyntax* header) :
         SyntaxNode(SyntaxKind::ExternModule), externKeyword(externKeyword), header(header)
     {
         childCount += 2;
@@ -3467,9 +3467,9 @@ protected:
 
 struct EmptyMemberSyntax : public MemberSyntax {
     TokenList qualifiers;
-    Token* semi;
+    Token semi;
 
-    EmptyMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token* semi) :
+    EmptyMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token semi) :
         MemberSyntax(SyntaxKind::EmptyMember, attributes), qualifiers(qualifiers), semi(semi)
     {
         childCount += 2;
@@ -3487,10 +3487,10 @@ protected:
 };
 
 struct ProceduralBlockSyntax : public MemberSyntax {
-    Token* keyword;
+    Token keyword;
     StatementSyntax* statement;
 
-    ProceduralBlockSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, StatementSyntax* statement) :
+    ProceduralBlockSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, StatementSyntax* statement) :
         MemberSyntax(kind, attributes), keyword(keyword), statement(statement)
     {
         childCount += 2;
@@ -3508,11 +3508,11 @@ protected:
 };
 
 struct GenerateRegionSyntax : public MemberSyntax {
-    Token* keyword;
+    Token keyword;
     SyntaxList<MemberSyntax> members;
-    Token* endgenerate;
+    Token endgenerate;
 
-    GenerateRegionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, SyntaxList<MemberSyntax> members, Token* endgenerate) :
+    GenerateRegionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SyntaxList<MemberSyntax> members, Token endgenerate) :
         MemberSyntax(SyntaxKind::GenerateRegion, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
     {
         childCount += 3;
@@ -3531,20 +3531,20 @@ protected:
 };
 
 struct LoopGenerateSyntax : public MemberSyntax {
-    Token* keyword;
-    Token* openParen;
-    Token* genvar;
-    Token* identifier;
-    Token* equals;
+    Token keyword;
+    Token openParen;
+    Token genvar;
+    Token identifier;
+    Token equals;
     ExpressionSyntax* initialExpr;
-    Token* semi1;
+    Token semi1;
     ExpressionSyntax* stopExpr;
-    Token* semi2;
+    Token semi2;
     ExpressionSyntax* iterationExpr;
-    Token* closeParen;
+    Token closeParen;
     MemberSyntax* block;
 
-    LoopGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* openParen, Token* genvar, Token* identifier, Token* equals, ExpressionSyntax* initialExpr, Token* semi1, ExpressionSyntax* stopExpr, Token* semi2, ExpressionSyntax* iterationExpr, Token* closeParen, MemberSyntax* block) :
+    LoopGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, Token genvar, Token identifier, Token equals, ExpressionSyntax* initialExpr, Token semi1, ExpressionSyntax* stopExpr, Token semi2, ExpressionSyntax* iterationExpr, Token closeParen, MemberSyntax* block) :
         MemberSyntax(SyntaxKind::LoopGenerate, attributes), keyword(keyword), openParen(openParen), genvar(genvar), identifier(identifier), equals(equals), initialExpr(initialExpr), semi1(semi1), stopExpr(stopExpr), semi2(semi2), iterationExpr(iterationExpr), closeParen(closeParen), block(block)
     {
         childCount += 12;
@@ -3572,14 +3572,14 @@ protected:
 };
 
 struct IfGenerateSyntax : public MemberSyntax {
-    Token* keyword;
-    Token* openParen;
+    Token keyword;
+    Token openParen;
     ExpressionSyntax* condition;
-    Token* closeParen;
+    Token closeParen;
     MemberSyntax* block;
     ElseClauseSyntax* elseClause;
 
-    IfGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* openParen, ExpressionSyntax* condition, Token* closeParen, MemberSyntax* block, ElseClauseSyntax* elseClause) :
+    IfGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax* condition, Token closeParen, MemberSyntax* block, ElseClauseSyntax* elseClause) :
         MemberSyntax(SyntaxKind::IfGenerate, attributes), keyword(keyword), openParen(openParen), condition(condition), closeParen(closeParen), block(block), elseClause(elseClause)
     {
         childCount += 6;
@@ -3601,14 +3601,14 @@ protected:
 };
 
 struct CaseGenerateSyntax : public MemberSyntax {
-    Token* keyword;
-    Token* openParen;
+    Token keyword;
+    Token openParen;
     ExpressionSyntax* condition;
-    Token* closeParen;
+    Token closeParen;
     SyntaxList<CaseItemSyntax> items;
-    Token* endCase;
+    Token endCase;
 
-    CaseGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* openParen, ExpressionSyntax* condition, Token* closeParen, SyntaxList<CaseItemSyntax> items, Token* endCase) :
+    CaseGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax* condition, Token closeParen, SyntaxList<CaseItemSyntax> items, Token endCase) :
         MemberSyntax(SyntaxKind::CaseGenerate, attributes), keyword(keyword), openParen(openParen), condition(condition), closeParen(closeParen), items(items), endCase(endCase)
     {
         childCount += 6;
@@ -3631,13 +3631,13 @@ protected:
 
 struct GenerateBlockSyntax : public MemberSyntax {
     NamedLabelSyntax* label;
-    Token* begin;
+    Token begin;
     NamedBlockClauseSyntax* beginName;
     SyntaxList<MemberSyntax> members;
-    Token* end;
+    Token end;
     NamedBlockClauseSyntax* endName;
 
-    GenerateBlockSyntax(SyntaxList<AttributeInstanceSyntax> attributes, NamedLabelSyntax* label, Token* begin, NamedBlockClauseSyntax* beginName, SyntaxList<MemberSyntax> members, Token* end, NamedBlockClauseSyntax* endName) :
+    GenerateBlockSyntax(SyntaxList<AttributeInstanceSyntax> attributes, NamedLabelSyntax* label, Token begin, NamedBlockClauseSyntax* beginName, SyntaxList<MemberSyntax> members, Token end, NamedBlockClauseSyntax* endName) :
         MemberSyntax(SyntaxKind::GenerateBlock, attributes), label(label), begin(begin), beginName(beginName), members(members), end(end), endName(endName)
     {
         childCount += 6;
@@ -3659,10 +3659,10 @@ protected:
 };
 
 struct DividerClauseSyntax : public SyntaxNode {
-    Token* divide;
-    Token* value;
+    Token divide;
+    Token value;
 
-    DividerClauseSyntax(Token* divide, Token* value) :
+    DividerClauseSyntax(Token divide, Token value) :
         SyntaxNode(SyntaxKind::DividerClause), divide(divide), value(value)
     {
         childCount += 2;
@@ -3679,12 +3679,12 @@ protected:
 };
 
 struct TimeUnitsDeclarationSyntax : public MemberSyntax {
-    Token* keyword;
-    Token* time;
+    Token keyword;
+    Token time;
     DividerClauseSyntax* divider;
-    Token* semi;
+    Token semi;
 
-    TimeUnitsDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* keyword, Token* time, DividerClauseSyntax* divider, Token* semi) :
+    TimeUnitsDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token time, DividerClauseSyntax* divider, Token semi) :
         MemberSyntax(SyntaxKind::TimeUnitsDeclaration, attributes), keyword(keyword), time(time), divider(divider), semi(semi)
     {
         childCount += 4;
@@ -3741,11 +3741,11 @@ protected:
 };
 
 struct NamedPortConnectionSyntax : public PortConnectionSyntax {
-    Token* dot;
-    Token* name;
+    Token dot;
+    Token name;
     ParenthesizedExpressionSyntax* connection;
 
-    NamedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* dot, Token* name, ParenthesizedExpressionSyntax* connection) :
+    NamedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token dot, Token name, ParenthesizedExpressionSyntax* connection) :
         PortConnectionSyntax(SyntaxKind::NamedPortConnection, attributes), dot(dot), name(name), connection(connection)
     {
         childCount += 3;
@@ -3764,9 +3764,9 @@ protected:
 };
 
 struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
-    Token* dotStar;
+    Token dotStar;
 
-    WildcardPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* dotStar) :
+    WildcardPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token dotStar) :
         PortConnectionSyntax(SyntaxKind::WildcardPortConnection, attributes), dotStar(dotStar)
     {
         childCount += 1;
@@ -3783,13 +3783,13 @@ protected:
 };
 
 struct HierarchicalInstanceSyntax : public SyntaxNode {
-    Token* name;
+    Token name;
     SyntaxList<VariableDimensionSyntax> dimensions;
-    Token* openParen;
+    Token openParen;
     SeparatedSyntaxList<PortConnectionSyntax> connections;
-    Token* closeParen;
+    Token closeParen;
 
-    HierarchicalInstanceSyntax(Token* name, SyntaxList<VariableDimensionSyntax> dimensions, Token* openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token* closeParen) :
+    HierarchicalInstanceSyntax(Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token closeParen) :
         SyntaxNode(SyntaxKind::HierarchicalInstance), name(name), dimensions(dimensions), openParen(openParen), connections(connections), closeParen(closeParen)
     {
         childCount += 5;
@@ -3809,12 +3809,12 @@ protected:
 };
 
 struct HierarchyInstantiationSyntax : public MemberSyntax {
-    Token* type;
+    Token type;
     ParameterValueAssignmentSyntax* parameters;
     SeparatedSyntaxList<HierarchicalInstanceSyntax> instances;
-    Token* semi;
+    Token semi;
 
-    HierarchyInstantiationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token* semi) :
+    HierarchyInstantiationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token semi) :
         MemberSyntax(SyntaxKind::HierarchyInstantiation, attributes), type(type), parameters(parameters), instances(instances), semi(semi)
     {
         childCount += 4;
@@ -3834,14 +3834,14 @@ protected:
 };
 
 struct FunctionPrototypeSyntax : public SyntaxNode {
-    Token* keyword;
-    Token* lifetime;
+    Token keyword;
+    Token lifetime;
     DataTypeSyntax* returnType;
     NameSyntax* name;
     AnsiPortListSyntax* portList;
-    Token* semi;
+    Token semi;
 
-    FunctionPrototypeSyntax(Token* keyword, Token* lifetime, DataTypeSyntax* returnType, NameSyntax* name, AnsiPortListSyntax* portList, Token* semi) :
+    FunctionPrototypeSyntax(Token keyword, Token lifetime, DataTypeSyntax* returnType, NameSyntax* name, AnsiPortListSyntax* portList, Token semi) :
         SyntaxNode(SyntaxKind::FunctionPrototype), keyword(keyword), lifetime(lifetime), returnType(returnType), name(name), portList(portList), semi(semi)
     {
         childCount += 6;
@@ -3864,10 +3864,10 @@ protected:
 struct FunctionDeclarationSyntax : public MemberSyntax {
     FunctionPrototypeSyntax* prototype;
     SyntaxList<SyntaxNode> items;
-    Token* end;
+    Token end;
     NamedBlockClauseSyntax* endBlockName;
 
-    FunctionDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, FunctionPrototypeSyntax* prototype, SyntaxList<SyntaxNode> items, Token* end, NamedBlockClauseSyntax* endBlockName) :
+    FunctionDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, FunctionPrototypeSyntax* prototype, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(kind, attributes), prototype(prototype), items(items), end(end), endBlockName(endBlockName)
     {
         childCount += 4;
@@ -3887,11 +3887,11 @@ protected:
 };
 
 struct ExtendsClauseSyntax : public SyntaxNode {
-    Token* keyword;
+    Token keyword;
     NameSyntax* baseName;
     ArgumentListSyntax* arguments;
 
-    ExtendsClauseSyntax(Token* keyword, NameSyntax* baseName, ArgumentListSyntax* arguments) :
+    ExtendsClauseSyntax(Token keyword, NameSyntax* baseName, ArgumentListSyntax* arguments) :
         SyntaxNode(SyntaxKind::ExtendsClause), keyword(keyword), baseName(baseName), arguments(arguments)
     {
         childCount += 3;
@@ -3909,10 +3909,10 @@ protected:
 };
 
 struct ImplementsClauseSyntax : public SyntaxNode {
-    Token* keyword;
+    Token keyword;
     SeparatedSyntaxList<NameSyntax> interfaces;
 
-    ImplementsClauseSyntax(Token* keyword, SeparatedSyntaxList<NameSyntax> interfaces) :
+    ImplementsClauseSyntax(Token keyword, SeparatedSyntaxList<NameSyntax> interfaces) :
         SyntaxNode(SyntaxKind::ImplementsClause), keyword(keyword), interfaces(interfaces)
     {
         childCount += 2;
@@ -3929,19 +3929,19 @@ protected:
 };
 
 struct ClassDeclarationSyntax : public MemberSyntax {
-    Token* virtualOrInterface;
-    Token* classKeyword;
-    Token* lifetime;
-    Token* name;
+    Token virtualOrInterface;
+    Token classKeyword;
+    Token lifetime;
+    Token name;
     ParameterPortListSyntax* parameters;
     ExtendsClauseSyntax* extendsClause;
     ImplementsClauseSyntax* implementsClause;
-    Token* semi;
+    Token semi;
     SyntaxList<MemberSyntax> items;
-    Token* endClass;
+    Token endClass;
     NamedBlockClauseSyntax* endBlockName;
 
-    ClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* virtualOrInterface, Token* classKeyword, Token* lifetime, Token* name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token* semi, SyntaxList<MemberSyntax> items, Token* endClass, NamedBlockClauseSyntax* endBlockName) :
+    ClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token virtualOrInterface, Token classKeyword, Token lifetime, Token name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token semi, SyntaxList<MemberSyntax> items, Token endClass, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(SyntaxKind::ClassDeclaration, attributes), virtualOrInterface(virtualOrInterface), classKeyword(classKeyword), lifetime(lifetime), name(name), parameters(parameters), extendsClause(extendsClause), implementsClause(implementsClause), semi(semi), items(items), endClass(endClass), endBlockName(endBlockName)
     {
         childCount += 11;
@@ -4031,11 +4031,11 @@ protected:
 };
 
 struct ContinuousAssignSyntax : public MemberSyntax {
-    Token* assign;
+    Token assign;
     SeparatedSyntaxList<ExpressionSyntax> assignments;
-    Token* semi;
+    Token semi;
 
-    ContinuousAssignSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* assign, SeparatedSyntaxList<ExpressionSyntax> assignments, Token* semi) :
+    ContinuousAssignSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token assign, SeparatedSyntaxList<ExpressionSyntax> assignments, Token semi) :
         MemberSyntax(SyntaxKind::ContinuousAssign, attributes), assign(assign), assignments(assignments), semi(semi)
     {
         childCount += 3;
@@ -4056,12 +4056,12 @@ protected:
 // ----- COVER GROUPS -----
 
 struct WithFunctionSampleSyntax : public SyntaxNode {
-    Token* with;
-    Token* function;
-    Token* sample;
+    Token with;
+    Token function;
+    Token sample;
     AnsiPortListSyntax* portList;
 
-    WithFunctionSampleSyntax(Token* with, Token* function, Token* sample, AnsiPortListSyntax* portList) :
+    WithFunctionSampleSyntax(Token with, Token function, Token sample, AnsiPortListSyntax* portList) :
         SyntaxNode(SyntaxKind::WithFunctionSample), with(with), function(function), sample(sample), portList(portList)
     {
         childCount += 4;
@@ -4089,10 +4089,10 @@ struct BlockEventExpressionSyntax : public SyntaxNode {
 
 struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
     BlockEventExpressionSyntax* left;
-    Token* orKeyword;
+    Token orKeyword;
     BlockEventExpressionSyntax* right;
 
-    BinaryBlockEventExpressionSyntax(BlockEventExpressionSyntax* left, Token* orKeyword, BlockEventExpressionSyntax* right) :
+    BinaryBlockEventExpressionSyntax(BlockEventExpressionSyntax* left, Token orKeyword, BlockEventExpressionSyntax* right) :
         BlockEventExpressionSyntax(SyntaxKind::BinaryBlockEventExpression), left(left), orKeyword(orKeyword), right(right)
     {
         childCount += 3;
@@ -4110,10 +4110,10 @@ protected:
 };
 
 struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
-    Token* keyword;
+    Token keyword;
     NameSyntax* name;
 
-    PrimaryBlockEventExpressionSyntax(Token* keyword, NameSyntax* name) :
+    PrimaryBlockEventExpressionSyntax(Token keyword, NameSyntax* name) :
         BlockEventExpressionSyntax(SyntaxKind::PrimaryBlockEventExpression), keyword(keyword), name(name)
     {
         childCount += 2;
@@ -4130,12 +4130,12 @@ protected:
 };
 
 struct BlockCoverageEventSyntax : public SyntaxNode {
-    Token* atat;
-    Token* openParen;
+    Token atat;
+    Token openParen;
     BlockEventExpressionSyntax* expr;
-    Token* closeParen;
+    Token closeParen;
 
-    BlockCoverageEventSyntax(Token* atat, Token* openParen, BlockEventExpressionSyntax* expr, Token* closeParen) :
+    BlockCoverageEventSyntax(Token atat, Token openParen, BlockEventExpressionSyntax* expr, Token closeParen) :
         SyntaxNode(SyntaxKind::BlockCoverageEvent), atat(atat), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 4;
@@ -4154,16 +4154,16 @@ protected:
 };
 
 struct CovergroupDeclarationSyntax : public MemberSyntax {
-    Token* covergroup;
-    Token* name;
+    Token covergroup;
+    Token name;
     AnsiPortListSyntax* portList;
     SyntaxNode* event;
-    Token* semi;
+    Token semi;
     SyntaxList<MemberSyntax> members;
-    Token* endgroup;
+    Token endgroup;
     NamedBlockClauseSyntax* endBlockName;
 
-    CovergroupDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* covergroup, Token* name, AnsiPortListSyntax* portList, SyntaxNode* event, Token* semi, SyntaxList<MemberSyntax> members, Token* endgroup, NamedBlockClauseSyntax* endBlockName) :
+    CovergroupDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token covergroup, Token name, AnsiPortListSyntax* portList, SyntaxNode* event, Token semi, SyntaxList<MemberSyntax> members, Token endgroup, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(SyntaxKind::CovergroupDeclaration, attributes), covergroup(covergroup), name(name), portList(portList), event(event), semi(semi), members(members), endgroup(endgroup), endBlockName(endBlockName)
     {
         childCount += 8;
@@ -4187,14 +4187,14 @@ protected:
 };
 
 struct CoverageOptionSyntax : public MemberSyntax {
-    Token* option;
-    Token* dot;
-    Token* name;
-    Token* equals;
+    Token option;
+    Token dot;
+    Token name;
+    Token equals;
     ExpressionSyntax* expr;
-    Token* semi;
+    Token semi;
 
-    CoverageOptionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token* option, Token* dot, Token* name, Token* equals, ExpressionSyntax* expr, Token* semi) :
+    CoverageOptionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token option, Token dot, Token name, Token equals, ExpressionSyntax* expr, Token semi) :
         MemberSyntax(SyntaxKind::CoverageOption, attributes), option(option), dot(dot), name(name), equals(equals), expr(expr), semi(semi)
     {
         childCount += 6;
@@ -4219,9 +4219,9 @@ protected:
 
 struct CompilationUnitSyntax : public SyntaxNode {
     SyntaxList<MemberSyntax> members;
-    Token* endOfFile;
+    Token endOfFile;
 
-    CompilationUnitSyntax(SyntaxList<MemberSyntax> members, Token* endOfFile) :
+    CompilationUnitSyntax(SyntaxList<MemberSyntax> members, Token endOfFile) :
         SyntaxNode(SyntaxKind::CompilationUnit), members(members), endOfFile(endOfFile)
     {
         childCount += 2;
@@ -4240,9 +4240,9 @@ protected:
 // ----- DIRECTIVES -----
 
 struct DirectiveSyntax : public SyntaxNode {
-    Token* directive;
+    Token directive;
 
-    DirectiveSyntax(SyntaxKind kind, Token* directive) :
+    DirectiveSyntax(SyntaxKind kind, Token directive) :
         SyntaxNode(kind), directive(directive)
     {
         childCount += 1;
@@ -4258,9 +4258,9 @@ protected:
 };
 
 struct SimpleDirectiveSyntax : public DirectiveSyntax {
-    Token* endOfDirective;
+    Token endOfDirective;
 
-    SimpleDirectiveSyntax(SyntaxKind kind, Token* directive, Token* endOfDirective) :
+    SimpleDirectiveSyntax(SyntaxKind kind, Token directive, Token endOfDirective) :
         DirectiveSyntax(kind, directive), endOfDirective(endOfDirective)
     {
         childCount += 1;
@@ -4277,10 +4277,10 @@ protected:
 };
 
 struct IncludeDirectiveSyntax : public DirectiveSyntax {
-    Token* fileName;
-    Token* endOfDirective;
+    Token fileName;
+    Token endOfDirective;
 
-    IncludeDirectiveSyntax(Token* directive, Token* fileName, Token* endOfDirective) :
+    IncludeDirectiveSyntax(Token directive, Token fileName, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::IncludeDirective, directive), fileName(fileName), endOfDirective(endOfDirective)
     {
         childCount += 2;
@@ -4298,11 +4298,11 @@ protected:
 };
 
 struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
-    Token* name;
-    Token* endOfDirective;
+    Token name;
+    Token endOfDirective;
     TokenList disabledTokens;
 
-    ConditionalBranchDirectiveSyntax(SyntaxKind kind, Token* directive, Token* name, Token* endOfDirective, TokenList disabledTokens) :
+    ConditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token name, Token endOfDirective, TokenList disabledTokens) :
         DirectiveSyntax(kind, directive), name(name), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
     {
         childCount += 3;
@@ -4321,10 +4321,10 @@ protected:
 };
 
 struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
-    Token* endOfDirective;
+    Token endOfDirective;
     TokenList disabledTokens;
 
-    UnconditionalBranchDirectiveSyntax(SyntaxKind kind, Token* directive, Token* endOfDirective, TokenList disabledTokens) :
+    UnconditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token endOfDirective, TokenList disabledTokens) :
         DirectiveSyntax(kind, directive), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
     {
         childCount += 2;
@@ -4342,10 +4342,10 @@ protected:
 };
 
 struct MacroArgumentDefaultSyntax : public SyntaxNode {
-    Token* equals;
+    Token equals;
     TokenList tokens;
 
-    MacroArgumentDefaultSyntax(Token* equals, TokenList tokens) :
+    MacroArgumentDefaultSyntax(Token equals, TokenList tokens) :
         SyntaxNode(SyntaxKind::MacroArgumentDefault), equals(equals), tokens(tokens)
     {
         childCount += 2;
@@ -4362,10 +4362,10 @@ protected:
 };
 
 struct MacroFormalArgumentSyntax : public SyntaxNode {
-    Token* name;
+    Token name;
     MacroArgumentDefaultSyntax* defaultValue;
 
-    MacroFormalArgumentSyntax(Token* name, MacroArgumentDefaultSyntax* defaultValue) :
+    MacroFormalArgumentSyntax(Token name, MacroArgumentDefaultSyntax* defaultValue) :
         SyntaxNode(SyntaxKind::MacroFormalArgument), name(name), defaultValue(defaultValue)
     {
         childCount += 2;
@@ -4382,11 +4382,11 @@ protected:
 };
 
 struct MacroFormalArgumentListSyntax : public SyntaxNode {
-    Token* openParen;
+    Token openParen;
     SeparatedSyntaxList<MacroFormalArgumentSyntax> args;
-    Token* closeParen;
+    Token closeParen;
 
-    MacroFormalArgumentListSyntax(Token* openParen, SeparatedSyntaxList<MacroFormalArgumentSyntax> args, Token* closeParen) :
+    MacroFormalArgumentListSyntax(Token openParen, SeparatedSyntaxList<MacroFormalArgumentSyntax> args, Token closeParen) :
         SyntaxNode(SyntaxKind::MacroFormalArgumentList), openParen(openParen), args(args), closeParen(closeParen)
     {
         childCount += 3;
@@ -4404,12 +4404,12 @@ protected:
 };
 
 struct DefineDirectiveSyntax : public DirectiveSyntax {
-    Token* name;
+    Token name;
     MacroFormalArgumentListSyntax* formalArguments;
     TokenList body;
-    Token* endOfDirective;
+    Token endOfDirective;
 
-    DefineDirectiveSyntax(Token* directive, Token* name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token* endOfDirective) :
+    DefineDirectiveSyntax(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::DefineDirective, directive), name(name), formalArguments(formalArguments), body(body), endOfDirective(endOfDirective)
     {
         childCount += 4;
@@ -4447,11 +4447,11 @@ protected:
 };
 
 struct MacroActualArgumentListSyntax : public SyntaxNode {
-    Token* openParen;
+    Token openParen;
     SeparatedSyntaxList<MacroActualArgumentSyntax> args;
-    Token* closeParen;
+    Token closeParen;
 
-    MacroActualArgumentListSyntax(Token* openParen, SeparatedSyntaxList<MacroActualArgumentSyntax> args, Token* closeParen) :
+    MacroActualArgumentListSyntax(Token openParen, SeparatedSyntaxList<MacroActualArgumentSyntax> args, Token closeParen) :
         SyntaxNode(SyntaxKind::MacroActualArgumentList), openParen(openParen), args(args), closeParen(closeParen)
     {
         childCount += 3;
@@ -4471,7 +4471,7 @@ protected:
 struct MacroUsageSyntax : public DirectiveSyntax {
     MacroActualArgumentListSyntax* args;
 
-    MacroUsageSyntax(Token* directive, MacroActualArgumentListSyntax* args) :
+    MacroUsageSyntax(Token directive, MacroActualArgumentListSyntax* args) :
         DirectiveSyntax(SyntaxKind::MacroUsage, directive), args(args)
     {
         childCount += 1;
@@ -4488,14 +4488,14 @@ protected:
 };
 
 struct TimescaleDirectiveSyntax : public DirectiveSyntax {
-    Token* timeUnit;
-    Token* timeUnitUnit;
-    Token* slash;
-    Token* timePrecision;
-    Token* timePrecisionUnit;
-    Token* endOfDirective;
+    Token timeUnit;
+    Token timeUnitUnit;
+    Token slash;
+    Token timePrecision;
+    Token timePrecisionUnit;
+    Token endOfDirective;
 
-    TimescaleDirectiveSyntax(Token* directive, Token* timeUnit, Token* timeUnitUnit, Token* slash, Token* timePrecision, Token* timePrecisionUnit, Token* endOfDirective) :
+    TimescaleDirectiveSyntax(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::TimescaleDirective, directive), timeUnit(timeUnit), timeUnitUnit(timeUnitUnit), slash(slash), timePrecision(timePrecision), timePrecisionUnit(timePrecisionUnit), endOfDirective(endOfDirective)
     {
         childCount += 6;
@@ -4517,10 +4517,10 @@ protected:
 };
 
 struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
-    Token* netType;
-    Token* endOfDirective;
+    Token netType;
+    Token endOfDirective;
 
-    DefaultNetTypeDirectiveSyntax(Token* directive, Token* netType, Token* endOfDirective) :
+    DefaultNetTypeDirectiveSyntax(Token directive, Token netType, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::DefaultNetTypeDirective, directive), netType(netType), endOfDirective(endOfDirective)
     {
         childCount += 2;

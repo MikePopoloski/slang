@@ -41,45 +41,45 @@ public:
     void pushSource(StringRef source);
     void pushSource(SourceBuffer buffer);
 
-    Token* next();
+    Token next();
 
     SourceManager& getSourceManager() const { return sourceManager; }
     BumpAllocator& getAllocator() const { return alloc; }
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-    Token* next(LexerMode mode);
-    Token* nextRaw(LexerMode mode);
+    Token next(LexerMode mode);
+    Token nextRaw(LexerMode mode);
 
-    Trivia handleIncludeDirective(Token* directive);
-    Trivia handleResetAllDirective(Token* directive);
-    Trivia handleDefineDirective(Token* directive);
-    Trivia handleMacroUsage(Token* directive);
-    Trivia handleIfDefDirective(Token* directive, bool inverted);
-    Trivia handleElsIfDirective(Token* directive);
-    Trivia handleElseDirective(Token* directive);
-    Trivia handleEndIfDirective(Token* directive);
-    Trivia handleTimescaleDirective(Token* directive);
-    Trivia handleDefaultNetTypeDirective(Token* directive);
+    Trivia handleIncludeDirective(Token directive);
+    Trivia handleResetAllDirective(Token directive);
+    Trivia handleDefineDirective(Token directive);
+    Trivia handleMacroUsage(Token directive);
+    Trivia handleIfDefDirective(Token directive, bool inverted);
+    Trivia handleElsIfDirective(Token directive);
+    Trivia handleElseDirective(Token directive);
+    Trivia handleEndIfDirective(Token directive);
+    Trivia handleTimescaleDirective(Token directive);
+    Trivia handleDefaultNetTypeDirective(Token directive);
 
-    Token* parseEndOfDirective(bool suppressError = false);
-    Trivia createSimpleDirective(Token* directive, bool suppressError = false);
+    Token parseEndOfDirective(bool suppressError = false);
+    Trivia createSimpleDirective(Token directive, bool suppressError = false);
 
     bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName);
-    Trivia parseBranchDirective(Token* directive, Token* condition, bool taken);
+    Trivia parseBranchDirective(Token directive, Token condition, bool taken);
 
-    void expectTimescaleSpecifier(Token*& unit, Token*& precision);
+    void expectTimescaleSpecifier(Token& unit, Token& precision);
 
-    DefineDirectiveSyntax* findMacro(Token* directive);
-    MacroActualArgumentListSyntax* handleTopLevelMacro(Token* directive);
-    bool expandMacro(DefineDirectiveSyntax* definition, MacroActualArgumentListSyntax* actualArgs, Buffer<Token*>& dest);
-    bool expandReplacementList(ArrayRef<Token*>& tokens);
+    DefineDirectiveSyntax* findMacro(Token directive);
+    MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
+    bool expandMacro(DefineDirectiveSyntax* definition, MacroActualArgumentListSyntax* actualArgs, Buffer<Token>& dest);
+    bool expandReplacementList(ArrayRef<Token>& tokens);
 
     // functions to advance the underlying token stream
-    Token* peek(LexerMode mode = LexerMode::Directive);
-    Token* consume(LexerMode mode = LexerMode::Directive);
-    Token* expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
-    bool peek(TokenKind kind, LexerMode mode = LexerMode::Directive) { return peek(mode)->kind == kind; }
+    Token peek(LexerMode mode = LexerMode::Directive);
+    Token consume(LexerMode mode = LexerMode::Directive);
+    Token expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
+    bool peek(TokenKind kind, LexerMode mode = LexerMode::Directive) { return peek(mode).kind == kind; }
 
     void addError(DiagCode code);
     void addError(DiagCode code, SourceLocation location);
@@ -110,12 +110,12 @@ private:
 
         // Set a buffer to use first, in order, before looking at an underlying preprocessor
         // stream for macro argument lists.
-        void setBuffer(ArrayRef<Token*> newBuffer);
+        void setBuffer(ArrayRef<Token> newBuffer);
 
         // Pull tokens one at a time from a previously set buffer. Note that this won't pull
         // from the underlying preprocessor stream; its purpose is to allow stepping through
         // a macro replacement list.
-        Token* next();
+        Token next();
 
         MacroActualArgumentListSyntax* parseActualArgumentList();
         MacroFormalArgumentListSyntax* parseFormalArgumentList();
@@ -126,15 +126,15 @@ private:
 
         MacroActualArgumentSyntax* parseActualArgument();
         MacroFormalArgumentSyntax* parseFormalArgument();
-        ArrayRef<Token*> parseTokenList();
+        ArrayRef<Token> parseTokenList();
 
-        Token* peek();
-        Token* consume();
-        Token* expect(TokenKind kind);
-        bool peek(TokenKind kind) { return peek()->kind == kind; }
+        Token peek();
+        Token consume();
+        Token expect(TokenKind kind);
+        bool peek(TokenKind kind) { return peek().kind == kind; }
 
         Preprocessor& pp;
-        ArrayRef<Token*> buffer;
+        ArrayRef<Token> buffer;
         uint32_t currentIndex = 0;
 
         // When we're parsing formal arguments, we're in directive mode since the macro needs to
@@ -163,16 +163,16 @@ private:
     std::unordered_map<StringRef, const TokenList*> argumentMap;
 
     // list of expanded macro tokens to drain before continuing with active lexer
-    Buffer<Token*> expandedTokens;
-    Token** currentMacroToken = nullptr;
+    Buffer<Token> expandedTokens;
+    Token* currentMacroToken = nullptr;
 
     // pools for constructing lists of trivia, tokens, syntax nodes
     BufferPool<Trivia> triviaPool;
-    BufferPool<Token*> tokenPool;
+    BufferPool<Token> tokenPool;
     BufferPool<TokenOrSyntax> syntaxPool;
 
     // the latest token pulled from a lexer
-    Token* currentToken;
+    Token currentToken;
 
     // we adjust lexing behavior slightly when lexing within a macro body
     bool inMacroBody = false;

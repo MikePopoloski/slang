@@ -1,5 +1,6 @@
 #include "Trivia.h"
 
+#include "SyntaxNode.h"
 #include "Token.h"
 
 namespace slang {
@@ -17,8 +18,8 @@ void Trivia::writeTo(Buffer<char>& buffer, uint8_t flags) const {
             break;
 
         case TriviaKind::SkippedTokens:
-            for (auto& t : tokens)
-                t->writeTo(buffer, flags);
+            for (Token t : tokens)
+                t.writeTo(buffer, flags);
             break;
 
         default:

@@ -26,7 +26,7 @@ TEST_CASE("Empty string", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::IdentifierName);
-    CHECK(((IdentifierNameSyntax*)expr)->identifier->isMissing());
+    CHECK(((IdentifierNameSyntax*)expr)->identifier.isMissing());
 }
 
 TEST_CASE("Name expression", "[parser:expressions]") {
@@ -34,7 +34,7 @@ TEST_CASE("Name expression", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::IdentifierName);
-    CHECK(!((IdentifierNameSyntax*)expr)->identifier->isMissing());
+    CHECK(!((IdentifierNameSyntax*)expr)->identifier.isMissing());
     CHECK(expr->toString() == text);
     CHECK(diagnostics.empty());
 }
@@ -63,7 +63,7 @@ void testImplicitClassHandle(TokenKind kind) {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == getKeywordNameExpression(kind));
-    CHECK(((KeywordNameSyntax*)expr)->keyword->kind == kind);
+    CHECK(((KeywordNameSyntax*)expr)->keyword.kind == kind);
     CHECK(diagnostics.empty());
 }
 
@@ -134,7 +134,7 @@ void testPrefixUnary(TokenKind kind) {
     CHECK(expr->toString() == text);
     CHECK(diagnostics.empty());
     auto us = (PrefixUnaryExpressionSyntax*)expr;
-    CHECK(us->operatorToken->kind == kind);
+    CHECK(us->operatorToken.kind == kind);
     CHECK(us->operand->kind == SyntaxKind::IdentifierName);
 }
 
@@ -162,7 +162,7 @@ void testPostfixUnary(TokenKind kind) {
     CHECK(expr->toString() == text);
     CHECK(diagnostics.empty());
     auto us = (PostfixUnaryExpressionSyntax*)expr;
-    CHECK(us->operatorToken->kind == kind);
+    CHECK(us->operatorToken.kind == kind);
     CHECK(us->operand->kind == SyntaxKind::IdentifierName);
 }
 
@@ -179,7 +179,7 @@ void testBinaryOperator(TokenKind kind) {
     CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
     auto us = (BinaryExpressionSyntax*)expr;
-    CHECK(us->operatorToken->kind == kind);
+    CHECK(us->operatorToken.kind == kind);
     CHECK(us->left->kind == SyntaxKind::IdentifierName);
     CHECK(us->right->kind == SyntaxKind::IntegerLiteralExpression);
 }

@@ -3,6 +3,7 @@
 #include "BumpAllocator.h"
 #include "CharInfo.h"
 #include "SourceManager.h"
+#include "SyntaxNode.h"
 
 namespace slang {
 
@@ -45,17 +46,17 @@ Lexer::Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnost
     }
 }
 
-Token* Lexer::concatenateTokens(BumpAllocator& alloc, const Token* left, const Token* right) {
+Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     // TODO: think about what happens if there is trivia in right token
     // TODO: think about what we should set the resulting location to be in order to capture expansion info
-    auto location = left->location;
-    auto trivia = left->trivia;
+    auto location = left.location();
+    auto trivia = left.trivia();
 
     // if either side is empty, we have an error; the user tried to concatenate some weird kind of token
-    auto leftText = left->rawText();
-    auto rightText = right->rawText();
+    auto leftText = left.rawText();
+    auto rightText = right.rawText();
     if (!leftText || !rightText)
-        return nullptr;
+        return Token();
 
     // combine the text for both sides; make sure to include room for a null
     uint32_t newLength = leftText.length() + rightText.length() + 1;
@@ -67,8 +68,10 @@ Token* Lexer::concatenateTokens(BumpAllocator& alloc, const Token* left, const T
 
     // common case: identifier + identifier
     // TODO: test that this works for all kinds of identifiers
-    if (left->kind == TokenKind::Identifier && right->kind == TokenKind::Identifier) {
-        return Token::createIdentifier(alloc, TokenKind::Identifier, location, trivia, combined.subString(0, newLength - 1), IdentifierType::Normal);
+    if (left.kind == TokenKind::Identifier && right.kind == TokenKind::Identifier) {
+        auto info = alloc.emplace<Token::Info>(trivia, combined.subString(0, newLength - 1), location, 0);
+        info->idType = IdentifierType::Normal;
+        return Token(TokenKind::Identifier, info);
     }
 
     // TODO: handle other kinds of errors and invalid combinations
@@ -78,34 +81,36 @@ Token* Lexer::concatenateTokens(BumpAllocator& alloc, const Token* left, const T
     Lexer lexer { BufferID(), combined, alloc, unused };
 
     auto token = lexer.lex();
-    if (token->kind == TokenKind::Unknown || !token->rawText())
-        return nullptr;
+    if (token.kind == TokenKind::Unknown || !token.rawText())
+        return Token();
 
     // make sure the next token is an EoF, otherwise there is junk left in the buffer
-    if (lexer.lex()->kind != TokenKind::EndOfFile)
-        return nullptr;
+    if (lexer.lex().kind != TokenKind::EndOfFile)
+        return Token();
 
-    token->location = location;
-    token->trivia = trivia;
-    return token;
+    auto info = alloc.emplace<Token::Info>(*token.getInfo());
+    info->location = location;
+    info->trivia = trivia;
+
+    return Token(token.kind, info);
 }
 
-Token* Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token** begin, Token** end) {
+Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end) {
     Buffer<char> text;
     text.append('"');
 
     // TODO: need to think a lot more about where and how much we insert spacing
     while (begin != end) {
-        Token* cur = *begin;
-        if (cur->hasTrivia(TriviaKind::Whitespace))
+        Token cur = *begin;
+        if (cur.hasTrivia(TriviaKind::Whitespace))
             text.append(' ');
 
-        if (cur->kind == TokenKind::MacroEscapedQuote) {
+        if (cur.kind == TokenKind::MacroEscapedQuote) {
             text.append('\\');
             text.append('"');
         }
         else {
-            text.appendRange((*begin)->rawText());
+            text.appendRange(cur.rawText());
         }
         begin++;
     }
@@ -117,38 +122,45 @@ Token* Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<
 
     // TODO: handle more error cases
     auto token = lexer.lex();
-    if (token->kind != TokenKind::StringLiteral)
-        return nullptr;
+    if (token.kind != TokenKind::StringLiteral)
+        return Token();
 
     // make sure the next token is an EoF, otherwise there is junk left in the buffer
-    if (lexer.lex()->kind != TokenKind::EndOfFile)
-        return nullptr;
+    if (lexer.lex().kind != TokenKind::EndOfFile)
+        return Token();
 
-    token->location = location;
-    token->trivia = trivia;
-    return token;
+    auto info = alloc.emplace<Token::Info>(*token.getInfo());
+    info->location = location;
+    info->trivia = trivia;
+
+    return Token(token.kind, info);
 }
 
-Token* Lexer::lex(LexerMode mode) {
+Token Lexer::lex(LexerMode mode) {
     if (mode == LexerMode::IncludeFileName)
         return lexIncludeFileName();
 
-    // lex leading trivia
-    TokenInfo info;
+    auto info = alloc.emplace<Token::Info>();
     auto triviaBuffer = triviaPool.get();
     bool directiveMode = mode == LexerMode::Directive;
-    if (lexTrivia(triviaBuffer, directiveMode))
-        return createToken(TokenKind::EndOfDirective, info, triviaBuffer);
+
+    // Lex any leading trivia; if we're in directive mode this might require
+    // us to return an EndOfDirective token right away.
+    bool eod = lexTrivia(triviaBuffer, directiveMode);
+    info->trivia = triviaBuffer.copy(alloc);
+    if (eod)
+        return Token(TokenKind::EndOfDirective, info);
 
     // lex the next token
     mark();
     TokenKind kind = lexToken(info, directiveMode);
-    return createToken(kind, info, triviaBuffer);
+    info->rawText = lexeme();
+    return Token(kind, info);
 }
 
-TokenKind Lexer::lexToken(TokenInfo& info, bool directiveMode) {
+TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode) {
     uint32_t offset = currentOffset();
-    info.offset = offset;
+    info->location = SourceLocation(getBufferID(), offset);
 
     char c = peek();
     advance();
@@ -376,7 +388,7 @@ TokenKind Lexer::lexToken(TokenInfo& info, bool directiveMode) {
             if (getKeywordTable()->lookup(lexeme(), kind))
                 return kind;
 
-            info.identifierType = IdentifierType::Normal;
+            info->idType = IdentifierType::Normal;
             return TokenKind::Identifier;
         }
         case '[': return TokenKind::OpenBracket;
@@ -444,7 +456,7 @@ TokenKind Lexer::lexToken(TokenInfo& info, bool directiveMode) {
     }
 }
 
-void Lexer::lexStringLiteral(TokenInfo& info) {
+void Lexer::lexStringLiteral(Token::Info* info) {
     stringBuffer.clear();
 
     while (true) {
@@ -531,10 +543,10 @@ void Lexer::lexStringLiteral(TokenInfo& info) {
         }
     }
 
-    info.niceText = StringRef(stringBuffer).intern(alloc);
+    info->stringText = StringRef(stringBuffer).intern(alloc);
 }
 
-TokenKind Lexer::lexEscapeSequence(TokenInfo& info) {
+TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
     char c = peek();
     if (isWhitespace(c) || c == '\0') {
         addError(DiagCode::EscapedWhitespace, currentOffset());
@@ -548,11 +560,11 @@ TokenKind Lexer::lexEscapeSequence(TokenInfo& info) {
             break;
     }
 
-    info.identifierType = IdentifierType::Escaped;
+    info->idType = IdentifierType::Escaped;
     return TokenKind::Identifier;
 }
 
-TokenKind Lexer::lexDollarSign(TokenInfo& info) {
+TokenKind Lexer::lexDollarSign(Token::Info* info) {
     scanIdentifier();
 
     // if length is 1, we just have a dollar sign operator
@@ -565,25 +577,25 @@ TokenKind Lexer::lexDollarSign(TokenInfo& info) {
     if (kind != TokenKind::Unknown)
         return kind;
 
-    info.identifierType = IdentifierType::System;
+    info->idType = IdentifierType::System;
     return TokenKind::SystemIdentifier;
 }
 
-TokenKind Lexer::lexDirective(TokenInfo& info) {
+TokenKind Lexer::lexDirective(Token::Info* info) {
     scanIdentifier();
 
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
         addError(DiagCode::MisplacedDirectiveChar, currentOffset() - 1);
-        info.directiveKind = SyntaxKind::Unknown;
+        info->directiveKind = SyntaxKind::Unknown;
         return TokenKind::Directive;
     }
 
-    info.directiveKind = getDirectiveKind(lexeme().subString(1));
+    info->directiveKind = getDirectiveKind(lexeme().subString(1));
     return TokenKind::Directive;
 }
 
-Token* Lexer::lexIncludeFileName() {
+Token Lexer::lexIncludeFileName() {
     // leading whitespace should lex into trivia
     auto triviaBuffer = triviaPool.get();
     if (isHorizontalWhitespace(peek())) {
@@ -593,12 +605,13 @@ Token* Lexer::lexIncludeFileName() {
 
     ArrayRef<Trivia> trivia = triviaBuffer.copy(alloc);
     uint32_t offset = currentOffset();
+    auto location = SourceLocation(getBufferID(), offset);
 
     mark();
     char delim = peek();
     if (delim != '"' && delim != '<') {
         addError(DiagCode::ExpectedIncludeFileName, offset);
-        return Token::missing(alloc, TokenKind::IncludeFileName, SourceLocation(getBufferID(), offset), trivia);
+        return Token(TokenKind::IncludeFileName, alloc.emplace<Token::Info>(trivia, nullptr, location, TokenFlags::Missing));
     }
 
     advance();
@@ -613,10 +626,13 @@ Token* Lexer::lexIncludeFileName() {
     } while (c != delim);
 
     StringRef rawText = lexeme();
-    return Token::createStringLiteral(alloc, TokenKind::IncludeFileName, SourceLocation(getBufferID(), offset), trivia, rawText, rawText);
+    auto info = alloc.emplace<Token::Info>(trivia, rawText, location, TokenFlags::None);
+    info->stringText = rawText;
+
+    return Token(TokenKind::IncludeFileName, info);
 }
 
-TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
+TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
     // have to check for the "1step" magic keyword
     static const char OneStepText[] = "1step";
     for (int i = 0; i < sizeof(OneStepText) - 1; i++) {
@@ -638,7 +654,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     scanUnsignedNumber(value, digits);
 
     // check if we have a fractional number here
-    info.numericFlags = 0;
+    info->numInfo.numericFlags = 0;
     switch (peek()) {
         case '.': {
             // fractional digits
@@ -661,7 +677,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
             else if (lexTimeLiteral(info))
                 result = TokenKind::TimeLiteral;
 
-            info.numericValue = computeRealValue(value, decPoint, digits, exp, neg);
+            info->numInfo.value = computeRealValue(value, decPoint, digits, exp, neg);
             return result;
         }
         case 'e':
@@ -672,7 +688,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
             uint64_t exp;
             bool neg;
             if (scanExponent(exp, neg)) {
-                info.numericValue = computeRealValue(value, digits, digits, exp, neg);
+                info->numInfo.value = computeRealValue(value, digits, digits, exp, neg);
                 return TokenKind::RealLiteral;
             }
             break;
@@ -682,7 +698,7 @@ TokenKind Lexer::lexNumericLiteral(TokenInfo& info) {
     // normal signed numeric literal; check for overflow
     if (value > INT32_MAX)
         value = INT32_MAX;
-    info.numericValue = (int32_t)value;
+    info->numInfo.value = (int32_t)value;
 
     if (lexTimeLiteral(info))
         return TokenKind::TimeLiteral;
@@ -714,25 +730,25 @@ bool Lexer::scanExponent(uint64_t& value, bool& negative) {
     return true;
 }
 
-TokenKind Lexer::lexApostrophe(TokenInfo& info) {
-    info.numericFlags = 0;
+TokenKind Lexer::lexApostrophe(Token::Info* info) {
+    info->numInfo.numericFlags = 0;
     char c = peek();
     switch (c) {
         case '0':
         case '1':
             advance();
-            info.numericValue = (logic_t)(uint8_t)getDigitValue(c);
+            info->numInfo.value = (logic_t)(uint8_t)getDigitValue(c);
             return TokenKind::UnbasedUnsizedLiteral;
         case 'x':
         case 'X':
             advance();
-            info.numericValue = logic_t::x;
+            info->numInfo.value = logic_t::x;
             return TokenKind::UnbasedUnsizedLiteral;
         case 'Z':
         case 'z':
         case '?':
             advance();
-            info.numericValue = logic_t::z;
+            info->numInfo.value = logic_t::z;
             return TokenKind::UnbasedUnsizedLiteral;
 
         case 's':
@@ -741,7 +757,7 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
             if (!lexIntegerBase(info))
                 addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
 
-            info.numericFlags |= NumericTokenFlags::IsSigned;
+            info->numInfo.numericFlags |= NumericTokenFlags::IsSigned;
             return TokenKind::IntegerBase;
 
         default:
@@ -753,44 +769,44 @@ TokenKind Lexer::lexApostrophe(TokenInfo& info) {
     }
 }
 
-bool Lexer::lexIntegerBase(TokenInfo& info) {
+bool Lexer::lexIntegerBase(Token::Info* info) {
     switch (peek()) {
         case 'd':
         case 'D':
             advance();
-            info.numericFlags = NumericTokenFlags::DecimalBase;
+            info->numInfo.numericFlags = NumericTokenFlags::DecimalBase;
             return true;
         case 'b':
         case 'B':
             advance();
-            info.numericFlags = NumericTokenFlags::BinaryBase;
+            info->numInfo.numericFlags = NumericTokenFlags::BinaryBase;
             return true;
         case 'o':
         case 'O':
             advance();
-            info.numericFlags = NumericTokenFlags::OctalBase;
+            info->numInfo.numericFlags = NumericTokenFlags::OctalBase;
             return true;
         case 'h':
         case 'H':
             advance();
-            info.numericFlags = NumericTokenFlags::HexBase;
+            info->numInfo.numericFlags = NumericTokenFlags::HexBase;
             return true;
     }
     return false;
 }
 
-bool Lexer::lexTimeLiteral(TokenInfo& info) {
+bool Lexer::lexTimeLiteral(Token::Info* info) {
 #define CASE(c, flag) \
     case c: if (peek(1) == 's') { \
         advance(2); \
-        info.numericFlags |= NumericTokenFlags::flag; \
+        info->numInfo.numericFlags |= NumericTokenFlags::flag; \
         return true; \
     } break;
 
     switch (peek()) {
         case 's':
             advance();
-            info.numericFlags |= NumericTokenFlags::Seconds;
+            info->numInfo.numericFlags |= NumericTokenFlags::Seconds;
             return true;
         CASE('m', Milliseconds);
         CASE('u', Microseconds);
@@ -969,31 +985,6 @@ bool Lexer::scanBlockComment(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
     
     addTrivia(TriviaKind::BlockComment, triviaBuffer);
     return eod;
-}
-
-Token* Lexer::createToken(TokenKind kind, TokenInfo& info, Buffer<Trivia>& triviaBuffer) {
-    auto trivia = triviaBuffer.copy(alloc);
-    auto location = SourceLocation(getBufferID(), info.offset);
-
-    switch (kind) {
-        case TokenKind::Unknown:
-            return Token::createUnknown(alloc, location, trivia, lexeme());
-        case TokenKind::Identifier:
-        case TokenKind::SystemIdentifier:
-            return Token::createIdentifier(alloc, kind, location, trivia, lexeme(), info.identifierType);
-        case TokenKind::IntegerLiteral:
-        case TokenKind::IntegerBase:
-        case TokenKind::UnbasedUnsizedLiteral:
-        case TokenKind::RealLiteral:
-        case TokenKind::TimeLiteral:
-            return Token::createNumericLiteral(alloc, kind, location, trivia, lexeme(), info.numericValue, info.numericFlags);
-        case TokenKind::StringLiteral:
-            return Token::createStringLiteral(alloc, kind, location, trivia, lexeme(), info.niceText);
-        case TokenKind::Directive:
-            return Token::createDirective(alloc, kind, location, trivia, lexeme(), info.directiveKind);
-        default:
-            return Token::createSimple(alloc, kind, location, trivia);
-    }
 }
 
 void Lexer::addTrivia(TriviaKind kind, Buffer<Trivia>& triviaBuffer) {

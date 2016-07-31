@@ -4,6 +4,7 @@
 #include "BufferPool.h"
 #include "Diagnostics.h"
 #include "SourceLocation.h"
+#include "SyntaxNode.h"
 #include "Token.h"
 
 namespace slang {
@@ -18,26 +19,26 @@ protected:
     ParserBase(Preprocessor& preprocessor);
 
     SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
-    Token* prependTrivia(Token* token, Trivia* trivia);
+    Token prependTrivia(Token token, Trivia* trivia);
 
     void prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia);
-    Token* prependTrivia(Token* token, Buffer<Trivia>& trivia);
+    Token prependTrivia(Token token, Buffer<Trivia>& trivia);
 
-    SyntaxNode* prependSkippedTokens(SyntaxNode* node, Buffer<Token*>& tokens);
-    Token* prependSkippedTokens(Token* node, Buffer<Token*>& tokens);
+    SyntaxNode* prependSkippedTokens(SyntaxNode* node, Buffer<Token>& tokens);
+    Token prependSkippedTokens(Token node, Buffer<Token>& tokens);
 
-    void reduceSkippedTokens(Buffer<Token*>& skipped, Buffer<Trivia>& trivia);
+    void reduceSkippedTokens(Buffer<Token>& skipped, Buffer<Trivia>& trivia);
 
     void addError(DiagCode code);
     Diagnostic& addError(DiagCode code, SourceLocation location);
-    Token* createExpectedToken(Token* actual, TokenKind expected);
+    Token createExpectedToken(Token actual, TokenKind expected);
 
-    Token* peek(int offset);
-    Token* peek();
+    Token peek(int offset);
+    Token peek();
     bool peek(TokenKind kind);
-    Token* consume();
-    Token* consumeIf(TokenKind kind);
-    Token* expect(TokenKind kind);
+    Token consume();
+    Token consumeIf(TokenKind kind);
+    Token expect(TokenKind kind);
 
     // sliding window of tokens
     class Window {
@@ -46,7 +47,7 @@ protected:
             tokenSource(source)
         {
             capacity = 32;
-            buffer = new Token*[capacity];
+            buffer = new Token[capacity];
         }
 
         ~Window() { delete[] buffer; }
@@ -55,9 +56,9 @@ protected:
         Window& operator=(const Window&) = delete;
 
         Preprocessor& tokenSource;
-        Token** buffer = nullptr;
-        Token* currentToken = nullptr;
-        Token* lastConsumed = nullptr;
+        Token* buffer = nullptr;
+        Token currentToken;
+        Token lastConsumed;
         int currentOffset = 0;
         int count = 0;
         int capacity = 0;
@@ -68,7 +69,7 @@ protected:
 
     BumpAllocator& alloc;
     BufferPool<Trivia> triviaPool;
-    BufferPool<Token*> tokenPool;
+    BufferPool<Token> tokenPool;
     BufferPool<SyntaxNode*> nodePool;
     BufferPool<TokenOrSyntax> tosPool;
 
@@ -84,9 +85,9 @@ protected:
         TokenKind openKind,
         TokenKind closeKind,
         TokenKind separatorKind,
-        Token*& openToken,
+        Token& openToken,
         ArrayRef<TokenOrSyntax>& list,
-        Token*& closeToken,
+        Token& closeToken,
         DiagCode code,
         TParserFunc&& parseItem
     ) {
@@ -102,22 +103,22 @@ protected:
         Buffer<TokenOrSyntax>& buffer,
         TokenKind closeKind,
         TokenKind separatorKind,
-        Token*& closeToken,
+        Token& closeToken,
         DiagCode code,
         TParserFunc&& parseItem
     ) {
         Trivia skippedTokens;
         auto current = peek();
-        if (!IsEnd(current->kind)) {
+        if (!IsEnd(current.kind)) {
             while (true) {
-                if (IsExpected(current->kind)) {
+                if (IsExpected(current.kind)) {
                     buffer.append(prependTrivia(parseItem(true), &skippedTokens));
                     while (true) {
                         current = peek();
-                        if (IsEnd(current->kind))
+                        if (IsEnd(current.kind))
                             break;
 
-                        if (IsExpected(current->kind)) {
+                        if (IsExpected(current.kind)) {
                             buffer.append(prependTrivia(expect(separatorKind), &skippedTokens));
                             buffer.append(prependTrivia(parseItem(false), &skippedTokens));
                             continue;
@@ -145,13 +146,13 @@ protected:
         auto current = peek();
         bool error = false;
 
-        while (!IsExpected(current->kind)) {
+        while (!IsExpected(current.kind)) {
             if (!error) {
-                addError(code, current->location);
+                addError(code, current.location());
                 error = true;
             }
 
-            if (current->kind == TokenKind::EndOfFile || IsAbort(current->kind)) {
+            if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind)) {
                 result = SkipAction::Abort;
                 break;
             }

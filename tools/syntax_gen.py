@@ -74,7 +74,7 @@ def generate(outf, name, tags, members, alltypes):
 
 	for m in members:
 		if m[0] == 'token':
-			typename = 'Token*'
+			typename = 'Token'
 		elif m[0] == 'tokenlist':
 			typename = 'TokenList'
 			pointerMembers.add(m[1])

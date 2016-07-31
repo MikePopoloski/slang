@@ -7,10 +7,10 @@
 
 #include "ArrayRef.h"
 #include "Buffer.h"
+#include "Token.h"
 
 namespace slang {
 
-class Token;
 class SyntaxNode;
 
 enum class SyntaxKind : uint16_t {
@@ -417,14 +417,14 @@ bool isPossibleVectorDigit(TokenKind kind);
 // discriminated union of Token and SyntaxNode
 struct TokenOrSyntax {
     union {
-        Token* token;
+        Token token;
         SyntaxNode* node;
     };
     bool isToken;
 
-    TokenOrSyntax(Token* token) : token(token), isToken(true) {}
+    TokenOrSyntax(Token token) : token(token), isToken(true) {}
     TokenOrSyntax(SyntaxNode* node) : node(node), isToken(false) {}
-    TokenOrSyntax(std::nullptr_t) : token(nullptr), isToken(true) {}
+    TokenOrSyntax(std::nullptr_t) : token(), isToken(true) {}
 };
 
 // base class for all syntax nodes
@@ -438,7 +438,7 @@ public:
     std::string toString(uint8_t flags = 0);
 
     void writeTo(Buffer<char>& buffer, uint8_t flags);
-    Token* getFirstToken();
+    Token getFirstToken();
 
     template<typename T>
     T* as() {
@@ -477,8 +477,8 @@ private:
 
 class TokenList : public SyntaxNode {
 public:
-    TokenList(std::nullptr_t) : TokenList(ArrayRef<Token*>(nullptr)) {}
-    TokenList(ArrayRef<Token*> elements) :
+    TokenList(std::nullptr_t) : TokenList(ArrayRef<Token>(nullptr)) {}
+    TokenList(ArrayRef<Token> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
@@ -487,17 +487,17 @@ public:
 
     uint32_t count() const { return elements.count(); }
 
-    Token* const* begin() const { return elements.begin(); }
-    Token* const* end() const { return elements.end(); }
+    const Token* begin() const { return elements.begin(); }
+    const Token* end() const { return elements.end(); }
 
-    const Token* operator[](uint32_t index) const { return elements[index]; }
-    Token* operator[](uint32_t index) { return elements[index]; }
+    const Token operator[](uint32_t index) const { return elements[index]; }
+    Token operator[](uint32_t index) { return elements[index]; }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
 
 private:
-    ArrayRef<Token*> elements;
+    ArrayRef<Token> elements;
 };
 
 template<typename T>

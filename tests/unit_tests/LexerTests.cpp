@@ -13,14 +13,14 @@ bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;
 }
 
-const Token& lexToken(StringRef text) {
+Token lexToken(StringRef text) {
     diagnostics.clear();
     auto buffer = sourceManager.assignText(text);
     Lexer lexer(buffer, alloc, diagnostics);
 
-    Token* token = lexer.lex();
-    REQUIRE(token != nullptr);
-    return *token;
+    Token token = lexer.lex();
+    REQUIRE(token);
+    return token;
 }
 
 TEST_CASE("Invalid chars", "[lexer]") {
@@ -74,8 +74,8 @@ TEST_CASE("Line Comment", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::LineComment);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
     CHECK(diagnostics.empty());
 }
 
@@ -85,8 +85,8 @@ TEST_CASE("Block Comment (one line)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     CHECK(diagnostics.empty());
 }
 
@@ -100,8 +100,8 @@ multiple lines
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     CHECK(diagnostics.empty());
 }
 
@@ -111,8 +111,8 @@ TEST_CASE("Block Comment (unterminated)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::UnterminatedBlockComment);
 }
@@ -123,8 +123,8 @@ TEST_CASE("Block Comment (nested)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::BlockComment);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::NestedBlockComment);
 }
@@ -135,8 +135,8 @@ TEST_CASE("Whitespace", "[lexer]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::Whitespace);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::Whitespace);
     CHECK(diagnostics.empty());
 }
 
@@ -145,8 +145,8 @@ TEST_CASE("Newlines (CR)", "[lexer]") {
     auto& token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::EndOfLine);
     CHECK(diagnostics.empty());
 }
 
@@ -155,8 +155,8 @@ TEST_CASE("Newlines (CR/LF)", "[lexer]") {
     auto& token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::EndOfLine);
     CHECK(diagnostics.empty());
 }
 
@@ -165,8 +165,8 @@ TEST_CASE("Newlines (LF)", "[lexer]") {
     auto& token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia.count() == 1);
-    CHECK(token.trivia[0].kind == TriviaKind::EndOfLine);
+    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::EndOfLine);
     CHECK(diagnostics.empty());
 }
 
@@ -905,11 +905,11 @@ void testDirectivePunctuation(TokenKind kind) {
     auto buffer = sourceManager.assignText(text);
     Lexer lexer(buffer, alloc, diagnostics);
 
-    Token* token = lexer.lex(LexerMode::Directive);
+    Token token = lexer.lex(LexerMode::Directive);
 
-    CHECK(token->kind == kind);
-    CHECK(token->toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token->valueText() == text);
+    CHECK(token.kind == kind);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(token.valueText() == text);
     CHECK(diagnostics.empty());
 }
 

@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Token.h
+// Contains Token class and related helpers.
+//
+// File is under the MIT license:
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <cstdint>
@@ -12,6 +18,7 @@
 
 namespace slang {
 
+enum class SyntaxKind : uint16_t;
 enum class TokenKind : uint16_t;
 
 struct TokenFlags {
@@ -79,29 +86,64 @@ struct NumericValue {
     };
 };
 
+/// Represents a single lexed token, including leading trivia, original location, token kind,
+/// and any related information derived from the token itself (such as the lexeme).
+///
+/// This class is a lightweight immutable structure designed to be copied around and stored
+/// wherever. The bulk of the token's data is stored in a heap allocated block. Most of the
+/// hot path only cares about the token's kind, so that's given priority.
 class Token {
 public:
-    ArrayRef<Trivia> trivia;
-    SourceLocation location;
+    struct Info {
+        ArrayRef<slang::Trivia> trivia;
+        StringRef rawText;
+        SourceLocation location;
+        union {
+            StringRef stringText;
+            SyntaxKind directiveKind;
+            IdentifierType idType;
+
+            struct NumericLiteralInfo {
+                NumericValue value;
+                uint8_t numericFlags;
+            } numInfo;
+        };
+        uint8_t flags;
+
+        Info() : flags(0) {}
+        Info(ArrayRef<Trivia> trivia, StringRef rawText, SourceLocation location, int flags) :
+            trivia(trivia), rawText(rawText), location(location), flags((uint8_t)flags)
+        {
+        }
+    };
+
     TokenKind kind;
 
+    Token();
+    Token(TokenKind kind, const Info* info);
+
     // a missing token was expected and inserted by the parser at a given point
-    bool isMissing() const { return flags & TokenFlags::Missing; }
+    bool isMissing() const { return (info->flags & TokenFlags::Missing) != 0; }
 
     // token was sourced from a preprocessor directive (include, macro, etc)
-    bool isFromPreprocessor() const { return (flags & TokenFlags::IsFromPreprocessor) != 0; }
-    void markAsPreprocessed() { flags |= TokenFlags::IsFromPreprocessor; }
+    bool isFromPreprocessor() const { return (info->flags & TokenFlags::IsFromPreprocessor) != 0; }
 
-    // value text is the "nice" lexed version of certain tokens;
-    // for example, in string literals, escape sequences are converted appropriately
+    SourceLocation location() const { return info->location; }
+    ArrayRef<Trivia> trivia() const { return info->trivia; }
+    const Info* getInfo() const { return info; }
+
+    /// Value text is the "nice" lexed version of certain tokens;
+    /// for example, in string literals, escape sequences are converted appropriately.
     StringRef valueText() const;
 
+    /// Gets the original lexeme that led to the creation of this token.
     StringRef rawText() const;
 
-    // convenience method that wraps writeTo
+    /// Convenience method that wraps writeTo and builds an std::string.
     std::string toString(uint8_t flags = 0) const;
 
-    // copy string representation to the given buffer
+    /// Write the string representation of the token to the given buffer.
+    /// flags control what exactly gets written.
     void writeTo(Buffer<char>& buffer, uint8_t flags) const;
 
     // data accessors for specific kinds of tokens
@@ -113,46 +155,16 @@ public:
 
     bool hasTrivia(TriviaKind triviaKind) const;
 
-    Token* clone(BumpAllocator& alloc) const;
+    bool valid() const { return info != nullptr; }
+    explicit operator bool() const { return valid(); }
 
-    static Token* createUnknown(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, uint8_t flags = 0);
-    static Token* createSimple(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags = 0);
-    static Token* createIdentifier(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, IdentifierType type, uint8_t flags = 0);
-    static Token* createStringLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, StringRef niceText, uint8_t flags = 0);
-    static Token* createNumericLiteral(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, NumericValue value, uint8_t numericFlags, uint8_t flags = 0);
-    static Token* createDirective(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, StringRef rawText, SyntaxKind directiveKind, uint8_t flags = 0);
-    static Token* missing(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia = nullptr);
+    Token cloneAsPreprocessed(BumpAllocator& alloc) const;
+    Token cloneWithTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const;
+
+    static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
 
 private:
-    uint8_t flags;
-
-    Token(TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags);
-    Token(const Token&) = delete;
-    Token& operator=(const Token&) = delete;
-
-    struct IdentifierInfo {
-        StringRef rawText;
-        IdentifierType type;
-    };
-
-    struct StringLiteralInfo {
-        StringRef rawText;
-        StringRef niceText;
-    };
-
-    struct NumericLiteralInfo {
-        StringRef rawText;
-        NumericValue value;
-        uint8_t numericFlags;
-    };
-
-    struct DirectiveInfo {
-        StringRef rawText;
-        SyntaxKind kind;
-    };
-
-    static size_t getAllocSize(TokenKind kind);
-    static Token* create(BumpAllocator& alloc, TokenKind kind, SourceLocation location, ArrayRef<Trivia> trivia, uint8_t flags);
+    const Info* info;
 };
 
 TokenKind getSystemKeywordKind(StringRef text);

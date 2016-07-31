@@ -1,3 +1,4 @@
+#include "SyntaxNode.h"
 #include "Token.h"
 
 namespace slang {
