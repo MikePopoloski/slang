@@ -36,8 +36,10 @@ void ParserBase::reduceSkippedTokens(Buffer<Token>& skipped, Buffer<Trivia>& tri
 }
 
 SyntaxNode* ParserBase::prependTrivia(SyntaxNode* node, Trivia* trivia) {
-    if (trivia->kind != TriviaKind::Unknown && node)
-        node->replaceFirstToken(prependTrivia(node->getFirstToken(), trivia));
+    if (trivia->kind != TriviaKind::Unknown && node) {
+        Token newToken = prependTrivia(node->getFirstToken(), trivia);
+        ASSERT(node->replaceFirstToken(newToken));
+    }
     return node;
 }
 
@@ -64,7 +66,8 @@ Token ParserBase::prependTrivia(Token token, Buffer<Trivia>& trivia) {
 void ParserBase::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
     if (!trivia.empty()) {
         ASSERT(node);
-        node->replaceFirstToken(prependTrivia(node->getFirstToken(), trivia));
+        Token newToken = prependTrivia(node->getFirstToken(), trivia);
+        ASSERT(node->replaceFirstToken(newToken));
     }
 }
 
@@ -107,6 +110,7 @@ Token ParserBase::peek() {
             window.addNew();
         window.currentToken = window.buffer[window.currentOffset];
     }
+    ASSERT(window.currentToken);
     return window.currentToken;
 }
 
@@ -162,7 +166,7 @@ void ParserBase::Window::addNew() {
         if (currentOffset > (capacity >> 1)) {
             int shift = count - currentOffset;
             if (shift > 0)
-                memmove(buffer, buffer + currentOffset, shift * sizeof(Token*));
+                memmove(buffer, buffer + currentOffset, shift * sizeof(Token));
 
             count -= currentOffset;
             currentOffset = 0;
@@ -170,7 +174,7 @@ void ParserBase::Window::addNew() {
         else {
             capacity *= 2;
             Token* newBuffer = new Token[capacity];
-            memcpy(newBuffer, buffer, count * sizeof(Token*));
+            memcpy(newBuffer, buffer, count * sizeof(Token));
 
             delete[] buffer;
             buffer = newBuffer;

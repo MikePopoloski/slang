@@ -439,7 +439,7 @@ public:
 
     void writeTo(Buffer<char>& buffer, uint8_t flags);
     Token getFirstToken();
-    void replaceFirstToken(Token token);
+    bool replaceFirstToken(Token token);
 
     template<typename T>
     T* as() {

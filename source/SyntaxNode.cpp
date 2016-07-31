@@ -35,19 +35,19 @@ Token SyntaxNode::getFirstToken() {
     return Token();
 }
 
-void SyntaxNode::replaceFirstToken(Token token) {
+bool SyntaxNode::replaceFirstToken(Token token) {
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
         if (child.isToken) {
             replaceChild(i, token);
-            return;
+            return true;
         }
         else if (child.node) {
-            child.node->replaceFirstToken(token);
-            return;
+            if (child.node->replaceFirstToken(token))
+                return true;
         }
     }
-    ASSERT(false, "No tokens to replace?!");
+    return false;
 }
 
 }

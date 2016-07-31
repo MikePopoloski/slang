@@ -30,7 +30,9 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
 }
 
 Token Preprocessor::next() {
-    return next(LexerMode::Normal);
+    Token token = next(LexerMode::Normal);
+    ASSERT(token);
+    return token;
 }
 
 Token Preprocessor::next(LexerMode mode) {
