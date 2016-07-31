@@ -85,6 +85,11 @@ const Buffer<char>* SourceManager::getBufferMemory(BufferID buffer) {
     return &fd->mem;
 }
 
+SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart, SourceLocation expansionEnd) {
+    bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionStart, expansionEnd));
+    return SourceLocation(BufferID::get(bufferEntries.size() - 1), 0);
+}
+
 SourceBuffer SourceManager::assignText(StringRef text) {
     return assignText("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">", text);
 }
@@ -163,7 +168,7 @@ SourceManager::FileData* SourceManager::getFileData(BufferID buffer) {
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom) {
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
-    return SourceBuffer { StringRef(fd->mem), BufferID::get(nextBufferID++) };
+    return SourceBuffer { StringRef(fd->mem), BufferID::get(bufferEntries.size() - 1) };
 }
 
 SourceBuffer SourceManager::openCached(path_type fullPath, SourceLocation includedFrom) {

@@ -39,6 +39,10 @@ public:
 
     bool isValid() const { return offset != 0; }
 
+    SourceLocation operator +(int delta) {
+        return SourceLocation(buffer, offset + delta);
+    }
+
     bool operator ==(const SourceLocation& rhs) {
         return offset == rhs.offset;
     }
@@ -50,6 +54,7 @@ public:
     bool operator <(const SourceLocation& rhs) {
         return offset < rhs.offset;
     }
+
     BufferID buffer;
     uint32_t offset;
 

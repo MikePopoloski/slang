@@ -158,8 +158,9 @@ public:
     bool valid() const { return info != nullptr; }
     explicit operator bool() const { return valid(); }
 
-    Token cloneAsPreprocessed(BumpAllocator& alloc) const;
-    Token cloneWithTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const;
+    Token asPreprocessed(BumpAllocator& alloc) const;
+    Token withTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const;
+    Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
 

@@ -71,7 +71,7 @@ Token Preprocessor::next(LexerMode mode) {
     } while (token.kind == TokenKind::Directive);
 
     trivia.appendRange(token.trivia());
-    return token.cloneWithTrivia(alloc, trivia.copy(alloc));
+    return token.withTrivia(alloc, trivia.copy(alloc));
 }
 
 Token Preprocessor::nextRaw(LexerMode mode) {
@@ -105,7 +105,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
         // The idea here is that if we have more things on the stack,
         // the current lexer must be for an include file
         if (lexerStack.size() > 1)
-            token = token.cloneAsPreprocessed(alloc);
+            token = token.asPreprocessed(alloc);
         return token;
     }
 
@@ -135,9 +135,9 @@ Token Preprocessor::nextRaw(LexerMode mode) {
 
     // finally found a real token to return, so update trivia and get out of
     // here
-    token = token.cloneWithTrivia(alloc, trivia.copy(alloc));
+    token = token.withTrivia(alloc, trivia.copy(alloc));
     if (lexerStack.size() > 1)
-        token = token.cloneAsPreprocessed(alloc);
+        token = token.asPreprocessed(alloc);
     return token;
 }
 
@@ -424,7 +424,7 @@ Token Preprocessor::parseEndOfDirective(bool suppressError) {
         auto trivia = triviaPool.get();
         trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
         trivia.appendRange(eod.trivia());
-        eod = eod.cloneWithTrivia(alloc, trivia.copy(alloc));
+        eod = eod.withTrivia(alloc, trivia.copy(alloc));
     }
 
     return eod;
@@ -464,7 +464,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     }
 
     auto buffer = tokenPool.get();
-    if (!expandMacro(definition, actualArgs, buffer))
+    if (!expandMacro(definition, directive, actualArgs, buffer))
         return actualArgs;
 
     ArrayRef<Token> tokens { buffer.begin(), buffer.end() };
@@ -555,10 +555,25 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     return actualArgs;
 }
 
-bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgumentListSyntax* actualArgs, Buffer<Token>& dest) {
+bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs, Buffer<Token>& dest) {
+    // ignore empty macro
+    if (macro->body.count() == 0)
+        return true;
+
     if (!macro->formalArguments) {
+        // each macro expansion gets its own location entry
+        SourceLocation start = usageSite.location();
+        SourceLocation macroStart = sourceManager.createExpansionLoc(
+            macro->body[0].location(),
+            start,
+            start + usageSite.rawText().length()
+        );
+
         // simple macro; just take body tokens
-        dest.appendRange(macro->body);
+        for (auto& token : macro->body) {
+            int delta = token.location().offset - start.offset;
+            dest.append(token.withLocation(alloc, macroStart + delta));
+        }
         return true;
     }
 
@@ -616,7 +631,7 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, MacroActualArgument
                 auto begin = it->second->begin();
                 auto end = it->second->end();
                 if (begin != end) {
-                    dest.append(begin->cloneWithTrivia(alloc, token.trivia()));
+                    dest.append(begin->withTrivia(alloc, token.trivia()));
                     dest.appendRange(++begin, end);
                 }
             }
@@ -660,7 +675,7 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
                         return false;
                 }
                 
-                if (!expandMacro(definition, actualArgs, *currentBuffer))
+                if (!expandMacro(definition, token, actualArgs, *currentBuffer))
                     return false;
 
                 expandedSomething = true;

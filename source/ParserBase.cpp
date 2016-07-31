@@ -49,7 +49,7 @@ Token ParserBase::prependTrivia(Token token, Trivia* trivia) {
         buffer.append(*trivia);
         buffer.appendRange(token.trivia());
 
-        token = token.cloneWithTrivia(alloc, buffer.copy(alloc));
+        token = token.withTrivia(alloc, buffer.copy(alloc));
         *trivia = Trivia();
     }
     return token;
@@ -58,7 +58,7 @@ Token ParserBase::prependTrivia(Token token, Trivia* trivia) {
 Token ParserBase::prependTrivia(Token token, Buffer<Trivia>& trivia) {
     ASSERT(token);
     trivia.appendRange(token.trivia());
-    token = token.cloneWithTrivia(alloc, trivia.copy(alloc));
+    token = token.withTrivia(alloc, trivia.copy(alloc));
     trivia.clear();
     return token;
 }

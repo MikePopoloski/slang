@@ -72,7 +72,7 @@ private:
 
     DefineDirectiveSyntax* findMacro(Token directive);
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
-    bool expandMacro(DefineDirectiveSyntax* definition, MacroActualArgumentListSyntax* actualArgs, Buffer<Token>& dest);
+    bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, MacroActualArgumentListSyntax* actualArgs, Buffer<Token>& dest);
     bool expandReplacementList(ArrayRef<Token>& tokens);
 
     // functions to advance the underlying token stream

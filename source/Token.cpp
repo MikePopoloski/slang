@@ -127,15 +127,21 @@ bool Token::hasTrivia(TriviaKind triviaKind) const {
     return false;
 }
 
-Token Token::cloneAsPreprocessed(BumpAllocator& alloc) const {
+Token Token::asPreprocessed(BumpAllocator& alloc) const {
     auto newInfo = alloc.emplace<Info>(*info);
     newInfo->flags |= TokenFlags::IsFromPreprocessor;
     return Token(kind, newInfo);
 }
 
-Token Token::cloneWithTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const {
+Token Token::withTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const {
     auto newInfo = alloc.emplace<Info>(*info);
     newInfo->trivia = trivia;
+    return Token(kind, newInfo);
+}
+
+Token Token::withLocation(BumpAllocator& alloc, SourceLocation location) const {
+    auto newInfo = alloc.emplace<Info>(*info);
+    newInfo->location = location;
     return Token(kind, newInfo);
 }
 

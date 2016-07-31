@@ -38,6 +38,9 @@ public:
     // get the buffer for the given file ID
     const Buffer<char>* getBufferMemory(BufferID buffer);
 
+    // Functions to create locations for macro expansions
+    SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart, SourceLocation expansionEnd);
+
     // Give ownership of source code to the manager and refer to it by the given path.
     // This method will fail if the given path is already loaded.
     SourceBuffer assignText(StringRef text);
@@ -53,7 +56,6 @@ private:
 
     BumpAllocator alloc;
     path_type workingDir;
-    uint32_t nextBufferID = 1;
     uint32_t unnamedBufferCount = 0;
 
     // Stores actual file contents and metadata; only one per loaded file
@@ -83,11 +85,23 @@ private:
         }
     };
 
-    // Instead of a file, this lets a BufferID point to a macro expansion location
+    // Instead of a file, this lets a BufferID point to a macro expansion location.
+    // This is actually used two different ways; if this is a normal token from a
+    // macro expansion, originalLocation will point to the token inside the macro
+    // definition, and expansionLocation will point to the range of the macro usage
+    // the expansion site. Alternatively, if this token came from an argument,
+    // originalLocation will point to the argument at the expansion site and
+    // expansionLocation will point to the parameter inside the macro body.
     struct ExpansionInfo {
-        SourceLocation originalLocation;
-        SourceLocation expansionLocationStart;
-        SourceLocation expansionLocationEnd;
+        SourceLocation originalLoc;
+        SourceLocation expansionStart;
+        SourceLocation expansionEnd;
+
+        ExpansionInfo() {}
+        ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart, SourceLocation expansionEnd) :
+            originalLoc(originalLoc), expansionStart(expansionStart), expansionEnd(expansionEnd)
+        {
+        }
     };
 
     // One BufferEntry per BufferID
