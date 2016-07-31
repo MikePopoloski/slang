@@ -15,12 +15,6 @@ void SyntaxNode::writeTo(Buffer<char>& buffer, uint8_t flags) {
     }
 }
 
-TokenOrSyntax SyntaxNode::getChild(uint32_t) {
-    // if you hit this assert, you forgot to override getChild in your syntax node
-    ASSERT(false);
-    return nullptr;
-}
-
 std::string SyntaxNode::toString(uint8_t flags) {
     Buffer<char> buffer;
     writeTo(buffer, flags);
@@ -39,6 +33,21 @@ Token SyntaxNode::getFirstToken() {
         }
     }
     return Token();
+}
+
+void SyntaxNode::replaceFirstToken(Token token) {
+    for (uint32_t i = 0; i < childCount; i++) {
+        auto child = getChild(i);
+        if (child.isToken) {
+            replaceChild(i, token);
+            return;
+        }
+        else if (child.node) {
+            child.node->replaceFirstToken(token);
+            return;
+        }
+    }
+    ASSERT(false, "No tokens to replace?!");
 }
 
 }

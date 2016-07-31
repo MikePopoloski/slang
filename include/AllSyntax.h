@@ -38,10 +38,17 @@ struct EqualsValueClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return equals;
             case 1: return expr;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: equals = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -58,10 +65,17 @@ struct AttributeSpecSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return name;
             case 1: return value;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: name = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -79,11 +93,19 @@ struct AttributeInstanceSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return &specs;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -100,10 +122,17 @@ struct NamedLabelSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return name;
             case 1: return colon;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: name = token; break;
+            case 1: colon = token; break;
         }
     }
 };
@@ -120,11 +149,19 @@ struct StatementSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -139,10 +176,17 @@ struct MemberSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -167,10 +211,17 @@ struct OrderedArgumentSyntax : public ArgumentSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return expr;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -189,13 +240,23 @@ struct NamedArgumentSyntax : public ArgumentSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return dot;
             case 1: return name;
             case 2: return openParen;
             case 3: return expr;
             case 4: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: dot = token; break;
+            case 1: name = token; break;
+            case 2: openParen = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeParen = token; break;
         }
     }
 };
@@ -213,11 +274,19 @@ struct ArgumentListSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return &parameters;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -234,10 +303,17 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return hash;
             case 1: return parameters;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: hash = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -264,10 +340,17 @@ struct VariablePatternSyntax : public PatternSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return dot;
             case 1: return variableName;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: dot = token; break;
+            case 1: variableName = token; break;
         }
     }
 };
@@ -283,9 +366,15 @@ struct WildcardPatternSyntax : public PatternSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return dotStar;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: dotStar = token; break;
         }
     }
 };
@@ -301,10 +390,17 @@ struct ExpressionPatternSyntax : public PatternSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return expr;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -321,11 +417,19 @@ struct TaggedPatternSyntax : public PatternSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return tagged;
             case 1: return memberName;
             case 2: return pattern;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: tagged = token; break;
+            case 1: memberName = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -349,10 +453,17 @@ struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return pattern;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -369,11 +480,19 @@ struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return name;
             case 1: return colon;
             case 2: return pattern;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: name = token; break;
+            case 1: colon = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -391,11 +510,19 @@ struct StructurePatternSyntax : public PatternSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBrace;
             case 1: return &members;
             case 2: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeBrace = token; break;
         }
     }
 };
@@ -412,10 +539,17 @@ struct MatchesClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return matchesKeyword;
             case 1: return pattern;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: matchesKeyword = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -432,11 +566,19 @@ struct ConditionalPatternSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return expr;
             case 1: return matchesClause;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -451,10 +593,17 @@ struct ConditionalPredicateSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &conditions;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -479,11 +628,19 @@ struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBrace;
             case 1: return &items;
             case 2: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeBrace = token; break;
         }
     }
 };
@@ -501,11 +658,19 @@ struct AssignmentPatternItemSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return key;
             case 1: return colon;
             case 2: return expr;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: colon = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -523,11 +688,19 @@ struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBrace;
             case 1: return &items;
             case 2: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeBrace = token; break;
         }
     }
 };
@@ -548,7 +721,7 @@ struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBrace;
             case 1: return countExpr;
             case 2: return innerOpenBrace;
@@ -556,6 +729,17 @@ protected:
             case 4: return innerCloseBrace;
             case 5: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: ASSERT(false); break;
+            case 2: innerOpenBrace = token; break;
+            case 3: ASSERT(false); break;
+            case 4: innerCloseBrace = token; break;
+            case 5: closeBrace = token; break;
         }
     }
 };
@@ -583,11 +767,19 @@ struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return operatorToken;
             case 1: return &attributes;
             case 2: return operand;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: operatorToken = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -605,11 +797,19 @@ struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return operand;
             case 1: return &attributes;
             case 2: return operatorToken;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: operatorToken = token; break;
         }
     }
 };
@@ -628,12 +828,21 @@ struct BinaryExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return operatorToken;
             case 2: return &attributes;
             case 3: return right;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: operatorToken = token; break;
+            case 2: ASSERT(false); break;
+            case 3: ASSERT(false); break;
         }
     }
 };
@@ -653,13 +862,23 @@ struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return min;
             case 1: return colon1;
             case 2: return typ;
             case 3: return colon2;
             case 4: return max;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: colon1 = token; break;
+            case 2: ASSERT(false); break;
+            case 3: colon2 = token; break;
+            case 4: ASSERT(false); break;
         }
     }
 };
@@ -677,11 +896,19 @@ struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return tagged;
             case 1: return member;
             case 2: return expr;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: tagged = token; break;
+            case 1: member = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -701,13 +928,23 @@ struct InsideExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return expr;
             case 1: return inside;
             case 2: return openBrace;
             case 3: return &valueRanges;
             case 4: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: inside = token; break;
+            case 2: openBrace = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeBrace = token; break;
         }
     }
 };
@@ -728,7 +965,7 @@ struct ConditionalExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return predicate;
             case 1: return question;
             case 2: return &attributes;
@@ -736,6 +973,17 @@ protected:
             case 4: return colon;
             case 5: return right;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: question = token; break;
+            case 2: ASSERT(false); break;
+            case 3: ASSERT(false); break;
+            case 4: colon = token; break;
+            case 5: ASSERT(false); break;
         }
     }
 };
@@ -752,11 +1000,19 @@ struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return type;
             case 1: return pattern;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -781,10 +1037,17 @@ struct BitSelectSyntax : public SelectorSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return expr;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -801,11 +1064,19 @@ struct RangeSelectSyntax : public SelectorSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return range;
             case 2: return right;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: range = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -823,11 +1094,19 @@ struct ElementSelectSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBracket;
             case 1: return selector;
             case 2: return closeBracket;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBracket = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeBracket = token; break;
         }
     }
 };
@@ -853,9 +1132,15 @@ struct IdentifierNameSyntax : public NameSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return identifier;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: identifier = token; break;
         }
     }
 };
@@ -872,10 +1157,17 @@ struct IdentifierSelectNameSyntax : public NameSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return identifier;
             case 1: return &selectors;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: identifier = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -891,9 +1183,15 @@ struct KeywordNameSyntax : public NameSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
         }
     }
 };
@@ -910,10 +1208,17 @@ struct ClassNameSyntax : public NameSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return identifier;
             case 1: return parameters;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: identifier = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -931,11 +1236,19 @@ struct ScopedNameSyntax : public NameSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return separator;
             case 2: return right;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: separator = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -952,10 +1265,17 @@ struct ClassScopeSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return separator;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: separator = token; break;
         }
     }
 };
@@ -973,9 +1293,15 @@ struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return literal;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: literal = token; break;
         }
     }
 };
@@ -993,11 +1319,19 @@ struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return size;
             case 1: return base;
             case 2: return value;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: size = token; break;
+            case 1: base = token; break;
+            case 2: value = token; break;
         }
     }
 };
@@ -1014,10 +1348,17 @@ struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBrace;
             case 1: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: closeBrace = token; break;
         }
     }
 };
@@ -1035,11 +1376,19 @@ struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBrace;
             case 1: return &expressions;
             case 2: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeBrace = token; break;
         }
     }
 };
@@ -1058,12 +1407,21 @@ struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBrace;
             case 1: return expression;
             case 2: return concatenation;
             case 3: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: closeBrace = token; break;
         }
     }
 };
@@ -1080,10 +1438,17 @@ struct StreamExpressionWithRange : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return withKeyword;
             case 1: return range;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: withKeyword = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -1100,11 +1465,19 @@ struct StreamExpressionSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return expression;
             case 1: return withRange;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -1125,7 +1498,7 @@ struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBrace;
             case 1: return operatorToken;
             case 2: return sliceSize;
@@ -1134,6 +1507,18 @@ protected:
             case 5: return innerCloseBrace;
             case 6: return closeBrace;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: operatorToken = token; break;
+            case 2: ASSERT(false); break;
+            case 3: innerOpenBrace = token; break;
+            case 4: ASSERT(false); break;
+            case 5: innerCloseBrace = token; break;
+            case 6: closeBrace = token; break;
         }
     }
 };
@@ -1151,11 +1536,19 @@ struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return expression;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -1173,11 +1566,19 @@ struct NewClassExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return classScope;
             case 1: return newKeyword;
             case 2: return arguments;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: newKeyword = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -1197,13 +1598,23 @@ struct NewArrayExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return newKeyword;
             case 1: return openBracket;
             case 2: return sizeExpr;
             case 3: return closeBracket;
             case 4: return initializer;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: newKeyword = token; break;
+            case 1: openBracket = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeBracket = token; break;
+            case 4: ASSERT(false); break;
         }
     }
 };
@@ -1222,11 +1633,19 @@ struct ElementSelectExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return select;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -1243,11 +1662,19 @@ struct MemberAccessExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return dot;
             case 2: return name;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: dot = token; break;
+            case 2: name = token; break;
         }
     }
 };
@@ -1265,12 +1692,21 @@ struct InvocationExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return &attributes;
             case 2: return arguments;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -1296,10 +1732,17 @@ struct DelaySyntax : public TimingControlSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return hash;
             case 1: return delayValue;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: hash = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -1316,10 +1759,17 @@ struct EventControlSyntax : public TimingControlSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return at;
             case 1: return eventName;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: at = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -1344,10 +1794,17 @@ struct IffClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return iff;
             case 1: return expr;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: iff = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -1365,11 +1822,19 @@ struct SignalEventExpressionSyntax : public EventExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return edge;
             case 1: return expr;
             case 2: return iffClause;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: edge = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -1387,11 +1852,19 @@ struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return operatorToken;
             case 2: return right;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: operatorToken = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -1409,11 +1882,19 @@ struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return expr;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -1429,9 +1910,15 @@ struct ImplicitEventControlSyntax : public TimingControlSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return atStar;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: atStar = token; break;
         }
     }
 };
@@ -1448,10 +1935,17 @@ struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return at;
             case 1: return openParenStarCloseParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: at = token; break;
+            case 1: openParenStarCloseParen = token; break;
         }
     }
 };
@@ -1468,10 +1962,17 @@ struct EventControlWithExpressionSyntax : public TimingControlSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return at;
             case 1: return expr;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: at = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -1491,13 +1992,23 @@ struct RepeatedEventControlSyntax : public TimingControlSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return repeat;
             case 1: return openParen;
             case 2: return expr;
             case 3: return closeParen;
             case 4: return eventControl;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: repeat = token; break;
+            case 1: openParen = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
+            case 4: ASSERT(false); break;
         }
     }
 };
@@ -1514,11 +2025,19 @@ struct TimingControlExpressionSyntax : public ExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return timing;
             case 1: return expr;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -1543,10 +2062,17 @@ struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return selector;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -1561,10 +2087,17 @@ struct DataTypeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return type;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -1579,9 +2112,15 @@ struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return star;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: star = token; break;
         }
     }
 };
@@ -1598,10 +2137,17 @@ struct ColonExpressionClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return colon;
             case 1: return expr;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: colon = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -1618,10 +2164,17 @@ struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return dollar;
             case 1: return maxSizeClause;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: dollar = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -1639,11 +2192,19 @@ struct VariableDimensionSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openBracket;
             case 1: return specifier;
             case 2: return closeBracket;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBracket = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeBracket = token; break;
         }
     }
 };
@@ -1661,11 +2222,19 @@ struct VariableDeclaratorSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return name;
             case 1: return &dimensions;
             case 2: return initializer;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: name = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -1684,13 +2253,23 @@ struct DataDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return &modifiers;
             case 2: return type;
             case 3: return &declarators;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -1710,7 +2289,7 @@ struct TypedefDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return typedefKeyword;
             case 2: return type;
@@ -1718,6 +2297,17 @@ protected:
             case 4: return &dimensions;
             case 5: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: typedefKeyword = token; break;
+            case 2: ASSERT(false); break;
+            case 3: name = token; break;
+            case 4: ASSERT(false); break;
+            case 5: semi = token; break;
         }
     }
 };
@@ -1736,13 +2326,23 @@ struct TypedefModportDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return typedefKeyword;
             case 2: return modportName;
             case 3: return name;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: typedefKeyword = token; break;
+            case 2: ASSERT(false); break;
+            case 3: name = token; break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -1761,13 +2361,23 @@ struct TypedefKeywordDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return typedefKeyword;
             case 2: return keyword;
             case 3: return name;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: typedefKeyword = token; break;
+            case 2: keyword = token; break;
+            case 3: name = token; break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -1787,7 +2397,7 @@ struct TypedefInterfaceClassDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return typedefKeyword;
             case 2: return interfaceKeyword;
@@ -1795,6 +2405,17 @@ protected:
             case 4: return name;
             case 5: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: typedefKeyword = token; break;
+            case 2: interfaceKeyword = token; break;
+            case 3: classKeyword = token; break;
+            case 4: name = token; break;
+            case 5: semi = token; break;
         }
     }
 };
@@ -1820,11 +2441,19 @@ struct ChargeStrengthSyntax : public NetStrengthSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return strength;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: strength = token; break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -1844,13 +2473,23 @@ struct DriveStrengthSyntax : public NetStrengthSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return strength0;
             case 2: return comma;
             case 3: return strength1;
             case 4: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: strength0 = token; break;
+            case 2: comma = token; break;
+            case 3: strength1 = token; break;
+            case 4: closeParen = token; break;
         }
     }
 };
@@ -1871,7 +2510,7 @@ struct NetDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return netType;
             case 2: return strength;
@@ -1880,6 +2519,18 @@ protected:
             case 5: return &declarators;
             case 6: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: netType = token; break;
+            case 2: ASSERT(false); break;
+            case 3: expansionHint = token; break;
+            case 4: ASSERT(false); break;
+            case 5: ASSERT(false); break;
+            case 6: semi = token; break;
         }
     }
 };
@@ -1897,11 +2548,19 @@ struct PackageImportItemSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return package;
             case 1: return doubleColon;
             case 2: return item;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: package = token; break;
+            case 1: doubleColon = token; break;
+            case 2: item = token; break;
         }
     }
 };
@@ -1919,12 +2578,21 @@ struct PackageImportDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
             case 2: return &items;
             case 3: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
         }
     }
 };
@@ -1950,11 +2618,19 @@ struct ParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return type;
             case 2: return &declarators;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -1972,11 +2648,19 @@ struct TypeParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return type;
             case 2: return &declarators;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: type = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -1993,11 +2677,19 @@ struct ParameterDeclarationStatementSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return parameter;
             case 2: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: semi = token; break;
         }
     }
 };
@@ -2023,12 +2715,21 @@ struct PortDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return header;
             case 2: return &declarators;
             case 3: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
         }
     }
 };
@@ -2046,12 +2747,21 @@ struct GenvarDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
             case 2: return &identifiers;
             case 3: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
         }
     }
 };
@@ -2071,11 +2781,19 @@ struct IntegerTypeSyntax : public DataTypeSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return signing;
             case 2: return &dimensions;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: signing = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -2091,9 +2809,15 @@ struct KeywordTypeSyntax : public DataTypeSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
         }
     }
 };
@@ -2109,10 +2833,17 @@ struct NamedTypeSyntax : public DataTypeSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return name;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -2131,13 +2862,23 @@ struct StructUnionMemberSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return randomQualifier;
             case 2: return type;
             case 3: return &declarators;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: randomQualifier = token; break;
+            case 2: ASSERT(false); break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -2160,7 +2901,7 @@ struct StructUnionTypeSyntax : public DataTypeSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return tagged;
             case 2: return packed;
@@ -2170,6 +2911,19 @@ protected:
             case 6: return closeBrace;
             case 7: return &dimensions;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: tagged = token; break;
+            case 2: packed = token; break;
+            case 3: signing = token; break;
+            case 4: openBrace = token; break;
+            case 5: ASSERT(false); break;
+            case 6: closeBrace = token; break;
+            case 7: ASSERT(false); break;
         }
     }
 };
@@ -2190,7 +2944,7 @@ struct EnumTypeSyntax : public DataTypeSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return baseType;
             case 2: return openBrace;
@@ -2198,6 +2952,17 @@ protected:
             case 4: return closeBrace;
             case 5: return &dimensions;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: ASSERT(false); break;
+            case 2: openBrace = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeBrace = token; break;
+            case 5: ASSERT(false); break;
         }
     }
 };
@@ -2216,12 +2981,21 @@ struct TypeReferenceSyntax : public DataTypeSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return typeKeyword;
             case 1: return openParen;
             case 2: return expr;
             case 3: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: typeKeyword = token; break;
+            case 1: openParen = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
         }
     }
 };
@@ -2238,10 +3012,17 @@ struct DotMemberClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return dot;
             case 1: return member;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: dot = token; break;
+            case 1: member = token; break;
         }
     }
 };
@@ -2261,13 +3042,23 @@ struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return virtualKeyword;
             case 1: return interfaceKeyword;
             case 2: return name;
             case 3: return parameters;
             case 4: return modport;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: virtualKeyword = token; break;
+            case 1: interfaceKeyword = token; break;
+            case 2: name = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
         }
     }
 };
@@ -2284,10 +3075,17 @@ struct ImplicitTypeSyntax : public DataTypeSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return signing;
             case 1: return &dimensions;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: signing = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -2307,11 +3105,19 @@ struct DeferredAssertionSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return hash;
             case 1: return zero;
             case 2: return finalKeyword;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: hash = token; break;
+            case 1: zero = token; break;
+            case 2: finalKeyword = token; break;
         }
     }
 };
@@ -2328,10 +3134,17 @@ struct ElseClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return elseKeyword;
             case 1: return clause;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: elseKeyword = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -2348,11 +3161,19 @@ struct ActionBlockSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return statement;
             case 1: return elseClause;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -2370,7 +3191,7 @@ struct ImmediateAssertionStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return keyword;
@@ -2378,6 +3199,17 @@ protected:
             case 4: return expr;
             case 5: return action;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: keyword = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+            case 5: ASSERT(false); break;
         }
     }
 };
@@ -2395,11 +3227,19 @@ struct EmptyStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return semicolon;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: semicolon = token; break;
         }
     }
 };
@@ -2421,7 +3261,7 @@ struct ConditionalStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return uniqueOrPriority;
@@ -2432,6 +3272,20 @@ protected:
             case 7: return statement;
             case 8: return elseClause;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: uniqueOrPriority = token; break;
+            case 3: ifKeyword = token; break;
+            case 4: openParen = token; break;
+            case 5: ASSERT(false); break;
+            case 6: closeParen = token; break;
+            case 7: ASSERT(false); break;
+            case 8: ASSERT(false); break;
         }
     }
 };
@@ -2457,11 +3311,19 @@ struct DefaultCaseItemSyntax : public CaseItemSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return defaultKeyword;
             case 1: return colon;
             case 2: return clause;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: defaultKeyword = token; break;
+            case 1: colon = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -2481,13 +3343,23 @@ struct PatternCaseItemSyntax : public CaseItemSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return pattern;
             case 1: return tripleAnd;
             case 2: return expr;
             case 3: return colon;
             case 4: return statement;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: tripleAnd = token; break;
+            case 2: ASSERT(false); break;
+            case 3: colon = token; break;
+            case 4: ASSERT(false); break;
         }
     }
 };
@@ -2505,11 +3377,19 @@ struct StandardCaseItemSyntax : public CaseItemSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &expressions;
             case 1: return colon;
             case 2: return clause;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: colon = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -2532,7 +3412,7 @@ struct CaseStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return uniqueOrPriority;
@@ -2544,6 +3424,21 @@ protected:
             case 8: return &items;
             case 9: return endcase;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: uniqueOrPriority = token; break;
+            case 3: caseKeyword = token; break;
+            case 4: openParen = token; break;
+            case 5: ASSERT(false); break;
+            case 6: closeParen = token; break;
+            case 7: matchesOrInside = token; break;
+            case 8: ASSERT(false); break;
+            case 9: endcase = token; break;
         }
     }
 };
@@ -2560,12 +3455,21 @@ struct ForeverStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return foreverKeyword;
             case 3: return statement;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: foreverKeyword = token; break;
+            case 3: ASSERT(false); break;
         }
     }
 };
@@ -2585,7 +3489,7 @@ struct LoopStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return repeatOrWhile;
@@ -2594,6 +3498,18 @@ protected:
             case 5: return closeParen;
             case 6: return statement;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: repeatOrWhile = token; break;
+            case 3: openParen = token; break;
+            case 4: ASSERT(false); break;
+            case 5: closeParen = token; break;
+            case 6: ASSERT(false); break;
         }
     }
 };
@@ -2615,7 +3531,7 @@ struct DoWhileStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return doKeyword;
@@ -2626,6 +3542,20 @@ protected:
             case 7: return closeParen;
             case 8: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: doKeyword = token; break;
+            case 3: ASSERT(false); break;
+            case 4: whileKeyword = token; break;
+            case 5: openParen = token; break;
+            case 6: ASSERT(false); break;
+            case 7: closeParen = token; break;
+            case 8: semi = token; break;
         }
     }
 };
@@ -2643,11 +3573,19 @@ struct ForVariableDeclarationSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return varKeyword;
             case 1: return type;
             case 2: return declarator;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: varKeyword = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -2671,7 +3609,7 @@ struct ForLoopStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return forKeyword;
@@ -2684,6 +3622,22 @@ protected:
             case 9: return closeParen;
             case 10: return statement;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: forKeyword = token; break;
+            case 3: openParen = token; break;
+            case 4: ASSERT(false); break;
+            case 5: semi1 = token; break;
+            case 6: ASSERT(false); break;
+            case 7: semi2 = token; break;
+            case 8: ASSERT(false); break;
+            case 9: closeParen = token; break;
+            case 10: ASSERT(false); break;
         }
     }
 };
@@ -2704,7 +3658,7 @@ struct ForeachLoopStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return keyword;
@@ -2714,6 +3668,19 @@ protected:
             case 6: return closeParen;
             case 7: return statement;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: keyword = token; break;
+            case 3: openParen = token; break;
+            case 4: ASSERT(false); break;
+            case 5: ASSERT(false); break;
+            case 6: closeParen = token; break;
+            case 7: ASSERT(false); break;
         }
     }
 };
@@ -2731,13 +3698,23 @@ struct ReturnStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return returnKeyword;
             case 3: return returnValue;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: returnKeyword = token; break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -2754,12 +3731,21 @@ struct JumpStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return breakOrContinue;
             case 3: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: breakOrContinue = token; break;
+            case 3: semi = token; break;
         }
     }
 };
@@ -2776,13 +3762,23 @@ struct TimingControlStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return timingControl;
             case 3: return statement;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -2798,12 +3794,21 @@ struct ExpressionStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return expr;
             case 3: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
         }
     }
 };
@@ -2823,7 +3828,7 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return keyword;
@@ -2832,6 +3837,18 @@ protected:
             case 5: return value;
             case 6: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: keyword = token; break;
+            case 3: ASSERT(false); break;
+            case 4: equals = token; break;
+            case 5: ASSERT(false); break;
+            case 6: semi = token; break;
         }
     }
 };
@@ -2849,13 +3866,23 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return keyword;
             case 3: return variable;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: keyword = token; break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -2873,13 +3900,23 @@ struct DisableStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return disable;
             case 3: return name;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: disable = token; break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -2897,13 +3934,23 @@ struct DisableForkStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return disable;
             case 3: return fork;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: disable = token; break;
+            case 3: fork = token; break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -2920,10 +3967,17 @@ struct NamedBlockClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return colon;
             case 1: return name;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: colon = token; break;
+            case 1: name = token; break;
         }
     }
 };
@@ -2943,7 +3997,7 @@ struct BlockStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return begin;
@@ -2952,6 +4006,18 @@ protected:
             case 5: return end;
             case 6: return endBlockName;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: begin = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+            case 5: end = token; break;
+            case 6: ASSERT(false); break;
         }
     }
 };
@@ -2971,7 +4037,7 @@ struct WaitStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return wait;
@@ -2980,6 +4046,18 @@ protected:
             case 5: return closeParen;
             case 6: return statement;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: wait = token; break;
+            case 3: openParen = token; break;
+            case 4: ASSERT(false); break;
+            case 5: closeParen = token; break;
+            case 6: ASSERT(false); break;
         }
     }
 };
@@ -2997,13 +4075,23 @@ struct WaitForkStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return wait;
             case 3: return fork;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: wait = token; break;
+            case 3: fork = token; break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -3023,7 +4111,7 @@ struct WaitOrderStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return wait_order;
@@ -3032,6 +4120,18 @@ protected:
             case 5: return closeParen;
             case 6: return action;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: wait_order = token; break;
+            case 3: openParen = token; break;
+            case 4: ASSERT(false); break;
+            case 5: closeParen = token; break;
+            case 6: ASSERT(false); break;
         }
     }
 };
@@ -3049,11 +4149,19 @@ struct RandCaseItemSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return expr;
             case 1: return colon;
             case 2: return statement;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: colon = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -3071,13 +4179,23 @@ struct RandCaseStatementSyntax : public StatementSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return label;
             case 1: return &attributes;
             case 2: return randCase;
             case 3: return &items;
             case 4: return endCase;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: randCase = token; break;
+            case 3: ASSERT(false); break;
+            case 4: endCase = token; break;
         }
     }
 };
@@ -3111,10 +4229,17 @@ struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return expr;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -3133,13 +4258,23 @@ struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return dot;
             case 1: return name;
             case 2: return openParen;
             case 3: return expr;
             case 4: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: dot = token; break;
+            case 1: name = token; break;
+            case 2: openParen = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeParen = token; break;
         }
     }
 };
@@ -3157,11 +4292,19 @@ struct NonAnsiPortListSyntax : public PortListSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return &ports;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -3177,10 +4320,17 @@ struct AnsiPortSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -3196,10 +4346,17 @@ struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return nameOrKeyword;
             case 1: return modport;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: nameOrKeyword = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -3217,11 +4374,19 @@ struct VariablePortHeaderSyntax : public PortHeaderSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return direction;
             case 1: return varKeyword;
             case 2: return type;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: direction = token; break;
+            case 1: varKeyword = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -3239,11 +4404,19 @@ struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return direction;
             case 1: return interconnect;
             case 2: return type;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: direction = token; break;
+            case 1: interconnect = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -3261,11 +4434,19 @@ struct NetPortHeaderSyntax : public PortHeaderSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return direction;
             case 1: return netType;
             case 2: return dataType;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: direction = token; break;
+            case 1: netType = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -3282,12 +4463,21 @@ struct ImplicitAnsiPortSyntax : public AnsiPortSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return header;
             case 2: return declarator;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -3307,7 +4497,7 @@ struct ExplicitAnsiPortSyntax : public AnsiPortSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return direction;
             case 2: return dot;
@@ -3316,6 +4506,18 @@ protected:
             case 5: return expr;
             case 6: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: direction = token; break;
+            case 2: dot = token; break;
+            case 3: name = token; break;
+            case 4: openParen = token; break;
+            case 5: ASSERT(false); break;
+            case 6: closeParen = token; break;
         }
     }
 };
@@ -3333,11 +4535,19 @@ struct AnsiPortListSyntax : public PortListSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return &ports;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -3355,11 +4565,19 @@ struct WildcardPortListSyntax : public PortListSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return dotStar;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: dotStar = token; break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -3378,12 +4596,21 @@ struct ParameterPortListSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return hash;
             case 1: return openParen;
             case 2: return &declarations;
             case 3: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: hash = token; break;
+            case 1: openParen = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
         }
     }
 };
@@ -3405,7 +4632,7 @@ struct ModuleHeaderSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return moduleKeyword;
             case 1: return lifetime;
             case 2: return name;
@@ -3414,6 +4641,18 @@ protected:
             case 5: return ports;
             case 6: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: moduleKeyword = token; break;
+            case 1: lifetime = token; break;
+            case 2: name = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+            case 5: ASSERT(false); break;
+            case 6: semi = token; break;
         }
     }
 };
@@ -3432,13 +4671,23 @@ struct ModuleDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return header;
             case 2: return &members;
             case 3: return endmodule;
             case 4: return blockName;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: endmodule = token; break;
+            case 4: ASSERT(false); break;
         }
     }
 };
@@ -3455,10 +4704,17 @@ struct ExternModuleSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return externKeyword;
             case 1: return header;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: externKeyword = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -3477,11 +4733,19 @@ struct EmptyMemberSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
             case 2: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: semi = token; break;
         }
     }
 };
@@ -3498,11 +4762,19 @@ struct ProceduralBlockSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
             case 2: return statement;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -3520,12 +4792,21 @@ struct GenerateRegionSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
             case 2: return &members;
             case 3: return endgenerate;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: ASSERT(false); break;
+            case 3: endgenerate = token; break;
         }
     }
 };
@@ -3552,7 +4833,7 @@ struct LoopGenerateSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
             case 2: return openParen;
@@ -3567,6 +4848,24 @@ protected:
             case 11: return closeParen;
             case 12: return block;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: openParen = token; break;
+            case 3: genvar = token; break;
+            case 4: identifier = token; break;
+            case 5: equals = token; break;
+            case 6: ASSERT(false); break;
+            case 7: semi1 = token; break;
+            case 8: ASSERT(false); break;
+            case 9: semi2 = token; break;
+            case 10: ASSERT(false); break;
+            case 11: closeParen = token; break;
+            case 12: ASSERT(false); break;
         }
     }
 };
@@ -3587,7 +4886,7 @@ struct IfGenerateSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
             case 2: return openParen;
@@ -3596,6 +4895,18 @@ protected:
             case 5: return block;
             case 6: return elseClause;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: openParen = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeParen = token; break;
+            case 5: ASSERT(false); break;
+            case 6: ASSERT(false); break;
         }
     }
 };
@@ -3616,7 +4927,7 @@ struct CaseGenerateSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
             case 2: return openParen;
@@ -3625,6 +4936,18 @@ protected:
             case 5: return &items;
             case 6: return endCase;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: openParen = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeParen = token; break;
+            case 5: ASSERT(false); break;
+            case 6: endCase = token; break;
         }
     }
 };
@@ -3645,7 +4968,7 @@ struct GenerateBlockSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return label;
             case 2: return begin;
@@ -3654,6 +4977,18 @@ protected:
             case 5: return end;
             case 6: return endName;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: begin = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+            case 5: end = token; break;
+            case 6: ASSERT(false); break;
         }
     }
 };
@@ -3670,10 +5005,17 @@ struct DividerClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return divide;
             case 1: return value;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: divide = token; break;
+            case 1: value = token; break;
         }
     }
 };
@@ -3692,13 +5034,23 @@ struct TimeUnitsDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
             case 2: return time;
             case 3: return divider;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: time = token; break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -3714,10 +5066,17 @@ struct PortConnectionSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -3732,11 +5091,19 @@ struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return expr;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -3753,12 +5120,21 @@ struct NamedPortConnectionSyntax : public PortConnectionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return dot;
             case 2: return name;
             case 3: return connection;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: dot = token; break;
+            case 2: name = token; break;
+            case 3: ASSERT(false); break;
         }
     }
 };
@@ -3774,10 +5150,17 @@ struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return dotStar;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: dotStar = token; break;
         }
     }
 };
@@ -3797,13 +5180,23 @@ struct HierarchicalInstanceSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return name;
             case 1: return &dimensions;
             case 2: return openParen;
             case 3: return &connections;
             case 4: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: name = token; break;
+            case 1: ASSERT(false); break;
+            case 2: openParen = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeParen = token; break;
         }
     }
 };
@@ -3822,13 +5215,23 @@ struct HierarchyInstantiationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return type;
             case 2: return parameters;
             case 3: return &instances;
             case 4: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: type = token; break;
+            case 2: ASSERT(false); break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
         }
     }
 };
@@ -3849,7 +5252,7 @@ struct FunctionPrototypeSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return lifetime;
             case 2: return returnType;
@@ -3857,6 +5260,17 @@ protected:
             case 4: return portList;
             case 5: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: lifetime = token; break;
+            case 2: ASSERT(false); break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+            case 5: semi = token; break;
         }
     }
 };
@@ -3875,13 +5289,23 @@ struct FunctionDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return prototype;
             case 2: return &items;
             case 3: return end;
             case 4: return endBlockName;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: end = token; break;
+            case 4: ASSERT(false); break;
         }
     }
 };
@@ -3899,11 +5323,19 @@ struct ExtendsClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return baseName;
             case 2: return arguments;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -3920,10 +5352,17 @@ struct ImplementsClauseSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return &interfaces;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -3949,7 +5388,7 @@ struct ClassDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return virtualOrInterface;
             case 2: return classKeyword;
@@ -3963,6 +5402,23 @@ protected:
             case 10: return endClass;
             case 11: return endBlockName;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: virtualOrInterface = token; break;
+            case 2: classKeyword = token; break;
+            case 3: lifetime = token; break;
+            case 4: name = token; break;
+            case 5: ASSERT(false); break;
+            case 6: ASSERT(false); break;
+            case 7: ASSERT(false); break;
+            case 8: semi = token; break;
+            case 9: ASSERT(false); break;
+            case 10: endClass = token; break;
+            case 11: ASSERT(false); break;
         }
     }
 };
@@ -3979,12 +5435,21 @@ struct ClassPropertyDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
             case 2: return declaration;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -4000,12 +5465,21 @@ struct ClassMethodDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
             case 2: return declaration;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -4021,12 +5495,21 @@ struct ClassMethodPrototypeSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
             case 2: return prototype;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -4043,12 +5526,21 @@ struct ContinuousAssignSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return assign;
             case 2: return &assignments;
             case 3: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: assign = token; break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
         }
     }
 };
@@ -4069,12 +5561,21 @@ struct WithFunctionSampleSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return with;
             case 1: return function;
             case 2: return sample;
             case 3: return portList;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: with = token; break;
+            case 1: function = token; break;
+            case 2: sample = token; break;
+            case 3: ASSERT(false); break;
         }
     }
 };
@@ -4100,11 +5601,19 @@ struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return left;
             case 1: return orKeyword;
             case 2: return right;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: orKeyword = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -4121,10 +5630,17 @@ struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return keyword;
             case 1: return name;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -4143,12 +5659,21 @@ struct BlockCoverageEventSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return atat;
             case 1: return openParen;
             case 2: return expr;
             case 3: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: atat = token; break;
+            case 1: openParen = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
         }
     }
 };
@@ -4171,7 +5696,7 @@ struct CovergroupDeclarationSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return covergroup;
             case 2: return name;
@@ -4182,6 +5707,20 @@ protected:
             case 7: return endgroup;
             case 8: return endBlockName;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: covergroup = token; break;
+            case 2: name = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+            case 5: semi = token; break;
+            case 6: ASSERT(false); break;
+            case 7: endgroup = token; break;
+            case 8: ASSERT(false); break;
         }
     }
 };
@@ -4202,7 +5741,7 @@ struct CoverageOptionSyntax : public MemberSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &attributes;
             case 1: return option;
             case 2: return dot;
@@ -4211,6 +5750,18 @@ protected:
             case 5: return expr;
             case 6: return semi;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: option = token; break;
+            case 2: dot = token; break;
+            case 3: name = token; break;
+            case 4: equals = token; break;
+            case 5: ASSERT(false); break;
+            case 6: semi = token; break;
         }
     }
 };
@@ -4229,10 +5780,17 @@ struct CompilationUnitSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &members;
             case 1: return endOfFile;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: endOfFile = token; break;
         }
     }
 };
@@ -4250,9 +5808,15 @@ struct DirectiveSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override {
+        switch (index) {
+            case 0: directive = token; break;
         }
     }
 };
@@ -4268,10 +5832,17 @@ struct SimpleDirectiveSyntax : public DirectiveSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             case 1: return endOfDirective;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: endOfDirective = token; break;
         }
     }
 };
@@ -4288,11 +5859,19 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             case 1: return fileName;
             case 2: return endOfDirective;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: fileName = token; break;
+            case 2: endOfDirective = token; break;
         }
     }
 };
@@ -4310,12 +5889,21 @@ struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             case 1: return name;
             case 2: return endOfDirective;
             case 3: return &disabledTokens;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: name = token; break;
+            case 2: endOfDirective = token; break;
+            case 3: ASSERT(false); break;
         }
     }
 };
@@ -4332,11 +5920,19 @@ struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             case 1: return endOfDirective;
             case 2: return &disabledTokens;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: endOfDirective = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -4353,10 +5949,17 @@ struct MacroArgumentDefaultSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return equals;
             case 1: return &tokens;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: equals = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -4373,10 +5976,17 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return name;
             case 1: return defaultValue;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: name = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -4394,11 +6004,19 @@ struct MacroFormalArgumentListSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return &args;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -4417,13 +6035,23 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             case 1: return name;
             case 2: return formalArguments;
             case 3: return &body;
             case 4: return endOfDirective;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: name = token; break;
+            case 2: ASSERT(false); break;
+            case 3: ASSERT(false); break;
+            case 4: endOfDirective = token; break;
         }
     }
 };
@@ -4439,10 +6067,17 @@ struct MacroActualArgumentSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return &tokens;
             default: return nullptr;
         }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
     }
 };
 
@@ -4459,11 +6094,19 @@ struct MacroActualArgumentListSyntax : public SyntaxNode {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return openParen;
             case 1: return &args;
             case 2: return closeParen;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
         }
     }
 };
@@ -4479,10 +6122,17 @@ struct MacroUsageSyntax : public DirectiveSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             case 1: return args;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -4503,7 +6153,7 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             case 1: return timeUnit;
             case 2: return timeUnitUnit;
@@ -4512,6 +6162,18 @@ protected:
             case 5: return timePrecisionUnit;
             case 6: return endOfDirective;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: timeUnit = token; break;
+            case 2: timeUnitUnit = token; break;
+            case 3: slash = token; break;
+            case 4: timePrecision = token; break;
+            case 5: timePrecisionUnit = token; break;
+            case 6: endOfDirective = token; break;
         }
     }
 };
@@ -4528,11 +6190,19 @@ struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        switch(index) {
+        switch (index) {
             case 0: return directive;
             case 1: return netType;
             case 2: return endOfDirective;
             default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: netType = token; break;
+            case 2: endOfDirective = token; break;
         }
     }
 };

@@ -439,6 +439,7 @@ public:
 
     void writeTo(Buffer<char>& buffer, uint8_t flags);
     Token getFirstToken();
+    void replaceFirstToken(Token token);
 
     template<typename T>
     T* as() {
@@ -446,7 +447,9 @@ public:
         return static_cast<T*>(this);
     }
 
-    virtual TokenOrSyntax getChild(uint32_t);
+protected:
+    virtual TokenOrSyntax getChild(uint32_t) = 0;
+    virtual void replaceChild(uint32_t, Token) = 0;
 };
 
 template<typename T>
@@ -470,6 +473,7 @@ public:
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
+    virtual void replaceChild(uint32_t, Token) override final { ASSERT(false, "No tokens in SyntaxList!"); };
 
 private:
     ArrayRef<T*> elements;
@@ -495,6 +499,7 @@ public:
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
+    virtual void replaceChild(uint32_t index, Token child) override final { elements[index] = child; };
 
 private:
     ArrayRef<Token> elements;
@@ -525,6 +530,10 @@ public:
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
+    virtual void replaceChild(uint32_t index, Token child) override final {
+        ASSERT(elements[index].isToken);
+        elements[index].token = child;
+    };
 
 private:
     ArrayRef<TokenOrSyntax> elements;

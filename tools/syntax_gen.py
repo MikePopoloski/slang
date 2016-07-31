@@ -119,7 +119,7 @@ def generate(outf, name, tags, members, alltypes):
 		outf.write('    }\n')
 		outf.write('\nprotected:\n')
 		outf.write('    TokenOrSyntax getChild(uint32_t index) override{} {{\n'.format(final))
-		outf.write('        switch(index) {\n')
+		outf.write('        switch (index) {\n')
 
 		index = 0
 		for m in combined:
@@ -129,6 +129,24 @@ def generate(outf, name, tags, members, alltypes):
 
 		outf.write('            default: return nullptr;\n')
 		outf.write('        }\n')
+		outf.write('    }\n\n')
+
+		outf.write('    void replaceChild(uint32_t index, Token token) override{} {{\n'.format(final))
+		outf.write('        switch (index) {\n')
+
+		anyTokens = False
+		index = 0
+		for m in combined:
+			isToken = m[0] == "token"
+			if isToken:
+				anyTokens = True
+			statement = "ASSERT(false)" if not isToken else "{} = token".format(m[1])
+			outf.write('            case {}: {}; break;\n'.format(index, statement))
+			index += 1
+
+		outf.write('        }\n')
+		if not anyTokens:
+			outf.write('        (void)token;\n')
 		outf.write('    }\n')
 
 	outf.write('};\n\n')

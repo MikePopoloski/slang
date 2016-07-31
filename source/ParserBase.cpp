@@ -37,7 +37,7 @@ void ParserBase::reduceSkippedTokens(Buffer<Token>& skipped, Buffer<Trivia>& tri
 
 SyntaxNode* ParserBase::prependTrivia(SyntaxNode* node, Trivia* trivia) {
     if (trivia->kind != TriviaKind::Unknown && node)
-        prependTrivia(node->getFirstToken(), trivia);
+        node->replaceFirstToken(prependTrivia(node->getFirstToken(), trivia));
     return node;
 }
 
@@ -64,7 +64,7 @@ Token ParserBase::prependTrivia(Token token, Buffer<Trivia>& trivia) {
 void ParserBase::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
     if (!trivia.empty()) {
         ASSERT(node);
-        prependTrivia(node->getFirstToken(), trivia);
+        node->replaceFirstToken(prependTrivia(node->getFirstToken(), trivia));
     }
 }
 
