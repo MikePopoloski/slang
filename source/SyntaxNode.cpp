@@ -24,8 +24,10 @@ std::string SyntaxNode::toString(uint8_t flags) {
 Token SyntaxNode::getFirstToken() {
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
-        if (child.isToken && child.token)
-            return child.token;
+        if (child.isToken) {
+            if (child.token)
+                return child.token;
+        }
         else if (child.node) {
             auto result = child.node->getFirstToken();
             if (result)
