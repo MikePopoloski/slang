@@ -48,6 +48,10 @@
 `define FPW 1
 `define OPENHMC_ASYNC_FIFOS 1
 `define OPEN_RSP_MODE 1
+`define AXI4BYTES 1
+`define RFS_OPENHMC_RF_AWIDTH 1
+`define RFS_OPENHMC_RF_RWIDTH 1
+`define RFS_OPENHMC_RF_WWIDTH 1
 
 module tb_top ();
 
