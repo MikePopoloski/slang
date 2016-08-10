@@ -6,6 +6,14 @@
 
 namespace slang {
 
+// Placeholders for __FILE__ and __LINE__ macros; these exist so that we get nice tokens
+// automatically when expanding macros that we can replace with the correct values.
+static Token::Info unusedTokenInfo;
+static Token intrinsicFileToken = Token(TokenKind::IntrinsicFileMacro, &unusedTokenInfo);
+static Token intrinsicLineToken = Token(TokenKind::IntrinsicLineMacro, &unusedTokenInfo);
+static DefineDirectiveSyntax fileDirective { Token(), Token(), nullptr, ArrayRef<Token>(&intrinsicFileToken, 1), Token() };
+static DefineDirectiveSyntax lineDirective { Token(), Token(), nullptr, ArrayRef<Token>(&intrinsicLineToken, 1), Token() };
+
 SyntaxKind getDirectiveKind(StringRef directive);
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics) :
@@ -14,6 +22,8 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, D
     diagnostics(diagnostics)
 {
     keywordTable = getKeywordTable();
+    macros["__FILE__"] = &fileDirective;
+    macros["__LINE__"] = &lineDirective;
 }
 
 void Preprocessor::pushSource(StringRef source) {
@@ -500,8 +510,22 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     buffer.clear();
     expandedTokens.clear();
     for (uint32_t i = 0; i < tokens.count(); i++) {
-        Token token = tokens[i];
         Token newToken;
+        Token token = tokens[i];
+
+        // replace intrinsic macros before we do anything else
+        // TODO: fill these in
+        if (token.kind == TokenKind::IntrinsicFileMacro) {
+            auto info = alloc.emplace<Token::Info>(token.trivia(), "", token.location(), 0);
+            info->stringText = "";
+            token = Token(TokenKind::StringLiteral, info);
+        }
+        else if (token.kind == TokenKind::IntrinsicLineMacro) {
+            auto info = alloc.emplace<Token::Info>(token.trivia(), "", token.location(), 0);
+            info->numInfo.numericFlags = 0;
+            info->numInfo.value = 0;
+            token = Token(TokenKind::IntegerLiteral, info);
+        }
 
         // Once we see a `" token, we start collecting tokens into their own
         // buffer for stringification. Otherwise, just add them to the final
