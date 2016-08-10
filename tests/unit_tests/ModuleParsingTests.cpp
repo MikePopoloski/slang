@@ -111,6 +111,7 @@ TEST_CASE("Simple members", "[parser:modules]") {
     parseMember("input [31:0] foo, bar;", SyntaxKind::PortDeclaration);
     parseMember("parameter foo = 1, bar = 2;", SyntaxKind::ParameterDeclarationStatement);
     parseMember("for (genvar i = 1; i != 10; i++) parameter foo = i;", SyntaxKind::LoopGenerate);
+    parseMember("typedef foo #(T, B) bar;", SyntaxKind::TypedefDeclaration);
 }
 
 }

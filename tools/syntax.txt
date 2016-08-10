@@ -300,6 +300,11 @@ ExpressionSyntax left
 list<AttributeInstanceSyntax> attributes
 ArgumentListSyntax arguments
 
+CastExpressionSyntax base=ExpressionSyntax kind=CastExpression
+ExpressionSyntax left
+token apostrophe
+ParenthesizedExpressionSyntax right
+
 // ----- TIMING CONTROL -----
 
 TimingControlSyntax final=false

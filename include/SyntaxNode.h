@@ -123,6 +123,7 @@ enum class SyntaxKind : uint16_t {
     InvocationExpression,
     PostincrementExpression,
     PostdecrementExpression,
+    CastExpression,
 
     // binary expressions
     AddExpression,

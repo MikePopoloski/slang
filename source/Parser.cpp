@@ -677,8 +677,8 @@ MemberSyntax* Parser::parseClassMember() {
         return parseClassDeclaration(attributes, consume());
 
     // because of the virtual keyword, we need to check for a variable decl before and after consuming qualifiers
-    if (isVariableDeclaration())
-        return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, nullptr, parseVariableDeclaration(nullptr));
+    /*if (isVariableDeclaration())
+        return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, nullptr, parseVariableDeclaration(nullptr));*/
 
     bool isPureOrExtern = false;
     auto qualifierBuffer = tokenPool.get();
@@ -1568,18 +1568,20 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             if (isPossibleDataType(kind) && kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName) {
                 auto type = parseDataType(/* allowImplicit */ false);
                 if (peek(TokenKind::ApostropheOpenBrace))
-                    return parseAssignmentPatternExpression(type);
+                    expr = parseAssignmentPatternExpression(type);
                 else
-                    return type;
+                    expr = type;
             }
-
-            // parseName() will insert a missing identifier token for the error case
-            auto name = parseName();
-            if (peek(TokenKind::ApostropheOpenBrace))
-                return parseAssignmentPatternExpression(alloc.emplace<NamedTypeSyntax>(name));
-
-            // otherwise just a name expression, break out and handle postfix's
-            expr = name;
+            else {
+                // parseName() will insert a missing identifier token for the error case
+                auto name = parseName();
+                if (peek(TokenKind::ApostropheOpenBrace))
+                    expr = parseAssignmentPatternExpression(alloc.emplace<NamedTypeSyntax>(name));
+                else {
+                    // otherwise just a name expression
+                    expr = name;
+                }
+            }
             break;
     }
     return parsePostfixExpression(expr);
@@ -1853,11 +1855,20 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
             case TokenKind::OpenParenthesis:
                 expr = alloc.emplace<InvocationExpressionSyntax>(expr, nullptr, parseArgumentList());
                 break;
-            // can't have any other postfix expressions after inc/dec
             case TokenKind::DoublePlus:
             case TokenKind::DoubleMinus: {
+                // can't have any other postfix expressions after inc/dec
                 auto op = consume();
                 return alloc.emplace<PostfixUnaryExpressionSyntax>(getUnaryPostfixExpression(op.kind), expr, nullptr, op);
+            }
+            case TokenKind::Apostrophe: {
+                auto apostrophe = consume();
+                auto openParen = expect(TokenKind::OpenParenthesis);
+                auto innerExpr = parseExpression();
+                auto closeParen = expect(TokenKind::CloseParenthesis);
+                auto parenExpr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, innerExpr, closeParen);
+                expr = alloc.emplace<CastExpressionSyntax>(expr, apostrophe, parenExpr);
+                break;
             }
             case TokenKind::OpenParenthesisStar: {
                 auto attributes = parseAttributes();
@@ -2351,42 +2362,53 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
             case TokenKind::StructKeyword:
             case TokenKind::UnionKeyword:
             case TokenKind::ClassKeyword:
-                if (peek(1).kind == TokenKind::Identifier && peek(2).kind == TokenKind::Semicolon)
+                if (peek(1).kind == TokenKind::Identifier && peek(2).kind == TokenKind::Semicolon) {
+                    auto keyword = consume();
+                    auto name = consume();
                     return alloc.emplace<TypedefKeywordDeclarationSyntax>(
                         attributes,
                         typedefKeyword,
-                        consume(),
-                        consume(),
-                        consume()
-                    );
+                        keyword,
+                        name,
+                        consume());
+                }
                 break;
-            case TokenKind::InterfaceKeyword:
+            case TokenKind::InterfaceKeyword: {
+                auto interfaceKeyword = consume();
+                auto classKeyword = expect(TokenKind::ClassKeyword);
+                auto name = expect(TokenKind::Identifier);
                 return alloc.emplace<TypedefInterfaceClassDeclarationSyntax>(
                     attributes,
                     typedefKeyword,
-                    consume(),
-                    expect(TokenKind::ClassKeyword),
-                    expect(TokenKind::Identifier),
-                    expect(TokenKind::Semicolon)
-                );
+                    interfaceKeyword,
+                    classKeyword,
+                    name,
+                    expect(TokenKind::Semicolon));
+            }
             default:
-                if (isVariableDeclaration())
+                // TODO: this should check for modport instead and then default to var decl
+                if (isVariableDeclaration()) {
+                    auto type = parseDataType(/* allowImplicit */ false);
+                    auto name = expect(TokenKind::Identifier);
+                    auto dims = parseDimensionList();
                     return alloc.emplace<TypedefDeclarationSyntax>(
                         attributes,
                         typedefKeyword,
-                        parseDataType(/* allowImplicit */ false),
-                        expect(TokenKind::Identifier),
-                        parseDimensionList(),
-                        expect(TokenKind::Semicolon)
-                    );
-                else
+                        type,
+                        name,
+                        dims,
+                        expect(TokenKind::Semicolon));
+                }
+                else {
+                    auto modport = parseName();
+                    auto name = expect(TokenKind::Identifier);
                     return alloc.emplace<TypedefModportDeclarationSyntax>(
                         attributes,
                         typedefKeyword,
-                        parseName(),
-                        expect(TokenKind::Identifier),
-                        expect(TokenKind::Semicolon)
-                    );
+                        modport,
+                        name,
+                        expect(TokenKind::Semicolon));
+                }
         }
     }
 

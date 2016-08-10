@@ -1710,6 +1710,36 @@ protected:
     }
 };
 
+struct CastExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* left;
+    Token apostrophe;
+    ParenthesizedExpressionSyntax* right;
+
+    CastExpressionSyntax(ExpressionSyntax* left, Token apostrophe, ParenthesizedExpressionSyntax* right) :
+        ExpressionSyntax(SyntaxKind::CastExpression), left(left), apostrophe(apostrophe), right(right)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return left;
+            case 1: return apostrophe;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: apostrophe = token; break;
+            case 2: ASSERT(false); break;
+        }
+    }
+};
+
 // ----- TIMING CONTROL -----
 
 struct TimingControlSyntax : public SyntaxNode {

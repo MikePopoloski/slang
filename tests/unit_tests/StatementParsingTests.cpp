@@ -152,7 +152,7 @@ TEST_CASE("Timing control statements", "[parser:statements]") {
     testTimingControl("@(posedge foo iff foo+92 == 76 or negedge clk, (edge clk)) ;", SyntaxKind::EventControlWithExpression);
 }
 
-void testProceduralAssign(StringRef text, SyntaxKind kind) {
+void testStatement(StringRef text, SyntaxKind kind) {
     auto stmt = parse(text);
 
     REQUIRE(stmt->kind == kind);
@@ -161,10 +161,16 @@ void testProceduralAssign(StringRef text, SyntaxKind kind) {
 }
 
 TEST_CASE("Procedural assign", "[parser:statements]") {
-    testProceduralAssign("assign foo = bar;", SyntaxKind::ProceduralAssignStatement);
-    testProceduralAssign("force foo = bar;", SyntaxKind::ProceduralForceStatement);
-    testProceduralAssign("deassign foo;", SyntaxKind::ProceduralDeassignStatement);
-    testProceduralAssign("release foo;", SyntaxKind::ProceduralReleaseStatement);
+    testStatement("assign foo = bar;", SyntaxKind::ProceduralAssignStatement);
+    testStatement("force foo = bar;", SyntaxKind::ProceduralForceStatement);
+    testStatement("deassign foo;", SyntaxKind::ProceduralDeassignStatement);
+    testStatement("release foo;", SyntaxKind::ProceduralReleaseStatement);
+}
+
+TEST_CASE("Function calls", "[parser:statements]") {
+    testStatement("foo();", SyntaxKind::ExpressionStatement);
+    testStatement("void'(foo());", SyntaxKind::ExpressionStatement);
+    testStatement("foo::bar.baz(blah, 324, yes);", SyntaxKind::ExpressionStatement);
 }
 
 DataDeclarationSyntax* parseBlockDeclaration(const std::string& text) {
