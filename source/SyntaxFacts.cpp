@@ -514,7 +514,7 @@ bool isPossibleExpressionOrTripleAnd(TokenKind kind) {
     return kind == TokenKind::TripleAnd || isPossibleExpression(kind);
 }
 
-bool isPossibleInsideElement(TokenKind kind) {
+bool isPossibleOpenRangeElement(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenBracket:
         case TokenKind::Comma:

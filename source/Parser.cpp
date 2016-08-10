@@ -1020,17 +1020,17 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword)
                     itemBuffer.append(parseDefaultCaseItem());
-                else if (isPossibleInsideElement(kind)) {
+                else if (isPossibleOpenRangeElement(kind)) {
                     Token colon;
                     auto buffer = tosPool.get();
 
-                    parseSeparatedList<isPossibleInsideElement, isEndOfCaseItem>(
+                    parseSeparatedList<isPossibleOpenRangeElement, isEndOfCaseItem>(
                         buffer,
                         TokenKind::Colon,
                         TokenKind::Comma,
                         colon,
-                        DiagCode::ExpectedInsideElement,
-                        [this](bool) { return parseInsideElement(); }
+                        DiagCode::ExpectedOpenRangeElement,
+                        [this](bool) { return parseOpenRangeElement(); }
                     );
                     itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -1167,8 +1167,7 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
     );
 }
 
-ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto keyword = consume();
+ForeachLoopListSyntax* Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto arrayName = parseName();
     auto buffer = tosPool.get();
@@ -1183,14 +1182,17 @@ ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* 
         [this](bool) { return parseName(); }
     );
 
+    return alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, buffer.copy(alloc), closeParen);
+}
+
+ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+    auto vars = parseForeachLoopVariables();
     return alloc.emplace<ForeachLoopStatementSyntax>(
         label,
         attributes,
         keyword,
-        openParen,
-        arrayName,
-        buffer.copy(alloc),
-        closeParen,
+        vars,
         parseStatement()
     );
 }
@@ -1652,25 +1654,30 @@ bool Parser::checkVectorDigits(Token token) {
 
 ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
     auto inside = expect(TokenKind::InsideKeyword);
+    auto list = parseOpenRangeList();
+    return alloc.emplace<InsideExpressionSyntax>(expr, inside, list);
+}
 
+OpenRangeListSyntax* Parser::parseOpenRangeList() {
     Token openBrace;
     Token closeBrace;
-    ArrayRef<TokenOrSyntax> list = nullptr;
+    ArrayRef<TokenOrSyntax> list;
 
-    parseSeparatedList<isPossibleInsideElement, isEndOfBracedList>(
+    parseSeparatedList<isPossibleOpenRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace,
         TokenKind::CloseBrace,
         TokenKind::Comma,
         openBrace,
         list,
         closeBrace,
-        DiagCode::ExpectedInsideElement,
-        [this](bool) { return parseInsideElement(); }
+        DiagCode::ExpectedOpenRangeElement,
+        [this](bool) { return parseOpenRangeElement(); }
     );
-    return alloc.emplace<InsideExpressionSyntax>(expr, inside, openBrace, list, closeBrace);
+
+    return alloc.emplace<OpenRangeListSyntax>(openBrace, list, closeBrace);
 }
 
-ExpressionSyntax* Parser::parseInsideElement() {
+ExpressionSyntax* Parser::parseOpenRangeElement() {
     if (!peek(TokenKind::OpenBracket))
         return parseExpression();
     return parseElementSelect();

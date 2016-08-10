@@ -144,7 +144,7 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "ExpectedAnsiPort" },
     { "ExpectedForInitializer" },
     { "ExpectedExpression" },
-    { "ExpectedInsideElement" },
+    { "ExpectedOpenRangeElement" },
     { "ExpectedStreamExpression" },
     { "ExpectedArgument" },
     { "ExpectedVariableDeclarator" },

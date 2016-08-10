@@ -913,17 +913,45 @@ protected:
     }
 };
 
-struct InsideExpressionSyntax : public ExpressionSyntax {
-    ExpressionSyntax* expr;
-    Token inside;
+struct OpenRangeListSyntax : public SyntaxNode {
     Token openBrace;
     SeparatedSyntaxList<ExpressionSyntax> valueRanges;
     Token closeBrace;
 
-    InsideExpressionSyntax(ExpressionSyntax* expr, Token inside, Token openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token closeBrace) :
-        ExpressionSyntax(SyntaxKind::InsideExpression), expr(expr), inside(inside), openBrace(openBrace), valueRanges(valueRanges), closeBrace(closeBrace)
+    OpenRangeListSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token closeBrace) :
+        SyntaxNode(SyntaxKind::OpenRangeList), openBrace(openBrace), valueRanges(valueRanges), closeBrace(closeBrace)
     {
-        childCount += 5;
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return openBrace;
+            case 1: return &valueRanges;
+            case 2: return closeBrace;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeBrace = token; break;
+        }
+    }
+};
+
+struct InsideExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* expr;
+    Token inside;
+    OpenRangeListSyntax* ranges;
+
+    InsideExpressionSyntax(ExpressionSyntax* expr, Token inside, OpenRangeListSyntax* ranges) :
+        ExpressionSyntax(SyntaxKind::InsideExpression), expr(expr), inside(inside), ranges(ranges)
+    {
+        childCount += 3;
     }
 
 protected:
@@ -931,9 +959,7 @@ protected:
         switch (index) {
             case 0: return expr;
             case 1: return inside;
-            case 2: return openBrace;
-            case 3: return &valueRanges;
-            case 4: return closeBrace;
+            case 2: return ranges;
             default: return nullptr;
         }
     }
@@ -942,9 +968,7 @@ protected:
         switch (index) {
             case 0: ASSERT(false); break;
             case 1: inside = token; break;
-            case 2: openBrace = token; break;
-            case 3: ASSERT(false); break;
-            case 4: closeBrace = token; break;
+            case 2: ASSERT(false); break;
         }
     }
 };
@@ -3672,18 +3696,48 @@ protected:
     }
 };
 
-struct ForeachLoopStatementSyntax : public StatementSyntax {
-    Token keyword;
+struct ForeachLoopListSyntax : public SyntaxNode {
     Token openParen;
     NameSyntax* arrayName;
     SeparatedSyntaxList<NameSyntax> loopVariables;
     Token closeParen;
+
+    ForeachLoopListSyntax(Token openParen, NameSyntax* arrayName, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeParen) :
+        SyntaxNode(SyntaxKind::ForeachLoopList), openParen(openParen), arrayName(arrayName), loopVariables(loopVariables), closeParen(closeParen)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return openParen;
+            case 1: return arrayName;
+            case 2: return &loopVariables;
+            case 3: return closeParen;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
+        }
+    }
+};
+
+struct ForeachLoopStatementSyntax : public StatementSyntax {
+    Token keyword;
+    ForeachLoopListSyntax* loopList;
     StatementSyntax* statement;
 
-    ForeachLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, NameSyntax* arrayName, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeParen, StatementSyntax* statement) :
-        StatementSyntax(SyntaxKind::ForeachLoopStatement, label, attributes), keyword(keyword), openParen(openParen), arrayName(arrayName), loopVariables(loopVariables), closeParen(closeParen), statement(statement)
+    ForeachLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ForeachLoopListSyntax* loopList, StatementSyntax* statement) :
+        StatementSyntax(SyntaxKind::ForeachLoopStatement, label, attributes), keyword(keyword), loopList(loopList), statement(statement)
     {
-        childCount += 6;
+        childCount += 3;
     }
 
 protected:
@@ -3692,11 +3746,8 @@ protected:
             case 0: return label;
             case 1: return &attributes;
             case 2: return keyword;
-            case 3: return openParen;
-            case 4: return arrayName;
-            case 5: return &loopVariables;
-            case 6: return closeParen;
-            case 7: return statement;
+            case 3: return loopList;
+            case 4: return statement;
             default: return nullptr;
         }
     }
@@ -3706,11 +3757,8 @@ protected:
             case 0: ASSERT(false); break;
             case 1: ASSERT(false); break;
             case 2: keyword = token; break;
-            case 3: openParen = token; break;
+            case 3: ASSERT(false); break;
             case 4: ASSERT(false); break;
-            case 5: ASSERT(false); break;
-            case 6: closeParen = token; break;
-            case 7: ASSERT(false); break;
         }
     }
 };
@@ -5571,6 +5619,272 @@ protected:
             case 1: assign = token; break;
             case 2: ASSERT(false); break;
             case 3: semi = token; break;
+        }
+    }
+};
+
+// ----- CONSTRAINTS -----
+
+struct ConstraintItemSyntax : public SyntaxNode {
+
+    ConstraintItemSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
+    Token unique;
+    OpenRangeListSyntax* ranges;
+    Token semi;
+
+    UniquenessConstraintSyntax(Token unique, OpenRangeListSyntax* ranges, Token semi) :
+        ConstraintItemSyntax(SyntaxKind::UniquenessConstraint), unique(unique), ranges(ranges), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return unique;
+            case 1: return ranges;
+            case 2: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: unique = token; break;
+            case 1: ASSERT(false); break;
+            case 2: semi = token; break;
+        }
+    }
+};
+
+struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
+    ExpressionSyntax* left;
+    Token arrow;
+    ConstraintItemSyntax* constraints;
+
+    ImplicationConstraintSyntax(ExpressionSyntax* left, Token arrow, ConstraintItemSyntax* constraints) :
+        ConstraintItemSyntax(SyntaxKind::ImplicationConstraint), left(left), arrow(arrow), constraints(constraints)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return left;
+            case 1: return arrow;
+            case 2: return constraints;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: arrow = token; break;
+            case 2: ASSERT(false); break;
+        }
+    }
+};
+
+struct ElseConstraintClauseSyntax : public SyntaxNode {
+    Token elseKeyword;
+    ConstraintItemSyntax* constraints;
+
+    ElseConstraintClauseSyntax(Token elseKeyword, ConstraintItemSyntax* constraints) :
+        SyntaxNode(SyntaxKind::ElseConstraintClause), elseKeyword(elseKeyword), constraints(constraints)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return elseKeyword;
+            case 1: return constraints;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: elseKeyword = token; break;
+            case 1: ASSERT(false); break;
+        }
+    }
+};
+
+struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
+    Token ifKeyword;
+    Token openParen;
+    ExpressionSyntax* condition;
+    Token closeParen;
+    ConstraintItemSyntax* constraints;
+    ElseConstraintClauseSyntax* elseClause;
+
+    ConditionalConstraintSyntax(Token ifKeyword, Token openParen, ExpressionSyntax* condition, Token closeParen, ConstraintItemSyntax* constraints, ElseConstraintClauseSyntax* elseClause) :
+        ConstraintItemSyntax(SyntaxKind::ConditionalConstraint), ifKeyword(ifKeyword), openParen(openParen), condition(condition), closeParen(closeParen), constraints(constraints), elseClause(elseClause)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return ifKeyword;
+            case 1: return openParen;
+            case 2: return condition;
+            case 3: return closeParen;
+            case 4: return constraints;
+            case 5: return elseClause;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ifKeyword = token; break;
+            case 1: openParen = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
+            case 4: ASSERT(false); break;
+            case 5: ASSERT(false); break;
+        }
+    }
+};
+
+struct LoopConstraintSyntax : public ConstraintItemSyntax {
+    Token foreachKeyword;
+    ForeachLoopListSyntax* loopList;
+    ConstraintItemSyntax* constraints;
+
+    LoopConstraintSyntax(Token foreachKeyword, ForeachLoopListSyntax* loopList, ConstraintItemSyntax* constraints) :
+        ConstraintItemSyntax(SyntaxKind::LoopConstraint), foreachKeyword(foreachKeyword), loopList(loopList), constraints(constraints)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return foreachKeyword;
+            case 1: return loopList;
+            case 2: return constraints;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: foreachKeyword = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+    }
+};
+
+struct ConstraintBlockSyntax : public ConstraintItemSyntax {
+    Token openBrace;
+    SyntaxList<ConstraintItemSyntax> items;
+    Token closeBrace;
+
+    ConstraintBlockSyntax(Token openBrace, SyntaxList<ConstraintItemSyntax> items, Token closeBrace) :
+        ConstraintItemSyntax(SyntaxKind::ConstraintBlock), openBrace(openBrace), items(items), closeBrace(closeBrace)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return openBrace;
+            case 1: return &items;
+            case 2: return closeBrace;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openBrace = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeBrace = token; break;
+        }
+    }
+};
+
+struct ConstraintPrototypeSyntax : public MemberSyntax {
+    TokenList qualifiers;
+    Token keyword;
+    Token name;
+    Token semi;
+
+    ConstraintPrototypeSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, Token semi) :
+        MemberSyntax(SyntaxKind::ConstraintPrototype, attributes), qualifiers(qualifiers), keyword(keyword), name(name), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return &qualifiers;
+            case 2: return keyword;
+            case 3: return name;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: keyword = token; break;
+            case 3: name = token; break;
+            case 4: semi = token; break;
+        }
+    }
+};
+
+struct ConstraintDeclarationSyntax : public MemberSyntax {
+    TokenList qualifiers;
+    Token keyword;
+    Token name;
+    ConstraintBlockSyntax* block;
+
+    ConstraintDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, ConstraintBlockSyntax* block) :
+        MemberSyntax(SyntaxKind::ConstraintDeclaration, attributes), qualifiers(qualifiers), keyword(keyword), name(name), block(block)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return &qualifiers;
+            case 2: return keyword;
+            case 3: return name;
+            case 4: return block;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: keyword = token; break;
+            case 3: name = token; break;
+            case 4: ASSERT(false); break;
         }
     }
 };

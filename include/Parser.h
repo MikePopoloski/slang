@@ -31,7 +31,8 @@ private:
     ConcatenationExpressionSyntax* parseConcatenation(Token openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token openBrace);
     StreamExpressionSyntax* parseStreamExpression();
-    ExpressionSyntax* parseInsideElement();
+    OpenRangeListSyntax* parseOpenRangeList();
+    ExpressionSyntax* parseOpenRangeElement();
     ElementSelectSyntax* parseElementSelect();
     SelectorSyntax* parseElementSelector();
     NameSyntax* parseName();
@@ -55,6 +56,7 @@ private:
     DoWhileStatementSyntax* parseDoWhileStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     ForLoopStatementSyntax* parseForLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     SyntaxNode* parseForInitializer();
+    ForeachLoopListSyntax* parseForeachLoopVariables();
     ForeachLoopStatementSyntax* parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     ReturnStatementSyntax* parseReturnStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     JumpStatementSyntax* parseJumpStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);

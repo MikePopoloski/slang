@@ -160,12 +160,15 @@ token tagged
 token member
 ExpressionSyntax expr
 
-InsideExpressionSyntax base=ExpressionSyntax kind=InsideExpression
-ExpressionSyntax expr
-token inside
+OpenRangeListSyntax kind=OpenRangeList
 token openBrace
 separated_list<ExpressionSyntax> valueRanges
 token closeBrace
+
+InsideExpressionSyntax base=ExpressionSyntax kind=InsideExpression
+ExpressionSyntax expr
+token inside
+OpenRangeListSyntax ranges
 
 ConditionalExpressionSyntax base=ExpressionSyntax kind=ConditionalExpression
 ConditionalPredicateSyntax predicate
@@ -649,12 +652,15 @@ separated_list<ExpressionSyntax> steps
 token closeParen
 StatementSyntax statement
 
-ForeachLoopStatementSyntax base=StatementSyntax kind=ForeachLoopStatement
-token keyword
+ForeachLoopListSyntax kind=ForeachLoopList
 token openParen
 NameSyntax arrayName
 separated_list<NameSyntax> loopVariables
 token closeParen
+
+ForeachLoopStatementSyntax base=StatementSyntax kind=ForeachLoopStatement
+token keyword
+ForeachLoopListSyntax loopList
 StatementSyntax statement
 
 ReturnStatementSyntax base=StatementSyntax kind=ReturnStatement
@@ -970,6 +976,55 @@ ContinuousAssignSyntax base=MemberSyntax kind=ContinuousAssign
 token assign
 separated_list<ExpressionSyntax> assignments
 token semi
+
+// ----- CONSTRAINTS -----
+
+ConstraintItemSyntax final=false
+empty
+
+UniquenessConstraintSyntax base=ConstraintItemSyntax kind=UniquenessConstraint
+token unique
+OpenRangeListSyntax ranges
+token semi
+
+ImplicationConstraintSyntax base=ConstraintItemSyntax kind=ImplicationConstraint
+ExpressionSyntax left
+token arrow
+ConstraintItemSyntax constraints
+
+ElseConstraintClauseSyntax kind=ElseConstraintClause
+token elseKeyword
+ConstraintItemSyntax constraints
+
+ConditionalConstraintSyntax base=ConstraintItemSyntax kind=ConditionalConstraint
+token ifKeyword
+token openParen
+ExpressionSyntax condition
+token closeParen
+ConstraintItemSyntax constraints
+ElseConstraintClauseSyntax elseClause
+
+LoopConstraintSyntax base=ConstraintItemSyntax kind=LoopConstraint
+token foreachKeyword
+ForeachLoopListSyntax loopList
+ConstraintItemSyntax constraints
+
+ConstraintBlockSyntax base=ConstraintItemSyntax kind=ConstraintBlock
+token openBrace
+list<ConstraintItemSyntax> items
+token closeBrace
+
+ConstraintPrototypeSyntax base=MemberSyntax kind=ConstraintPrototype
+tokenlist qualifiers
+token keyword
+token name
+token semi
+
+ConstraintDeclarationSyntax base=MemberSyntax kind=ConstraintDeclaration
+tokenlist qualifiers
+token keyword
+token name
+ConstraintBlockSyntax block
 
 // ----- COVER GROUPS -----
 

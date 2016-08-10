@@ -155,6 +155,7 @@ enum class SyntaxKind : uint16_t {
     ArithmeticShiftLeftExpression,
     ArithmeticShiftRightExpression,
     TaggedUnionExpression,
+    OpenRangeList,
     InsideExpression,
     ConditionalExpression,
 
@@ -272,6 +273,7 @@ enum class SyntaxKind : uint16_t {
     DoWhileStatement,
     ForVariableDeclaration,
     ForLoopStatement,
+    ForeachLoopList,
     ForeachLoopStatement,
     ReturnStatement,
     JumpStatement,
@@ -355,6 +357,16 @@ enum class SyntaxKind : uint16_t {
     ClassMethodPrototype,
     ContinuousAssign,
 
+    // constraints
+    UniquenessConstraint,
+    ImplicationConstraint,
+    ElseConstraintClause,
+    ConditionalConstraint,
+    LoopConstraint,
+    ConstraintBlock,
+    ConstraintPrototype,
+    ConstraintDeclaration,
+
     // covergroups
     WithFunctionSample,
     BinaryBlockEventExpression,
@@ -395,7 +407,7 @@ bool isIdentifierOrComma(TokenKind kind);
 bool isPossibleExpressionOrComma(TokenKind kind);
 bool isPossibleExpressionOrCommaOrDefault(TokenKind kind);
 bool isPossibleExpressionOrTripleAnd(TokenKind kind);
-bool isPossibleInsideElement(TokenKind kind);
+bool isPossibleOpenRangeElement(TokenKind kind);
 bool isPossiblePattern(TokenKind kind);
 bool isPossibleDelayOrEventControl(TokenKind kind);
 bool isEndKeyword(TokenKind kind);
