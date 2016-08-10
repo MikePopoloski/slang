@@ -874,6 +874,9 @@ bool Lexer::lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
                 addTrivia(TriviaKind::LineContinuation, triviaBuffer);
                 break;
             }
+            case '\0':
+                // in directive mode, return an EOD first to wrap up any directive processing
+                return directiveMode;
             default:
                 return false;
         }

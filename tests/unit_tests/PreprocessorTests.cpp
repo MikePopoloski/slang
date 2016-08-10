@@ -286,4 +286,22 @@ TEST_CASE("Nested branches", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("IfDef inside macro", "[preprocessor]") {
+    auto& text =
+"`define FOO \\\n"
+"  `ifdef BAR \\\n"
+"    32 \\\n"
+"  `else \\\n"
+"    63 \\\n"
+"  `endif \\\n"
+"\n"
+"`define BAR\n"
+"`FOO";
+    auto& token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.numericValue().integer == 32);
+    CHECK(diagnostics.empty());
+}
+
 }

@@ -177,6 +177,8 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
     // next token should be the macro name
     auto name = expect(TokenKind::Identifier);
+    inMacroBody = true;
+
     if (!name.isMissing()) {
         if (getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage)
             addError(DiagCode::InvalidMacroName, name.location());
@@ -191,10 +193,33 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     }
 
     // consume all remaining tokens as macro text
+    bool needEod = false;
     auto body = tokenPool.get();
-    inMacroBody = true;
-    while (!peek(TokenKind::EndOfDirective))
+    while (!peek(TokenKind::EndOfDirective)) {
+        // In SystemVerilog macros can actually contain other directives, such as ifdef. We
+        // therefore have to keep track of where EndOfDirective tokens need to be so that
+        // when the macro gets expanded they parse correctly.
+        Token t = peek();
+        if (needEod && (t.hasTrivia(TriviaKind::EndOfLine) || t.hasTrivia(TriviaKind::LineContinuation))) {
+            body.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
+            needEod = false;
+        }
+
+        if (t.kind == TokenKind::Directive) {
+            switch (t.directiveKind()) {
+                case SyntaxKind::IfDefDirective:
+                case SyntaxKind::ElseDirective:
+                case SyntaxKind::IfNDefDirective:
+                case SyntaxKind::ElsIfDirective:
+                case SyntaxKind::EndIfDirective:
+                    needEod = true;
+                    break;
+                default:
+                    break;
+            }
+        }
         body.append(consume());
+    }
     inMacroBody = false;
 
     auto result = alloc.emplace<DefineDirectiveSyntax>(
