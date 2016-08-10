@@ -33,6 +33,16 @@ ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> 
     );
 }
 
+ClassDeclarationSyntax* Parser::parseClass() {
+    auto attributes = parseAttributes();
+
+    Token virtualOrInterface;
+    if (peek(TokenKind::VirtualKeyword) || peek(TokenKind::InterfaceKeyword))
+        virtualOrInterface = consume();
+
+    return parseClassDeclaration(attributes, virtualOrInterface);
+}
+
 Token Parser::parseLifetime() {
     auto kind = peek().kind;
     if (kind == TokenKind::StaticKeyword || kind == TokenKind::AutomaticKeyword)

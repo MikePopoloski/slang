@@ -13,11 +13,13 @@ static const char RelativeTestPath[] = "../../../tests/file_tests/corpus";
 BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceManager sourceManager;
-Preprocessor preprocessor(sourceManager, alloc, diagnostics);
 
 int parseFile(SourceBuffer buffer, const char* path) {
     diagnostics.clear();
+
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
     preprocessor.pushSource(buffer);
+
     Parser parser(preprocessor);
 
     auto tree = parser.parseCompilationUnit();
@@ -37,8 +39,8 @@ int main() {
         if (p.status().type() != fs::file_type::regular)
             continue;
 
-        //if (errors > 100)
-          //  break;
+        if (errors > 100)
+            break;
 
         auto buffer = sourceManager.readSource(p.path().string());
         errors += parseFile(buffer, p.path().string().c_str());

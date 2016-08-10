@@ -408,6 +408,7 @@ TokenKind getModuleEndKind(TokenKind kind) {
         case TokenKind::MacromoduleKeyword: return TokenKind::EndModuleKeyword;
         case TokenKind::ProgramKeyword: return TokenKind::EndProgramKeyword;
         case TokenKind::InterfaceKeyword: return TokenKind::EndInterfaceKeyword;
+        case TokenKind::PackageKeyword: return TokenKind::EndPackageKeyword;
         default: return TokenKind::Unknown;
     }
 }

@@ -9,7 +9,7 @@ BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceManager sourceManager;
 
-ModuleDeclarationSyntax* parse(StringRef text) {
+ModuleDeclarationSyntax* parseModule(StringRef text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
@@ -21,9 +21,21 @@ ModuleDeclarationSyntax* parse(StringRef text) {
     return node;
 }
 
+ClassDeclarationSyntax* parseClass(StringRef text) {
+    diagnostics.clear();
+
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Parser parser(preprocessor);
+    auto node = parser.parseClass();
+    REQUIRE(node);
+    return node;
+}
+
 TEST_CASE("Simple module", "[parser:modules]") {
     auto& text = "module foo(); endmodule";
-    auto module = parse(text);
+    auto module = parseModule(text);
 
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -33,7 +45,7 @@ TEST_CASE("Simple module", "[parser:modules]") {
 
 TEST_CASE("Simple interface", "[parser:modules]") {
     auto& text = "interface foo(); endinterface";
-    auto module = parse(text);
+    auto module = parseModule(text);
 
     REQUIRE(module->kind == SyntaxKind::InterfaceDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -43,7 +55,7 @@ TEST_CASE("Simple interface", "[parser:modules]") {
 
 TEST_CASE("Simple program", "[parser:modules]") {
     auto& text = "program foo(); endprogram";
-    auto module = parse(text);
+    auto module = parseModule(text);
 
     REQUIRE(module->kind == SyntaxKind::ProgramDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -53,7 +65,7 @@ TEST_CASE("Simple program", "[parser:modules]") {
 
 TEST_CASE("Complex header", "[parser:modules]") {
     auto& text = "(* foo = 4 *) macromodule automatic foo import blah::*, foo::bar; #(foo = bar, parameter blah, stuff) (input wire i = 3); endmodule";
-    auto module = parse(text);
+    auto module = parseModule(text);
 
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -67,7 +79,7 @@ TEST_CASE("Complex header", "[parser:modules]") {
 
 TEST_CASE("Parameter ports", "[parser:modules]") {
     auto& text = "module foo #(foo, foo [3:1][9:0] = 4:3:9, parameter blah = blah, localparam type blah = shortint); endmodule";
-    auto module = parse(text);
+    auto module = parseModule(text);
 
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -83,9 +95,9 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     CHECK(((TypeParameterDeclarationSyntax*)parameters[3])->declarators[0]->initializer->expr->kind == SyntaxKind::ShortIntType);
 }
 
-const MemberSyntax* parseMember(const std::string& text, SyntaxKind kind) {
+const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) {
     auto fullText = "module foo; " + text + " endmodule";
-    auto module = parse(fullText);
+    auto module = parseModule(fullText);
 
     REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
     CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
@@ -96,22 +108,41 @@ const MemberSyntax* parseMember(const std::string& text, SyntaxKind kind) {
     return module->members[0];
 }
 
-TEST_CASE("Simple members", "[parser:modules]") {
-    parseMember("Foo #(stuff) bar(.*), baz(.clock, .rst(rst + 2));", SyntaxKind::HierarchyInstantiation);
-    parseMember("timeunit 30ns / 40ns;", SyntaxKind::TimeUnitsDeclaration);
-    parseMember("timeprecision 30ns;", SyntaxKind::TimeUnitsDeclaration);
-    parseMember("module foo; endmodule", SyntaxKind::ModuleDeclaration);
-    parseMember("interface foo; endinterface", SyntaxKind::InterfaceDeclaration);
-    parseMember("program foo; endprogram", SyntaxKind::ProgramDeclaration);
-    parseMember("generate logic foo = 4; endgenerate", SyntaxKind::GenerateRegion);
-    parseMember("initial begin logic foo = 4; end", SyntaxKind::InitialBlock);
-    parseMember("final begin logic foo = 4; end", SyntaxKind::FinalBlock);
-    parseMember("always @* begin logic foo = 4; end", SyntaxKind::AlwaysBlock);
-    parseMember("always_ff @(posedge clk) begin logic foo = 4; end", SyntaxKind::AlwaysFFBlock);
-    parseMember("input [31:0] foo, bar;", SyntaxKind::PortDeclaration);
-    parseMember("parameter foo = 1, bar = 2;", SyntaxKind::ParameterDeclarationStatement);
-    parseMember("for (genvar i = 1; i != 10; i++) parameter foo = i;", SyntaxKind::LoopGenerate);
-    parseMember("typedef foo #(T, B) bar;", SyntaxKind::TypedefDeclaration);
+TEST_CASE("Module members", "[parser:modules]") {
+    parseModuleMember("Foo #(stuff) bar(.*), baz(.clock, .rst(rst + 2));", SyntaxKind::HierarchyInstantiation);
+    parseModuleMember("timeunit 30ns / 40ns;", SyntaxKind::TimeUnitsDeclaration);
+    parseModuleMember("timeprecision 30ns;", SyntaxKind::TimeUnitsDeclaration);
+    parseModuleMember("module foo; endmodule", SyntaxKind::ModuleDeclaration);
+    parseModuleMember("interface foo; endinterface", SyntaxKind::InterfaceDeclaration);
+    parseModuleMember("program foo; endprogram", SyntaxKind::ProgramDeclaration);
+    parseModuleMember("generate logic foo = 4; endgenerate", SyntaxKind::GenerateRegion);
+    parseModuleMember("initial begin logic foo = 4; end", SyntaxKind::InitialBlock);
+    parseModuleMember("final begin logic foo = 4; end", SyntaxKind::FinalBlock);
+    parseModuleMember("always @* begin logic foo = 4; end", SyntaxKind::AlwaysBlock);
+    parseModuleMember("always_ff @(posedge clk) begin logic foo = 4; end", SyntaxKind::AlwaysFFBlock);
+    parseModuleMember("input [31:0] foo, bar;", SyntaxKind::PortDeclaration);
+    parseModuleMember("parameter foo = 1, bar = 2;", SyntaxKind::ParameterDeclarationStatement);
+    parseModuleMember("for (genvar i = 1; i != 10; i++) parameter foo = i;", SyntaxKind::LoopGenerate);
+    parseModuleMember("typedef foo #(T, B) bar;", SyntaxKind::TypedefDeclaration);
+}
+
+const MemberSyntax* parseClassMember(const std::string& text, SyntaxKind kind) {
+    auto fullText = "class foo; " + text + " endclass";
+    auto classDecl = parseClass(fullText);
+
+    REQUIRE(classDecl->kind == SyntaxKind::ClassDeclaration);
+    CHECK(classDecl->toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
+    CHECK(diagnostics.empty());
+
+    REQUIRE(classDecl->items.count() == 1);
+    REQUIRE(classDecl->items[0]->kind == kind);
+    return classDecl->items[0];
+}
+
+TEST_CASE("Class members", "[parser:class]") {
+    parseClassMember("function void blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
+    parseClassMember("virtual function void blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
+    parseClassMember("static function type_id blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
 }
 
 }

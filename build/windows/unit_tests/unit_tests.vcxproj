@@ -23,7 +23,7 @@
     <ClCompile Include="..\..\..\tests\unit_tests\LexerTests.cpp" />
     <ClCompile Include="..\..\..\tests\unit_tests\main.cpp" />
     <ClCompile Include="..\..\..\tests\unit_tests\ExpressionParsingTests.cpp" />
-    <ClCompile Include="..\..\..\tests\unit_tests\ModuleParsingTests.cpp" />
+    <ClCompile Include="..\..\..\tests\unit_tests\MemberParsingTests.cpp" />
     <ClCompile Include="..\..\..\tests\unit_tests\PreprocessorTests.cpp" />
     <ClCompile Include="..\..\..\tests\unit_tests\StatementParsingTests.cpp" />
   </ItemGroup>

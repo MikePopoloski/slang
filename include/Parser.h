@@ -19,6 +19,7 @@ public:
     ExpressionSyntax* parseExpression();
     StatementSyntax* parseStatement();
     ModuleDeclarationSyntax* parseModule();
+    ClassDeclarationSyntax* parseClass();
 
 private:
     ExpressionSyntax* parseMinTypMaxExpression();
