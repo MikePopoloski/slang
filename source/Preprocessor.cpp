@@ -562,17 +562,18 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
 
     if (!macro->formalArguments) {
         // each macro expansion gets its own location entry
-        SourceLocation start = usageSite.location();
-        SourceLocation macroStart = sourceManager.createExpansionLoc(
-            macro->body[0].location(),
+        SourceLocation start = macro->body[0].location();
+        SourceLocation usageLoc = usageSite.location();
+        SourceLocation expansionLoc = sourceManager.createExpansionLoc(
             start,
-            start + usageSite.rawText().length()
+            usageLoc,
+            usageLoc + usageSite.rawText().length()
         );
 
         // simple macro; just take body tokens
         for (auto& token : macro->body) {
             int delta = token.location().offset - start.offset;
-            dest.append(token.withLocation(alloc, macroStart + delta));
+            dest.append(token.withLocation(alloc, expansionLoc + delta));
         }
         return true;
     }
@@ -615,19 +616,30 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
         argumentMap[name] = tokenList;
     }
 
+    // TODO: the expansion range for a function-like macro should include the parenthesis and arguments
+    SourceLocation start = macro->body[0].location();
+    SourceLocation usageLoc = usageSite.location();
+    SourceLocation expansionLoc = sourceManager.createExpansionLoc(
+        start,
+        usageLoc,
+        usageLoc + usageSite.rawText().length()
+    );
+
     // now add each body token, substituting arguments as necessary
     for (auto& token : macro->body) {
+        int delta = token.location().offset - start.offset;
+
         if (token.kind != TokenKind::Identifier)
-            dest.append(token);
+            dest.append(token.withLocation(alloc, expansionLoc + delta));
         else {
             // check for formal param
             auto it = argumentMap.find(token.valueText());
             if (it == argumentMap.end())
-                dest.append(token);
+                dest.append(token.withLocation(alloc, expansionLoc + delta));
             else {
                 // we need to ensure that we get correct spacing for the leading token here;
                 // it needs to come from the *formal* parameter used in the macro body, not
-                // from the argument iself
+                // from the argument itself
                 auto begin = it->second->begin();
                 auto end = it->second->end();
                 if (begin != end) {

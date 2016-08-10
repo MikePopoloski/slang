@@ -77,6 +77,52 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
     return entry.file.includedFrom;
 }
 
+bool SourceManager::isFileLoc(SourceLocation location) {
+    auto buffer = location.buffer;
+    if (!buffer)
+        return false;
+
+    ASSERT(buffer.id < bufferEntries.size());
+    BufferEntry& entry = bufferEntries[buffer.id];
+
+    return entry.isFile;
+}
+
+bool SourceManager::isMacroLoc(SourceLocation location) {
+    auto buffer = location.buffer;
+    if (!buffer)
+        return false;
+
+    ASSERT(buffer.id < bufferEntries.size());
+    BufferEntry& entry = bufferEntries[buffer.id];
+
+    return !entry.isFile;
+}
+
+SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
+    auto buffer = location.buffer;
+    if (!buffer)
+        return SourceLocation();
+
+    ASSERT(buffer.id < bufferEntries.size());
+    BufferEntry& entry = bufferEntries[buffer.id];
+
+    ASSERT(!entry.isFile);
+    return entry.expansion.expansionStart;
+}
+
+SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
+    auto buffer = location.buffer;
+    if (!buffer)
+        return SourceLocation();
+
+    ASSERT(buffer.id < bufferEntries.size());
+    BufferEntry& entry = bufferEntries[buffer.id];
+
+    ASSERT(!entry.isFile);
+    return entry.expansion.originalLoc + location.offset;
+}
+
 const Buffer<char>* SourceManager::getBufferMemory(BufferID buffer) {
     FileData* fd = getFileData(buffer);
     if (!fd)

@@ -35,6 +35,11 @@ public:
     StringRef getBufferName(BufferID buffer);
     SourceLocation getIncludedFrom(BufferID buffer);
 
+    bool isFileLoc(SourceLocation location);
+    bool isMacroLoc(SourceLocation location);
+    SourceLocation getExpansionLoc(SourceLocation location);
+    SourceLocation getOriginalLoc(SourceLocation location);
+
     // get the buffer for the given file ID
     const Buffer<char>* getBufferMemory(BufferID buffer);
 
