@@ -982,6 +982,26 @@ token semi
 ConstraintItemSyntax final=false
 empty
 
+DistWeightSyntax kind=DistWeight
+token op
+ExpressionSyntax expr
+
+DistItemSyntax kind=DistItem
+ExpressionSyntax range
+DistWeightSyntax weight
+
+DistConstraintListSyntax kind=DistConstraintList
+token dist
+token openBrace
+list<DistItemSyntax> items
+token closeBrace
+
+ExpressionConstraintSyntax base=ConstraintItemSyntax kind=ExpressionConstraint
+token soft
+ExpressionSyntax expr
+DistConstraintListSyntax distribution
+token semi
+
 UniquenessConstraintSyntax base=ConstraintItemSyntax kind=UniquenessConstraint
 token unique
 OpenRangeListSyntax ranges
@@ -1008,6 +1028,12 @@ LoopConstraintSyntax base=ConstraintItemSyntax kind=LoopConstraint
 token foreachKeyword
 ForeachLoopListSyntax loopList
 ConstraintItemSyntax constraints
+
+DisableConstraintSyntax base=ConstraintItemSyntax kind=DisableConstraint
+token disable
+token soft
+NameSyntax name
+token semi
 
 ConstraintBlockSyntax base=ConstraintItemSyntax kind=ConstraintBlock
 token openBrace

@@ -9,7 +9,7 @@ Parser::Parser(Preprocessor& preprocessor) :
 
 CompilationUnitSyntax* Parser::parseCompilationUnit() {
     Token eof;
-    auto members = parseMemberList(TokenKind::EndOfFile, eof, [this]() { return parseMember(); });
+    auto members = parseMemberList<MemberSyntax>(TokenKind::EndOfFile, eof, [this]() { return parseMember(); });
     return alloc.emplace<CompilationUnitSyntax>(members, eof);
 }
 
@@ -22,7 +22,7 @@ ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> 
     auto endKind = getModuleEndKind(header->moduleKeyword.kind);
 
     Token endmodule;
-    auto members = parseMemberList(endKind, endmodule, [this]() { return parseMember(); });
+    auto members = parseMemberList<MemberSyntax>(endKind, endmodule, [this]() { return parseMember(); });
     return alloc.emplace<ModuleDeclarationSyntax>(
         getModuleDeclarationKind(header->moduleKeyword.kind),
         attributes,
@@ -300,7 +300,7 @@ MemberSyntax* Parser::parseMember() {
             }
 
             Token endgenerate;
-            auto members = parseMemberList(TokenKind::EndGenerateKeyword, endgenerate, [this]() { return parseMember(); });
+            auto members = parseMemberList<MemberSyntax>(TokenKind::EndGenerateKeyword, endgenerate, [this]() { return parseMember(); });
             return alloc.emplace<GenerateRegionSyntax>(attributes, keyword, members, endgenerate);
         }
 
@@ -380,9 +380,9 @@ MemberSyntax* Parser::parseMember() {
     return nullptr;
 }
 
-template<typename TParseFunc>
-ArrayRef<MemberSyntax*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc) {
-    auto members = nodePool.getAs<MemberSyntax*>();
+template<typename TMember, typename TParseFunc>
+ArrayRef<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc) {
+    auto members = nodePool.getAs<TMember*>();
     auto skipped = tokenPool.get();
     auto trivia = triviaPool.get();
     bool error = false;
@@ -598,7 +598,7 @@ MemberSyntax* Parser::parseGenerateBlock() {
     auto beginName = parseNamedBlockClause();
 
     Token end;
-    auto members = parseMemberList(TokenKind::EndKeyword, end, [this]() { return parseMember(); });
+    auto members = parseMemberList<MemberSyntax>(TokenKind::EndKeyword, end, [this]() { return parseMember(); });
     auto endName = parseNamedBlockClause();
 
     return alloc.emplace<GenerateBlockSyntax>(
@@ -659,7 +659,7 @@ ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstance
     }
 
     Token endClass;
-    auto members = parseMemberList(TokenKind::EndClassKeyword, endClass, [this]() { return parseClassMember(); });
+    auto members = parseMemberList<MemberSyntax>(TokenKind::EndClassKeyword, endClass, [this]() { return parseClassMember(); });
     auto endBlockName = parseNamedBlockClause();
     return alloc.emplace<ClassDeclarationSyntax>(
         attributes,
@@ -718,6 +718,9 @@ MemberSyntax* Parser::parseClassMember() {
             );
         }
     }
+
+    if (kind == TokenKind::ConstraintKeyword)
+        return parseConstraint(attributes, qualifiers);
 
     // qualifiers aren't allowed past this point, so return an empty member to hold them
     // TODO: specific error code for this
@@ -831,7 +834,7 @@ CovergroupDeclarationSyntax* Parser::parseCovergroupDeclaration(ArrayRef<Attribu
     auto semi = expect(TokenKind::Semicolon);
 
     Token endGroup;
-    auto members = parseMemberList(TokenKind::EndGroupKeyword, endGroup, [this]() { return parseCoverageMember(); });
+    auto members = parseMemberList<MemberSyntax>(TokenKind::EndGroupKeyword, endGroup, [this]() { return parseCoverageMember(); });
     auto endBlockName = parseNamedBlockClause();
     return alloc.emplace<CovergroupDeclarationSyntax>(
         attributes,
@@ -844,6 +847,59 @@ CovergroupDeclarationSyntax* Parser::parseCovergroupDeclaration(ArrayRef<Attribu
         endGroup,
         endBlockName
     );
+}
+
+MemberSyntax* Parser::parseConstraint(ArrayRef<AttributeInstanceSyntax*> attributes, ArrayRef<Token> qualifiers) {
+    auto keyword = consume();
+    auto name = expect(TokenKind::Identifier);
+    if (peek(TokenKind::Semicolon)) {
+        // this is just a prototype
+        return alloc.emplace<ConstraintPrototypeSyntax>(attributes, qualifiers, keyword, name, consume());
+    }
+    return alloc.emplace<ConstraintDeclarationSyntax>(attributes, qualifiers, keyword, name, parseConstraintBlock());
+}
+
+ConstraintBlockSyntax* Parser::parseConstraintBlock() {
+    Token closeBrace;
+    auto openBrace = expect(TokenKind::OpenBrace);
+    auto members = parseMemberList<ConstraintItemSyntax>(TokenKind::CloseBrace, closeBrace, [this]() { return parseConstraintItem(); });
+    return alloc.emplace<ConstraintBlockSyntax>(openBrace, members, closeBrace);
+}
+
+ConstraintItemSyntax* Parser::parseConstraintItem() {
+    switch (peek().kind) {
+        case TokenKind::DisableKeyword: {
+            auto disable = consume();
+            auto soft = expect(TokenKind::SoftKeyword);
+            auto name = parseName();
+            return alloc.emplace<DisableConstraintSyntax>(disable, soft, name, expect(TokenKind::Semicolon));
+        }
+        case TokenKind::ForeachKeyword: {
+            auto keyword = consume();
+            auto vars = parseForeachLoopVariables();
+            return alloc.emplace<LoopConstraintSyntax>(keyword, vars, parseConstraintItem());
+        }
+        case TokenKind::IfKeyword: {
+            auto ifKeyword = consume();
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            auto condition = parseExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            auto constraints = parseConstraintItem();
+
+            ElseConstraintClauseSyntax* elseClause = nullptr;
+            if (peek(TokenKind::ElseKeyword)) {
+                auto elseKeyword = consume();
+                elseClause = alloc.emplace<ElseConstraintClauseSyntax>(elseKeyword, parseConstraintItem());
+            }
+            return alloc.emplace<ConditionalConstraintSyntax>(ifKeyword, openParen, condition, closeParen, constraints, elseClause);
+        }
+        case TokenKind::UniqueKeyword: {
+            auto keyword = consume();
+            auto list = parseOpenRangeList();
+            return alloc.emplace<UniquenessConstraintSyntax>(keyword, list, expect(TokenKind::Semicolon));
+        }
+
+    }
 }
 
 Token Parser::parseSigning() {

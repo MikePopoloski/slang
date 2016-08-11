@@ -358,11 +358,16 @@ enum class SyntaxKind : uint16_t {
     ContinuousAssign,
 
     // constraints
+    DistWeight,
+    DistItem,
+    DistConstraintList,
+    ExpressionConstraint,
     UniquenessConstraint,
     ImplicationConstraint,
     ElseConstraintClause,
     ConditionalConstraint,
     LoopConstraint,
+    DisableConstraint,
     ConstraintBlock,
     ConstraintPrototype,
     ConstraintDeclaration,

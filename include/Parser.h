@@ -115,6 +115,9 @@ private:
     MemberSyntax* parseCoverageMember();
     BlockEventExpressionSyntax* parseBlockEventExpression();
     CovergroupDeclarationSyntax* parseCovergroupDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    MemberSyntax* parseConstraint(ArrayRef<AttributeInstanceSyntax*> attributes, ArrayRef<Token> qualifiers);
+    ConstraintBlockSyntax* parseConstraintBlock();
+    ConstraintItemSyntax* parseConstraintItem();
 
     bool isPortDeclaration();
     bool isNetDeclaration();
@@ -141,8 +144,8 @@ private:
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token& end);
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(Token& semi);
 
-    template<typename TParseFunc>
-    ArrayRef<MemberSyntax*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
+    template<typename TMember, typename TParseFunc>
+    ArrayRef<TMember*> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
 
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);

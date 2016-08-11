@@ -5633,6 +5633,127 @@ struct ConstraintItemSyntax : public SyntaxNode {
     }
 };
 
+struct DistWeightSyntax : public SyntaxNode {
+    Token op;
+    ExpressionSyntax* expr;
+
+    DistWeightSyntax(Token op, ExpressionSyntax* expr) :
+        SyntaxNode(SyntaxKind::DistWeight), op(op), expr(expr)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return op;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: op = token; break;
+            case 1: ASSERT(false); break;
+        }
+    }
+};
+
+struct DistItemSyntax : public SyntaxNode {
+    ExpressionSyntax* range;
+    DistWeightSyntax* weight;
+
+    DistItemSyntax(ExpressionSyntax* range, DistWeightSyntax* weight) :
+        SyntaxNode(SyntaxKind::DistItem), range(range), weight(weight)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return range;
+            case 1: return weight;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
+struct DistConstraintListSyntax : public SyntaxNode {
+    Token dist;
+    Token openBrace;
+    SyntaxList<DistItemSyntax> items;
+    Token closeBrace;
+
+    DistConstraintListSyntax(Token dist, Token openBrace, SyntaxList<DistItemSyntax> items, Token closeBrace) :
+        SyntaxNode(SyntaxKind::DistConstraintList), dist(dist), openBrace(openBrace), items(items), closeBrace(closeBrace)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return dist;
+            case 1: return openBrace;
+            case 2: return &items;
+            case 3: return closeBrace;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: dist = token; break;
+            case 1: openBrace = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeBrace = token; break;
+        }
+    }
+};
+
+struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
+    Token soft;
+    ExpressionSyntax* expr;
+    DistConstraintListSyntax* distribution;
+    Token semi;
+
+    ExpressionConstraintSyntax(Token soft, ExpressionSyntax* expr, DistConstraintListSyntax* distribution, Token semi) :
+        ConstraintItemSyntax(SyntaxKind::ExpressionConstraint), soft(soft), expr(expr), distribution(distribution), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return soft;
+            case 1: return expr;
+            case 2: return distribution;
+            case 3: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: soft = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
+        }
+    }
+};
+
 struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
     Token unique;
     OpenRangeListSyntax* ranges;
@@ -5785,6 +5906,39 @@ protected:
             case 0: foreachKeyword = token; break;
             case 1: ASSERT(false); break;
             case 2: ASSERT(false); break;
+        }
+    }
+};
+
+struct DisableConstraintSyntax : public ConstraintItemSyntax {
+    Token disable;
+    Token soft;
+    NameSyntax* name;
+    Token semi;
+
+    DisableConstraintSyntax(Token disable, Token soft, NameSyntax* name, Token semi) :
+        ConstraintItemSyntax(SyntaxKind::DisableConstraint), disable(disable), soft(soft), name(name), semi(semi)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return disable;
+            case 1: return soft;
+            case 2: return name;
+            case 3: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: disable = token; break;
+            case 1: soft = token; break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
         }
     }
 };
