@@ -168,5 +168,11 @@
     <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp">
       <Filter>util\3ps</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\Parser_statements.cpp">
+      <Filter>parsing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\Parser_expressions.cpp">
+      <Filter>parsing</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

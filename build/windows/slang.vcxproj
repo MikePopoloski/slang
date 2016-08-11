@@ -60,6 +60,8 @@
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
     <ClCompile Include="..\..\source\Parser.cpp" />
     <ClCompile Include="..\..\source\ParserBase.cpp" />
+    <ClCompile Include="..\..\source\Parser_expressions.cpp" />
+    <ClCompile Include="..\..\source\Parser_statements.cpp" />
     <ClCompile Include="..\..\source\SourceManager.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
