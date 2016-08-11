@@ -862,11 +862,11 @@ MemberSyntax* Parser::parseConstraint(ArrayRef<AttributeInstanceSyntax*> attribu
 ConstraintBlockSyntax* Parser::parseConstraintBlock() {
     Token closeBrace;
     auto openBrace = expect(TokenKind::OpenBrace);
-    auto members = parseMemberList<ConstraintItemSyntax>(TokenKind::CloseBrace, closeBrace, [this]() { return parseConstraintItem(); });
+    auto members = parseMemberList<ConstraintItemSyntax>(TokenKind::CloseBrace, closeBrace, [this]() { return parseConstraintItem(false); });
     return alloc.emplace<ConstraintBlockSyntax>(openBrace, members, closeBrace);
 }
 
-ConstraintItemSyntax* Parser::parseConstraintItem() {
+ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
     switch (peek().kind) {
         case TokenKind::DisableKeyword: {
             auto disable = consume();
@@ -877,19 +877,19 @@ ConstraintItemSyntax* Parser::parseConstraintItem() {
         case TokenKind::ForeachKeyword: {
             auto keyword = consume();
             auto vars = parseForeachLoopVariables();
-            return alloc.emplace<LoopConstraintSyntax>(keyword, vars, parseConstraintItem());
+            return alloc.emplace<LoopConstraintSyntax>(keyword, vars, parseConstraintItem(true));
         }
         case TokenKind::IfKeyword: {
             auto ifKeyword = consume();
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto condition = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            auto constraints = parseConstraintItem();
+            auto constraints = parseConstraintItem(true);
 
             ElseConstraintClauseSyntax* elseClause = nullptr;
             if (peek(TokenKind::ElseKeyword)) {
                 auto elseKeyword = consume();
-                elseClause = alloc.emplace<ElseConstraintClauseSyntax>(elseKeyword, parseConstraintItem());
+                elseClause = alloc.emplace<ElseConstraintClauseSyntax>(elseKeyword, parseConstraintItem(true));
             }
             return alloc.emplace<ConditionalConstraintSyntax>(ifKeyword, openParen, condition, closeParen, constraints, elseClause);
         }
@@ -898,8 +898,73 @@ ConstraintItemSyntax* Parser::parseConstraintItem() {
             auto list = parseOpenRangeList();
             return alloc.emplace<UniquenessConstraintSyntax>(keyword, list, expect(TokenKind::Semicolon));
         }
-
+        case TokenKind::SoftKeyword: {
+            auto soft = consume();
+            auto expr = parseExpression();
+            auto dist = parseDistConstraintList();
+            return alloc.emplace<ExpressionConstraintSyntax>(soft, expr, dist, expect(TokenKind::Semicolon));
+        }
+        case TokenKind::OpenBrace: {
+            // Ambiguity here: an open brace could either be the start of a constraint block
+            // or the start of a concatenation expression. Descend into the expression until
+            // we can find out for sure one way or the other.
+            if (allowBlock) {
+                int index = 1;
+                if (!scanTypePart<isNotInConcatenationExpr>(index, TokenKind::OpenBrace, TokenKind::CloseBrace))
+                    return parseConstraintBlock();
+            }
+            break;
+        }
+        default:
+            break;
     }
+
+    // at this point we either have an expression with optional distribution or
+    // we have an implication constraint
+    auto expr = parseExpression();
+    if (peek(TokenKind::MinusArrow)) {
+        auto arrow = consume();
+        return alloc.emplace<ImplicationConstraintSyntax>(expr, arrow, parseConstraintItem(true));
+    }
+
+    auto dist = parseDistConstraintList();
+    return alloc.emplace<ExpressionConstraintSyntax>(Token(), expr, dist, expect(TokenKind::Semicolon));
+}
+
+DistConstraintListSyntax* Parser::parseDistConstraintList() {
+    if (!peek(TokenKind::DistKeyword))
+        return nullptr;
+
+    auto dist = consume();
+   
+    Token openBrace;
+    Token closeBrace;
+    ArrayRef<TokenOrSyntax> list;
+
+    parseSeparatedList<isPossibleOpenRangeElement, isEndOfBracedList>(
+        TokenKind::OpenBrace,
+        TokenKind::CloseBrace,
+        TokenKind::Comma,
+        openBrace,
+        list,
+        closeBrace,
+        DiagCode::ExpectedDistItem,
+        [this](bool) { return parseDistItem(); }
+    );
+
+    return alloc.emplace<DistConstraintListSyntax>(dist, openBrace, list, closeBrace);
+}
+
+DistItemSyntax* Parser::parseDistItem() {
+    auto range = parseOpenRangeElement();
+
+    DistWeightSyntax* weight = nullptr;
+    if (peek(TokenKind::ColonEquals) || peek(TokenKind::ColonSlash)) {
+        auto op = consume();
+        weight = alloc.emplace<DistWeightSyntax>(op, parseExpression());
+    }
+
+    return alloc.emplace<DistItemSyntax>(range, weight);
 }
 
 Token Parser::parseSigning() {

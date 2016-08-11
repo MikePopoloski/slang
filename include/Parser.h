@@ -117,8 +117,11 @@ private:
     CovergroupDeclarationSyntax* parseCovergroupDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseConstraint(ArrayRef<AttributeInstanceSyntax*> attributes, ArrayRef<Token> qualifiers);
     ConstraintBlockSyntax* parseConstraintBlock();
-    ConstraintItemSyntax* parseConstraintItem();
+    ConstraintItemSyntax* parseConstraintItem(bool allowBlock);
+    DistConstraintListSyntax* parseDistConstraintList();
+    DistItemSyntax* parseDistItem();
 
+    bool isConstraintBlock();
     bool isPortDeclaration();
     bool isNetDeclaration();
     bool isVariableDeclaration();

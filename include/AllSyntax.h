@@ -5691,10 +5691,10 @@ protected:
 struct DistConstraintListSyntax : public SyntaxNode {
     Token dist;
     Token openBrace;
-    SyntaxList<DistItemSyntax> items;
+    SeparatedSyntaxList<DistItemSyntax> items;
     Token closeBrace;
 
-    DistConstraintListSyntax(Token dist, Token openBrace, SyntaxList<DistItemSyntax> items, Token closeBrace) :
+    DistConstraintListSyntax(Token dist, Token openBrace, SeparatedSyntaxList<DistItemSyntax> items, Token closeBrace) :
         SyntaxNode(SyntaxKind::DistConstraintList), dist(dist), openBrace(openBrace), items(items), closeBrace(closeBrace)
     {
         childCount += 4;

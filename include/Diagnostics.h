@@ -75,7 +75,8 @@ enum class DiagCode : uint8_t {
     ExpectedVectorDigits,
     ExpectedVariableAssignment,
     ExpectedInterfaceClassName,
-    ExpectedAssignmentKey
+    ExpectedAssignmentKey,
+    ExpectedDistItem
 };
 
 class Diagnostic;

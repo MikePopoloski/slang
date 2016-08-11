@@ -426,6 +426,7 @@ bool isEndOfAttribute(TokenKind kind);
 bool isEndOfParameterList(TokenKind kind);
 bool isNotInType(TokenKind kind);
 bool isNotInPortReference(TokenKind kind);
+bool isNotInConcatenationExpr(TokenKind kind);
 bool isPossibleAnsiPort(TokenKind kind);
 bool isPossibleNonAnsiPort(TokenKind kind);
 bool isPossibleParameter(TokenKind kind);

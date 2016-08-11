@@ -993,7 +993,7 @@ DistWeightSyntax weight
 DistConstraintListSyntax kind=DistConstraintList
 token dist
 token openBrace
-list<DistItemSyntax> items
+separated_list<DistItemSyntax> items
 token closeBrace
 
 ExpressionConstraintSyntax base=ConstraintItemSyntax kind=ExpressionConstraint

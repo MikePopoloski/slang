@@ -156,7 +156,8 @@ static const DiagnosticDescriptor diagnosticDescriptors[] = {
     { "ExpectedVectorDigits" },
     { "ExpectedVariableAssignment" },
     { "ExpectedInterfaceClassName" },
-    { "ExpectedAssignmentKey" }
+    { "ExpectedAssignmentKey" },
+    { "ExpectedDistItem" }
 };
 
 DiagnosticReport::DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :

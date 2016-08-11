@@ -695,4 +695,21 @@ bool isNotInPortReference(TokenKind kind) {
     return kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
 }
 
+bool isNotInConcatenationExpr(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Semicolon:
+        case TokenKind::EndOfFile:
+        case TokenKind::IfKeyword:
+        case TokenKind::ForeachKeyword:
+        case TokenKind::SoftKeyword:
+        case TokenKind::UniqueKeyword:
+        case TokenKind::DistKeyword:
+        case TokenKind::DisableKeyword:
+        case TokenKind::MinusArrow:
+            return true;
+        default:
+            return false;
+    }
+}
+
 }
