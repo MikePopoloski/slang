@@ -682,13 +682,17 @@ MemberSyntax* Parser::parseClassMember() {
     auto attributes = parseAttributes();
 
     // virtual keyword can either be a class decl, virtual interface, or a method qualifier;
-    // early out here if it's a class
-    if (peek(TokenKind::VirtualKeyword) && peek(1).kind == TokenKind::ClassKeyword)
-        return parseClassDeclaration(attributes, consume());
-
-    // because of the virtual keyword, we need to check for a variable decl before and after consuming qualifiers
-    /*if (isVariableDeclaration())
-        return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, nullptr, parseVariableDeclaration(nullptr));*/
+    // early out here if it's a class or interface
+    if (peek(TokenKind::VirtualKeyword)) {
+        switch (peek(1).kind) {
+            case TokenKind::ClassKeyword:
+                return parseClassDeclaration(attributes, consume());
+            case TokenKind::InterfaceKeyword:
+                return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, nullptr, parseVariableDeclaration(nullptr));
+            default:
+                break;
+        }
+    }
 
     bool isPureOrExtern = false;
     auto qualifierBuffer = tokenPool.get();
