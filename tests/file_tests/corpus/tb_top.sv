@@ -47,6 +47,7 @@
 `define FPW 1
 `define OPENHMC_ASYNC_FIFOS 1
 `define OPEN_RSP_MODE 1
+`define AXI4BYTES 1
 
 `timescale 100ps/1ps
 
