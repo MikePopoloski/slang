@@ -6043,6 +6043,99 @@ protected:
     }
 };
 
+struct ArrayMethodWithClauseSyntax : public ExpressionSyntax {
+    Token with;
+    Token openParen;
+    ExpressionSyntax* expr;
+    Token closeParen;
+
+    ArrayMethodWithClauseSyntax(Token with, Token openParen, ExpressionSyntax* expr, Token closeParen) :
+        ExpressionSyntax(SyntaxKind::ArrayMethodWithClause), with(with), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return with;
+            case 1: return openParen;
+            case 2: return expr;
+            case 3: return closeParen;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: with = token; break;
+            case 1: openParen = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
+        }
+    }
+};
+
+struct IdentifierListSyntax : public SyntaxNode {
+    Token openParen;
+    SeparatedSyntaxList<IdentifierNameSyntax> identifiers;
+    Token closeParen;
+
+    IdentifierListSyntax(Token openParen, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token closeParen) :
+        SyntaxNode(SyntaxKind::IdentifierList), openParen(openParen), identifiers(identifiers), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return openParen;
+            case 1: return &identifiers;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
+        }
+    }
+};
+
+struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
+    Token with;
+    IdentifierListSyntax* names;
+    ConstraintBlockSyntax* constraints;
+
+    RandomizeMethodWithClauseSyntax(Token with, IdentifierListSyntax* names, ConstraintBlockSyntax* constraints) :
+        ExpressionSyntax(SyntaxKind::RandomizeMethodWithClause), with(with), names(names), constraints(constraints)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return with;
+            case 1: return names;
+            case 2: return constraints;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: with = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+    }
+};
+
 // ----- COVER GROUPS -----
 
 struct WithFunctionSampleSyntax : public SyntaxNode {

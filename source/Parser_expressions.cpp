@@ -505,6 +505,9 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
                 }
                 break;
             }
+            case TokenKind::WithKeyword:
+                expr = parseArrayOrRandomizeWithClause();
+                break;
             default:
                 return expr;
         }
@@ -759,6 +762,38 @@ TimingControlSyntax* Parser::parseTimingControl() {
         default:
             return nullptr;
     }
+}
+
+ExpressionSyntax* Parser::parseArrayOrRandomizeWithClause() {
+    auto with = consume();
+    if (!peek(TokenKind::OpenParenthesis))
+        return alloc.emplace<RandomizeMethodWithClauseSyntax>(with, nullptr, parseConstraintBlock());
+
+    auto openParen = consume();
+    if (peek(TokenKind::CloseParenthesis)) {
+        auto idList = alloc.emplace<IdentifierListSyntax>(openParen, nullptr, consume());
+        return alloc.emplace<RandomizeMethodWithClauseSyntax>(with, idList, parseConstraintBlock());
+    }
+
+    if (!peek(TokenKind::Identifier) || (peek(1).kind == TokenKind::CloseParenthesis && peek(2).kind != TokenKind::OpenBrace)) {
+        auto expr = parseExpression();
+        return alloc.emplace<ArrayMethodWithClauseSyntax>(with, openParen, expr, expect(TokenKind::CloseParenthesis));
+    }
+
+    // otherwise we have an identifier list here
+    Token closeParen;
+    auto buffer = tosPool.get();
+    parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
+        buffer,
+        TokenKind::CloseParenthesis,
+        TokenKind::Comma,
+        closeParen,
+        DiagCode::ExpectedIdentifier,
+        [this](bool) { return alloc.emplace<IdentifierNameSyntax>(consume()); }
+    );
+
+    auto idList = alloc.emplace<IdentifierListSyntax>(openParen, buffer.copy(alloc), closeParen);
+    return alloc.emplace<RandomizeMethodWithClauseSyntax>(with, idList, parseConstraintBlock());
 }
 
 }

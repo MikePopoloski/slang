@@ -120,8 +120,8 @@ private:
     ConstraintItemSyntax* parseConstraintItem(bool allowBlock);
     DistConstraintListSyntax* parseDistConstraintList();
     DistItemSyntax* parseDistItem();
+    ExpressionSyntax* parseArrayOrRandomizeWithClause();
 
-    bool isConstraintBlock();
     bool isPortDeclaration();
     bool isNetDeclaration();
     bool isVariableDeclaration();

@@ -1052,6 +1052,22 @@ token keyword
 token name
 ConstraintBlockSyntax block
 
+ArrayMethodWithClauseSyntax base=ExpressionSyntax kind=ArrayMethodWithClause
+token with
+token openParen
+ExpressionSyntax expr
+token closeParen
+
+IdentifierListSyntax kind=IdentifierList
+token openParen
+separated_list<IdentifierNameSyntax> identifiers
+token closeParen
+
+RandomizeMethodWithClauseSyntax base=ExpressionSyntax kind=RandomizeMethodWithClause
+token with
+IdentifierListSyntax names
+ConstraintBlockSyntax constraints
+
 // ----- COVER GROUPS -----
 
 WithFunctionSampleSyntax kind=WithFunctionSample
