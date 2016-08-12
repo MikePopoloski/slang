@@ -1,11 +1,12 @@
 #pragma once
 
-#include "SourceManager.h"
+#include "AllSyntax.h"
 #include "BitVector.h"
 #include "Diagnostics.h"
-#include "Trivia.h"
-#include "Token.h"
 #include "Lexer.h"
-#include "Preprocessor.h"
-#include "AllSyntax.h"
 #include "Parser.h"
+#include "Preprocessor.h"
+#include "SourceManager.h"
+#include "SyntaxTree.h"
+#include "Token.h"
+#include "Trivia.h"

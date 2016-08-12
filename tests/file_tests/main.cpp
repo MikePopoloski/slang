@@ -10,25 +10,7 @@ namespace fs = std::tr2::sys;
 
 static const char RelativeTestPath[] = "../../../tests/file_tests/corpus";
 
-BumpAllocator alloc;
-Diagnostics diagnostics;
 SourceManager sourceManager;
-
-int parseFile(SourceBuffer buffer, const char* path) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-    preprocessor.pushSource(buffer);
-
-    Parser parser(preprocessor);
-
-    auto tree = parser.parseCompilationUnit();
-    if (!diagnostics.empty()) {
-        printf("Parsing '%s'\n", path);
-        printf("%s\n\n", diagnostics.reportAll(sourceManager).c_str());
-    }
-    return diagnostics.count();
-}
 
 int main() {
     // run through all external files in our corpus and make sure they parse without error
@@ -42,8 +24,13 @@ int main() {
         //if (errors > 100)
           //  break;
 
-        auto buffer = sourceManager.readSource(p.path().string());
-        errors += parseFile(buffer, p.path().string().c_str());
+        SyntaxTree tree = SyntaxTree::fromFile(sourceManager, p.path().string());
+        if (!tree.diagnostics().empty()) {
+            printf("Parsing '%s'\n", p.path().string().c_str());
+            printf("%s\n\n", tree.diagnostics().reportAll(sourceManager).c_str());
+        }
+
+        errors += tree.diagnostics().count();
         files++;
     }
 

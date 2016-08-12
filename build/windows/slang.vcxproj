@@ -46,6 +46,7 @@
     <ClInclude Include="..\..\include\StringRef.h" />
     <ClInclude Include="..\..\include\StringTable.h" />
     <ClInclude Include="..\..\include\SyntaxNode.h" />
+    <ClInclude Include="..\..\include\SyntaxTree.h" />
     <ClInclude Include="..\..\include\Token.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />
@@ -55,6 +56,7 @@
     <ClCompile Include="..\..\external\fmt\ostream.cc" />
     <ClCompile Include="..\..\external\fmt\posix.cc" />
     <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp" />
+    <ClCompile Include="..\..\include\SyntaxTree.cpp" />
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />

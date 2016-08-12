@@ -112,6 +112,9 @@
     <ClInclude Include="..\..\external\pempek_assert\pempek_assert.h">
       <Filter>util\3ps</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\SyntaxTree.h">
+      <Filter>parsing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -172,6 +175,9 @@
       <Filter>parsing</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\Parser_expressions.cpp">
+      <Filter>parsing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\SyntaxTree.cpp">
       <Filter>parsing</Filter>
     </ClCompile>
   </ItemGroup>
