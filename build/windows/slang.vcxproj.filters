@@ -22,6 +22,9 @@
     <Filter Include="util\3ps">
       <UniqueIdentifier>{62a9b006-279b-4b9e-bdfd-cd14e4d029a9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="symbols">
+      <UniqueIdentifier>{133f8481-f6f0-4405-9c93-67d946e284ad}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\slang.h" />
@@ -115,6 +118,15 @@
     <ClInclude Include="..\..\include\SyntaxTree.h">
       <Filter>parsing</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\source\DeclarationTable.h">
+      <Filter>symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ModuleSymbol.h">
+      <Filter>symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SemanticModel.h">
+      <Filter>symbols</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -179,6 +191,9 @@
     </ClCompile>
     <ClCompile Include="..\..\include\SyntaxTree.cpp">
       <Filter>parsing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\ModuleSymbol.cpp">
+      <Filter>symbols</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

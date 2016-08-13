@@ -10,3 +10,5 @@
 #include "SyntaxTree.h"
 #include "Token.h"
 #include "Trivia.h"
+
+#include "../source/DeclarationTable.h"
