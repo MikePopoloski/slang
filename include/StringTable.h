@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// StringTable.h
+// Specialized string lookup table.
+//
+// File is under the MIT license:
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <cstdint>
@@ -5,11 +11,12 @@
 
 #include "StringRef.h"
 
-// Fixed-sized hash of string to value
-// TODO: write a tool to find the best seed for given sets of elements
+// TODO: use an offline tool to make this a minimal perfect hash.
 
 namespace slang {
 
+/// This class is a lookup table from string to value. It's optimized for
+/// a known fixed set of keywords
 template<typename T>
 class StringTable {
 public:

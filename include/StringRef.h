@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// StringRef.h
+// Lighweight view of a string.
+//
+// File is under the MIT license:
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <cstddef>
@@ -13,6 +19,9 @@ namespace slang {
 
 class BumpAllocator;
 
+/// StringRef - Immutable wrapper around a {pointer, length} pair to a string.
+/// This class does not own the string memory; it's up to the user
+/// to make sure it remains valid.
 class StringRef {
 public:
     StringRef();

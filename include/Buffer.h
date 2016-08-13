@@ -90,27 +90,32 @@ public:
     uint32_t count() const { return len; }
     bool empty() const { return len == 0; }
 
+    /// Clear all elements but retain underlying storage.
     void clear() {
         destructElements();
         len = 0;
     }
 
+    /// Remove the last element from the buffer. Asserts if empty.
     void pop() {
         ASSERT(len);
         len--;
         data[len].~T();
     }
 
+    /// Add an element to the end of the buffer.
     void append(const T& item) {
         amortizeCapacity();
         new (&data[len++]) T(item);
     }
 
+    /// Add a range of elements to the end of the buffer.
     template<typename Container>
     void appendRange(const Container& container) {
         appendRange(std::begin(container), std::end(container));
     }
 
+    /// Add a range of elements to the end of the buffer.
     void appendRange(const T* begin, const T* end) {
         uint32_t count = (uint32_t)(end - begin);
         uint32_t newLen = len + count;
@@ -127,17 +132,20 @@ public:
         len = newLen;
     }
 
+    /// Construct a new element at the end of the buffer.
     template<typename... Args>
     void emplace(Args&&... args) {
         amortizeCapacity();
         new (&data[len++]) T(std::forward<Args>(args)...);
     }
 
+    /// Adds @a size elements to the buffer (default constructed).
     void extend(uint32_t size) {
         ensureSize(len + size);
         len += size;
     }
 
+    /// Creates a copy of the buffer using the given allocator.
     ArrayRef<T> copy(BumpAllocator& alloc) const {
         if (len == 0)
             return nullptr;
