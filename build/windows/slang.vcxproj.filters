@@ -25,6 +25,9 @@
     <Filter Include="symbols">
       <UniqueIdentifier>{133f8481-f6f0-4405-9c93-67d946e284ad}</UniqueIdentifier>
     </Filter>
+    <Filter Include="util\3ps\fmt">
+      <UniqueIdentifier>{e575849d-3926-4fe7-8ab7-a84062f0dfed}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\slang.h" />
@@ -85,31 +88,10 @@
     <ClInclude Include="..\..\include\ParserBase.h">
       <Filter>parsing</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\SourceLocation.h">
-      <Filter>text</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\SourceManager.h">
       <Filter>text</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\external\cppformat\format.h">
-      <Filter>util\3ps</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\external\xxhash\xxhash.h">
-      <Filter>util\3ps</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\fmt\ostream.h">
-      <Filter>util\3ps</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\fmt\posix.h">
-      <Filter>util\3ps</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\fmt\printf.h">
-      <Filter>util\3ps</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\fmt\string.h">
-      <Filter>util\3ps</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\fmt\time.h">
       <Filter>util\3ps</Filter>
     </ClInclude>
     <ClInclude Include="..\..\external\pempek_assert\pempek_assert.h">
@@ -126,6 +108,27 @@
     </ClInclude>
     <ClInclude Include="..\..\include\SemanticModel.h">
       <Filter>symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\cppformat\format.h">
+      <Filter>util\3ps\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\ostream.h">
+      <Filter>util\3ps\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\posix.h">
+      <Filter>util\3ps\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\printf.h">
+      <Filter>util\3ps\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\string.h">
+      <Filter>util\3ps\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\time.h">
+      <Filter>util\3ps\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SourceLocation.h">
+      <Filter>text</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -171,15 +174,6 @@
     <ClCompile Include="..\..\source\BumpAllocator.cpp">
       <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\external\fmt\format.cc">
-      <Filter>util\3ps</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\external\fmt\ostream.cc">
-      <Filter>util\3ps</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\external\fmt\posix.cc">
-      <Filter>util\3ps</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp">
       <Filter>util\3ps</Filter>
     </ClCompile>
@@ -194,6 +188,15 @@
     </ClCompile>
     <ClCompile Include="..\..\source\ModuleSymbol.cpp">
       <Filter>symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\fmt\format.cc">
+      <Filter>util\3ps\fmt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\fmt\ostream.cc">
+      <Filter>util\3ps\fmt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\fmt\posix.cc">
+      <Filter>util\3ps\fmt</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

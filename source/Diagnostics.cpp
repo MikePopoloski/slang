@@ -23,11 +23,11 @@ bool sortDiagnostics(SourceManager& sourceManager, const Diagnostic& x, const Di
 }
 
 StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
-    const Buffer<char>* buffer = sourceManager.getBufferMemory(location.buffer);
-    if (!buffer)
+    StringRef text = sourceManager.getSourceText(location.buffer);
+    if (!text)
         return nullptr;
 
-    const char* start = buffer->begin() + location.offset - (col - 1);
+    const char* start = text.begin() + location.offset - (col - 1);
     const char* curr = start;
     while (*curr != '\n' && *curr != '\r' && *curr != '\0')
         curr++;
@@ -256,10 +256,10 @@ std::string Diagnostics::reportAll(SourceManager& sourceManager) {
             lastBuffer = loc.buffer;
             getIncludeStack(sourceManager, lastBuffer, includeStack);
 
-            for (auto& loc : includeStack) {
+            for (auto& includeLoc : includeStack) {
                 writer.write("In file included from {}:{}:\n",
-                    sourceManager.getBufferName(loc.buffer),
-                    sourceManager.getLineNumber(loc)
+                    sourceManager.getBufferName(includeLoc.buffer),
+                    sourceManager.getLineNumber(includeLoc)
                 );
             }
         }

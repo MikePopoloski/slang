@@ -123,17 +123,17 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
     return entry.expansion.originalLoc + location.offset;
 }
 
-const Buffer<char>* SourceManager::getBufferMemory(BufferID buffer) {
+StringRef SourceManager::getSourceText(BufferID buffer) {
     FileData* fd = getFileData(buffer);
     if (!fd)
         return nullptr;
 
-    return &fd->mem;
+    return StringRef(fd->mem);
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart, SourceLocation expansionEnd) {
     bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionStart, expansionEnd));
-    return SourceLocation(BufferID::get(bufferEntries.size() - 1), 0);
+    return SourceLocation(BufferID::get((uint32_t)(bufferEntries.size() - 1)), 0);
 }
 
 SourceBuffer SourceManager::assignText(StringRef text) {
@@ -214,7 +214,7 @@ SourceManager::FileData* SourceManager::getFileData(BufferID buffer) {
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom) {
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
-    return SourceBuffer { StringRef(fd->mem), BufferID::get(bufferEntries.size() - 1) };
+    return SourceBuffer { StringRef(fd->mem), BufferID::get((uint32_t)(bufferEntries.size() - 1)) };
 }
 
 SourceBuffer SourceManager::openCached(path_type fullPath, SourceLocation includedFrom) {

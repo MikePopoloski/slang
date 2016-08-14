@@ -1,9 +1,21 @@
+//------------------------------------------------------------------------------
+// SourceManager.h
+// Source element location tracking.
+//
+// File is under the MIT license:
+//------------------------------------------------------------------------------
 #pragma once
 
 namespace slang {
 
 class SourceManager;
 
+/// BufferID - Represents a source buffer.
+///
+/// Buffers can either be source code loaded from a file, assigned
+/// from text in memory, or they can represent a macro expansion.
+/// Each time a macro is expanded a new BufferID is allocated to track
+/// the expansion location and original definition location.
 struct BufferID {
     bool valid() const { return id != 0; }
     bool operator==(const BufferID& rhs) const { return id == rhs.id; }
@@ -12,9 +24,10 @@ struct BufferID {
     explicit operator bool() const {
         return valid();
     }
+
+private:
     uint32_t id = 0;
 
-protected:
     static BufferID get(uint32_t value) {
         BufferID result;
         result.id = value;
@@ -22,13 +35,13 @@ protected:
     }
     uint32_t getValue() const { return id; }
 
-private:
     friend class SourceManager;
 };
 
-// Represents a location in source code. The SourceManager can decode this into
-// file, line, and column information.
-
+/// This class represents a location in source code (or within a macro expansion).
+/// The SourceManager can decode this into file, line, and column information if
+/// it's a file location, or into expanded and original locations if it's a
+/// macro location.
 class SourceLocation {
 public:
     SourceLocation() : offset(0) {}
@@ -39,26 +52,25 @@ public:
 
     bool isValid() const { return offset != 0; }
 
-    SourceLocation operator +(int delta) {
+    SourceLocation operator +(int delta) const {
         return SourceLocation(buffer, offset + delta);
     }
 
-    bool operator ==(const SourceLocation& rhs) {
+    bool operator ==(const SourceLocation& rhs) const {
         return offset == rhs.offset;
     }
 
-    bool operator !=(const SourceLocation& rhs) {
+    bool operator !=(const SourceLocation& rhs) const {
         return offset != rhs.offset;
     }
 
-    bool operator <(const SourceLocation& rhs) {
+    bool operator <(const SourceLocation& rhs) const {
         return offset < rhs.offset;
     }
 
+private:
     BufferID buffer;
     uint32_t offset;
-
-private:
 };
 
 }
