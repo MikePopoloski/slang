@@ -506,6 +506,10 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
                 break;
             }
             case TokenKind::WithKeyword:
+                // If we see bracket right after the with keyword, this is actually part of a stream expression
+                // return and let the call further up the stack handle it.
+                if (peek(1).kind == TokenKind::OpenBracket)
+                    return expr;
                 expr = parseArrayOrRandomizeWithClause();
                 break;
             default:
