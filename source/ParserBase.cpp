@@ -149,7 +149,7 @@ Token ParserBase::createExpectedToken(Token actual, TokenKind expected) {
         location = actual.location();
     else {
         location = window.lastConsumed.location();
-        location += window.lastConsumed.rawText().length();
+        location = location + window.lastConsumed.rawText().length();
     }
 
     // report an error here for the missing token

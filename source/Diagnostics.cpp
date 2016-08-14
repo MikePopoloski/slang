@@ -23,11 +23,11 @@ bool sortDiagnostics(SourceManager& sourceManager, const Diagnostic& x, const Di
 }
 
 StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
-    StringRef text = sourceManager.getSourceText(location.buffer);
+    StringRef text = sourceManager.getSourceText(location.buffer());
     if (!text)
         return nullptr;
 
-    const char* start = text.begin() + location.offset - (col - 1);
+    const char* start = text.begin() + location.offset() - (col - 1);
     const char* curr = start;
     while (*curr != '\n' && *curr != '\r' && *curr != '\0')
         curr++;
@@ -39,11 +39,11 @@ void getIncludeStack(SourceManager& sourceManager, BufferID buffer, std::deque<S
     stack.clear();
     while (buffer) {
         SourceLocation loc = sourceManager.getIncludedFrom(buffer);
-        if (!loc.buffer)
+        if (!loc.buffer())
             break;
 
         stack.push_front(loc);
-        buffer = loc.buffer;
+        buffer = loc.buffer();
     }
 }
 
@@ -52,7 +52,7 @@ void formatDiag(fmt::MemoryWriter& writer, SourceManager& sourceManager, SourceL
 
     uint32_t col = sourceManager.getColumnNumber(loc);
     writer.write("{}:{}:{}: {}: {}",
-        sourceManager.getBufferName(loc.buffer),
+        sourceManager.getBufferName(loc.buffer()),
         sourceManager.getLineNumber(loc),
         col,
         severity,
@@ -250,15 +250,15 @@ std::string Diagnostics::reportAll(SourceManager& sourceManager) {
 
     for (auto& diag : *this) {
         SourceLocation loc = getFullyExpandedLoc(sourceManager, diag.location);
-        if (loc.buffer != lastBuffer) {
+        if (loc.buffer() != lastBuffer) {
             // We're looking at diagnostics from another file now. See if we should print
             // include stack info before we go on with the reports.
-            lastBuffer = loc.buffer;
+            lastBuffer = loc.buffer();
             getIncludeStack(sourceManager, lastBuffer, includeStack);
 
             for (auto& includeLoc : includeStack) {
                 writer.write("In file included from {}:{}:\n",
-                    sourceManager.getBufferName(includeLoc.buffer),
+                    sourceManager.getBufferName(includeLoc.buffer()),
                     sourceManager.getLineNumber(includeLoc)
                 );
             }

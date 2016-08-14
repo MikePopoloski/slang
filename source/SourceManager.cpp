@@ -32,7 +32,7 @@ void SourceManager::addUserDirectory(StringRef path) {
 }
 
 uint32_t SourceManager::getLineNumber(SourceLocation location) {
-    FileData* fd = getFileData(location.buffer);
+    FileData* fd = getFileData(location.buffer());
     if (!fd)
         return 0;
 
@@ -40,22 +40,22 @@ uint32_t SourceManager::getLineNumber(SourceLocation location) {
     if (fd->lineOffsets.empty())
         computeLineOffsets(fd->mem, fd->lineOffsets);
 
-    auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset);
+    auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset());
     return (uint32_t)(it - fd->lineOffsets.begin());
 }
 
 uint32_t SourceManager::getColumnNumber(SourceLocation location) {
-    FileData* fd = getFileData(location.buffer);
+    FileData* fd = getFileData(location.buffer());
     if (!fd)
         return 0;
 
     // walk backward to find start of line
-    uint32_t lineStart = location.offset;
+    uint32_t lineStart = location.offset();
     ASSERT(lineStart < fd->mem.count());
     while (lineStart > 0 && fd->mem[lineStart - 1] != '\n' && fd->mem[lineStart - 1] != '\r')
         lineStart--;
 
-    return location.offset - lineStart + 1;
+    return location.offset() - lineStart + 1;
 }
 
 StringRef SourceManager::getBufferName(BufferID buffer) {
@@ -78,7 +78,7 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
 }
 
 bool SourceManager::isFileLoc(SourceLocation location) {
-    auto buffer = location.buffer;
+    auto buffer = location.buffer();
     if (!buffer)
         return false;
 
@@ -89,7 +89,7 @@ bool SourceManager::isFileLoc(SourceLocation location) {
 }
 
 bool SourceManager::isMacroLoc(SourceLocation location) {
-    auto buffer = location.buffer;
+    auto buffer = location.buffer();
     if (!buffer)
         return false;
 
@@ -100,7 +100,7 @@ bool SourceManager::isMacroLoc(SourceLocation location) {
 }
 
 SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
-    auto buffer = location.buffer;
+    auto buffer = location.buffer();
     if (!buffer)
         return SourceLocation();
 
@@ -112,7 +112,7 @@ SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
 }
 
 SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
-    auto buffer = location.buffer;
+    auto buffer = location.buffer();
     if (!buffer)
         return SourceLocation();
 
@@ -120,7 +120,7 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
     BufferEntry& entry = bufferEntries[buffer.id];
 
     ASSERT(!entry.isFile);
-    return entry.expansion.originalLoc + location.offset;
+    return entry.expansion.originalLoc + location.offset();
 }
 
 StringRef SourceManager::getSourceText(BufferID buffer) {
@@ -183,7 +183,7 @@ SourceBuffer SourceManager::readHeader(StringRef path, SourceLocation includedFr
     }
 
     // search relative to the current file
-    FileData* fd = getFileData(includedFrom.buffer);
+    FileData* fd = getFileData(includedFrom.buffer());
     if (fd && fd->directory) {
         SourceBuffer result = openCached((*fd->directory) / p, includedFrom);
         if (result.id)

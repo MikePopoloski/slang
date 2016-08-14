@@ -621,7 +621,7 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
 
         // simple macro; just take body tokens
         for (auto& token : macro->body) {
-            int delta = token.location().offset - start.offset;
+            int delta = token.location().offset() - start.offset();
             dest.append(token.withLocation(alloc, expansionLoc + delta));
         }
         return true;
@@ -676,7 +676,7 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
 
     // now add each body token, substituting arguments as necessary
     for (auto& token : macro->body) {
-        int delta = token.location().offset - start.offset;
+        int delta = token.location().offset() - start.offset();
 
         if (token.kind != TokenKind::Identifier)
             dest.append(token.withLocation(alloc, expansionLoc + delta));

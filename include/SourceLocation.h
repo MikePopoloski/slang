@@ -44,33 +44,35 @@ private:
 /// macro location.
 class SourceLocation {
 public:
-    SourceLocation() : offset(0) {}
+    SourceLocation() : charOffset(0) {}
     SourceLocation(BufferID buffer, uint32_t offset) :
-        buffer(buffer), offset(offset)
+        bufferID(buffer), charOffset(offset)
     {
     }
 
-    bool isValid() const { return offset != 0; }
+    BufferID buffer() const { return bufferID; }
+    uint32_t offset() const { return charOffset; }
+    bool isValid() const { return charOffset != 0; }
 
     SourceLocation operator +(int delta) const {
-        return SourceLocation(buffer, offset + delta);
+        return SourceLocation(bufferID, charOffset + delta);
     }
 
     bool operator ==(const SourceLocation& rhs) const {
-        return offset == rhs.offset;
+        return charOffset == rhs.charOffset;
     }
 
     bool operator !=(const SourceLocation& rhs) const {
-        return offset != rhs.offset;
+        return charOffset != rhs.charOffset;
     }
 
     bool operator <(const SourceLocation& rhs) const {
-        return offset < rhs.offset;
+        return charOffset < rhs.charOffset;
     }
 
 private:
-    BufferID buffer;
-    uint32_t offset;
+    BufferID bufferID;
+    uint32_t charOffset;
 };
 
 }
