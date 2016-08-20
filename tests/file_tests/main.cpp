@@ -6,7 +6,7 @@
 using namespace slang;
 using namespace std::literals;
 
-static const char RelativeTestPath[] = "../../../tests/file_tests/corpus";
+static const char RelativeTestPath[] = "tests/file_tests/corpus";
 
 SourceManager sourceManager;
 

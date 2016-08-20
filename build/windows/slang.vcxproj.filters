@@ -186,9 +186,6 @@
     <ClCompile Include="..\..\source\Parser_expressions.cpp">
       <Filter>parsing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\include\SyntaxTree.cpp">
-      <Filter>parsing</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\ModuleSymbol.cpp">
       <Filter>symbols</Filter>
     </ClCompile>
@@ -200,6 +197,9 @@
     </ClCompile>
     <ClCompile Include="..\..\external\fmt\posix.cc">
       <Filter>util\3ps\fmt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\SyntaxTree.cpp">
+      <Filter>parsing</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

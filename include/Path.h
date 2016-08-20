@@ -13,6 +13,7 @@
 # include <windows.h>
 #else
 # include <unistd.h>
+# include <dirent.h>
 #endif
 #include <sys/stat.h>
 
@@ -289,13 +290,14 @@ inline std::vector<Path> getFilesInDirectory(const Path& path) {
 
 #if defined(_WIN32)
     WIN32_FIND_DATA ffd;
-    HANDLE hFind = FindFirstFile(path.wstr().c_str(), &ffd);
+    std::wstring base = path.wstr() + L"\\";
+    HANDLE hFind = FindFirstFile((base + +L"*").c_str(), &ffd);
     if (hFind == INVALID_HANDLE_VALUE)
         throw std::runtime_error("Internal error in FindFirstFile(): " + std::to_string(GetLastError()));
 
     do {
         if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-            result.push_back(ffd.cFileName);
+            result.push_back(base + ffd.cFileName);
     } while (FindNextFile(hFind, &ffd) != 0);
 
     DWORD dwError = GetLastError();
@@ -303,6 +305,18 @@ inline std::vector<Path> getFilesInDirectory(const Path& path) {
         throw std::runtime_error("Internal error in FindNextFile(): " + std::to_string(dwError));
 
     FindClose(hFind);
+#else
+    DIR* d;
+    struct dirent* dir;
+    std::string base = path.str() + "/";
+    d = opendir(base.c_str());
+    if (d) {
+        while ((dir = readdir(d))) {
+            if (dir->d_type == DT_REG)
+                result.push_back(base + dir->d_name);
+        }
+        closedir(d);
+    }
 #endif
 
     return result;

@@ -60,7 +60,6 @@
     <ClCompile Include="..\..\external\fmt\ostream.cc" />
     <ClCompile Include="..\..\external\fmt\posix.cc" />
     <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp" />
-    <ClCompile Include="..\..\include\SyntaxTree.cpp" />
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
@@ -76,6 +75,7 @@
     <ClCompile Include="..\..\source\StringRef.cpp" />
     <ClCompile Include="..\..\source\SyntaxFacts.cpp" />
     <ClCompile Include="..\..\source\SyntaxNode.cpp" />
+    <ClCompile Include="..\..\source\SyntaxTree.cpp" />
     <ClCompile Include="..\..\source\Token.cpp" />
     <ClCompile Include="..\..\source\Trivia.cpp" />
   </ItemGroup>
