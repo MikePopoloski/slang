@@ -30,7 +30,7 @@ Token lexToken(StringRef text) {
 
 TEST_CASE("Include File", "[preprocessor]") {
     auto& text = "`include \"include.svh\"";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == "test string");
@@ -38,7 +38,7 @@ TEST_CASE("Include File", "[preprocessor]") {
 }
 
 void testDirective(SyntaxKind kind) {
-    auto& text = getDirectiveText(kind);
+    StringRef text = getDirectiveText(kind);
 
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);
@@ -78,7 +78,7 @@ TEST_CASE("Directives", "[preprocessor]") {
 
 TEST_CASE("Macro define (simple)", "[preprocessor]") {
     auto& text = "`define FOO (1)";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -97,7 +97,7 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
 
 TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     auto& text = "`define FOO(a) a+1";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -118,7 +118,7 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
 
 TEST_CASE("Macro usage (undefined)", "[preprocessor]") {
     auto& text = "`FOO";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::UnknownDirective);
@@ -126,7 +126,7 @@ TEST_CASE("Macro usage (undefined)", "[preprocessor]") {
 
 TEST_CASE("Macro usage (simple)", "[preprocessor]") {
     auto& text = "`define FOO 42\n`FOO";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 42);
@@ -135,7 +135,7 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
 
 TEST_CASE("Function macro (simple)", "[preprocessor]") {
     auto& text = "`define FOO(x) x\n`FOO(3)";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 3);
@@ -144,7 +144,7 @@ TEST_CASE("Function macro (simple)", "[preprocessor]") {
 
 TEST_CASE("Function macro (defaults)", "[preprocessor]") {
     auto& text = "`define FOO(x=9(,), y=2) x\n`FOO()";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 9);
@@ -153,7 +153,7 @@ TEST_CASE("Function macro (defaults)", "[preprocessor]") {
 
 TEST_CASE("Function macro (no tokens)", "[preprocessor]") {
     auto& text = "`define FOO(x=) x\n`FOO()";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::EndOfFile);
     CHECK(diagnostics.empty());
@@ -161,7 +161,7 @@ TEST_CASE("Function macro (no tokens)", "[preprocessor]") {
 
 TEST_CASE("Function macro (simple nesting)", "[preprocessor]") {
     auto& text = "`define BLAHBLAH(x) x\n`define BAR(x) `BLAHBLAH(x)\n`define BAZ(x) `BAR(x)\n`define FOO(y) `BAZ(y)\n`FOO(15)";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 15);
@@ -170,7 +170,7 @@ TEST_CASE("Function macro (simple nesting)", "[preprocessor]") {
 
 TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
     auto& text = "`define FOO(x) x\n`FOO(`FOO(3))";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 3);
@@ -179,7 +179,7 @@ TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
 
 TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
     auto& text = "`define FOO(x,y) x   ``   _blah``y\n`FOO(   bar,    _BAZ)";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "bar_blah_BAZ");
@@ -188,7 +188,7 @@ TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
 
 TEST_CASE("Macro pasting (operator)", "[preprocessor]") {
     auto& text = "`define FOO(x) x``+\n`FOO(+)";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::DoublePlus);
     CHECK(diagnostics.empty());
@@ -196,7 +196,7 @@ TEST_CASE("Macro pasting (operator)", "[preprocessor]") {
 
 TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
     auto& text = "`define FOO(x,y) x``foo``y``42\n`FOO(bar_, 32)";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "bar_foo3242");
@@ -205,7 +205,7 @@ TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
 
 TEST_CASE("Macro stringify", "[preprocessor]") {
     auto& text = "`define FOO(x) `\" `\\`\" x``foo``42 `\\`\" `\"\n`FOO(bar_)";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == " \" bar_foo42 \"");
@@ -214,7 +214,7 @@ TEST_CASE("Macro stringify", "[preprocessor]") {
 
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 42);
@@ -223,7 +223,7 @@ TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
 
 TEST_CASE("IfDef branch (not taken)", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef BAR\n42\n`endif";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(diagnostics.empty());
@@ -231,7 +231,7 @@ TEST_CASE("IfDef branch (not taken)", "[preprocessor]") {
 
 TEST_CASE("IfNDef branch", "[preprocessor]") {
     auto& text = "`ifndef BAR\n42\n`endif";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 42);
@@ -240,7 +240,7 @@ TEST_CASE("IfNDef branch", "[preprocessor]") {
 
 TEST_CASE("ElseIf branch", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef BAR\n42\n`elsif FOO\n99`else\n1000`endif";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 99);
@@ -249,7 +249,7 @@ TEST_CASE("ElseIf branch", "[preprocessor]") {
 
 TEST_CASE("EndIf not done", "[preprocessor]") {
     auto& text = "`ifdef FOO\n`ifdef BAR\n42\n`endif\n1000`endif\n42.3";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::RealLiteral);
     CHECK(token.numericValue().real == 42.3);
@@ -279,7 +279,7 @@ TEST_CASE("Nested branches", "[preprocessor]") {
 "       `endif\n"
 "   `endif\n"
 "`endif";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 99);
@@ -297,7 +297,7 @@ TEST_CASE("IfDef inside macro", "[preprocessor]") {
 "\n"
 "`define BAR\n"
 "`FOO";
-    auto& token = lexToken(text);
+    Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.numericValue().integer == 32);

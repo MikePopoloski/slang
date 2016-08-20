@@ -70,7 +70,7 @@ StringRef Token::rawText() const {
             case TokenKind::EndOfFile:
                 break;
             default:
-                ASSERT(false, "Unknown token kind: %d", kind);
+                ASSERT(false, "Unknown token kind: %u", (uint32_t)kind);
         }
     }
     return nullptr;

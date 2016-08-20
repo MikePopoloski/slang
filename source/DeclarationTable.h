@@ -22,7 +22,7 @@ public:
                     // ignore empty names
                     auto name = member->as<ModuleDeclarationSyntax>()->header->name.valueText();
                     if (name)
-                        declarations.try_emplace(name, member);
+                        declarations.emplace(name, member);
                     break;
                 }
                 default:
@@ -31,7 +31,7 @@ public:
         }
     }
 
-    SyntaxNode* findDeclaration(StringRef name) const;
+    //SyntaxNode* findDeclaration(StringRef name) const;
 
 private:
     std::unordered_map<StringRef, SyntaxNode*> declarations;

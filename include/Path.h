@@ -210,9 +210,9 @@ public:
     static Path makeAbsolute(const Path& path) {
 #if !defined(_WIN32)
         char temp[PATH_MAX];
-        if (realpath(str().c_str(), temp) == nullptr)
+        if (realpath(path.str().c_str(), temp) == nullptr)
             throw std::runtime_error("Internal error in realpath(): " + std::string(strerror(errno)));
-        return path(temp);
+        return Path(temp);
 #else
         std::wstring value = path.wstr();
         std::wstring out(MAX_PATH, '\0');
@@ -228,7 +228,7 @@ public:
         char temp[PATH_MAX];
         if (::getcwd(temp, PATH_MAX) == NULL)
             throw std::runtime_error("Internal error in getcwd(): " + std::string(strerror(errno)));
-        return path(temp);
+        return Path(temp);
 #else
         std::wstring temp(MAX_PATH, '\0');
         if (!_wgetcwd(&temp[0], MAX_PATH))

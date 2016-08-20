@@ -338,6 +338,8 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
                     case SyntaxKind::EndIfDirective:
                         done = true;
                         break;
+                    default:
+                        break;
                 }
             }
 
@@ -883,6 +885,8 @@ ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
                 break;
             case TokenKind::OpenBracket:
                 pp.delimPairStack.append(TokenKind::CloseBracket);
+                break;
+            default:
                 break;
         }
     }

@@ -1,6 +1,7 @@
 #include "StringRef.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "BumpAllocator.h"
 #include "Debug.h"

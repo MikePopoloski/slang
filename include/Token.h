@@ -95,6 +95,11 @@ struct NumericValue {
 class Token {
 public:
     struct Info {
+        struct NumericLiteralInfo {
+            NumericValue value;
+            uint8_t numericFlags;
+        };
+
         ArrayRef<slang::Trivia> trivia;
         StringRef rawText;
         SourceLocation location;
@@ -102,11 +107,7 @@ public:
             StringRef stringText;
             SyntaxKind directiveKind;
             IdentifierType idType;
-
-            struct NumericLiteralInfo {
-                NumericValue value;
-                uint8_t numericFlags;
-            } numInfo;
+            NumericLiteralInfo numInfo;
         };
         uint8_t flags;
 

@@ -23,10 +23,10 @@ void ModuleSymbol::handleHierarchyInstantiation(HierarchyInstantiationSyntax* sy
     if (!typeName)
         return;
 
-    if (!declTable.findDeclaration(typeName)) {
+    //if (!declTable.findDeclaration(typeName)) {
         // TODO: error
-        return;
-    }
+    //    return;
+    //}
 
 
 }
