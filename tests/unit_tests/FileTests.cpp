@@ -5,7 +5,7 @@ using namespace slang;
 
 namespace {
 
-static const char RelativeTestPath[] = "../../../tests/unit_tests/data/include.svh";
+static const char RelativeTestPath[] = "tests/unit_tests/data/include.svh";
 
 TEST_CASE("Read source", "[files]") {
     SourceManager manager;
@@ -60,12 +60,12 @@ TEST_CASE("Read header (relative)", "[files]") {
 
 TEST_CASE("Read header (include dirs)", "[files]") {
     SourceManager manager;
-    manager.addSystemDirectory(manager.makeAbsolutePath("../../../tests/unit_tests/data/"));
+    manager.addSystemDirectory(manager.makeAbsolutePath("tests/unit_tests/data/"));
 
     SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), true);
     REQUIRE(buffer);
 
-    manager.addUserDirectory(manager.makeAbsolutePath("../../../tests/unit_tests/data/nested"));
+    manager.addUserDirectory(manager.makeAbsolutePath("tests/unit_tests/data/nested"));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
 }

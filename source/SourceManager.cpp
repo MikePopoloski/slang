@@ -145,7 +145,7 @@ SourceBuffer SourceManager::assignText(StringRef path, StringRef text) {
 }
 
 SourceBuffer SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) {
-    Path fullPath = Path::makeAbsolute(path);
+    Path fullPath = path;
     std::string canonicalStr = fullPath.str();
     auto it = lookupCache.find(canonicalStr);
     ASSERT(it == lookupCache.end());
@@ -156,7 +156,7 @@ SourceBuffer SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) 
 SourceBuffer SourceManager::readSource(StringRef path) {
     // ensure that we have an absolute path
     ASSERT(path);
-    return openCached(Path::makeAbsolute(path), SourceLocation());
+    return openCached(path, SourceLocation());
 }
 
 SourceBuffer SourceManager::readHeader(StringRef path, SourceLocation includedFrom, bool isSystemPath) {
@@ -213,7 +213,14 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
 
 SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation includedFrom) {
     // first see if we have this file cached
-    Path absPath = Path::makeAbsolute(fullPath);
+    Path absPath;
+    try {
+        absPath = Path::makeAbsolute(fullPath);
+    }
+    catch (std::runtime_error&) {
+        return SourceBuffer();
+    }
+
     std::string canonicalStr = absPath.str();
     auto it = lookupCache.find(canonicalStr);
     if (it != lookupCache.end()) {
