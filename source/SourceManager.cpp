@@ -1,14 +1,11 @@
 #include "SourceManager.h"
 
+#include <algorithm>
 #include <fstream>
-
-namespace fs = std::tr2::sys;
 
 namespace slang {
 
 SourceManager::SourceManager() {
-    workingDir = fs::current_path();
-
     // add a dummy entry to the start of the directory list so that our file IDs line up
     FileInfo file;
     bufferEntries.emplace_back(file);
@@ -18,17 +15,15 @@ std::string SourceManager::makeAbsolutePath(StringRef path) const {
     if (!path)
         return "";
 
-    return (workingDir / path_type(path.begin(), path.end())).string();
+    return Path::makeAbsolute(path).str();
 }
 
 void SourceManager::addSystemDirectory(StringRef path) {
-    path_type p = fs::absolute(path_type(path.begin(), path.end()), workingDir);
-    systemDirectories.push_back(fs::canonical(p));
+    systemDirectories.push_back(Path::makeAbsolute(path));
 }
 
 void SourceManager::addUserDirectory(StringRef path) {
-    path_type p = fs::absolute(path_type(path.begin(), path.end()), workingDir);
-    userDirectories.push_back(fs::canonical(p));
+    userDirectories.push_back(Path::makeAbsolute(path));
 }
 
 uint32_t SourceManager::getLineNumber(SourceLocation location) {
@@ -150,8 +145,8 @@ SourceBuffer SourceManager::assignText(StringRef path, StringRef text) {
 }
 
 SourceBuffer SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) {
-    auto fullPath = fs::canonical(path.toString());
-    auto canonicalStr = fullPath.string();
+    Path fullPath = Path::makeAbsolute(path);
+    std::string canonicalStr = fullPath.str();
     auto it = lookupCache.find(canonicalStr);
     ASSERT(it == lookupCache.end());
 
@@ -161,21 +156,20 @@ SourceBuffer SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) 
 SourceBuffer SourceManager::readSource(StringRef path) {
     // ensure that we have an absolute path
     ASSERT(path);
-    path_type absPath = fs::absolute(path_type(path.begin(), path.end()), workingDir);
-    return openCached(absPath, SourceLocation());
+    return openCached(Path::makeAbsolute(path), SourceLocation());
 }
 
 SourceBuffer SourceManager::readHeader(StringRef path, SourceLocation includedFrom, bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     ASSERT(path);
-    path_type p(path.begin(), path.end());
-    if (p.is_absolute())
+    Path p = path;
+    if (p.isAbsolute())
         return openCached(p, includedFrom);
 
     // system path lookups only look in system directories
     if (isSystemPath) {
         for (auto& d : systemDirectories) {
-            SourceBuffer result = openCached(d / p, includedFrom);
+            SourceBuffer result = openCached(d + p, includedFrom);
             if (result.id)
                 return result;
         }
@@ -185,14 +179,14 @@ SourceBuffer SourceManager::readHeader(StringRef path, SourceLocation includedFr
     // search relative to the current file
     FileData* fd = getFileData(includedFrom.buffer());
     if (fd && fd->directory) {
-        SourceBuffer result = openCached((*fd->directory) / p, includedFrom);
+        SourceBuffer result = openCached((*fd->directory) + p, includedFrom);
         if (result.id)
             return result;
     }
 
     // search additional include directories
     for (auto& d : userDirectories) {
-        SourceBuffer result = openCached(d / p, includedFrom);
+        SourceBuffer result = openCached(d + p, includedFrom);
         if (result.id)
             return result;
     }
@@ -217,10 +211,10 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
     return SourceBuffer { StringRef(fd->mem), BufferID::get((uint32_t)(bufferEntries.size() - 1)) };
 }
 
-SourceBuffer SourceManager::openCached(path_type fullPath, SourceLocation includedFrom) {
+SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation includedFrom) {
     // first see if we have this file cached
-    fullPath = fs::canonical(fullPath);
-    auto canonicalStr = fullPath.string();
+    Path absPath = Path::makeAbsolute(fullPath);
+    std::string canonicalStr = absPath.str();
     auto it = lookupCache.find(canonicalStr);
     if (it != lookupCache.end()) {
         FileData* fd = it->second.get();
@@ -231,18 +225,18 @@ SourceBuffer SourceManager::openCached(path_type fullPath, SourceLocation includ
 
     // do the read
     Buffer<char> buffer(0);
-    if (!readFile(fullPath, buffer)) {
+    if (!readFile(absPath, buffer)) {
         lookupCache.emplace(std::move(canonicalStr), nullptr);
         return SourceBuffer();
     }
 
-    return cacheBuffer(std::move(canonicalStr), fullPath, includedFrom, std::move(buffer));
+    return cacheBuffer(std::move(canonicalStr), absPath, includedFrom, std::move(buffer));
 }
 
-SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& path, SourceLocation includedFrom, Buffer<char>&& buffer) {
-    std::string name = path.filename().string();
+SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Buffer<char>&& buffer) {
+    std::string name = path.filename();
     auto fd = std::make_unique<FileData>(
-        &*directories.insert(path.remove_filename()).first,
+        &*directories.insert(path.parentPath()).first,
         name,
         std::move(buffer)
     );
@@ -251,17 +245,20 @@ SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, path_type& 
     return createBufferEntry(fdPtr, includedFrom);
 }
 
-bool SourceManager::readFile(const path_type& path, Buffer<char>& buffer) {
-    std::error_code ec;
-    uintmax_t size = fs::file_size(path, ec);
-    if (ec || size > INT32_MAX)
+bool SourceManager::readFile(const Path& path, Buffer<char>& buffer) {
+    size_t size;
+    try {
+        size = path.fileSize();
+    }
+    catch (std::runtime_error&) {
         return false;
+    }
 
-    // null-terminate the buffer while we're at it
     buffer.extend((uint32_t)size + 1);
-    std::ifstream stream(path, std::ios::binary);
+    std::ifstream stream(path.str(), std::ios::binary);
     stream.read(buffer.begin(), size);
 
+    // null-terminate the buffer while we're at it
     buffer.begin()[(uint32_t)size] = '\0';
 
     return stream.good();

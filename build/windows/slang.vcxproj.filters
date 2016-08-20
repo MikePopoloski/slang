@@ -130,6 +130,9 @@
     <ClInclude Include="..\..\include\SourceLocation.h">
       <Filter>text</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\Path.h">
+      <Filter>util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">

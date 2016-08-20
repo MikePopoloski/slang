@@ -7,7 +7,7 @@
 #pragma once
 
 #include <deque>
-#include <filesystem>
+#include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -15,6 +15,7 @@
 
 #include "Buffer.h"
 #include "BumpAllocator.h"
+#include "Path.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 
@@ -42,7 +43,7 @@ public:
     SourceManager();
 
     /// Sets the working directory. Note that this does not
-    /// update include directories already added to the manager.
+    /// update relative include directories already added to the manager.
     void setWorkingDirectory(StringRef path) const;
 
     /// Convert the given relative path into an absolute path.
@@ -106,10 +107,7 @@ public:
     SourceBuffer readHeader(StringRef path, SourceLocation includedFrom, bool isSystemPath);
 
 private:
-    using path_type = std::tr2::sys::path;
-
     BumpAllocator alloc;
-    path_type workingDir;
     uint32_t unnamedBufferCount = 0;
 
     // Stores actual file contents and metadata; only one per loaded file
@@ -117,9 +115,9 @@ private:
         Buffer<char> mem;
         std::string name;
         std::vector<uint32_t> lineOffsets;
-        const path_type* directory;
+        const Path* directory;
 
-        FileData(const path_type* directory, const std::string& name, Buffer<char>&& data) :
+        FileData(const Path* directory, const std::string& name, Buffer<char>&& data) :
             directory(directory),
             name(name),
             mem(std::move(data))
@@ -185,20 +183,20 @@ private:
     std::unordered_map<std::string, std::unique_ptr<FileData>> lookupCache;
 
     // directories for system and user includes
-    std::vector<path_type> systemDirectories;
-    std::vector<path_type> userDirectories;
+    std::vector<Path> systemDirectories;
+    std::vector<Path> userDirectories;
 
     // uniquified backing memory for directories
-    std::set<path_type> directories;
+    std::set<Path> directories;
 
     FileData* getFileData(BufferID buffer);
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom);
 
-    SourceBuffer openCached(path_type fullPath, SourceLocation includedFrom);
-    SourceBuffer cacheBuffer(std::string&& canonicalPath, path_type& path, SourceLocation includedFrom, Buffer<char>&& buffer);
+    SourceBuffer openCached(const Path& fullPath, SourceLocation includedFrom);
+    SourceBuffer cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Buffer<char>&& buffer);
 
     static void computeLineOffsets(const Buffer<char>& buffer, std::vector<uint32_t>& offsets);
-    static bool readFile(const path_type& path, Buffer<char>& buffer);
+    static bool readFile(const Path& path, Buffer<char>& buffer);
 };
 
 }

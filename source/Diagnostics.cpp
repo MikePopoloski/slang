@@ -1,5 +1,7 @@
 #include "Diagnostics.h"
 
+#include <algorithm>
+
 #include "../external/fmt/format.h"
 #include "../external/fmt/ostream.h"
 

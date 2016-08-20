@@ -37,6 +37,7 @@
     <ClInclude Include="..\..\include\ModuleSymbol.h" />
     <ClInclude Include="..\..\include\Parser.h" />
     <ClInclude Include="..\..\include\ParserBase.h" />
+    <ClInclude Include="..\..\include\Path.h" />
     <ClInclude Include="..\..\include\SemanticModel.h" />
     <ClInclude Include="..\..\include\SourceLocation.h" />
     <ClInclude Include="..\..\include\SourceManager.h" />
