@@ -100,12 +100,6 @@
     <ClInclude Include="..\..\include\SyntaxTree.h">
       <Filter>parsing</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\source\DeclarationTable.h">
-      <Filter>symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\ModuleSymbol.h">
-      <Filter>symbols</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\SemanticModel.h">
       <Filter>symbols</Filter>
     </ClInclude>
@@ -129,6 +123,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\SourceLocation.h">
       <Filter>text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Symbol.h">
+      <Filter>symbols</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\Path.h">
       <Filter>util</Filter>
@@ -186,9 +183,6 @@
     <ClCompile Include="..\..\source\Parser_expressions.cpp">
       <Filter>parsing</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\ModuleSymbol.cpp">
-      <Filter>symbols</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\external\fmt\format.cc">
       <Filter>util\3ps\fmt</Filter>
     </ClCompile>
@@ -200,6 +194,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\SyntaxTree.cpp">
       <Filter>parsing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\SemanticModel.cpp">
+      <Filter>symbols</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

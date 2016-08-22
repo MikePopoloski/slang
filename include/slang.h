@@ -6,9 +6,8 @@
 #include "Lexer.h"
 #include "Parser.h"
 #include "Preprocessor.h"
+#include "SemanticModel.h"
 #include "SourceManager.h"
 #include "SyntaxTree.h"
 #include "Token.h"
 #include "Trivia.h"
-
-#include "../source/DeclarationTable.h"

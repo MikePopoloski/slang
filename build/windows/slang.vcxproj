@@ -34,7 +34,6 @@
     <ClInclude Include="..\..\include\BitVector.h" />
     <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
-    <ClInclude Include="..\..\include\ModuleSymbol.h" />
     <ClInclude Include="..\..\include\Parser.h" />
     <ClInclude Include="..\..\include\ParserBase.h" />
     <ClInclude Include="..\..\include\Path.h" />
@@ -48,12 +47,12 @@
     <ClInclude Include="..\..\include\slang.h" />
     <ClInclude Include="..\..\include\StringRef.h" />
     <ClInclude Include="..\..\include\StringTable.h" />
+    <ClInclude Include="..\..\include\Symbol.h" />
     <ClInclude Include="..\..\include\SyntaxNode.h" />
     <ClInclude Include="..\..\include\SyntaxTree.h" />
     <ClInclude Include="..\..\include\Token.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
     <ClInclude Include="..\..\source\CharInfo.h" />
-    <ClInclude Include="..\..\source\DeclarationTable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\external\fmt\format.cc" />
@@ -63,11 +62,11 @@
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
-    <ClCompile Include="..\..\source\ModuleSymbol.cpp" />
     <ClCompile Include="..\..\source\Parser.cpp" />
     <ClCompile Include="..\..\source\ParserBase.cpp" />
     <ClCompile Include="..\..\source\Parser_expressions.cpp" />
     <ClCompile Include="..\..\source\Parser_statements.cpp" />
+    <ClCompile Include="..\..\source\SemanticModel.cpp" />
     <ClCompile Include="..\..\source\SourceManager.cpp" />
     <ClCompile Include="..\..\source\Hash.cpp" />
     <ClCompile Include="..\..\source\Lexer.cpp" />
