@@ -769,6 +769,34 @@ ContinuousAssignSyntax* Parser::parseContinuousAssign(ArrayRef<AttributeInstance
     return alloc.emplace<ContinuousAssignSyntax>(attributes, assign, buffer.copy(alloc), semi);
 }
 
+DefParamAssignmentSyntax* Parser::parseDefParamAssignment() {
+    auto name = parseName();
+
+    EqualsValueClauseSyntax* initializer = nullptr;
+    if (peek(TokenKind::Equals)) {
+        auto equals = consume();
+        initializer = alloc.emplace<EqualsValueClauseSyntax>(equals, parseMinTypMaxExpression());
+    }
+    return alloc.emplace<DefParamAssignmentSyntax>(name, initializer);
+}
+
+DefParamSyntax* Parser::parseDefParam(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto defparam = consume();
+    auto buffer = tosPool.get();
+
+    Token semi;
+    parseSeparatedList<isPossibleExpressionOrComma, isSemicolon>(
+        buffer,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        semi,
+        DiagCode::ExpectedVariableAssignment,
+        [this](bool) { return parseDefParamAssignment(); }
+    );
+
+    return alloc.emplace<DefParamSyntax>(attributes, defparam, buffer.copy(alloc), semi);
+}
+
 MemberSyntax* Parser::parseCoverageMember() {
     // TODO: error on attributes that don't attach to a valid construct
     auto attributes = parseAttributes();

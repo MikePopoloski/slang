@@ -5623,6 +5623,66 @@ protected:
     }
 };
 
+struct DefParamAssignmentSyntax : public SyntaxNode {
+    NameSyntax* name;
+    EqualsValueClauseSyntax* setter;
+
+    DefParamAssignmentSyntax(NameSyntax* name, EqualsValueClauseSyntax* setter) :
+        SyntaxNode(SyntaxKind::DefParamAssignment), name(name), setter(setter)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return name;
+            case 1: return setter;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
+struct DefParamSyntax : public MemberSyntax {
+    Token defparam;
+    SeparatedSyntaxList<DefParamAssignmentSyntax> assignments;
+    Token semi;
+
+    DefParamSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token defparam, SeparatedSyntaxList<DefParamAssignmentSyntax> assignments, Token semi) :
+        MemberSyntax(SyntaxKind::DefParam, attributes), defparam(defparam), assignments(assignments), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return defparam;
+            case 2: return &assignments;
+            case 3: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: defparam = token; break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
+        }
+    }
+};
+
 // ----- CONSTRAINTS -----
 
 struct ConstraintItemSyntax : public SyntaxNode {

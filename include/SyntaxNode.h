@@ -359,6 +359,8 @@ enum class SyntaxKind : uint16_t {
     ClassMethodDeclaration,
     ClassMethodPrototype,
     ContinuousAssign,
+    DefParamAssignment,
+    DefParam,
 
     // constraints
     DistWeight,

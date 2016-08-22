@@ -977,6 +977,15 @@ token assign
 separated_list<ExpressionSyntax> assignments
 token semi
 
+DefParamAssignmentSyntax kind=DefParamAssignment
+NameSyntax name
+EqualsValueClauseSyntax setter
+
+DefParamSyntax base=MemberSyntax kind=DefParam
+token defparam
+separated_list<DefParamAssignmentSyntax> assignments
+token semi
+
 // ----- CONSTRAINTS -----
 
 ConstraintItemSyntax final=false

@@ -121,6 +121,8 @@ private:
     DistConstraintListSyntax* parseDistConstraintList();
     DistItemSyntax* parseDistItem();
     ExpressionSyntax* parseArrayOrRandomizeWithClause();
+    DefParamAssignmentSyntax* parseDefParamAssignment();
+    DefParamSyntax* parseDefParam(ArrayRef<AttributeInstanceSyntax*> attributes);
 
     bool isPortDeclaration();
     bool isNetDeclaration();
