@@ -328,10 +328,10 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::ImportKeyword:
             return parseImportDeclaration(attributes);
         case TokenKind::SpecParamKeyword:
-        case TokenKind::DefParamKeyword:
         case TokenKind::Identifier:
         case TokenKind::BindKeyword:
         case TokenKind::AliasKeyword:
+            // TODO: parse these
             break;
         case TokenKind::AssignKeyword:
             return parseContinuousAssign(attributes);
@@ -366,6 +366,8 @@ MemberSyntax* Parser::parseMember() {
             return parseClassDeclaration(attributes, Token());
         case TokenKind::VirtualKeyword:
             return parseClassDeclaration(attributes, consume());
+        case TokenKind::DefParamKeyword:
+            return parseDefParam(attributes);
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, consume());
         default:
