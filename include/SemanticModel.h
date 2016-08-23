@@ -25,14 +25,11 @@ public:
     SemanticModel(ArrayRef<const SyntaxTree*> syntaxTrees);
 
 private:
-    void discoverHierarchy(const CompilationUnitSyntax* node);
-    void discoverHierarchy(ModuleDeclarationSyntax* node);
     void discoverHierarchy(HierarchyInstantiationSyntax* node);
     void discoverHierarchy(FunctionDeclarationSyntax* node);
-    void discoverHierarchy(GenerateRegionSyntax* node);
-    void discoverHierarchy(LoopGenerateSyntax* node);
-    void discoverHierarchy(CaseGenerateSyntax* node);
-    void discoverHierarchy(IfGenerateSyntax* node);
+    void discoverHierarchy(BlockStatementSyntax* node);
+    void discoverHierarchy(DefParamSyntax* node);
+    void discoverHierarchy(MemberSyntax* node);
 
     Diagnostics diagnostics;
     BumpAllocator alloc;

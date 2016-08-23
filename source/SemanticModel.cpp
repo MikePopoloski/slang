@@ -6,6 +6,11 @@
 
 namespace slang {
 
+struct InitialHierarchyNode {
+    SyntaxNode* syntax;
+    ArrayRef<InitialHierarchyNode> children;
+};
+
 SemanticModel::SemanticModel(ArrayRef<const SyntaxTree*> syntaxTrees) :
     syntaxTrees(syntaxTrees)
 {
@@ -40,53 +45,95 @@ SemanticModel::SemanticModel(ArrayRef<const SyntaxTree*> syntaxTrees) :
     //      - named begin-end blocks
     //      - named fork-join blocks
     for (auto& syntax : syntaxTrees) {
-        discoverHierarchy(syntax->root());
+        for (auto& member : syntax->root()->members)
+            discoverHierarchy(member);
     }
 }
 
-void SemanticModel::discoverHierarchy(const CompilationUnitSyntax* node) {
-    // descend into modules
-    for (auto& member : node->members) {
-        switch (member->kind) {
-            case SyntaxKind::ModuleDeclaration:
-            case SyntaxKind::InterfaceDeclaration:
-            case SyntaxKind::ProgramDeclaration:
-                discoverHierarchy(member->as<ModuleDeclarationSyntax>());
-                break;
-            default:
-                break;
-        }
-    }
+void SemanticModel::discoverHierarchy(HierarchyInstantiationSyntax* node) {
 }
 
-void SemanticModel::discoverHierarchy(ModuleDeclarationSyntax* node) {
-    for (auto& member : node->members) {
-        switch (member->kind) {
-            case SyntaxKind::HierarchyInstantiation:
-                discoverHierarchy(member->as<HierarchyInstantiationSyntax>());
-                break;
-            case SyntaxKind::TaskDeclaration:
-            case SyntaxKind::FunctionDeclaration:
-                discoverHierarchy(member->as<FunctionDeclarationSyntax>());
-                break;
-            case SyntaxKind::ModuleDeclaration:
-            case SyntaxKind::InterfaceDeclaration:
-            case SyntaxKind::ProgramDeclaration:
-                discoverHierarchy(member->as<ModuleDeclarationSyntax>());
-                break;
-            case SyntaxKind::GenerateRegion:
-                discoverHierarchy(member->as<GenerateRegionSyntax>());
-                break;
-            case SyntaxKind::LoopGenerate:
-                discoverHierarchy(member->as<LoopGenerateSyntax>());
-                break;
-            case SyntaxKind::CaseGenerate:
-                discoverHierarchy(member->as<CaseGenerateSyntax>());
-                break;
-            case SyntaxKind::IfGenerate:
-                discoverHierarchy(member->as<IfGenerateSyntax>());
-                break;
+void SemanticModel::discoverHierarchy(FunctionDeclarationSyntax* node) {
+}
+
+void SemanticModel::discoverHierarchy(BlockStatementSyntax* node) {
+}
+
+void SemanticModel::discoverHierarchy(DefParamSyntax* node) {
+}
+
+void SemanticModel::discoverHierarchy(MemberSyntax* node) {
+    if (!node)
+        return;
+
+    switch (node->kind) {
+        case SyntaxKind::HierarchyInstantiation:
+            discoverHierarchy(node->as<HierarchyInstantiationSyntax>());
+            break;
+        case SyntaxKind::TaskDeclaration:
+        case SyntaxKind::FunctionDeclaration:
+            discoverHierarchy(node->as<FunctionDeclarationSyntax>());
+            break;
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration:
+            for (auto& child : node->as<ModuleDeclarationSyntax>()->members)
+                discoverHierarchy(child);
+            break;
+        case SyntaxKind::GenerateRegion:
+            for (auto& child : node->as<GenerateRegionSyntax>()->members)
+                discoverHierarchy(child);
+            break;
+        case SyntaxKind::GenerateBlock:
+            for (auto& child : node->as<GenerateBlockSyntax>()->members)
+                discoverHierarchy(child);
+            break;
+        case SyntaxKind::LoopGenerate:
+            discoverHierarchy(node->as<LoopGenerateSyntax>()->block);
+            break;
+        case SyntaxKind::CaseGenerate:
+            for (auto& item : node->as<CaseGenerateSyntax>()->items) {
+                switch (item->kind) {
+                    case SyntaxKind::DefaultCaseItem:
+                        discoverHierarchy(item->as<DefaultCaseItemSyntax>()->clause->as<MemberSyntax>());
+                        break;
+                    case SyntaxKind::StandardCaseItem:
+                        discoverHierarchy(item->as<StandardCaseItemSyntax>()->clause->as<MemberSyntax>());
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        case SyntaxKind::IfGenerate: {
+            auto ifGen = node->as<IfGenerateSyntax>();
+            discoverHierarchy(ifGen->block);
+            if (ifGen->elseClause)
+                discoverHierarchy(ifGen->elseClause->clause->as<MemberSyntax>());
+            break;
         }
+        case SyntaxKind::DefParam:
+            discoverHierarchy(node->as<DefParamSyntax>());
+            break;
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::AlwaysCombBlock:
+        case SyntaxKind::AlwaysLatchBlock:
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::FinalBlock: {
+            auto statement = node->as<ProceduralBlockSyntax>()->statement;
+            switch (statement->kind) {
+                case SyntaxKind::SequentialBlockStatement:
+                case SyntaxKind::ParallelBlockStatement:
+                    discoverHierarchy(statement->as<BlockStatementSyntax>());
+                    break;
+                default:
+                    break;
+            }
+            break;
+        }
+        default:
+            break;
     }
 }
 
