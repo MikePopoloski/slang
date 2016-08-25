@@ -17,15 +17,38 @@ namespace slang {
 class SyntaxTree;
 class Symbol;
 
+class DeclarationTable {
+public:
+    explicit DeclarationTable(ArrayRef<const SyntaxTree*> syntaxTrees);
+
+    SyntaxNode* find(StringRef
+
+private:
+    std::unordered_map<StringRef, SyntaxNode*> topLevel;
+};
+
 /// SemanticModel is responsible for binding symbols and performing
 /// type checking based on input parse trees.
 
 class SemanticModel {
 public:
-    SemanticModel(ArrayRef<const SyntaxTree*> syntaxTrees);
+    SemanticModel() {}
+
+    void discoverHierarchy(ArrayRef<const SyntaxTree*> syntaxTrees);
 
 private:
-    void discoverHierarchy(HierarchyInstantiationSyntax* node);
+    struct InitialHierarchyNode {
+        StringRef name;
+        SyntaxNode* syntax;
+        ArrayRef<InitialHierarchyNode> children;
+
+        InitialHierarchyNode(StringRef name, SyntaxNode* syntax) :
+            name(name), syntax(syntax)
+        {
+        }
+    };
+
+    InitialHierarchyNode discoverHierarchy(HierarchyInstantiationSyntax* node, DeclarationTable& declTable);
     void discoverHierarchy(FunctionDeclarationSyntax* node);
     void discoverHierarchy(BlockStatementSyntax* node);
     void discoverHierarchy(DefParamSyntax* node);
@@ -33,7 +56,6 @@ private:
 
     Diagnostics diagnostics;
     BumpAllocator alloc;
-    ArrayRef<const SyntaxTree*> syntaxTrees;
     BufferPool<Symbol*> symbolPool;
 };
 

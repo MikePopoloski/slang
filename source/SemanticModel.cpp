@@ -6,14 +6,7 @@
 
 namespace slang {
 
-struct InitialHierarchyNode {
-    SyntaxNode* syntax;
-    ArrayRef<InitialHierarchyNode> children;
-};
-
-SemanticModel::SemanticModel(ArrayRef<const SyntaxTree*> syntaxTrees) :
-    syntaxTrees(syntaxTrees)
-{
+void SemanticModel::discoverHierarchy(ArrayRef<const SyntaxTree*> syntaxTrees) {
     // find all top-level modules
     std::unordered_map<StringRef, SyntaxNode*> topLevelModules;
     for (auto& syntax : syntaxTrees) {
@@ -50,7 +43,13 @@ SemanticModel::SemanticModel(ArrayRef<const SyntaxTree*> syntaxTrees) :
     }
 }
 
-void SemanticModel::discoverHierarchy(HierarchyInstantiationSyntax* node) {
+SemanticModel::InitialHierarchyNode SemanticModel::discoverHierarchy(HierarchyInstantiationSyntax* node, DeclarationTable& declTable) {
+    if (!node)
+        return nullptr;
+
+    node->type
+
+    return InitialHierarchyNode(
 }
 
 void SemanticModel::discoverHierarchy(FunctionDeclarationSyntax* node) {
