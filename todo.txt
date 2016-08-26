@@ -37,3 +37,33 @@ Warn on redefining macros
 Stringifying and concatenating tokens
 Include directive macros
 Macros that have other directives in their bodies?
+
+
+
+
+Compilation Flow
+================
+- Create and initialize a SourceManager
+- In parallel:
+    - Parse each source file into a SyntaxTree
+    - For each compilation unit determine the following:
+        - The set of modules in the root name space
+        - Which of those modules are referenced
+        - A set of references to unknown modules
+        - Errors for conflicting module names
+        - Whether there are defparams
+- Join the set of root modules, find which ones are unreferenced
+    - Error on conflicting names
+- For top-level (unreferenced) modules:
+    - Evaluate all parameters (error if top-level doesn't have param value and no defparams)
+    - If no defparams, do type checking and bind all statements
+    - Descend into the hierachy building a tree of instances
+        - If we have defparams, skip generates
+- If we have defparams, evaluate them now
+    - Re-run through and re-evaluate all parameters
+    - Make sure all top-levels have fully defined parameters
+    - Evaluate generates
+    - Do type checking and bind all statements
+
+At this point we know the hierarchy and all final parameter values and
+all generate blocks have been evaluated.

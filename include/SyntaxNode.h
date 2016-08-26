@@ -532,6 +532,18 @@ private:
 template<typename T>
 class SeparatedSyntaxList : public SyntaxNode {
 public:
+    class iterator : public std::iterator<std::forward_iterator_tag, T*> {
+    public:
+        iterator(SeparatedSyntaxList& list);
+
+        iterator& operator++();
+        reference operator*() const;
+        pointer operator->() const;
+
+        bool operator==(const iterator& a) const;
+        bool operator!=(const iterator& b) const;
+    };
+
     SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(ArrayRef<TokenOrSyntax>(nullptr)) {}
     SeparatedSyntaxList(ArrayRef<TokenOrSyntax> elements) :
         SyntaxNode(SyntaxKind::List),
@@ -540,6 +552,7 @@ public:
         childCount = elements.count();
     }
 
+    bool empty() const { return count() == 0; }
     uint32_t count() const { return (uint32_t)std::ceil(elements.count() / 2.0); }
 
     const T* operator[](uint32_t index) const {
@@ -551,6 +564,9 @@ public:
         ASSERT(!elements[index].isToken);
         return static_cast<T*>(elements[index].node);
     }
+
+    iterator begin();
+    iterator end();
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }

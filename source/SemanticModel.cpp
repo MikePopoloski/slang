@@ -1,7 +1,5 @@
 #include "SemanticModel.h"
 
-#include <unordered_map>
-
 #include "SyntaxTree.h"
 
 namespace slang {
@@ -43,13 +41,20 @@ void SemanticModel::discoverHierarchy(ArrayRef<const SyntaxTree*> syntaxTrees) {
     }
 }
 
-SemanticModel::InitialHierarchyNode SemanticModel::discoverHierarchy(HierarchyInstantiationSyntax* node, DeclarationTable& declTable) {
-    if (!node)
-        return nullptr;
+void SemanticModel::discoverHierarchy(HierarchyInstantiationSyntax* node, DeclarationTable& declTable, Buffer<InitialHierarchyNode>& buffer) {
+    if (!node || node->instances.empty())
+        return;
 
-    node->type
+    // try to look up the module being instantiated
+    SyntaxNode* ref = declTable.find(node->type.valueText());
+    if (!ref)
+        return;
 
-    return InitialHierarchyNode(
+    for (auto& instance : node->instances) {
+        auto name = instance->name.valueText();
+        if (name)
+            buffer.emplace(name, ref);
+    }
 }
 
 void SemanticModel::discoverHierarchy(FunctionDeclarationSyntax* node) {

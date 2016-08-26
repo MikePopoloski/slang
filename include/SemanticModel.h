@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <unordered_map>
+
 #include "AllSyntax.h"
 #include "Buffer.h"
 #include "BufferPool.h"
@@ -17,14 +19,17 @@ namespace slang {
 class SyntaxTree;
 class Symbol;
 
+/// The DeclarationTable keeps track of top-level modules for future lookup.
+/// It also tacks the location of all defparams in the design, which are the
+/// only other constructs that can refer to items in other compilation units.
 class DeclarationTable {
 public:
-    explicit DeclarationTable(ArrayRef<const SyntaxTree*> syntaxTrees);
+    void addSyntaxTree(const SyntaxTree* tree);
 
-    SyntaxNode* find(StringRef
+    SyntaxNode* find(StringRef name);
 
 private:
-    std::unordered_map<StringRef, SyntaxNode*> topLevel;
+    std::unordered_map<StringRef, SyntaxNode*> nodes;
 };
 
 /// SemanticModel is responsible for binding symbols and performing
@@ -42,13 +47,14 @@ private:
         SyntaxNode* syntax;
         ArrayRef<InitialHierarchyNode> children;
 
+        InitialHierarchyNode(std::nullptr_t) : syntax(nullptr) {}
         InitialHierarchyNode(StringRef name, SyntaxNode* syntax) :
             name(name), syntax(syntax)
         {
         }
     };
 
-    InitialHierarchyNode discoverHierarchy(HierarchyInstantiationSyntax* node, DeclarationTable& declTable);
+    void discoverHierarchy(HierarchyInstantiationSyntax* node, DeclarationTable& declTable, Buffer<InitialHierarchyNode>& buffer);
     void discoverHierarchy(FunctionDeclarationSyntax* node);
     void discoverHierarchy(BlockStatementSyntax* node);
     void discoverHierarchy(DefParamSyntax* node);
