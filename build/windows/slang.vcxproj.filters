@@ -130,6 +130,9 @@
     <ClInclude Include="..\..\include\Path.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\DeclarationTable.h">
+      <Filter>symbols</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -196,6 +199,9 @@
       <Filter>parsing</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\SemanticModel.cpp">
+      <Filter>symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\DeclarationTable.cpp">
       <Filter>symbols</Filter>
     </ClCompile>
   </ItemGroup>
