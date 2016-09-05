@@ -46,6 +46,8 @@ struct NumericTokenFlags {
         HexBase,
         BinaryBase,
 
+        BaseMask = 0x3,
+
         IsSigned = 1 << 2,
 
         // for time literals, specify the unit

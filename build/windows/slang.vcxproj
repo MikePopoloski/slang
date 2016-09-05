@@ -55,7 +55,6 @@
     <ClInclude Include="..\..\include\SyntaxTree.h" />
     <ClInclude Include="..\..\include\Token.h" />
     <ClInclude Include="..\..\include\Trivia.h" />
-    <ClInclude Include="..\..\source\CharInfo.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\external\fmt\format.cc" />
@@ -63,6 +62,7 @@
     <ClCompile Include="..\..\external\fmt\posix.cc" />
     <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp" />
     <ClCompile Include="..\..\source\Binder.cpp" />
+    <ClCompile Include="..\..\source\BitVector.cpp" />
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />
     <ClCompile Include="..\..\source\DeclarationTable.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />

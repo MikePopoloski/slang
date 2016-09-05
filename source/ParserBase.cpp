@@ -89,13 +89,17 @@ Token ParserBase::prependSkippedTokens(Token token, Buffer<Token>& tokens) {
     return token;
 }
 
+Diagnostics& ParserBase::getDiagnostics() {
+    return window.tokenSource.getDiagnostics();
+}
+
 void ParserBase::addError(DiagCode code) {
     // TODO: location
     window.tokenSource.getDiagnostics().emplace(code, SourceLocation());
 }
 
 Diagnostic& ParserBase::addError(DiagCode code, SourceLocation location) {
-    return window.tokenSource.getDiagnostics().add(code, location);
+    return getDiagnostics().add(code, location);
 }
 
 Token ParserBase::peek(int offset) {

@@ -14,11 +14,13 @@ BoundExpression* Binder::bindExpression(ExpressionSyntax* syntax) {
         case SyntaxKind::OneStepLiteralExpression:
         case SyntaxKind::IntegerLiteralExpression:
         case SyntaxKind::UnbasedUnsizedLiteralExpression:
-            return bindLiteral(syntax->as<LiteralExpressionSyntax>());
+            //return bindLiteral(syntax->as<LiteralExpressionSyntax>());
         case SyntaxKind::IntegerVectorExpression:
-            return bindVectorLiteral(syntax->as<IntegerVectorExpressionSyntax>());
+            //return bindVectorLiteral(syntax->as<IntegerVectorExpressionSyntax>());
         case SyntaxKind::ParenthesizedExpression:
+            break;
     }
+    return nullptr;
 }
 
 }

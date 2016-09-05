@@ -2,6 +2,7 @@
 
 #include "AllSyntax.h"
 #include "ArrayRef.h"
+#include "BitVector.h"
 #include "ParserBase.h"
 #include "Token.h"
 
@@ -133,8 +134,6 @@ private:
     bool scanDimensionList(int& index);
     bool scanQualifiedName(int& index);
 
-    bool checkVectorDigits(Token token);
-
     struct ExpressionOptions {
         enum Enum {
             None = 0,
@@ -154,6 +153,8 @@ private:
 
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);
+
+    VectorBuilder vectorBuilder;
 };
 
 }

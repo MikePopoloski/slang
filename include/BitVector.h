@@ -1,6 +1,10 @@
 #pragma once
 
+#include "Buffer.h"
+
 namespace slang {
+
+class Diagnostics;
 
 struct logic_t {
     // limited from 0 to 15, plus x or z
@@ -21,11 +25,24 @@ public:
 
 class VectorBuilder {
 public:
-    void start(uint32_t , bool ) {}
-    void startUnsized() {}
-    void addDigit(logic_t ) {}
+    VectorBuilder(Diagnostics& diagnostics);
+
+    void start(uint32_t size);
+    void startUnsized();
+
+    void addBinaryDigit(logic_t digit);
+    void addOctalDigit(logic_t digit);
+    void addDecimalDigit(logic_t digit);
+    void addHexDigit(logic_t digit);
+
+    bool haveError() const { return error; }
 
     LogicVector toVector() const { return LogicVector(); }
+
+private:
+    Diagnostics& diagnostics;
+    Buffer<logic_t> digits;
+    bool error = false;
 };
 
 }

@@ -3,7 +3,8 @@
 namespace slang {
 
 Parser::Parser(Preprocessor& preprocessor) :
-    ParserBase::ParserBase(preprocessor)
+    ParserBase::ParserBase(preprocessor),
+    vectorBuilder(getDiagnostics())
 {
 }
 

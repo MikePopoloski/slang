@@ -1,5 +1,7 @@
 #include "Parser.h"
 
+#include "Lexer.h"
+
 namespace slang {
 
 ExpressionSyntax* Parser::parseExpression() {
@@ -221,20 +223,22 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
         return alloc.emplace<IntegerVectorExpressionSyntax>(size, base, Token::createMissing(alloc, TokenKind::IntegerLiteral, first.location()));
     }
 
-    uint32_t length = first.rawText().length();
-    consume();
+    if (size)
+        vectorBuilder.start(size.numericValue().integer);
+    else
+        vectorBuilder.startUnsized();
 
-    if (checkVectorDigits(first)) {
-        auto next = peek();
-        while (isPossibleVectorDigit(next.kind) && next.trivia().empty()) {
-            consume();
-            length += next.rawText().length();
-            if (!checkVectorDigits(next))
-                break;
+    Token next = first;
+    uint32_t length = 0;
+    bool check = !vectorBuilder.haveError();
 
-            next = peek();
-        }
-    }
+    do {
+        length += next.rawText().length();
+        consume();
+        if (check)
+            check = Lexer::checkVectorDigits(getDiagnostics(), vectorBuilder, next, base.numericFlags(), false);
+        next = peek();
+    } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
     // TODO: compute value
     StringRef rawText(first.rawText().begin(), length);
@@ -245,11 +249,6 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     info->numInfo.numericFlags = 0;
 
     return alloc.emplace<IntegerVectorExpressionSyntax>(size, base, Token(TokenKind::IntegerLiteral, info));
-}
-
-bool Parser::checkVectorDigits(Token token) {
-    // TODO:
-    return true;
 }
 
 ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {

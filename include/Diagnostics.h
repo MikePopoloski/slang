@@ -31,6 +31,12 @@ enum class DiagCode : uint8_t {
     UnknownEscapeCode,
     ExpectedIncludeFileName,
     MissingExponentDigits,
+    VectorDigitsLeadingUnderscore,
+    DecimalDigitMultipleUnknown,
+    BadBinaryDigit,
+    BadOctalDigit,
+    BadDecimalDigit,
+    BadHexDigit,
 
     // preprocessor
     CouldNotOpenIncludeFile,

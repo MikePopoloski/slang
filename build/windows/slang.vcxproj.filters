@@ -73,9 +73,6 @@
     <ClInclude Include="..\..\include\StringTable.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\source\CharInfo.h">
-      <Filter>text</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\BufferPool.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -215,6 +212,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\Binder.cpp">
       <Filter>binding</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\BitVector.cpp">
+      <Filter>numeric</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
