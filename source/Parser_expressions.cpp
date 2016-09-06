@@ -112,7 +112,6 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
     TokenKind kind = peek().kind;
     switch (kind) {
         case TokenKind::StringLiteral:
-        case TokenKind::RealLiteral:
         case TokenKind::TimeLiteral:
         case TokenKind::UnbasedUnsizedLiteral:
         case TokenKind::NullKeyword:
@@ -120,6 +119,15 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
         case TokenKind::Dollar: {
             auto literal = consume();
             expr = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal.kind), literal);
+            break;
+        }
+        case TokenKind::RealLiteral: {
+            // have to check for overflow here, now that we know this is actually a real
+            auto literal = consume();
+            ASSERT(literal.numericValue().type == NumericValue::Real);
+            if (!std::isfinite(literal.numericValue().real))
+                addError(DiagCode::RealExponentOverflow, literal.location());
+            expr = alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::RealLiteralExpression, literal);
             break;
         }
         case TokenKind::IntegerLiteral:
@@ -209,8 +217,12 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     if (token.kind == TokenKind::IntegerBase)
         base = token;
     else {
-        if (!peek(TokenKind::IntegerBase))
+        if (!peek(TokenKind::IntegerBase)) {
+            ASSERT(token.numericValue().type == NumericValue::Integer);
+            if (token.numericValue().integer > INT32_MAX)
+                addError(DiagCode::SignedIntegerOverflow, token.location());
             return alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::IntegerLiteralExpression, token);
+        }
         size = token;
         base = consume();
     }

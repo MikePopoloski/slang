@@ -13,10 +13,8 @@ struct logic_t {
     logic_t() : value(0) {}
     logic_t(uint8_t value) : value(value) {}
 
-    enum {
-        x = (1 << 7),
-        z = (1 << 6)
-    };
+    static const logic_t x;
+    static const logic_t z;
 };
 
 class LogicVector {

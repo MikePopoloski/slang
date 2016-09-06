@@ -946,9 +946,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
     }
 
     // normal signed numeric literal; check for overflow
-    if (value > INT32_MAX)
-        value = INT32_MAX;
-    info->numInfo.value = (int32_t)value;
+    info->numInfo.value = value;
 
     if (lexTimeLiteral(info))
         return TokenKind::TimeLiteral;

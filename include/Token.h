@@ -70,14 +70,14 @@ enum class IdentifierType : uint8_t {
 struct NumericValue {
     union {
         logic_t bit;
-        int32_t integer;
+        uint64_t integer;
         double real;
     };
     uint8_t type;
 
     NumericValue() : type(Unknown), real(0.0) {}
     NumericValue(double real) : type(Real), real(real) {}
-    NumericValue(int32_t integer) : type(Integer), integer(integer) {}
+    NumericValue(uint64_t integer) : type(Integer), integer(integer) {}
     NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
 
     enum {

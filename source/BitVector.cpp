@@ -4,6 +4,9 @@
 
 namespace slang {
 
+const logic_t logic_t::x = 1 << 7;
+const logic_t logic_t::z = 1 << 6;
+
 VectorBuilder::VectorBuilder(Diagnostics& diagnostics) :
     diagnostics(diagnostics)
 {

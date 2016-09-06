@@ -37,6 +37,8 @@ enum class DiagCode : uint8_t {
     BadOctalDigit,
     BadDecimalDigit,
     BadHexDigit,
+    RealExponentOverflow,       // actually generated in parser
+    SignedIntegerOverflow,      // actually generated in parser
 
     // preprocessor
     CouldNotOpenIncludeFile,
