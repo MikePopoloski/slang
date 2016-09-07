@@ -1315,7 +1315,7 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
     // X x = 1, Y y = 2;
     // The second identifier would be treated as a variable name, which is confusing
     if (!isFirst && peek(TokenKind::Identifier))
-        addError(DiagCode::MultipleTypesInDeclaration);
+        addError(DiagCode::MultipleTypesInDeclaration, peek().location());
 
     auto dimensions = parseDimensionList();
 

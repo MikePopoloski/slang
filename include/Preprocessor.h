@@ -81,7 +81,6 @@ private:
     Token expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
     bool peek(TokenKind kind, LexerMode mode = LexerMode::Directive) { return peek(mode).kind == kind; }
 
-    void addError(DiagCode code);
     void addError(DiagCode code, SourceLocation location);
 
     // This is a small collection of state used to keep track of where we are in a tree of
@@ -173,6 +172,10 @@ private:
 
     // the latest token pulled from a lexer
     Token currentToken;
+
+    // the last token consumed before the currentToken; used to back up and
+    // report errors in a different location in certain scenarios
+    Token lastConsumed;
 
     // we adjust lexing behavior slightly when lexing within a macro body
     bool inMacroBody = false;

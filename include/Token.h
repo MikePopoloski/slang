@@ -21,6 +21,8 @@ namespace slang {
 enum class SyntaxKind : uint16_t;
 enum class TokenKind : uint16_t;
 
+class Diagnostics;
+
 struct TokenFlags {
     enum {
         None = 0,
@@ -166,6 +168,7 @@ public:
     Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
+    static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual, TokenKind expected, Token lastConsumed);
 
 private:
     const Info* info;

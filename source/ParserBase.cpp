@@ -5,23 +5,6 @@
 
 namespace slang {
 
-static bool reportErrorAdjacent(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::OpenBracket:
-        case TokenKind::OpenParenthesis:
-        case TokenKind::OpenParenthesisStar:
-        case TokenKind::OpenParenthesisStarCloseParenthesis:
-        case TokenKind::Semicolon:
-        case TokenKind::Colon:
-        case TokenKind::DoubleColon:
-        case TokenKind::Comma:
-        case TokenKind::Dot:
-            return true;
-        default:
-            return false;
-    }
-}
-
 ParserBase::ParserBase(Preprocessor& preprocessor) :
     window(preprocessor),
     alloc(preprocessor.getAllocator())
@@ -93,11 +76,6 @@ Diagnostics& ParserBase::getDiagnostics() {
     return window.tokenSource.getDiagnostics();
 }
 
-void ParserBase::addError(DiagCode code) {
-    // TODO: location
-    window.tokenSource.getDiagnostics().emplace(code, SourceLocation());
-}
-
 Diagnostic& ParserBase::addError(DiagCode code, SourceLocation location) {
     return getDiagnostics().add(code, location);
 }
@@ -141,27 +119,10 @@ Token ParserBase::expect(TokenKind kind) {
     // keep this method small so that it gets inlined
     auto result = peek();
     if (result.kind != kind)
-        return createExpectedToken(result, kind);
+        return Token::createExpected(alloc, getDiagnostics(), result, kind, window.lastConsumed);
 
     window.moveToNext();
     return result;
-}
-
-Token ParserBase::createExpectedToken(Token actual, TokenKind expected) {
-    SourceLocation location;
-    if (!window.lastConsumed || !reportErrorAdjacent(expected))
-        location = actual.location();
-    else {
-        location = window.lastConsumed.location();
-        location = location + window.lastConsumed.rawText().length();
-    }
-
-    // report an error here for the missing token
-    switch (expected) {
-        case TokenKind::Identifier: addError(DiagCode::ExpectedIdentifier, location); break;
-        default: addError(DiagCode::ExpectedToken, location) << getTokenKindText(expected); break;
-    }
-    return Token::createMissing(alloc, expected, location);
 }
 
 void ParserBase::Window::addNew() {

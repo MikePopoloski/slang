@@ -81,11 +81,11 @@ inline bool isLogicDigit(char c) {
     }
 }
 
-inline uint32_t getDigitValue(char c) {
+inline uint8_t getDigitValue(char c) {
     return c - '0';
 }
 
-inline uint32_t getHexDigitValue(char c) {
+inline uint8_t getHexDigitValue(char c) {
     if (c <= '9')
         return c - '0';
     if (c <= 'F')

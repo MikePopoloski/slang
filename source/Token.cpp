@@ -1,6 +1,7 @@
 #include "Token.h"
 
 #include "BumpAllocator.h"
+#include "Diagnostics.h"
 
 namespace slang {
 
@@ -151,6 +152,42 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
     info->flags = TokenFlags::Missing;
 
     return Token(kind, info);
+}
+
+// for certain kinds of expected tokens we back up and report
+// the error at the end of the previous token
+static bool reportErrorAdjacent(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenBracket:
+        case TokenKind::OpenParenthesis:
+        case TokenKind::OpenParenthesisStar:
+        case TokenKind::OpenParenthesisStarCloseParenthesis:
+        case TokenKind::Semicolon:
+        case TokenKind::Colon:
+        case TokenKind::DoubleColon:
+        case TokenKind::Comma:
+        case TokenKind::Dot:
+            return true;
+        default:
+            return false;
+    }
+}
+
+Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual, TokenKind expected, Token lastConsumed) {
+    SourceLocation location;
+    if (!lastConsumed || !reportErrorAdjacent(expected))
+        location = actual.location();
+    else {
+        location = lastConsumed.location();
+        location = location + lastConsumed.rawText().length();
+    }
+
+    // report an error here for the missing token
+    switch (expected) {
+        case TokenKind::Identifier: diagnostics.add(DiagCode::ExpectedIdentifier, location); break;
+        default: diagnostics.add(DiagCode::ExpectedToken, location) << getTokenKindText(expected); break;
+    }
+    return Token::createMissing(alloc, expected, location);
 }
 
 }

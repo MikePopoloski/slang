@@ -30,7 +30,6 @@ protected:
     void reduceSkippedTokens(Buffer<Token>& skipped, Buffer<Trivia>& trivia);
 
     Diagnostics& getDiagnostics();
-    void addError(DiagCode code);
     Diagnostic& addError(DiagCode code, SourceLocation location);
     Token createExpectedToken(Token actual, TokenKind expected);
 

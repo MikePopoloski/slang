@@ -56,7 +56,6 @@ enum class DiagCode : uint8_t {
     NotEnoughMacroArgs,
 
     // parser
-    SyntaxError,
     ExpectedIdentifier,
     ExpectedToken,
     ImplicitNotAllowed,

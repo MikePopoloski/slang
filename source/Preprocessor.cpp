@@ -159,7 +159,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 
     StringRef path = fileName.valueText();
     if (path.length() < 3)
-        addError(DiagCode::ExpectedIncludeFileName);
+        addError(DiagCode::ExpectedIncludeFileName, fileName.location());
     else {
         // remove delimiters
         path = path.subString(1, path.length() - 2);
@@ -167,7 +167,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         if (!buffer.id)
             addError(DiagCode::CouldNotOpenIncludeFile, fileName.location());
         else if (lexerStack.size() >= MaxIncludeDepth)
-            addError(DiagCode::ExceededMaxIncludeDepth);
+            addError(DiagCode::ExceededMaxIncludeDepth, fileName.location());
         else
             pushSource(buffer);
     }
@@ -768,19 +768,12 @@ Token Preprocessor::consume(LexerMode mode) {
 
 Token Preprocessor::expect(TokenKind kind, LexerMode mode) {
     auto result = peek(mode);
-    if (result.kind != kind) {
-        // report an error here for the missing token
-        addError(DiagCode::SyntaxError);
-        return Token::createMissing(alloc, kind, result.location());
-    }
+    if (result.kind != kind)
+        return Token::createExpected(alloc, diagnostics, result, kind, lastConsumed);
 
+    lastConsumed = currentToken;
     currentToken = Token();
     return result;
-}
-
-void Preprocessor::addError(DiagCode code) {
-    // TODO: location
-    diagnostics.emplace(code, SourceLocation());
 }
 
 void Preprocessor::addError(DiagCode code, SourceLocation location) {
@@ -806,7 +799,7 @@ MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentLis
     // macro has arguments, so we expect to see them here
     currentMode = LexerMode::Normal;
     if (!peek(TokenKind::OpenParenthesis)) {
-        pp.addError(DiagCode::ExpectedMacroArgs);
+        pp.addError(DiagCode::ExpectedMacroArgs, peek().location());
         return nullptr;
     }
 
@@ -861,9 +854,9 @@ ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
         auto kind = peek().kind;
         if (kind == TokenKind::EndOfDirective) {
             if (pp.delimPairStack.empty())
-                pp.addError(DiagCode::ExpectedEndOfMacroArgs);
+                pp.addError(DiagCode::ExpectedEndOfMacroArgs, peek().location());
             else
-                pp.addError(DiagCode::UnbalancedMacroArgDims);
+                pp.addError(DiagCode::UnbalancedMacroArgDims, peek().location());
             pp.delimPairStack.clear();
             break;
         }
@@ -922,9 +915,8 @@ Token Preprocessor::MacroParser::expect(TokenKind kind) {
         return pp.expect(kind, currentMode);
 
     if (buffer[currentIndex].kind != kind) {
-        // report an error here for the missing token
-        pp.addError(DiagCode::SyntaxError);
-        return Token::createMissing(pp.alloc, kind, buffer[currentIndex].location());
+        Token last = currentIndex > 0 ? buffer[currentIndex - 1] : Token();
+        return Token::createExpected(pp.alloc, pp.diagnostics, buffer[currentIndex], kind, last);
     }
     return next();
 }

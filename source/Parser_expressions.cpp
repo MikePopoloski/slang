@@ -236,7 +236,7 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     }
 
     if (size)
-        vectorBuilder.start(size.numericValue().integer);
+        vectorBuilder.start((uint32_t)size.numericValue().integer);
     else
         vectorBuilder.startUnsized();
 
@@ -537,14 +537,14 @@ NameSyntax* Parser::parseName() {
 
     auto kind = peek().kind;
     while (kind == TokenKind::Dot || kind == TokenKind::DoubleColon) {
+        auto separator = consume();
         if (kind == TokenKind::Dot)
             usedDot = true;
         else if (usedDot && !reportedError) {
             reportedError = true;
-            addError(DiagCode::ColonShouldBeDot);
+            addError(DiagCode::ColonShouldBeDot, separator.location());
         }
 
-        auto separator = consume();
         name = alloc.emplace<ScopedNameSyntax>(name, separator, parseNamePart());
         kind = peek().kind;
     }
