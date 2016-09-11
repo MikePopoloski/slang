@@ -1,10 +1,12 @@
 #include "Parser.h"
 
+#include "Preprocessor.h"
+
 namespace slang {
 
 Parser::Parser(Preprocessor& preprocessor) :
     ParserBase::ParserBase(preprocessor),
-    vectorBuilder(getDiagnostics())
+    vectorBuilder(preprocessor.getAllocator(), getDiagnostics())
 {
 }
 

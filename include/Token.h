@@ -40,26 +40,19 @@ struct SyntaxToStringFlags {
     };
 };
 
+enum class TimeUnit : uint8_t {
+    Seconds,
+    Milliseconds,
+    Microseconds,
+    Nanoseconds,
+    Picoseconds,
+    Femtoseconds
+};
+
 struct NumericTokenFlags {
-    enum {
-        // first two bits are the base
-        DecimalBase,
-        OctalBase,
-        HexBase,
-        BinaryBase,
-
-        BaseMask = 0x3,
-
-        IsSigned = 1 << 2,
-
-        // for time literals, specify the unit
-        Seconds,
-        Milliseconds,
-        Microseconds,
-        Nanoseconds,
-        Picoseconds,
-        Femtoseconds
-    };
+    LiteralBase base : 2;
+    bool isSigned : 1;
+    TimeUnit unit : 3;
 };
 
 enum class IdentifierType : uint8_t {
@@ -73,6 +66,7 @@ struct NumericValue {
     union {
         logic_t bit;
         uint64_t integer;
+        LogicVector vector;
         double real;
     };
     uint8_t type;
@@ -81,12 +75,14 @@ struct NumericValue {
     NumericValue(double real) : type(Real), real(real) {}
     NumericValue(uint64_t integer) : type(Integer), integer(integer) {}
     NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
+    NumericValue(LogicVector vector) : type(Vector), vector(vector) {}
 
     enum {
         Unknown,
         Real,
         Integer,
-        UnsizedBit
+        UnsizedBit,
+        Vector
     };
 };
 
@@ -101,7 +97,7 @@ public:
     struct Info {
         struct NumericLiteralInfo {
             NumericValue value;
-            uint8_t numericFlags;
+            NumericTokenFlags numericFlags;
         };
 
         ArrayRef<slang::Trivia> trivia;
@@ -154,7 +150,7 @@ public:
     // data accessors for specific kinds of tokens
     // these will generally assert if the kind is wrong
     const NumericValue& numericValue() const;
-    uint8_t numericFlags() const;
+    NumericTokenFlags numericFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
 

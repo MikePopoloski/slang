@@ -210,21 +210,39 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
 }
 
 ExpressionSyntax* Parser::parseIntegerExpression() {
-    Token size;
-    Token base;
+    Token sizeToken;
+    Token baseToken;
+    uint32_t sizeBits = 32;
 
     auto token = consume();
     if (token.kind == TokenKind::IntegerBase)
-        base = token;
+        baseToken = token;
     else {
+        ASSERT(token.numericValue().type == NumericValue::Integer);
+        uint64_t tokenValue = token.numericValue().integer;
+
         if (!peek(TokenKind::IntegerBase)) {
-            ASSERT(token.numericValue().type == NumericValue::Integer);
-            if (token.numericValue().integer > INT32_MAX)
+            if (tokenValue > INT32_MAX)
                 addError(DiagCode::SignedIntegerOverflow, token.location());
             return alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::IntegerLiteralExpression, token);
         }
-        size = token;
-        base = consume();
+
+        sizeToken = token;
+        baseToken = consume();
+
+        // TODO: move this constant somewhere
+        static const int MaxLiteralBits = 65535;
+        if (tokenValue == 0) {
+            sizeBits = 32; // just pick something so we can keep going
+            addError(DiagCode::LiteralSizeIsZero, token.location());
+        }
+        else if (tokenValue > MaxLiteralBits) {
+            sizeBits = MaxLiteralBits;
+            addError(DiagCode::LiteralSizeTooLarge, token.location());
+        }
+        else {
+            sizeBits = (uint32_t)tokenValue;
+        }
     }
 
     // at this point we expect to see vector digits, but they could be split out into other token types
@@ -232,35 +250,32 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     auto first = peek();
     if (!isPossibleVectorDigit(first.kind)) {
         addError(DiagCode::ExpectedVectorDigits, first.location());
-        return alloc.emplace<IntegerVectorExpressionSyntax>(size, base, Token::createMissing(alloc, TokenKind::IntegerLiteral, first.location()));
+        return alloc.emplace<IntegerVectorExpressionSyntax>(sizeToken, baseToken, Token::createMissing(alloc, TokenKind::IntegerLiteral, first.location()));
     }
-
-    if (size)
-        vectorBuilder.start((uint32_t)size.numericValue().integer);
-    else
-        vectorBuilder.startUnsized();
 
     Token next = first;
     uint32_t length = 0;
-    bool check = !vectorBuilder.haveError();
+    LiteralBase base = baseToken.numericFlags().base;
+    bool stillGood = true;
 
     do {
         length += next.rawText().length();
         consume();
-        if (check)
-            check = Lexer::checkVectorDigits(getDiagnostics(), vectorBuilder, next, base.numericFlags(), false);
+        if (stillGood)
+            stillGood = Lexer::checkVectorDigits(getDiagnostics(), vectorBuilder, next, base, false);
         next = peek();
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
-    // TODO: compute value
     StringRef rawText(first.rawText().begin(), length);
     NumericValue value;
+    if (stillGood)
+        value = vectorBuilder.finish(base, sizeBits, first.location());
 
     auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location(), 0);
     info->numInfo.value = value;
-    info->numInfo.numericFlags = 0;
+    info->numInfo.numericFlags = NumericTokenFlags();
 
-    return alloc.emplace<IntegerVectorExpressionSyntax>(size, base, Token(TokenKind::IntegerLiteral, info));
+    return alloc.emplace<IntegerVectorExpressionSyntax>(sizeToken, baseToken, Token(TokenKind::IntegerLiteral, info));
 }
 
 ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {

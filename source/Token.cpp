@@ -104,7 +104,7 @@ const NumericValue& Token::numericValue() const {
     return info->numInfo.value;
 }
 
-uint8_t Token::numericFlags() const {
+NumericTokenFlags Token::numericFlags() const {
     ASSERT(kind == TokenKind::IntegerBase || kind == TokenKind::TimeLiteral);
     return info->numInfo.numericFlags;
 }
