@@ -23,8 +23,6 @@
 * Param expressions
 * Type reference expression
 * Assignment patterns
-* Casting
-* Bullet proof integer expressions
 
 When skipping to an end keyword, break out if we encounter some other kind of end
 Include and macro directives should come *after* the stuff they insert into the stream
@@ -34,7 +32,6 @@ FILE and LINE macros
 Error on recursive macros
 Mark tokens from arguments as being ok to "recursively" expand
 Warn on redefining macros
-Stringifying and concatenating tokens
 Include directive macros
 Macros that have other directives in their bodies?
 

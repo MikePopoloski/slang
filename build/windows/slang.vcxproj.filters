@@ -22,14 +22,11 @@
     <Filter Include="util\3ps">
       <UniqueIdentifier>{62a9b006-279b-4b9e-bdfd-cd14e4d029a9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="symbols">
-      <UniqueIdentifier>{133f8481-f6f0-4405-9c93-67d946e284ad}</UniqueIdentifier>
-    </Filter>
     <Filter Include="util\3ps\fmt">
       <UniqueIdentifier>{e575849d-3926-4fe7-8ab7-a84062f0dfed}</UniqueIdentifier>
     </Filter>
-    <Filter Include="binding">
-      <UniqueIdentifier>{3453667f-cf6a-4cce-8a69-041faf97484c}</UniqueIdentifier>
+    <Filter Include="analysis">
+      <UniqueIdentifier>{133f8481-f6f0-4405-9c93-67d946e284ad}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -101,7 +98,7 @@
       <Filter>parsing</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\SemanticModel.h">
-      <Filter>symbols</Filter>
+      <Filter>analysis</Filter>
     </ClInclude>
     <ClInclude Include="..\..\external\cppformat\format.h">
       <Filter>util\3ps\fmt</Filter>
@@ -125,19 +122,19 @@
       <Filter>text</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\Symbol.h">
-      <Filter>symbols</Filter>
+      <Filter>analysis</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\Path.h">
       <Filter>util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\DeclarationTable.h">
-      <Filter>symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\Binder.h">
-      <Filter>binding</Filter>
+      <Filter>analysis</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\BoundNodes.h">
-      <Filter>binding</Filter>
+      <Filter>analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\BindContext.h">
+      <Filter>analysis</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -205,16 +202,16 @@
       <Filter>parsing</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\SemanticModel.cpp">
-      <Filter>symbols</Filter>
+      <Filter>analysis</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\DeclarationTable.cpp">
-      <Filter>symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\Binder.cpp">
-      <Filter>binding</Filter>
+      <Filter>analysis</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\BitVector.cpp">
       <Filter>numeric</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\BindContext.cpp">
+      <Filter>analysis</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
