@@ -136,6 +136,9 @@
     <ClInclude Include="..\..\include\BindContext.h">
       <Filter>analysis</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ConstantValue.h">
+      <Filter>analysis</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">

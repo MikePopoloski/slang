@@ -19,26 +19,50 @@ namespace slang {
 class SyntaxTree;
 class Symbol;
 
+enum class SpecialType {
+    ShortInt,
+    Int,
+    LongInt,
+    Byte,
+    Bit,
+    Logic,
+    Reg,
+    Integer,
+    Time,
+    Real,
+    ShortReal,
+    RealTime
+    // note: if you update this enum you have to update
+    // the table of special types in SemanticModel
+};
+
 enum class ValueCategory {
     None,
-    SelfDetermined
+    Constant
 };
 
 /// SemanticModel is responsible for binding symbols and performing
 /// type checking based on input parse trees.
 class SemanticModel {
 public:
+    SemanticModel();
     SemanticModel(DeclarationTable& declTable);
 
     void bindModuleImplicit(ModuleDeclarationSyntax* module);
-    BoundParameterDeclaration* bindParameterDecl(ParameterDeclarationStatementSyntax* syntax);
+    BoundParameterDeclaration* bindParameterDecl(const ParameterDeclarationSyntax* syntax);
     BoundExpression* bindExpression(ExpressionSyntax* syntax);
-    BoundExpression* bindValue(ExpressionSyntax* syntax, ValueCategory category);
+    BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
+
+    const TypeSymbol* getSpecialType(SpecialType type) const;
+    void foldConstants(BoundExpression* expression);
 
 private:
     Diagnostics diagnostics;
     BumpAllocator alloc;
     BufferPool<Symbol*> symbolPool;
+
+    // preallocated type symbols for common types
+    TypeSymbol* specialTypes[(int)SpecialType::RealTime];
 };
 
 }

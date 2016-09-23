@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\tests\unit_tests\ExpressionBindingTests.cpp" />
     <ClCompile Include="..\..\..\tests\unit_tests\FileTests.cpp" />
     <ClCompile Include="..\..\..\tests\unit_tests\LexerTests.cpp" />
     <ClCompile Include="..\..\..\tests\unit_tests\main.cpp" />

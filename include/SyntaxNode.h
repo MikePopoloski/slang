@@ -471,6 +471,12 @@ public:
         return static_cast<T*>(this);
     }
 
+    template<typename T>
+    const T* as() const {
+        // TODO: assert kind
+        return static_cast<const T*>(this);
+    }
+
 protected:
     virtual TokenOrSyntax getChild(uint32_t) = 0;
     virtual void replaceChild(uint32_t, Token) = 0;

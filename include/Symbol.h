@@ -10,19 +10,22 @@ class Symbol {
 /// Base class for all data types
 class TypeSymbol : public Symbol {
 public:
-    bool isAggregate() const;
-    bool isSingular() const;
-    bool isIntegral() const;
-    bool isSimpleBitVector() const;
-    bool isReal() const;
+    bool isAggregate : 1;
+    bool isSingular : 1;
+    bool isIntegral : 1;
+    bool isSimpleBitVector : 1;
+    bool isReal : 1;
 };
 
 class IntegralTypeSymbol : public TypeSymbol {
 public:
-    IntegralTypeSymbol(bool isSigned, int width);
+    IntegralTypeSymbol(bool isSigned, int width) :
+        isSigned(isSigned), width(width)
+    {
+    }
 
-    bool isSigned() const;
-    int width() const;
+    bool isSigned : 1;
+    int width : 1;
 };
 
 class IntegerVectorTypeSymbol : public IntegralTypeSymbol {
