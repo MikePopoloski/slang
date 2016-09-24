@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// SyntaxTree.cpp
+// Top-level parser interface.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #include "SyntaxTree.h"
 
 #include "Parser.h"

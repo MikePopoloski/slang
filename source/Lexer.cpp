@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Lexer.cpp
+// Source file lexer.
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
 #include "Lexer.h"
 
 #define NOMINMAX
@@ -1254,4 +1260,4 @@ BufferID Lexer::getBufferID() const {
     return bufferId;
 }
 
-} // namespace slang
+}

@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Trivia.cpp
+// Support for tracking trivia like whitespace and comments.
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
 #include "Trivia.h"
 
 #include "SyntaxNode.h"

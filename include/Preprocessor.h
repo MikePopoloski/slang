@@ -2,7 +2,7 @@
 // Preprocessor.h
 // SystemVerilog preprocessor and directive support.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -38,9 +38,11 @@ class Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
 
+	/// Push a new source file onto the stack.
     void pushSource(StringRef source);
     void pushSource(SourceBuffer buffer);
 
+	/// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
 
     SourceManager& getSourceManager() const { return sourceManager; }
@@ -48,9 +50,11 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
+	// Internal methods to grab and handle the next token
     Token next(LexerMode mode);
     Token nextRaw(LexerMode mode);
 
+	// directive handling methods
     Trivia handleIncludeDirective(Token directive);
     Trivia handleResetAllDirective(Token directive);
     Trivia handleDefineDirective(Token directive);
@@ -62,14 +66,20 @@ private:
     Trivia handleTimescaleDirective(Token directive);
     Trivia handleDefaultNetTypeDirective(Token directive);
 
+	// Shared method to consume up to the end of a directive line
     Token parseEndOfDirective(bool suppressError = false);
     Trivia createSimpleDirective(Token directive, bool suppressError = false);
 
+	// Determines whether the else branch of a conditional directive should be taken
     bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName);
+
+	// Handle parsing a branch of a conditional directive
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
 
+	// Timescale specifier parser
     void expectTimescaleSpecifier(Token& unit, Token& precision);
 
+	// Macro handling methods
     DefineDirectiveSyntax* findMacro(Token directive);
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
     bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, MacroActualArgumentListSyntax* actualArgs, Buffer<Token>& dest);

@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// SyntaxFacts.cpp
+// Various syntax-related utility methods.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #include "SyntaxNode.h"
 
 #include "Token.h"

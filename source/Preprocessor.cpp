@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Preprocessor.cpp
+// SystemVerilog preprocessor and directive support.
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
 #include "Preprocessor.h"
 
 #include "AllSyntax.h"
@@ -103,8 +109,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
         return result;
     }
 
-    // if this assert fires, the user disregarded an EoF and kept calling
-    // next()
+    // if this assert fires, the user disregarded an EoF and kept calling next()
     ASSERT(!lexerStack.empty());
 
     // Pull the next token from the active source.
@@ -143,8 +148,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
             break;
     }
 
-    // finally found a real token to return, so update trivia and get out of
-    // here
+    // finally found a real token to return, so update trivia and get out of here
     token = token.withTrivia(alloc, trivia->copy(alloc));
     if (lexerStack.size() > 1)
         token = token.asPreprocessed(alloc);
@@ -157,6 +161,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     Token fileName = next(LexerMode::IncludeFileName);
     Token end = parseEndOfDirective();
 
+	// path should be at least three chars: "a" or <a>
     StringRef path = fileName.valueText();
     if (path.length() < 3)
         addError(DiagCode::ExpectedIncludeFileName, fileName.location());
@@ -257,6 +262,7 @@ Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted) {
     auto name = expect(TokenKind::Identifier);
     bool take = false;
     if (branchStack.empty() || branchStack.back().currentActive) {
+		// decide whether the branch is taken or skipped
         take = macros.find(name.valueText()) != macros.end();
         if (inverted)
             take = !take;
@@ -310,10 +316,9 @@ bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf, 
 
 Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool taken) {
     auto eod = parseEndOfDirective();
-
-    // skip over everything until we find another conditional compilation directive
     auto skipped = tokenPool.get();
     if (!taken) {
+		// skip over everything until we find another conditional compilation directive
         while (true) {
             auto token = nextRaw(LexerMode::Normal);
 
@@ -428,6 +433,7 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
             netType = consume();
             break;
         case TokenKind::Identifier:
+			// none isn't a keyword but it's special here
             if (peek().rawText() == "none")
                 netType = consume();
             break;
@@ -500,14 +506,18 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
             return actualArgs;
     }
 
+	// Expand out the macro
     auto buffer = tokenPool.get();
     if (!expandMacro(definition, directive, actualArgs, buffer))
         return actualArgs;
 
+	// Recursively expand macros in the replacement list
     ArrayRef<Token> tokens { buffer->begin(), buffer->end() };
     if (!expandReplacementList(tokens))
         return actualArgs;
 
+	// Now that all macros have been expanded, handle token concatenation and stringification.
+	// TODO: do we have to worry about non-macros being concatenated into real macros?
     Token stringify;
     buffer->clear();
     expandedTokens.clear();
@@ -745,6 +755,7 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
             }
         }
 
+		// shake the box until the cat stops making noise
         tokens = ArrayRef<Token>(currentBuffer->begin(), currentBuffer->end());
         std::swap(currentBuffer, nextBuffer);
         currentBuffer->clear();

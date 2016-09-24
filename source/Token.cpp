@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Token.cpp
+// Contains Token class and related helpers.
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
 #include "Token.h"
 
 #include "BumpAllocator.h"

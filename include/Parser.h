@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Parser.h
+// SystemVerilog language parser.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "AllSyntax.h"
@@ -11,12 +17,17 @@ namespace slang {
 class BumpAllocator;
 class Preprocessor;
 
+/// Implements a full syntax parser for SystemVerilog.
 class Parser : ParserBase {
 public:
     Parser(Preprocessor& preprocessor);
 
+	/// Parse a whole compilation unit.
     CompilationUnitSyntax* parseCompilationUnit();
 
+	/// Parse an expression / statement / module / class.
+	/// These are mostly for testing; only use if you know that the
+	/// source stream is currently looking at one of these.
     ExpressionSyntax* parseExpression();
     StatementSyntax* parseStatement();
     ModuleDeclarationSyntax* parseModule();
@@ -134,6 +145,7 @@ private:
     bool scanDimensionList(int& index);
     bool scanQualifiedName(int& index);
 
+	/// Various options for parsing expressions.
     struct ExpressionOptions {
         enum Enum {
             None = 0,
@@ -154,6 +166,7 @@ private:
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);
 
+	// Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;
 };
 

@@ -8,7 +8,13 @@ def main():
 	inf = open(os.path.join(ourdir, "syntax.txt"))
 	outf = open(os.path.join(ourdir, "../include/AllSyntax.h"), 'w')
 
-	outf.write('''#pragma once
+	outf.write('''//------------------------------------------------------------------------------
+// AllSyntax.h
+// All generated syntax node data structures.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
+#pragma once
 
 #include "SyntaxNode.h"
 #include "Token.h"

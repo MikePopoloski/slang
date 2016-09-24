@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Parser_statements.cpp
+// Statement-related parsing methods.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #include "Parser.h"
 
 namespace slang {

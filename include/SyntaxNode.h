@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// SyntaxNode.h
+// Base class and utilities for syntax nodes.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <cmath>
@@ -451,18 +457,27 @@ struct TokenOrSyntax {
     TokenOrSyntax(std::nullptr_t) : token(), isToken(true) {}
 };
 
-// base class for all syntax nodes
+/// Base class for all syntax nodes.
 class SyntaxNode {
 public:
+	/// Number of child nodes.
     uint32_t childCount = 0;
+
+	/// The kind of syntax node.
     SyntaxKind kind;
 
     SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
+	/// Utility method to wrap writeTo and generate an std::string.
     std::string toString(uint8_t flags = 0);
 
+	/// Write the node and all of its children to a string.
     void writeTo(Buffer<char>& buffer, uint8_t flags);
+
+	/// Get the first leaf token in this subtree.
     Token getFirstToken();
+
+	/// Replace the first token in the subtree with the given token.
     bool replaceFirstToken(Token token);
 
     template<typename T>

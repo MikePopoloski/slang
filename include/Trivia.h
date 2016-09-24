@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Trivia.h
+// Support for tracking trivia like whitespace and comments.
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <cstdint>
@@ -11,6 +17,7 @@ namespace slang {
 class Token;
 class SyntaxNode;
 
+/// The kind of trivia we've stored.
 enum class TriviaKind : uint8_t {
     Unknown,
     Whitespace,
@@ -24,6 +31,9 @@ enum class TriviaKind : uint8_t {
     Directive
 };
 
+/// The Trivia class holds on to a piece of source text that should otherwise
+/// not turn into a token; for example, a preprocessor directive, a line continuation
+/// character, or a comment.
 class Trivia {
 public:
     TriviaKind kind;
@@ -33,10 +43,10 @@ public:
     Trivia(TriviaKind kind, ArrayRef<Token> tokens) : kind(kind), tokens(tokens) {}
     Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
 
+	/// Writes the trivia's text to the given buffer.
     void writeTo(Buffer<char>& buffer, uint8_t flags = 0) const;
 
-    // data accessors for specific kinds of trivia
-    // these will assert if the kind is wrong
+	/// If this trivia is tracking a skipped syntax node, return that now.
     SyntaxNode* syntax() const;
 
 private:

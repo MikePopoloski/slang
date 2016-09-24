@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Lexer.h
+// Source file lexer.
+//
+// File is under the MIT license; see LICENSE for details
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <cstdint>
@@ -15,37 +21,52 @@ class VectorBuilder;
 class BumpAllocator;
 struct SourceBuffer;
 
+/// The lexer can interpret source characters differently depending on mode.
 enum class LexerMode {
+	/// Normal lexing mode.
     Normal,
+
+	/// We're inside a directive; end of line turns into EndOfDirective
+	/// tokens instead of whitespace.
     Directive,
+
+	/// We're lexing an include file name; we're looking at a special
+	/// kind of string that might be delimited by angle brackets.
     IncludeFileName
 };
 
+/// The Lexer is responsible for taking source text and chopping it up into tokens.
+/// Tokens carry along leading "trivia", which is things like whitespace and comments,
+/// so that we can programmatically piece back together what the original file looked like.
+///
+/// There are also helper methods on this class that handle token manipulation on the
+/// character level.
 class Lexer {
 public:
     Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics);
 
+	// Not copyable
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
 
-    // lex the next token from the source code
-    // will never return a null pointer; at the end of the buffer,
-    // an infinite stream of EndOfFile tokens will be generated
+    /// Lexes the next token from the source code.
+    /// This will never return a null pointer; at the end of the buffer,
+    /// an infinite stream of EndOfFile tokens will be generated
     Token lex(LexerMode mode = LexerMode::Normal);
 
     BufferID getBufferID() const;
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
 
-    // Concatenate two tokens together; used for macro pasting
+    /// Concatenates two tokens together; used for macro pasting.
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
-    // Convert a range of tokens into a string literal; used for macro stringification
+    /// Converts a range of tokens into a string literal; used for macro stringification.
     static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end);
 
-    // Checks a token for numeric literal digits and builds up a value; intended to be called in
-    // a loop consuming all potential numeric literal tokens next to each other. This is split out
-    // from regular lexing since macro replacement can change how a literal should be interpreted.
+    /// Checks a token for numeric literal digits and builds up a value; intended to be called in
+    /// a loop consuming all potential numeric literal tokens next to each other. This is split out
+    /// from regular lexing since macro replacement can change how a literal should be interpreted.
     static bool checkVectorDigits(Diagnostics& diagnostics, VectorBuilder& builder, Token token, LiteralBase base, bool first);
 
 private:

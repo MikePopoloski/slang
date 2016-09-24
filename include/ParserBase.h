@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// ParserBase.h
+// Base class for parsing.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "Buffer.h"
@@ -11,28 +17,31 @@ namespace slang {
 
 class Preprocessor;
 
-// Base class for the Parser, which contains helpers and language-agnostic parsing routines.
-// Mostly this helps keep the main Parser smaller and more focused.
-
+/// Base class for the Parser, which contains helpers and language-agnostic parsing routines.
+/// Mostly this helps keep the main Parser smaller and more focused.
 class ParserBase {
 protected:
     ParserBase(Preprocessor& preprocessor);
 
+	/// Preprend trivia to the given syntax node / token.
     SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
     Token prependTrivia(Token token, Trivia* trivia);
 
+	/// Prepend a set of trivia to the given syntax node / token.
     void prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia);
     Token prependTrivia(Token token, Buffer<Trivia>& trivia);
 
+	/// Prepend a set of skipped tokens to the given syntax node / token.
     SyntaxNode* prependSkippedTokens(SyntaxNode* node, Buffer<Token>& tokens);
     Token prependSkippedTokens(Token node, Buffer<Token>& tokens);
 
+	/// Reduce the given skipped tokens into trivia in the given buffer.
     void reduceSkippedTokens(Buffer<Token>& skipped, Buffer<Trivia>& trivia);
 
     Diagnostics& getDiagnostics();
     Diagnostic& addError(DiagCode code, SourceLocation location);
-    Token createExpectedToken(Token actual, TokenKind expected);
 
+	// Helper methods to manipulate the underlying token stream.
     Token peek(int offset);
     Token peek();
     bool peek(TokenKind kind);
@@ -40,7 +49,7 @@ protected:
     Token consumeIf(TokenKind kind);
     Token expect(TokenKind kind);
 
-    // sliding window of tokens
+    /// Helper class that maintains a sliding window of tokens, with lookahead.
     class Window {
     public:
         explicit Window(Preprocessor& source) :
@@ -52,13 +61,23 @@ protected:
 
         ~Window() { delete[] buffer; }
 
+		// not copyable
         Window(const Window&) = delete;
         Window& operator=(const Window&) = delete;
 
+		// the source of all tokens
         Preprocessor& tokenSource;
+
+		// a buffer of tokens for implementing lookahead
         Token* buffer = nullptr;
+
+		// the current token we're looking at
         Token currentToken;
+
+		// the last token we consumed
         Token lastConsumed;
+
+		// the current offset within the lookahead buffer
         int currentOffset = 0;
         int count = 0;
         int capacity = 0;
@@ -78,8 +97,8 @@ protected:
         Abort
     };
 
-    // this is a generalized method for parsing a delimiter separated list of things
-    // with bookend tokens in a way that robustly handles bad tokens
+    /// This is a generalized method for parsing a delimiter separated list of things
+    /// with bookend tokens in a way that robustly handles bad tokens.
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
     void parseSeparatedList(
         TokenKind openKind,

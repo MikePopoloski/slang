@@ -2,7 +2,7 @@
 // Token.h
 // Contains Token class and related helpers.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -23,6 +23,7 @@ enum class TokenKind : uint16_t;
 
 class Diagnostics;
 
+/// Various flags that we track on the token.
 struct TokenFlags {
     enum {
         None = 0,
@@ -31,6 +32,7 @@ struct TokenFlags {
     };
 };
 
+/// Various flags used to control conversion to string.
 struct SyntaxToStringFlags {
     enum {
         None = 0,
@@ -40,6 +42,7 @@ struct SyntaxToStringFlags {
     };
 };
 
+/// Time unit specifier.
 enum class TimeUnit : uint8_t {
     Seconds,
     Milliseconds,
@@ -49,12 +52,14 @@ enum class TimeUnit : uint8_t {
     Femtoseconds
 };
 
+/// Various flags for numeric tokens.
 struct NumericTokenFlags {
     LiteralBase base : 2;
     bool isSigned : 1;
     TimeUnit unit : 3;
 };
 
+/// The original kind of identifier represented by a token.
 enum class IdentifierType : uint8_t {
     Unknown,
     Normal,
@@ -94,21 +99,39 @@ struct NumericValue {
 /// hot path only cares about the token's kind, so that's given priority.
 class Token {
 public:
+	/// Heap-allocated info block.
     struct Info {
+		/// Numeric-related information.
         struct NumericLiteralInfo {
             NumericValue value;
             NumericTokenFlags numericFlags;
         };
 
+		/// Leading trivia.
         ArrayRef<slang::Trivia> trivia;
+
+		/// The raw source span.
         StringRef rawText;
+
+		/// The original location in the source text (or a macro location
+		/// if the token was generated during macro expansion).
         SourceLocation location;
+
         union {
+			/// The nice text of a string literal.
             StringRef stringText;
+
+			/// The kind of a directive token.
             SyntaxKind directiveKind;
+
+			/// The kind of an identifier token.
             IdentifierType idType;
+
+			/// Info for numeric tokens.
             NumericLiteralInfo numInfo;
         };
+
+		/// Various token flags.
         uint8_t flags;
 
         Info() : flags(0) {}
@@ -118,15 +141,17 @@ public:
         }
     };
 
+	/// The kind of the token; this is not in the info block because
+	/// we almost always want to look at it.
     TokenKind kind;
 
     Token();
     Token(TokenKind kind, const Info* info);
 
-    // a missing token was expected and inserted by the parser at a given point
+    /// A missing token was expected and inserted by the parser at a given point.
     bool isMissing() const { return (info->flags & TokenFlags::Missing) != 0; }
 
-    // token was sourced from a preprocessor directive (include, macro, etc)
+    /// Token was sourced from a preprocessor directive (include, macro, etc)
     bool isFromPreprocessor() const { return (info->flags & TokenFlags::IsFromPreprocessor) != 0; }
 
     SourceLocation location() const { return info->location; }
@@ -147,18 +172,20 @@ public:
     /// flags control what exactly gets written.
     void writeTo(Buffer<char>& buffer, uint8_t flags) const;
 
-    // data accessors for specific kinds of tokens
-    // these will generally assert if the kind is wrong
+    /// Data accessors for specific kinds of tokens.
+    /// These will generally assert if the kind is wrong.
     const NumericValue& numericValue() const;
     NumericTokenFlags numericFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
 
+	/// Determines whether the token has the given trivia.
     bool hasTrivia(TriviaKind triviaKind) const;
 
     bool valid() const { return info != nullptr; }
     explicit operator bool() const { return valid(); }
 
+	/// Modification methods to make it easier to deal with immutable tokens.
     Token asPreprocessed(BumpAllocator& alloc) const;
     Token withTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const;
     Token withLocation(BumpAllocator& alloc, SourceLocation location) const;

@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// SyntaxNode.cpp
+// Base class and utilities for syntax nodes.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #include "SyntaxNode.h"
 
 namespace slang {

@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// AllSyntax.h
+// All generated syntax node data structures.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "SyntaxNode.h"
