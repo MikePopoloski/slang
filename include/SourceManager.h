@@ -11,6 +11,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <variant.hpp>
 #include <vector>
 
 #include "Buffer.h"

@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <eggs/variant/detail/config/prefix.hpp>
+#include <variant/detail/config/prefix.hpp>
 
 namespace eggs { namespace variants { namespace detail
 {
@@ -189,6 +189,6 @@ namespace eggs { namespace variants { namespace detail
     {};
 }}}
 
-#include <eggs/variant/detail/config/suffix.hpp>
+#include <variant/detail/config/suffix.hpp>
 
 #endif /*EGGS_VARIANT_DETAIL_PACK_HPP*/

@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <exception>
 
-#include <eggs/variant/detail/config/prefix.hpp>
+#include <variant/detail/config/prefix.hpp>
 
 namespace eggs { namespace variants
 {
@@ -51,6 +51,6 @@ namespace eggs { namespace variants
     }
 }}
 
-#include <eggs/variant/detail/config/suffix.hpp>
+#include <variant/detail/config/suffix.hpp>
 
 #endif /*EGGS_VARIANT_BAD_VARIANT_ACCESS_HPP*/

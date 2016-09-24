@@ -9,14 +9,14 @@
 #ifndef EGGS_VARIANT_VARIANT_HPP
 #define EGGS_VARIANT_VARIANT_HPP
 
-#include <eggs/variant/detail/apply.hpp>
-#include <eggs/variant/detail/pack.hpp>
-#include <eggs/variant/detail/storage.hpp>
-#include <eggs/variant/detail/utility.hpp>
-#include <eggs/variant/detail/visitor.hpp>
+#include <variant/detail/apply.hpp>
+#include <variant/detail/pack.hpp>
+#include <variant/detail/storage.hpp>
+#include <variant/detail/utility.hpp>
+#include <variant/detail/visitor.hpp>
 
-#include <eggs/variant/bad_variant_access.hpp>
-#include <eggs/variant/in_place.hpp>
+#include <variant/bad_variant_access.hpp>
+#include <variant/in_place.hpp>
 
 #include <cstddef>
 #include <functional>
@@ -25,7 +25,7 @@
 #include <typeinfo>
 #include <utility>
 
-#include <eggs/variant/detail/config/prefix.hpp>
+#include <variant/detail/config/prefix.hpp>
 
 namespace eggs { namespace variants
 {
@@ -1961,6 +1961,6 @@ namespace std
     };
 }
 
-#include <eggs/variant/detail/config/suffix.hpp>
+#include <variant/detail/config/suffix.hpp>
 
 #endif /*EGGS_VARIANT_VARIANT_HPP*/

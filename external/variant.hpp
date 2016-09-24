@@ -9,7 +9,7 @@
 #ifndef EGGS_VARIANT_HPP
 #define EGGS_VARIANT_HPP
 
-#include <eggs/variant/variant.hpp>
+#include <variant/variant.hpp>
 
 namespace eggs
 {
