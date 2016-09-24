@@ -154,28 +154,8 @@ private:
         }
     };
 
-    // One BufferEntry per BufferID; this is a simple union of FileInfo and ExpansionInfo.
-    struct BufferEntry {
-        bool isFile;
-        union {
-            FileInfo file;
-            ExpansionInfo expansion;
-        };
-
-        BufferEntry(FileInfo f) : isFile(true), file(f) {}
-        BufferEntry(ExpansionInfo e) : isFile(false), expansion(e) {}
-
-        BufferEntry(const BufferEntry& e) {
-            isFile = e.isFile;
-            if (isFile)
-                file = e.file;
-            else
-                expansion = e.expansion;
-        }
-    };
-
     // index from BufferID to buffer metadata
-    std::deque<BufferEntry> bufferEntries;
+    std::deque<variant<FileInfo, ExpansionInfo>> bufferEntries;
 
     // cache for file lookups; this holds on to the actual file data
     std::unordered_map<std::string, std::unique_ptr<FileData>> lookupCache;

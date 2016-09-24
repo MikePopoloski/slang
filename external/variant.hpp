@@ -17,4 +17,7 @@ namespace eggs
     using variants::variant;
 }
 
+using eggs::variant;
+using eggs::variants::get;
+
 #endif /*EGGS_VARIANT_HPP*/

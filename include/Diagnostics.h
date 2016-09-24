@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <string>
+#include <variant.hpp>
 #include <vector>
 
 #include "Buffer.h"
@@ -128,20 +129,8 @@ public:
 /// Wraps up a reported diagnostic along with location in source and any arguments.
 class Diagnostic {
 public:
-    struct Arg {
-        StringRef strRef;
-        uint8_t type;
-
-        Arg(StringRef strRef);
-
-        friend std::ostream& operator <<(std::ostream& os, const Arg& arg);
-
-        enum {
-            STRINGREF
-        };
-    };
-
     // Diagnostic-specific arguments that can be used to better report messages.
+    using Arg = variant<StringRef>;
     std::vector<Arg> args;
 
     /// The specific kind of diagnostic that was issued.
@@ -157,6 +146,8 @@ public:
     /// Adds an argument to the diagnostic.
     friend Diagnostic& operator<<(Diagnostic& diag, Arg&& arg);
 };
+
+std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg);
 
 /// A collection of diagnostics along with reporting functionality.
 class Diagnostics : public Buffer<Diagnostic> {

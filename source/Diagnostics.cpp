@@ -213,28 +213,18 @@ DiagnosticReport Diagnostic::toReport() const {
     };
 }
 
-Diagnostic::Arg::Arg(StringRef strRef) :
-    strRef(strRef), type(STRINGREF)
-{
-}
-
 Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
     code(code), location(location)
 {
 }
 
-std::ostream& operator <<(std::ostream& os, const Diagnostic::Arg& arg) {
-    switch (arg.type) {
-        case Diagnostic::Arg::STRINGREF: os << arg.strRef; break;
-        default:
-            ASSERT(false && "Unknown arg type. Missing case!");
-    }
-    return os;
-}
-
-Diagnostic& operator <<(Diagnostic& diag, Diagnostic::Arg&& arg) {
+Diagnostic& operator<<(Diagnostic& diag, Diagnostic::Arg&& arg) {
     diag.args.push_back(std::move(arg));
     return diag;
+}
+
+std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
+    return apply([&](auto&& t) -> auto& { return os << t; }, arg);
 }
 
 Diagnostics::Diagnostics() :

@@ -74,10 +74,7 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
         return SourceLocation();
 
     ASSERT(buffer.id < bufferEntries.size());
-    BufferEntry& entry = bufferEntries[buffer.id];
-
-    ASSERT(entry.isFile);
-    return entry.file.includedFrom;
+    return get<FileInfo>(bufferEntries[buffer.id]).includedFrom;
 }
 
 bool SourceManager::isFileLoc(SourceLocation location) {
@@ -86,9 +83,7 @@ bool SourceManager::isFileLoc(SourceLocation location) {
         return false;
 
     ASSERT(buffer.id < bufferEntries.size());
-    BufferEntry& entry = bufferEntries[buffer.id];
-
-    return entry.isFile;
+    return bufferEntries[buffer.id].target<FileInfo>() != nullptr;
 }
 
 bool SourceManager::isMacroLoc(SourceLocation location) {
@@ -97,9 +92,7 @@ bool SourceManager::isMacroLoc(SourceLocation location) {
         return false;
 
     ASSERT(buffer.id < bufferEntries.size());
-    BufferEntry& entry = bufferEntries[buffer.id];
-
-    return !entry.isFile;
+    return bufferEntries[buffer.id].target<ExpansionInfo>() != nullptr;
 }
 
 SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
@@ -108,10 +101,7 @@ SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
         return SourceLocation();
 
     ASSERT(buffer.id < bufferEntries.size());
-    BufferEntry& entry = bufferEntries[buffer.id];
-
-    ASSERT(!entry.isFile);
-    return entry.expansion.expansionStart;
+    return get<ExpansionInfo>(bufferEntries[buffer.id]).expansionStart;
 }
 
 SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
@@ -120,10 +110,7 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
         return SourceLocation();
 
     ASSERT(buffer.id < bufferEntries.size());
-    BufferEntry& entry = bufferEntries[buffer.id];
-
-    ASSERT(!entry.isFile);
-    return entry.expansion.originalLoc + location.offset();
+    return get<ExpansionInfo>(bufferEntries[buffer.id]).originalLoc + location.offset();
 }
 
 StringRef SourceManager::getSourceText(BufferID buffer) {
@@ -207,10 +194,7 @@ SourceManager::FileData* SourceManager::getFileData(BufferID buffer) {
         return nullptr;
 
     ASSERT(buffer.id < bufferEntries.size());
-    BufferEntry& entry = bufferEntries[buffer.id];
-
-    ASSERT(entry.isFile);
-    return entry.file.data;
+    return get<FileInfo>(bufferEntries[buffer.id]).data;
 }
 
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom) {
