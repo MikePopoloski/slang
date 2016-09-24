@@ -397,7 +397,7 @@ Token Lexer::lex(LexerMode mode) {
     // Lex any leading trivia; if we're in directive mode this might require
     // us to return an EndOfDirective token right away.
     bool eod = lexTrivia(triviaBuffer, directiveMode);
-    info->trivia = triviaBuffer.copy(alloc);
+    info->trivia = triviaBuffer->copy(alloc);
     if (eod)
         return Token(TokenKind::EndOfDirective, info);
 
@@ -853,7 +853,7 @@ Token Lexer::lexIncludeFileName() {
         scanWhitespace(triviaBuffer);
     }
 
-    ArrayRef<Trivia> trivia = triviaBuffer.copy(alloc);
+    ArrayRef<Trivia> trivia = triviaBuffer->copy(alloc);
     uint32_t offset = currentOffset();
     auto location = SourceLocation(getBufferID(), offset);
 

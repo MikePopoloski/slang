@@ -67,7 +67,7 @@ AnsiPortListSyntax* Parser::parseAnsiPortList(Token openParen) {
         DiagCode::ExpectedAnsiPort,
         [this](bool) { return parseAnsiPort(); }
     );
-    return alloc.emplace<AnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+    return alloc.emplace<AnsiPortListSyntax>(openParen, buffer->copy(alloc), closeParen);
 }
 
 ModuleHeaderSyntax* Parser::parseModuleHeader() {
@@ -95,7 +95,7 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
                 DiagCode::ExpectedNonAnsiPort,
                 [this](bool) { return parseNonAnsiPort(); }
             );
-            ports = alloc.emplace<NonAnsiPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+            ports = alloc.emplace<NonAnsiPortListSyntax>(openParen, buffer->copy(alloc), closeParen);
         }
         else
             ports = parseAnsiPortList(openParen);
@@ -401,7 +401,7 @@ ArrayRef<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, T
         if (!member) {
             // couldn't parse anything, skip a token and try again
             auto token = consume();
-            skipped.append(token);
+            skipped->append(token);
             if (!error) {
                 addError(DiagCode::InvalidTokenInMemberList, token.location());
                 error = true;
@@ -411,7 +411,7 @@ ArrayRef<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, T
             // got a real member; make sure not to lose the trivia
             reduceSkippedTokens(skipped, trivia);
             prependTrivia(member, trivia);
-            members.append(member);
+            members->append(member);
             error = false;
         }
     }
@@ -419,7 +419,7 @@ ArrayRef<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, T
     reduceSkippedTokens(skipped, trivia);
     endToken = prependTrivia(expect(endKind), trivia);
 
-    return members.copy(alloc);
+    return members->copy(alloc);
 }
 
 TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -557,7 +557,7 @@ CaseGenerateSyntax* Parser::parseCaseGenerateConstruct(ArrayRef<AttributeInstanc
         if (kind == TokenKind::DefaultKeyword) {
             auto def = consume();
             auto colon = consumeIf(TokenKind::Colon);
-            itemBuffer.append(alloc.emplace<DefaultCaseItemSyntax>(def, colon, parseGenerateBlock()));
+            itemBuffer->append(alloc.emplace<DefaultCaseItemSyntax>(def, colon, parseGenerateBlock()));
         }
         else if (isPossibleExpression(kind)) {
             Token colon;
@@ -570,7 +570,7 @@ CaseGenerateSyntax* Parser::parseCaseGenerateConstruct(ArrayRef<AttributeInstanc
                 DiagCode::ExpectedExpression,
                 [this](bool) { return parseExpression(); }
             );
-            itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseGenerateBlock()));
+            itemBuffer->append(alloc.emplace<StandardCaseItemSyntax>(buffer->copy(alloc), colon, parseGenerateBlock()));
         }
         else {
             break;
@@ -584,7 +584,7 @@ CaseGenerateSyntax* Parser::parseCaseGenerateConstruct(ArrayRef<AttributeInstanc
         openParen,
         condition,
         closeParen,
-        itemBuffer.copy(alloc),
+        itemBuffer->copy(alloc),
         endcase
     );
 }
@@ -634,7 +634,7 @@ ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Tok
         [this](bool) { return parseName(); }
     );
 
-    return alloc.emplace<ImplementsClauseSyntax>(implements, buffer.copy(alloc));
+    return alloc.emplace<ImplementsClauseSyntax>(implements, buffer->copy(alloc));
 }
 
 ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token virtualOrInterface) {
@@ -704,12 +704,12 @@ MemberSyntax* Parser::parseClassMember() {
     auto kind = peek().kind;
     while (isMemberQualifier(kind)) {
         // TODO: error on bad combination / ordering
-        qualifierBuffer.append(consume());
+        qualifierBuffer->append(consume());
         if (kind == TokenKind::PureKeyword || kind == TokenKind::ExternKeyword)
             isPureOrExtern = true;
         kind = peek().kind;
     }
-    auto qualifiers = qualifierBuffer.copy(alloc);
+    auto qualifiers = qualifierBuffer->copy(alloc);
 
     if (isVariableDeclaration())
         return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, qualifiers, parseVariableDeclaration(nullptr));
@@ -771,7 +771,7 @@ ContinuousAssignSyntax* Parser::parseContinuousAssign(ArrayRef<AttributeInstance
         [this](bool) { return parseExpression(); }
     );
 
-    return alloc.emplace<ContinuousAssignSyntax>(attributes, assign, buffer.copy(alloc), semi);
+    return alloc.emplace<ContinuousAssignSyntax>(attributes, assign, buffer->copy(alloc), semi);
 }
 
 DefParamAssignmentSyntax* Parser::parseDefParamAssignment() {
@@ -799,7 +799,7 @@ DefParamSyntax* Parser::parseDefParam(ArrayRef<AttributeInstanceSyntax*> attribu
         [this](bool) { return parseDefParamAssignment(); }
     );
 
-    return alloc.emplace<DefParamSyntax>(attributes, defparam, buffer.copy(alloc), semi);
+    return alloc.emplace<DefParamSyntax>(attributes, defparam, buffer->copy(alloc), semi);
 }
 
 MemberSyntax* Parser::parseCoverageMember() {
@@ -1054,9 +1054,9 @@ ArrayRef<VariableDimensionSyntax*> Parser::parseDimensionList() {
         auto dim = parseDimension();
         if (!dim)
             break;
-        buffer.append(dim);
+        buffer->append(dim);
     }
-    return buffer.copy(alloc);
+    return buffer->copy(alloc);
 }
 
 DotMemberClauseSyntax* Parser::parseDotMemberClause() {
@@ -1098,7 +1098,7 @@ StructUnionTypeSyntax* Parser::parseStructUnion(SyntaxKind syntaxKind) {
             Token semi;
             auto declarators = parseVariableDeclarators(semi);
 
-            buffer.append(alloc.emplace<StructUnionMemberSyntax>(attributes, randomQualifier, type, declarators, semi));
+            buffer->append(alloc.emplace<StructUnionMemberSyntax>(attributes, randomQualifier, type, declarators, semi));
             kind = peek().kind;
         }
         closeBrace = expect(TokenKind::CloseBrace);
@@ -1111,7 +1111,7 @@ StructUnionTypeSyntax* Parser::parseStructUnion(SyntaxKind syntaxKind) {
         packed,
         signing,
         openBrace,
-        buffer.copy(alloc),
+        buffer->copy(alloc),
         closeBrace,
         parseDimensionList()
     );
@@ -1296,7 +1296,7 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
     auto kind = peek().kind;
     while (isDeclarationModifier(kind)) {
         // TODO: error on bad combination / ordering
-        modifiers.append(consume());
+        modifiers->append(consume());
         if (kind == TokenKind::VarKeyword)
             hasVar = true;
         kind = peek().kind;
@@ -1307,7 +1307,7 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
     Token semi;
     auto declarators = parseVariableDeclarators(semi);
 
-    return alloc.emplace<DataDeclarationSyntax>(attributes, modifiers.copy(alloc), dataType, declarators, semi);
+    return alloc.emplace<DataDeclarationSyntax>(attributes, modifiers->copy(alloc), dataType, declarators, semi);
 }
 
 VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
@@ -1332,8 +1332,8 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
 
 ArrayRef<TokenOrSyntax> Parser::parseOneVariableDeclarator() {
     auto buffer = tosPool.get();
-    buffer.append(parseVariableDeclarator(/* isFirst */ true));
-    return buffer.copy(alloc);
+    buffer->append(parseVariableDeclarator(/* isFirst */ true));
+    return buffer->copy(alloc);
 }
 
 template<bool(*IsEnd)(TokenKind)>
@@ -1348,7 +1348,7 @@ ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Toke
         [this](bool first) { return parseVariableDeclarator(first); }
     );
 
-    return buffer.copy(alloc);
+    return buffer->copy(alloc);
 }
 
 ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(Token& semi) {
@@ -1373,9 +1373,9 @@ ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
             [this](bool) { return parseAttributeSpec(); }
         );
 
-        buffer.append(alloc.emplace<AttributeInstanceSyntax>(openParen, list, closeParen));
+        buffer->append(alloc.emplace<AttributeInstanceSyntax>(openParen, list, closeParen));
     }
-    return buffer.copy(alloc);
+    return buffer->copy(alloc);
 }
 
 AttributeSpecSyntax* Parser::parseAttributeSpec() {
@@ -1393,8 +1393,8 @@ AttributeSpecSyntax* Parser::parseAttributeSpec() {
 ArrayRef<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
     auto buffer = nodePool.getAs<PackageImportDeclarationSyntax*>();
     while (peek(TokenKind::ImportKeyword))
-        buffer.append(parseImportDeclaration(nullptr));
-    return buffer.copy(alloc);
+        buffer->append(parseImportDeclaration(nullptr));
+    return buffer->copy(alloc);
 }
 
 PackageImportDeclarationSyntax* Parser::parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -1411,7 +1411,7 @@ PackageImportDeclarationSyntax* Parser::parseImportDeclaration(ArrayRef<Attribut
         [this](bool) { return parsePackageImportItem(); }
     );
 
-    return alloc.emplace<PackageImportDeclarationSyntax>(attributes, keyword, items.copy(alloc), semi);
+    return alloc.emplace<PackageImportDeclarationSyntax>(attributes, keyword, items->copy(alloc), semi);
 }
 
 PackageImportItemSyntax* Parser::parsePackageImportItem() {
@@ -1465,7 +1465,7 @@ HierarchyInstantiationSyntax* Parser::parseHierarchyInstantiation(ArrayRef<Attri
         [this](bool) { return parseHierarchicalInstance(); }
     );
 
-    return alloc.emplace<HierarchyInstantiationSyntax>(attributes, type, parameters, items.copy(alloc), semi);
+    return alloc.emplace<HierarchyInstantiationSyntax>(attributes, type, parameters, items->copy(alloc), semi);
 }
 
 HierarchicalInstanceSyntax* Parser::parseHierarchicalInstance() {

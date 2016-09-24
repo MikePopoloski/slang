@@ -57,31 +57,31 @@ Token Preprocessor::next(LexerMode mode) {
         // TODO: handle all directive types
         // TODO: check keyword eligibility
         switch (token.directiveKind()) {
-            case SyntaxKind::IncludeDirective: trivia.append(handleIncludeDirective(token)); break;
-            case SyntaxKind::ResetAllDirective: trivia.append(handleResetAllDirective(token)); break;
-            case SyntaxKind::DefineDirective: trivia.append(handleDefineDirective(token)); break;
-            case SyntaxKind::MacroUsage: trivia.append(handleMacroUsage(token)); break;
-            case SyntaxKind::IfDefDirective: trivia.append(handleIfDefDirective(token, false)); break;
-            case SyntaxKind::IfNDefDirective: trivia.append(handleIfDefDirective(token, true)); break;
-            case SyntaxKind::ElsIfDirective: trivia.append(handleElsIfDirective(token)); break;
-            case SyntaxKind::ElseDirective: trivia.append(handleElseDirective(token)); break;
-            case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
-            case SyntaxKind::TimescaleDirective: trivia.append(handleTimescaleDirective(token)); break;
-            case SyntaxKind::DefaultNetTypeDirective: trivia.append(handleDefaultNetTypeDirective(token)); break;
+            case SyntaxKind::IncludeDirective: trivia->append(handleIncludeDirective(token)); break;
+            case SyntaxKind::ResetAllDirective: trivia->append(handleResetAllDirective(token)); break;
+            case SyntaxKind::DefineDirective: trivia->append(handleDefineDirective(token)); break;
+            case SyntaxKind::MacroUsage: trivia->append(handleMacroUsage(token)); break;
+            case SyntaxKind::IfDefDirective: trivia->append(handleIfDefDirective(token, false)); break;
+            case SyntaxKind::IfNDefDirective: trivia->append(handleIfDefDirective(token, true)); break;
+            case SyntaxKind::ElsIfDirective: trivia->append(handleElsIfDirective(token)); break;
+            case SyntaxKind::ElseDirective: trivia->append(handleElseDirective(token)); break;
+            case SyntaxKind::EndIfDirective: trivia->append(handleEndIfDirective(token)); break;
+            case SyntaxKind::TimescaleDirective: trivia->append(handleTimescaleDirective(token)); break;
+            case SyntaxKind::DefaultNetTypeDirective: trivia->append(handleDefaultNetTypeDirective(token)); break;
             case SyntaxKind::UndefineAllDirective:
             case SyntaxKind::UnconnectedDriveDirective:
             case SyntaxKind::NoUnconnectedDriveDirective:
             case SyntaxKind::CellDefineDirective:
             case SyntaxKind::EndCellDefineDirective:
             default:
-                trivia.append(createSimpleDirective(token));
+                trivia->append(createSimpleDirective(token));
                 break;
         }
         token = nextRaw(mode);
     } while (token.kind == TokenKind::Directive);
 
-    trivia.appendRange(token.trivia());
-    return token.withTrivia(alloc, trivia.copy(alloc));
+    trivia->appendRange(token.trivia());
+    return token.withTrivia(alloc, trivia->copy(alloc));
 }
 
 Token Preprocessor::nextRaw(LexerMode mode) {
@@ -129,12 +129,12 @@ Token Preprocessor::nextRaw(LexerMode mode) {
     // return that one, but we do want to merge its trivia with whatever comes
     // next.
     auto trivia = triviaPool.get();
-    trivia.appendRange(token.trivia());
+    trivia->appendRange(token.trivia());
 
     while (true) {
         auto& nextSource = lexerStack.back();
         token = nextSource->lex(mode);
-        trivia.appendRange(token.trivia());
+        trivia->appendRange(token.trivia());
         if (token.kind != TokenKind::EndOfFile)
             break;
 
@@ -145,7 +145,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
 
     // finally found a real token to return, so update trivia and get out of
     // here
-    token = token.withTrivia(alloc, trivia.copy(alloc));
+    token = token.withTrivia(alloc, trivia->copy(alloc));
     if (lexerStack.size() > 1)
         token = token.asPreprocessed(alloc);
     return token;
@@ -211,7 +211,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         // when the macro gets expanded they parse correctly.
         Token t = peek();
         if (needEod && (t.hasTrivia(TriviaKind::EndOfLine) || t.hasTrivia(TriviaKind::LineContinuation))) {
-            body.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
+            body->append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
             needEod = false;
         }
 
@@ -228,7 +228,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
                     break;
             }
         }
-        body.append(consume());
+        body->append(consume());
     }
     inMacroBody = false;
 
@@ -236,7 +236,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         directive,
         name,
         formalArguments,
-        body.copy(alloc),
+        body->copy(alloc),
         consume()
     );
 
@@ -326,7 +326,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
                     // we still need to handle line continuations correctly for macro defines
                     case SyntaxKind::DefineDirective:
                         do {
-                            skipped.append(token);
+                            skipped->append(token);
                             token = nextRaw(LexerMode::Directive);
                         } while (token.kind != TokenKind::EndOfDirective);
                         break;
@@ -348,7 +348,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
                 currentToken = token;
                 break;
             }
-            skipped.append(token);
+            skipped->append(token);
         }
     }
 
@@ -359,7 +359,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
             directive,
             condition,
             eod,
-            skipped.copy(alloc)
+            skipped->copy(alloc)
         );
     }
     else {
@@ -367,7 +367,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
             directive.directiveKind(),
             directive,
             eod,
-            skipped.copy(alloc)
+            skipped->copy(alloc)
         );
     }
     return Trivia(TriviaKind::Directive, syntax);
@@ -451,17 +451,17 @@ Token Preprocessor::parseEndOfDirective(bool suppressError) {
         if (!suppressError)
             addError(DiagCode::ExpectedEndOfDirective, peek().location());
         do {
-            skipped.append(consume());
+            skipped->append(consume());
         } while (!peek(TokenKind::EndOfDirective));
     }
 
     Token eod = consume();
-    if (!skipped.empty()) {
+    if (!skipped->empty()) {
         // splice together the trivia
         auto trivia = triviaPool.get();
-        trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
-        trivia.appendRange(eod.trivia());
-        eod = eod.withTrivia(alloc, trivia.copy(alloc));
+        trivia->append(Trivia(TriviaKind::SkippedTokens, skipped->copy(alloc)));
+        trivia->appendRange(eod.trivia());
+        eod = eod.withTrivia(alloc, trivia->copy(alloc));
     }
 
     return eod;
@@ -504,12 +504,12 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     if (!expandMacro(definition, directive, actualArgs, buffer))
         return actualArgs;
 
-    ArrayRef<Token> tokens { buffer.begin(), buffer.end() };
+    ArrayRef<Token> tokens { buffer->begin(), buffer->end() };
     if (!expandReplacementList(tokens))
         return actualArgs;
 
     Token stringify;
-    buffer.clear();
+    buffer->clear();
     expandedTokens.clear();
     for (uint32_t i = 0; i < tokens.count(); i++) {
         Token newToken;
@@ -538,7 +538,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                     stringify = token;
                 else {
                     // all done stringifying; convert saved tokens to string   
-                    newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(), buffer.begin(), buffer.end());
+                    newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(), buffer->begin(), buffer->end());
                     if (!newToken) {
                         // TODO: error
                     }
@@ -563,13 +563,13 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                 else if (stringify) {
                     // if this is right after the opening quote or right before the closing quote, we're
                     // trying to concatenate something with nothing, so assume an error
-                    if (buffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote) {
+                    if (buffer->empty() || tokens[i + 1].kind == TokenKind::MacroQuote) {
                         // TODO: error
                     }
                     else {
-                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[++i]);
+                        newToken = Lexer::concatenateTokens(alloc, buffer->back(), tokens[++i]);
                         if (newToken)
-                            buffer.pop();
+                            buffer->pop();
                         else {
                             // TODO: handle error cases
                         }
@@ -592,7 +592,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         if (newToken) {
             // if we're stringifying, save this in a temporary buffer
             if (stringify)
-                buffer.append(newToken);
+                buffer->append(newToken);
             else
                 expandedTokens.append(newToken);
         }
@@ -789,7 +789,7 @@ MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentLis
 
     return pp.alloc.emplace<MacroFormalArgumentListSyntax>(
         openParen,
-        arguments.copy(pp.alloc),
+        arguments->copy(pp.alloc),
         expect(TokenKind::CloseParenthesis)
     );
 }
@@ -807,7 +807,7 @@ MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentLis
     parseArgumentList(arguments, [this]() { return parseActualArgument(); });
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
-    return pp.alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(pp.alloc), closeParen);
+    return pp.alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments->copy(pp.alloc), closeParen);
 }
 
 template<typename TFunc>
@@ -867,7 +867,7 @@ ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
         else if (pp.delimPairStack.back() == kind)
             pp.delimPairStack.pop();
 
-        tokens.append(consume());
+        tokens->append(consume());
         switch (kind) {
             case TokenKind::OpenParenthesis:
                 pp.delimPairStack.append(TokenKind::CloseParenthesis);
@@ -882,7 +882,7 @@ ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
                 break;
         }
     }
-    return tokens.copy(pp.alloc);
+    return tokens->copy(pp.alloc);
 }
 
 void Preprocessor::MacroParser::setBuffer(ArrayRef<Token> newBuffer) {

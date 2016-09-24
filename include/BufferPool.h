@@ -28,41 +28,18 @@ public:
 
     /// Simple RAII wrapper so that pooled buffers get returned automatically at the end of a scope.
     template<typename TWrapped>
-    struct BufferWrapper {
+    class BufferWrapper {
+	public:
+		BufferWrapper(BufferPool<T>* pool, Buffer<TWrapped>* buffer) : pool(pool), buffer(buffer) {}
+		~BufferWrapper() { pool->free(buffer); }
+
+		Buffer<TWrapped>& get() { return *buffer; }
+		Buffer<TWrapped>* operator->() { return buffer; }
+		operator Buffer<TWrapped>&() { return *buffer; }
+
+	private:
         BufferPool<T>* pool;
         Buffer<TWrapped>* buffer;
-
-        BufferWrapper(BufferPool<T>* pool, Buffer<TWrapped>* buffer) : pool(pool), buffer(buffer) {}
-        ~BufferWrapper() { pool->free(buffer); }
-
-        bool empty() const { return buffer->empty(); }
-        T* begin() { return buffer->begin(); }
-        T* end() { return buffer->end(); }
-
-        T& back() {
-            return buffer->back();
-        }
-
-        void pop() {
-            buffer->pop();
-        }
-
-        void append(const TWrapped& item) { buffer->append(item); }
-        void appendRange(const TWrapped* begin, const TWrapped* end) { buffer->appendRange(begin, end); }
-
-        template<typename Container>
-        void appendRange(const Container& container) { buffer->appendRange(container); }
-
-        template<typename... Args>
-        void emplace(Args&&... args) { buffer->emplace(std::forward<Args>(args)...); }
-
-        void clear() { buffer->clear(); }
-
-        ArrayRef<TWrapped> copy(BumpAllocator& alloc) const { return buffer->copy(alloc); }
-
-        Buffer<TWrapped>& get() { return *buffer; }
-
-        operator Buffer<TWrapped>&() { return *buffer; }
     };
 
     /// Get a buffer from the pool. If there aren't any available, a new one

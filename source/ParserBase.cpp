@@ -29,10 +29,10 @@ SyntaxNode* ParserBase::prependTrivia(SyntaxNode* node, Trivia* trivia) {
 Token ParserBase::prependTrivia(Token token, Trivia* trivia) {
     if (trivia->kind != TriviaKind::Unknown && token) {
         auto buffer = triviaPool.get();
-        buffer.append(*trivia);
-        buffer.appendRange(token.trivia());
+        buffer->append(*trivia);
+        buffer->appendRange(token.trivia());
 
-        token = token.withTrivia(alloc, buffer.copy(alloc));
+        token = token.withTrivia(alloc, buffer->copy(alloc));
         *trivia = Trivia();
     }
     return token;

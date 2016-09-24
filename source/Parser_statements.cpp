@@ -149,7 +149,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
             while (true) {
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword)
-                    itemBuffer.append(parseDefaultCaseItem());
+                    itemBuffer->append(parseDefaultCaseItem());
                 else if (isPossiblePattern(kind)) {
                     auto pattern = parsePattern();
                     Token tripleAnd;
@@ -161,7 +161,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                     }
 
                     auto colon = expect(TokenKind::Colon);
-                    itemBuffer.append(alloc.emplace<PatternCaseItemSyntax>(pattern, tripleAnd, patternExpr, colon, parseStatement()));
+                    itemBuffer->append(alloc.emplace<PatternCaseItemSyntax>(pattern, tripleAnd, patternExpr, colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -176,7 +176,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
             while (true) {
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword)
-                    itemBuffer.append(parseDefaultCaseItem());
+                    itemBuffer->append(parseDefaultCaseItem());
                 else if (isPossibleOpenRangeElement(kind)) {
                     Token colon;
                     auto buffer = tosPool.get();
@@ -189,7 +189,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                         DiagCode::ExpectedOpenRangeElement,
                         [this](bool) { return parseOpenRangeElement(); }
                     );
-                    itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
+                    itemBuffer->append(alloc.emplace<StandardCaseItemSyntax>(buffer->copy(alloc), colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -203,7 +203,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
             while (true) {
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword)
-                    itemBuffer.append(parseDefaultCaseItem());
+                    itemBuffer->append(parseDefaultCaseItem());
                 else if (isPossibleExpression(kind)) {
                     Token colon;
                     auto buffer = tosPool.get();
@@ -216,7 +216,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                         DiagCode::ExpectedExpression,
                         [this](bool) { return parseExpression(); }
                     );
-                    itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
+                    itemBuffer->append(alloc.emplace<StandardCaseItemSyntax>(buffer->copy(alloc), colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -236,7 +236,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
         caseExpr,
         closeParen,
         matchesOrInside,
-        itemBuffer.copy(alloc),
+        itemBuffer->copy(alloc),
         endcase
         );
 }
@@ -314,11 +314,11 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
         attributes,
         forKeyword,
         openParen,
-        initializers.copy(alloc),
+        initializers->copy(alloc),
         semi1,
         stopExpr,
         semi2,
-        steps.copy(alloc),
+        steps->copy(alloc),
         closeParen,
         parseStatement()
         );
@@ -339,7 +339,7 @@ ForeachLoopListSyntax* Parser::parseForeachLoopVariables() {
         [this](bool) { return parseName(); }
     );
 
-    return alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, buffer.copy(alloc), closeParen);
+    return alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, buffer->copy(alloc), closeParen);
 }
 
 ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -455,7 +455,7 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
             newNode = parseStatement();
         else {
             auto token = consume();
-            skipped.append(token);
+            skipped->append(token);
             if (!error) {
                 addError(DiagCode::InvalidTokenInSequentialBlock, token.location());
                 error = true;
@@ -463,7 +463,7 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         }
 
         if (newNode) {
-            buffer.append(prependSkippedTokens(newNode, skipped));
+            buffer->append(prependSkippedTokens(newNode, skipped));
             error = false;
         }
         kind = peek().kind;
@@ -487,7 +487,7 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
     }
 
     end = prependSkippedTokens(end, skipped);
-    return buffer.copy(alloc);
+    return buffer->copy(alloc);
 }
 
 BlockStatementSyntax* Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind, NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -533,7 +533,7 @@ WaitOrderStatementSyntax* Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
         attributes,
         keyword,
         openParen,
-        buffer.copy(alloc),
+        buffer->copy(alloc),
         closeParen,
         parseActionBlock()
         );
@@ -546,7 +546,7 @@ RandCaseStatementSyntax* Parser::parseRandCaseStatement(NamedLabelSyntax* label,
     while (isPossibleExpression(peek().kind)) {
         auto expr = parseExpression();
         auto colon = expect(TokenKind::Colon);
-        itemBuffer.append(alloc.emplace<RandCaseItemSyntax>(expr, colon, parseStatement()));
+        itemBuffer->append(alloc.emplace<RandCaseItemSyntax>(expr, colon, parseStatement()));
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
@@ -554,7 +554,7 @@ RandCaseStatementSyntax* Parser::parseRandCaseStatement(NamedLabelSyntax* label,
         label,
         attributes,
         randCase,
-        itemBuffer.copy(alloc),
+        itemBuffer->copy(alloc),
         endcase
         );
 }

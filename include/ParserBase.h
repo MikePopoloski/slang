@@ -95,7 +95,7 @@ protected:
 
         auto buffer = tosPool.get();
         parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken, code, std::forward<TParserFunc>(parseItem));
-        list = buffer.copy(alloc);
+        list = buffer->copy(alloc);
     }
 
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
@@ -156,14 +156,14 @@ protected:
                 result = SkipAction::Abort;
                 break;
             }
-            tokens.append(consume());
+            tokens->append(consume());
             current = peek();
         }
 
-        if (tokens.empty())
+        if (tokens->empty())
             *skippedTokens = Trivia();
         else
-            *skippedTokens = Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc));
+            *skippedTokens = Trivia(TriviaKind::SkippedTokens, tokens->copy(alloc));
 
         return result;
     }
