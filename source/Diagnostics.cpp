@@ -85,133 +85,11 @@ void formatDiag(fmt::MemoryWriter& writer, SourceManager& sourceManager, SourceL
 
 namespace slang {
 
-struct DiagnosticDescriptor {
-    StringRef format;
-    DiagnosticSeverity severity;
-
-    DiagnosticDescriptor(StringRef format) :
-        format(format), severity(DiagnosticSeverity::Error)
-    {
-    }
-};
-
 static const char* severityToString[] = {
     "info",
     "warning",
     "error"
 };
-
-static const DiagnosticDescriptor diagnosticDescriptors[] = {
-    // lexer
-    { "non-printable character in source text; SystemVerilog only supports ASCII text" },
-    { "UTF-8 sequence in source text; SystemVerilog only supports ASCII text" },
-    { "Unicode BOM at start of source text; SystemVerilog only supports ASCII text" },
-    { "embedded NUL in source text; are you sure this is source code?" },
-    { "expected directive name" },
-    { "unexpected whitespace after escape character" },
-    { "missing closing quote" },
-    { "block comment unclosed at end of file" },
-    { "nested block comments are disallowed by SystemVerilog" },
-    { "block comments on the same line as a directive must also be terminated on that line" },
-    { "expected integer base specifier after signed specifier" },
-    { "expected fractional digits after decimal" },
-    { "octal escape code is too large to be an ASCII character" },
-    { "invalid hexadecimal number" },
-    { "unknown character escape sequence" },
-    { "expected an include file name" },
-    { "expected exponent digits" },
-    
-    // preprocessor
-    { "could not find or open include file" },
-    { "ExceededMaxIncludeDepth" },
-    { "unknown macro or compiler directive" },
-    { "expected end of directive (missing newline?)" },
-    { "ExpectedEndOfMacroArgs" },
-    { "ExpectedEndIfDirective" },
-    { "unexpected conditional directive" },
-    { "UnbalancedMacroArgDims" },
-    { "ExpectedMacroArgs" },
-    { "expected net type specifier" },
-    { "can't redefine compiler directive as a macro" },
-    { "too many arguments provided to function-like macro" },
-    { "not enough arguments provided to function-like macro" },
-
-    // parser
-    { "SyntaxError" },
-    { "expected identifier" },
-    { "expected '{}'" },
-    { "expected data type (implicit type name not allowed)" },
-    { "MultipleTypesInDeclaration" },
-    { "DirectionOnInterfacePort" },
-    { "ColonShouldBeDot" },
-    { "invalid token in member list" },
-    { "invalid token in sequential block" },
-    { "expected statement" },
-    { "ExpectedParameterPort" },
-    { "ExpectedNonAnsiPort" },
-    { "ExpectedAnsiPort" },
-    { "ExpectedForInitializer" },
-    { "ExpectedExpression" },
-    { "ExpectedOpenRangeElement" },
-    { "ExpectedStreamExpression" },
-    { "ExpectedArgument" },
-    { "ExpectedVariableDeclarator" },
-    { "ExpectedConditionalPattern" },
-    { "ExpectedAttribute" },
-    { "ExpectedPackageImport" },
-    { "ExpectedHierarchicalInstantiation" },
-    { "ExpectedPortConnection" },
-    { "ExpectedVectorDigits" },
-    { "ExpectedVariableAssignment" },
-    { "ExpectedInterfaceClassName" },
-    { "ExpectedAssignmentKey" },
-    { "ExpectedDistItem" }
-};
-
-DiagnosticReport::DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity) :
-    diagnostic(diagnostic), format(format), severity(severity)
-{
-}
-
-std::string DiagnosticReport::toString(SourceManager& sourceManager) const {
-    Buffer<SourceLocation> expansionLocs;
-    SourceLocation location = diagnostic.location;
-    while (sourceManager.isMacroLoc(location)) {
-        expansionLocs.append(location);
-        location = sourceManager.getExpansionLoc(location);
-    }
-
-    // build the error message from arguments, if we have any
-    std::string msg;
-    switch (diagnostic.args.size()) {
-        case 0: msg = format.toString(); break;
-        case 1: msg = fmt::format(format.toString(), diagnostic.args[0]); break;
-        case 2: msg = fmt::format(format.toString(), diagnostic.args[0], diagnostic.args[1]); break;
-        default:
-            ASSERT(false, "Too many arguments to diagnostic format. Add another switch case!");
-    }
-
-    fmt::MemoryWriter writer;
-    formatDiag(writer, sourceManager, location, severityToString[(int)severity], msg);
-
-    // write out macro expansions, if we have any
-    while (!expansionLocs.empty()) {
-        location = expansionLocs.back();
-        expansionLocs.pop();
-        formatDiag(writer, sourceManager, sourceManager.getOriginalLoc(location), "note", "expanded from here");
-    }
-
-    return writer.str();
-}
-
-DiagnosticReport Diagnostic::toReport() const {
-    auto& descriptor = diagnosticDescriptors[(int)code];
-    return{
-        *this,
-        descriptor.format,
-        descriptor.severity
-    };
-}
 
 Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
     code(code), location(location)
@@ -228,7 +106,7 @@ std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
 }
 
 Diagnostics::Diagnostics() :
-    Buffer::Buffer(128)
+    Buffer::Buffer(8)
 {
 }
 
@@ -237,16 +115,148 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
     return back();
 }
 
-std::string Diagnostics::reportAll(SourceManager& sourceManager) {
+DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
+	sourceManager(sourceManager)
+{
+	Descriptor* d = descriptors;
+	// lexer
+	*d++ = { "non-printable character in source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
+	*d++ = { "UTF-8 sequence in source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
+	*d++ = { "Unicode BOM at start of source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
+	*d++ = { "embedded NUL in source text; are you sure this is source code?", DiagnosticSeverity::Error };
+	*d++ = { "expected directive name", DiagnosticSeverity::Error };
+	*d++ = { "unexpected whitespace after escape character", DiagnosticSeverity::Error };
+	*d++ = { "missing closing quote", DiagnosticSeverity::Error };
+	*d++ = { "block comment unclosed at end of file", DiagnosticSeverity::Error };
+	*d++ = { "nested block comments are disallowed by SystemVerilog", DiagnosticSeverity::Error };
+	*d++ = { "block comments on the same line as a directive must also be terminated on that line", DiagnosticSeverity::Error };
+	*d++ = { "expected integer base specifier after signed specifier", DiagnosticSeverity::Error };
+	*d++ = { "expected fractional digits after decimal", DiagnosticSeverity::Error };
+	*d++ = { "octal escape code is too large to be an ASCII character", DiagnosticSeverity::Error };
+	*d++ = { "invalid hexadecimal number", DiagnosticSeverity::Error };
+	*d++ = { "unknown character escape sequence", DiagnosticSeverity::Error };
+	*d++ = { "expected an include file name", DiagnosticSeverity::Error };
+	*d++ = { "expected exponent digits", DiagnosticSeverity::Error };
+	*d++ = { "vector literals must not start with a leading underscore", DiagnosticSeverity::Error };
+	*d++ = { "decimal literals cannot have multiple X or Z digits", DiagnosticSeverity::Error };
+	*d++ = { "expected binary digit", DiagnosticSeverity::Error };
+	*d++ = { "expected octal digit", DiagnosticSeverity::Error };
+	*d++ = { "expected decimal digit", DiagnosticSeverity::Error };
+	*d++ = { "expected hexadecimal digit", DiagnosticSeverity::Error };
+
+	// numeric
+	*d++ = { "size of vector literal cannot be zero", DiagnosticSeverity::Error };
+	*d++ = { "size of vector literal is too large (> {} bits)", DiagnosticSeverity::Error };
+	*d++ = { "real literal overflows 64 bits", DiagnosticSeverity::Error };
+	*d++ = { "signed integer overflows 32 bits", DiagnosticSeverity::Error };
+	*d++ = { "decimal literal overflows 32 bits", DiagnosticSeverity::Error };
+	*d++ = { "literal specifies too many digits for the given number of bits", DiagnosticSeverity::Error };
+
+	// preprocessor
+	*d++ = { "could not find or open include file", DiagnosticSeverity::Error };
+	*d++ = { "exceeded max include depth", DiagnosticSeverity::Error };
+	*d++ = { "unknown macro or compiler directive", DiagnosticSeverity::Error };
+	*d++ = { "expected end of directive (missing newline?)", DiagnosticSeverity::Error };
+	*d++ = { "expected end of macro arguments (missing closing parenthesis?)", DiagnosticSeverity::Error };
+	*d++ = { "unexpected conditional directive", DiagnosticSeverity::Error };
+	*d++ = { "unbalanced macro argument delimiters ((), [], or {{}}); didn't see an end '{}'", DiagnosticSeverity::Error };
+	*d++ = { "expected macro arguments for function-like macro", DiagnosticSeverity::Error };
+	*d++ = { "expected net type specifier", DiagnosticSeverity::Error };
+	*d++ = { "can't redefine compiler directive as a macro", DiagnosticSeverity::Error };
+	*d++ = { "too many arguments provided to function-like macro", DiagnosticSeverity::Error };
+	*d++ = { "not enough arguments provided to function-like macro", DiagnosticSeverity::Error };
+
+	// parser
+	*d++ = { "expected identifier", DiagnosticSeverity::Error };
+	*d++ = { "expected '{}'", DiagnosticSeverity::Error };
+	*d++ = { "expected data type (implicit type name not allowed)", DiagnosticSeverity::Error };
+	*d++ = { "multiple types given in single declaration; this is not allowed in SystemVerilog", DiagnosticSeverity::Error };
+	*d++ = { "misplaced colon; did you mean to use a dot?", DiagnosticSeverity::Error };
+	*d++ = { "invalid token in member list", DiagnosticSeverity::Error };
+	*d++ = { "invalid token in sequential block", DiagnosticSeverity::Error };
+	*d++ = { "expected statement", DiagnosticSeverity::Error };
+	*d++ = { "expected parameter declaration", DiagnosticSeverity::Error };
+	*d++ = { "expected non-ansi port declaration", DiagnosticSeverity::Error };
+	*d++ = { "expected ansi port declaration", DiagnosticSeverity::Error };
+	*d++ = { "expected for loop initializer", DiagnosticSeverity::Error };
+	*d++ = { "expected expression", DiagnosticSeverity::Error };
+	*d++ = { "expected open range element", DiagnosticSeverity::Error };
+	*d++ = { "expected stream expression", DiagnosticSeverity::Error };
+	*d++ = { "expected argument", DiagnosticSeverity::Error };
+	*d++ = { "expected variable declarator", DiagnosticSeverity::Error };
+	*d++ = { "expected conditional pattern", DiagnosticSeverity::Error };
+	*d++ = { "expected attribute", DiagnosticSeverity::Error };
+	*d++ = { "expected package import", DiagnosticSeverity::Error };
+	*d++ = { "expected hierarhical instantiation", DiagnosticSeverity::Error };
+	*d++ = { "expected port connection", DiagnosticSeverity::Error };
+	*d++ = { "expected vector literal digits", DiagnosticSeverity::Error };
+	*d++ = { "expected variable assignment", DiagnosticSeverity::Error };
+	*d++ = { "expected interface class name", DiagnosticSeverity::Error };
+	*d++ = { "expected assignment key", DiagnosticSeverity::Error };
+	*d++ = { "expected dist item", DiagnosticSeverity::Error };
+
+	// declarations
+	*d++ = { "ExpectedDistItem", DiagnosticSeverity::Error };
+	*d++ = { "ExpectedDistItem", DiagnosticSeverity::Error };
+
+	ASSERT((int)DiagCode::MaxValue == (d - &descriptors[0]), "When you add a new diagnostic code you need to update default messages");
+}
+
+void DiagnosticWriter::setMessage(DiagCode code, std::string format) {
+	descriptors[(int)code].format = std::move(format);
+}
+
+void DiagnosticWriter::setSeverity(DiagCode code, DiagnosticSeverity severity) {
+	descriptors[(int)code].severity = severity;
+}
+
+DiagnosticSeverity DiagnosticWriter::getSeverity(DiagCode code) const {
+	return descriptors[(int)code].severity;
+}
+
+std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
+	// walk out until we find a location for this diagnostic that isn't inside a macro
+	Buffer<SourceLocation> expansionLocs;
+	SourceLocation location = diagnostic.location;
+	while (sourceManager.isMacroLoc(location)) {
+		expansionLocs.append(location);
+		location = sourceManager.getExpansionLoc(location);
+	}
+
+	// build the error message from arguments, if we have any
+	Descriptor& desc = descriptors[(int)diagnostic.code];
+	std::string msg;
+	switch (diagnostic.args.size()) {
+		case 0: msg = desc.format; break;
+		case 1: msg = fmt::format(desc.format, diagnostic.args[0]); break;
+		case 2: msg = fmt::format(desc.format, diagnostic.args[0], diagnostic.args[1]); break;
+		default:
+			ASSERT(false, "Too many arguments to diagnostic format. Add another switch case!");
+	}
+
+	fmt::MemoryWriter writer;
+	formatDiag(writer, sourceManager, location, severityToString[(int)desc.severity], msg);
+
+	// write out macro expansions, if we have any
+	while (!expansionLocs.empty()) {
+		location = expansionLocs.back();
+		expansionLocs.pop();
+		formatDiag(writer, sourceManager, sourceManager.getOriginalLoc(location), "note", "expanded from here");
+	}
+
+	return writer.str();
+}
+
+std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
     // first sort diagnostics by file so that we can cut down
     // on the amount of include information we print out
-    std::sort(begin(), end(), [&sourceManager](auto& x, auto& y) { return sortDiagnostics(sourceManager, x, y); });
+    std::sort(diagnostics.begin(), diagnostics.end(), [this](auto& x, auto& y) { return sortDiagnostics(sourceManager, x, y); });
 
     std::deque<SourceLocation> includeStack;
     BufferID lastBuffer;
     fmt::MemoryWriter writer;
 
-    for (auto& diag : *this) {
+    for (auto& diag : diagnostics) {
         SourceLocation loc = getFullyExpandedLoc(sourceManager, diag.location);
         if (loc.buffer() != lastBuffer) {
             // We're looking at diagnostics from another file now. See if we should print
@@ -261,7 +271,7 @@ std::string Diagnostics::reportAll(SourceManager& sourceManager) {
                 );
             }
         }
-        writer << diag.toReport().toString(sourceManager);
+		writer << report(diag);
     }
     return writer.str();
 }

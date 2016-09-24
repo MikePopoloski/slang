@@ -238,7 +238,7 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
         }
         else if (tokenValue > MaxLiteralBits) {
             sizeBits = MaxLiteralBits;
-            addError(DiagCode::LiteralSizeTooLarge, token.location());
+            addError(DiagCode::LiteralSizeTooLarge, token.location()) << MaxLiteralBits;
         }
         else {
             sizeBits = (uint32_t)tokenValue;

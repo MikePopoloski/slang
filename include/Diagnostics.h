@@ -51,7 +51,6 @@ enum class DiagCode : uint8_t {
     LiteralSizeTooLarge,
     RealExponentOverflow,
     SignedIntegerOverflow,
-    IntegerVectorOverflow,
     DecimalLiteralOverflow,
     TooManyLiteralDigits,
 
@@ -61,7 +60,6 @@ enum class DiagCode : uint8_t {
     UnknownDirective,
     ExpectedEndOfDirective,
     ExpectedEndOfMacroArgs,
-    ExpectedEndIfDirective,
     UnexpectedConditionalDirective,
     UnbalancedMacroArgDims,
     ExpectedMacroArgs,
@@ -75,7 +73,6 @@ enum class DiagCode : uint8_t {
     ExpectedToken,
     ImplicitNotAllowed,
     MultipleTypesInDeclaration,
-    DirectionOnInterfacePort,
     ColonShouldBeDot,
     InvalidTokenInMemberList,
     InvalidTokenInSequentialBlock,
@@ -102,7 +99,9 @@ enum class DiagCode : uint8_t {
 
     // declarations
     ModuleRedefinition,
-    UnknownModule
+    UnknownModule,
+
+	MaxValue
 };
 
 class Diagnostic;
@@ -115,22 +114,11 @@ enum class DiagnosticSeverity {
     Error
 };
 
-class DiagnosticReport {
-public:
-    const Diagnostic& diagnostic;
-    StringRef format;
-    DiagnosticSeverity severity;
-
-    DiagnosticReport(const Diagnostic& diagnostic, StringRef format, DiagnosticSeverity severity);
-
-    std::string toString(SourceManager& sourceManager) const;
-};
-
 /// Wraps up a reported diagnostic along with location in source and any arguments.
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = variant<StringRef>;
+    using Arg = variant<StringRef, int>;
     std::vector<Arg> args;
 
     /// The specific kind of diagnostic that was issued.
@@ -139,9 +127,8 @@ public:
     /// The location in source of the cause of the diagnostic.
     SourceLocation location;
 
+	/// Constructs a new Diagnostic entry with the given code and location.
     Diagnostic(DiagCode code, SourceLocation location);
-
-    DiagnosticReport toReport() const;
 
     /// Adds an argument to the diagnostic.
     friend Diagnostic& operator<<(Diagnostic& diag, Arg&& arg);
@@ -149,17 +136,44 @@ public:
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg);
 
-/// A collection of diagnostics along with reporting functionality.
+/// A collection of diagnostics.
 class Diagnostics : public Buffer<Diagnostic> {
 public:
     Diagnostics();
 
     /// Adds a new diagnostic to the collection.
     Diagnostic& add(DiagCode code, SourceLocation location);
+};
 
-    /// Generates a report string. Takes a SourceManager to resolve source information
-    /// such as line numbers and file names.
-    std::string reportAll(SourceManager& sourceManager);
+class DiagnosticWriter {
+public:
+	DiagnosticWriter(SourceManager& sourceManager);
+
+	/// Sets the message to use for the given diagnostic.
+	void setMessage(DiagCode code, std::string format);
+
+	/// Sets the severity to use for the given diagnostic.
+	void setSeverity(DiagCode code, DiagnosticSeverity severity);
+
+	/// Gets the current severity of the given diagnostic.
+	DiagnosticSeverity getSeverity(DiagCode code) const;
+
+	/// Writes a report for the given diagnostic.
+	std::string report(const Diagnostic& diagnostic);
+
+	/// Writes a report for all of the diagnostics in the given collection.
+	/// Note that this modifies the collection by sorting it.
+	std::string report(Diagnostics& diagnostics);
+
+private:
+	SourceManager& sourceManager;
+
+	// Little structure to hold a diagnostic's format and severity.
+	struct Descriptor {
+		std::string format;
+		DiagnosticSeverity severity;
+	};
+	Descriptor descriptors[(int)DiagCode::MaxValue];
 };
 
 }

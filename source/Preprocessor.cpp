@@ -776,9 +776,8 @@ Token Preprocessor::expect(TokenKind kind, LexerMode mode) {
     return result;
 }
 
-void Preprocessor::addError(DiagCode code, SourceLocation location) {
-    // TODO: location
-    diagnostics.emplace(code, location);
+Diagnostic& Preprocessor::addError(DiagCode code, SourceLocation location) {
+    return diagnostics.add(code, location);
 }
 
 MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentList() {
@@ -856,7 +855,7 @@ ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
             if (pp.delimPairStack.empty())
                 pp.addError(DiagCode::ExpectedEndOfMacroArgs, peek().location());
             else
-                pp.addError(DiagCode::UnbalancedMacroArgDims, peek().location());
+                pp.addError(DiagCode::UnbalancedMacroArgDims, peek().location()) << getTokenKindText(pp.delimPairStack.back());
             pp.delimPairStack.clear();
             break;
         }
