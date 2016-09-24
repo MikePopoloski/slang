@@ -216,5 +216,8 @@
     <ClCompile Include="..\..\source\BindContext.cpp">
       <Filter>analysis</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\ConstantValue.cpp">
+      <Filter>analysis</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

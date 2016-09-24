@@ -50,8 +50,9 @@ public:
 
     void bindModuleImplicit(ModuleDeclarationSyntax* module);
     BoundParameterDeclaration* bindParameterDecl(const ParameterDeclarationSyntax* syntax);
-    BoundExpression* bindExpression(ExpressionSyntax* syntax);
+    BoundExpression* bindExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
+    BoundExpression* bindArithmeticExpression(const BinaryExpressionSyntax* syntax);
 
     const TypeSymbol* getSpecialType(SpecialType type) const;
     void foldConstants(BoundExpression* expression);

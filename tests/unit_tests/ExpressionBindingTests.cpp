@@ -11,18 +11,20 @@ SyntaxTree parse(StringRef text) {
     return SyntaxTree::fromText(sourceManager, text);
 }
 
-BoundParameterDeclaration* testParameter(std::string text) {
+BoundParameterDeclaration* testParameter(SemanticModel& sem, std::string text) {
     auto tree = parse("module Top; " + text + " endmodule");
     auto paramDecl = tree.root()->members[0]->as<ModuleDeclarationSyntax>()->members[0]->as<ParameterDeclarationStatementSyntax>();
 
-    SemanticModel sem;
     auto parameter = sem.bindParameterDecl(paramDecl->parameter->as<ParameterDeclarationSyntax>());
     REQUIRE(parameter);
     return parameter;
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {
-    CHECK(testParameter("parameter foo = 4;")->value == 4);
+    SemanticModel sem;
+
+    CHECK(testParameter(sem, "parameter foo = 4;")->value == 4);
+    CHECK(testParameter(sem, "parameter foo = 4 + 5;")->value == 9);
 }
 
 }

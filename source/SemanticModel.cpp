@@ -29,7 +29,7 @@ BoundParameterDeclaration* SemanticModel::bindParameterDecl(const ParameterDecla
     return alloc.emplace<BoundParameterDeclaration>(syntax, boundInitializer);
 }
 
-BoundExpression* SemanticModel::bindExpression(ExpressionSyntax* syntax) {
+BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
     ASSERT(syntax);
 
     switch (syntax->kind) {
@@ -47,6 +47,19 @@ BoundExpression* SemanticModel::bindExpression(ExpressionSyntax* syntax) {
             break;
         case SyntaxKind::IntegerLiteralExpression:
             return bindLiteral(syntax->as<LiteralExpressionSyntax>());
+
+        case SyntaxKind::AddExpression:
+        case SyntaxKind::SubtractExpression:
+        case SyntaxKind::MultiplyExpression:
+        case SyntaxKind::DivideExpression:
+        case SyntaxKind::ModExpression:
+            return bindArithmeticExpression(syntax->as<BinaryExpressionSyntax>());
+
+        case SyntaxKind::BinaryAndExpression:
+        case SyntaxKind::BinaryOrExpression:
+        case SyntaxKind::BinaryXorExpression:
+        case SyntaxKind::BinaryXnorExpression:
+            break;
     }
     return nullptr;
 }
@@ -56,11 +69,20 @@ BoundExpression* SemanticModel::bindLiteral(const LiteralExpressionSyntax* synta
         case SyntaxKind::IntegerLiteralExpression: {
             // the integer has already been checked for overflow in the parser
             ConstantValue cv((int32_t)syntax->literal.numericValue().integer);
-            return alloc.emplace<BoundExpression>(syntax, getSpecialType(SpecialType::Int), cv);
+            return alloc.emplace<BoundLiteralExpression>(syntax, getSpecialType(SpecialType::Int), cv);
         }
         default:
             return nullptr;
     }
+}
+
+BoundExpression* SemanticModel::bindArithmeticExpression(const BinaryExpressionSyntax* syntax) {
+    BoundExpression* lhs = bindExpression(syntax->left);
+    BoundExpression* rhs = bindExpression(syntax->right);
+
+    //if (lhs->type->isReal || rhs->type->isReal)
+
+    return alloc.emplace<BoundBinaryExpression>(syntax, nullptr, lhs, rhs);
 }
 
 const TypeSymbol* SemanticModel::getSpecialType(SpecialType type) const {
@@ -68,9 +90,37 @@ const TypeSymbol* SemanticModel::getSpecialType(SpecialType type) const {
 }
 
 void SemanticModel::foldConstants(BoundExpression* expression) {
-    switch (expression->syntax->kind) {
-        default:
+    ASSERT(expression);
+
+    switch (expression->kind) {
+        case BoundNodeKind::BinaryExpression: {
+            auto binary = (BoundBinaryExpression*)expression;
+            foldConstants(binary->left);
+            foldConstants(binary->right);
+            
+            switch (binary->syntax->kind) {
+                case SyntaxKind::AddExpression:
+                    expression->constantValue = binary->left->constantValue + binary->right->constantValue;
+                    break;
+                case SyntaxKind::SubtractExpression:
+                    expression->constantValue = binary->left->constantValue - binary->right->constantValue;
+                    break;
+                case SyntaxKind::MultiplyExpression:
+                    expression->constantValue = binary->left->constantValue * binary->right->constantValue;
+                    break;
+                case SyntaxKind::DivideExpression:
+                    expression->constantValue = binary->left->constantValue / binary->right->constantValue;
+                    break;
+                case SyntaxKind::ModExpression:
+                    expression->constantValue = binary->left->constantValue % binary->right->constantValue;
+                    break;
+                default:
+                    break;
+            }
             break;
+        }
+        default:
+            return;
     }
 }
 

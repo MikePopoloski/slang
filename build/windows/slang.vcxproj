@@ -65,6 +65,7 @@
     <ClCompile Include="..\..\source\BindContext.cpp" />
     <ClCompile Include="..\..\source\BitVector.cpp" />
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />
+    <ClCompile Include="..\..\source\ConstantValue.cpp" />
     <ClCompile Include="..\..\source\DeclarationTable.cpp" />
     <ClCompile Include="..\..\source\Diagnostics.cpp" />
     <ClCompile Include="..\..\source\LexerFacts.cpp" />
