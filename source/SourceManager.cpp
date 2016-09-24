@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// SourceManager.cpp
+// Source file management.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #include "SourceManager.h"
 
 #include <algorithm>
@@ -35,6 +41,8 @@ uint32_t SourceManager::getLineNumber(SourceLocation location) {
     if (fd->lineOffsets.empty())
         computeLineOffsets(fd->mem, fd->lineOffsets);
 
+    // Find the first line offset that is greater than the given location offset. That iterator
+    // then tells us how many lines away from the beginning we are.
     auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset());
     return (uint32_t)(it - fd->lineOffsets.begin());
 }
@@ -132,6 +140,7 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, Sou
 }
 
 SourceBuffer SourceManager::assignText(StringRef text) {
+    // Generate a placeholder name for this "file"
     return assignText("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">", text);
 }
 
@@ -154,7 +163,6 @@ SourceBuffer SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) 
 }
 
 SourceBuffer SourceManager::readSource(StringRef path) {
-    // ensure that we have an absolute path
     ASSERT(path);
     return openCached(path, SourceLocation());
 }
@@ -212,7 +220,6 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
 }
 
 SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation includedFrom) {
-    // first see if we have this file cached
     Path absPath;
     try {
         absPath = Path::makeAbsolute(fullPath);
@@ -221,6 +228,7 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
         return SourceBuffer();
     }
 
+    // first see if we have this file cached
     std::string canonicalStr = absPath.str();
     auto it = lookupCache.find(canonicalStr);
     if (it != lookupCache.end()) {
@@ -261,6 +269,7 @@ bool SourceManager::readFile(const Path& path, Buffer<char>& buffer) {
         return false;
     }
 
+    // + 1 for null terminator
     buffer.extend((uint32_t)size + 1);
     std::ifstream stream(path.str(), std::ios::binary);
     stream.read(buffer.begin(), size);

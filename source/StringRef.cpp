@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// StringRef.cpp
+// Lighweight view of a string.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #include "StringRef.h"
 
 #include <algorithm>

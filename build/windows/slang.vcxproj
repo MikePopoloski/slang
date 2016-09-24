@@ -26,6 +26,7 @@
     <ClInclude Include="..\..\external\fmt\string.h" />
     <ClInclude Include="..\..\external\fmt\time.h" />
     <ClInclude Include="..\..\external\pempek_assert\pempek_assert.h" />
+    <ClInclude Include="..\..\external\variant.hpp" />
     <ClInclude Include="..\..\external\xxhash\xxhash.h" />
     <ClInclude Include="..\..\include\AllSyntax.h" />
     <ClInclude Include="..\..\include\ArrayRef.h" />

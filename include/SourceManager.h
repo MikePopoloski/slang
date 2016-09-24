@@ -2,7 +2,7 @@
 // SourceManager.h
 // Source file management.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -41,10 +41,6 @@ struct SourceBuffer {
 class SourceManager {
 public:
     SourceManager();
-
-    /// Sets the working directory. Note that this does not
-    /// update relative include directories already added to the manager.
-    void setWorkingDirectory(StringRef path) const;
 
     /// Convert the given relative path into an absolute path.
     std::string makeAbsolutePath(StringRef path) const;
@@ -112,10 +108,10 @@ private:
 
     // Stores actual file contents and metadata; only one per loaded file
     struct FileData {
-        Buffer<char> mem;
-        std::string name;
-        std::vector<uint32_t> lineOffsets;
-        const Path* directory;
+        Buffer<char> mem;                   // file contents
+        std::string name;                   // name of the file
+        std::vector<uint32_t> lineOffsets;  // char offset for each line
+        const Path* directory;              // directory that the file exists in
 
         FileData(const Path* directory, const std::string& name, Buffer<char>&& data) :
             directory(directory),
@@ -125,7 +121,8 @@ private:
         }
     };
 
-    // Stores a pointer to file data along with information about where we included it
+    // Stores a pointer to file data along with information about where we included it.
+    // There can potentially be many of these for a given file.
     struct FileInfo {
         FileData* data;
         SourceLocation includedFrom;
@@ -156,7 +153,7 @@ private:
         }
     };
 
-    // One BufferEntry per BufferID
+    // One BufferEntry per BufferID; this is a simple union of FileInfo and ExpansionInfo.
     struct BufferEntry {
         bool isFile;
         union {

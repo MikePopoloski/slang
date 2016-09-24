@@ -2,15 +2,12 @@
 // BumpAllocator.h
 // Fast allocator based on pointer bumping.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 
 #include <cstdint>
 #include <utility>
-
-// Simple bump allocator that can't deallocate individual items.
-// When none of the memory is needed anymore, the whole thing can be freed.
 
 namespace slang {
 
@@ -21,6 +18,8 @@ namespace slang {
 /// the entire thing must be destroyed to release the memory.
 class BumpAllocator {
 public:
+    /// Constructs a new allocator with the given segment size. It's probably a good idea
+    /// to make the segment size a multiple of the page size.
     explicit BumpAllocator(uint32_t segmentSize = 8192);
     ~BumpAllocator();
 

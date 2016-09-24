@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Hash.cpp
+// General hashing algorithms.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #include "Hash.h"
 
 #include <cstdlib>

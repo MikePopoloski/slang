@@ -2,7 +2,7 @@
 // StringTable.h
 // Specialized string lookup table.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -11,17 +11,19 @@
 
 #include "StringRef.h"
 
-// TODO: use an offline tool to make this a minimal perfect hash.
-
 namespace slang {
 
 /// This class is a lookup table from string to value. It's optimized for
-/// a known fixed set of keywords
+/// a known fixed set of keywords.
+///
+/// TODO: use an offline tool to make this a minimal perfect hash.
 template<typename T>
 class StringTable {
 public:
     StringTable(std::initializer_list<std::pair<StringRef, T>> entries) {
-        // double count and round up to nearest power of 2
+        // Give ourselves a bunch of room for entries to hash by using double
+        // the required number of entries. Also round up to power of two so that
+        // we can use bitwise AND instead of mod for wraparound.
         capacity = (uint32_t)entries.size() * 2;
         capacity = roundUpToPow2(capacity);
         table = new Entry[capacity];

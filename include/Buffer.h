@@ -2,7 +2,7 @@
 // Buffer.h
 // Implements fast resizable buffer template.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -170,6 +170,8 @@ private:
         if (std::is_trivially_copyable<T>())
             memcpy(newData, data, len * sizeof(T));
         else {
+            // We assume we can trivially std::move elements here. Don't do anything dumb like
+            // putting throwing move types into this container.
             for (uint32_t i = 0; i < len; i++)
                 new (&newData[i]) T(std::move(data[i]));
         }

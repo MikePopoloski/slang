@@ -2,7 +2,7 @@
 // Hash.h
 // General hashing algorithms.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 

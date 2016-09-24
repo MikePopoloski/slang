@@ -30,6 +30,9 @@ struct logic_t {
     static const logic_t z;
 };
 
+/// LogicVector is an arbitrary precision integer type that implements SystemVerilog
+/// semantics for its operations. In addition to the actual bits it also tracks
+/// 4-state X and Z values.
 class LogicVector {
 public:
     union {

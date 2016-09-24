@@ -2,7 +2,7 @@
 // ArrayRef.h
 // Implements array reference utility template.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 

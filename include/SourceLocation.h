@@ -2,7 +2,7 @@
 // SourceManager.h
 // Source element location tracking.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -21,9 +21,7 @@ struct BufferID {
     bool operator==(const BufferID& rhs) const { return id == rhs.id; }
     bool operator!=(const BufferID& rhs) const { return !(*this == rhs); }
 
-    explicit operator bool() const {
-        return valid();
-    }
+    explicit operator bool() const { return valid(); }
 
 private:
     uint32_t id = 0;
@@ -54,19 +52,22 @@ public:
     uint32_t offset() const { return charOffset; }
     bool isValid() const { return charOffset != 0; }
 
-    SourceLocation operator +(int delta) const {
+    /// Computes a source location that is offset from the current one.
+    /// Note that there is no error checking to ensure that the location
+    /// still points to a valid place in the source.
+    SourceLocation operator+(int delta) const {
         return SourceLocation(bufferID, charOffset + delta);
     }
 
-    bool operator ==(const SourceLocation& rhs) const {
+    bool operator==(const SourceLocation& rhs) const {
         return charOffset == rhs.charOffset;
     }
 
-    bool operator !=(const SourceLocation& rhs) const {
+    bool operator!=(const SourceLocation& rhs) const {
         return charOffset != rhs.charOffset;
     }
 
-    bool operator <(const SourceLocation& rhs) const {
+    bool operator<(const SourceLocation& rhs) const {
         return charOffset < rhs.charOffset;
     }
 

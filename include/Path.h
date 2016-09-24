@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Path.h
+// Cross platform file path handling and directory iteration.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <string>
@@ -25,6 +31,9 @@
 
 namespace slang {
 
+/// Path - Cross platform file path manipulation routines.
+/// This is loosely based on C++17 filesystem functionality, which is very
+/// new and unimplemented on a bunch of systems.
 class Path {
 public:
     enum PathType {
@@ -53,15 +62,20 @@ public:
     Path(const std::string& string) { set(string); }
     Path(StringRef string) { set(string.toString()); }
 
+    // Paths in Win32 typically need UTF-16 characters
 #if defined(_WIN32)
     Path(const std::wstring& wstring) { set(wstring); }
     Path(const wchar_t* wstring) { set(wstring); }
 #endif
 
+    /// Number of "elements" in the path, where an element is one directory or filename.
     size_t length() const { return elements.size(); }
     bool empty() const { return elements.empty(); }
+
+    /// Is this an absolute path or a relative one?
     bool isAbsolute() const { return absolute; }
 
+    /// Checks if the file exists; note that there is the typical IO race condition here.
     bool exists() const {
 #if defined(_WIN32)
         return GetFileAttributesW(wstr().c_str()) != INVALID_FILE_ATTRIBUTES;
@@ -118,12 +132,15 @@ public:
         return name.substr(pos + 1);
     }
 
+    /// Gets the file name (including extension). If this isn't a path to a file,
+    /// it returns the most nested directory name.
     std::string filename() const {
         if (empty())
             return "";
         return elements.back();
     }
 
+    /// Goes up one level in the directory hierarchy. 
     Path parentPath() const {
         Path result;
         result.absolute = absolute;
@@ -140,6 +157,7 @@ public:
         return result;
     }
 
+    /// Concatenate two paths.
     Path operator+(const Path& other) const {
         if (other.absolute)
             throw std::runtime_error("path::operator+(): expected a relative path!");
@@ -208,6 +226,7 @@ public:
         return os;
     }
 
+    /// Convert a relative path to an absolute one.
     static Path makeAbsolute(const Path& path) {
 #if !defined(_WIN32)
         char temp[PATH_MAX];
@@ -224,6 +243,7 @@ public:
 #endif
     }
 
+    /// Gets the process's current working directory.
     static Path getCurrentDirectory() {
 #if !defined(_WIN32)
         char temp[PATH_MAX];
@@ -285,6 +305,9 @@ private:
     bool absolute = false;
 };
 
+/// Simple utility method to iterate all of the files in a given directory. Note that the
+/// entire set is realized in one go; you may want something smarter if you only need to
+/// look at a few entries.
 inline std::vector<Path> getFilesInDirectory(const Path& path) {
     std::vector<Path> result;
 

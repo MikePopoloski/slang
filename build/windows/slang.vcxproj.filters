@@ -10,9 +10,6 @@
     <Filter Include="util">
       <UniqueIdentifier>{802f3eb7-6e0d-46c0-9237-cb9b1949b6e0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="diagnostics">
-      <UniqueIdentifier>{8f199817-7db9-449f-bd06-9f9efcea78a4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="numeric">
       <UniqueIdentifier>{92c36059-cdc7-4ae5-9806-bf921f712548}</UniqueIdentifier>
     </Filter>
@@ -27,6 +24,9 @@
     </Filter>
     <Filter Include="analysis">
       <UniqueIdentifier>{133f8481-f6f0-4405-9c93-67d946e284ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="diagnostics">
+      <UniqueIdentifier>{8f199817-7db9-449f-bd06-9f9efcea78a4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +138,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\ConstantValue.h">
       <Filter>analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\variant.hpp">
+      <Filter>util\3ps</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

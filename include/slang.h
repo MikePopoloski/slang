@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// slang.h
+// Master include file for the slang library.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "AllSyntax.h"
