@@ -13,76 +13,6 @@
 
 #include "SourceManager.h"
 
-namespace {
-
-using namespace slang;
-
-SourceLocation getFullyExpandedLoc(SourceManager& sourceManager, SourceLocation loc) {
-    while (sourceManager.isMacroLoc(loc))
-        loc = sourceManager.getExpansionLoc(loc);
-    return loc;
-}
-
-bool sortDiagnostics(SourceManager& sourceManager, const Diagnostic& x, const Diagnostic& y) {
-    // start by expanding out macro locations
-    SourceLocation xl = getFullyExpandedLoc(sourceManager, x.location);
-    SourceLocation yl = getFullyExpandedLoc(sourceManager, y.location);
-    return xl < yl;
-}
-
-StringRef getBufferLine(SourceManager& sourceManager, SourceLocation location, uint32_t col) {
-    StringRef text = sourceManager.getSourceText(location.buffer());
-    if (!text)
-        return nullptr;
-
-    const char* start = text.begin() + location.offset() - (col - 1);
-    const char* curr = start;
-    while (*curr != '\n' && *curr != '\r' && *curr != '\0')
-        curr++;
-
-    return StringRef(start, (uint32_t)(curr - start));
-}
-
-void getIncludeStack(SourceManager& sourceManager, BufferID buffer, std::deque<SourceLocation>& stack) {
-    stack.clear();
-    while (buffer) {
-        SourceLocation loc = sourceManager.getIncludedFrom(buffer);
-        if (!loc.buffer())
-            break;
-
-        stack.push_front(loc);
-        buffer = loc.buffer();
-    }
-}
-
-void formatDiag(fmt::MemoryWriter& writer, SourceManager& sourceManager, SourceLocation loc,
-    const char* severity, const std::string& msg) {
-
-    uint32_t col = sourceManager.getColumnNumber(loc);
-    writer.write("{}:{}:{}: {}: {}",
-        sourceManager.getBufferName(loc.buffer()),
-        sourceManager.getLineNumber(loc),
-        col,
-        severity,
-        msg
-    );
-
-    StringRef line = getBufferLine(sourceManager, loc, col);
-    if (line) {
-        writer.write("\n{}\n", line);
-        for (unsigned i = 0; i < col - 1; i++) {
-            if (line[i] == '\t')
-                writer << '\t';
-            else
-                writer << ' ';
-        }
-        writer << '^';
-    }
-    writer << '\n';
-}
-
-}
-
 namespace slang {
 
 static const char* severityToString[] = {
@@ -235,13 +165,13 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
 	}
 
 	fmt::MemoryWriter writer;
-	formatDiag(writer, sourceManager, location, severityToString[(int)desc.severity], msg);
+	formatDiag(writer, location, severityToString[(int)desc.severity], msg);
 
 	// write out macro expansions, if we have any
 	while (!expansionLocs.empty()) {
 		location = expansionLocs.back();
 		expansionLocs.pop();
-		formatDiag(writer, sourceManager, sourceManager.getOriginalLoc(location), "note", "expanded from here");
+		formatDiag(writer, sourceManager.getOriginalLoc(location), "note", "expanded from here");
 	}
 
 	return writer.str();
@@ -250,19 +180,19 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
 std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
     // first sort diagnostics by file so that we can cut down
     // on the amount of include information we print out
-    std::sort(diagnostics.begin(), diagnostics.end(), [this](auto& x, auto& y) { return sortDiagnostics(sourceManager, x, y); });
+    std::sort(diagnostics.begin(), diagnostics.end(), [this](auto& x, auto& y) { return sortDiagnostics(x, y); });
 
     std::deque<SourceLocation> includeStack;
     BufferID lastBuffer;
     fmt::MemoryWriter writer;
 
     for (auto& diag : diagnostics) {
-        SourceLocation loc = getFullyExpandedLoc(sourceManager, diag.location);
+        SourceLocation loc = getFullyExpandedLoc(diag.location);
         if (loc.buffer() != lastBuffer) {
             // We're looking at diagnostics from another file now. See if we should print
             // include stack info before we go on with the reports.
             lastBuffer = loc.buffer();
-            getIncludeStack(sourceManager, lastBuffer, includeStack);
+            getIncludeStack(lastBuffer, includeStack);
 
             for (auto& includeLoc : includeStack) {
                 writer.write("In file included from {}:{}:\n",
@@ -274,6 +204,69 @@ std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
 		writer << report(diag);
     }
     return writer.str();
+}
+
+SourceLocation DiagnosticWriter::getFullyExpandedLoc(SourceLocation loc) {
+	while (sourceManager.isMacroLoc(loc))
+		loc = sourceManager.getExpansionLoc(loc);
+	return loc;
+}
+
+bool DiagnosticWriter::sortDiagnostics(const Diagnostic& x, const Diagnostic& y) {
+	// start by expanding out macro locations
+	SourceLocation xl = getFullyExpandedLoc(x.location);
+	SourceLocation yl = getFullyExpandedLoc(y.location);
+	return xl < yl;
+}
+
+StringRef DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {
+	StringRef text = sourceManager.getSourceText(location.buffer());
+	if (!text)
+		return nullptr;
+
+	const char* start = text.begin() + location.offset() - (col - 1);
+	const char* curr = start;
+	while (*curr != '\n' && *curr != '\r' && *curr != '\0')
+		curr++;
+
+	return StringRef(start, (uint32_t)(curr - start));
+}
+
+void DiagnosticWriter::getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack) {
+	stack.clear();
+	while (buffer) {
+		SourceLocation loc = sourceManager.getIncludedFrom(buffer);
+		if (!loc.buffer())
+			break;
+
+		stack.push_front(loc);
+		buffer = loc.buffer();
+	}
+}
+
+template<typename T>
+void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const char* severity, const std::string& msg) {
+	uint32_t col = sourceManager.getColumnNumber(loc);
+	writer.write("{}:{}:{}: {}: {}",
+		sourceManager.getBufferName(loc.buffer()),
+		sourceManager.getLineNumber(loc),
+		col,
+		severity,
+		msg
+	);
+
+	StringRef line = getBufferLine(loc, col);
+	if (line) {
+		writer.write("\n{}\n", line);
+		for (unsigned i = 0; i < col - 1; i++) {
+			if (line[i] == '\t')
+				writer << '\t';
+			else
+				writer << ' ';
+		}
+		writer << '^';
+	}
+	writer << '\n';
 }
 
 }

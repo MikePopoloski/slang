@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <string>
 #include <variant.hpp>
 #include <vector>
@@ -166,6 +167,14 @@ public:
 	std::string report(Diagnostics& diagnostics);
 
 private:
+	SourceLocation getFullyExpandedLoc(SourceLocation loc);
+	StringRef getBufferLine(SourceLocation location, uint32_t col);
+	bool sortDiagnostics(const Diagnostic& x, const Diagnostic& y);
+	void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);
+	
+	template<typename T>
+	void formatDiag(T& writer, SourceLocation loc, const char* severity, const std::string& msg);
+
 	SourceManager& sourceManager;
 
 	// Little structure to hold a diagnostic's format and severity.
