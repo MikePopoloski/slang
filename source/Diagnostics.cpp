@@ -80,7 +80,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
 	*d++ = { "real literal overflows 64 bits", DiagnosticSeverity::Error };
 	*d++ = { "signed integer overflows 32 bits", DiagnosticSeverity::Error };
 	*d++ = { "decimal literal overflows 32 bits", DiagnosticSeverity::Error };
-	*d++ = { "literal specifies too many digits for the given number of bits", DiagnosticSeverity::Error };
+	*d++ = { "vector literal too large for the given number of bits", DiagnosticSeverity::Error };
 
 	// preprocessor
 	*d++ = { "could not find or open include file", DiagnosticSeverity::Error };

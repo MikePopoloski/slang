@@ -68,6 +68,7 @@ public:
 
 private:
     void commonAddDigit(logic_t digit, int maxValue);
+	void checkSize(uint64_t value, uint32_t size, SourceLocation location);
 
     uint64_t calcBinary() const;
     uint64_t calcOctal() const;

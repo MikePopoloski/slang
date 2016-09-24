@@ -258,6 +258,7 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     LiteralBase base = baseToken.numericFlags().base;
     bool stillGood = true;
 
+	vectorBuilder.start();
     do {
         length += next.rawText().length();
         consume();

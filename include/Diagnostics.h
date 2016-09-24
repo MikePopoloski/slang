@@ -53,7 +53,7 @@ enum class DiagCode : uint8_t {
     RealExponentOverflow,
     SignedIntegerOverflow,
     DecimalLiteralOverflow,
-    TooManyLiteralDigits,
+    VectorLiteralOverflow,
 
     // preprocessor
     CouldNotOpenIncludeFile,
