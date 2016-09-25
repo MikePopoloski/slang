@@ -113,6 +113,24 @@ SyntaxKind getSequenceBinaryExpression(TokenKind kind) {
     }
 }
 
+SyntaxKind getPropertyBinaryExpression(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OrKeyword: return SyntaxKind::OrPropertyExpression;
+        case TokenKind::AndKeyword: return SyntaxKind::AndPropertyExpression;
+        case TokenKind::IffKeyword: return SyntaxKind::IffPropertyExpression;
+        case TokenKind::UntilKeyword: return SyntaxKind::UntilPropertyExpression;
+        case TokenKind::SUntilKeyword: return SyntaxKind::SUntilPropertyExpression;
+        case TokenKind::UntilWithKeyword: return SyntaxKind::UntilWithPropertyExpression;
+        case TokenKind::SUntilWithKeyword: return SyntaxKind::SUntilWithPropertyExpression;
+        case TokenKind::ImpliesKeyword: return SyntaxKind::ImpliesPropertyExpression;
+        case TokenKind::OrMinusArrow: return SyntaxKind::OverlappedImplicationPropertyExpression;
+        case TokenKind::OrEqualsArrow: return SyntaxKind::NonOverlappedImplicationPropertyExpression;
+        case TokenKind::HashMinusHash: return SyntaxKind::OverlappedFollowedByPropertyExpression;
+        case TokenKind::HashEqualsHash: return SyntaxKind::NonOverlappedFollowedByPropertyExpression;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
 SyntaxKind getKeywordNameExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::UnitSystemName: return SyntaxKind::UnitScope;
@@ -225,11 +243,45 @@ int getSequencePrecedence(SyntaxKind kind) {
     }
 }
 
+int getPropertyPrecedence(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::OverlappedImplicationPropertyExpression:
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
+        case SyntaxKind::OverlappedFollowedByPropertyExpression:
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
+            return 1;
+        case SyntaxKind::UntilPropertyExpression:
+        case SyntaxKind::SUntilPropertyExpression:
+        case SyntaxKind::UntilWithPropertyExpression:
+        case SyntaxKind::SUntilWithPropertyExpression:
+        case SyntaxKind::ImpliesPropertyExpression:
+            return 2;
+        case SyntaxKind::IffPropertyExpression:
+            return 3;
+        case SyntaxKind::OrPropertyExpression:
+            return 4;
+        case SyntaxKind::AndPropertyExpression:
+            return 5;
+        default:
+            return 0;
+    }
+}
+
 bool isRightAssociative(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::LogicalImplicationExpression:
         case SyntaxKind::LogicalEquivalenceExpression:
         case SyntaxKind::ThroughoutSequenceExpression:
+        case SyntaxKind::IffPropertyExpression:
+        case SyntaxKind::UntilPropertyExpression:
+        case SyntaxKind::SUntilPropertyExpression:
+        case SyntaxKind::UntilWithPropertyExpression:
+        case SyntaxKind::SUntilWithPropertyExpression:
+        case SyntaxKind::ImpliesPropertyExpression:
+        case SyntaxKind::OverlappedImplicationPropertyExpression:
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
+        case SyntaxKind::OverlappedFollowedByPropertyExpression:
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
             return true;
         default:
             return false;

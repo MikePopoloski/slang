@@ -316,6 +316,18 @@ enum class SyntaxKind : uint16_t {
     IntersectSequenceExpression,
     WithinSequenceExpression,
     ThroughoutSequenceExpression,
+    OrPropertyExpression,
+    AndPropertyExpression,
+    IffPropertyExpression,
+    UntilPropertyExpression,
+    SUntilPropertyExpression,
+    UntilWithPropertyExpression,
+    SUntilWithPropertyExpression,
+    ImpliesPropertyExpression,
+    OverlappedImplicationPropertyExpression,
+    NonOverlappedImplicationPropertyExpression,
+    OverlappedFollowedByPropertyExpression,
+    NonOverlappedFollowedByPropertyExpression,
 
     // modules
     ImplicitNonAnsiPort,
@@ -409,6 +421,7 @@ SyntaxKind getUnaryPostfixExpression(TokenKind kind);
 SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
 SyntaxKind getSequenceBinaryExpression(TokenKind kind);
+SyntaxKind getPropertyBinaryExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
 SyntaxKind getIntegerType(TokenKind kind);
 SyntaxKind getKeywordType(TokenKind kind);
@@ -418,6 +431,7 @@ SyntaxKind getModuleHeaderKind(TokenKind kind);
 TokenKind getModuleEndKind(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
 int getSequencePrecedence(SyntaxKind kind);
+int getPropertyPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleDataType(TokenKind kind);
 bool isPossibleExpression(TokenKind kind);
