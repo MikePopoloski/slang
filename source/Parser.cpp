@@ -909,6 +909,15 @@ ConstraintBlockSyntax* Parser::parseConstraintBlock() {
     return alloc.emplace<ConstraintBlockSyntax>(openBrace, members, closeBrace);
 }
 
+ExpressionSyntax* Parser::parseExpressionOrDist() {
+    auto expr = parseExpression();
+    if (!peek(TokenKind::DistKeyword))
+        return expr;
+
+    auto dist = parseDistConstraintList();
+    return alloc.emplace<ExpressionOrDistSyntax>(expr, dist);
+}
+
 ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
     switch (peek().kind) {
         case TokenKind::DisableKeyword: {
@@ -943,9 +952,7 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
         }
         case TokenKind::SoftKeyword: {
             auto soft = consume();
-            auto expr = parseExpression();
-            auto dist = parseDistConstraintList();
-            auto exprOrDist = alloc.emplace<ExpressionOrDistSyntax>(expr, dist);
+            auto exprOrDist = parseExpressionOrDist();
             return alloc.emplace<ExpressionConstraintSyntax>(soft, exprOrDist, expect(TokenKind::Semicolon));
         }
         case TokenKind::OpenBrace: {
@@ -971,9 +978,12 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
         return alloc.emplace<ImplicationConstraintSyntax>(expr, arrow, parseConstraintItem(true));
     }
 
-    auto dist = parseDistConstraintList();
-    auto exprOrDist = alloc.emplace<ExpressionOrDistSyntax>(expr, dist);
-    return alloc.emplace<ExpressionConstraintSyntax>(Token(), exprOrDist, expect(TokenKind::Semicolon));
+    if (peek(TokenKind::DistKeyword)) {
+        auto dist = parseDistConstraintList();
+        expr = alloc.emplace<ExpressionOrDistSyntax>(expr, dist);
+    }
+
+    return alloc.emplace<ExpressionConstraintSyntax>(Token(), expr, expect(TokenKind::Semicolon));
 }
 
 DistConstraintListSyntax* Parser::parseDistConstraintList() {

@@ -5850,10 +5850,10 @@ protected:
 
 struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
     Token soft;
-    ExpressionOrDistSyntax* expr;
+    ExpressionSyntax* expr;
     Token semi;
 
-    ExpressionConstraintSyntax(Token soft, ExpressionOrDistSyntax* expr, Token semi) :
+    ExpressionConstraintSyntax(Token soft, ExpressionSyntax* expr, Token semi) :
         ConstraintItemSyntax(SyntaxKind::ExpressionConstraint), soft(soft), expr(expr), semi(semi)
     {
         childCount += 3;

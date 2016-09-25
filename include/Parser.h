@@ -135,6 +135,7 @@ private:
     ExpressionSyntax* parseArrayOrRandomizeWithClause();
     DefParamAssignmentSyntax* parseDefParamAssignment();
     DefParamSyntax* parseDefParam(ArrayRef<AttributeInstanceSyntax*> attributes);
+    ExpressionSyntax* parseExpressionOrDist();
 
     bool isPortDeclaration();
     bool isNetDeclaration();

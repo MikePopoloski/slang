@@ -1019,7 +1019,7 @@ DistConstraintListSyntax distribution
 
 ExpressionConstraintSyntax base=ConstraintItemSyntax kind=ExpressionConstraint
 token soft
-ExpressionOrDistSyntax expr
+ExpressionSyntax expr
 token semi
 
 UniquenessConstraintSyntax base=ConstraintItemSyntax kind=UniquenessConstraint

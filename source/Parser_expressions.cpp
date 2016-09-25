@@ -768,11 +768,25 @@ TimingControlSyntax* Parser::parseTimingControl() {
     switch (peek().kind) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash: {
-            // TODO: make sure primary expression ends up being the right type
             auto hash = consume();
-            auto delayValue = parsePrimaryExpression();
+            ExpressionSyntax* delay;
+            if (hash.kind == TokenKind::DoubleHash && peek(TokenKind::OpenBracket)) {
+                if (peek(1).kind == TokenKind::Star || peek(1).kind == TokenKind::Plus) {
+                    Token openBracket = consume();
+                    Token op = consume();
+                    return alloc.emplace<ShortcutCycleDelayRangeSyntax>(hash, openBracket, op, expect(TokenKind::CloseBracket));
+                }
+                else {
+                    delay = parseElementSelect();
+                }
+            }
+            else {
+                // TODO: make sure primary expression ends up being the right type
+                delay = parsePrimaryExpression();
+            }
+
             SyntaxKind kind = hash.kind == TokenKind::Hash ? SyntaxKind::DelayControl : SyntaxKind::CycleDelay;
-            return alloc.emplace<DelaySyntax>(kind, hash, delayValue);
+            return alloc.emplace<DelaySyntax>(kind, hash, delay);
         }
         case TokenKind::At: {
             auto at = consume();
@@ -839,41 +853,11 @@ ExpressionSyntax* Parser::parseSequenceExpression(int precedence) {
 
     Token current = peek();
     switch (current.kind) {
+        case TokenKind::At:
         case TokenKind::DoubleHash: {
             // unary delay control
-            Token doubleHash = consume();
-            TimingControlSyntax* timing;
-            if (peek(TokenKind::OpenBracket)) {
-                if (peek(1).kind == TokenKind::Star || peek(1).kind == TokenKind::Plus) {
-                    Token openBracket = consume();
-                    Token op = consume();
-                    timing = alloc.emplace<ShortcutCycleDelayRangeSyntax>(doubleHash, openBracket, op, expect(TokenKind::CloseBracket));
-                }
-                else {
-                    timing = alloc.emplace<DelaySyntax>(SyntaxKind::DelayControl, doubleHash, parseElementSelect());
-                }
-            }
-            else {
-                timing = alloc.emplace<DelaySyntax>(SyntaxKind::DelayControl, doubleHash, parsePrimaryExpression());
-            }
+            auto timing = parseTimingControl();
             newPrecedence = getSequencePrecedence(SyntaxKind::DelayControl);
-            leftOperand = alloc.emplace<TimingControlExpressionSyntax>(timing, parseSequenceExpression(newPrecedence));
-            break;
-        }
-        case TokenKind::At: {
-            // unary event control
-            auto at = consume();
-            TimingControlSyntax* timing;
-            if (peek(TokenKind::OpenParenthesis)) {
-                auto openParen = consume();
-                auto eventExpr = parseEventExpression();
-                auto closeParen = expect(TokenKind::CloseParenthesis);
-                timing = alloc.emplace<EventControlWithExpressionSyntax>(at, alloc.emplace<ParenthesizedEventExpressionSyntax>(openParen, eventExpr, closeParen));
-            }
-            else {
-                timing = alloc.emplace<EventControlSyntax>(at, parseName());
-            }
-            newPrecedence = getSequencePrecedence(SyntaxKind::EventControl);
             leftOperand = alloc.emplace<TimingControlExpressionSyntax>(timing, parseSequenceExpression(newPrecedence));
             break;
         }
@@ -883,9 +867,7 @@ ExpressionSyntax* Parser::parseSequenceExpression(int precedence) {
             // primary: parenthesized
         default: {
             // primary: expression (or dist)
-            leftOperand = parseExpression();
-            if (peek(TokenKind::DistKeyword))
-                leftOperand = alloc.emplace<ExpressionOrDistSyntax>(leftOperand, parseDistConstraintList());
+            leftOperand = parseExpressionOrDist();
             break;
         }
     }
