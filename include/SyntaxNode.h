@@ -167,6 +167,7 @@ enum class SyntaxKind : uint16_t {
     OpenRangeList,
     InsideExpression,
     ConditionalExpression,
+    ExpressionOrDist,
 
     // assignment expressions
     AssignmentExpression,
@@ -215,6 +216,7 @@ enum class SyntaxKind : uint16_t {
     EventControlWithExpression,
     RepeatedEventControl,
     TimingControlExpression,
+    ShortcutCycleDelayRange,
 
     // declarations
     RangeDimensionSpecifier,
@@ -309,6 +311,11 @@ enum class SyntaxKind : uint16_t {
     ImmediateAssertStatement,
     ImmediateAssumeStatement,
     ImmediateCoverStatement,
+    OrSequenceExpression,
+    AndSequenceExpression,
+    IntersectSequenceExpression,
+    WithinSequenceExpression,
+    ThroughoutSequenceExpression,
 
     // modules
     ImplicitNonAnsiPort,
@@ -401,6 +408,7 @@ SyntaxKind getUnaryPrefixExpression(TokenKind kind);
 SyntaxKind getUnaryPostfixExpression(TokenKind kind);
 SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
+SyntaxKind getSequenceBinaryExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
 SyntaxKind getIntegerType(TokenKind kind);
 SyntaxKind getKeywordType(TokenKind kind);
@@ -409,6 +417,7 @@ SyntaxKind getModuleDeclarationKind(TokenKind kind);
 SyntaxKind getModuleHeaderKind(TokenKind kind);
 TokenKind getModuleEndKind(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
+int getSequencePrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleDataType(TokenKind kind);
 bool isPossibleExpression(TokenKind kind);

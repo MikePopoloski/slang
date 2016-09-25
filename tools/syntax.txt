@@ -365,6 +365,12 @@ TimingControlExpressionSyntax base=ExpressionSyntax kind=TimingControlExpression
 TimingControlSyntax timing
 ExpressionSyntax expr
 
+ShortcutCycleDelayRangeSyntax base=TimingControlSyntax kind=ShortcutCycleDelayRange
+token doubleHash
+token openBracket
+token op
+token closeBracket
+
 // ----- DECLARATIONS -----
 
 DimensionSpecifierSyntax final=false
@@ -571,6 +577,8 @@ token keyword
 DeferredAssertionSyntax delay
 ParenthesizedExpressionSyntax expr
 ActionBlockSyntax action
+
+
 
 // ----- STATEMENTS -----
 
@@ -1005,10 +1013,13 @@ token openBrace
 separated_list<DistItemSyntax> items
 token closeBrace
 
-ExpressionConstraintSyntax base=ConstraintItemSyntax kind=ExpressionConstraint
-token soft
+ExpressionOrDistSyntax base=ExpressionSyntax kind=ExpressionOrDist
 ExpressionSyntax expr
 DistConstraintListSyntax distribution
+
+ExpressionConstraintSyntax base=ConstraintItemSyntax kind=ExpressionConstraint
+token soft
+ExpressionOrDistSyntax expr
 token semi
 
 UniquenessConstraintSyntax base=ConstraintItemSyntax kind=UniquenessConstraint

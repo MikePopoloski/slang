@@ -102,6 +102,17 @@ SyntaxKind getBinaryExpression(TokenKind kind) {
     }
 }
 
+SyntaxKind getSequenceBinaryExpression(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OrKeyword: return SyntaxKind::OrSequenceExpression;
+        case TokenKind::AndKeyword: return SyntaxKind::AndSequenceExpression;
+        case TokenKind::IntersectKeyword: return SyntaxKind::IntersectSequenceExpression;
+        case TokenKind::WithinKeyword: return SyntaxKind::WithinSequenceExpression;
+        case TokenKind::ThroughoutKeyword: return SyntaxKind::ThroughoutSequenceExpression;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
 SyntaxKind getKeywordNameExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::UnitSystemName: return SyntaxKind::UnitScope;
@@ -194,10 +205,31 @@ int getPrecedence(SyntaxKind kind) {
     }
 }
 
+int getSequencePrecedence(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::OrSequenceExpression:
+            return 1;
+        case SyntaxKind::AndSequenceExpression:
+            return 2;
+        case SyntaxKind::IntersectSequenceExpression:
+            return 3;
+        case SyntaxKind::WithinSequenceExpression:
+            return 4;
+        case SyntaxKind::ThroughoutSequenceExpression:
+            return 5;
+        case SyntaxKind::DelayControl:
+        case SyntaxKind::EventControl:
+            return 6;
+        default:
+            return 0;
+    }
+}
+
 bool isRightAssociative(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::LogicalImplicationExpression:
         case SyntaxKind::LogicalEquivalenceExpression:
+        case SyntaxKind::ThroughoutSequenceExpression:
             return true;
         default:
             return false;

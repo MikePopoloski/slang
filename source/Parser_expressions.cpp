@@ -833,4 +833,81 @@ ExpressionSyntax* Parser::parseArrayOrRandomizeWithClause() {
     return alloc.emplace<RandomizeMethodWithClauseSyntax>(with, idList, parseConstraintBlock());
 }
 
+ExpressionSyntax* Parser::parseSequenceExpression(int precedence) {
+    ExpressionSyntax* leftOperand = nullptr;
+    int newPrecedence = 0;
+
+    Token current = peek();
+    switch (current.kind) {
+        case TokenKind::DoubleHash: {
+            Token doubleHash = consume();
+            TimingControlSyntax* timing;
+            if (peek(TokenKind::OpenBracket)) {
+                if (peek(1).kind == TokenKind::Star || peek(1).kind == TokenKind::Plus) {
+                    Token openBracket = consume();
+                    Token op = consume();
+                    timing = alloc.emplace<ShortcutCycleDelayRangeSyntax>(doubleHash, openBracket, op, expect(TokenKind::CloseBracket));
+                }
+                else {
+                    timing = alloc.emplace<DelaySyntax>(SyntaxKind::DelayControl, doubleHash, parseElementSelect());
+                }
+            }
+            else {
+                timing = alloc.emplace<DelaySyntax>(SyntaxKind::DelayControl, doubleHash, parsePrimaryExpression());
+            }
+            newPrecedence = getSequencePrecedence(SyntaxKind::DelayControl);
+            leftOperand = alloc.emplace<TimingControlExpressionSyntax>(timing, parseSequenceExpression(newPrecedence));
+            break;
+        }
+        case TokenKind::At: {
+            auto at = consume();
+            TimingControlSyntax* timing;
+            if (peek(TokenKind::OpenParenthesis)) {
+                auto openParen = consume();
+                auto eventExpr = parseEventExpression();
+                auto closeParen = expect(TokenKind::CloseParenthesis);
+                timing = alloc.emplace<EventControlWithExpressionSyntax>(at, alloc.emplace<ParenthesizedEventExpressionSyntax>(openParen, eventExpr, closeParen));
+            }
+            else {
+                timing = alloc.emplace<EventControlSyntax>(at, parseName());
+            }
+            newPrecedence = getSequencePrecedence(SyntaxKind::EventControl);
+            leftOperand = alloc.emplace<TimingControlExpressionSyntax>(timing, parseSequenceExpression(newPrecedence));
+            break;
+        }
+        case TokenKind::FirstMatchKeyword:
+        case TokenKind::OpenParenthesis:
+        default: {
+            leftOperand = parseExpression();
+            if (peek(TokenKind::DistKeyword))
+                leftOperand = alloc.emplace<ExpressionOrDistSyntax>(leftOperand, parseDistConstraintList());
+            break;
+        }
+    }
+
+    while (true) {
+        // either a binary operator, or we're done
+        current = peek();
+        SyntaxKind opKind = getSequenceBinaryExpression(current.kind);
+        if (opKind == SyntaxKind::Unknown)
+            break;
+
+        // see if we should take this operator or if it's part of our parent due to precedence
+        newPrecedence = getSequencePrecedence(opKind);
+        if (newPrecedence < precedence)
+            break;
+
+        // if we have a precedence tie, check associativity
+        if (newPrecedence == precedence && !isRightAssociative(opKind))
+            break;
+
+        // take the operator
+        auto opToken = consume();
+        auto rightOperand = parseSequenceExpression(newPrecedence);
+        leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, nullptr, rightOperand);
+    }
+
+    return leftOperand;
+}
+
 }

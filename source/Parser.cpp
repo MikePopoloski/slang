@@ -945,7 +945,8 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
             auto soft = consume();
             auto expr = parseExpression();
             auto dist = parseDistConstraintList();
-            return alloc.emplace<ExpressionConstraintSyntax>(soft, expr, dist, expect(TokenKind::Semicolon));
+            auto exprOrDist = alloc.emplace<ExpressionOrDistSyntax>(expr, dist);
+            return alloc.emplace<ExpressionConstraintSyntax>(soft, exprOrDist, expect(TokenKind::Semicolon));
         }
         case TokenKind::OpenBrace: {
             // Ambiguity here: an open brace could either be the start of a constraint block
@@ -971,7 +972,8 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
     }
 
     auto dist = parseDistConstraintList();
-    return alloc.emplace<ExpressionConstraintSyntax>(Token(), expr, dist, expect(TokenKind::Semicolon));
+    auto exprOrDist = alloc.emplace<ExpressionOrDistSyntax>(expr, dist);
+    return alloc.emplace<ExpressionConstraintSyntax>(Token(), exprOrDist, expect(TokenKind::Semicolon));
 }
 
 DistConstraintListSyntax* Parser::parseDistConstraintList() {

@@ -2101,6 +2101,39 @@ protected:
     }
 };
 
+struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
+    Token doubleHash;
+    Token openBracket;
+    Token op;
+    Token closeBracket;
+
+    ShortcutCycleDelayRangeSyntax(Token doubleHash, Token openBracket, Token op, Token closeBracket) :
+        TimingControlSyntax(SyntaxKind::ShortcutCycleDelayRange), doubleHash(doubleHash), openBracket(openBracket), op(op), closeBracket(closeBracket)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return doubleHash;
+            case 1: return openBracket;
+            case 2: return op;
+            case 3: return closeBracket;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: doubleHash = token; break;
+            case 1: openBracket = token; break;
+            case 2: op = token; break;
+            case 3: closeBracket = token; break;
+        }
+    }
+};
+
 // ----- DECLARATIONS -----
 
 struct DimensionSpecifierSyntax : public SyntaxNode {
@@ -5787,16 +5820,43 @@ protected:
     }
 };
 
-struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
-    Token soft;
+struct ExpressionOrDistSyntax : public ExpressionSyntax {
     ExpressionSyntax* expr;
     DistConstraintListSyntax* distribution;
+
+    ExpressionOrDistSyntax(ExpressionSyntax* expr, DistConstraintListSyntax* distribution) :
+        ExpressionSyntax(SyntaxKind::ExpressionOrDist), expr(expr), distribution(distribution)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return expr;
+            case 1: return distribution;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
+struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
+    Token soft;
+    ExpressionOrDistSyntax* expr;
     Token semi;
 
-    ExpressionConstraintSyntax(Token soft, ExpressionSyntax* expr, DistConstraintListSyntax* distribution, Token semi) :
-        ConstraintItemSyntax(SyntaxKind::ExpressionConstraint), soft(soft), expr(expr), distribution(distribution), semi(semi)
+    ExpressionConstraintSyntax(Token soft, ExpressionOrDistSyntax* expr, Token semi) :
+        ConstraintItemSyntax(SyntaxKind::ExpressionConstraint), soft(soft), expr(expr), semi(semi)
     {
-        childCount += 4;
+        childCount += 3;
     }
 
 protected:
@@ -5804,8 +5864,7 @@ protected:
         switch (index) {
             case 0: return soft;
             case 1: return expr;
-            case 2: return distribution;
-            case 3: return semi;
+            case 2: return semi;
             default: return nullptr;
         }
     }
@@ -5814,8 +5873,7 @@ protected:
         switch (index) {
             case 0: soft = token; break;
             case 1: ASSERT(false); break;
-            case 2: ASSERT(false); break;
-            case 3: semi = token; break;
+            case 2: semi = token; break;
         }
     }
 };
