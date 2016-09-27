@@ -312,36 +312,34 @@ MemberSyntax* Parser::parseMember() {
             auto members = parseMemberList<MemberSyntax>(TokenKind::EndGenerateKeyword, endgenerate, [this]() { return parseMember(); });
             return alloc.emplace<GenerateRegionSyntax>(attributes, keyword, members, endgenerate);
         }
-
-        case TokenKind::SpecifyKeyword:
-            break;
-
         case TokenKind::TimeUnitKeyword:
         case TokenKind::TimePrecisionKeyword:
             return parseTimeUnitsDeclaration(attributes);
-
         case TokenKind::ModuleKeyword:
         case TokenKind::MacromoduleKeyword:
         case TokenKind::ProgramKeyword:
         case TokenKind::PackageKeyword:
             // modules, interfaces, and programs share the same syntax
             return parseModule(attributes);
-
         case TokenKind::InterfaceKeyword:
             // an interface class is different from an interface
             if (peek(1).kind == TokenKind::ClassKeyword)
                 return parseClassDeclaration(attributes, consume());
             else
                 return parseModule(attributes);
-
-        case TokenKind::ImportKeyword:
-            return parseImportDeclaration(attributes);
         case TokenKind::SpecParamKeyword:
         case TokenKind::Identifier:
         case TokenKind::BindKeyword:
         case TokenKind::AliasKeyword:
+        case TokenKind::CheckerKeyword:
+        case TokenKind::SpecifyKeyword:
             // TODO: parse these
             break;
+        case TokenKind::AssertKeyword:
+        case TokenKind::AssumeKeyword:
+        case TokenKind::CoverKeyword:
+        case TokenKind::RestrictKeyword:
+            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, parseConcurrentAssertion(nullptr, nullptr));
         case TokenKind::AssignKeyword:
             return parseContinuousAssign(attributes);
         case TokenKind::InitialKeyword:
@@ -365,10 +363,6 @@ MemberSyntax* Parser::parseMember() {
             return parseFunctionDeclaration(attributes, SyntaxKind::TaskDeclaration, TokenKind::EndTaskKeyword);
         case TokenKind::FunctionKeyword:
             return parseFunctionDeclaration(attributes, SyntaxKind::FunctionDeclaration, TokenKind::EndFunctionKeyword);
-
-        case TokenKind::CheckerKeyword:
-            break;
-
         case TokenKind::CoverGroupKeyword:
             return parseCovergroupDeclaration(attributes);
         case TokenKind::ClassKeyword:
@@ -377,6 +371,8 @@ MemberSyntax* Parser::parseMember() {
             return parseClassDeclaration(attributes, consume());
         case TokenKind::DefParamKeyword:
             return parseDefParam(attributes);
+        case TokenKind::ImportKeyword:
+            return parseImportDeclaration(attributes);
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, consume());
         default:

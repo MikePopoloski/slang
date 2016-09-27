@@ -311,6 +311,14 @@ enum class SyntaxKind : uint16_t {
     ImmediateAssertStatement,
     ImmediateAssumeStatement,
     ImmediateCoverStatement,
+    DisableIff,
+    PropertySpec,
+    AssertPropertyStatement,
+    AssumePropertyStatement,
+    CoverPropertyStatement,
+    CoverSequenceStatement,
+    RestrictPropertyStatement,
+    ExpectPropertyStatement,
     OrSequenceExpression,
     AndSequenceExpression,
     IntersectSequenceExpression,
@@ -328,6 +336,7 @@ enum class SyntaxKind : uint16_t {
     NonOverlappedImplicationPropertyExpression,
     OverlappedFollowedByPropertyExpression,
     NonOverlappedFollowedByPropertyExpression,
+    ConcurrentAssertionMember,
 
     // modules
     ImplicitNonAnsiPort,

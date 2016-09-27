@@ -82,11 +82,13 @@ StatementSyntax* Parser::parseStatement() {
         case TokenKind::ForkKeyword:
             return parseBlock(SyntaxKind::ParallelBlockStatement, TokenKind::JoinKeyword, label, attributes);
         case TokenKind::AssertKeyword:
-            return parseAssertionStatement(SyntaxKind::ImmediateAssertStatement, label, attributes);
         case TokenKind::AssumeKeyword:
-            return parseAssertionStatement(SyntaxKind::ImmediateAssumeStatement, label, attributes);
         case TokenKind::CoverKeyword:
-            return parseAssertionStatement(SyntaxKind::ImmediateCoverStatement, label, attributes);
+            return parseAssertionStatement(label, attributes);
+        case TokenKind::RestrictKeyword:
+            return parseConcurrentAssertion(label, attributes);
+        case TokenKind::ExpectKeyword:
+            return parseConcurrentAssertion(label, attributes);
         case TokenKind::WaitKeyword:
             return parseWaitStatement(label, attributes);
         case TokenKind::WaitOrderKeyword:
@@ -327,7 +329,7 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
         steps->copy(alloc),
         closeParen,
         parseStatement()
-        );
+    );
 }
 
 ForeachLoopListSyntax* Parser::parseForeachLoopVariables() {
@@ -404,14 +406,106 @@ StatementSyntax* Parser::parseDisableStatement(NamedLabelSyntax* label, ArrayRef
     return alloc.emplace<DisableStatementSyntax>(label, attributes, disable, name, expect(TokenKind::Semicolon));
 }
 
-ImmediateAssertionStatementSyntax* Parser::parseAssertionStatement(SyntaxKind assertionKind, NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
-    // TODO: deferred assertions
-    auto keyword = consume();
+StatementSyntax* Parser::parseAssertionStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    // figure out what kind of assertion we're looking at; concurrent assertions
+    // are involved and get their own handling
+    SyntaxKind assertionKind = SyntaxKind::Unknown;
+    TokenKind nextKind = peek(1).kind;
+    switch (peek().kind) {
+        case TokenKind::AssertKeyword:
+            if (nextKind == TokenKind::PropertyKeyword)
+                return parseConcurrentAssertion(label, attributes);
+            assertionKind = SyntaxKind::ImmediateAssertStatement;
+            break;
+        case TokenKind::AssumeKeyword:
+            if (nextKind == TokenKind::PropertyKeyword)
+                return parseConcurrentAssertion(label, attributes);
+            assertionKind = SyntaxKind::ImmediateAssumeStatement;
+            break;
+        case TokenKind::CoverKeyword:
+            if (nextKind == TokenKind::PropertyKeyword || nextKind == TokenKind::SequenceKeyword)
+                return parseConcurrentAssertion(label, attributes);
+            assertionKind = SyntaxKind::ImmediateCoverStatement;
+            break;
+        default:
+            ASSERT(false, "Shouldn't ever get here");
+    }
+
+    Token keyword = consume();
+    DeferredAssertionSyntax* deferred = nullptr;
+    if (peek(TokenKind::Hash)) {
+        // TODO: ensure integer is 0
+        auto hash = consume();
+        deferred = alloc.emplace<DeferredAssertionSyntax>(hash, expect(TokenKind::IntegerLiteral), Token());
+    }
+    else if (peek(TokenKind::FinalKeyword)) {
+        deferred = alloc.emplace<DeferredAssertionSyntax>(Token(), Token(), consume());
+    }
+
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto expr = parseExpression();
     auto parenExpr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expr, expect(TokenKind::CloseParenthesis));
     auto actionBlock = parseActionBlock();
-    return alloc.emplace<ImmediateAssertionStatementSyntax>(assertionKind, label, attributes, keyword, nullptr, parenExpr, actionBlock);
+    return alloc.emplace<ImmediateAssertionStatementSyntax>(assertionKind, label, attributes, keyword, deferred, parenExpr, actionBlock);
+}
+
+ConcurrentAssertionStatementSyntax* Parser::parseConcurrentAssertion(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    SyntaxKind kind;
+    Token propertyOrSequence;
+    auto keyword = consume();
+
+    switch (keyword.kind) {
+        case TokenKind::AssertKeyword:
+            kind = SyntaxKind::AssertPropertyStatement;
+            propertyOrSequence = expect(TokenKind::PropertyKeyword);
+            break;
+        case TokenKind::AssumeKeyword:
+            kind = SyntaxKind::AssumePropertyStatement;
+            propertyOrSequence = expect(TokenKind::PropertyKeyword);
+            break;
+        case TokenKind::CoverKeyword:
+            if (peek(TokenKind::SequenceKeyword)) {
+                kind = SyntaxKind::CoverSequenceStatement;
+                propertyOrSequence = consume();
+            }
+            else {
+                kind = SyntaxKind::CoverPropertyStatement;
+                propertyOrSequence = expect(TokenKind::PropertyKeyword);
+            }
+            break;
+        case TokenKind::RestrictKeyword:
+            kind = SyntaxKind::RestrictPropertyStatement;
+            propertyOrSequence = expect(TokenKind::PropertyKeyword);
+            break;
+        case TokenKind::ExpectKeyword:
+            kind = SyntaxKind::ExpectPropertyStatement;
+            break;
+    }
+
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto spec = parsePropertySpec(propertyOrSequence.kind == TokenKind::SequenceKeyword);
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    auto action = parseActionBlock();
+
+    return alloc.emplace<ConcurrentAssertionStatementSyntax>(kind, label, attributes, keyword, propertyOrSequence, openParen, spec, closeParen, action);
+}
+
+PropertySpecSyntax* Parser::parsePropertySpec(bool isSequence) {
+    TimingControlSyntax* timing = nullptr;
+    if (peek(TokenKind::At))
+        timing = parseTimingControl();
+
+    DisableIffSyntax* disable = nullptr;
+    if (peek(TokenKind::DisableKeyword)) {
+        auto keyword = consume();
+        auto iff = expect(TokenKind::IffKeyword);
+        auto openParen = expect(TokenKind::OpenParenthesis);
+        auto expr = parseExpressionOrDist();
+        disable = alloc.emplace<DisableIffSyntax>(keyword, iff, openParen, expr, expect(TokenKind::CloseParenthesis));
+    }
+
+    auto expr = isSequence ? parseSequenceExpression(0) : parsePropertyExpression(0);
+    return alloc.emplace<PropertySpecSyntax>(timing, disable, expr);
 }
 
 ActionBlockSyntax* Parser::parseActionBlock() {

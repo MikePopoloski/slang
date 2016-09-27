@@ -3307,6 +3307,143 @@ protected:
     }
 };
 
+struct DisableIffSyntax : public SyntaxNode {
+    Token disable;
+    Token iff;
+    Token openParen;
+    ExpressionSyntax* expr;
+    Token closeParen;
+
+    DisableIffSyntax(Token disable, Token iff, Token openParen, ExpressionSyntax* expr, Token closeParen) :
+        SyntaxNode(SyntaxKind::DisableIff), disable(disable), iff(iff), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return disable;
+            case 1: return iff;
+            case 2: return openParen;
+            case 3: return expr;
+            case 4: return closeParen;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: disable = token; break;
+            case 1: iff = token; break;
+            case 2: openParen = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeParen = token; break;
+        }
+    }
+};
+
+struct PropertySpecSyntax : public SyntaxNode {
+    TimingControlSyntax* clocking;
+    DisableIffSyntax* disable;
+    ExpressionSyntax* expr;
+
+    PropertySpecSyntax(TimingControlSyntax* clocking, DisableIffSyntax* disable, ExpressionSyntax* expr) :
+        SyntaxNode(SyntaxKind::PropertySpec), clocking(clocking), disable(disable), expr(expr)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return clocking;
+            case 1: return disable;
+            case 2: return expr;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
+struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
+    Token keyword;
+    Token propertyOrSequence;
+    Token openParen;
+    PropertySpecSyntax* propertySpec;
+    Token closeParen;
+    ActionBlockSyntax* action;
+
+    ConcurrentAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token propertyOrSequence, Token openParen, PropertySpecSyntax* propertySpec, Token closeParen, ActionBlockSyntax* action) :
+        StatementSyntax(kind, label, attributes), keyword(keyword), propertyOrSequence(propertyOrSequence), openParen(openParen), propertySpec(propertySpec), closeParen(closeParen), action(action)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return keyword;
+            case 3: return propertyOrSequence;
+            case 4: return openParen;
+            case 5: return propertySpec;
+            case 6: return closeParen;
+            case 7: return action;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: keyword = token; break;
+            case 3: propertyOrSequence = token; break;
+            case 4: openParen = token; break;
+            case 5: ASSERT(false); break;
+            case 6: closeParen = token; break;
+            case 7: ASSERT(false); break;
+        }
+    }
+};
+
+struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
+    ConcurrentAssertionStatementSyntax* statement;
+
+    ConcurrentAssertionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ConcurrentAssertionStatementSyntax* statement) :
+        MemberSyntax(SyntaxKind::ConcurrentAssertionMember, attributes), statement(statement)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return statement;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
 // ----- STATEMENTS -----
 
 struct EmptyStatementSyntax : public StatementSyntax {

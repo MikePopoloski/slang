@@ -578,7 +578,28 @@ DeferredAssertionSyntax delay
 ParenthesizedExpressionSyntax expr
 ActionBlockSyntax action
 
+DisableIffSyntax kind=DisableIff
+token disable
+token iff
+token openParen
+ExpressionSyntax expr
+token closeParen
 
+PropertySpecSyntax kind=PropertySpec
+TimingControlSyntax clocking
+DisableIffSyntax disable
+ExpressionSyntax expr
+
+ConcurrentAssertionStatementSyntax base=StatementSyntax
+token keyword
+token propertyOrSequence
+token openParen
+PropertySpecSyntax propertySpec
+token closeParen
+ActionBlockSyntax action
+
+ConcurrentAssertionMemberSyntax base=MemberSyntax kind=ConcurrentAssertionMember
+ConcurrentAssertionStatementSyntax statement
 
 // ----- STATEMENTS -----
 
