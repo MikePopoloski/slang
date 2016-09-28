@@ -166,6 +166,7 @@ private:
     };
 
     ExpressionSyntax* parseSubExpression(ExpressionOptions::Enum options, int precedence);
+    ExpressionSyntax* parsePrefixExpression(ExpressionOptions::Enum options, SyntaxKind opKind);
 
     template<bool(*IsEnd)(TokenKind)>
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token& end);

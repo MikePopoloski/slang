@@ -34,10 +34,10 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     auto current = peek();
     if (current.kind == TokenKind::NewKeyword)
         return parseNewExpression();
-    else if (isPossibleDelayOrEventControl(current.kind)) {
+    /*else if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
         return alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
-    }
+    }*/
     else if (current.kind == TokenKind::TaggedKeyword) {
         // TODO: check for trailing expression
         auto tagged = consume();
@@ -46,18 +46,10 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     }
 
     SyntaxKind opKind = getUnaryPrefixExpression(current.kind);
-    if (opKind != SyntaxKind::Unknown) {
-        auto opToken = consume();
-        auto attributes = parseAttributes();
-
-        newPrecedence = getPrecedence(opKind);
-        ExpressionSyntax* operand = parseSubExpression(options, newPrecedence);
-        leftOperand = alloc.emplace<PrefixUnaryExpressionSyntax>(opKind, opToken, attributes, operand);
-    }
-    else {
-        // not a unary operator, so must be a primary expression
+    if (opKind != SyntaxKind::Unknown)
+        leftOperand = parsePrefixExpression(options, opKind);
+    else
         leftOperand = parsePrimaryExpression();
-    }
 
     while (true) {
         // either a binary operator, or we're done
@@ -115,6 +107,38 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     }
 
     return leftOperand;
+}
+
+ExpressionSyntax* Parser::parsePrefixExpression(ExpressionOptions::Enum options, SyntaxKind opKind) {
+    switch (opKind) {
+        case SyntaxKind::UnarySequenceDelayExpression:
+        case SyntaxKind::UnarySequenceEventExpression: {
+            auto timing = parseTimingControl();
+            return alloc.emplace<TimingControlExpressionSyntax>(timing, parseExpression());
+        }
+        case SyntaxKind::NextTimePropertyExpression:
+        case SyntaxKind::SNextTimePropertyExpression:
+        case SyntaxKind::AlwaysPropertyExpression:
+        case SyntaxKind::SAlwaysPropertyExpression:
+        case SyntaxKind::EventuallyPropertyExpression:
+        case SyntaxKind::SEventuallyPropertyExpression:
+            // TODO:
+            break;
+        case SyntaxKind::AcceptOnPropertyExpression:
+        case SyntaxKind::RejectOnPropertyExpression:
+        case SyntaxKind::SyncAcceptOnPropertyExpression:
+        case SyntaxKind::SyncRejectOnPropertyExpression:
+            // TODO:
+            break;
+        default:
+            break;
+    }
+
+    auto opToken = consume();
+    auto attributes = parseAttributes();
+
+    ExpressionSyntax* operand = parseSubExpression(options, getPrecedence(opKind));
+    return alloc.emplace<PrefixUnaryExpressionSyntax>(opKind, opToken, attributes, operand);
 }
 
 ExpressionSyntax* Parser::parsePrimaryExpression() {
@@ -206,6 +230,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             }
             else {
                 // parseName() will insert a missing identifier token for the error case
+                // TODO: better error for "expected expression" instead of "expected identifier"
                 auto name = parseName();
                 if (peek(TokenKind::ApostropheOpenBrace))
                     expr = parseAssignmentPatternExpression(alloc.emplace<NamedTypeSyntax>(name));

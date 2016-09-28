@@ -15,14 +15,21 @@
 [Parser]
 * Stack overflow prevention
 * Give syntax nodes a Kind for as<> casting
-* Unify parser and preprocessor support code
 
 [parsing]
-* Randomize / Array method "with" blocks
-* Sequence methods
 * Param expressions
 * Type reference expression
 * Assignment patterns
+
+* Sequence instances / methods
+* Fill in unary operators
+* Commas in parenthesis for sequence concat
+* Sequence if / case
+* Expression or dist
+* Procedural context
+* Top level deferred assertions
+* Sequence / property declarations
+* Sequence postfix
 
 When skipping to an end keyword, break out if we encounter some other kind of end
 Include and macro directives should come *after* the stuff they insert into the stream

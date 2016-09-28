@@ -328,13 +328,19 @@ MemberSyntax* Parser::parseMember() {
             else
                 return parseModule(attributes);
         case TokenKind::SpecParamKeyword:
-        case TokenKind::Identifier:
         case TokenKind::BindKeyword:
         case TokenKind::AliasKeyword:
         case TokenKind::CheckerKeyword:
         case TokenKind::SpecifyKeyword:
             // TODO: parse these
             break;
+        case TokenKind::Identifier: {
+            // named assertion label
+            // TODO: Don't assume we have an assert here; this could be an accidental label or something
+            auto name = consume();
+            auto label = alloc.emplace<NamedLabelSyntax>(name, expect(TokenKind::Colon));
+            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, parseConcurrentAssertion(label, nullptr));
+        }
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
         case TokenKind::CoverKeyword:
