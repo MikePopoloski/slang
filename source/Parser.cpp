@@ -814,6 +814,19 @@ MemberSyntax* Parser::parseCoverageMember() {
     // TODO: error on attributes that don't attach to a valid construct
     auto attributes = parseAttributes();
 
+    // check for coverage option
+    auto token = peek();
+    if (token.kind == TokenKind::Identifier) {
+        if (token.valueText() == "option" || token.valueText() == "type_option") {
+            consume();
+            auto dot = expect(TokenKind::Dot);
+            auto name = expect(TokenKind::Identifier);
+            auto equals = expect(TokenKind::Equals);
+            auto expr = parseExpression();
+            return alloc.emplace<CoverageOptionSyntax>(attributes, token, dot, name, equals, expr, expect(TokenKind::Semicolon));
+        }
+    }
+
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (attributes.count())
         return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, expect(TokenKind::Semicolon));
