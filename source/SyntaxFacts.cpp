@@ -26,6 +26,19 @@ SyntaxKind getUnaryPrefixExpression(TokenKind kind) {
         case TokenKind::DoubleMinus: return SyntaxKind::UnaryPredecrementExpression;
         case TokenKind::Tilde: return SyntaxKind::UnaryBitwiseNotExpression;
         case TokenKind::Exclamation: return SyntaxKind::UnaryLogicalNotExpression;
+        case TokenKind::DoubleHash: return SyntaxKind::UnarySequenceDelayExpression;
+        case TokenKind::At: return SyntaxKind::UnarySequenceEventExpression;
+        case TokenKind::AcceptOnKeyword: return SyntaxKind::AcceptOnPropertyExpression;
+        case TokenKind::RejectOnKeyword: return SyntaxKind::RejectOnPropertyExpression;
+        case TokenKind::SyncAcceptOnKeyword: return SyntaxKind::SyncAcceptOnPropertyExpression;
+        case TokenKind::SyncRejectOnKeyword: return SyntaxKind::SyncRejectOnPropertyExpression;
+        case TokenKind::NotKeyword: return SyntaxKind::UnaryNotPropertyExpression;
+        case TokenKind::NextTimeKeyword: return SyntaxKind::NextTimePropertyExpression;
+        case TokenKind::SNextTimeKeyword: return SyntaxKind::SNextTimePropertyExpression;
+        case TokenKind::AlwaysKeyword: return SyntaxKind::AlwaysPropertyExpression;
+        case TokenKind::SAlwaysKeyword: return SyntaxKind::SAlwaysPropertyExpression;
+        case TokenKind::EventuallyKeyword: return SyntaxKind::EventuallyPropertyExpression;
+        case TokenKind::SEventuallyKeyword: return SyntaxKind::SEventuallyPropertyExpression;
         default:
             return SyntaxKind::Unknown;
     }
@@ -98,25 +111,11 @@ SyntaxKind getBinaryExpression(TokenKind kind) {
         case TokenKind::TripleLeftShiftEqual: return SyntaxKind::ArithmeticLeftShiftAssignmentExpression;
         case TokenKind::RightShiftEqual: return SyntaxKind::LogicalRightShiftAssignmentExpression;
         case TokenKind::TripleRightShiftEqual: return SyntaxKind::ArithmeticRightShiftAssignmentExpression;
-        default: return SyntaxKind::Unknown;
-    }
-}
-
-SyntaxKind getSequenceBinaryExpression(TokenKind kind) {
-    switch (kind) {
         case TokenKind::OrKeyword: return SyntaxKind::OrSequenceExpression;
         case TokenKind::AndKeyword: return SyntaxKind::AndSequenceExpression;
         case TokenKind::IntersectKeyword: return SyntaxKind::IntersectSequenceExpression;
         case TokenKind::WithinKeyword: return SyntaxKind::WithinSequenceExpression;
         case TokenKind::ThroughoutKeyword: return SyntaxKind::ThroughoutSequenceExpression;
-        default: return SyntaxKind::Unknown;
-    }
-}
-
-SyntaxKind getPropertyBinaryExpression(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::OrKeyword: return SyntaxKind::OrPropertyExpression;
-        case TokenKind::AndKeyword: return SyntaxKind::AndPropertyExpression;
         case TokenKind::IffKeyword: return SyntaxKind::IffPropertyExpression;
         case TokenKind::UntilKeyword: return SyntaxKind::UntilPropertyExpression;
         case TokenKind::SUntilKeyword: return SyntaxKind::SUntilPropertyExpression;
@@ -127,6 +126,7 @@ SyntaxKind getPropertyBinaryExpression(TokenKind kind) {
         case TokenKind::OrEqualsArrow: return SyntaxKind::NonOverlappedImplicationPropertyExpression;
         case TokenKind::HashMinusHash: return SyntaxKind::OverlappedFollowedByPropertyExpression;
         case TokenKind::HashEqualsHash: return SyntaxKind::NonOverlappedFollowedByPropertyExpression;
+        case TokenKind::DoubleHash: return SyntaxKind::BinarySequenceDelayExpression;
         default: return SyntaxKind::Unknown;
     }
 }
@@ -149,6 +149,46 @@ SyntaxKind getKeywordNameExpression(TokenKind kind) {
 
 int getPrecedence(SyntaxKind kind) {
     switch (kind) {
+        case SyntaxKind::AlwaysPropertyExpression:
+        case SyntaxKind::SAlwaysPropertyExpression:
+        case SyntaxKind::EventuallyPropertyExpression:
+        case SyntaxKind::SEventuallyPropertyExpression:
+        case SyntaxKind::AcceptOnPropertyExpression:
+        case SyntaxKind::RejectOnPropertyExpression:
+        case SyntaxKind::SyncAcceptOnPropertyExpression:
+        case SyntaxKind::SyncRejectOnPropertyExpression:
+            return 1;
+        case SyntaxKind::OverlappedImplicationPropertyExpression:
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
+        case SyntaxKind::OverlappedFollowedByPropertyExpression:
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
+            return 2;
+        case SyntaxKind::UntilPropertyExpression:
+        case SyntaxKind::SUntilPropertyExpression:
+        case SyntaxKind::UntilWithPropertyExpression:
+        case SyntaxKind::SUntilWithPropertyExpression:
+        case SyntaxKind::ImpliesPropertyExpression:
+            return 3;
+        case SyntaxKind::IffPropertyExpression:
+            return 3;
+        case SyntaxKind::OrSequenceExpression:
+            return 4;
+        case SyntaxKind::AndSequenceExpression:
+            return 5;
+        case SyntaxKind::UnaryNotPropertyExpression:
+        case SyntaxKind::NextTimePropertyExpression:
+        case SyntaxKind::SNextTimePropertyExpression:
+            return 6;
+        case SyntaxKind::IntersectSequenceExpression:
+            return 7;
+        case SyntaxKind::WithinSequenceExpression:
+            return 8;
+        case SyntaxKind::ThroughoutSequenceExpression:
+            return 9;
+        case SyntaxKind::BinarySequenceDelayExpression:
+        case SyntaxKind::UnarySequenceDelayExpression:
+        case SyntaxKind::UnarySequenceEventExpression:
+            return 10;
         case SyntaxKind::AssignmentExpression:
         case SyntaxKind::AddAssignmentExpression:
         case SyntaxKind::SubtractAssignmentExpression:
@@ -163,48 +203,48 @@ int getPrecedence(SyntaxKind kind) {
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
         case SyntaxKind::NonblockingAssignmentExpression:
-            return 1;
+            return 11;
         case SyntaxKind::LogicalImplicationExpression:
         case SyntaxKind::LogicalEquivalenceExpression:
-            return 2;
+            return 12;
         case SyntaxKind::LogicalOrExpression:
-            return 3;
+            return 13;
         case SyntaxKind::LogicalAndExpression:
-            return 4;
+            return 14;
         case SyntaxKind::BinaryOrExpression:
-            return 5;
+            return 15;
         case SyntaxKind::BinaryXorExpression:
         case SyntaxKind::BinaryXnorExpression:
-            return 6;
+            return 16;
         case SyntaxKind::BinaryAndExpression:
-            return 7;
+            return 17;
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
         case SyntaxKind::CaseEqualityExpression:
         case SyntaxKind::CaseInequalityExpression:
         case SyntaxKind::WildcardEqualityExpression:
         case SyntaxKind::WildcardInequalityExpression:
-            return 8;
+            return 18;
         case SyntaxKind::LessThanExpression:
         case SyntaxKind::LessThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::InsideExpression:
-            return 9;
+            return 19;
         case SyntaxKind::LogicalShiftLeftExpression:
         case SyntaxKind::LogicalShiftRightExpression:
         case SyntaxKind::ArithmeticShiftLeftExpression:
         case SyntaxKind::ArithmeticShiftRightExpression:
-            return 10;
+            return 20;
         case SyntaxKind::AddExpression:
         case SyntaxKind::SubtractExpression:
-            return 11;
+            return 21;
         case SyntaxKind::MultiplyExpression:
         case SyntaxKind::DivideExpression:
         case SyntaxKind::ModExpression:
-            return 12;
+            return 22;
         case SyntaxKind::PowerExpression:
-            return 13;
+            return 23;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryLogicalNotExpression:
@@ -217,51 +257,7 @@ int getPrecedence(SyntaxKind kind) {
         case SyntaxKind::UnaryBitwiseXnorExpression:
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            return 14;
-        default:
-            return 0;
-    }
-}
-
-int getSequencePrecedence(SyntaxKind kind) {
-    switch (kind) {
-        case SyntaxKind::OrSequenceExpression:
-            return 1;
-        case SyntaxKind::AndSequenceExpression:
-            return 2;
-        case SyntaxKind::IntersectSequenceExpression:
-            return 3;
-        case SyntaxKind::WithinSequenceExpression:
-            return 4;
-        case SyntaxKind::ThroughoutSequenceExpression:
-            return 5;
-        case SyntaxKind::DelayControl:
-        case SyntaxKind::EventControl:
-            return 6;
-        default:
-            return 0;
-    }
-}
-
-int getPropertyPrecedence(SyntaxKind kind) {
-    switch (kind) {
-        case SyntaxKind::OverlappedImplicationPropertyExpression:
-        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
-        case SyntaxKind::OverlappedFollowedByPropertyExpression:
-        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
-            return 1;
-        case SyntaxKind::UntilPropertyExpression:
-        case SyntaxKind::SUntilPropertyExpression:
-        case SyntaxKind::UntilWithPropertyExpression:
-        case SyntaxKind::SUntilWithPropertyExpression:
-        case SyntaxKind::ImpliesPropertyExpression:
-            return 2;
-        case SyntaxKind::IffPropertyExpression:
-            return 3;
-        case SyntaxKind::OrPropertyExpression:
-            return 4;
-        case SyntaxKind::AndPropertyExpression:
-            return 5;
+            return 24;
         default:
             return 0;
     }
@@ -337,14 +333,22 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::LocalKeyword:
         case TokenKind::OpenParenthesis:
         case TokenKind::OpenBrace:
+        case TokenKind::OpenBracket:
         case TokenKind::UnitSystemName:
         case TokenKind::ThisKeyword:
         case TokenKind::SuperKeyword:
         case TokenKind::Identifier:
         case TokenKind::RootSystemName:
         case TokenKind::Hash:
+        case TokenKind::DoubleHash:
+        case TokenKind::At:
         case TokenKind::TypeKeyword:
         case TokenKind::ApostropheOpenBrace:
+        case TokenKind::FirstMatchKeyword:
+        case TokenKind::StrongKeyword:
+        case TokenKind::WeakKeyword:
+        case TokenKind::IfKeyword:
+        case TokenKind::CaseKeyword:
             // expressions can't actually start with these, but we'll allow it
             // to provide good error handling
         case TokenKind::DoubleColon:
@@ -352,6 +356,7 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::MatchesKeyword:
         case TokenKind::TripleAnd:
         case TokenKind::InsideKeyword:
+        case TokenKind::DistKeyword:
             return true;
         default:
             break;

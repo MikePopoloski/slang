@@ -1842,12 +1842,12 @@ struct EventExpressionSyntax : public SyntaxNode {
     }
 };
 
-struct IffClauseSyntax : public SyntaxNode {
-    Token iff;
+struct SignalEventExpressionSyntax : public EventExpressionSyntax {
+    Token edge;
     ExpressionSyntax* expr;
 
-    IffClauseSyntax(Token iff, ExpressionSyntax* expr) :
-        SyntaxNode(SyntaxKind::IffClause), iff(iff), expr(expr)
+    SignalEventExpressionSyntax(Token edge, ExpressionSyntax* expr) :
+        EventExpressionSyntax(SyntaxKind::SignalEventExpression), edge(edge), expr(expr)
     {
         childCount += 2;
     }
@@ -1855,37 +1855,8 @@ struct IffClauseSyntax : public SyntaxNode {
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch (index) {
-            case 0: return iff;
-            case 1: return expr;
-            default: return nullptr;
-        }
-    }
-
-    void replaceChild(uint32_t index, Token token) override final {
-        switch (index) {
-            case 0: iff = token; break;
-            case 1: ASSERT(false); break;
-        }
-    }
-};
-
-struct SignalEventExpressionSyntax : public EventExpressionSyntax {
-    Token edge;
-    ExpressionSyntax* expr;
-    IffClauseSyntax* iffClause;
-
-    SignalEventExpressionSyntax(Token edge, ExpressionSyntax* expr, IffClauseSyntax* iffClause) :
-        EventExpressionSyntax(SyntaxKind::SignalEventExpression), edge(edge), expr(expr), iffClause(iffClause)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch (index) {
             case 0: return edge;
             case 1: return expr;
-            case 2: return iffClause;
             default: return nullptr;
         }
     }
@@ -1894,7 +1865,6 @@ protected:
         switch (index) {
             case 0: edge = token; break;
             case 1: ASSERT(false); break;
-            case 2: ASSERT(false); break;
         }
     }
 };
@@ -3441,6 +3411,42 @@ protected:
             case 1: ASSERT(false); break;
         }
         (void)token;
+    }
+};
+
+struct AbortPropertyExpressionSyntax : public ExpressionSyntax {
+    Token keyword;
+    Token openParen;
+    ExpressionSyntax* condition;
+    Token closeParen;
+    ExpressionSyntax* expr;
+
+    AbortPropertyExpressionSyntax(SyntaxKind kind, Token keyword, Token openParen, ExpressionSyntax* condition, Token closeParen, ExpressionSyntax* expr) :
+        ExpressionSyntax(kind), keyword(keyword), openParen(openParen), condition(condition), closeParen(closeParen), expr(expr)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return keyword;
+            case 1: return openParen;
+            case 2: return condition;
+            case 3: return closeParen;
+            case 4: return expr;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: keyword = token; break;
+            case 1: openParen = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
+            case 4: ASSERT(false); break;
+        }
     }
 };
 

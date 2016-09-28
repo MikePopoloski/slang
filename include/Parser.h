@@ -77,7 +77,7 @@ private:
     StatementSyntax* parseDisableStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     StatementSyntax* parseAssertionStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     ConcurrentAssertionStatementSyntax* parseConcurrentAssertion(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    PropertySpecSyntax* parsePropertySpec(bool isSequence);
+    PropertySpecSyntax* parsePropertySpec();
     ActionBlockSyntax* parseActionBlock();
     BlockStatementSyntax* parseBlock(SyntaxKind blockKind, TokenKind endKind, NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     StatementSyntax* parseWaitStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
@@ -152,14 +152,20 @@ private:
     struct ExpressionOptions {
         enum Enum {
             None = 0,
+
+            // Allow pattern matching expressions; these are not allowed recursively so
+            // they're turned off after finding the first one
             AllowPatternMatch = 1,
-            ProceduralAssignmentContext = 2
+
+            // In a procedural assignment context, <= is a non-blocking assignment, not less than or equals
+            ProceduralAssignmentContext = 2,
+
+            // In an event expression context, the "or" operator has special meaning
+            EventExpressionContext = 4
         };
     };
 
     ExpressionSyntax* parseSubExpression(ExpressionOptions::Enum options, int precedence);
-    ExpressionSyntax* parseSequenceExpression(int precedence);
-    ExpressionSyntax* parsePropertyExpression(int precedence);
 
     template<bool(*IsEnd)(TokenKind)>
     ArrayRef<TokenOrSyntax> parseVariableDeclarators(TokenKind endKind, Token& end);

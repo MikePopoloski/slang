@@ -324,14 +324,9 @@ NameSyntax eventName
 EventExpressionSyntax final=false
 empty
 
-IffClauseSyntax kind=IffClause
-token iff
-ExpressionSyntax expr
-
 SignalEventExpressionSyntax base=EventExpressionSyntax kind=SignalEventExpression
 token edge
 ExpressionSyntax expr
-IffClauseSyntax iffClause
 
 BinaryEventExpressionSyntax base=EventExpressionSyntax kind=BinaryEventExpression
 EventExpressionSyntax left
@@ -600,6 +595,13 @@ ActionBlockSyntax action
 
 ConcurrentAssertionMemberSyntax base=MemberSyntax kind=ConcurrentAssertionMember
 ConcurrentAssertionStatementSyntax statement
+
+AbortPropertyExpressionSyntax base=ExpressionSyntax
+token keyword
+token openParen
+ExpressionSyntax condition
+token closeParen
+ExpressionSyntax expr
 
 // ----- STATEMENTS -----
 

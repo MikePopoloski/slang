@@ -79,6 +79,13 @@ enum class SyntaxKind : uint16_t {
     StructuredAssignmentPattern,
     ReplicatedAssignmentPattern,
 
+    // misc expressions
+    TaggedUnionExpression,
+    OpenRangeList,
+    InsideExpression,
+    ConditionalExpression,
+    ExpressionOrDist,
+
     // unary expressions
     UnaryPlusExpression,
     UnaryMinusExpression,
@@ -92,6 +99,19 @@ enum class SyntaxKind : uint16_t {
     UnaryPredecrementExpression,
     UnaryLogicalNotExpression,
     UnaryBitwiseNotExpression,
+    UnarySequenceDelayExpression,
+    UnarySequenceEventExpression,
+    UnaryNotPropertyExpression,
+    AcceptOnPropertyExpression,
+    RejectOnPropertyExpression,
+    SyncAcceptOnPropertyExpression,
+    SyncRejectOnPropertyExpression,
+    NextTimePropertyExpression,
+    SNextTimePropertyExpression,
+    AlwaysPropertyExpression,
+    SAlwaysPropertyExpression,
+    EventuallyPropertyExpression,
+    SEventuallyPropertyExpression,
 
     // primary expressions
     NullLiteralExpression,
@@ -115,6 +135,9 @@ enum class SyntaxKind : uint16_t {
     NewArrayExpression,
     AssignmentPatternExpression,
     DefaultPatternKeyExpression,
+    StrongPropertyExpression,
+    WeakPropertyExpression,
+    FirstMatchSequenceExpression,
 
     // selectors
     BitSelect,
@@ -163,11 +186,22 @@ enum class SyntaxKind : uint16_t {
     LogicalShiftRightExpression,
     ArithmeticShiftLeftExpression,
     ArithmeticShiftRightExpression,
-    TaggedUnionExpression,
-    OpenRangeList,
-    InsideExpression,
-    ConditionalExpression,
-    ExpressionOrDist,
+    BinarySequenceDelayExpression,
+    OrSequenceExpression,
+    AndSequenceExpression,
+    IntersectSequenceExpression,
+    WithinSequenceExpression,
+    ThroughoutSequenceExpression,
+    IffPropertyExpression,
+    UntilPropertyExpression,
+    SUntilPropertyExpression,
+    UntilWithPropertyExpression,
+    SUntilWithPropertyExpression,
+    ImpliesPropertyExpression,
+    OverlappedImplicationPropertyExpression,
+    NonOverlappedImplicationPropertyExpression,
+    OverlappedFollowedByPropertyExpression,
+    NonOverlappedFollowedByPropertyExpression,
 
     // assignment expressions
     AssignmentExpression,
@@ -207,7 +241,6 @@ enum class SyntaxKind : uint16_t {
     DelayControl,
     CycleDelay,
     EventControl,
-    IffClause,
     SignalEventExpression,
     BinaryEventExpression,
     ParenthesizedEventExpression,
@@ -307,6 +340,7 @@ enum class SyntaxKind : uint16_t {
 
     // assertions
     DeferredAssertion,
+    ConcurrentAssertionMember,
     ActionBlock,
     ImmediateAssertStatement,
     ImmediateAssumeStatement,
@@ -319,24 +353,6 @@ enum class SyntaxKind : uint16_t {
     CoverSequenceStatement,
     RestrictPropertyStatement,
     ExpectPropertyStatement,
-    OrSequenceExpression,
-    AndSequenceExpression,
-    IntersectSequenceExpression,
-    WithinSequenceExpression,
-    ThroughoutSequenceExpression,
-    OrPropertyExpression,
-    AndPropertyExpression,
-    IffPropertyExpression,
-    UntilPropertyExpression,
-    SUntilPropertyExpression,
-    UntilWithPropertyExpression,
-    SUntilWithPropertyExpression,
-    ImpliesPropertyExpression,
-    OverlappedImplicationPropertyExpression,
-    NonOverlappedImplicationPropertyExpression,
-    OverlappedFollowedByPropertyExpression,
-    NonOverlappedFollowedByPropertyExpression,
-    ConcurrentAssertionMember,
 
     // modules
     ImplicitNonAnsiPort,
@@ -429,8 +445,6 @@ SyntaxKind getUnaryPrefixExpression(TokenKind kind);
 SyntaxKind getUnaryPostfixExpression(TokenKind kind);
 SyntaxKind getLiteralExpression(TokenKind kind);
 SyntaxKind getBinaryExpression(TokenKind kind);
-SyntaxKind getSequenceBinaryExpression(TokenKind kind);
-SyntaxKind getPropertyBinaryExpression(TokenKind kind);
 SyntaxKind getKeywordNameExpression(TokenKind kind);
 SyntaxKind getIntegerType(TokenKind kind);
 SyntaxKind getKeywordType(TokenKind kind);
@@ -439,8 +453,6 @@ SyntaxKind getModuleDeclarationKind(TokenKind kind);
 SyntaxKind getModuleHeaderKind(TokenKind kind);
 TokenKind getModuleEndKind(TokenKind kind);
 int getPrecedence(SyntaxKind kind);
-int getSequencePrecedence(SyntaxKind kind);
-int getPropertyPrecedence(SyntaxKind kind);
 bool isRightAssociative(SyntaxKind kind);
 bool isPossibleDataType(TokenKind kind);
 bool isPossibleExpression(TokenKind kind);

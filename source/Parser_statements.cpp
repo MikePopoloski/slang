@@ -483,14 +483,14 @@ ConcurrentAssertionStatementSyntax* Parser::parseConcurrentAssertion(NamedLabelS
     }
 
     auto openParen = expect(TokenKind::OpenParenthesis);
-    auto spec = parsePropertySpec(propertyOrSequence.kind == TokenKind::SequenceKeyword);
+    auto spec = parsePropertySpec();
     auto closeParen = expect(TokenKind::CloseParenthesis);
     auto action = parseActionBlock();
 
     return alloc.emplace<ConcurrentAssertionStatementSyntax>(kind, label, attributes, keyword, propertyOrSequence, openParen, spec, closeParen, action);
 }
 
-PropertySpecSyntax* Parser::parsePropertySpec(bool isSequence) {
+PropertySpecSyntax* Parser::parsePropertySpec() {
     TimingControlSyntax* timing = nullptr;
     if (peek(TokenKind::At))
         timing = parseTimingControl();
@@ -503,9 +503,7 @@ PropertySpecSyntax* Parser::parsePropertySpec(bool isSequence) {
         auto expr = parseExpressionOrDist();
         disable = alloc.emplace<DisableIffSyntax>(keyword, iff, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
-
-    auto expr = isSequence ? parseSequenceExpression(0) : parsePropertyExpression(0);
-    return alloc.emplace<PropertySpecSyntax>(timing, disable, expr);
+    return alloc.emplace<PropertySpecSyntax>(timing, disable, parseExpression());
 }
 
 ActionBlockSyntax* Parser::parseActionBlock() {

@@ -66,6 +66,10 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
         if (opKind == SyntaxKind::Unknown)
             break;
 
+        // the "or" operator in event expressions is special, we don't handle it here
+        if (opKind == SyntaxKind::OrSequenceExpression && (options & ExpressionOptions::EventExpressionContext))
+            break;
+
         // we have to special case '<=', which can be less than or nonblocking assignment depending on context
         if (opKind == SyntaxKind::LessThanEqualExpression && (options & ExpressionOptions::ProceduralAssignmentContext)) {
             options = (ExpressionOptions::Enum)(options & ~ExpressionOptions::ProceduralAssignmentContext);
@@ -717,15 +721,8 @@ EventExpressionSyntax* Parser::parseEventExpression() {
         if (kind == TokenKind::PosEdgeKeyword || kind == TokenKind::NegEdgeKeyword || kind == TokenKind::EdgeKeyword)
             edge = consume();
 
-        // TODO: support sequence instances
-        auto expr = parseExpression();
-
-        IffClauseSyntax* iffClause = nullptr;
-        if (peek(TokenKind::IffKeyword)) {
-            auto iff = consume();
-            iffClause = alloc.emplace<IffClauseSyntax>(iff, parseExpression());
-        }
-        left = alloc.emplace<SignalEventExpressionSyntax>(edge, expr, iffClause);
+        auto expr = parseSubExpression((ExpressionOptions::Enum)(ExpressionOptions::AllowPatternMatch | ExpressionOptions::EventExpressionContext), 0);
+        left = alloc.emplace<SignalEventExpressionSyntax>(edge, expr);
     }
 
     kind = peek().kind;
@@ -845,108 +842,6 @@ ExpressionSyntax* Parser::parseArrayOrRandomizeWithClause() {
 
     auto idList = alloc.emplace<IdentifierListSyntax>(openParen, buffer->copy(alloc), closeParen);
     return alloc.emplace<RandomizeMethodWithClauseSyntax>(with, idList, parseConstraintBlock());
-}
-
-ExpressionSyntax* Parser::parseSequenceExpression(int precedence) {
-    ExpressionSyntax* leftOperand = nullptr;
-    int newPrecedence = 0;
-
-    Token current = peek();
-    switch (current.kind) {
-        case TokenKind::At:
-        case TokenKind::DoubleHash: {
-            // unary delay control
-            auto timing = parseTimingControl();
-            newPrecedence = getSequencePrecedence(SyntaxKind::DelayControl);
-            leftOperand = alloc.emplace<TimingControlExpressionSyntax>(timing, parseSequenceExpression(newPrecedence));
-            break;
-        }
-        case TokenKind::FirstMatchKeyword:
-            // primary: first_match
-        case TokenKind::OpenParenthesis:
-            // primary: parenthesized
-        default: {
-            // primary: expression (or dist)
-            leftOperand = parseExpressionOrDist();
-            break;
-        }
-    }
-
-    while (true) {
-        // either a binary operator, or we're done
-        current = peek();
-        SyntaxKind opKind = getSequenceBinaryExpression(current.kind);
-        if (opKind == SyntaxKind::Unknown)
-            break;
-
-        // see if we should take this operator or if it's part of our parent due to precedence
-        newPrecedence = getSequencePrecedence(opKind);
-        if (newPrecedence < precedence)
-            break;
-
-        // if we have a precedence tie, check associativity
-        if (newPrecedence == precedence && !isRightAssociative(opKind))
-            break;
-
-        // take the operator
-        auto opToken = consume();
-        auto rightOperand = parseSequenceExpression(newPrecedence);
-        leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, nullptr, rightOperand);
-    }
-
-    return leftOperand;
-}
-
-ExpressionSyntax* Parser::parsePropertyExpression(int precedence) {
-    ExpressionSyntax* leftOperand = nullptr;
-    int newPrecedence = 0;
-
-    Token current = peek();
-    switch (current.kind) {
-        case TokenKind::StrongKeyword:
-        case TokenKind::WeakKeyword:
-        case TokenKind::OpenParenthesis:
-        case TokenKind::NotKeyword:
-        case TokenKind::IfKeyword:
-        case TokenKind::CaseKeyword:
-        case TokenKind::NextTimeKeyword:
-        case TokenKind::SNextTimeKeyword:
-        case TokenKind::AlwaysKeyword:
-        case TokenKind::SAlwaysKeyword:
-        case TokenKind::EventuallyKeyword:
-        case TokenKind::SEventuallyKeyword:
-        case TokenKind::AcceptOnKeyword:
-        case TokenKind::RejectOnKeyword:
-        case TokenKind::SyncAcceptOnKeyword:
-        case TokenKind::SyncRejectOnKeyword:
-        case TokenKind::At:
-        default:
-            break;
-    }
-
-    while (true) {
-        // either a binary operator, or we're done
-        current = peek();
-        SyntaxKind opKind = getPropertyBinaryExpression(current.kind);
-        if (opKind == SyntaxKind::Unknown)
-            break;
-
-        // see if we should take this operator or if it's part of our parent due to precedence
-        newPrecedence = getPropertyPrecedence(opKind);
-        if (newPrecedence < precedence)
-            break;
-
-        // if we have a precedence tie, check associativity
-        if (newPrecedence == precedence && !isRightAssociative(opKind))
-            break;
-
-        // take the operator
-        auto opToken = consume();
-        auto rightOperand = parsePropertyExpression(newPrecedence);
-        leftOperand = alloc.emplace<BinaryExpressionSyntax>(opKind, leftOperand, opToken, nullptr, rightOperand);
-    }
-
-    return leftOperand;
 }
 
 }
