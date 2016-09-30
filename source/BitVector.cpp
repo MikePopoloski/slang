@@ -2,6 +2,8 @@
 
 #include "Diagnostics.h"
 
+#include "SVInt.h"
+
 namespace {
 
 uint32_t clog2(uint64_t value) {

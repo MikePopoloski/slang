@@ -52,6 +52,7 @@
     <ClInclude Include="..\..\include\slang.h" />
     <ClInclude Include="..\..\include\StringRef.h" />
     <ClInclude Include="..\..\include\StringTable.h" />
+    <ClInclude Include="..\..\include\SVInt.h" />
     <ClInclude Include="..\..\include\Symbol.h" />
     <ClInclude Include="..\..\include\SyntaxNode.h" />
     <ClInclude Include="..\..\include\SyntaxTree.h" />
