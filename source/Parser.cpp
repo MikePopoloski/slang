@@ -810,11 +810,7 @@ DefParamSyntax* Parser::parseDefParam(ArrayRef<AttributeInstanceSyntax*> attribu
     return alloc.emplace<DefParamSyntax>(attributes, defparam, buffer->copy(alloc), semi);
 }
 
-MemberSyntax* Parser::parseCoverageMember() {
-    // TODO: error on attributes that don't attach to a valid construct
-    auto attributes = parseAttributes();
-
-    // check for coverage option
+CoverageOptionSyntax* Parser::parseCoverageOption(ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto token = peek();
     if (token.kind == TokenKind::Identifier) {
         if (token.valueText() == "option" || token.valueText() == "type_option") {
@@ -826,6 +822,36 @@ MemberSyntax* Parser::parseCoverageMember() {
             return alloc.emplace<CoverageOptionSyntax>(attributes, token, dot, name, equals, expr, expect(TokenKind::Semicolon));
         }
     }
+    return nullptr;
+}
+
+MemberSyntax* Parser::parseCoverageMember() {
+    // TODO: error on attributes that don't attach to a valid construct
+    auto attributes = parseAttributes();
+
+    // check for coverage option
+    auto option = parseCoverageOption(attributes);
+    if (option)
+        return option;
+
+    auto token = peek();
+    if (token.kind == TokenKind::Identifier && peek(1).kind == TokenKind::Colon) {
+        auto name = consume();
+        auto label = alloc.emplace<NamedLabelSyntax>(name, consume());
+        return parseCoverpoint(attributes, nullptr, label);
+    }
+
+    if (isPossibleDataType(token.kind)) {
+        auto type = parseDataType(/* allowImplicit */ true);
+        auto name = expect(TokenKind::Identifier);
+        auto label = alloc.emplace<NamedLabelSyntax>(name, expect(TokenKind::Colon));
+        return parseCoverpoint(attributes, type, label);
+    }
+
+    switch (token.kind) {
+        case TokenKind::CoverPointKeyword: return parseCoverpoint(attributes, nullptr, nullptr);
+        default: break;
+    }
 
     // if we got attributes but don't know what comes next, we have some kind of nonsense
     if (attributes.count())
@@ -833,6 +859,135 @@ MemberSyntax* Parser::parseCoverageMember() {
 
     // otherwise, we got nothing and should just return null so that our caller will skip and try again.
     return nullptr;
+}
+
+CoverpointSyntax* Parser::parseCoverpoint(ArrayRef<AttributeInstanceSyntax*> attributes, DataTypeSyntax* type, NamedLabelSyntax* label) {
+    // if we have total junk here don't bother trying to fabricate a working tree
+    if (attributes.empty() && !type && !label && !peek(TokenKind::CoverPointKeyword))
+        return nullptr;
+    
+    Token keyword = expect(TokenKind::CoverPointKeyword);
+    auto expr = parseExpression();
+    // TODO: handle iff clause separately?
+
+    if (peek(TokenKind::OpenBrace)) {
+        auto openBrace = consume();
+
+        Token closeBrace;
+        auto members = parseMemberList<MemberSyntax>(TokenKind::CloseBrace, closeBrace, [this]() { return parseCoverpointMember(); });
+        return alloc.emplace<CoverpointSyntax>(
+            attributes,
+            type,
+            label,
+            keyword,
+            expr,
+            openBrace,
+            members,
+            closeBrace,
+            Token()
+        );
+    }
+
+    // no brace, so this is an empty list, expect a semicolon
+    return alloc.emplace<CoverpointSyntax>(
+        attributes,
+        type,
+        label,
+        keyword,
+        expr,
+        Token(),
+        nullptr,
+        Token(),
+        expect(TokenKind::Semicolon)
+    );
+}
+
+WithClauseSyntax* Parser::parseWithClause() {
+    if (!peek(TokenKind::WithKeyword))
+        return nullptr;
+
+    auto with = consume();
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto expr = parseExpression();
+    return alloc.emplace<WithClauseSyntax>(with, openParen, expr, expect(TokenKind::CloseParenthesis));
+}
+
+MemberSyntax* Parser::parseCoverpointMember() {
+    // TODO: error on attributes that don't attach to a valid construct
+    auto attributes = parseAttributes();
+
+    // check for coverage option
+    auto option = parseCoverageOption(attributes);
+    if (option)
+        return option;
+
+    Token bins;
+    Token wildcard = consumeIf(TokenKind::WildcardKeyword);
+    switch (peek().kind) {
+        case TokenKind::BinsKeyword:
+        case TokenKind::IllegalBinsKeyword:
+        case TokenKind::IgnoreBinsKeyword:
+            bins = consume();
+            break;
+        default:
+            break;
+    }
+
+    // error out if we have total junk here
+    if (!wildcard && !bins && attributes.empty())
+        return nullptr;
+
+    Token name = expect(TokenKind::Identifier);
+    
+    ElementSelectSyntax* selector = nullptr;
+    if (peek(TokenKind::OpenBracket))
+        selector = parseElementSelect();
+
+    // bunch of different kinds of initializers here
+    CoverageBinInitializerSyntax* initializer = nullptr;
+    Token equals = expect(TokenKind::Equals);
+
+    switch (peek().kind) {
+        case TokenKind::OpenBrace: {
+            auto ranges = parseOpenRangeList();
+            auto with = parseWithClause();
+            initializer = alloc.emplace<RangeCoverageBinInitializerSyntax>(ranges, with);
+            break;
+        }
+        case TokenKind::DefaultKeyword: {
+            auto defaultKeyword = consume();
+            auto sequenceKeyword = consumeIf(TokenKind::SequenceKeyword);
+            initializer = alloc.emplace<DefaultCoverageBinInitializerSyntax>(defaultKeyword, sequenceKeyword);
+            break;
+        }
+        // TODO: trans_list
+        default: {
+            auto expr = parseExpression();
+            auto with = parseWithClause();
+            initializer = alloc.emplace<ExpressionCoverageBinInitializerSyntax>(expr, with);
+            break;
+        }
+    }
+
+    IffClauseSyntax* iffClause = nullptr;
+    if (peek(TokenKind::IffKeyword)) {
+        auto iff = consume();
+        auto openParen = expect(TokenKind::OpenParenthesis);
+        auto expr = parseExpression();
+        iffClause = alloc.emplace<IffClauseSyntax>(iff, openParen, expr, expect(TokenKind::CloseParenthesis));
+    }
+
+    return alloc.emplace<CoverageBinsSyntax>(
+        attributes,
+        wildcard,
+        bins,
+        name,
+        selector,
+        equals,
+        initializer,
+        iffClause,
+        expect(TokenKind::Semicolon)
+    );
 }
 
 BlockEventExpressionSyntax* Parser::parseBlockEventExpression() {

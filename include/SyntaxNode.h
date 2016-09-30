@@ -153,7 +153,7 @@ enum class SyntaxKind : uint16_t {
     PostincrementExpression,
     PostdecrementExpression,
     CastExpression,
-    ArrayMethodWithClause,
+    WithClause,
     IdentifierList,
     RandomizeMethodWithClause,
 
@@ -434,6 +434,12 @@ enum class SyntaxKind : uint16_t {
     BlockCoverageEvent,
     CovergroupDeclaration,
     CoverageOption,
+    Coverpoint,
+    DefaultCoverageBinInitializer,
+    ExpressionCoverageBinInitializer,
+    RangeCoverageBinInitializer,
+    IffClause,
+    CoverageBins,
 
     // top level
     CompilationUnit

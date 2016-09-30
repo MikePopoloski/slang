@@ -6310,14 +6310,14 @@ protected:
     }
 };
 
-struct ArrayMethodWithClauseSyntax : public ExpressionSyntax {
+struct WithClauseSyntax : public ExpressionSyntax {
     Token with;
     Token openParen;
     ExpressionSyntax* expr;
     Token closeParen;
 
-    ArrayMethodWithClauseSyntax(Token with, Token openParen, ExpressionSyntax* expr, Token closeParen) :
-        ExpressionSyntax(SyntaxKind::ArrayMethodWithClause), with(with), openParen(openParen), expr(expr), closeParen(closeParen)
+    WithClauseSyntax(Token with, Token openParen, ExpressionSyntax* expr, Token closeParen) :
+        ExpressionSyntax(SyntaxKind::WithClause), with(with), openParen(openParen), expr(expr), closeParen(closeParen)
     {
         childCount += 4;
     }
@@ -6620,6 +6620,224 @@ protected:
             case 4: equals = token; break;
             case 5: ASSERT(false); break;
             case 6: semi = token; break;
+        }
+    }
+};
+
+struct CoverpointSyntax : public MemberSyntax {
+    DataTypeSyntax* type;
+    NamedLabelSyntax* label;
+    Token coverpoint;
+    ExpressionSyntax* expr;
+    Token openBrace;
+    SyntaxList<MemberSyntax> members;
+    Token closeBrace;
+    Token emptySemi;
+
+    CoverpointSyntax(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, NamedLabelSyntax* label, Token coverpoint, ExpressionSyntax* expr, Token openBrace, SyntaxList<MemberSyntax> members, Token closeBrace, Token emptySemi) :
+        MemberSyntax(SyntaxKind::Coverpoint, attributes), type(type), label(label), coverpoint(coverpoint), expr(expr), openBrace(openBrace), members(members), closeBrace(closeBrace), emptySemi(emptySemi)
+    {
+        childCount += 8;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return type;
+            case 2: return label;
+            case 3: return coverpoint;
+            case 4: return expr;
+            case 5: return openBrace;
+            case 6: return &members;
+            case 7: return closeBrace;
+            case 8: return emptySemi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: coverpoint = token; break;
+            case 4: ASSERT(false); break;
+            case 5: openBrace = token; break;
+            case 6: ASSERT(false); break;
+            case 7: closeBrace = token; break;
+            case 8: emptySemi = token; break;
+        }
+    }
+};
+
+struct CoverageBinInitializerSyntax : public SyntaxNode {
+
+    CoverageBinInitializerSyntax(SyntaxKind kind) :
+        SyntaxNode(kind)
+    {
+    }
+};
+
+struct DefaultCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
+    Token defaultKeyword;
+    Token sequenceKeyword;
+
+    DefaultCoverageBinInitializerSyntax(Token defaultKeyword, Token sequenceKeyword) :
+        CoverageBinInitializerSyntax(SyntaxKind::DefaultCoverageBinInitializer), defaultKeyword(defaultKeyword), sequenceKeyword(sequenceKeyword)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return defaultKeyword;
+            case 1: return sequenceKeyword;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: defaultKeyword = token; break;
+            case 1: sequenceKeyword = token; break;
+        }
+    }
+};
+
+struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
+    ExpressionSyntax* expr;
+    WithClauseSyntax* withClause;
+
+    ExpressionCoverageBinInitializerSyntax(ExpressionSyntax* expr, WithClauseSyntax* withClause) :
+        CoverageBinInitializerSyntax(SyntaxKind::ExpressionCoverageBinInitializer), expr(expr), withClause(withClause)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return expr;
+            case 1: return withClause;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
+struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
+    OpenRangeListSyntax* ranges;
+    WithClauseSyntax* withClause;
+
+    RangeCoverageBinInitializerSyntax(OpenRangeListSyntax* ranges, WithClauseSyntax* withClause) :
+        CoverageBinInitializerSyntax(SyntaxKind::RangeCoverageBinInitializer), ranges(ranges), withClause(withClause)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return ranges;
+            case 1: return withClause;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
+struct IffClauseSyntax : public SyntaxNode {
+    Token iff;
+    Token openParen;
+    ExpressionSyntax* expr;
+    Token closeParen;
+
+    IffClauseSyntax(Token iff, Token openParen, ExpressionSyntax* expr, Token closeParen) :
+        SyntaxNode(SyntaxKind::IffClause), iff(iff), openParen(openParen), expr(expr), closeParen(closeParen)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return iff;
+            case 1: return openParen;
+            case 2: return expr;
+            case 3: return closeParen;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: iff = token; break;
+            case 1: openParen = token; break;
+            case 2: ASSERT(false); break;
+            case 3: closeParen = token; break;
+        }
+    }
+};
+
+struct CoverageBinsSyntax : public MemberSyntax {
+    Token wildcard;
+    Token keyword;
+    Token name;
+    ElementSelectSyntax* selector;
+    Token equals;
+    CoverageBinInitializerSyntax* initializer;
+    IffClauseSyntax* iff;
+    Token semi;
+
+    CoverageBinsSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token wildcard, Token keyword, Token name, ElementSelectSyntax* selector, Token equals, CoverageBinInitializerSyntax* initializer, IffClauseSyntax* iff, Token semi) :
+        MemberSyntax(SyntaxKind::CoverageBins, attributes), wildcard(wildcard), keyword(keyword), name(name), selector(selector), equals(equals), initializer(initializer), iff(iff), semi(semi)
+    {
+        childCount += 8;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return wildcard;
+            case 2: return keyword;
+            case 3: return name;
+            case 4: return selector;
+            case 5: return equals;
+            case 6: return initializer;
+            case 7: return iff;
+            case 8: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: wildcard = token; break;
+            case 2: keyword = token; break;
+            case 3: name = token; break;
+            case 4: ASSERT(false); break;
+            case 5: equals = token; break;
+            case 6: ASSERT(false); break;
+            case 7: ASSERT(false); break;
+            case 8: semi = token; break;
         }
     }
 };

@@ -850,7 +850,7 @@ ExpressionSyntax* Parser::parseArrayOrRandomizeWithClause() {
 
     if (!peek(TokenKind::Identifier) || (peek(1).kind == TokenKind::CloseParenthesis && peek(2).kind != TokenKind::OpenBrace)) {
         auto expr = parseExpression();
-        return alloc.emplace<ArrayMethodWithClauseSyntax>(with, openParen, expr, expect(TokenKind::CloseParenthesis));
+        return alloc.emplace<WithClauseSyntax>(with, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
 
     // otherwise we have an identifier list here

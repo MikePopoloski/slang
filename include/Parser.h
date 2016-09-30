@@ -128,7 +128,11 @@ private:
     ArrayRef<TokenOrSyntax> parseOneVariableDeclarator();
     MemberSyntax* parseCoverageMember();
     BlockEventExpressionSyntax* parseBlockEventExpression();
+    WithClauseSyntax* parseWithClause();
     CovergroupDeclarationSyntax* parseCovergroupDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    CoverpointSyntax* parseCoverpoint(ArrayRef<AttributeInstanceSyntax*> attributes, DataTypeSyntax* type, NamedLabelSyntax* label);
+    CoverageOptionSyntax* parseCoverageOption(ArrayRef<AttributeInstanceSyntax*> attributes);
+    MemberSyntax* parseCoverpointMember();
     MemberSyntax* parseConstraint(ArrayRef<AttributeInstanceSyntax*> attributes, ArrayRef<Token> qualifiers);
     ConstraintBlockSyntax* parseConstraintBlock();
     ConstraintItemSyntax* parseConstraintItem(bool allowBlock);

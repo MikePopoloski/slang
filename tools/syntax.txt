@@ -1095,7 +1095,7 @@ token keyword
 token name
 ConstraintBlockSyntax block
 
-ArrayMethodWithClauseSyntax base=ExpressionSyntax kind=ArrayMethodWithClause
+WithClauseSyntax base=ExpressionSyntax kind=WithClause
 token with
 token openParen
 ExpressionSyntax expr
@@ -1153,6 +1153,47 @@ token dot
 token name
 token equals
 ExpressionSyntax expr
+token semi
+
+CoverpointSyntax base=MemberSyntax kind=Coverpoint
+DataTypeSyntax type
+NamedLabelSyntax label
+token coverpoint
+ExpressionSyntax expr
+token openBrace
+list<MemberSyntax> members
+token closeBrace
+token emptySemi
+
+CoverageBinInitializerSyntax final=false
+empty
+
+DefaultCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=DefaultCoverageBinInitializer
+token defaultKeyword
+token sequenceKeyword
+
+ExpressionCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=ExpressionCoverageBinInitializer
+ExpressionSyntax expr
+WithClauseSyntax withClause
+
+RangeCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=RangeCoverageBinInitializer
+OpenRangeListSyntax ranges
+WithClauseSyntax withClause
+
+IffClauseSyntax kind=IffClause
+token iff
+token openParen
+ExpressionSyntax expr
+token closeParen
+
+CoverageBinsSyntax base=MemberSyntax kind=CoverageBins
+token wildcard
+token keyword
+token name
+ElementSelectSyntax selector
+token equals
+CoverageBinInitializerSyntax initializer
+IffClauseSyntax iff
 token semi
 
 // ----- TOP LEVEL -----
