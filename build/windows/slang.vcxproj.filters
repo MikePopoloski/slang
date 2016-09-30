@@ -225,5 +225,8 @@
     <ClCompile Include="..\..\source\ConstantValue.cpp">
       <Filter>analysis</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\SVInt.cpp">
+      <Filter>numeric</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -2,8 +2,6 @@
 
 #include "Diagnostics.h"
 
-#include "SVInt.h"
-
 namespace {
 
 uint32_t clog2(uint64_t value) {
@@ -13,9 +11,6 @@ uint32_t clog2(uint64_t value) {
 }
 
 namespace slang {
-
-const logic_t logic_t::x = 1 << 7;
-const logic_t logic_t::z = 1 << 6;
 
 VectorBuilder::VectorBuilder(BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc), diagnostics(diagnostics)

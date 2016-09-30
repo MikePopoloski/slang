@@ -2,33 +2,12 @@
 
 #include "Buffer.h"
 #include "SourceLocation.h"
+#include "SVInt.h"
 
 namespace slang {
 
 class BumpAllocator;
 class Diagnostics;
-
-enum class LiteralBase : uint8_t {
-    Binary,
-    Octal,
-    Decimal,
-    Hex
-};
-
-struct logic_t {
-    // limited from 0 to 15, plus x or z
-    uint8_t value;
-
-    logic_t() : value(0) {}
-    logic_t(uint8_t value) : value(value) {}
-
-    bool isUnknown() const {
-        return value == x.value || value == z.value;
-    }
-
-    static const logic_t x;
-    static const logic_t z;
-};
 
 /// LogicVector is an arbitrary precision integer type that implements SystemVerilog
 /// semantics for its operations. In addition to the actual bits it also tracks
