@@ -6,13 +6,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cstdint>
-#include <climits>
 #include <ostream>
 #include <string>
 
 #include "ArrayRef.h"
 #include "Buffer.h"
+#include "MathUtils.h"
 
 namespace slang {
 
@@ -38,12 +37,13 @@ struct logic_t {
         return !isUnknown() && value != 0;
     }
 
+    bool operator==(const logic_t& rhs) const {
+        return value == rhs.value;
+    }
+
     static const logic_t x;
     static const logic_t z;
 };
-
-// TODO: better impl of this
-inline uint32_t clog2(uint64_t value) { return (uint32_t)std::ceil(std::log2(value)); }
 
 /// SystemVerilog arbitrary precision integer type.
 /// This type is designed to implement all of the operations supported by SystemVerilog
@@ -82,7 +82,7 @@ public:
 
     /// Construct from a 64-bit value that can be given an arbitrarily large number of bits (sign
     /// extended if necessary).
-    SVInt(uint16_t bits, uint64_t value, bool isSigned = false) :
+    SVInt(uint16_t bits, uint64_t value, bool isSigned) :
         bitWidth(bits), signFlag(isSigned), unknownFlag(false)
     {
         ASSERT(bitWidth);
@@ -122,11 +122,10 @@ public:
 
     bool isSigned() const { return signFlag; }
     bool hasUnknown() const { return unknownFlag; }
+    uint16_t getBitWidth() const { return bitWidth; }
     bool isNegative() const;
-    uint16_t getBitWidth() const;
-    uint16_t getActiveBits() const;
 
-    void setSigned(bool isSigned);
+    void setSigned(bool isSigned) { signFlag = isSigned; }
     void setWidth(uint16_t bits);
 
     size_t hash(size_t seed = Seed) const;
@@ -137,6 +136,8 @@ public:
     SVInt xnor(const SVInt& rhs) const;
     SVInt ashr(const SVInt& rhs) const;
     SVInt lshr(const SVInt& rhs) const;
+
+    SVInt signExtend(uint16_t bits) const;
 
     SVInt partSelect(const SVInt& msb, const SVInt& lsb) const;
 
@@ -163,26 +164,20 @@ public:
     SVInt& operator*=(const SVInt& rhs);
     SVInt& operator/=(const SVInt& rhs);
     SVInt& operator%(const SVInt& rhs);
-    SVInt& operator<<=(const SVInt& rhs);
 
-    /// Postfix increment operator.
     SVInt operator++(int) {
         SVInt sv(*this);
         ++(*this);
         return sv;
     }
 
-    /// Postfix decrement operator.
     SVInt operator--(int) {
         SVInt sv(*this);
         --(*this);
         return sv;
     }
 
-    /// Prefix increment operator.
     SVInt& operator++();
-
-    /// Prefix decrement operator.
     SVInt& operator--();
 
     SVInt operator-() const;
@@ -197,7 +192,6 @@ public:
     SVInt operator&(const SVInt& rhs) const;
     SVInt operator|(const SVInt& rhs) const;
     SVInt operator^(const SVInt& rhs) const;
-    SVInt operator<<(const SVInt& rhs) const;
 
     /// Equality operator; if either value is unknown the result is unknown.
     /// Otherwise, if bit lengths are unequal we extend the smaller one and then compare.
@@ -207,7 +201,6 @@ public:
         return equalsSlowCase(rhs);
     }
 
-    /// Inequality operator
     logic_t operator!=(const SVInt& rhs) const { return !((*this) == rhs); }
 
     logic_t operator<(const SVInt& rhs) const;
@@ -236,17 +229,38 @@ public:
     }
 
 private:
+    // fast internal constructor to just set fields on new values
+    SVInt(uint64_t* data, uint16_t bits, bool signFlag, bool unknownFlag) :
+        pVal(data), bitWidth(bits), signFlag(signFlag), unknownFlag(unknownFlag)
+    {
+    }
+
+    // slow cases for various initialization paths
     void initSlowCase(logic_t bit);
     void initSlowCase(uint64_t value);
     void initSlowCase(const SVInt& other);
 
+    // slow cases for various other routines
     logic_t equalsSlowCase(const SVInt& rhs) const;
+    uint32_t countLeadingZerosSlowCase() const;
 
+    // word and bit manipulation
     bool isSingleWord() const { return bitWidth <= BITS_PER_WORD && !unknownFlag; }
     uint32_t getNumWords() const { return getNumWords(bitWidth, unknownFlag); }
     uint64_t getWord(int bitIndex) const { return isSingleWord() ? val : pVal[whichWord(bitIndex)]; }
     int whichUnknownWord(int bitIndex) const { return whichWord(bitIndex) + getNumWords(bitWidth, false); }
+    uint32_t getActiveBits() const { return bitWidth - countLeadingZeros(); }
 
+    const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
+
+    uint32_t countLeadingZeros() const {
+        if (isSingleWord())
+            return slang::countLeadingZeros(val) - (BITS_PER_WORD - bitWidth);
+        return countLeadingZerosSlowCase();
+    }
+
+    // other helpers
+    static void signExtendCopy(uint64_t* output,  const uint64_t* input, uint16_t oldBits, uint16_t newBits);
     void setUnknownBit(int index, logic_t bit);
     void clearUnusedBits();
 

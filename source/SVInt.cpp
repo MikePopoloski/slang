@@ -11,6 +11,54 @@ namespace slang {
 const logic_t logic_t::x = 1 << 7;
 const logic_t logic_t::z = 1 << 6;
 
+SVInt SVInt::signExtend(uint16_t bits) const {
+    ASSERT(bits > bitWidth);
+
+    if (bits <= BITS_PER_WORD && !unknownFlag) {
+        uint64_t newVal = val << (BITS_PER_WORD - bitWidth);
+        newVal = (int64_t)newVal >> (bits - bitWidth);
+        return SVInt(bits, newVal >> (BITS_PER_WORD - bits));
+    }
+
+    // copy and sign extend; for unknown values, this copies the data words
+    // but not the unknown-indicator words, which we do separate below
+    SVInt result(new uint64_t[getNumWords(bits, unknownFlag)], bits, signFlag, unknownFlag);
+    signExtendCopy(result.pVal, getRawData(), bitWidth, bits);
+
+    if (unknownFlag)
+        signExtendCopy(result.pVal + getNumWords(bits, false), pVal + getNumWords(bitWidth, false), bitWidth, bits);
+    
+    return result;
+}
+
+void SVInt::signExtendCopy(uint64_t* output, const uint64_t* input, uint16_t oldBits, uint16_t newBits) {
+    // copy full words over
+    int i;
+    uint64_t word = 0;
+    for (i = 0; i != oldBits / BITS_PER_WORD; i++) {
+        word = input[i];
+        output[i] = word;
+    }
+
+    // sign-extend the last word
+    uint32_t last = (-oldBits) % BITS_PER_WORD;
+    if (last != 0)
+        word = (int64_t)input[i] << last >> last;
+    else
+        word = (int64_t)word >> (BITS_PER_WORD - 1);
+
+    // fill remaining words
+    for (; i != newBits / BITS_PER_WORD; i++) {
+        output[i] = word;
+        word = (int64_t)word >> (BITS_PER_WORD - 1);
+    }
+
+    // write remaining partial word
+    last = (-newBits) % BITS_PER_WORD;
+    if (last != 0)
+        output[i] = word << last >> last;
+}
+
 std::string SVInt::toString(LiteralBase base) const {
     Buffer<char> buffer(16);
     writeTo(buffer, base);
@@ -18,6 +66,7 @@ std::string SVInt::toString(LiteralBase base) const {
 }
 
 void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
+    // TODO: impl
 }
 
 void SVInt::initSlowCase(logic_t bit) {
@@ -32,7 +81,7 @@ void SVInt::initSlowCase(uint64_t value) {
 
     // sign extend if necessary
     if (signFlag && int64_t(value) < 0) {
-        for (uint32_t i = 0; i < words; i++)
+        for (uint32_t i = 1; i < words; i++)
             pVal[i] = (uint64_t)(-1);
     }
 }
@@ -48,10 +97,49 @@ logic_t SVInt::equalsSlowCase(const SVInt& rhs) const {
         return logic_t::x;
 
     // handle unequal bit widths; spec says that if both values are signed, then do sign extension
-    if (bitWidth != rhs.bitWidth && signFlag && rhs.signFlag) {
+    const uint64_t* lval = pVal;
+    const uint64_t* rval = rhs.pVal;
 
+    if (bitWidth != rhs.bitWidth) {
+        if (signFlag && rhs.signFlag) {
+            if (bitWidth < rhs.bitWidth)
+                return signExtend(rhs.bitWidth).equalsSlowCase(rhs);
+            else
+                return rhs.signExtend(bitWidth).equalsSlowCase(*this);
+        }
+
+        if (isSingleWord())
+            lval = &val;
+        if (rhs.isSingleWord())
+            rval = &rhs.val;
     }
-    return 0;
+
+    uint32_t a1 = getActiveBits();
+    uint32_t a2 = rhs.getActiveBits();
+    if (a1 != a2)
+        return false;
+
+    // compare each word
+    int limit = whichWord(a1 - 1);
+    for (int i = 0; i <= limit; i++) {
+        if (lval[i] != rval[i])
+            return false;
+    }
+
+    return true;
+}
+
+uint32_t SVInt::countLeadingZerosSlowCase() const {
+    int count = 0;
+    for (int i = getNumWords() - 1; i >= 0; i--) {
+        if (pVal[i] == 0)
+            count += BITS_PER_WORD;
+        else {
+            count += slang::countLeadingZeros(pVal[i]);
+            break;
+        }
+    }
+    return count;
 }
 
 void SVInt::setUnknownBit(int index, logic_t bit) {

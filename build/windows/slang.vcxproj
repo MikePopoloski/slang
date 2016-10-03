@@ -39,6 +39,7 @@
     <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\DeclarationTable.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
+    <ClInclude Include="..\..\include\MathUtils.h" />
     <ClInclude Include="..\..\include\Parser.h" />
     <ClInclude Include="..\..\include\ParserBase.h" />
     <ClInclude Include="..\..\include\Path.h" />

@@ -18,4 +18,16 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(value4 == value3);
 }
 
+TEST_CASE("Equality", "[numeric]") {
+    SVInt a = logic_t::x;
+
+    CHECK((a == 4) == logic_t::x);
+    CHECK(SVInt(32) != logic_t::x);
+    CHECK(SVInt(9000) == SVInt(1024, 9000, false));
+    CHECK(SVInt(-4) == -4);
+    CHECK(SVInt(-4) != SVInt(9999, -4, true));
+    CHECK(SVInt(-4, true) == SVInt(9999, -4, true));
+    CHECK(SVInt(-4, true) != logic_t::x);
+}
+
 }
