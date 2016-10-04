@@ -22,6 +22,9 @@ enum class LiteralBase : uint8_t {
     Hex
 };
 
+/// Represents a single 4-state bit. The typical values of 0 and 1 are
+/// augmented with X (unknown) and Z (high impedance). Both X and Z are
+/// considred "unknown" for most computation purposes.
 struct logic_t {
     // limited from 0 to 15, plus x or z
     uint8_t value;
@@ -29,17 +32,48 @@ struct logic_t {
     constexpr logic_t() : value(0) {}
     constexpr logic_t(uint8_t value) : value(value) {}
 
-    bool isUnknown() const {
-        return value == x.value || value == z.value;
+    bool isUnknown() const { return value == x.value || value == z.value; }
+
+    logic_t operator!() const {
+        if (isUnknown())
+            return logic_t::x;
+        return value == 0;
     }
 
-    explicit operator bool() const {
-        return !isUnknown() && value != 0;
+    logic_t operator&(const logic_t& rhs) const {
+        if (value == 0 || rhs.value == 0)
+            return 0;
+        if (value == 1 && rhs.value == 1)
+            return 1;
+        return logic_t::x;
     }
 
-    bool operator==(const logic_t& rhs) const {
+    logic_t operator|(const logic_t& rhs) const {
+        if (value == 1 || rhs.value == 1)
+            return 1;
+        if (value == 0 && rhs.value == 0)
+            return 0;
+        return logic_t::x;
+    }
+
+    logic_t operator^(const logic_t& rhs) const {
+        if (isUnknown() || rhs.isUnknown())
+            return logic_t::x;
+        return value ^ rhs.value;
+    }
+
+    logic_t operator==(const logic_t& rhs) const {
+        if (isUnknown() || rhs.isUnknown())
+            return logic_t::x;
         return value == rhs.value;
     }
+
+    logic_t operator~() const { return !(*this); }
+    logic_t operator!=(const logic_t& rhs) const { return !((*this) == rhs); }
+    logic_t operator&&(const logic_t& rhs) const { return (bool)*this && (bool)rhs; }
+    logic_t operator||(const logic_t& rhs) const { return (bool)*this != 0 || (bool)rhs; }
+
+    explicit operator bool() const { return !isUnknown() && value != 0; }
 
     static const logic_t x;
     static const logic_t z;
@@ -145,9 +179,6 @@ public:
     bool fullyNotEqual(const SVInt& rhs) const;
     bool wildcardEqual(const SVInt& rhs) const;
     bool wildcardNotEqual(const SVInt& rhs) const;
-    
-    logic_t logicalImplication(const SVInt& rhs) const;
-    logic_t logicalEquivalence(const SVInt& rhs) const;
 
     logic_t reductionOr() const;
     logic_t reductionAnd() const;
@@ -182,7 +213,7 @@ public:
 
     SVInt operator-() const;
     SVInt operator~() const;
-    SVInt operator!() const;
+    logic_t operator!() const { return *this == 0; }
 
     SVInt operator+(const SVInt& rhs) const;
     SVInt operator-(const SVInt& rhs) const;
@@ -204,13 +235,15 @@ public:
     logic_t operator!=(const SVInt& rhs) const { return !((*this) == rhs); }
 
     logic_t operator<(const SVInt& rhs) const;
-    logic_t operator<=(const SVInt& rhs) const;
-    logic_t operator>(const SVInt& rhs) const;
-    logic_t operator>=(const SVInt& rhs) const;
-    logic_t operator&&(const SVInt& rhs) const;
-    logic_t operator||(const SVInt& rhs) const;
+    logic_t operator<=(const SVInt& rhs) const { return (*this < rhs) || (*this == rhs); }
+    logic_t operator>(const SVInt& rhs) const { return !(*this <= rhs); }
+    logic_t operator>=(const SVInt& rhs) const { return !(*this < rhs); }
+    logic_t operator&&(const SVInt& rhs) const { return *this != 0 && rhs != 0; }
+    logic_t operator||(const SVInt& rhs) const { return *this != 0 || rhs != 0; }
 
     logic_t operator[](int index) const;
+
+    explicit operator logic_t() const;
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
@@ -293,6 +326,24 @@ private:
         WORD_SIZE = sizeof(uint64_t)
     };
 };
+
+inline logic_t operator||(const SVInt& lhs, logic_t rhs) { return lhs != 0 || rhs; }
+inline logic_t operator||(logic_t lhs, const SVInt& rhs) { return lhs || rhs != 0; }
+inline logic_t operator&&(const SVInt& lhs, logic_t rhs) { return lhs != 0 && rhs; }
+inline logic_t operator&&(logic_t lhs, const SVInt& rhs) { return lhs && rhs != 0; }
+
+inline bool operator||(bool lhs, logic_t rhs) { return lhs || (bool)rhs; }
+inline bool operator||(logic_t lhs, bool rhs) { return (bool)lhs || rhs; }
+inline bool operator&&(bool lhs, logic_t rhs) { return lhs && (bool)rhs; }
+inline bool operator&&(logic_t lhs, bool rhs) { return (bool)lhs && rhs; }
+
+/// Implements logical implication: lhs -> rhs. This is equivalent to (!lhs || rhs).
+inline logic_t logicalImplication(const SVInt& lhs, const SVInt& rhs) { return !lhs || rhs; }
+
+/// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs -> lhs)).
+inline logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs) {
+    return logicalImplication(lhs, rhs) && logicalImplication(rhs, lhs);
+}
 
 }
 

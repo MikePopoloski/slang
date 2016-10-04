@@ -17,7 +17,7 @@ SVInt SVInt::signExtend(uint16_t bits) const {
     if (bits <= BITS_PER_WORD && !unknownFlag) {
         uint64_t newVal = val << (BITS_PER_WORD - bitWidth);
         newVal = (int64_t)newVal >> (bits - bitWidth);
-        return SVInt(bits, newVal >> (BITS_PER_WORD - bits));
+        return SVInt(bits, newVal >> (BITS_PER_WORD - bits), signFlag);
     }
 
     // copy and sign extend; for unknown values, this copies the data words
