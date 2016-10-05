@@ -148,6 +148,9 @@
     <ClInclude Include="..\..\include\MathUtils.h">
       <Filter>numeric</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\source\SVIntHelpers.h">
+      <Filter>numeric</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">

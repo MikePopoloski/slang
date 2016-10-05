@@ -159,8 +159,13 @@ public:
     uint16_t getBitWidth() const { return bitWidth; }
     bool isNegative() const { return (bool)(*this)[bitWidth - 1]; }
 
+    /// Mutating methods.
     void setSigned(bool isSigned) { signFlag = isSigned; }
     void setWidth(uint16_t bits);
+    void setAllOnes();
+    void setAllZeros();
+    void setAllX();
+    void setAllZ();
 
     size_t hash(size_t seed = Seed) const;
     void writeTo(Buffer<char>& buffer, LiteralBase base) const;
@@ -287,6 +292,11 @@ public:
         return os;
     }
 
+    enum {
+        BITS_PER_WORD = sizeof(uint64_t) * CHAR_BIT,
+        WORD_SIZE = sizeof(uint64_t)
+    };
+
 private:
     // fast internal constructor to just set fields on new values
     SVInt(uint64_t* data, uint16_t bits, bool signFlag, bool unknownFlag) :
@@ -317,13 +327,14 @@ private:
     }
 
     // other helpers
-    static void signExtendCopy(uint64_t* output,  const uint64_t* input, uint16_t oldBits, uint16_t newBits);
     void setUnknownBit(int index, logic_t bit);
     void clearUnusedBits();
 
     static constexpr int whichWord(int bitIndex) { return bitIndex / BITS_PER_WORD; }
     static constexpr int whichBit(int bitIndex) { return bitIndex % BITS_PER_WORD; }
     static constexpr uint64_t maskBit(int bitIndex) { return 1ULL << whichBit(bitIndex); }
+
+    static SVInt createFillX(uint16_t bitWidth, bool isSigned);
 
     static int getNumWords(uint16_t bitWidth, bool unknown) {
         uint32_t value = ((uint64_t)bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;
@@ -344,11 +355,6 @@ private:
     uint16_t bitWidth;  // number of bits in the integer
     bool signFlag;      // whether the number should be treated as signed
     bool unknownFlag;   // whether we have at least one X or Z value in the number
-
-    enum {
-        BITS_PER_WORD = sizeof(uint64_t) * CHAR_BIT,
-        WORD_SIZE = sizeof(uint64_t)
-    };
 };
 
 inline logic_t operator||(const SVInt& lhs, logic_t rhs) { return lhs != 0 || rhs; }

@@ -6,19 +6,70 @@
 //------------------------------------------------------------------------------
 #include "SVInt.h"
 
+#include <algorithm>
+
 namespace slang {
+
+#include "SVIntHelpers.h"
 
 const logic_t logic_t::x = 1 << 7;
 const logic_t logic_t::z = 1 << 6;
 
-static void lshrNear(uint64_t* dst, uint64_t* src, int words, int amount) {
-    // fast case for logical right shift of a small amount (less than 64 bits)
-    uint64_t carry = 0;
-    for (int i = words - 1; i >= 0; i--) {
-        uint64_t temp = src[i];
-        dst[i] = (temp >> amount) | carry;
-        carry = temp << (64 - amount);
+void SVInt::setAllZeros() {
+    if (isSingleWord())
+        val = 0;
+    else if (unknownFlag)
+        *this = SVInt(bitWidth, 0, signFlag);
+    else
+        memset(pVal, 0, getNumWords() * WORD_SIZE);
+}
+
+void SVInt::setAllOnes() {
+    if (unknownFlag) {
+        unknownFlag = false;
+        delete[] pVal;
+        if (getNumWords() > 1)
+            pVal = new uint64_t[getNumWords()];
     }
+
+    if (isSingleWord())
+        val = UINT64_MAX;
+    else {
+        for (int i = 0; i < getNumWords(); i++)
+            pVal[i] = UINT64_MAX;
+    }
+    clearUnusedBits();
+}
+
+void SVInt::setAllX() {
+    // first set low half to zero (for X)
+    int words = getNumWords(bitWidth, false);
+    if (unknownFlag)
+        memset(pVal, 0, words * WORD_SIZE);
+    else {
+        if (!isSingleWord())
+            delete[] pVal;
+
+        unknownFlag = true;
+        pVal = new uint64_t[words * 2]();
+    }
+
+    // now set upper half to ones (for unknown)
+    for (int i = words; i < words * 2; i++)
+        pVal[i] = UINT64_MAX;
+}
+
+void SVInt::setAllZ() {
+    if (!unknownFlag) {
+        if (!isSingleWord())
+            delete[] pVal;
+
+        unknownFlag = true;
+        pVal = new uint64_t[getNumWords()];
+    }
+
+    for (int i = 0; i < getNumWords(); i++)
+        pVal[i] = UINT64_MAX;
 }
 
 SVInt SVInt::lshr(uint32_t amount) const {
@@ -36,24 +87,9 @@ SVInt SVInt::lshr(uint32_t amount) const {
         uint32_t wordShift = amount % BITS_PER_WORD;
         uint32_t offset = amount / BITS_PER_WORD;
 
-        // optimization: move whole words
-        if (wordShift == 0) {
-            for (uint32_t i = 0; i < numWords - offset; i++)
-                newVal[i] = pVal[i + offset];
-
-            if (unknownFlag) {
-                for (uint32_t i = numWords; i < numWords + numWords - offset; i++)
-                    newVal[i] = pVal[i + offset];
-            }
-        }
-        else {
-            // shift low order words
-            uint32_t breakWord = numWords - offset - 1;
-            for (uint32_t i = 0; i < breakWord; i++)
-                newVal[i] = (pVal[i + offset] >> wordShift) | (pVal[i + offset + 1] << (BITS_PER_WORD - wordShift));
-
-            newVal[breakWord] = pVal[breakWord + offset] >> wordShift;
-        }
+        lshrFar(newVal, pVal, wordShift, offset, 0, numWords);
+        if (unknownFlag)
+            lshrFar(newVal, pVal, wordShift, offset, numWords, numWords);
     }
     return SVInt(newVal, bitWidth, signFlag, unknownFlag);
 }
@@ -68,7 +104,7 @@ SVInt SVInt::signExtend(uint16_t bits) const {
     }
 
     // copy and sign extend; for unknown values, this copies the data words
-    // but not the unknown-indicator words, which we do separate below
+    // but not the unknown-indicator words, which we do separately below
     SVInt result(new uint64_t[getNumWords(bits, unknownFlag)], bits, signFlag, unknownFlag);
     signExtendCopy(result.pVal, getRawData(), bitWidth, bits);
 
@@ -76,34 +112,6 @@ SVInt SVInt::signExtend(uint16_t bits) const {
         signExtendCopy(result.pVal + getNumWords(bits, false), pVal + getNumWords(bitWidth, false), bitWidth, bits);
     
     return result;
-}
-
-void SVInt::signExtendCopy(uint64_t* output, const uint64_t* input, uint16_t oldBits, uint16_t newBits) {
-    // copy full words over
-    int i;
-    uint64_t word = 0;
-    for (i = 0; i != oldBits / BITS_PER_WORD; i++) {
-        word = input[i];
-        output[i] = word;
-    }
-
-    // sign-extend the last word
-    uint32_t last = (-oldBits) % BITS_PER_WORD;
-    if (last != 0)
-        word = (int64_t)input[i] << last >> last;
-    else
-        word = (int64_t)word >> (BITS_PER_WORD - 1);
-
-    // fill remaining words
-    for (; i != newBits / BITS_PER_WORD; i++) {
-        output[i] = word;
-        word = (int64_t)word >> (BITS_PER_WORD - 1);
-    }
-
-    // write remaining partial word
-    last = (-newBits) % BITS_PER_WORD;
-    if (last != 0)
-        output[i] = word << last >> last;
 }
 
 std::string SVInt::toString(LiteralBase base) const {
@@ -141,6 +149,7 @@ void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
     uint32_t startOffset = buffer.count();
     static const char Digits[] = "0123456789ABCDEF";
     if (base == LiteralBase::Decimal) {
+        // TODO:
     }
     else {
         uint32_t shiftAmount = 0;
@@ -163,6 +172,80 @@ void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
     std::reverse(buffer.begin() + startOffset, buffer.end());
 }
 
+SVInt& SVInt::operator++() {
+    if (isSingleWord())
+        ++val;
+    else if (unknownFlag)
+        setAllX();
+    else
+        addOne(pVal, pVal, getNumWords(), 1);
+    clearUnusedBits();
+    return *this;
+}
+
+SVInt& SVInt::operator--() {
+    if (isSingleWord())
+        --val;
+    else if (unknownFlag)
+        setAllX();
+    else
+        subOne(pVal, pVal, getNumWords(), 1);
+    clearUnusedBits();
+    return *this;
+}
+
+SVInt& SVInt::operator+=(const SVInt& rhs) {
+    if (bitWidth != rhs.bitWidth) {
+        if (bitWidth < rhs.bitWidth)
+            *this = signExtend(rhs.bitWidth);
+        else
+            return *this += rhs.signExtend(bitWidth);
+    }
+
+    if (unknownFlag || rhs.unknownFlag)
+        setAllX();
+    else {
+        if (isSingleWord())
+            val += rhs.val;
+        else
+            addGeneral(pVal, pVal, rhs.pVal, getNumWords());
+        clearUnusedBits();
+    }
+    return *this;
+}
+
+SVInt& SVInt::operator-=(const SVInt& rhs) {
+    if (bitWidth != rhs.bitWidth) {
+        if (bitWidth < rhs.bitWidth)
+            *this = signExtend(rhs.bitWidth);
+        else
+            return *this -= rhs.signExtend(bitWidth);
+    }
+
+    if (unknownFlag || rhs.unknownFlag)
+        setAllX();
+    else {
+        if (isSingleWord())
+            val -= rhs.val;
+        else
+            subGeneral(pVal, pVal, rhs.pVal, getNumWords());
+        clearUnusedBits();
+    }
+    return *this;
+}
+
+SVInt SVInt::operator+(const SVInt& rhs) const {
+    SVInt tmp(*this);
+    tmp += rhs;
+    return tmp;
+}
+
+SVInt SVInt::operator-(const SVInt& rhs) const {
+    SVInt tmp(*this);
+    tmp += rhs;
+    return tmp;
+}
+
 logic_t SVInt::operator[](uint32_t index) const {
     bool bit = (maskBit(index) & (isSingleWord() ? val : pVal[whichWord(index)])) != 0;
     if (!unknownFlag)
@@ -180,6 +263,7 @@ void SVInt::initSlowCase(logic_t bit) {
     pVal = new uint64_t[words]();   // allocation is zero cleared
     setUnknownBit(0, bit);
 }
+
 void SVInt::initSlowCase(uint64_t value) {
     uint32_t words = getNumWords();
     pVal = new uint64_t[words]();   // allocation is zero cleared
@@ -311,6 +395,12 @@ void SVInt::clearUnusedBits() {
         val &= mask;
     else
         pVal[getNumWords() - 1] &= mask;
+}
+
+SVInt SVInt::createFillX(uint16_t bitWidth, bool isSigned) {
+    SVInt result(new uint64_t[getNumWords(bitWidth, true)], bitWidth, isSigned, true);
+    result.setAllX();
+    return result;
 }
 
 }
