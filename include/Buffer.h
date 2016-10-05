@@ -112,22 +112,34 @@ public:
     /// Add a range of elements to the end of the buffer.
     template<typename Container>
     void appendRange(const Container& container) {
-        appendRange(std::begin(container), std::end(container));
+        appendIterator(std::begin(container), std::end(container));
     }
 
     /// Add a range of elements to the end of the buffer.
     void appendRange(const T* begin, const T* end) {
+        if (std::is_trivially_copyable<T>()) {
+            uint32_t count = (uint32_t)(end - begin);
+            uint32_t newLen = len + count;
+            ensureSize(newLen);
+
+            T* ptr = data + len;
+            memcpy(ptr, begin, count * sizeof(T));
+            len = newLen;
+        }
+        else {
+            appendIterator(begin, end);
+        }
+    }
+
+    template<typename It>
+    void appendIterator(It begin, It end) {
         uint32_t count = (uint32_t)(end - begin);
         uint32_t newLen = len + count;
         ensureSize(newLen);
 
         T* ptr = data + len;
-        if (std::is_trivially_copyable<T>())
-            memcpy(ptr, begin, count * sizeof(T));
-        else {
-            while (begin != end)
-                new (ptr++) T(*begin++);
-        }
+        while (begin != end)
+            new (ptr++) T(*begin++);
 
         len = newLen;
     }

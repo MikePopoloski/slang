@@ -157,7 +157,7 @@ public:
     bool isSigned() const { return signFlag; }
     bool hasUnknown() const { return unknownFlag; }
     uint16_t getBitWidth() const { return bitWidth; }
-    bool isNegative() const;
+    bool isNegative() const { return (bool)(*this)[bitWidth - 1]; }
 
     void setSigned(bool isSigned) { signFlag = isSigned; }
     void setWidth(uint16_t bits);
@@ -170,6 +170,7 @@ public:
     SVInt xnor(const SVInt& rhs) const;
     SVInt ashr(const SVInt& rhs) const;
     SVInt lshr(const SVInt& rhs) const;
+    SVInt lshr(uint32_t amount) const;
 
     SVInt signExtend(uint16_t bits) const;
 
@@ -184,8 +185,33 @@ public:
     logic_t reductionAnd() const;
     logic_t reductionXor() const;
 
-    SVInt& operator=(const SVInt& rhs);
-    SVInt& operator=(SVInt&& rhs) noexcept;
+    SVInt& operator=(const SVInt& rhs) {
+        if (isSingleWord() && rhs.isSingleWord()) {
+            val = rhs.val;
+            bitWidth = rhs.bitWidth;
+            signFlag = signFlag;
+            unknownFlag = unknownFlag;
+            return *this;
+        }
+        return assignSlowCase(rhs);
+    }
+
+    SVInt& operator=(SVInt&& rhs) noexcept {
+        if (this == &rhs)
+            return *this;
+
+        if (!isSingleWord())
+            delete[] pVal;
+
+        val = rhs.val;
+        bitWidth = rhs.bitWidth;
+        signFlag = rhs.signFlag;
+        unknownFlag = rhs.unknownFlag;
+
+        // zero-ing out the bitwidth of the other object will cause it to not release memory
+        rhs.bitWidth = 0;
+        return *this;
+    }
 
     SVInt& operator&=(const SVInt& rhs);
     SVInt& operator|=(const SVInt& rhs);
@@ -241,7 +267,7 @@ public:
     logic_t operator&&(const SVInt& rhs) const { return *this != 0 && rhs != 0; }
     logic_t operator||(const SVInt& rhs) const { return *this != 0 || rhs != 0; }
 
-    logic_t operator[](int index) const;
+    logic_t operator[](uint32_t index) const;
 
     explicit operator logic_t() const;
 
@@ -268,12 +294,10 @@ private:
     {
     }
 
-    // slow cases for various initialization paths
     void initSlowCase(logic_t bit);
     void initSlowCase(uint64_t value);
     void initSlowCase(const SVInt& other);
-
-    // slow cases for various other routines
+    SVInt& assignSlowCase(const SVInt& other);
     logic_t equalsSlowCase(const SVInt& rhs) const;
     uint32_t countLeadingZerosSlowCase() const;
 

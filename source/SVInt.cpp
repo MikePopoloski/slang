@@ -11,6 +11,53 @@ namespace slang {
 const logic_t logic_t::x = 1 << 7;
 const logic_t logic_t::z = 1 << 6;
 
+static void lshrNear(uint64_t* dst, uint64_t* src, int words, int amount) {
+    // fast case for logical right shift of a small amount (less than 64 bits)
+    uint64_t carry = 0;
+    for (int i = words - 1; i >= 0; i--) {
+        uint64_t temp = src[i];
+        dst[i] = (temp >> amount) | carry;
+        carry = temp << (64 - amount);
+    }
+}
+
+SVInt SVInt::lshr(uint32_t amount) const {
+    if (amount == 0 || amount >= bitWidth)
+        return SVInt(bitWidth, 0, signFlag);
+
+    if (isSingleWord())
+        return SVInt(bitWidth, val >> amount, signFlag);
+
+    uint64_t* newVal = new uint64_t[getNumWords()]();
+    if (amount < BITS_PER_WORD && !unknownFlag)
+        lshrNear(newVal, pVal, getNumWords(), amount);
+    else {
+        int numWords = getNumWords(bitWidth, false);
+        uint32_t wordShift = amount % BITS_PER_WORD;
+        uint32_t offset = amount / BITS_PER_WORD;
+
+        // optimization: move whole words
+        if (wordShift == 0) {
+            for (uint32_t i = 0; i < numWords - offset; i++)
+                newVal[i] = pVal[i + offset];
+
+            if (unknownFlag) {
+                for (uint32_t i = numWords; i < numWords + numWords - offset; i++)
+                    newVal[i] = pVal[i + offset];
+            }
+        }
+        else {
+            // shift low order words
+            uint32_t breakWord = numWords - offset - 1;
+            for (uint32_t i = 0; i < breakWord; i++)
+                newVal[i] = (pVal[i + offset] >> wordShift) | (pVal[i + offset + 1] << (BITS_PER_WORD - wordShift));
+
+            newVal[breakWord] = pVal[breakWord + offset] >> wordShift;
+        }
+    }
+    return SVInt(newVal, bitWidth, signFlag, unknownFlag);
+}
+
 SVInt SVInt::signExtend(uint16_t bits) const {
     ASSERT(bits > bitWidth);
 
@@ -66,7 +113,66 @@ std::string SVInt::toString(LiteralBase base) const {
 }
 
 void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
-    // TODO: impl
+    // negative sign if necessary
+    if (isNegative() && signFlag)
+        buffer.append('-');
+
+    // append the bit size, unless we're a signed 32-bit base 10 integer
+    if (base != LiteralBase::Decimal || bitWidth != 32 || signFlag || unknownFlag) {
+        buffer.appendRange(std::to_string(bitWidth));
+        buffer.append('\'');
+        if (signFlag)
+            buffer.append('s');
+        switch (base) {
+            case LiteralBase::Binary: buffer.append('b'); break;
+            case LiteralBase::Octal: buffer.append('o'); break;
+            case LiteralBase::Decimal: buffer.append('d'); break;
+            case LiteralBase::Hex: buffer.append('h'); break;
+            default: ASSERT(false, "Unknown base"); break;
+        }
+    }
+
+    SVInt tmp(*this);
+    if (signFlag && isNegative()) {
+        // TODO:
+    }
+
+    // for bases 2, 8, and 16 we can just shift instead of dividing
+    uint32_t startOffset = buffer.count();
+    static const char Digits[] = "0123456789ABCDEF";
+    if (base == LiteralBase::Decimal) {
+    }
+    else {
+        uint32_t shiftAmount = 0;
+        uint32_t maskAmount = 0;
+        switch (base) {
+            case LiteralBase::Binary: shiftAmount = 1; maskAmount = 1; break;
+            case LiteralBase::Octal: shiftAmount = 3; maskAmount = 7; break;
+            case LiteralBase::Hex: shiftAmount = 4; maskAmount = 15; break;
+            default: ASSERT(false, "Impossible"); break;
+        }
+
+        while (tmp != 0) {
+            uint32_t digit = uint32_t(tmp.getRawData()[0]) & maskAmount;
+            buffer.append(Digits[digit]);
+            tmp = tmp.lshr(shiftAmount);
+        }
+    }
+
+    // reverse the digits
+    std::reverse(buffer.begin() + startOffset, buffer.end());
+}
+
+logic_t SVInt::operator[](uint32_t index) const {
+    bool bit = (maskBit(index) & (isSingleWord() ? val : pVal[whichWord(index)])) != 0;
+    if (!unknownFlag)
+        return bit;
+
+    bool unknownBit = (maskBit(index) & pVal[whichWord(index) + getNumWords(bitWidth, false)]) != 0;
+    if (!unknownBit)
+        return bit;
+
+    return bit ? logic_t::z : logic_t::x;
 }
 
 void SVInt::initSlowCase(logic_t bit) {
@@ -90,6 +196,28 @@ void SVInt::initSlowCase(const SVInt& other) {
     uint32_t words = getNumWords();
     pVal = new uint64_t[words];
     std::copy(other.pVal, other.pVal + words, pVal);
+}
+
+SVInt& SVInt::assignSlowCase(const SVInt& rhs) {
+    if (this == &rhs)
+        return *this;
+
+    if (rhs.isSingleWord()) {
+        delete[] pVal;
+        val = rhs.val;
+    }
+    else {
+        if (isSingleWord()) {
+            pVal = new uint64_t[rhs.getNumWords()];
+        }
+        else if (getNumWords() != rhs.getNumWords()) {
+            delete[] pVal;
+            pVal = new uint64_t[rhs.getNumWords()];
+        }
+        memcpy(pVal, rhs.pVal, rhs.getNumWords() * WORD_SIZE);
+    }
+    bitWidth = rhs.bitWidth;
+    return *this;
 }
 
 logic_t SVInt::equalsSlowCase(const SVInt& rhs) const {
