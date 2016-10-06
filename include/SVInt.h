@@ -177,8 +177,6 @@ public:
     SVInt lshr(const SVInt& rhs) const;
     SVInt lshr(uint32_t amount) const;
 
-    SVInt signExtend(uint16_t bits) const;
-
     SVInt partSelect(const SVInt& msb, const SVInt& lsb) const;
 
     bool fullyEqual(const SVInt& rhs) const;
@@ -292,6 +290,10 @@ public:
         return os;
     }
 
+    friend SVInt signExtend(const SVInt& value, uint16_t bits);
+    friend SVInt zeroExtend(const SVInt& value, uint16_t bits);
+    friend SVInt extend(const SVInt& value, uint16_t bits, bool sign);
+
     enum {
         BITS_PER_WORD = sizeof(uint64_t) * CHAR_BIT,
         WORD_SIZE = sizeof(uint64_t)
@@ -335,6 +337,9 @@ private:
     static constexpr uint64_t maskBit(int bitIndex) { return 1ULL << whichBit(bitIndex); }
 
     static SVInt createFillX(uint16_t bitWidth, bool isSigned);
+    static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);
+    static void buildDivideResult(SVInt* result, uint32_t* value, uint32_t numWords);
+    static void divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords, SVInt* quotient, SVInt* remainder);
 
     static int getNumWords(uint16_t bitWidth, bool unknown) {
         uint32_t value = ((uint64_t)bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;

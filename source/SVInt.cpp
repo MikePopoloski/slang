@@ -35,7 +35,7 @@ void SVInt::setAllOnes() {
     if (isSingleWord())
         val = UINT64_MAX;
     else {
-        for (int i = 0; i < getNumWords(); i++)
+        for (uint32_t i = 0; i < getNumWords(); i++)
             pVal[i] = UINT64_MAX;
     }
     clearUnusedBits();
@@ -68,7 +68,7 @@ void SVInt::setAllZ() {
         pVal = new uint64_t[getNumWords()];
     }
 
-    for (int i = 0; i < getNumWords(); i++)
+    for (uint32_t i = 0; i < getNumWords(); i++)
         pVal[i] = UINT64_MAX;
 }
 
@@ -92,26 +92,6 @@ SVInt SVInt::lshr(uint32_t amount) const {
             lshrFar(newVal, pVal, wordShift, offset, numWords, numWords);
     }
     return SVInt(newVal, bitWidth, signFlag, unknownFlag);
-}
-
-SVInt SVInt::signExtend(uint16_t bits) const {
-    ASSERT(bits > bitWidth);
-
-    if (bits <= BITS_PER_WORD && !unknownFlag) {
-        uint64_t newVal = val << (BITS_PER_WORD - bitWidth);
-        newVal = (int64_t)newVal >> (bits - bitWidth);
-        return SVInt(bits, newVal >> (BITS_PER_WORD - bits), signFlag);
-    }
-
-    // copy and sign extend; for unknown values, this copies the data words
-    // but not the unknown-indicator words, which we do separately below
-    SVInt result(new uint64_t[getNumWords(bits, unknownFlag)], bits, signFlag, unknownFlag);
-    signExtendCopy(result.pVal, getRawData(), bitWidth, bits);
-
-    if (unknownFlag)
-        signExtendCopy(result.pVal + getNumWords(bits, false), pVal + getNumWords(bitWidth, false), bitWidth, bits);
-    
-    return result;
 }
 
 std::string SVInt::toString(LiteralBase base) const {
@@ -197,9 +177,9 @@ SVInt& SVInt::operator--() {
 SVInt& SVInt::operator+=(const SVInt& rhs) {
     if (bitWidth != rhs.bitWidth) {
         if (bitWidth < rhs.bitWidth)
-            *this = signExtend(rhs.bitWidth);
+            *this = extend(*this, rhs.bitWidth, signFlag && rhs.signFlag);
         else
-            return *this += rhs.signExtend(bitWidth);
+            return *this += extend(rhs, bitWidth, signFlag && rhs.signFlag);
     }
 
     if (unknownFlag || rhs.unknownFlag)
@@ -217,9 +197,9 @@ SVInt& SVInt::operator+=(const SVInt& rhs) {
 SVInt& SVInt::operator-=(const SVInt& rhs) {
     if (bitWidth != rhs.bitWidth) {
         if (bitWidth < rhs.bitWidth)
-            *this = signExtend(rhs.bitWidth);
+            *this = extend(*this, rhs.bitWidth, signFlag && rhs.signFlag);
         else
-            return *this -= rhs.signExtend(bitWidth);
+            return *this -= extend(rhs, bitWidth, signFlag && rhs.signFlag);
     }
 
     if (unknownFlag || rhs.unknownFlag)
@@ -315,9 +295,9 @@ logic_t SVInt::equalsSlowCase(const SVInt& rhs) const {
     if (bitWidth != rhs.bitWidth) {
         if (signFlag && rhs.signFlag) {
             if (bitWidth < rhs.bitWidth)
-                return signExtend(rhs.bitWidth).equalsSlowCase(rhs);
+                return signExtend(*this, rhs.bitWidth).equalsSlowCase(rhs);
             else
-                return rhs.signExtend(bitWidth).equalsSlowCase(*this);
+                return signExtend(rhs, bitWidth).equalsSlowCase(*this);
         }
 
         if (isSingleWord())
@@ -401,6 +381,163 @@ SVInt SVInt::createFillX(uint16_t bitWidth, bool isSigned) {
     SVInt result(new uint64_t[getNumWords(bitWidth, true)], bitWidth, isSigned, true);
     result.setAllX();
     return result;
+}
+
+void SVInt::splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords) {
+    const uint64_t mask = ~0ull >> sizeof(uint32_t) * CHAR_BIT;
+    for (uint32_t i = 0; i < numWords; i++) {
+        uint64_t val = value.getNumWords() == 1 ? value.val : value.pVal[i];
+        dest[i * 2] = uint32_t(val & mask);
+        dest[i * 2 + 1] = uint32_t(val >> (sizeof(uint32_t) * CHAR_BIT));
+    }
+}
+
+void SVInt::buildDivideResult(SVInt* result, uint32_t* value, uint32_t numWords) {
+    if (!result)
+        return;
+
+    // TODO!
+}
+
+void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords,
+    SVInt* quotient, SVInt* remainder)
+{
+    ASSERT(lhsWords >= rhsWords, "Fractional result");
+
+    // The Knuth algorithm requires arrays of 32-bit words (because results of operations
+    // need to fit natively into 64 bits). Allocate space for the backing memory, either on
+    // the stack if it's small or on the heap if it's not.
+    uint32_t divisorWords = rhsWords * 2;
+    uint32_t extraWords = (lhsWords * 2) - divisorWords;
+    uint32_t dividendWords = divisorWords + extraWords;
+
+    uint32_t scratch[128];
+    uint32_t* u = nullptr;
+    uint32_t* v = nullptr;
+    uint32_t* q = nullptr;
+    uint32_t* r = nullptr;
+    if ((remainder ? 4 : 3) * divisorWords + 2 * extraWords + 1 <= 128) {
+        u = scratch;
+        v = u + dividendWords + 1;
+        q = v + divisorWords;
+        if (remainder)
+            r = q + dividendWords;
+    }
+    else {
+        u = new uint32_t[dividendWords + 1];
+        v = new uint32_t[divisorWords];
+        q = new uint32_t[dividendWords];
+        if (remainder)
+            r = new uint32_t[divisorWords];
+    }
+
+    // Initialize the dividend and divisor
+    splitWords(lhs, u, lhsWords);
+    splitWords(rhs, v, rhsWords);
+
+    // Initialize quotient and remainder
+    memset(q, 0, dividendWords * sizeof(uint32_t));
+    if (remainder)
+        memset(r, 0, divisorWords * sizeof(uint32_t));
+
+    // extra word for spill space in Knuth algorithm
+    u[dividendWords] = 0;
+
+    // Adjust sizes for division. The Knuth algorithm will fail if there
+    // are empty words in the input.
+    for (uint32_t i = divisorWords; i > 0 && v[i - 1] == 0; i--) {
+        divisorWords--;
+        extraWords++;
+    }
+    for (uint32_t i = dividendWords; i > 0 && u[i - 1] == 0; i--)
+        extraWords--;
+
+    // If we're left with only a single divisor word, Knuth won't work.
+    // We can use a sequence of standard 64 bit divides for this.
+    dividendWords = divisorWords + extraWords;
+    if (divisorWords == 1) {
+        uint32_t divisor = v[0];
+        uint32_t rem = 0;
+        for (int i = dividendWords - 1; i >= 0; i--) {
+            uint64_t partial_dividend = uint64_t(rem) << 32 | u[i];
+            if (partial_dividend == 0) {
+                q[i] = 0;
+                rem = 0;
+            }
+            else if (partial_dividend < divisor) {
+                q[i] = 0;
+                rem = (uint32_t)partial_dividend;
+            }
+            else if (partial_dividend == divisor) {
+                q[i] = 1;
+                rem = 0;
+            }
+            else {
+                q[i] = (uint32_t)(partial_dividend / divisor);
+                rem = (uint32_t)(partial_dividend - (q[i] * divisor));
+            }
+        }
+        if (r)
+            r[0] = rem;
+    }
+    else {
+        // otherwise invoke Knuth
+        knuthDiv(u, v, q, r, extraWords, divisorWords);
+    }
+
+    buildDivideResult(quotient, q, lhsWords);
+    buildDivideResult(remainder, r, rhsWords);
+
+    // cleanup
+    if (u != scratch) {
+        delete[] u;
+        delete[] v;
+        delete[] q;
+        delete[] r;
+    }
+}
+
+SVInt signExtend(const SVInt& value, uint16_t bits) {
+    ASSERT(bits > value.bitWidth);
+
+    if (bits <= SVInt::BITS_PER_WORD && !value.unknownFlag) {
+        uint64_t newVal = value.val << (SVInt::BITS_PER_WORD - value.bitWidth);
+        newVal = (int64_t)newVal >> (bits - value.bitWidth);
+        return SVInt(bits, newVal >> (SVInt::BITS_PER_WORD - bits), value.signFlag);
+    }
+
+    // copy and sign extend; for unknown values, this copies the data words
+    // but not the unknown-indicator words, which we do separately below
+    SVInt result(new uint64_t[SVInt::getNumWords(bits, value.unknownFlag)], bits, value.signFlag, value.unknownFlag);
+    signExtendCopy(result.pVal, value.getRawData(), value.bitWidth, bits);
+
+    if (value.unknownFlag) {
+        signExtendCopy(
+            result.pVal + SVInt::getNumWords(bits, false),
+            value.pVal + SVInt::getNumWords(value.bitWidth, false),
+            value.bitWidth,
+            bits
+        );
+    }
+    
+    return result;
+}
+
+SVInt zeroExtend(const SVInt& value, uint16_t bits) {
+    ASSERT(bits > value.bitWidth);
+
+    if (bits <= SVInt::BITS_PER_WORD && !value.unknownFlag)
+        return SVInt(bits, value.val, value.signFlag);
+
+    SVInt result(new uint64_t[SVInt::getNumWords(bits, value.unknownFlag)](), bits, value.signFlag, value.unknownFlag);
+    for (uint32_t i = 0; i < value.getNumWords(); i++)
+        result.pVal[i] = value.getRawData()[i];
+
+    return result;
+}
+
+SVInt extend(const SVInt& value, uint16_t bits, bool sign) {
+    return sign ? signExtend(value, bits) : zeroExtend(value, bits);
 }
 
 }
