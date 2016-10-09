@@ -247,6 +247,7 @@ void SVInt::setAllX() {
 	// now set upper half to ones (for unknown)
 	for (int i = words; i < words * 2; i++)
 		pVal[i] = UINT64_MAX;
+	clearUnusedBits();
 }
 
 void SVInt::setAllZ() {
@@ -261,6 +262,7 @@ void SVInt::setAllZ() {
 	// everything set to 1 (for Z in the low half and for unknown in the upper half)
 	for (uint32_t i = 0; i < getNumWords(); i++)
 		pVal[i] = UINT64_MAX;
+	clearUnusedBits();
 }
 
 SVInt SVInt::shl(const SVInt& rhs) const {
@@ -831,8 +833,11 @@ void SVInt::clearUnusedBits() {
 	uint64_t mask = ~uint64_t(0ULL) >> (BITS_PER_WORD - wordBits);
 	if (isSingleWord())
 		val &= mask;
-	else
+	else {
 		pVal[getNumWords() - 1] &= mask;
+		if (unknownFlag)
+			pVal[getNumWords(bitWidth, false) - 1] &= mask;
+	}
 }
 
 void SVInt::checkUnknown() {

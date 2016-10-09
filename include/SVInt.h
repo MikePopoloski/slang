@@ -81,6 +81,16 @@ struct logic_t {
 
     explicit operator bool() const { return !isUnknown() && value != 0; }
 
+	friend std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
+		if (rhs.value == x.value)
+			os << "x";
+		else if (rhs.value == z.value)
+			os << "z";
+		else
+			os << rhs.value;
+		return os;
+	}
+
     static const logic_t x;
     static const logic_t z;
 };
