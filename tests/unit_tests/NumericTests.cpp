@@ -25,7 +25,6 @@ TEST_CASE("Equality", "[numeric]") {
     CHECK(SVInt(-4) == -4);
     CHECK(SVInt(-4) != SVInt(9999, -4, true));
     CHECK(SVInt(-4, true) == SVInt(9999, -4, true));
-    CHECK(SVInt(-4, true) != SVInt(9999, -4, true));
 }
 
 }

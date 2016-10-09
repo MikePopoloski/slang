@@ -319,8 +319,8 @@ private:
     uint64_t getWord(int bitIndex) const { return isSingleWord() ? val : pVal[whichWord(bitIndex)]; }
     int whichUnknownWord(int bitIndex) const { return whichWord(bitIndex) + getNumWords(bitWidth, false); }
     uint32_t getActiveBits() const { return bitWidth - countLeadingZeros(); }
-
     const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
+	uint64_t getAssertUInt64() const;
 
     uint32_t countLeadingZeros() const {
         if (isSingleWord())
@@ -338,8 +338,9 @@ private:
 
     static SVInt createFillX(uint16_t bitWidth, bool isSigned);
     static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);
-    static void buildDivideResult(SVInt* result, uint32_t* value, uint32_t numWords);
+    static void buildDivideResult(SVInt* result, uint32_t* value, uint16_t bitWidth, bool signFlag, uint32_t numWords);
     static void divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords, SVInt* quotient, SVInt* remainder);
+	static SVInt udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned);
 
     static int getNumWords(uint16_t bitWidth, bool unknown) {
         uint32_t value = ((uint64_t)bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;
