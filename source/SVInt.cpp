@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "CharInfo.h"
+#include "Hash.h"
 
 namespace slang {
 
@@ -194,6 +195,14 @@ void SVInt::setAllZ() {
 		pVal[i] = UINT64_MAX;
 }
 
+SVInt SVInt::shl(const SVInt& rhs) const {
+	if (rhs.hasUnknown())
+		return createFillX(bitWidth, signFlag);
+	if (rhs >= bitWidth)
+		return SVInt(bitWidth, 0, signFlag);
+	return shl((uint32_t)rhs.getAssertUInt64());
+}
+
 SVInt SVInt::shl(uint32_t amount) const {
 	if (amount == 0)
 		return *this;
@@ -225,6 +234,14 @@ SVInt SVInt::shl(uint32_t amount) const {
 	return result;
 }
 
+SVInt SVInt::lshr(const SVInt& rhs) const {
+	if (rhs.hasUnknown())
+		return createFillX(bitWidth, signFlag);
+	if (rhs >= bitWidth)
+		return SVInt(bitWidth, 0, signFlag);
+	return lshr((uint32_t)rhs.getAssertUInt64());
+}
+
 SVInt SVInt::lshr(uint32_t amount) const {
 	if (amount == 0)
 		return *this;
@@ -246,6 +263,10 @@ SVInt SVInt::lshr(uint32_t amount) const {
 			lshrFar(newVal, pVal, wordShift, offset, numWords, numWords);
 	}
 	return SVInt(newVal, bitWidth, signFlag, unknownFlag);
+}
+
+size_t SVInt::hash(size_t seed) const {
+	return xxhash(getRawData(), getNumWords() * WORD_SIZE, seed);
 }
 
 std::string SVInt::toString(LiteralBase base) const {

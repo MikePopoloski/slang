@@ -279,7 +279,7 @@ public:
 
     logic_t operator[](uint32_t index) const;
 
-    explicit operator logic_t() const;
+	explicit operator logic_t() const { return *this != 0; }
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
