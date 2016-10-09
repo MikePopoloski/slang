@@ -18,6 +18,14 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(value4 == value3);
 }
 
+void checkRoundTrip(const std::string& str, LiteralBase base) {
+	CHECK(SVInt(str).toString(base) == str);
+}
+
+TEST_CASE("String round trip", "[numeric]") {
+	checkRoundTrip("22'd10", LiteralBase::Decimal);
+}
+
 TEST_CASE("Equality", "[numeric]") {
     SVInt a = logic_t::x;
 

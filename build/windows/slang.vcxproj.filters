@@ -151,6 +151,9 @@
     <ClInclude Include="..\..\source\SVIntHelpers.h">
       <Filter>numeric</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\source\CharInfo.h">
+      <Filter>text</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">

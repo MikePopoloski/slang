@@ -17,7 +17,7 @@ static void lshrNear(uint64_t* dst, uint64_t* src, int words, int amount) {
 }
 
 static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, int numWords) {
-    // this is split out so that if we have an unknown value we can reuse the code
+    // this function is split out so that if we have an unknown value we can reuse the code
     // optimization: move whole words
     if (wordShift == 0) {
         for (uint32_t i = start; i < start + numWords - offset; i++)
@@ -32,6 +32,23 @@ static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t o
         // shift the "break" word
         dst[breakWord] = src[breakWord + offset] >> wordShift;
     }
+}
+
+static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, int numWords) {
+	// this function is split out so that if we have an unknown value we can reuse the code
+	for (uint32_t i = start; i < start + offset; i++)
+		dst[i] = 0;
+
+	// optimization: move whole words
+	if (wordShift == 0) {
+		for (uint32_t i = start + offset; i < start + numWords; i++)
+			dst[i] = src[i - offset];
+	}
+	else {
+		for (uint32_t i = start + numWords - 1; i > start + offset; i--)
+			dst[i] = src[i - offset] << wordShift | src[i - offset - 1] >> (SVInt::BITS_PER_WORD - wordShift);
+		dst[start + offset] = src[start] << wordShift;
+	}
 }
 
 static void signExtendCopy(uint64_t* output, const uint64_t* input, uint16_t oldBits, uint16_t newBits) {
@@ -111,6 +128,59 @@ static bool subGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, int len) {
         dst[i] = tmp - y[i];
     }
     return borrow;
+}
+
+// One term of a multiply operation
+static uint64_t mulTerm(uint64_t x, uint64_t ly, uint64_t hy, uint64_t& carry) {
+	uint64_t lx = x & 0xffffffffULL;
+	uint64_t hx = x >> 32;
+	uint64_t result = carry + lx * ly;
+
+	// hasCarry:
+	// - if 0, no carry
+	// - if 1, has carry
+	// - if 2, no carry and result is 0
+	int hasCarry = 0;
+	hasCarry = (result < carry) ? 1 : 0;
+	carry = (hasCarry ? (1ULL << 32) : 0) + hx * ly + (result >> 32);
+	hasCarry = (!carry && hasCarry) ? 1 : (!carry ? 2 : 0);
+
+	carry += (lx * hy) & 0xffffffffULL;
+	result = (carry << 32) | (result & 0xffffffffULL);
+
+	uint64_t bias = 0;
+	if ((!carry && hasCarry != 2) || hasCarry == 1)
+		bias = 1ULL << 32;
+
+	carry = bias + (carry >> 32) + ((lx * hy) >> 32) + (hx * hy);
+	return result;
+}
+
+// Multiply an integer array by a single uint64
+static uint64_t mulOne(uint64_t* dst, uint64_t* x, uint32_t len, uint64_t y) {
+	uint64_t ly = y & 0xffffffffULL;
+	uint64_t hy = y >> 32;
+	uint64_t carry = 0;
+	for (uint32_t i = 0; i < len; ++i)
+		dst[i] = mulTerm(x[i], ly, hy, carry);
+	return carry;
+}
+
+// Generalized multiplier
+static void mul(uint64_t* dst, uint64_t* x, uint32_t xlen, uint64_t* y, uint32_t ylen) {
+	dst[xlen] = mulOne(dst, x, xlen, y[0]);
+	for (uint32_t i = 1; i < ylen; i++) {
+		uint64_t ly = y[i] & 0xffffffffULL;
+		uint64_t hy = y[i] >> 32;
+		uint64_t carry = 0;
+		for (uint32_t j = 0; j < xlen; j++) {
+			uint64_t result = mulTerm(x[j], ly, hy, carry);
+			dst[i + j] += result;
+			if (dst[i + j] < result)
+				carry++;
+		}
+		dst[i + xlen] = carry;
+	}
 }
 
 // Implementation of Knuth's Algorithm D (Division of nonnegative integers)

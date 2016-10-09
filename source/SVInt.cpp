@@ -8,12 +8,134 @@
 
 #include <algorithm>
 
+#include "CharInfo.h"
+
 namespace slang {
 
 #include "SVIntHelpers.h"
 
 const logic_t logic_t::x = 1 << 7;
 const logic_t logic_t::z = 1 << 6;
+
+SVInt::SVInt(StringRef str) {
+	ASSERT(str);
+
+	const char* c = str.begin();
+	bool negative = *c == '-';
+	if (*c == '-' || *c == '+') {
+		c++;	// heh
+		ASSERT(c != str.end(), "String only has a sign?");
+	}
+
+	// look for a base specifier
+	bool sizeBad = false;
+	uint32_t possibleSize = 0;
+	const char* apostrophe = nullptr;
+	for (const char* tmp = c; tmp != str.end(); tmp++) {
+		char d = *tmp;
+		if (d == '\'') {
+			apostrophe = tmp;
+			break;
+		}
+		else if (isDecimalDigit(d)) {
+			possibleSize *= 10;
+			possibleSize += getDigitValue(d);
+			if (possibleSize > UINT16_MAX)
+				sizeBad = true;
+		}
+		else if (d != '_')
+			sizeBad = true;
+	}
+
+	unknownFlag = false;
+	signFlag = true;
+	bitWidth = 32;
+	int radix = 10;
+	int shift = 0;
+	LiteralBase base = LiteralBase::Decimal;
+
+	if (apostrophe) {
+		ASSERT(!sizeBad, "Size is invalid (bad chars or overflow 16 bits)");
+		bitWidth = (uint16_t)possibleSize;
+
+		c = apostrophe + 1;
+		ASSERT(c != str.end(), "Nothing after size specifier");
+
+		if (*c == 's' || *c == 'S') {
+			signFlag = true;
+			c++;
+			ASSERT(c != str.end(), "Nothing after sign specifier");
+		}
+		else {
+			signFlag = false;
+		}
+
+		switch (*c) {
+			case 'b':
+			case 'B':
+				radix = 2;
+				shift = 1;
+				base = LiteralBase::Binary;
+				break;
+			case 'o':
+			case 'O':
+				radix = 8;
+				shift = 3;
+				base = LiteralBase::Octal;
+				break;
+			case 'd':
+			case 'D':
+				radix = 10;
+				shift = 0;
+				base = LiteralBase::Decimal;
+				break;
+			case 'h':
+			case 'H':
+				radix = 16;
+				shift = 4;
+				base = LiteralBase::Hex;
+				break;
+			default:
+				ASSERT(false, "Unknown base specifier '%c'", *c);
+				break;
+		}
+		c++;
+		ASSERT(c != str.end(), "Nothing after base specifier");
+	}
+
+	if (isSingleWord())
+		val = 0;
+	else
+		pVal = new uint64_t[getNumWords()]();
+
+	SVInt digit(bitWidth, 0, false);
+	SVInt radixSv(bitWidth, radix, false);
+
+	for (; c != str.end(); c++) {
+		char d = *c;
+		if (d == '_')
+			continue;
+
+		// TODO: unknown
+		int value = getHexDigitValue(d);
+		ASSERT(value < radix, "Invalid character");
+
+		if (shift)
+			*this = shl(shift);
+		else
+			*this *= radixSv;
+
+		if (digit.isSingleWord())
+			digit.val = value;
+		else
+			digit.pVal[0] = value;
+		*this += digit;
+	}
+
+	// if it's negative, flip it around
+	if (negative)
+		*this = -(*this);
+}
 
 void SVInt::setAllZeros() {
 	if (isSingleWord())
@@ -72,10 +194,42 @@ void SVInt::setAllZ() {
 		pVal[i] = UINT64_MAX;
 }
 
-SVInt SVInt::lshr(uint32_t amount) const {
-	if (amount == 0 || amount >= bitWidth)
+SVInt SVInt::shl(uint32_t amount) const {
+	if (amount == 0)
+		return *this;
+	if (amount >= bitWidth)
 		return SVInt(bitWidth, 0, signFlag);
+	if (isSingleWord())
+		return SVInt(bitWidth, val << amount, signFlag);
 
+	uint64_t* newVal = new uint64_t[getNumWords()]();
+	if (amount < BITS_PER_WORD && !unknownFlag) {
+		uint64_t carry = 0;
+		for (uint32_t i = 0; i < getNumWords(); i++) {
+			newVal[i] = pVal[i] << amount | carry;
+			carry = pVal[i] >> (BITS_PER_WORD - amount);
+		}
+	}
+	else {
+		int numWords = getNumWords(bitWidth, false);
+		uint32_t wordShift = amount % BITS_PER_WORD;
+		uint32_t offset = amount / BITS_PER_WORD;
+
+		shlFar(newVal, pVal, wordShift, offset, 0, numWords);
+		if (unknownFlag)
+			shlFar(newVal, pVal, wordShift, offset, numWords, numWords);
+	}
+
+	SVInt result(newVal, bitWidth, signFlag, unknownFlag);
+	result.clearUnusedBits();
+	return result;
+}
+
+SVInt SVInt::lshr(uint32_t amount) const {
+	if (amount == 0)
+		return *this;
+	if (amount >= bitWidth)
+		return SVInt(bitWidth, 0, signFlag);
 	if (isSingleWord())
 		return SVInt(bitWidth, val >> amount, signFlag);
 
@@ -229,6 +383,50 @@ SVInt& SVInt::operator-=(const SVInt& rhs) {
 	return *this;
 }
 
+SVInt& SVInt::operator*=(const SVInt& rhs) {
+	bool bothSigned = signFlag && rhs.signFlag;
+	if (bitWidth != rhs.bitWidth) {
+		if (bitWidth < rhs.bitWidth)
+			*this = extend(*this, rhs.bitWidth, signFlag && rhs.signFlag);
+		else
+			return *this *= extend(rhs, bitWidth, signFlag && rhs.signFlag);
+	}
+
+	if (unknownFlag || rhs.unknownFlag)
+		setAllX();
+	else {
+		if (isSingleWord())
+			val *= rhs.val;
+		else {
+			// check for zeros
+			uint32_t lhsBits = getActiveBits();
+			uint32_t lhsWords = !lhsBits ? 0 : whichWord(lhsBits - 1) + 1;
+			if (!lhsWords)
+				return *this;
+
+			uint32_t rhsBits = rhs.getActiveBits();
+			uint32_t rhsWords = !rhsBits ? 0 : whichWord(rhsBits - 1) + 1;
+			if (!rhsWords) {
+				setAllZeros();
+				return *this;
+			}
+
+			// allocate result space and do the multiply
+			uint32_t destWords = lhsWords + rhsWords;
+			uint64_t* dst = new uint64_t[destWords];
+			mul(dst, pVal, lhsWords, rhs.pVal, rhsWords);
+
+			// copy the result back into *this
+			setAllZeros();
+			uint32_t wordsToCopy = destWords >= getNumWords() ? getNumWords() : destWords;
+			memcpy(pVal, dst, wordsToCopy * WORD_SIZE);
+			delete[] dst;
+		}
+		clearUnusedBits();
+	}
+	return *this;
+}
+
 SVInt& SVInt::operator/=(const SVInt& rhs) {
 	*this = *this / rhs;
 	return *this;
@@ -243,6 +441,12 @@ SVInt SVInt::operator+(const SVInt& rhs) const {
 SVInt SVInt::operator-(const SVInt& rhs) const {
 	SVInt tmp(*this);
 	tmp -= rhs;
+	return tmp;
+}
+
+SVInt SVInt::operator*(const SVInt& rhs) const {
+	SVInt tmp(*this);
+	tmp *= rhs;
 	return tmp;
 }
 

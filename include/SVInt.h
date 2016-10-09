@@ -12,6 +12,7 @@
 #include "ArrayRef.h"
 #include "Buffer.h"
 #include "MathUtils.h"
+#include "StringRef.h"
 
 namespace slang {
 
@@ -127,6 +128,10 @@ public:
         clearUnusedBits();
     }
 
+	/// Constructs from a string (in SystemVerilog syntax). This is mostly for convenience;
+	/// any errors will assert instead of be handled gracefully.
+	explicit SVInt(StringRef str);
+
     SVInt(uint16_t bits, ArrayRef<logic_t> digits);
 
     /// Destructor.
@@ -173,6 +178,8 @@ public:
 
     SVInt pow(const SVInt& rhs) const;
     SVInt xnor(const SVInt& rhs) const;
+	SVInt shl(const SVInt& rhs) const;
+	SVInt shl(uint32_t amount) const;
     SVInt ashr(const SVInt& rhs) const;
     SVInt lshr(const SVInt& rhs) const;
     SVInt lshr(uint32_t amount) const;
