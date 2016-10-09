@@ -28,32 +28,47 @@ SVInt::SVInt(StringRef str) {
 		ASSERT(c != str.end(), "String only has a sign?");
 	}
 
-	// look for a base specifier
+	// look for a base specifier (optional)
+	// along the way we'll keep track of the current decimal value, so that
+	// if we find that it's actually a size we'll already be done
 	bool sizeBad = false;
 	uint32_t possibleSize = 0;
 	const char* apostrophe = nullptr;
 	for (const char* tmp = c; tmp != str.end(); tmp++) {
 		char d = *tmp;
 		if (d == '\'') {
+			// found it, we're done
 			apostrophe = tmp;
 			break;
 		}
 		else if (isDecimalDigit(d)) {
+			// bit widths can't be larger than 2^16, so if the number gets larger
+			// then this is either not a size or a bad one
 			possibleSize *= 10;
 			possibleSize += getDigitValue(d);
 			if (possibleSize > UINT16_MAX)
 				sizeBad = true;
 		}
-		else if (d != '_')
+		else if (d != '_') {
+			// underscores are allowed as digit separators; anything else means this
+			// is not a valid bit width
 			sizeBad = true;
+		}
 	}
 
-	unknownFlag = false;
+	// numbers without a size specifier are assumed to be 32 bits, signed, and in decimal base
 	signFlag = true;
 	bitWidth = 32;
+	LiteralBase base = LiteralBase::Decimal;
+
+	// for base 10, we use the radix to multiply each time we have a new digit
+	// for the other bases, we can shift instead of multiplying
 	int radix = 10;
 	int shift = 0;
-	LiteralBase base = LiteralBase::Decimal;
+
+	// this keeps track of an "all 1s" value for cases where we need to
+	// shift in a high impedance or unknown value
+	int ones = 0x0;
 
 	if (apostrophe) {
 		ASSERT(!sizeBad, "Size is invalid (bad chars or overflow 16 bits)");
@@ -76,24 +91,28 @@ SVInt::SVInt(StringRef str) {
 			case 'B':
 				radix = 2;
 				shift = 1;
+				ones = 0x1;
 				base = LiteralBase::Binary;
 				break;
 			case 'o':
 			case 'O':
 				radix = 8;
 				shift = 3;
+				ones = 0x7;
 				base = LiteralBase::Octal;
 				break;
 			case 'd':
 			case 'D':
 				radix = 10;
 				shift = 0;
+				ones = 0x0;
 				base = LiteralBase::Decimal;
 				break;
 			case 'h':
 			case 'H':
 				radix = 16;
 				shift = 4;
+				ones = 0xf;
 				base = LiteralBase::Hex;
 				break;
 			default:
@@ -102,6 +121,15 @@ SVInt::SVInt(StringRef str) {
 		}
 		c++;
 		ASSERT(c != str.end(), "Nothing after base specifier");
+	}
+
+	// check if we have any unknown digits now, so that we can allocate space for them
+	unknownFlag = false;
+	for (const char* tmp = c; tmp != str.end(); tmp++) {
+		if (isLogicDigit(*tmp)) {
+			unknownFlag = true;
+			break;
+		}
 	}
 
 	if (isSingleWord())
@@ -117,23 +145,61 @@ SVInt::SVInt(StringRef str) {
 		if (d == '_')
 			continue;
 
-		// TODO: unknown
-		int value = getHexDigitValue(d);
-		ASSERT(value < radix, "Invalid character");
+		int value;
+		int unknown;
+		switch (d) {
+			case 'X':
+			case 'x':
+				value = 0;
+				unknown = ones;
+				break;
+			case 'Z':
+			case 'z':
+			case '?':
+				value = ones;
+				unknown = ones;
+				break;
+			default:
+				value = getHexDigitValue(d);
+				unknown = 0;
+				ASSERT(value < radix, "Invalid character");
+				break;
+		}
 
+		// shift if we can, multiply if we must
 		if (shift)
-			*this = shl(shift);
+			*this = shl(shift, false);
 		else
 			*this *= radixSv;
 
-		if (digit.isSingleWord())
-			digit.val = value;
-		else
-			digit.pVal[0] = value;
-		*this += digit;
+		if (unknownFlag) {
+			// In base ten we can't have individual bits be X or Z, it's all or nothing
+			if (radix == 10) {
+				if (value)
+					setAllZ();
+				else
+					setAllX();
+				break;
+			}
+
+			// otherwise, make sure the unknown flag is set for this group of bits
+			// because we're shifting bits for the radix involved (2, 8, or 16) we
+			// know that the bits we're setting are fresh and all zero, so adding
+			// won't cause any kind of carry
+			pVal[0] += value;
+			pVal[getNumWords(bitWidth, false)] += unknown;
+		}
+		else {
+			// add in the new digit
+			if (digit.isSingleWord())
+				digit.val = value;
+			else
+				digit.pVal[0] = value;
+			*this += digit;
+		}
 	}
 
-	// if it's negative, flip it around
+	// if it's supposed to be negative, flip it around
 	if (negative)
 		*this = -(*this);
 }
@@ -148,6 +214,7 @@ void SVInt::setAllZeros() {
 }
 
 void SVInt::setAllOnes() {
+	// we don't have unknown digits anymore, so reallocate if necessary
 	if (unknownFlag) {
 		unknownFlag = false;
 		delete[] pVal;
@@ -191,19 +258,28 @@ void SVInt::setAllZ() {
 		pVal = new uint64_t[getNumWords()];
 	}
 
+	// everything set to 1 (for Z in the low half and for unknown in the upper half)
 	for (uint32_t i = 0; i < getNumWords(); i++)
 		pVal[i] = UINT64_MAX;
 }
 
 SVInt SVInt::shl(const SVInt& rhs) const {
+	// if the shift amount is unknown, result is all X's
 	if (rhs.hasUnknown())
 		return createFillX(bitWidth, signFlag);
+
+	// if the shift amount is too large, we end up with zero anyway
 	if (rhs >= bitWidth)
 		return SVInt(bitWidth, 0, signFlag);
 	return shl((uint32_t)rhs.getAssertUInt64());
 }
 
 SVInt SVInt::shl(uint32_t amount) const {
+	return shl(amount, true);
+}
+
+SVInt SVInt::shl(uint32_t amount, bool doCheckUnknown) const {
+	// handle trivial cases
 	if (amount == 0)
 		return *this;
 	if (amount >= bitWidth)
@@ -211,6 +287,7 @@ SVInt SVInt::shl(uint32_t amount) const {
 	if (isSingleWord())
 		return SVInt(bitWidth, val << amount, signFlag);
 
+	// handle the small shift case
 	uint64_t* newVal = new uint64_t[getNumWords()]();
 	if (amount < BITS_PER_WORD && !unknownFlag) {
 		uint64_t carry = 0;
@@ -220,10 +297,12 @@ SVInt SVInt::shl(uint32_t amount) const {
 		}
 	}
 	else {
+		// otherwise do a full shift
 		int numWords = getNumWords(bitWidth, false);
 		uint32_t wordShift = amount % BITS_PER_WORD;
 		uint32_t offset = amount / BITS_PER_WORD;
 
+		// also handle shifting the unknown bits if necessary
 		shlFar(newVal, pVal, wordShift, offset, 0, numWords);
 		if (unknownFlag)
 			shlFar(newVal, pVal, wordShift, offset, numWords, numWords);
@@ -231,18 +310,27 @@ SVInt SVInt::shl(uint32_t amount) const {
 
 	SVInt result(newVal, bitWidth, signFlag, unknownFlag);
 	result.clearUnusedBits();
+
+	// our fromString() routine uses shl() on newly constructed unknown values
+	// which we don't want to remove here
+	if (doCheckUnknown)
+		result.checkUnknown();
 	return result;
 }
 
 SVInt SVInt::lshr(const SVInt& rhs) const {
+	// if the shift amount is unknown, result is all X's
 	if (rhs.hasUnknown())
 		return createFillX(bitWidth, signFlag);
+
+	// if the shift amount is too large, we end up with zero anyway
 	if (rhs >= bitWidth)
 		return SVInt(bitWidth, 0, signFlag);
 	return lshr((uint32_t)rhs.getAssertUInt64());
 }
 
 SVInt SVInt::lshr(uint32_t amount) const {
+	// handle trivial cases
 	if (amount == 0)
 		return *this;
 	if (amount >= bitWidth)
@@ -250,19 +338,25 @@ SVInt SVInt::lshr(uint32_t amount) const {
 	if (isSingleWord())
 		return SVInt(bitWidth, val >> amount, signFlag);
 
+	// handle the small shift case
 	uint64_t* newVal = new uint64_t[getNumWords()]();
 	if (amount < BITS_PER_WORD && !unknownFlag)
 		lshrNear(newVal, pVal, getNumWords(), amount);
 	else {
+		// otherwise do a full shift
 		int numWords = getNumWords(bitWidth, false);
 		uint32_t wordShift = amount % BITS_PER_WORD;
 		uint32_t offset = amount / BITS_PER_WORD;
 
+		// also handle shifting the unknown bits if necessary
 		lshrFar(newVal, pVal, wordShift, offset, 0, numWords);
 		if (unknownFlag)
 			lshrFar(newVal, pVal, wordShift, offset, numWords, numWords);
 	}
-	return SVInt(newVal, bitWidth, signFlag, unknownFlag);
+
+	SVInt result(newVal, bitWidth, signFlag, unknownFlag);
+	result.checkUnknown();
+	return result;
 }
 
 size_t SVInt::hash(size_t seed) const {
@@ -278,13 +372,13 @@ std::string SVInt::toString(LiteralBase base) const {
 void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
 	// negative sign if necessary
 	SVInt tmp(*this);
-	if (isNegative() && signFlag) {
+	if (isNegative() && signFlag && !unknownFlag) {
 		tmp = -tmp;
 		buffer.append('-');
 	}
 
 	// append the bit size, unless we're a signed 32-bit base 10 integer
-	if (base != LiteralBase::Decimal || bitWidth != 32 || signFlag || unknownFlag) {
+	if (base != LiteralBase::Decimal || bitWidth != 32 || !signFlag || unknownFlag) {
 		buffer.appendRange(std::to_string(bitWidth));
 		buffer.append('\'');
 		if (signFlag)
@@ -298,21 +392,29 @@ void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
 		}
 	}
 
-	// TODO: handle x's
-
 	// for bases 2, 8, and 16 we can just shift instead of dividing
 	uint32_t startOffset = buffer.count();
 	static const char Digits[] = "0123456789abcdef";
 	if (base == LiteralBase::Decimal) {
-		SVInt divisor(4, 10, false);
-		while (tmp != 0) {
-			SVInt remainder;
-			SVInt quotient;
-			divide(tmp, tmp.getNumWords(), divisor, divisor.getNumWords(), &quotient, &remainder);
-			uint64_t digit = remainder.getAssertUInt64();
-			ASSERT(digit < 10);
-			buffer.append(Digits[digit]);
-			tmp = quotient;
+		// decimal numbers that have unknown values only print as a single letter
+		if (unknownFlag) {
+			if (getRawData()[0])
+				buffer.append('z');
+			else
+				buffer.append('x');
+		}
+		else {
+			// repeatedly divide by 10 to get each digit
+			SVInt divisor(4, 10, false);
+			while (tmp != 0) {
+				SVInt remainder;
+				SVInt quotient;
+				divide(tmp, tmp.getNumWords(), divisor, divisor.getNumWords(), &quotient, &remainder);
+				uint64_t digit = remainder.getAssertUInt64();
+				ASSERT(digit < 10);
+				buffer.append(Digits[digit]);
+				tmp = quotient;
+			}
 		}
 	}
 	else {
@@ -325,10 +427,26 @@ void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
 			default: ASSERT(false, "Impossible"); break;
 		}
 
-		while (tmp != 0) {
+		// if we have unknown values here, the comparison will return X
+		// we want to keep going so that we print the unknowns
+		logic_t x = tmp != 0;
+		while (x || x.isUnknown()) {
 			uint32_t digit = uint32_t(tmp.getRawData()[0]) & maskAmount;
-			buffer.append(Digits[digit]);
+			if (!tmp.unknownFlag)
+				buffer.append(Digits[digit]);
+			else {
+				uint32_t u = uint32_t(tmp.pVal[getNumWords(bitWidth, false)]) & maskAmount;
+				if (!u)
+					buffer.append(Digits[digit]);
+				else if (digit)
+					buffer.append('z');
+				else
+					buffer.append('x');
+			}
+			// this shift might shift away the unknown digits, at which point
+			// it converts back to being a normal 2-state value
 			tmp = tmp.lshr(shiftAmount);
+			x = tmp != 0;
 		}
 	}
 
@@ -405,7 +523,6 @@ SVInt& SVInt::operator-=(const SVInt& rhs) {
 }
 
 SVInt& SVInt::operator*=(const SVInt& rhs) {
-	bool bothSigned = signFlag && rhs.signFlag;
 	if (bitWidth != rhs.bitWidth) {
 		if (bitWidth < rhs.bitWidth)
 			*this = extend(*this, rhs.bitWidth, signFlag && rhs.signFlag);
@@ -665,58 +782,78 @@ uint32_t SVInt::countLeadingZerosSlowCase() const {
 		return slang::countLeadingZeros(part) - (BITS_PER_WORD - bitsInMsw);
 
 	int count = bitsInMsw;
-    for (--i; i > 0; --i) {
-        if (pVal[i - 1] == 0)
-            count += BITS_PER_WORD;
-        else {
-            count += slang::countLeadingZeros(pVal[i - 1]);
-            break;
-        }
-    }
-    return count;
+	for (--i; i > 0; --i) {
+		if (pVal[i - 1] == 0)
+			count += BITS_PER_WORD;
+		else {
+			count += slang::countLeadingZeros(pVal[i - 1]);
+			break;
+		}
+	}
+	return count;
 }
 
 void SVInt::setUnknownBit(int index, logic_t bit) {
-    // the encoding is:
-    //   - If the bit is known, the trailing array word has a 0 bit set.
-    //   - If the bit is unknown, the trailing array word has a 1 bit set at the right index.
-    //     The primary word has a 0 or 1 to mean X or Z, respectively.
-    ASSERT(unknownFlag);
-    switch (bit.value) {
-        case 0:
-            pVal[whichWord(index)] &= ~maskBit(index);
-            pVal[whichUnknownWord(index)] &= ~maskBit(index);
-            break;
-        case 1:
-            pVal[whichWord(index)] |= maskBit(index);
-            pVal[whichUnknownWord(index)] &= ~maskBit(index);
-            break;
-        case 1 << 7: // TODO
-            pVal[whichWord(index)] &= ~maskBit(index);
-            pVal[whichUnknownWord(index)] |= maskBit(index);
-            break;
-        case 1 << 6: // TODO
-            pVal[whichWord(index)] |= maskBit(index);
-            pVal[whichUnknownWord(index)] |= maskBit(index);
-            break;
-        default:
-            ASSERT(false, "Bad bit value");
-            break;
-    }
+	// the encoding is:
+	//   - If the bit is known, the trailing array word has a 0 bit set.
+	//   - If the bit is unknown, the trailing array word has a 1 bit set at the right index.
+	//     The primary word has a 0 or 1 to mean X or Z, respectively.
+	ASSERT(unknownFlag);
+	switch (bit.value) {
+		case 0:
+			pVal[whichWord(index)] &= ~maskBit(index);
+			pVal[whichUnknownWord(index)] &= ~maskBit(index);
+			break;
+		case 1:
+			pVal[whichWord(index)] |= maskBit(index);
+			pVal[whichUnknownWord(index)] &= ~maskBit(index);
+			break;
+		case 1 << 7: // TODO
+			pVal[whichWord(index)] &= ~maskBit(index);
+			pVal[whichUnknownWord(index)] |= maskBit(index);
+			break;
+		case 1 << 6: // TODO
+			pVal[whichWord(index)] |= maskBit(index);
+			pVal[whichUnknownWord(index)] |= maskBit(index);
+			break;
+		default:
+			ASSERT(false, "Bad bit value");
+			break;
+	}
 }
 
 void SVInt::clearUnusedBits() {
-    // TODO: don't clear sign extension
-    // clear out unused bits in the top word after we've assigned something to it
-    uint32_t wordBits = bitWidth % BITS_PER_WORD;
-    if (wordBits == 0)
-        return;
+	// clear out unused bits in the top word after we've assigned something to it
+	uint32_t wordBits = bitWidth % BITS_PER_WORD;
+	if (wordBits == 0)
+		return;
 
-    uint64_t mask = ~uint64_t(0ULL) >> (BITS_PER_WORD - wordBits);
-    if (isSingleWord())
-        val &= mask;
-    else
-        pVal[getNumWords() - 1] &= mask;
+	uint64_t mask = ~uint64_t(0ULL) >> (BITS_PER_WORD - wordBits);
+	if (isSingleWord())
+		val &= mask;
+	else
+		pVal[getNumWords() - 1] &= mask;
+}
+
+void SVInt::checkUnknown() {
+	// check if we've lost all of our unknown bits and need
+	// to downgrade back to a non-unknown value
+	if (!unknownFlag || countLeadingZeros() < bitWidth)
+		return;
+
+	unknownFlag = false;
+	uint32_t words = getNumWords();
+	if (words == 1) {
+		uint64_t newVal = pVal[0];
+		delete[] pVal;
+		val = newVal;
+	}
+	else {
+		uint64_t* newMem = new uint64_t[words];
+		memcpy(newMem, pVal, words * WORD_SIZE);
+		delete[] pVal;
+		pVal = newMem;
+	}
 }
 
 SVInt SVInt::createFillX(uint16_t bitWidth, bool isSigned) {

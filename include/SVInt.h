@@ -16,6 +16,7 @@
 
 namespace slang {
 
+/// Specifies the base of an integer (for converting to/from a string)
 enum class LiteralBase : uint8_t {
     Binary,
     Octal,
@@ -23,16 +24,20 @@ enum class LiteralBase : uint8_t {
     Hex
 };
 
-/// Represents a single 4-state bit. The typical values of 0 and 1 are
+/// Represents a single 4-state bit. The usual bit values of 0 and 1 are
 /// augmented with X (unknown) and Z (high impedance). Both X and Z are
-/// considred "unknown" for most computation purposes.
+/// considered "unknown" for most computation purposes.
 struct logic_t {
     // limited from 0 to 15, plus x or z
     uint8_t value;
 
+	/// Default construct; zero value
     constexpr logic_t() : value(0) {}
+
+	/// Construct from a single bit value
     constexpr logic_t(uint8_t value) : value(value) {}
 
+	/// Returns true if the bit is either X or Z
     bool isUnknown() const { return value == x.value || value == z.value; }
 
     logic_t operator!() const {
@@ -80,6 +85,7 @@ struct logic_t {
     static const logic_t z;
 };
 
+///
 /// SystemVerilog arbitrary precision integer type.
 /// This type is designed to implement all of the operations supported by SystemVerilog
 /// expressions involving integer vectors. Each value has an arbitrary (but constant) size in bits,
@@ -87,6 +93,11 @@ struct logic_t {
 ///
 /// Additionally, SVInt can represent a 4-state value, where each bit can take on additional
 /// states of X and Z.
+///
+/// Small integer values that fit within 64 bits are kept in a simple native integer. Otherwise,
+/// space is allocated on the heap. If there are any unknown bits in the number, an extra set of
+/// words are allocated adjacent in memory. The bits in these extra words indicate whether the
+/// corresponding bits in the low words are unknown or normal.
 ///
 class SVInt {
 public:
@@ -129,18 +140,16 @@ public:
     }
 
 	/// Constructs from a string (in SystemVerilog syntax). This is mostly for convenience;
-	/// any errors will assert instead of be handled gracefully.
+	/// any errors will assert instead of being handled gracefully.
 	explicit SVInt(StringRef str);
 
     SVInt(uint16_t bits, ArrayRef<logic_t> digits);
 
-    /// Destructor.
     ~SVInt() {
         if (!isSingleWord())
             delete[] pVal;
     }
 
-    /// Copy constructor.
     SVInt(const SVInt& other) :
         bitWidth(other.bitWidth), signFlag(other.signFlag), unknownFlag(other.unknownFlag)
     {
@@ -150,23 +159,27 @@ public:
             initSlowCase(other);
     }
 
-    /// Move constructor.
     SVInt(SVInt&& other) noexcept :
         val(other.val), bitWidth(other.bitWidth),
         signFlag(other.signFlag), unknownFlag(other.unknownFlag)
     {
-        // zero-ing out the bitwidth of the other object will cause it to not release memory
-        other.bitWidth = 0;
+		// prevent the other object from releasing memory
+		other.pVal = 0;
     }
 
     bool isSigned() const { return signFlag; }
     bool hasUnknown() const { return unknownFlag; }
     uint16_t getBitWidth() const { return bitWidth; }
+
+	/// Check whether the number is negative. Note that this doesn't care about
+	/// the sign flag; it simply looks at the highest bit to determine whether it is set.
     bool isNegative() const { return (bool)(*this)[bitWidth - 1]; }
 
-    /// Mutating methods.
+    /// Reinterpret the integer as a signed or unsigned value. This doesn't
+	/// change the bits, only the representation.
     void setSigned(bool isSigned) { signFlag = isSigned; }
-    void setWidth(uint16_t bits);
+
+	/// Set all of the bits in the integer to 1, zero, X, or Z.
     void setAllOnes();
     void setAllZeros();
     void setAllX();
@@ -218,8 +231,8 @@ public:
         signFlag = rhs.signFlag;
         unknownFlag = rhs.unknownFlag;
 
-        // zero-ing out the bitwidth of the other object will cause it to not release memory
-        rhs.bitWidth = 0;
+        // prevent the other object from releasing memory
+		rhs.pVal = 0;
         return *this;
     }
 
@@ -313,40 +326,77 @@ private:
     {
     }
 
+	// Initialization routines for various cases.
     void initSlowCase(logic_t bit);
     void initSlowCase(uint64_t value);
     void initSlowCase(const SVInt& other);
+
+	// Slow cases for assignment, equality checking, and counting leading zeros.
     SVInt& assignSlowCase(const SVInt& other);
     logic_t equalsSlowCase(const SVInt& rhs) const;
     uint32_t countLeadingZerosSlowCase() const;
 
-    // word and bit manipulation
+	// Specialized shift left routine that doesn't remove the unknown flag.
+	SVInt shl(uint32_t amount, bool doCheckUnknown) const;
+
+    // Check if we can fit the integer into a single word.
     bool isSingleWord() const { return bitWidth <= BITS_PER_WORD && !unknownFlag; }
+
+	// Get the number of words required to hold the integer, including the unknown bits.
     uint32_t getNumWords() const { return getNumWords(bitWidth, unknownFlag); }
+
+	// Get a specific word holding the given bit index.
     uint64_t getWord(int bitIndex) const { return isSingleWord() ? val : pVal[whichWord(bitIndex)]; }
-    int whichUnknownWord(int bitIndex) const { return whichWord(bitIndex) + getNumWords(bitWidth, false); }
+
+	// Get a specific unknown control word holding the given bit index.
+	int whichUnknownWord(int bitIndex) const { return whichWord(bitIndex) + getNumWords(bitWidth, false); }
+
+	// Get the number of "active bits". An SVInt might have a large bit width but be set
+	// to a very small value, in which case it will have a low number of active bits.
     uint32_t getActiveBits() const { return bitWidth - countLeadingZeros(); }
+
+	// Get a pointer to the data, either pVal or val depending on whether we have a single word.
     const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
+
+	// Assert that the integer value can fit into a single uint64 and return it.
 	uint64_t getAssertUInt64() const;
 
+	// Count the number of leading zeros. This doesn't do anything special for
+	// unknown values, so make sure you know what you're doing with it.
     uint32_t countLeadingZeros() const {
         if (isSingleWord())
             return slang::countLeadingZeros(val) - (BITS_PER_WORD - bitWidth);
         return countLeadingZerosSlowCase();
     }
 
-    // other helpers
+	// Set a specific bit to be a specific 4-state value.
     void setUnknownBit(int index, logic_t bit);
+
+	// Clear out any unused bits in the topmost word if our bit width
+	// is not an even multiple of the word size.
     void clearUnusedBits();
+
+	// Check if we still need to have the unknownFlag set after doing an
+	// operation that might have removed the unknown bits in the number.
+	void checkUnknown();
 
     static constexpr int whichWord(int bitIndex) { return bitIndex / BITS_PER_WORD; }
     static constexpr int whichBit(int bitIndex) { return bitIndex % BITS_PER_WORD; }
     static constexpr uint64_t maskBit(int bitIndex) { return 1ULL << whichBit(bitIndex); }
 
+	// Create an integer of the given bit width filled with X's.
     static SVInt createFillX(uint16_t bitWidth, bool isSigned);
+
+	// Split an integer's data into 32-bit words.
     static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);
+
+	// Build the output result of a divide (used for both quotients and remainders).
     static void buildDivideResult(SVInt* result, uint32_t* value, uint16_t bitWidth, bool signFlag, uint32_t numWords);
+
+	// Entry point for Knuth divide that handles corner cases and splitting the integers into 32-bit words.
     static void divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords, SVInt* quotient, SVInt* remainder);
+
+	// Unsigned division algorithm.
 	static SVInt udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned);
 
     static int getNumWords(uint16_t bitWidth, bool unknown) {

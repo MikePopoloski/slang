@@ -30,6 +30,10 @@ TEST_CASE("String round trip", "[numeric]") {
 	checkRoundTrip("-5'sd10", LiteralBase::Decimal);
 	checkRoundTrip("-993'shff", LiteralBase::Hex);
 	checkRoundTrip("12'b101010101", LiteralBase::Binary);
+	checkRoundTrip("12'dx", LiteralBase::Decimal);
+	checkRoundTrip("32", LiteralBase::Decimal);
+	checkRoundTrip("-999989", LiteralBase::Decimal);
+	checkRoundTrip("12'b101x101z1", LiteralBase::Binary);
 }
 
 TEST_CASE("Equality", "[numeric]") {
