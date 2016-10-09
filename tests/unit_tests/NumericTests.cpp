@@ -18,12 +18,18 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(value4 == value3);
 }
 
-void checkRoundTrip(const std::string& str, LiteralBase base) {
-	CHECK(SVInt(str).toString(base) == str);
+void checkRoundTrip(std::string str, LiteralBase base) {
+	SVInt sv(str);
+	str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
+	CHECK(sv.toString(base) == str);
 }
 
 TEST_CASE("String round trip", "[numeric]") {
 	checkRoundTrip("22'd10", LiteralBase::Decimal);
+	checkRoundTrip("92'so10_0214_562", LiteralBase::Octal);
+	checkRoundTrip("-5'sd10", LiteralBase::Decimal);
+	checkRoundTrip("-993'shff", LiteralBase::Hex);
+	checkRoundTrip("12'b101010101", LiteralBase::Binary);
 }
 
 TEST_CASE("Equality", "[numeric]") {

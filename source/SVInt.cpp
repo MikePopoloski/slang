@@ -281,7 +281,7 @@ void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
 
 	// for bases 2, 8, and 16 we can just shift instead of dividing
 	uint32_t startOffset = buffer.count();
-	static const char Digits[] = "0123456789ABCDEF";
+	static const char Digits[] = "0123456789abcdef";
 	if (base == LiteralBase::Decimal) {
 		SVInt divisor(4, 10, false);
 		while (tmp != 0) {
