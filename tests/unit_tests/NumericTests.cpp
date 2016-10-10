@@ -21,6 +21,8 @@ TEST_CASE("Construction", "[numeric]") {
 	CHECK(value5.isNegative());
 	value5.setSigned(false);
 	CHECK(value5.isNegative());
+
+	CHECK(SVInt("13'b1100xZ?01")[2] == logic_t::z);
 }
 
 void checkRoundTrip(std::string str, LiteralBase base) {
@@ -84,8 +86,9 @@ TEST_CASE("Arithmetic", "[numeric]") {
 
 TEST_CASE("Shifting", "[numeric]") {
 	CHECK(SVInt("100'b11110000111").lshr(5) == 60);
-	CHECK(SVInt("100'b11xxxZ00101").lshr(7) == SVInt("10'b11xx"));
+	CHECK(SVInt("100'b11xxxZ00101").lshr(7) == SVInt("20'b11xx"));
 	CHECK(SVInt("64").shl(3) == 512);
+	CHECK(SVInt("52'hffxx").shl(4) == SVInt("52'hffxx0"));
 }
 
 }
