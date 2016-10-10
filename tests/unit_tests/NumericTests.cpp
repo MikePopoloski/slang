@@ -22,7 +22,7 @@ TEST_CASE("Construction", "[numeric]") {
 	value5.setSigned(false);
 	CHECK(value5.isNegative());
 
-	CHECK(SVInt("13'b1100xZ?01")[2] == logic_t::z);
+	CHECK(exactlyEqual(SVInt("13'b1100xZ?01")[2], logic_t::z));
 }
 
 void checkRoundTrip(std::string str, LiteralBase base) {
@@ -63,9 +63,9 @@ TEST_CASE("Comparison", "[numeric]") {
 	v.setAllZeros();
 	CHECK(v == 0);
 	v.setAllX();
-	CHECK(v == SVInt("6'bxxxxxx"));
+	CHECK(exactlyEqual(v, SVInt("6'bxxxxxx")));
 	v.setAllZ();
-	CHECK(v == SVInt("6'bzz??ZZ"));
+	CHECK(exactlyEqual(v, SVInt("6'bzz??ZZ")));
 }
 
 TEST_CASE("Arithmetic", "[numeric]") {
@@ -86,9 +86,9 @@ TEST_CASE("Arithmetic", "[numeric]") {
 
 TEST_CASE("Shifting", "[numeric]") {
 	CHECK(SVInt("100'b11110000111").lshr(5) == 60);
-	CHECK(SVInt("100'b11xxxZ00101").lshr(7) == SVInt("20'b11xx"));
+	CHECK(exactlyEqual(SVInt("100'b11xxxZ00101").lshr(7), SVInt("20'b11xx")));
 	CHECK(SVInt("64").shl(3) == 512);
-	CHECK(SVInt("52'hffxx").shl(4) == SVInt("52'hffxx0"));
+	CHECK(exactlyEqual(SVInt("52'hffxx").shl(4), SVInt("52'hffxx0")));
 }
 
 }

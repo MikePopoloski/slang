@@ -1053,14 +1053,44 @@ SVInt zeroExtend(const SVInt& value, uint16_t bits) {
         return SVInt(bits, value.val, value.signFlag);
 
     SVInt result(new uint64_t[SVInt::getNumWords(bits, value.unknownFlag)](), bits, value.signFlag, value.unknownFlag);
-    for (uint32_t i = 0; i < value.getNumWords(); i++)
+
+	uint32_t valueWords = SVInt::getNumWords(value.bitWidth, false);
+    for (uint32_t i = 0; i < valueWords; i++)
         result.pVal[i] = value.getRawData()[i];
+
+	if (value.unknownFlag) {
+		uint32_t newWords = SVInt::getNumWords(bits, false);
+		for (uint32_t i = 0; i < valueWords; i++)
+			result.pVal[i + newWords] = value.getRawData()[i + valueWords];
+	}
 
     return result;
 }
 
 SVInt extend(const SVInt& value, uint16_t bits, bool sign) {
     return sign ? signExtend(value, bits) : zeroExtend(value, bits);
+}
+
+bool exactlyEqual(const SVInt& lhs, const SVInt &rhs) {
+	// if no unknown flags, do normal comparison
+	if (!lhs.unknownFlag && !rhs.unknownFlag)
+		return (bool)(lhs == rhs);
+
+	// if one has unknown and the other doesn't, they're not equal
+	if (!lhs.unknownFlag || !rhs.unknownFlag)
+		return false;
+
+	// handle sign extension if necessary
+	if (lhs.bitWidth != rhs.bitWidth) {
+		bool bothSigned = lhs.signFlag && rhs.signFlag;
+		if (lhs.bitWidth < rhs.bitWidth)
+			return exactlyEqual(extend(lhs, rhs.bitWidth, bothSigned), rhs);
+		else
+			return exactlyEqual(lhs, extend(rhs, lhs.bitWidth, bothSigned));
+	}
+
+	// ok, equal widths, and they both have unknown values, do a straight memory compare
+	return memcmp(lhs.pVal, rhs.pVal, lhs.getNumWords() * SVInt::WORD_SIZE) == 0;
 }
 
 }

@@ -81,6 +81,8 @@ struct logic_t {
 
     explicit operator bool() const { return !isUnknown() && value != 0; }
 
+	friend bool exactlyEqual(logic_t lhs, logic_t rhs) { return lhs.value == rhs.value; }
+
 	friend std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
 		if (rhs.value == x.value)
 			os << "x";
@@ -209,11 +211,6 @@ public:
 
     SVInt partSelect(const SVInt& msb, const SVInt& lsb) const;
 
-    bool fullyEqual(const SVInt& rhs) const;
-    bool fullyNotEqual(const SVInt& rhs) const;
-    bool wildcardEqual(const SVInt& rhs) const;
-    bool wildcardNotEqual(const SVInt& rhs) const;
-
     logic_t reductionOr() const;
     logic_t reductionAnd() const;
     logic_t reductionXor() const;
@@ -323,6 +320,8 @@ public:
     friend SVInt signExtend(const SVInt& value, uint16_t bits);
     friend SVInt zeroExtend(const SVInt& value, uint16_t bits);
     friend SVInt extend(const SVInt& value, uint16_t bits, bool sign);
+	friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
+	friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     enum {
         BITS_PER_WORD = sizeof(uint64_t) * CHAR_BIT,
