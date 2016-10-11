@@ -265,6 +265,36 @@ void SVInt::setAllZ() {
 	clearUnusedBits();
 }
 
+SVInt SVInt::xnor(const SVInt& rhs) const {
+	if (bitWidth != rhs.bitWidth) {
+		bool bothSigned = signFlag && rhs.signFlag;
+		if (bitWidth < rhs.bitWidth)
+			return extend(*this, rhs.bitWidth, bothSigned).xnor(rhs);
+		else
+			return xnor(extend(rhs, bitWidth, bothSigned));
+	}
+
+	SVInt result(*this);
+	if (isSingleWord())
+		result.val = ~(result.val ^ rhs.val);
+	else {
+		uint32_t words = getNumWords(bitWidth, false);
+		if (unknownFlag) {
+			for (uint32_t i = 0; i < words; i++)
+				result.pVal[i + words] |= rhs.pVal[i + words];
+
+			for (uint32_t i = 0; i < words; i++)
+				result.pVal[i] = ~result.pVal[i + words] & ~(result.pVal[i] ^ rhs.pVal[i]);
+		}
+		else {
+			for (uint32_t i = 0; i < words; i++)
+				result.pVal[i] = ~(result.pVal[i] ^ rhs.pVal[i]);
+		}
+	}
+	result.clearUnusedBits();
+	return result;
+}
+
 SVInt SVInt::shl(const SVInt& rhs) const {
 	// if the shift amount is unknown, result is all X's
 	if (rhs.hasUnknown())
@@ -462,6 +492,29 @@ SVInt SVInt::operator-() const {
 	return SVInt(bitWidth, 0, signFlag) - *this;
 }
 
+SVInt SVInt::operator~() const {
+	SVInt result(*this);
+	uint32_t words = getNumWords(bitWidth, false);
+
+	// just use xor to quickly flip everything
+	if (isSingleWord())
+		result.val ^= UINT64_MAX;
+	else {
+		for (uint32_t i = 0; i < words; i++)
+			result.pVal[i] ^= UINT64_MAX;
+	}
+
+	if (unknownFlag) {
+		// any unknown bits are still unknown, but we need to make sure
+		// any high impedance values become X's
+		for (uint32_t i = 0; i < words; i++)
+			result.pVal[i] &= ~result.pVal[i + words];
+	}
+
+	result.clearUnusedBits();
+	return result;
+}
+
 SVInt& SVInt::operator++() {
 	if (isSingleWord())
 		++val;
@@ -572,6 +625,93 @@ SVInt& SVInt::operator/=(const SVInt& rhs) {
 	return *this;
 }
 
+SVInt& SVInt::operator&=(const SVInt& rhs) {
+	if (bitWidth != rhs.bitWidth) {
+		bool bothSigned = signFlag && rhs.signFlag;
+		if (bitWidth < rhs.bitWidth)
+			*this = extend(*this, rhs.bitWidth, bothSigned);
+		else
+			return *this &= extend(rhs, bitWidth, bothSigned);
+	}
+
+	if (isSingleWord())
+		val &= rhs.val;
+	else {
+		uint32_t words = getNumWords(bitWidth, false);
+		if (unknownFlag) {
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i + words] = (pVal[i + words] | rhs.pVal[i + words]) & (pVal[i + words] | pVal[i]) & (rhs.pVal[i + words] | rhs.pVal[i]);
+
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i] = ~pVal[i + words] & pVal[i] & rhs.pVal[i];
+		}
+		else {
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i] &= rhs.pVal[i];
+		}
+	}
+	clearUnusedBits();
+	return *this;
+}
+
+SVInt& SVInt::operator|=(const SVInt& rhs) {
+	if (bitWidth != rhs.bitWidth) {
+		bool bothSigned = signFlag && rhs.signFlag;
+		if (bitWidth < rhs.bitWidth)
+			*this = extend(*this, rhs.bitWidth, bothSigned);
+		else
+			return *this |= extend(rhs, bitWidth, bothSigned);
+	}
+
+	if (isSingleWord())
+		val |= rhs.val;
+	else {
+		uint32_t words = getNumWords(bitWidth, false);
+		if (unknownFlag) {
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i + words] = (pVal[i + words] & (rhs.pVal[i + words] | ~rhs.pVal[i])) | (~pVal[i] & rhs.pVal[i + words]);
+
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i] = ~pVal[i + words] & (pVal[i] | rhs.pVal[i]);
+		}
+		else {
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i] |= rhs.pVal[i];
+		}
+	}
+	clearUnusedBits();
+	return *this;
+}
+
+SVInt& SVInt::operator^=(const SVInt& rhs) {
+	if (bitWidth != rhs.bitWidth) {
+		bool bothSigned = signFlag && rhs.signFlag;
+		if (bitWidth < rhs.bitWidth)
+			*this = extend(*this, rhs.bitWidth, bothSigned);
+		else
+			return *this ^= extend(rhs, bitWidth, bothSigned);
+	}
+
+	if (isSingleWord())
+		val ^= rhs.val;
+	else {
+		uint32_t words = getNumWords(bitWidth, false);
+		if (unknownFlag) {
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i + words] |= rhs.pVal[i + words];
+
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i] = ~pVal[i + words] & (pVal[i] ^ rhs.pVal[i]);
+		}
+		else {
+			for (uint32_t i = 0; i < words; i++)
+				pVal[i] ^= rhs.pVal[i];
+		}
+	}
+	clearUnusedBits();
+	return *this;
+}
+
 SVInt SVInt::operator+(const SVInt& rhs) const {
 	SVInt tmp(*this);
 	tmp += rhs;
@@ -617,6 +757,24 @@ SVInt SVInt::operator/(const SVInt& rhs) const {
 
 	// otherwise, just do the division
 	return udiv(*this, rhs, false);
+}
+
+SVInt SVInt::operator&(const SVInt& rhs) const {
+	SVInt tmp(*this);
+	tmp &= rhs;
+	return tmp;
+}
+
+SVInt SVInt::operator|(const SVInt& rhs) const {
+	SVInt tmp(*this);
+	tmp |= rhs;
+	return tmp;
+}
+
+SVInt SVInt::operator^(const SVInt& rhs) const {
+	SVInt tmp(*this);
+	tmp ^= rhs;
+	return tmp;
 }
 
 logic_t SVInt::operator<(const SVInt& rhs) const {

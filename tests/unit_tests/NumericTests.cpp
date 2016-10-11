@@ -91,4 +91,12 @@ TEST_CASE("Shifting", "[numeric]") {
 	CHECK(exactlyEqual(SVInt("52'hffxx").shl(4), SVInt("52'hffxx0")));
 }
 
+TEST_CASE("Bitwise", "[numeric]") {
+	CHECK(exactlyEqual(SVInt("100'b11xx1Z00x10") | SVInt("90'b10101xzx01z"), SVInt("90'b111x1xxxx1x")));
+	CHECK(exactlyEqual(SVInt("100'b11xx1Z00x10") & SVInt("90'b10101xzx01z"), SVInt("90'b10x01x00010")));
+	CHECK(exactlyEqual(SVInt("100'b11xx1Z00x10") ^ SVInt("90'b10101xzx01z"), SVInt("90'b01xx0xxxx0x")));
+	CHECK(exactlyEqual(SVInt("11'b11xx1Z00x10").xnor(SVInt("11'b10101xzx01z")), SVInt("11'b10xx1xxxx1x")));
+	CHECK(exactlyEqual(~SVInt("11'b11xx1Z00x10"), SVInt("12'b00xx0x11x01")));
+}
+
 }
