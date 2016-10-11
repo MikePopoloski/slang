@@ -486,6 +486,53 @@ void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
 	std::reverse(buffer.begin() + startOffset, buffer.end());
 }
 
+logic_t SVInt::reductionAnd() const {
+	if (unknownFlag)
+		return logic_t::x;
+
+	uint64_t mask;
+	uint32_t bitsInMsw;
+	getTopWordMask(bitsInMsw, mask);
+
+	if (isSingleWord())
+		return val == mask;
+	else {
+		for (uint32_t i = 0; i < getNumWords() - 1; i++) {
+			if (pVal[i] != UINT64_MAX)
+				return false;
+		}
+		return pVal[getNumWords() - 1] == mask;
+	}
+}
+
+logic_t SVInt::reductionOr() const {
+	if (unknownFlag)
+		return logic_t::x;
+
+	if (isSingleWord())
+		return val != 0;
+	else {
+		for (uint32_t i = 0; i < getNumWords(); i++) {
+			if (pVal[i] != 0)
+				return true;
+		}
+	}
+	return false;
+}
+
+logic_t SVInt::reductionXor() const {
+	if (unknownFlag)
+		return logic_t::x;
+
+	// reduction xor basically determines whether the number of set
+	// bits in the number is even or odd
+	uint32_t count = countPopulation();
+	if (count % 2 == 0)
+		return 0;
+
+	return 1;
+}
+
 SVInt SVInt::operator-() const {
 	if (unknownFlag)
 		return createFillX(bitWidth, signFlag);
@@ -917,6 +964,16 @@ logic_t SVInt::equalsSlowCase(const SVInt& rhs) const {
 	return true;
 }
 
+void SVInt::getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const {
+	bitsInMsw = bitWidth % BITS_PER_WORD;
+	if (bitsInMsw)
+		mask = (1ull << bitsInMsw) - 1;
+	else {
+		mask = UINT64_MAX;
+		bitsInMsw = BITS_PER_WORD;
+	}
+}
+
 uint64_t SVInt::getAssertUInt64() const {
 	// assert that this value fits within a uint64
 	if (isSingleWord())
@@ -927,14 +984,9 @@ uint64_t SVInt::getAssertUInt64() const {
 
 uint32_t SVInt::countLeadingZerosSlowCase() const {
 	// Most significant word might have extra bits that shouldn't count
-	uint32_t bitsInMsw = bitWidth % BITS_PER_WORD;
 	uint64_t mask;
-	if (bitsInMsw)
-		mask = (1ull << bitsInMsw) - 1;
-	else {
-		mask = ~uint64_t(0);
-		bitsInMsw = BITS_PER_WORD;
-	}
+	uint32_t bitsInMsw;
+	getTopWordMask(bitsInMsw, mask);
 
 	uint32_t i = getNumWords();
 	uint64_t part = pVal[i - 1] & mask;
@@ -950,6 +1002,17 @@ uint32_t SVInt::countLeadingZerosSlowCase() const {
 			break;
 		}
 	}
+	return count;
+}
+
+uint32_t SVInt::countPopulation() const {
+	// don't worry about unknowns in this function; only use it if the number is all known
+	if (isSingleWord())
+		return slang::countPopulation(val);
+	
+	uint32_t count = 0;
+	for (uint32_t i = 0; i < getNumWords(); i++)
+		count += slang::countPopulation(pVal[i]);
 	return count;
 }
 

@@ -205,7 +205,8 @@ public:
     SVInt xnor(const SVInt& rhs) const;
 	SVInt shl(const SVInt& rhs) const;
 	SVInt shl(uint32_t amount) const;
-    SVInt ashr(const SVInt& rhs) const;
+	SVInt ashr(const SVInt& rhs) const;
+	SVInt ashr(uint32_t amount) const;
     SVInt lshr(const SVInt& rhs) const;
     SVInt lshr(uint32_t amount) const;
 
@@ -344,6 +345,7 @@ private:
     SVInt& assignSlowCase(const SVInt& other);
     logic_t equalsSlowCase(const SVInt& rhs) const;
     uint32_t countLeadingZerosSlowCase() const;
+	uint32_t countPopulation() const;
 
 	// Specialized shift left routine that doesn't remove the unknown flag.
 	SVInt shl(uint32_t amount, bool doCheckUnknown) const;
@@ -359,6 +361,9 @@ private:
 
 	// Get a specific unknown control word holding the given bit index.
 	int whichUnknownWord(int bitIndex) const { return whichWord(bitIndex) + getNumWords(bitWidth, false); }
+
+	// Get the number of bits that are useful in the top word
+	void getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const;
 
 	// Get the number of "active bits". An SVInt might have a large bit width but be set
 	// to a very small value, in which case it will have a low number of active bits.

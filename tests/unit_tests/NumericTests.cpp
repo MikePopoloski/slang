@@ -97,6 +97,11 @@ TEST_CASE("Bitwise", "[numeric]") {
 	CHECK(exactlyEqual(SVInt("100'b11xx1Z00x10") ^ SVInt("90'b10101xzx01z"), SVInt("90'b01xx0xxxx0x")));
 	CHECK(exactlyEqual(SVInt("11'b11xx1Z00x10").xnor(SVInt("11'b10101xzx01z")), SVInt("11'b10xx1xxxx1x")));
 	CHECK(exactlyEqual(~SVInt("11'b11xx1Z00x10"), SVInt("12'b00xx0x11x01")));
+
+	CHECK(SVInt("100'h1000000000000000").reductionOr() == 1);
+	CHECK(SVInt("100'h10111111111111111111111111111111111").reductionAnd() == 0);
+	CHECK(SVInt("35'b11111111111111111111111111111111111").reductionAnd() == 1);
+	CHECK(SVInt("35'b11111100000011111111111111111101110").reductionXor() == 1);
 }
 
 }

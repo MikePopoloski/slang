@@ -33,4 +33,12 @@ inline uint32_t countLeadingOnes(uint64_t value) {
     return countLeadingZeros(~value);
 }
 
+inline int countPopulation(uint64_t value) {
+#if defined (_MSC_VER)
+	return (int)__popcnt64(value);
+#else
+	return (int)__builtin_popcountll(value);
+#endif
+}
+
 }
