@@ -133,8 +133,12 @@ public:
     SVInt(uint64_t value, bool isSigned = false) :
         val(value), bitWidth((uint16_t)clog2(value+1)), signFlag(isSigned), unknownFlag(false)
     {
-        if (bitWidth == 0)
-            bitWidth = 1;
+		if (bitWidth == 0) {
+			if (value == 0)
+				bitWidth = 1;
+			else
+				bitWidth = 64;
+		}
         clearUnusedBits();
     }
 
@@ -251,7 +255,7 @@ public:
     SVInt& operator-=(const SVInt& rhs);
     SVInt& operator*=(const SVInt& rhs);
     SVInt& operator/=(const SVInt& rhs);
-    SVInt& operator%(const SVInt& rhs);
+    SVInt& operator%=(const SVInt& rhs);
 
     SVInt operator++(int) {
         SVInt sv(*this);
@@ -412,6 +416,9 @@ private:
 
 	// Unsigned division algorithm.
 	static SVInt udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned);
+
+	// Unsigned remainder algorithm.
+	static SVInt urem(const SVInt& lhs, const SVInt& rhs, bool bothSigned);
 
     static int getNumWords(uint16_t bitWidth, bool unknown) {
         uint32_t value = ((uint64_t)bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;

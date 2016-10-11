@@ -74,6 +74,8 @@ TEST_CASE("Arithmetic", "[numeric]") {
 	CHECK(SVInt("100'sd32") - 32 == 0);
 	CHECK(SVInt("100'sd99999999999") * SVInt("-120'sd999987654321") == SVInt("-137'sd99998765431100012345679"));
 	CHECK(SVInt("100'sd99999999999") / SVInt("-120'sd987654321") == SVInt(-101, true));
+	CHECK(SVInt("100'sd99999999999") % SVInt("120'sd987654321") == SVInt(246913578, true));
+	CHECK((SVInt(64, -7, true) % SVInt(64, 3, true)) == -1);
 
 	SVInt v1("99'd99999999");
 	SVInt v2 = v1++;

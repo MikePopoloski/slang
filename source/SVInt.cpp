@@ -672,6 +672,11 @@ SVInt& SVInt::operator/=(const SVInt& rhs) {
 	return *this;
 }
 
+SVInt& SVInt::operator%=(const SVInt& rhs) {
+	*this = *this % rhs;
+	return *this;
+}
+
 SVInt& SVInt::operator&=(const SVInt& rhs) {
 	if (bitWidth != rhs.bitWidth) {
 		bool bothSigned = signFlag && rhs.signFlag;
@@ -804,6 +809,35 @@ SVInt SVInt::operator/(const SVInt& rhs) const {
 
 	// otherwise, just do the division
 	return udiv(*this, rhs, false);
+}
+
+SVInt SVInt::operator%(const SVInt& rhs) const {
+	bool bothSigned = signFlag && rhs.signFlag;
+	if (bitWidth != rhs.bitWidth) {
+		if (bitWidth < rhs.bitWidth)
+			return extend(*this, rhs.bitWidth, bothSigned) % rhs;
+		else
+			return *this % extend(rhs, bitWidth, bothSigned);
+	}
+
+	// Any X's mean all X's; also dividing by zero does the same
+	if (unknownFlag || rhs.unknownFlag || rhs == 0)
+		return createFillX(bitWidth, bothSigned);
+
+	// handle signed remainder
+	if (bothSigned) {
+		// do the remainder on positive numbers and flip the sign at the end
+		if (isNegative()) {
+			if (rhs.isNegative())
+				return -urem(-(*this), -rhs, true);
+			return -urem(-(*this), rhs, true);
+		}
+		if (rhs.isNegative())
+			return urem(*this, -rhs, true);
+	}
+
+	// otherwise, just do the remainder
+	return urem(*this, rhs, false);
 }
 
 SVInt SVInt::operator&(const SVInt& rhs) const {
@@ -1239,6 +1273,36 @@ SVInt SVInt::udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
 	SVInt quotient;
 	divide(lhs, lhsWords, rhs, rhsWords, &quotient, nullptr);
 	return quotient;
+}
+
+SVInt SVInt::urem(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
+	// At this point we have two values with the same bit widths, both positive,
+	// and X's have been dealt with. Also, we know rhs isn't zero.
+	if (lhs.isSingleWord())
+		return SVInt(lhs.bitWidth, lhs.val % rhs.val, bothSigned);
+
+	uint32_t lhsBits = lhs.getActiveBits();
+	uint32_t lhsWords = !lhsBits ? 0 : (whichWord(lhsBits - 1) + 1);
+	uint32_t rhsBits = rhs.getActiveBits();
+	uint32_t rhsWords = !rhsBits ? 0 : (whichWord(rhsBits - 1) + 1);
+
+	// 0 % X
+	if (!lhsWords)
+		return SVInt(lhs.bitWidth, 0, bothSigned);
+	// X % X
+	if (&lhs == &rhs)
+		return SVInt(lhs.bitWidth, 0, bothSigned);
+	// X % Y where X < Y
+	if (lhsWords < rhsWords || lhs < rhs)
+		return lhs;
+	// X and Y are actually a single word
+	if (lhsWords == 1)
+		return SVInt(lhs.bitWidth, lhs.pVal[0] % rhs.pVal[0], bothSigned);
+
+	// compute it the hard way with the Knuth algorithm
+	SVInt remainder;
+	divide(lhs, lhsWords, rhs, rhsWords, nullptr, &remainder);
+	return remainder;
 }
 
 SVInt signExtend(const SVInt& value, uint16_t bits) {
