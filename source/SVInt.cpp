@@ -404,7 +404,7 @@ std::string SVInt::toString(LiteralBase base) const {
 void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
 	// negative sign if necessary
 	SVInt tmp(*this);
-	if (isNegative() && signFlag && !unknownFlag) {
+	if (signFlag && !unknownFlag && isNegative()) {
 		tmp = -tmp;
 		buffer.append('-');
 	}
@@ -482,8 +482,13 @@ void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
 		}
 	}
 
-	// reverse the digits
-	std::reverse(buffer.begin() + startOffset, buffer.end());
+	// no digits means this is zero
+	if (startOffset == buffer.count())
+		buffer.append('0');
+	else {
+		// reverse the digits
+		std::reverse(buffer.begin() + startOffset, buffer.end());
+	}
 }
 
 logic_t SVInt::reductionAnd() const {
