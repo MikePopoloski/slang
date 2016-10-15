@@ -491,6 +491,56 @@ void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
 	}
 }
 
+SVInt SVInt::pow(const SVInt& rhs) const {
+    // ignore unknowns
+    bool bothSigned = signFlag && rhs.signFlag;
+    if (unknownFlag || rhs.unknownFlag)
+        return createFillX(bitWidth, bothSigned);
+
+    // Handle special cases first (note that the result always has
+    // the bit width of *this)
+    uint32_t lhsBits = getActiveBits();
+    uint32_t rhsBits = rhs.getActiveBits();
+    if (lhsBits == 0) {
+        if (rhsBits == 0)      // 0**0 == 1
+            return SVInt(bitWidth, 1, bothSigned);
+        if (rhs.signFlag && rhs.isNegative())  // 0**-y == x
+            return createFillX(bitWidth, bothSigned);
+        // 0**y == 0
+        return SVInt(bitWidth, 0, bothSigned);
+    }
+
+    // x**0 == 1 || 1**y == 1
+    if (rhsBits == 0 || lhsBits == 1)
+        return SVInt(bitWidth, 1, bothSigned);
+
+    if (bothSigned && isNegative()) {
+        if (*this == SVInt(bitWidth, UINT64_MAX, bothSigned)) {
+            // if rhs is odd, result is -1
+            // otherwise, result is 1
+            if (rhs.isOdd())
+                return SVInt(bitWidth, UINT64_MAX, bothSigned);
+            else
+                return SVInt(bitWidth, 1, bothSigned);
+        }
+    }
+
+    if (bothSigned && rhs.isNegative()) // x**-y == 0
+        return SVInt(bitWidth, 0, bothSigned);
+
+    // we have one of two cases left (rhs is always positive here):
+    // 1. lhs > 1 (just do the operation)
+    // 2. lhs < -1 (invert, do the op, figure out the sign at the end)
+    if (bothSigned && isNegative()) {
+        // result is negative if rhs is odd, otherwise positive
+        if (rhs.isOdd())
+            return -modPow(-(*this), rhs, bothSigned);
+        else
+            return modPow(-(*this), rhs, bothSigned);
+    }
+    return modPow(*this, rhs, bothSigned);
+}
+
 logic_t SVInt::reductionAnd() const {
 	if (unknownFlag)
 		return logic_t::x;
@@ -920,6 +970,27 @@ logic_t SVInt::operator[](uint32_t index) const {
 	return bit ? logic_t::z : logic_t::x;
 }
 
+SVInt SVInt::operator()(const SVInt& msb, const SVInt& lsb) const {
+    // TODO:
+    return (*this)((uint16_t)msb.getAssertUInt64(), (uint16_t)lsb.getAssertUInt64());
+}
+
+SVInt SVInt::operator()(uint16_t msb, uint16_t lsb) const {
+    if (lsb != 0)
+        return lshr(lsb)(msb - lsb, 0);
+    
+    // lsb is always zero from here on out
+    SVInt result(msb + 1, 0, false);
+    if (result.isSingleWord())
+        result.val = getRawData()[0];
+    else {
+        for (uint32_t i = 0; i < result.getNumWords(); i++)
+            result.pVal[i] = pVal[i];
+    }
+    result.clearUnusedBits();
+    return result;
+}
+
 void SVInt::initSlowCase(logic_t bit) {
 	uint32_t words = getNumWords();
 	pVal = new uint64_t[words]();   // allocation is zero cleared
@@ -1308,6 +1379,63 @@ SVInt SVInt::urem(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
 	SVInt remainder;
 	divide(lhs, lhsWords, rhs, rhsWords, nullptr, &remainder);
 	return remainder;
+}
+
+SVInt SVInt::modPow(const SVInt& base, const SVInt& exponent, bool bothSigned) {
+    // This is based on the modular exponentiation algorithm described here:
+    // https://en.wikipedia.org/wiki/Modular_exponentiation
+    //
+    // The result value will have the same bit width as the lhs. That's the value we'll
+    // be using as the modulus in the (a * b) mod m equation.
+    // Allocate a temporary result value that has 2x the number of bits so that we can
+    // handle any possible intermediate multiply.
+    uint16_t bitWidth = base.bitWidth;
+    ASSERT(UINT16_MAX - bitWidth > bitWidth);
+    SVInt value(bitWidth * 2, 1, false);
+    SVInt baseCopy = zeroExtend(base, bitWidth * 2);
+
+    // Because the mod in this case is always a power of two, set up a mask
+    // that we'll AND with instead of the more costly remainder operation.
+    SVInt mask(bitWidth, 0, false);
+    mask.setAllOnes();
+    mask = zeroExtend(mask, bitWidth * 2);
+
+    // Loop through each bit of the exponent.
+    uint32_t exponentWords = exponent.getNumWords();
+    for (uint32_t i = 0; i < exponentWords - 1; i++) {
+        uint64_t word = exponent.getRawData()[i];
+        for (int j = 0; j < BITS_PER_WORD; j++) {
+            if (word & 0x1) {
+                value *= baseCopy;
+                value &= mask;
+            }
+            baseCopy *= baseCopy;
+            baseCopy &= mask;
+            word >>= 1;
+        }
+    }
+
+    // Unroll the last loop iteration to avoid multiplications
+    // when the rest of the exponent bits are zero
+    uint64_t word = exponent.getRawData()[exponentWords - 1];
+    while (word) {
+        if (word & 0x1) {
+            value *= baseCopy;
+            value &= mask;
+        }
+        if (word != 1) {
+            baseCopy *= baseCopy;
+            baseCopy &= mask;
+        }
+        word >>= 1;
+    }
+
+    // Truncate the result down to fit into the final bit width; we know
+    // since we've been reducing at each step that none of the truncated
+    // bits will be significant.
+    SVInt result = value(bitWidth - 1, 0);
+    result.setSigned(bothSigned);
+    return result;
 }
 
 SVInt signExtend(const SVInt& value, uint16_t bits) {

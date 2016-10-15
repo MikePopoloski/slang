@@ -97,6 +97,10 @@ struct logic_t {
     static const logic_t z;
 };
 
+// TODO:
+// - Correct behavior when indexing outside the bounds of the value
+// - Use a 32-bit value for bitWidth to allow for full sized intermediaries
+
 ///
 /// SystemVerilog arbitrary precision integer type.
 /// This type is designed to implement all of the operations supported by SystemVerilog
@@ -191,6 +195,10 @@ public:
 	/// the sign flag; it simply looks at the highest bit to determine whether it is set.
     bool isNegative() const { return (bool)(*this)[bitWidth - 1]; }
 
+    /// Check whether a number is odd or even. Ignores the unknown flag.
+    bool isOdd() const { return getRawData()[0] & 0x1; }
+    bool isEven() const { return !isOdd(); }
+
     /// Reinterpret the integer as a signed or unsigned value. This doesn't
 	/// change the bits, only the representation.
     void setSigned(bool isSigned) { signFlag = isSigned; }
@@ -205,16 +213,24 @@ public:
     void writeTo(Buffer<char>& buffer, LiteralBase base) const;
     std::string toString(LiteralBase base) const;
 
+    /// Power function. Note that the result will have the same bitwidth
+    /// as this object. The value will be modulo the bit width.
     SVInt pow(const SVInt& rhs) const;
-    SVInt xnor(const SVInt& rhs) const;
+
+    /// Left shifting.
 	SVInt shl(const SVInt& rhs) const;
 	SVInt shl(uint32_t amount) const;
+
+    /// Arithmetic right shifting.
 	SVInt ashr(const SVInt& rhs) const;
 	SVInt ashr(uint32_t amount) const;
+
+    /// Logical right shifting.
     SVInt lshr(const SVInt& rhs) const;
     SVInt lshr(uint32_t amount) const;
 
-    SVInt partSelect(const SVInt& msb, const SVInt& lsb) const;
+    /// Bitwise xnor.
+    SVInt xnor(const SVInt& rhs) const;
 
     logic_t reductionOr() const;
     logic_t reductionAnd() const;
@@ -303,6 +319,8 @@ public:
     logic_t operator||(const SVInt& rhs) const { return *this != 0 || rhs != 0; }
 
     logic_t operator[](uint32_t index) const;
+    SVInt operator()(const SVInt& msb, const SVInt& lsb) const;
+    SVInt operator()(uint16_t msb, uint16_t lsb) const;
 
 	explicit operator logic_t() const { return *this != 0; }
 
@@ -419,6 +437,9 @@ private:
 
 	// Unsigned remainder algorithm.
 	static SVInt urem(const SVInt& lhs, const SVInt& rhs, bool bothSigned);
+    
+    // Unsigned modular exponentiation algorithm.
+    static SVInt modPow(const SVInt& base, const SVInt& exponent, bool bothSigned);
 
     static int getNumWords(uint16_t bitWidth, bool unknown) {
         uint32_t value = ((uint64_t)bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;

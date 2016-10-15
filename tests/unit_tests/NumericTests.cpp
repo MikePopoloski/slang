@@ -84,6 +84,8 @@ TEST_CASE("Arithmetic", "[numeric]") {
 
 	--v1;
 	CHECK(v2 == v1);
+
+    CHECK(SVInt(64, 3, false).pow(918245) == SVInt("64'd12951281834385883507"));
 }
 
 TEST_CASE("Shifting", "[numeric]") {
