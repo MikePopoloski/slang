@@ -191,6 +191,10 @@ public:
     bool hasUnknown() const { return unknownFlag; }
     uint16_t getBitWidth() const { return bitWidth; }
 
+	/// Assert that the integer value can fit into a single integer and return it.
+	uint64_t getAssertUInt32() const;
+	uint64_t getAssertUInt64() const;
+
 	/// Check whether the number is negative. Note that this doesn't care about
 	/// the sign flag; it simply looks at the highest bit to determine whether it is set.
     bool isNegative() const { return (bool)(*this)[bitWidth - 1]; }
@@ -347,6 +351,7 @@ public:
 	friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     enum {
+		MAX_BITS = UINT16_MAX,
         BITS_PER_WORD = sizeof(uint64_t) * CHAR_BIT,
         WORD_SIZE = sizeof(uint64_t)
     };
@@ -393,9 +398,6 @@ private:
 
 	// Get a pointer to the data, either pVal or val depending on whether we have a single word.
     const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
-
-	// Assert that the integer value can fit into a single uint64 and return it.
-	uint64_t getAssertUInt64() const;
 
 	// Count the number of leading zeros. This doesn't do anything special for
 	// unknown values, so make sure you know what you're doing with it.

@@ -7,14 +7,15 @@
 #pragma once
 
 #include <cstdint>
+#include <variant.hpp>
 
 #include "ArrayRef.h"
-#include "BitVector.h"
 #include "Buffer.h"
 #include "Trivia.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 #include "StringTable.h"
+#include "SVInt.h"
 
 namespace slang {
 
@@ -67,29 +68,7 @@ enum class IdentifierType : uint8_t {
     System
 };
 
-struct NumericValue {
-    union {
-        logic_t bit;
-        uint64_t integer;
-        LogicVector vector;
-        double real;
-    };
-    uint8_t type;
-
-    NumericValue() : type(Unknown), real(0.0) {}
-    NumericValue(double real) : type(Real), real(real) {}
-    NumericValue(uint64_t integer) : type(Integer), integer(integer) {}
-    NumericValue(logic_t bit) : type(UnsizedBit), bit(bit) {}
-    NumericValue(LogicVector vector) : type(Vector), vector(vector) {}
-
-    enum {
-        Unknown,
-        Real,
-        Integer,
-        UnsizedBit,
-        Vector
-    };
-};
+using NumericTokenValue = variant<logic_t, double, SVInt>;
 
 /// Represents a single lexed token, including leading trivia, original location, token kind,
 /// and any related information derived from the token itself (such as the lexeme).
@@ -103,7 +82,7 @@ public:
     struct Info {
 		/// Numeric-related information.
         struct NumericLiteralInfo {
-            NumericValue value;
+			NumericTokenValue value;
             NumericTokenFlags numericFlags;
         };
 
@@ -139,6 +118,8 @@ public:
             trivia(trivia), rawText(rawText), location(location), flags((uint8_t)flags)
         {
         }
+
+		~Info();
     };
 
 	/// The kind of the token; this is not in the info block because
@@ -174,7 +155,7 @@ public:
 
     /// Data accessors for specific kinds of tokens.
     /// These will generally assert if the kind is wrong.
-    const NumericValue& numericValue() const;
+    const NumericTokenValue& numericValue() const;
     NumericTokenFlags numericFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;

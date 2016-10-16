@@ -1084,6 +1084,12 @@ void SVInt::getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const {
 	}
 }
 
+uint64_t SVInt::getAssertUInt32() const {
+	// assert that this value fits within a uint64
+	ASSERT(getActiveBits() <= 32);
+	return (uint32_t)getRawData()[0];
+}
+
 uint64_t SVInt::getAssertUInt64() const {
 	// assert that this value fits within a uint64
 	if (isSingleWord())

@@ -8,9 +8,9 @@
 
 #include "AllSyntax.h"
 #include "ArrayRef.h"
-#include "BitVector.h"
 #include "ParserBase.h"
 #include "Token.h"
+#include "VectorBuilder.h"
 
 namespace slang {
 

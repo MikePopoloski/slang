@@ -35,7 +35,7 @@
     <ClInclude Include="..\..\include\BufferPool.h" />
     <ClInclude Include="..\..\include\ConstantValue.h" />
     <ClInclude Include="..\..\include\Debug.h" />
-    <ClInclude Include="..\..\include\BitVector.h" />
+    <ClInclude Include="..\..\include\VectorBuilder.h" />
     <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\DeclarationTable.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
@@ -68,7 +68,7 @@
     <ClCompile Include="..\..\external\fmt\posix.cc" />
     <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp" />
     <ClCompile Include="..\..\source\BindContext.cpp" />
-    <ClCompile Include="..\..\source\BitVector.cpp" />
+    <ClCompile Include="..\..\source\VectorBuilder.cpp" />
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />
     <ClCompile Include="..\..\source\ConstantValue.cpp" />
     <ClCompile Include="..\..\source\DeclarationTable.cpp" />

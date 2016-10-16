@@ -3,8 +3,6 @@
 #include <cstdint>
 #include <ostream>
 
-#include "BitVector.h"
-
 namespace slang {
 
 class ConstantValue {

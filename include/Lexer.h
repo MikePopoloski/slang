@@ -64,11 +64,6 @@ public:
     /// Converts a range of tokens into a string literal; used for macro stringification.
     static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end);
 
-    /// Checks a token for numeric literal digits and builds up a value; intended to be called in
-    /// a loop consuming all potential numeric literal tokens next to each other. This is split out
-    /// from regular lexing since macro replacement can change how a literal should be interpreted.
-    static bool checkVectorDigits(Diagnostics& diagnostics, VectorBuilder& builder, Token token, LiteralBase base, bool first);
-
 private:
     Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
 

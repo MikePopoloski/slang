@@ -34,6 +34,7 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     auto current = peek();
     if (current.kind == TokenKind::NewKeyword)
         return parseNewExpression();
+	// TODO:
     /*else if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
         return alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
@@ -158,8 +159,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
         case TokenKind::RealLiteral: {
             // have to check for overflow here, now that we know this is actually a real
             auto literal = consume();
-            ASSERT(literal.numericValue().type == NumericValue::Real);
-            if (!std::isfinite(literal.numericValue().real))
+            if (!std::isfinite(get<double>(literal.numericValue())))
                 addError(DiagCode::RealExponentOverflow, literal.location());
             expr = alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::RealLiteralExpression, literal);
             break;
@@ -253,8 +253,7 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     if (token.kind == TokenKind::IntegerBase)
         baseToken = token;
     else {
-        ASSERT(token.numericValue().type == NumericValue::Integer);
-        uint64_t tokenValue = token.numericValue().integer;
+        const SVInt& tokenValue = get<SVInt>(token.numericValue());
 
         if (!peek(TokenKind::IntegerBase)) {
             if (tokenValue > INT32_MAX)
@@ -265,18 +264,16 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
         sizeToken = token;
         baseToken = consume();
 
-        // TODO: move this constant somewhere
-        static const int MaxLiteralBits = 65535;
         if (tokenValue == 0) {
             sizeBits = 32; // just pick something so we can keep going
             addError(DiagCode::LiteralSizeIsZero, token.location());
         }
-        else if (tokenValue > MaxLiteralBits) {
-            sizeBits = MaxLiteralBits;
-            addError(DiagCode::LiteralSizeTooLarge, token.location()) << MaxLiteralBits;
+        else if (tokenValue > SVInt::MAX_BITS) {
+            sizeBits = SVInt::MAX_BITS;
+            addError(DiagCode::LiteralSizeTooLarge, token.location()) << SVInt::MAX_BITS;
         }
         else {
-            sizeBits = (uint32_t)tokenValue;
+            sizeBits = tokenValue.getAssertUInt32();
         }
     }
 
@@ -290,22 +287,17 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
 
     Token next = first;
     uint32_t length = 0;
-    LiteralBase base = baseToken.numericFlags().base;
-    bool stillGood = true;
 
-	vectorBuilder.start();
+	vectorBuilder.start(baseToken.numericFlags().base, sizeBits, first.location());
     do {
         length += next.rawText().length();
         consume();
-        if (stillGood)
-            stillGood = Lexer::checkVectorDigits(getDiagnostics(), vectorBuilder, next, base, false);
+		vectorBuilder.append(next);
         next = peek();
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
     StringRef rawText(first.rawText().begin(), length);
-    NumericValue value;
-    if (stillGood)
-        value = vectorBuilder.finish(base, sizeBits, first.location());
+    NumericTokenValue value = vectorBuilder.finish();
 
     auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location(), 0);
     info->numInfo.value = value;

@@ -104,7 +104,7 @@ std::string Token::toString(uint8_t writeFlags) const {
     return std::string(buffer.begin(), buffer.end());
 }
 
-const NumericValue& Token::numericValue() const {
+const NumericTokenValue& Token::numericValue() const {
     ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::UnbasedUnsizedLiteral ||
            kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
     return info->numInfo.value;

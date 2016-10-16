@@ -43,9 +43,6 @@
     <ClInclude Include="..\..\include\Diagnostics.h">
       <Filter>diagnostics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\BitVector.h">
-      <Filter>numeric</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\Trivia.h">
       <Filter>lexing</Filter>
     </ClInclude>
@@ -154,6 +151,9 @@
     <ClInclude Include="..\..\source\CharInfo.h">
       <Filter>text</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\VectorBuilder.h">
+      <Filter>numeric</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -225,9 +225,6 @@
     <ClCompile Include="..\..\source\DeclarationTable.cpp">
       <Filter>analysis</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\BitVector.cpp">
-      <Filter>numeric</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\BindContext.cpp">
       <Filter>analysis</Filter>
     </ClCompile>
@@ -235,6 +232,9 @@
       <Filter>analysis</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\SVInt.cpp">
+      <Filter>numeric</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\VectorBuilder.cpp">
       <Filter>numeric</Filter>
     </ClCompile>
   </ItemGroup>
