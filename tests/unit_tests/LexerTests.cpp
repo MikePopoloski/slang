@@ -358,8 +358,7 @@ TEST_CASE("Integer literal", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Integer);
-    CHECK(value.integer == 19248);
+    CHECK(get<SVInt>(value) == 19248);
 }
 
 void checkVectorBase(const std::string& s, LiteralBase base, bool isSigned) {
@@ -392,8 +391,7 @@ TEST_CASE("Unbased unsized literal", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::UnsizedBit);
-    CHECK(value.bit.value == 1);
+    CHECK(get<logic_t>(value).value == 1);
 }
 
 TEST_CASE("Real literal (fraction)", "[lexer]") {
@@ -405,8 +403,7 @@ TEST_CASE("Real literal (fraction)", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Real);
-    CHECK(withinUlp(value.real, 32.57));
+    CHECK(withinUlp(get<double>(value), 32.57));
 }
 
 TEST_CASE("Real literal (missing fraction)", "[lexer]") {
@@ -419,8 +416,7 @@ TEST_CASE("Real literal (missing fraction)", "[lexer]") {
     CHECK(diagnostics.back().code == DiagCode::MissingFractionalDigits);
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Real);
-    CHECK(value.real == 32);
+    CHECK(get<double>(value) == 32);
 }
 
 TEST_CASE("Real literal (exponent)", "[lexer]") {
@@ -432,8 +428,7 @@ TEST_CASE("Real literal (exponent)", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Real);
-    CHECK(withinUlp(value.real, 32e57));
+    CHECK(withinUlp(get<double>(value), 32e57));
 }
 
 TEST_CASE("Real literal (plus exponent)", "[lexer]") {
@@ -445,8 +440,7 @@ TEST_CASE("Real literal (plus exponent)", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Real);
-    CHECK(withinUlp(value.real, 32e57));
+    CHECK(withinUlp(get<double>(value), 32e57));
 }
 
 TEST_CASE("Real literal (minus exponent)", "[lexer]") {
@@ -458,8 +452,7 @@ TEST_CASE("Real literal (minus exponent)", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Real);
-    CHECK(withinUlp(value.real, 32e-57));
+    CHECK(withinUlp(get<double>(value), 32e-57));
 }
 
 TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
@@ -471,8 +464,7 @@ TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Real);
-    CHECK(withinUlp(value.real, 32.3456e57));
+    CHECK(withinUlp(get<double>(value), 32.3456e57));
 }
 
 TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
@@ -484,8 +476,7 @@ TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Real);
-    CHECK(std::isinf(value.real));
+    CHECK(std::isinf(get<double>(value)));
 }
 
 TEST_CASE("Real literal (digit overflow)", "[lexer]") {
@@ -497,8 +488,7 @@ TEST_CASE("Real literal (digit overflow)", "[lexer]") {
     CHECK(diagnostics.empty());
 
     auto& value = token.numericValue();
-    CHECK(value.type == NumericValue::Real);
-    CHECK(std::isinf(value.real));
+    CHECK(std::isinf(get<double>(value)));
 }
 
 TEST_CASE("Integer literal (not an exponent)", "[lexer]") {

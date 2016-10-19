@@ -35,7 +35,7 @@ struct logic_t {
     constexpr logic_t() : value(0) {}
 
 	/// Construct from a single bit value
-    constexpr logic_t(uint8_t value) : value(value) {}
+    constexpr explicit logic_t(uint8_t value) : value(value) {}
 
 	/// Returns true if the bit is either X or Z
     bool isUnknown() const { return value == x.value || value == z.value; }
@@ -43,41 +43,41 @@ struct logic_t {
     logic_t operator!() const {
         if (isUnknown())
             return logic_t::x;
-        return value == 0;
+        return logic_t(value == 0);
     }
 
     logic_t operator&(const logic_t& rhs) const {
         if (value == 0 || rhs.value == 0)
-            return 0;
+            return logic_t(0);
         if (value == 1 && rhs.value == 1)
-            return 1;
+            return logic_t(1);
         return logic_t::x;
     }
 
     logic_t operator|(const logic_t& rhs) const {
         if (value == 1 || rhs.value == 1)
-            return 1;
+            return logic_t(1);
         if (value == 0 && rhs.value == 0)
-            return 0;
+            return logic_t(0);
         return logic_t::x;
     }
 
     logic_t operator^(const logic_t& rhs) const {
         if (isUnknown() || rhs.isUnknown())
             return logic_t::x;
-        return value ^ rhs.value;
+        return logic_t(value ^ rhs.value);
     }
 
     logic_t operator==(const logic_t& rhs) const {
         if (isUnknown() || rhs.isUnknown())
             return logic_t::x;
-        return value == rhs.value;
+        return logic_t(value == rhs.value);
     }
 
     logic_t operator~() const { return !(*this); }
     logic_t operator!=(const logic_t& rhs) const { return !((*this) == rhs); }
-    logic_t operator&&(const logic_t& rhs) const { return (bool)*this && (bool)rhs; }
-    logic_t operator||(const logic_t& rhs) const { return (bool)*this != 0 || (bool)rhs; }
+    logic_t operator&&(const logic_t& rhs) const { return logic_t((bool)*this && (bool)rhs); }
+    logic_t operator||(const logic_t& rhs) const { return logic_t((bool)*this != 0 || (bool)rhs); }
 
     explicit operator bool() const { return !isUnknown() && value != 0; }
 
@@ -105,7 +105,7 @@ struct logic_t {
 /// SystemVerilog arbitrary precision integer type.
 /// This type is designed to implement all of the operations supported by SystemVerilog
 /// expressions involving integer vectors. Each value has an arbitrary (but constant) size in bits,
-/// up to a maximum of 64k.
+/// up to a maximum of 2**16.
 ///
 /// Additionally, SVInt can represent a 4-state value, where each bit can take on additional
 /// states of X and Z.
@@ -124,7 +124,7 @@ public:
     }
 
     /// Construct from a single bit that can be unknown.
-    SVInt(logic_t bit) :
+    explicit SVInt(logic_t bit) :
         bitWidth(1), signFlag(false), unknownFlag(bit.isUnknown())
     {
         if (isSingleWord())
@@ -134,7 +134,7 @@ public:
     }
 
     /// Construct from a given 64-bit value. Uses only the bits necessary to hold the value.
-    SVInt(uint64_t value, bool isSigned = false) :
+    explicit SVInt(uint64_t value, bool isSigned = false) :
         val(value), bitWidth((uint16_t)clog2(value+1)), signFlag(isSigned), unknownFlag(false)
     {
 		if (bitWidth == 0) {
@@ -163,7 +163,7 @@ public:
 	/// any errors will assert instead of being handled gracefully.
 	explicit SVInt(StringRef str);
 
-    SVInt(uint16_t bits, ArrayRef<logic_t> digits);
+    SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, ArrayRef<logic_t> digits);
 
     ~SVInt() {
         if (!isSingleWord())
@@ -192,7 +192,8 @@ public:
     uint16_t getBitWidth() const { return bitWidth; }
 
 	/// Assert that the integer value can fit into a single integer and return it.
-	uint64_t getAssertUInt32() const;
+    uint16_t getAssertUInt16() const;
+    uint32_t getAssertUInt32() const;
 	uint64_t getAssertUInt64() const;
 
 	/// Check whether the number is negative. Note that this doesn't care about
@@ -309,7 +310,7 @@ public:
     /// Otherwise, if bit lengths are unequal we extend the smaller one and then compare.
     logic_t operator==(const SVInt& rhs) const {
         if (isSingleWord() && rhs.isSingleWord())
-            return val == rhs.val;
+            return logic_t(val == rhs.val);
         return equalsSlowCase(rhs);
     }
 
@@ -349,6 +350,38 @@ public:
     friend SVInt extend(const SVInt& value, uint16_t bits, bool sign);
 	friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
 	friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
+    
+    /// Optimized operators that work with direct integer values.
+    friend logic_t operator==(const SVInt& lhs, uint64_t rhs) {
+        if (lhs.hasUnknown())
+            return logic_t::x;
+        if (lhs.isSingleWord())
+            return logic_t(lhs.val == rhs);
+        if (lhs.getActiveBits() <= BITS_PER_WORD)
+            return logic_t(lhs.pVal[0] == rhs);
+        return logic_t(false);
+    }
+    friend logic_t operator==(uint64_t lhs, const SVInt& rhs) { return rhs == lhs; }
+    friend logic_t operator!=(const SVInt& lhs, uint64_t rhs) { return !(lhs == rhs); }
+    friend logic_t operator!=(uint64_t lhs, const SVInt& rhs) { return !(rhs == lhs); }
+
+    friend logic_t operator<(const SVInt& lhs, uint64_t rhs) {
+        if (lhs.hasUnknown())
+            return logic_t::x;
+        if (lhs.isSingleWord())
+            return logic_t(lhs.val < rhs);
+        if (lhs.getActiveBits() <= BITS_PER_WORD)
+            return logic_t(lhs.pVal[0] < rhs);
+        return logic_t(false);
+    }
+    friend logic_t operator<=(const SVInt& lhs, uint64_t rhs) { return (lhs < rhs) || (lhs == rhs); }
+    friend logic_t operator>(const SVInt& lhs, uint64_t rhs) { return !(lhs <= rhs); }
+    friend logic_t operator>=(const SVInt& lhs, uint64_t rhs) { return !(lhs < rhs); }
+
+    friend logic_t operator<(uint64_t lhs, const SVInt& rhs) { return rhs >= lhs; }
+    friend logic_t operator<=(uint64_t lhs, const SVInt& rhs) { return rhs > lhs; }
+    friend logic_t operator>(uint64_t lhs, const SVInt& rhs) { return rhs <= lhs; }
+    friend logic_t operator>=(uint64_t lhs, const SVInt& rhs) { return rhs < lhs; }
 
     enum {
 		MAX_BITS = UINT16_MAX,

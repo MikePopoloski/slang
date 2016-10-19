@@ -15,8 +15,8 @@ namespace slang {
 
 #include "SVIntHelpers.h"
 
-const logic_t logic_t::x = 1 << 7;
-const logic_t logic_t::z = 1 << 6;
+const logic_t logic_t::x = logic_t(1 << 7);
+const logic_t logic_t::z = logic_t(1 << 6);
 
 SVInt::SVInt(StringRef str) {
 	ASSERT(str);
@@ -202,6 +202,91 @@ SVInt::SVInt(StringRef str) {
 	// if it's supposed to be negative, flip it around
 	if (negative)
 		*this = -(*this);
+}
+
+SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, ArrayRef<logic_t> digits) {
+    // TODO: fast path this function for single word sized values
+    // Also can probably share some impl with the function that converts from string
+    bitWidth = bits;
+    signFlag = isSigned;
+    unknownFlag = anyUnknown;
+    if (isSingleWord())
+        val = 0;
+    else
+        pVal = new uint64_t[getNumWords()]();
+
+    int radix = 0;
+    int shift = 0;
+    switch (base) {
+        case LiteralBase::Binary:
+            radix = 2;
+            shift = 1;
+            break;
+        case LiteralBase::Octal:
+            radix = 8;
+            shift = 3;
+            break;
+        case LiteralBase::Decimal:
+            radix = 10;
+            break;
+        case LiteralBase::Hex:
+            radix = 16;
+            shift = 4;
+            break;
+        default:
+            ASSERT(false, "Unreachable");
+            break;
+    }
+
+    int ones = (1 << shift) - 1;
+
+    SVInt digit(bitWidth, 0, false);
+    SVInt radixSv(bitWidth, radix, false);
+
+    for (const logic_t& d : digits) {
+        int unknown = 0;
+        int value = d.value;
+        if (d == logic_t::x) {
+            value = 0;
+            unknown = ones;
+        }
+        else if (d == logic_t::z) {
+            value = ones;
+            unknown = ones;
+        }
+
+        // shift if we can, multiply if we must
+        if (shift)
+            *this = shl(shift, false);
+        else
+            *this *= radixSv;
+
+        if (unknownFlag) {
+            // In base ten we can't have individual bits be X or Z, it's all or nothing
+            if (radix == 10) {
+                if (value)
+                    setAllZ();
+                else
+                    setAllX();
+                break;
+            }
+
+            // otherwise, make sure the unknown flag is set for this group of bits
+            // because we're shifting bits for the radix involved (2, 8, or 16) we
+            // know that the bits we're setting are fresh and all zero, so adding
+            // won't cause any kind of carry
+            pVal[0] += value;
+            pVal[getNumWords(bitWidth, false)] += unknown;
+        }
+        else {
+            // add in the new digit
+            if (digit.isSingleWord())
+                digit.val = value;
+            else
+                digit.pVal[0] = value;
+            *this += digit;
+        }
+    }
 }
 
 void SVInt::setAllZeros() {
@@ -550,13 +635,13 @@ logic_t SVInt::reductionAnd() const {
 	getTopWordMask(bitsInMsw, mask);
 
 	if (isSingleWord())
-		return val == mask;
+		return logic_t(val == mask);
 	else {
 		for (uint32_t i = 0; i < getNumWords() - 1; i++) {
 			if (pVal[i] != UINT64_MAX)
-				return false;
+				return logic_t(false);
 		}
-		return pVal[getNumWords() - 1] == mask;
+		return logic_t(pVal[getNumWords() - 1] == mask);
 	}
 }
 
@@ -565,14 +650,14 @@ logic_t SVInt::reductionOr() const {
 		return logic_t::x;
 
 	if (isSingleWord())
-		return val != 0;
+		return logic_t(val != 0);
 	else {
 		for (uint32_t i = 0; i < getNumWords(); i++) {
 			if (pVal[i] != 0)
-				return true;
+				return logic_t(true);
 		}
 	}
-	return false;
+	return logic_t(false);
 }
 
 logic_t SVInt::reductionXor() const {
@@ -583,9 +668,9 @@ logic_t SVInt::reductionXor() const {
 	// bits in the number is even or odd
 	uint32_t count = countPopulation();
 	if (count % 2 == 0)
-		return 0;
+		return logic_t(0);
 
-	return 1;
+	return logic_t(1);
 }
 
 SVInt SVInt::operator-() const {
@@ -931,41 +1016,41 @@ logic_t SVInt::operator<(const SVInt& rhs) const {
 			if (rhs.isNegative())
 				return -(*this) > -rhs;
 			else
-				return true;
+				return logic_t(true);
 		}
 		if (rhs.isNegative())
-			return false;
+			return logic_t(false);
 	}
 
 	if (isSingleWord())
-		return val < rhs.val;
+		return logic_t(val < rhs.val);
 
 	uint32_t a1 = getActiveBits();
 	uint32_t a2 = rhs.getActiveBits();
 	if (a1 < a2)
-		return true;
+		return logic_t(true);
 	if (a2 < a1)
-		return false;
+		return logic_t(false);
 
 	// same number of words, compare each one until there's no match
 	uint32_t top = whichWord(a1 - 1);
 	for (int i = top; i >= 0; i--) {
 		if (pVal[i] > rhs.pVal[i])
-			return false;
+			return logic_t(false);
 		if (pVal[i] < rhs.pVal[i])
-			return true;
+			return logic_t(true);
 	}
-	return false;
+	return logic_t(false);
 }
 
 logic_t SVInt::operator[](uint32_t index) const {
 	bool bit = (maskBit(index) & (isSingleWord() ? val : pVal[whichWord(index)])) != 0;
 	if (!unknownFlag)
-		return bit;
+		return logic_t(bit);
 
 	bool unknownBit = (maskBit(index) & pVal[whichWord(index) + getNumWords(bitWidth, false)]) != 0;
 	if (!unknownBit)
-		return bit;
+		return logic_t(bit);
 
 	return bit ? logic_t::z : logic_t::x;
 }
@@ -1062,16 +1147,16 @@ logic_t SVInt::equalsSlowCase(const SVInt& rhs) const {
 	uint32_t a1 = getActiveBits();
 	uint32_t a2 = rhs.getActiveBits();
 	if (a1 != a2)
-		return false;
+		return logic_t(false);
 
 	// compare each word
 	int limit = whichWord(a1 - 1);
 	for (int i = 0; i <= limit; i++) {
 		if (lval[i] != rval[i])
-			return false;
+			return logic_t(false);
 	}
 
-	return true;
+	return logic_t(true);
 }
 
 void SVInt::getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const {
@@ -1084,7 +1169,13 @@ void SVInt::getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const {
 	}
 }
 
-uint64_t SVInt::getAssertUInt32() const {
+uint16_t SVInt::getAssertUInt16() const {
+    // assert that this value fits within a uint64
+    ASSERT(getActiveBits() <= 16);
+    return (uint16_t)getRawData()[0];
+}
+
+uint32_t SVInt::getAssertUInt32() const {
 	// assert that this value fits within a uint64
 	ASSERT(getActiveBits() <= 32);
 	return (uint32_t)getRawData()[0];

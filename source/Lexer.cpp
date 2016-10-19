@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <cmath>
 
-#include "BitVector.h"
 #include "BumpAllocator.h"
 #include "CharInfo.h"
 #include "SourceManager.h"
@@ -136,7 +135,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     // TODO: test that this works for all kinds of identifiers
     if (left.kind == TokenKind::Identifier && right.kind == TokenKind::Identifier) {
         auto info = alloc.emplace<Token::Info>(trivia, combined.subString(0, newLength - 1), location, 0);
-        info->idType = IdentifierType::Normal;
+        info->extra = IdentifierType::Normal;
         return Token(TokenKind::Identifier, info);
     }
 
@@ -200,86 +199,6 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
     info->trivia = trivia;
 
     return Token(token.kind, info);
-}
-
-bool Lexer::checkVectorDigits(Diagnostics& diagnostics, VectorBuilder& builder, Token token, LiteralBase base, bool first) {
-    // underscore as the first char is not allowed
-    StringRef text = token.rawText();
-    if (text.length() == 0)
-        return false;
-
-    SourceLocation location = token.location();
-    if (first && text[0] == '_') {
-        diagnostics.add(DiagCode::VectorDigitsLeadingUnderscore, location);
-        return false;
-    }
-
-    int index = 0;
-    switch (base) {
-        case LiteralBase::Binary:
-            for (char c : text) {
-                if (isLogicDigit(c))
-                    builder.addBinaryDigit(getLogicCharValue(c));
-                else if (isBinaryDigit(c))
-                    builder.addBinaryDigit(getDigitValue(c));
-                else if (c != '_') {
-                    diagnostics.add(DiagCode::BadBinaryDigit, location + index);
-                    return false;
-                }
-                index++;
-            }
-            break;
-        case LiteralBase::Octal:
-            for (char c : text) {
-                if (isLogicDigit(c))
-                    builder.addOctalDigit(getLogicCharValue(c));
-                else if (isOctalDigit(c))
-                    builder.addOctalDigit(getDigitValue(c));
-                else if (c != '_') {
-                    diagnostics.add(DiagCode::BadOctalDigit, location + index);
-                    return false;
-                }
-                index++;
-            }
-            break;
-        case LiteralBase::Decimal:
-            // in decimal literals you can only use x or z if it's the only digit 
-            if (first && text.length() == 1 && isLogicDigit(text[0])) {
-                builder.addDecimalDigit(getLogicCharValue(text[0]));
-                return true;
-            }
-
-            for (char c : text) {
-                if (isLogicDigit(c)) {
-                    diagnostics.add(DiagCode::DecimalDigitMultipleUnknown, location + index);
-                    return false;
-                }
-                else if (isDecimalDigit(c))
-                    builder.addDecimalDigit(getDigitValue(c));
-                else if (c != '_') {
-                    diagnostics.add(DiagCode::BadDecimalDigit, location + index);
-                    return false;
-                }
-                index++;
-            }
-            break;
-        case LiteralBase::Hex:
-            for (char c : text) {
-                if (isLogicDigit(c))
-                    builder.addHexDigit(getLogicCharValue(c));
-                else if (isHexDigit(c))
-                    builder.addHexDigit(getHexDigitValue(c));
-                else if (c != '_') {
-                    diagnostics.add(DiagCode::BadHexDigit, location + index);
-                    return false;
-                }
-                index++;
-            }
-            break;
-        default:
-            ASSERT(false, "Impossible");
-    }
-    return true;
 }
 
 Token Lexer::lex(LexerMode mode) {
@@ -534,7 +453,7 @@ TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode) {
             if (getKeywordTable()->lookup(lexeme(), kind))
                 return kind;
 
-            info->idType = IdentifierType::Normal;
+            info->extra = IdentifierType::Normal;
             return TokenKind::Identifier;
         }
         case '[': return TokenKind::OpenBracket;
@@ -689,7 +608,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
         }
     }
 
-    info->stringText = StringRef(stringBuffer).intern(alloc);
+    info->extra = StringRef(stringBuffer).intern(alloc);
 }
 
 TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
@@ -706,7 +625,7 @@ TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
             break;
     }
 
-    info->idType = IdentifierType::Escaped;
+    info->extra = IdentifierType::Escaped;
     return TokenKind::Identifier;
 }
 
@@ -723,7 +642,7 @@ TokenKind Lexer::lexDollarSign(Token::Info* info) {
     if (kind != TokenKind::Unknown)
         return kind;
 
-    info->idType = IdentifierType::System;
+    info->extra = IdentifierType::System;
     return TokenKind::SystemIdentifier;
 }
 
@@ -733,11 +652,11 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
         addError(DiagCode::MisplacedDirectiveChar, currentOffset() - 1);
-        info->directiveKind = SyntaxKind::Unknown;
+        info->extra = SyntaxKind::Unknown;
         return TokenKind::Directive;
     }
 
-    info->directiveKind = getDirectiveKind(lexeme().subString(1));
+    info->extra = getDirectiveKind(lexeme().subString(1));
     return TokenKind::Directive;
 }
 
@@ -773,7 +692,7 @@ Token Lexer::lexIncludeFileName() {
 
     StringRef rawText = lexeme();
     auto info = alloc.emplace<Token::Info>(trivia, rawText, location, TokenFlags::None);
-    info->stringText = rawText;
+    info->extra = rawText;
 
     return Token(TokenKind::IncludeFileName, info);
 }
@@ -800,7 +719,6 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
     scanUnsignedNumber(value, digits);
 
     // check if we have a fractional number here
-    info->numInfo.numericFlags = NumericTokenFlags();
     switch (peek()) {
         case '.': {
             // fractional digits
@@ -823,7 +741,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             else if (lexTimeLiteral(info))
                 result = TokenKind::TimeLiteral;
 
-            info->numInfo.value = computeRealValue(value, decPoint, digits, exp, neg);
+            info->setNumInfo(computeRealValue(value, decPoint, digits, exp, neg));
             return result;
         }
         case 'e':
@@ -834,7 +752,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             uint64_t exp;
             bool neg;
             if (scanExponent(exp, neg)) {
-                info->numInfo.value = computeRealValue(value, digits, digits, exp, neg);
+                info->setNumInfo(computeRealValue(value, digits, digits, exp, neg));
                 return TokenKind::RealLiteral;
             }
             break;
@@ -842,7 +760,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
     }
 
     // normal signed numeric literal; check for overflow
-    info->numInfo.value = value;
+    info->setNumInfo(SVInt(value));
 
     if (lexTimeLiteral(info))
         return TokenKind::TimeLiteral;
@@ -875,37 +793,35 @@ bool Lexer::scanExponent(uint64_t& value, bool& negative) {
 }
 
 TokenKind Lexer::lexApostrophe(Token::Info* info) {
-    info->numInfo.numericFlags = NumericTokenFlags();
     char c = peek();
     switch (c) {
         case '0':
         case '1':
             advance();
-            info->numInfo.value = (logic_t)(uint8_t)getDigitValue(c);
+            info->setNumInfo((logic_t)(uint8_t)getDigitValue(c));
             return TokenKind::UnbasedUnsizedLiteral;
         case 'x':
         case 'X':
             advance();
-            info->numInfo.value = logic_t::x;
+            info->setNumInfo(logic_t::x);
             return TokenKind::UnbasedUnsizedLiteral;
         case 'Z':
         case 'z':
         case '?':
             advance();
-            info->numInfo.value = logic_t::z;
+            info->setNumInfo(logic_t::z);
             return TokenKind::UnbasedUnsizedLiteral;
 
         case 's':
         case 'S':
             advance();
-            if (!lexIntegerBase(info))
+            if (!lexIntegerBase(info, true))
                 addError(DiagCode::ExpectedIntegerBaseAfterSigned, currentOffset());
 
-            info->numInfo.numericFlags.isSigned = true;
             return TokenKind::IntegerBase;
 
         default:
-            if (lexIntegerBase(info))
+            if (lexIntegerBase(info, false))
                 return TokenKind::IntegerBase;
 
             // otherwise just an apostrophe token
@@ -913,27 +829,27 @@ TokenKind Lexer::lexApostrophe(Token::Info* info) {
     }
 }
 
-bool Lexer::lexIntegerBase(Token::Info* info) {
+bool Lexer::lexIntegerBase(Token::Info* info, bool isSigned) {
     switch (peek()) {
         case 'd':
         case 'D':
             advance();
-            info->numInfo.numericFlags.base = LiteralBase::Decimal;
+            info->setNumFlags(LiteralBase::Decimal, isSigned);
             return true;
         case 'b':
         case 'B':
             advance();
-            info->numInfo.numericFlags.base = LiteralBase::Binary;
+            info->setNumFlags(LiteralBase::Binary, isSigned);
             return true;
         case 'o':
         case 'O':
             advance();
-            info->numInfo.numericFlags.base = LiteralBase::Octal;
+            info->setNumFlags(LiteralBase::Octal, isSigned);
             return true;
         case 'h':
         case 'H':
             advance();
-            info->numInfo.numericFlags.base = LiteralBase::Hex;
+            info->setNumFlags(LiteralBase::Hex, isSigned);
             return true;
     }
     return false;
@@ -943,14 +859,14 @@ bool Lexer::lexTimeLiteral(Token::Info* info) {
 #define CASE(c, flag) \
     case c: if (peek(1) == 's') { \
         advance(2); \
-        info->numInfo.numericFlags.unit = TimeUnit::flag; \
+        info->setTimeUnit(TimeUnit::flag); \
         return true; \
     } break;
 
     switch (peek()) {
         case 's':
             advance();
-            info->numInfo.numericFlags.unit = TimeUnit::Seconds;
+            info->setTimeUnit(TimeUnit::Seconds);
             return true;
         CASE('m', Milliseconds);
         CASE('u', Microseconds);

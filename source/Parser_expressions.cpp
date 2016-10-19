@@ -247,7 +247,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
 ExpressionSyntax* Parser::parseIntegerExpression() {
     Token sizeToken;
     Token baseToken;
-    uint32_t sizeBits = 32;
+    uint16_t sizeBits = 32;
 
     auto token = consume();
     if (token.kind == TokenKind::IntegerBase)
@@ -273,7 +273,7 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
             addError(DiagCode::LiteralSizeTooLarge, token.location()) << SVInt::MAX_BITS;
         }
         else {
-            sizeBits = tokenValue.getAssertUInt32();
+            sizeBits = tokenValue.getAssertUInt16();
         }
     }
 
@@ -287,8 +287,9 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
 
     Token next = first;
     uint32_t length = 0;
+    NumericTokenFlags baseFlags = baseToken.numericFlags();
 
-	vectorBuilder.start(baseToken.numericFlags().base, sizeBits, first.location());
+	vectorBuilder.start(baseFlags.base, sizeBits, baseFlags.isSigned, first.location());
     do {
         length += next.rawText().length();
         consume();
@@ -300,8 +301,7 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     NumericTokenValue value = vectorBuilder.finish();
 
     auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location(), 0);
-    info->numInfo.value = value;
-    info->numInfo.numericFlags = NumericTokenFlags();
+    info->setNumInfo(std::move(value));
 
     return alloc.emplace<IntegerVectorExpressionSyntax>(sizeToken, baseToken, Token(TokenKind::IntegerLiteral, info));
 }

@@ -58,6 +58,11 @@ struct NumericTokenFlags {
     LiteralBase base : 2;
     bool isSigned : 1;
     TimeUnit unit : 3;
+
+    NumericTokenFlags() :
+        base(LiteralBase::Binary), isSigned(false), unit(TimeUnit::Seconds)
+    {
+    }
 };
 
 /// The original kind of identifier represented by a token.
@@ -96,34 +101,31 @@ public:
 		/// if the token was generated during macro expansion).
         SourceLocation location;
 
-        union {
-			/// The nice text of a string literal.
-            StringRef stringText;
-
-			/// The kind of a directive token.
-            SyntaxKind directiveKind;
-
-			/// The kind of an identifier token.
-            IdentifierType idType;
-
-			/// Info for numeric tokens.
-            NumericLiteralInfo numInfo;
-        };
+        /// Extra kind-specific data associated with the token.
+        /// StringRef: The nice text of a string literal.
+        /// SyntaxKind: The kind of a directive token.
+        /// IdentifierType: The kind of an identifer token.
+        /// NumericLiteralInfo: Info for numeric tokens.
+        variant<StringRef, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
 
 		/// Various token flags.
         uint8_t flags;
 
-        Info() : flags(0) {}
-        Info(ArrayRef<Trivia> trivia, StringRef rawText, SourceLocation location, int flags) :
-            trivia(trivia), rawText(rawText), location(location), flags((uint8_t)flags)
-        {
-        }
+        Info();
+        Info(ArrayRef<Trivia> trivia, StringRef rawText, SourceLocation location, int flags);
 
-		~Info();
+        void setNumInfo(NumericTokenValue&& value);
+        void setNumFlags(LiteralBase base, bool isSigned);
+        void setTimeUnit(TimeUnit unit);
+
+        const StringRef& stringText() const { return get<StringRef>(extra); }
+        const SyntaxKind& directiveKind() const { return get<SyntaxKind>(extra); }
+        const IdentifierType& idType() const { return get<IdentifierType>(extra); }
+        const NumericLiteralInfo& numInfo() const { return get<NumericLiteralInfo>(extra); }
     };
 
 	/// The kind of the token; this is not in the info block because
-	/// we almost always want to look at it.
+	/// we almost always want to look at it (perf).
     TokenKind kind;
 
     Token();

@@ -1,9 +1,11 @@
 #pragma once
 
-#include "ConstantValue.h"
 #include "Symbol.h"
+#include "SVInt.h"
 
 namespace slang {
+
+using ConstantValue = variant<SVInt, double>;
 
 enum class BoundNodeKind {
     Unknown,

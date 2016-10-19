@@ -99,7 +99,7 @@ inline logic_t getLogicCharValue(char c) {
 		case 'X':
 			return logic_t::x;
 		default:
-			return 0;
+			return logic_t(0);
 	}
 }
 

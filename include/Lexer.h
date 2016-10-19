@@ -77,7 +77,7 @@ private:
     Token lexIncludeFileName();
 
     void lexStringLiteral(Token::Info* info);
-    bool lexIntegerBase(Token::Info* info);
+    bool lexIntegerBase(Token::Info* info, bool isSigned);
     bool lexTimeLiteral(Token::Info* info);
 
     bool lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode);

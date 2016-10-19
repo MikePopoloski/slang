@@ -67,8 +67,7 @@ BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
 BoundExpression* SemanticModel::bindLiteral(const LiteralExpressionSyntax* syntax) {
     switch (syntax->kind) {
         case SyntaxKind::IntegerLiteralExpression: {
-            // the integer has already been checked for overflow in the parser
-            ConstantValue cv((int32_t)syntax->literal.numericValue().integer);
+            ConstantValue cv = get<SVInt>(syntax->literal.numericValue());
             return alloc.emplace<BoundLiteralExpression>(syntax, getSpecialType(SpecialType::Int), cv);
         }
         default:
@@ -99,7 +98,7 @@ void SemanticModel::foldConstants(BoundExpression* expression) {
             foldConstants(binary->right);
             
             switch (binary->syntax->kind) {
-                case SyntaxKind::AddExpression:
+                /*case SyntaxKind::AddExpression:
                     expression->constantValue = binary->left->constantValue + binary->right->constantValue;
                     break;
                 case SyntaxKind::SubtractExpression:
@@ -113,7 +112,7 @@ void SemanticModel::foldConstants(BoundExpression* expression) {
                     break;
                 case SyntaxKind::ModExpression:
                     expression->constantValue = binary->left->constantValue % binary->right->constantValue;
-                    break;
+                    break;*/
                 default:
                     break;
             }

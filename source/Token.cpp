@@ -11,6 +11,52 @@
 
 namespace slang {
 
+Token::Info::Info() :
+    flags(0)
+{
+}
+
+Token::Info::Info(ArrayRef<Trivia> trivia, StringRef rawText, SourceLocation location, int flags) :
+    trivia(trivia), rawText(rawText), location(location), flags((uint8_t)flags)
+{
+}
+
+void Token::Info::setNumInfo(NumericTokenValue&& value) {
+    NumericLiteralInfo* target = extra.target<NumericLiteralInfo>();
+    if (target)
+        target->value = std::move(value);
+    else {
+        NumericLiteralInfo numInfo;
+        numInfo.value = std::move(value);
+        extra = std::move(numInfo);
+    }
+}
+
+void Token::Info::setNumFlags(LiteralBase base, bool isSigned) {
+    NumericLiteralInfo* target = extra.target<NumericLiteralInfo>();
+    if (target) {
+        target->numericFlags.base = base;
+        target->numericFlags.isSigned = isSigned;
+    }
+    else {
+        NumericLiteralInfo numInfo;
+        numInfo.numericFlags.base = base;
+        numInfo.numericFlags.isSigned = isSigned;
+        extra = std::move(numInfo);
+    }
+}
+
+void Token::Info::setTimeUnit(TimeUnit unit) {
+    NumericLiteralInfo* target = extra.target<NumericLiteralInfo>();
+    if (target)
+        target->numericFlags.unit = unit;
+    else {
+        NumericLiteralInfo numInfo;
+        numInfo.numericFlags.unit = unit;
+        extra = std::move(numInfo);
+    }
+}
+
 Token::Token() :
     kind(TokenKind::Unknown), info(nullptr)
 {
@@ -44,7 +90,7 @@ StringRef Token::valueText() const {
             return info->rawText;
         case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
-            return info->stringText;
+            return info->stringText();
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
             return info->rawText;
@@ -107,23 +153,23 @@ std::string Token::toString(uint8_t writeFlags) const {
 const NumericTokenValue& Token::numericValue() const {
     ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::UnbasedUnsizedLiteral ||
            kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
-    return info->numInfo.value;
+    return info->numInfo().value;
 }
 
 NumericTokenFlags Token::numericFlags() const {
     ASSERT(kind == TokenKind::IntegerBase || kind == TokenKind::TimeLiteral);
-    return info->numInfo.numericFlags;
+    return info->numInfo().numericFlags;
 }
 
 IdentifierType Token::identifierType() const {
     if (kind == TokenKind::Identifier || kind == TokenKind::SystemIdentifier)
-        return info->idType;
+        return info->idType();
     return IdentifierType::Unknown;
 }
 
 SyntaxKind Token::directiveKind() const {
     ASSERT(kind == TokenKind::Directive || kind == TokenKind::MacroUsage);
-    return info->directiveKind;
+    return info->directiveKind();
 }
 
 bool Token::hasTrivia(TriviaKind triviaKind) const {

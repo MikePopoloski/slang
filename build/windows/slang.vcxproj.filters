@@ -133,9 +133,6 @@
     <ClInclude Include="..\..\include\BindContext.h">
       <Filter>analysis</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\ConstantValue.h">
-      <Filter>analysis</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\external\variant.hpp">
       <Filter>util\3ps</Filter>
     </ClInclude>
@@ -226,9 +223,6 @@
       <Filter>analysis</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\BindContext.cpp">
-      <Filter>analysis</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\ConstantValue.cpp">
       <Filter>analysis</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\SVInt.cpp">
