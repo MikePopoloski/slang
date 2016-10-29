@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// VectorBuilder.cpp
+// Helper type to construct SVInt instances.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #include "VectorBuilder.h"
 
 #include "CharInfo.h"
@@ -114,6 +120,9 @@ void VectorBuilder::append(Token token) {
 }
 
 SVInt VectorBuilder::finish() {
+    if (!valid)
+        return SVInt(0);
+
     // figure out how much space we actually need for our digits
     ASSERT(digits.count(), "No digits somehow?");
 

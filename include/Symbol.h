@@ -4,6 +4,8 @@
 
 namespace slang {
 
+class IntegralTypeSymbol;
+
 class Symbol {
 };
 
@@ -15,17 +17,32 @@ public:
     bool isIntegral : 1;
     bool isSimpleBitVector : 1;
     bool isReal : 1;
+
+    TypeSymbol() {
+        isAggregate = false;
+        isSingular = false;
+        isIntegral = false;
+        isSimpleBitVector = false;
+        isReal = false;
+    }
+
+    const IntegralTypeSymbol& integral() const {
+        ASSERT(isIntegral);
+        return *(IntegralTypeSymbol*)this;
+    }
 };
 
 class IntegralTypeSymbol : public TypeSymbol {
 public:
-    IntegralTypeSymbol(bool isSigned, int width) :
-        isSigned(isSigned), width(width)
-    {
-    }
-
+    int width;
     bool isSigned : 1;
-    int width : 1;
+    bool isFourState : 1;
+
+    IntegralTypeSymbol(int width, bool isSigned, bool isFourState) :
+        width(width), isSigned(isSigned), isFourState(isFourState)
+    {
+        isIntegral = true;
+    }
 };
 
 class IntegerVectorTypeSymbol : public IntegralTypeSymbol {
@@ -40,6 +57,9 @@ public:
 class EnumTypeSymbol : public TypeSymbol {
 public:
     TypeSymbol* baseType;
+};
+
+class ErrorTypeSymbol : public TypeSymbol {
 };
 
 }
