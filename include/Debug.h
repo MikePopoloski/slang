@@ -10,3 +10,5 @@
 
 // Just delegate our assert handling to the 3rd part lib
 #define ASSERT PPK_ASSERT
+
+#define DEFAULT_UNREACHABLE default: ASSERT(false, "Default case should be unreachable!")

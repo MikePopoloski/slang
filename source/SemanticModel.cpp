@@ -34,15 +34,12 @@ BoundParameterDeclaration* SemanticModel::bindParameterDecl(const ParameterDecla
     auto declarator = syntax->declarators[0];
     auto initializer = declarator->initializer;
 
-    auto boundInitializer = bindExpression(initializer->expr);
-    foldConstants(boundInitializer);
-
+    auto boundInitializer = bindSelfDeterminedExpression(initializer->expr);
     return alloc.emplace<BoundParameterDeclaration>(syntax, boundInitializer);
 }
 
 BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
     ASSERT(syntax);
-
     switch (syntax->kind) {
         case SyntaxKind::NullLiteralExpression:
         case SyntaxKind::StringLiteralExpression:
@@ -106,14 +103,13 @@ BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
 
 BoundExpression* SemanticModel::bindSelfDeterminedExpression(const ExpressionSyntax* syntax) {
     BoundExpression* expr = bindExpression(syntax);
-    // TODO: propogate type
+	propagateAndFold(expr, expr->type);
     return expr;
 }
 
 BoundExpression* SemanticModel::bindLiteral(const LiteralExpressionSyntax* syntax) {
     switch (syntax->kind) {
         case SyntaxKind::IntegerLiteralExpression: {
-            //ConstantValue cv = get<SVInt>(syntax->literal.numericValue());
             return alloc.emplace<BoundLiteralExpression>(syntax, getSpecialType(SpecialType::Int), false);
         }
         default:
@@ -192,11 +188,119 @@ BoundExpression* SemanticModel::bindShiftOrPowerOperator(const BinaryExpressionS
 }
 
 const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned) {
-    return nullptr;
+	std::unordered_map<int, const TypeSymbol*>& cache = integralTypeCache[true][isSigned]; // always use the 4-state cache
+
+	auto it = cache.find(width);
+	if (it != cache.end())
+		return it->second;
+
+	it = cache.emplace_hint(it, width, alloc.emplace<IntegralTypeSymbol>(width, isSigned, true));
+	return it->second;
 }
 
-void SemanticModel::foldConstants(BoundExpression* expression) {
+void SemanticModel::propagateAndFold(BoundExpression* expression, const TypeSymbol* type) {
     ASSERT(expression);
+	if (expression->bad)
+		return;
+
+	switch (expression->syntax->kind) {
+		case SyntaxKind::IntegerLiteralExpression:
+		case SyntaxKind::IntegerVectorExpression:
+			return propagateAndFoldLiteral((BoundLiteralExpression*)expression, type);
+		case SyntaxKind::UnaryPlusExpression:
+		case SyntaxKind::UnaryMinusExpression:
+		case SyntaxKind::UnaryBitwiseNotExpression:
+			return propagateAndFoldUnaryArithmeticOperator((BoundUnaryExpression*)expression, type);
+		case SyntaxKind::UnaryBitwiseAndExpression:
+		case SyntaxKind::UnaryBitwiseOrExpression:
+		case SyntaxKind::UnaryBitwiseXorExpression:
+		case SyntaxKind::UnaryBitwiseNandExpression:
+		case SyntaxKind::UnaryBitwiseNorExpression:
+		case SyntaxKind::UnaryBitwiseXnorExpression:
+		case SyntaxKind::UnaryLogicalNotExpression:
+			return propagateAndFoldUnaryReductionOperator((BoundUnaryExpression*)expression, type);
+		case SyntaxKind::AddExpression:
+		case SyntaxKind::SubtractExpression:
+		case SyntaxKind::MultiplyExpression:
+		case SyntaxKind::DivideExpression:
+		case SyntaxKind::ModExpression:
+		case SyntaxKind::BinaryAndExpression:
+		case SyntaxKind::BinaryOrExpression:
+		case SyntaxKind::BinaryXorExpression:
+		case SyntaxKind::BinaryXnorExpression:
+			return propagateAndFoldArithmeticOperator((BoundBinaryExpression*)expression, type);
+		case SyntaxKind::EqualityExpression:
+		case SyntaxKind::InequalityExpression:
+		case SyntaxKind::CaseEqualityExpression:
+		case SyntaxKind::CaseInequalityExpression:
+		case SyntaxKind::GreaterThanEqualExpression:
+		case SyntaxKind::GreaterThanExpression:
+		case SyntaxKind::LessThanEqualExpression:
+		case SyntaxKind::LessThanExpression:
+			return propagateAndFoldComparisonOperator((BoundBinaryExpression*)expression, type);
+		case SyntaxKind::LogicalAndExpression:
+		case SyntaxKind::LogicalOrExpression:
+		case SyntaxKind::LogicalImplicationExpression:
+		case SyntaxKind::LogicalEquivalenceExpression:
+			return propagateAndFoldRelationalOperator((BoundBinaryExpression*)expression, type);
+		case SyntaxKind::LogicalShiftLeftExpression:
+		case SyntaxKind::LogicalShiftRightExpression:
+		case SyntaxKind::ArithmeticShiftLeftExpression:
+		case SyntaxKind::ArithmeticShiftRightExpression:
+		case SyntaxKind::PowerExpression:
+			return propagateAndFoldShiftOrPowerOperator((BoundBinaryExpression*)expression, type);
+	}
+}
+
+void SemanticModel::propagateAndFoldLiteral(BoundLiteralExpression* expression, const TypeSymbol* type) {
+	switch (expression->syntax->kind) {
+		case SyntaxKind::IntegerLiteralExpression: {
+			const SVInt& v = get<SVInt>(expression->syntax->as<LiteralExpressionSyntax>()->literal.numericValue());
+			if (v.getBitWidth() < type->integral().width)
+				expression->constantValue = extend(v, type->integral().width, type->integral().isSigned);
+			else
+				expression->constantValue = v;
+		}
+	}
+}
+
+void SemanticModel::propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpression* expression, const TypeSymbol* type) {
+}
+
+void SemanticModel::propagateAndFoldUnaryReductionOperator(BoundUnaryExpression* expression, const TypeSymbol* type) {
+}
+
+void SemanticModel::propagateAndFoldArithmeticOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
+	expression->type = type;
+	propagateAndFold(expression->left, type);
+	propagateAndFold(expression->right, type);
+
+	ConstantValue cv;
+	SVInt& l = get<SVInt>(expression->left->constantValue);
+	SVInt& r = get<SVInt>(expression->right->constantValue);
+
+	switch (expression->syntax->kind) {
+		case SyntaxKind::AddExpression: cv = l + r; break;
+		case SyntaxKind::SubtractExpression: cv = l - r; break;
+		case SyntaxKind::MultiplyExpression: cv = l * r; break;
+		case SyntaxKind::DivideExpression: cv = l / r; break;
+		case SyntaxKind::ModExpression: cv = l % r; break;
+		case SyntaxKind::BinaryAndExpression: cv = l & r; break;
+		case SyntaxKind::BinaryOrExpression: cv = l | r; break;
+		case SyntaxKind::BinaryXorExpression: cv = l ^ r; break;
+		case SyntaxKind::BinaryXnorExpression: cv = l.xnor(r); break;
+			DEFAULT_UNREACHABLE;
+	}
+	expression->constantValue = cv;
+}
+
+void SemanticModel::propagateAndFoldComparisonOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
+}
+
+void SemanticModel::propagateAndFoldRelationalOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
+}
+
+void SemanticModel::propagateAndFoldShiftOrPowerOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
 }
 
 }

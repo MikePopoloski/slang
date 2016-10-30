@@ -759,8 +759,8 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
         }
     }
 
-    // normal signed numeric literal; check for overflow
-    info->setNumInfo(SVInt(value));
+    // normal signed numeric literal
+    info->setNumInfo(SVInt(32, value, true));
 
     if (lexTimeLiteral(info))
         return TokenKind::TimeLiteral;

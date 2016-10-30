@@ -23,8 +23,8 @@ BoundParameterDeclaration* testParameter(SemanticModel& sem, std::string text) {
 TEST_CASE("Bind parameter", "[binding:expressions]") {
     SemanticModel sem;
 
-    CHECK(testParameter(sem, "parameter foo = 4;")->value == 4);
-    CHECK(testParameter(sem, "parameter foo = 4 + 5;")->value == 9);
+    CHECK(get<SVInt>(testParameter(sem, "parameter foo = 4;")->value) == 4);
+    CHECK(get<SVInt>(testParameter(sem, "parameter foo = 4 + 5;")->value) == 9);
 }
 
 }

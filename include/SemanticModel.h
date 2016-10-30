@@ -51,6 +51,7 @@ public:
     void bindModuleImplicit(ModuleDeclarationSyntax* module);
     BoundParameterDeclaration* bindParameterDecl(const ParameterDeclarationSyntax* syntax);
 
+	/// Expression binding methods.
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
@@ -62,12 +63,22 @@ public:
     BoundExpression* bindRelationalOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax);
 
+	/// Utilities for getting various type symbols.
     const TypeSymbol* getErrorType() const { return getSpecialType(SpecialType::Error); }
     const TypeSymbol* getSpecialType(SpecialType type) const { return specialTypes[(int)type]; }
     const TypeSymbol* getIntegralType(int width, bool isSigned);
 
 private:
-    void foldConstants(BoundExpression* expression);
+	// propagates the type of the expression back down to its operands
+	// and folds constants on the way back up
+	void propagateAndFold(BoundExpression* expression, const TypeSymbol* type);
+	void propagateAndFoldLiteral(BoundLiteralExpression* expression, const TypeSymbol* type);
+	void propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpression* expression, const TypeSymbol* type);
+	void propagateAndFoldUnaryReductionOperator(BoundUnaryExpression* expression, const TypeSymbol* type);
+	void propagateAndFoldArithmeticOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
+	void propagateAndFoldComparisonOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
+	void propagateAndFoldRelationalOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
+	void propagateAndFoldShiftOrPowerOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
 
     Diagnostics diagnostics;
     BumpAllocator alloc;
@@ -75,6 +86,9 @@ private:
 
     // preallocated type symbols for common types
     TypeSymbol* specialTypes[(int)SpecialType::Error+1];
+
+	// cache of simple integral types; maps from width -> type, arrayed by 4-state/2-state and signed/unsigned
+	std::unordered_map<int, const TypeSymbol*> integralTypeCache[2][2];
 };
 
 }
