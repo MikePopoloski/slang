@@ -265,9 +265,37 @@ void SemanticModel::propagateAndFoldLiteral(BoundLiteralExpression* expression, 
 }
 
 void SemanticModel::propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpression* expression, const TypeSymbol* type) {
+	expression->type = type;
+	propagateAndFold(expression->operand, type);
+
+	ConstantValue cv;
+	SVInt& v = get<SVInt>(expression->operand->constantValue);
+
+	switch (expression->syntax->kind) {
+		case SyntaxKind::UnaryPlusExpression: cv = v; break;
+		case SyntaxKind::UnaryMinusExpression: cv = -v; break;
+		case SyntaxKind::UnaryBitwiseNotExpression: cv = ~v; break;
+			DEFAULT_UNREACHABLE;
+	}
+	expression->constantValue = cv;
 }
 
 void SemanticModel::propagateAndFoldUnaryReductionOperator(BoundUnaryExpression* expression, const TypeSymbol* type) {
+	// operands are self-determined and result type is always 1 bit
+	ConstantValue cv;
+	SVInt& v = get<SVInt>(expression->operand->constantValue);
+
+	switch (expression->syntax->kind) {
+		case SyntaxKind::UnaryBitwiseAndExpression: cv = SVInt(v.reductionAnd()); break;
+		case SyntaxKind::UnaryBitwiseOrExpression: cv = SVInt(v.reductionOr()); break;
+		case SyntaxKind::UnaryBitwiseXorExpression: cv = SVInt(v.reductionXor()); break;
+		case SyntaxKind::UnaryBitwiseNandExpression: cv = SVInt(!v.reductionAnd()); break;
+		case SyntaxKind::UnaryBitwiseNorExpression: cv = SVInt(!v.reductionOr()); break;
+		case SyntaxKind::UnaryBitwiseXnorExpression: cv = SVInt(!v.reductionXor()); break;
+		case SyntaxKind::UnaryLogicalNotExpression: cv = SVInt(!v); break;
+			DEFAULT_UNREACHABLE;
+	}
+	expression->constantValue = cv;
 }
 
 void SemanticModel::propagateAndFoldArithmeticOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
