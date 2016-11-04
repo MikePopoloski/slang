@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <unordered_set>
+
 #include "AllSyntax.h"
 #include "BoundNodes.h"
 #include "Buffer.h"
@@ -16,6 +18,7 @@
 
 namespace slang {
 
+class BindContext;
 class SyntaxTree;
 class Symbol;
 
@@ -36,20 +39,15 @@ enum class SpecialType {
     Error
 };
 
-enum class ValueCategory {
-    None,
-    Constant
-};
-
 /// SemanticModel is responsible for binding symbols and performing
 /// type checking based on input parse trees.
 class SemanticModel {
 public:
     SemanticModel();
-    SemanticModel(DeclarationTable& declTable);
 
-    void bindModuleImplicit(ModuleDeclarationSyntax* module);
-    BoundParameterDeclaration* bindParameterDecl(const ParameterDeclarationSyntax* syntax);
+    DesignElementSymbol* bindDesignElement(const ModuleDeclarationSyntax* module);
+
+    //ParameterSymbol* bindParameterDecl(const ParameterDeclarationSyntax* syntax);
 
 	/// Expression binding methods.
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
@@ -69,6 +67,8 @@ public:
     const TypeSymbol* getIntegralType(int width, bool isSigned);
 
 private:
+    bool bindParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer, bool lastLocal, bool overrideLocal);
+
 	// propagates the type of the expression back down to its operands
 	// and folds constants on the way back up
 	void propagateAndFold(BoundExpression* expression, const TypeSymbol* type);
@@ -80,9 +80,16 @@ private:
 	void propagateAndFoldRelationalOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
 	void propagateAndFoldShiftOrPowerOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
 
+    void pushContext(BindContext* c);
+    void popContext();
+
     Diagnostics diagnostics;
     BumpAllocator alloc;
     BufferPool<Symbol*> symbolPool;
+    std::unordered_set<StringRef> stringSet;
+
+    // the currently active bind context
+    BindContext* context;
 
     // preallocated type symbols for common types
     TypeSymbol* specialTypes[(int)SpecialType::Error+1];

@@ -603,17 +603,40 @@ private:
 template<typename T>
 class SeparatedSyntaxList : public SyntaxNode {
 public:
-    class iterator : public std::iterator<std::forward_iterator_tag, T*> {
+    template<typename TOwner, typename TValue>
+    class iterator_templ {
     public:
-        iterator(SeparatedSyntaxList& list);
+        using difference_type = ptrdiff_t;
+        using value_type = TValue*;
+        using pointer = TValue**;
+        using reference = TValue*;
+        using iterator_category = std::forward_iterator_tag;
 
-        iterator& operator++();
-        reference operator*() const;
-        pointer operator->() const;
+        iterator_templ(TOwner& list, int index) :
+            list(list), index(index)
+        {
+        }
 
-        bool operator==(const iterator& a) const;
-        bool operator!=(const iterator& b) const;
+        iterator_templ& operator++() { ++index; return *this; }
+        iterator_templ operator++(int) {
+            iterator_temp result = *this;
+            ++(*this);
+            return result;
+        }
+
+        reference operator*() const { return list[index]; }
+        pointer operator->() const { return &list[index]; }
+
+        bool operator==(const iterator_templ& other) const { return &list == &other.list && index == other.index; }
+        bool operator!=(const iterator_templ& other) const { return !(*this == other); }
+
+    private:
+        TOwner& list;
+        int index;
     };
+
+    using iterator = iterator_templ<SeparatedSyntaxList, T>;
+    using const_iterator = iterator_templ<const SeparatedSyntaxList, const T>;
 
     SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(ArrayRef<TokenOrSyntax>(nullptr)) {}
     SeparatedSyntaxList(ArrayRef<TokenOrSyntax> elements) :
@@ -636,8 +659,13 @@ public:
         return static_cast<T*>(elements[index].node);
     }
 
-    iterator begin();
-    iterator end();
+    iterator begin() { return iterator(*this, 0); }
+    iterator end() { return iterator(*this, count()); }
+
+    const_iterator begin() const { return cbegin(); }
+    const_iterator end() const { return cend(); }
+    const_iterator cbegin() const { return const_iterator(*this, 0); }
+    const_iterator cend() const { return const_iterator(*this, count()); }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }

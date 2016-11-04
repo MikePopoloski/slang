@@ -47,8 +47,8 @@ endmodule
 
     REQUIRE(topLevelModules.count() == 1);
 
-    SemanticModel sem(declTable);
-    sem.bindModuleImplicit(topLevelModules[0]);
+    SemanticModel sem;
+    sem.bindDesignElement(topLevelModules[0]);
 }
 
 }

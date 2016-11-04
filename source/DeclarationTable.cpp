@@ -20,7 +20,7 @@ ArrayRef<ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules(Diagnost
             auto name = node->header->name;
             auto pair = nameLookup.try_emplace(name.valueText(), node);
             if (!pair.second)
-                diagnostics.add(DiagCode::ModuleRedefinition, name.location()) << name.valueText();
+                diagnostics.add(DiagCode::DuplicateModule, name.location()) << name.valueText();
         }
     }
 

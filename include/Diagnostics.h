@@ -99,7 +99,8 @@ enum class DiagCode : uint8_t {
     ExpectedDistItem,
 
     // declarations
-    ModuleRedefinition,
+    DuplicateModule,
+    DuplicateParameter,
     UnknownModule,
 
 	MaxValue

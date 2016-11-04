@@ -19,23 +19,64 @@ SemanticModel::SemanticModel() {
     specialTypes[(int)SpecialType::Error] = alloc.emplace<ErrorTypeSymbol>();
 }
 
-SemanticModel::SemanticModel(DeclarationTable& declTable) :
-    SemanticModel()
+DesignElementSymbol* SemanticModel::bindDesignElement(const ModuleDeclarationSyntax* syntax) {
+    // Discover all of the element's parameters. If we have a parameter port list, the only
+    // publicly visible parameters are the ones in that list. Otherwise, parameters declared
+    // in the module body are publicly visible.
+    const ModuleHeaderSyntax* header = syntax->header;
+    auto parameters = symbolPool.getAs<ParameterSymbol*>();
+    stringSet.clear();
+
+    bool overrideLocal = false;
+    if (header->parameters) {
+        bool lastLocal = false;
+        for (const ParameterPortDeclarationSyntax* decl : header->parameters->declarations)
+            lastLocal = bindParameters(decl, parameters, lastLocal, false);
+        overrideLocal = true;
+    }
+
+    // also find direct body parameters
+    for (const MemberSyntax* member : syntax->members) {
+        if (member->kind == SyntaxKind::ParameterDeclarationStatement)
+            bindParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, parameters, false, overrideLocal);
+    }
+
+    return alloc.emplace<DesignElementSymbol>(syntax, header->name.valueText(), parameters->copy(alloc));
+}
+
+bool SemanticModel::bindParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
+                                   bool lastLocal, bool overrideLocal)
 {
-}
+    bool local = false;
+    if (syntax->kind == SyntaxKind::TypeParameterDeclaration) {
+        // TODO: unsupported
+    }
+    else {
+        // It's legal to leave off the parameter keyword in the parameter port list.
+        // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
+        // This isn't allowed in a module body, but the parser will take care of the error for us.
+        auto p = syntax->as<ParameterDeclarationSyntax>();
+        if (!p->keyword)
+            local = lastLocal;
+        else {
+            // In the body of a module that has a parameter port list in its header, parameters are
+            // actually just localparams. overrideLocal will be true in this case.
+            local = p->keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
+        }
 
-void SemanticModel::bindModuleImplicit(ModuleDeclarationSyntax* module) {
-}
+        for (const VariableDeclaratorSyntax* declarator : p->declarators) {
+            auto name = declarator->name.valueText();
+            if (!name)
+                continue;
 
-BoundParameterDeclaration* SemanticModel::bindParameterDecl(const ParameterDeclarationSyntax* syntax) {
-    ASSERT(syntax);
-    ASSERT(syntax->kind == SyntaxKind::ParameterDeclaration);
-
-    auto declarator = syntax->declarators[0];
-    auto initializer = declarator->initializer;
-
-    auto boundInitializer = bindSelfDeterminedExpression(initializer->expr);
-    return alloc.emplace<BoundParameterDeclaration>(syntax, boundInitializer);
+            // ensure uniqueness of parameter names
+            if (!stringSet.insert(name).second)
+                diagnostics.add(DiagCode::DuplicateParameter, declarator->name.location()) << name;
+            else
+                buffer.append(alloc.emplace<ParameterSymbol>(name, local));
+        }
+    }
+    return local;
 }
 
 BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
@@ -257,7 +298,7 @@ void SemanticModel::propagateAndFoldLiteral(BoundLiteralExpression* expression, 
 		case SyntaxKind::IntegerLiteralExpression: {
 			const SVInt& v = get<SVInt>(expression->syntax->as<LiteralExpressionSyntax>()->literal.numericValue());
 			if (v.getBitWidth() < type->integral().width)
-				expression->constantValue = extend(v, type->integral().width, type->integral().isSigned);
+				expression->constantValue = extend(v, (uint16_t)type->integral().width, type->integral().isSigned);
 			else
 				expression->constantValue = v;
 		}

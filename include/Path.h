@@ -16,7 +16,9 @@
 #include <cstring>
 
 #if defined(_WIN32)
+# undef DEFAULT_UNREACHABLE
 # include <windows.h>
+# undef DEFAULT_UNREACHABLE
 #else
 # include <unistd.h>
 # include <dirent.h>

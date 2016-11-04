@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ArrayRef.h"
+#include "BoundNodes.h"
 
 namespace slang {
 
@@ -8,6 +9,40 @@ class IntegralTypeSymbol;
 
 class Symbol {
 };
+
+class ParameterSymbol : public Symbol {
+public:
+    StringRef name;
+    bool isLocal;
+
+    ParameterSymbol(StringRef name, bool isLocal) : name(name), isLocal(isLocal) {}
+};
+
+/// Symbol for design elements, which includes things like modules, interfaces, programs, etc.
+class DesignElementSymbol : public Symbol {
+public:
+    const ModuleDeclarationSyntax* syntax;
+    StringRef name;
+    ArrayRef<ParameterSymbol*> parameters;
+    
+    DesignElementSymbol(const ModuleDeclarationSyntax* syntax, StringRef name, ArrayRef<ParameterSymbol*> parameters) :
+        syntax(syntax), name(name), parameters(parameters)
+    {
+    }
+};
+
+/// A SystemVerilog parameter (or localparam)
+//class ParameterSymbol : public Symbol {
+//public:
+//    const ParameterDeclarationSyntax* syntax;
+//    BoundExpression* initializer;
+//    ConstantValue value;
+//
+//    ParameterSymbol(const ParameterDeclarationSyntax* syntax, BoundExpression* initializer) :
+//        syntax(syntax), initializer(initializer), value(initializer->constantValue)
+//    {
+//    }
+//};
 
 /// Base class for all data types
 class TypeSymbol : public Symbol {
