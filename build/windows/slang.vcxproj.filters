@@ -118,9 +118,6 @@
     <ClInclude Include="..\..\include\BoundNodes.h">
       <Filter>analysis</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\BindContext.h">
-      <Filter>analysis</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\external\variant.hpp">
       <Filter>util\3ps</Filter>
     </ClInclude>
@@ -144,6 +141,9 @@
     </ClInclude>
     <ClInclude Include="..\..\external\fmt\format.h">
       <Filter>util\3ps\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Scope.h">
+      <Filter>analysis</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -213,9 +213,6 @@
     <ClCompile Include="..\..\source\DeclarationTable.cpp">
       <Filter>analysis</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\BindContext.cpp">
-      <Filter>analysis</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\SVInt.cpp">
       <Filter>numeric</Filter>
     </ClCompile>
@@ -226,6 +223,9 @@
       <Filter>util\3ps</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\Symbol.cpp">
+      <Filter>analysis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\Scope.cpp">
       <Filter>analysis</Filter>
     </ClCompile>
   </ItemGroup>

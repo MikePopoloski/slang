@@ -6,19 +6,23 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <functional>
+#include <memory>
 #include <unordered_set>
+#include <vector>
 
 #include "AllSyntax.h"
+#include "BoundNodes.h"
 #include "Buffer.h"
 #include "BufferPool.h"
 #include "BumpAllocator.h"
 #include "DeclarationTable.h"
 #include "Diagnostics.h"
+#include "Scope.h"
 #include "Symbol.h"
 
 namespace slang {
 
-class BindContext;
 class SyntaxTree;
 class Symbol;
 
@@ -54,6 +58,7 @@ public:
     BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const IntegerVectorExpressionSyntax* syntax);
+	BoundExpression* bindSimpleName(const IdentifierNameSyntax* syntax);
     BoundExpression* bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax);
     BoundExpression* bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax* syntax);
     BoundExpression* bindArithmeticOperator(const BinaryExpressionSyntax* syntax);
@@ -72,7 +77,8 @@ private:
 	// propagates the type of the expression back down to its operands
 	// and folds constants on the way back up
 	void propagateAndFold(BoundExpression* expression, const TypeSymbol* type);
-	void propagateAndFoldLiteral(BoundLiteralExpression* expression, const TypeSymbol* type);
+	void propagateAndFoldLiteral(BoundLiteral* expression, const TypeSymbol* type);
+	void propagateAndFoldParameter(BoundParameter* expression, const TypeSymbol* type);
 	void propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpression* expression, const TypeSymbol* type);
 	void propagateAndFoldUnaryReductionOperator(BoundUnaryExpression* expression, const TypeSymbol* type);
 	void propagateAndFoldArithmeticOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
@@ -80,16 +86,19 @@ private:
 	void propagateAndFoldRelationalOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
 	void propagateAndFoldShiftOrPowerOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
 
-    void pushContext(BindContext* c);
-    void popContext();
+	using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;
+	ScopePtr pushScope();
+	void popScope(const Scope* scope);
+	const Symbol* lookupSymbol(StringRef name);
+
+	template<typename TContainer>
+	ScopePtr pushScope(const TContainer& range);
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
     BufferPool<Symbol*> symbolPool;
     std::unordered_set<StringRef> stringSet;
-
-    // the currently active bind context
-    BindContext* context;
+	std::vector<Scope> scopeStack;
 
     // preallocated type symbols for common types
     TypeSymbol* specialTypes[(int)SpecialType::Error+1];

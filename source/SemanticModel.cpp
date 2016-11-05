@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "Scope.h"
 #include "SyntaxTree.h"
 
 namespace slang {
@@ -112,20 +113,30 @@ bool SemanticModel::bindParameters(const ParameterPortDeclarationSyntax* syntax,
 InstanceSymbol* SemanticModel::bindImplicitInstance(DesignElementSymbol* element) {
 	ASSERT(element);
 	
-	// First of all, evaluate all parameters now.
-	Buffer<ParameterInstance> parameters; // TODO: cache this buffer?
-	for (const ParameterSymbol* param : element->parameters) {
+	// First of all, evaluate all parameters now. Go through and
+	// create all of the symbols, then come back around and evaluate their
+	// initializers and figure out their final types. We do this so that
+	// parameters can depend on previously declared parameters.
+	auto parameters = symbolPool.getAs<ParameterInstanceSymbol*>();
+	for (const ParameterSymbol* param : element->parameters)
+		parameters->append(alloc.emplace<ParameterInstanceSymbol>(param));
+
+	auto scope = pushScope(parameters.get());
+	auto it = element->parameters.begin();
+	for (ParameterInstanceSymbol* param : parameters.get()) {
 		// If no type is given, infer the type from the initializer
-		if (!param->typeSyntax) {
-			BoundExpression* expr = bindSelfDeterminedExpression(param->initializer);
-			parameters.emplace(param, expr->constantValue);
+		const ParameterSymbol* decl = *it++;
+		if (!decl->typeSyntax) {
+			BoundExpression* expr = bindSelfDeterminedExpression(decl->initializer);
+			param->type = expr->type;
+			param->value = expr->constantValue;
 		}
 		else {
 			// TODO
 		}
 	}
 
-	return alloc.emplace<InstanceSymbol>(parameters.copy(alloc));
+	return alloc.emplace<InstanceSymbol>(parameters->copy(alloc));
 }
 
 BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
@@ -139,6 +150,8 @@ BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
         case SyntaxKind::OneStepLiteralExpression:
         case SyntaxKind::UnbasedUnsizedLiteralExpression:
             break;
+		case SyntaxKind::IdentifierName:
+			return bindSimpleName(syntax->as<IdentifierNameSyntax>());
         case SyntaxKind::IntegerLiteralExpression:
             return bindLiteral(syntax->as<LiteralExpressionSyntax>());
         case SyntaxKind::IntegerVectorExpression:
@@ -187,6 +200,8 @@ BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
         case SyntaxKind::ArithmeticShiftRightExpression:
         case SyntaxKind::PowerExpression:
             return bindShiftOrPowerOperator(syntax->as<BinaryExpressionSyntax>());
+
+			DEFAULT_UNREACHABLE;
     }
     return nullptr;
 }
@@ -200,15 +215,27 @@ BoundExpression* SemanticModel::bindSelfDeterminedExpression(const ExpressionSyn
 BoundExpression* SemanticModel::bindLiteral(const LiteralExpressionSyntax* syntax) {
     switch (syntax->kind) {
         case SyntaxKind::IntegerLiteralExpression: {
-            return alloc.emplace<BoundLiteralExpression>(syntax, getSpecialType(SpecialType::Int), false);
+            return alloc.emplace<BoundLiteral>(syntax, getSpecialType(SpecialType::Int), false);
         }
         default:
             return nullptr;
     }
 }
 
+BoundExpression* SemanticModel::bindSimpleName(const IdentifierNameSyntax* syntax) {
+	// if we have an invalid name token just give up now, the error has already been reported
+	StringRef identifier = syntax->identifier.valueText();
+	if (!identifier)
+		return alloc.emplace<BadBoundExpression>();
+
+	const Symbol* symbol = lookupSymbol(identifier);
+	ASSERT(symbol && symbol->kind == SymbolKind::Parameter);
+
+	return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterInstanceSymbol>(), false);
+}
+
 BoundExpression* SemanticModel::bindLiteral(const IntegerVectorExpressionSyntax* syntax) {
-    return alloc.emplace<BoundLiteralExpression>(syntax, getSpecialType(SpecialType::Int), false);
+    return alloc.emplace<BoundLiteral>(syntax, getSpecialType(SpecialType::Int), false);
 }
 
 BoundExpression* SemanticModel::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax) {
@@ -296,7 +323,7 @@ void SemanticModel::propagateAndFold(BoundExpression* expression, const TypeSymb
 	switch (expression->syntax->kind) {
 		case SyntaxKind::IntegerLiteralExpression:
 		case SyntaxKind::IntegerVectorExpression:
-			return propagateAndFoldLiteral((BoundLiteralExpression*)expression, type);
+			return propagateAndFoldLiteral((BoundLiteral*)expression, type);
 		case SyntaxKind::UnaryPlusExpression:
 		case SyntaxKind::UnaryMinusExpression:
 		case SyntaxKind::UnaryBitwiseNotExpression:
@@ -340,9 +367,14 @@ void SemanticModel::propagateAndFold(BoundExpression* expression, const TypeSymb
 		case SyntaxKind::PowerExpression:
 			return propagateAndFoldShiftOrPowerOperator((BoundBinaryExpression*)expression, type);
 	}
+
+	switch (expression->kind) {
+		case BoundNodeKind::Parameter:
+			return propagateAndFoldParameter((BoundParameter*)expression, type);
+	}
 }
 
-void SemanticModel::propagateAndFoldLiteral(BoundLiteralExpression* expression, const TypeSymbol* type) {
+void SemanticModel::propagateAndFoldLiteral(BoundLiteral* expression, const TypeSymbol* type) {
 	switch (expression->syntax->kind) {
 		case SyntaxKind::IntegerLiteralExpression: {
 			const SVInt& v = get<SVInt>(expression->syntax->as<LiteralExpressionSyntax>()->literal.numericValue());
@@ -352,6 +384,10 @@ void SemanticModel::propagateAndFoldLiteral(BoundLiteralExpression* expression, 
 				expression->constantValue = v;
 		}
 	}
+}
+
+void SemanticModel::propagateAndFoldParameter(BoundParameter* expression, const TypeSymbol* type) {
+	expression->constantValue = expression->symbol->value;
 }
 
 void SemanticModel::propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpression* expression, const TypeSymbol* type) {
@@ -419,6 +455,34 @@ void SemanticModel::propagateAndFoldRelationalOperator(BoundBinaryExpression* ex
 }
 
 void SemanticModel::propagateAndFoldShiftOrPowerOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
+}
+
+SemanticModel::ScopePtr SemanticModel::pushScope() {
+	scopeStack.emplace_back();
+	return ScopePtr(&scopeStack.back(), [this](Scope* s) { popScope(s); });
+}
+
+template<typename TContainer>
+SemanticModel::ScopePtr SemanticModel::pushScope(const TContainer& range) {
+	auto scope = pushScope();
+	scope->addRange(range);
+	return scope;
+}
+
+void SemanticModel::popScope(const Scope* scope) {
+	ASSERT(!scopeStack.empty());
+	ASSERT(&scopeStack.back() == scope);
+	scopeStack.pop_back();
+}
+
+const Symbol* SemanticModel::lookupSymbol(StringRef name) {
+	// TODO: soooo many things here...
+	for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
+		const Symbol* result = it->lookup(name);
+		if (result)
+			return result;
+	}
+	return nullptr;
 }
 
 }

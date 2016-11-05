@@ -2,24 +2,87 @@
 
 #include "AllSyntax.h"
 #include "ArrayRef.h"
-#include "BoundNodes.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 
 namespace slang {
 
-class IntegralTypeSymbol;
+using ConstantValue = variant<SVInt, double>;
+
+enum class SymbolKind {
+	Unknown,
+	Parameter
+};
 
 class Symbol {
 public:
+	SymbolKind kind;
     StringRef name;
     SourceLocation location;
 
     Symbol() {}
-    Symbol(StringRef name, SourceLocation location) :
-        name(name), location(location)
+    Symbol(SymbolKind kind, StringRef name, SourceLocation location) :
+        kind(kind), name(name), location(location)
     {
     }
+
+	template<typename T>
+	const T* as() const { return static_cast<const T*>(this); }
+};
+
+class IntegralTypeSymbol;
+
+/// Base class for all data types
+class TypeSymbol : public Symbol {
+public:
+	bool isAggregate : 1;
+	bool isSingular : 1;
+	bool isIntegral : 1;
+	bool isSimpleBitVector : 1;
+	bool isReal : 1;
+
+	TypeSymbol() {
+		isAggregate = false;
+		isSingular = false;
+		isIntegral = false;
+		isSimpleBitVector = false;
+		isReal = false;
+	}
+
+	const IntegralTypeSymbol& integral() const {
+		ASSERT(isIntegral);
+		return *(IntegralTypeSymbol*)this;
+	}
+};
+
+class IntegralTypeSymbol : public TypeSymbol {
+public:
+	int width;
+	bool isSigned : 1;
+	bool isFourState : 1;
+
+	IntegralTypeSymbol(int width, bool isSigned, bool isFourState) :
+		width(width), isSigned(isSigned), isFourState(isFourState)
+	{
+		isIntegral = true;
+	}
+};
+
+class IntegerVectorTypeSymbol : public IntegralTypeSymbol {
+public:
+	// Lower bounds for dimensions, by position.
+	ArrayRef<int> lowerBounds;
+
+	// Sizes for dimensions, by position.
+	ArrayRef<int> sizes;
+};
+
+class EnumTypeSymbol : public TypeSymbol {
+public:
+	TypeSymbol* baseType;
+};
+
+class ErrorTypeSymbol : public TypeSymbol {
 };
 
 class ParameterSymbol : public Symbol {
@@ -29,7 +92,7 @@ public:
     bool isLocal;
 
     ParameterSymbol(StringRef name, SourceLocation location, const DataTypeSyntax* typeSyntax, const ExpressionSyntax* initializer, bool isLocal) :
-        Symbol(name, location), typeSyntax(typeSyntax), initializer(initializer), isLocal(isLocal)
+        Symbol(SymbolKind::Unknown, name, location), typeSyntax(typeSyntax), initializer(initializer), isLocal(isLocal)
 	{
 	}
 };
@@ -59,91 +122,25 @@ public:
 	}
 };
 
-class ParameterInstance {
+class ParameterInstanceSymbol : public Symbol {
 public:
-	const ParameterSymbol* symbol;
+	const TypeSymbol* type = nullptr;
 	ConstantValue value;
 
-	ParameterInstance(const ParameterSymbol* symbol, ConstantValue value) :
-		symbol(symbol), value(value)
+	ParameterInstanceSymbol(const ParameterSymbol* symbol) :
+		Symbol(SymbolKind::Parameter, symbol->name, symbol->location)
 	{
 	}
 };
 
 class InstanceSymbol : public Symbol {
 public:
-	ArrayRef<ParameterInstance> parameters;
+	ArrayRef<ParameterInstanceSymbol*> parameters;
 
-	InstanceSymbol(ArrayRef<ParameterInstance> parameters) :
+	InstanceSymbol(ArrayRef<ParameterInstanceSymbol*> parameters) :
 		parameters(parameters)
 	{
 	}
-};
-
-/// A SystemVerilog parameter (or localparam)
-//class ParameterSymbol : public Symbol {
-//public:
-//    const ParameterDeclarationSyntax* syntax;
-//    BoundExpression* initializer;
-//    ConstantValue value;
-//
-//    ParameterSymbol(const ParameterDeclarationSyntax* syntax, BoundExpression* initializer) :
-//        syntax(syntax), initializer(initializer), value(initializer->constantValue)
-//    {
-//    }
-//};
-
-/// Base class for all data types
-class TypeSymbol : public Symbol {
-public:
-    bool isAggregate : 1;
-    bool isSingular : 1;
-    bool isIntegral : 1;
-    bool isSimpleBitVector : 1;
-    bool isReal : 1;
-
-    TypeSymbol() {
-        isAggregate = false;
-        isSingular = false;
-        isIntegral = false;
-        isSimpleBitVector = false;
-        isReal = false;
-    }
-
-    const IntegralTypeSymbol& integral() const {
-        ASSERT(isIntegral);
-        return *(IntegralTypeSymbol*)this;
-    }
-};
-
-class IntegralTypeSymbol : public TypeSymbol {
-public:
-    int width;
-    bool isSigned : 1;
-    bool isFourState : 1;
-
-    IntegralTypeSymbol(int width, bool isSigned, bool isFourState) :
-        width(width), isSigned(isSigned), isFourState(isFourState)
-    {
-        isIntegral = true;
-    }
-};
-
-class IntegerVectorTypeSymbol : public IntegralTypeSymbol {
-public:
-    // Lower bounds for dimensions, by position.
-    ArrayRef<int> lowerBounds;
-
-    // Sizes for dimensions, by position.
-    ArrayRef<int> sizes;
-};
-
-class EnumTypeSymbol : public TypeSymbol {
-public:
-    TypeSymbol* baseType;
-};
-
-class ErrorTypeSymbol : public TypeSymbol {
 };
 
 }

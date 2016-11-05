@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SVInt.h"
+#include "Symbol.h"
 
 namespace slang {
 
@@ -10,7 +11,8 @@ using ConstantValue = variant<SVInt, double>;
 
 enum class BoundNodeKind {
     Unknown,
-    LiteralExpression,
+    Literal,
+	Parameter,
     UnaryExpression,
     BinaryExpression,
 };
@@ -35,12 +37,30 @@ public:
     }
 };
 
-class BoundLiteralExpression : public BoundExpression {
+class BadBoundExpression : public BoundExpression {
 public:
-    BoundLiteralExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, bool bad) :
-        BoundExpression(BoundNodeKind::LiteralExpression, syntax, type, bad)
+	BadBoundExpression() :
+		BoundExpression(BoundNodeKind::Unknown, nullptr, nullptr, true)
+	{
+	}
+};
+
+class BoundLiteral : public BoundExpression {
+public:
+    BoundLiteral(const ExpressionSyntax* syntax, const TypeSymbol* type, bool bad) :
+        BoundExpression(BoundNodeKind::Literal, syntax, type, bad)
     {
     }
+};
+
+class BoundParameter : public BoundExpression {
+public:
+	const ParameterInstanceSymbol* symbol;
+
+	BoundParameter(const ExpressionSyntax* syntax, const ParameterInstanceSymbol* symbol, bool bad) :
+		BoundExpression(BoundNodeKind::Parameter, syntax, symbol->type, bad), symbol(symbol)
+	{
+	}
 };
 
 class BoundUnaryExpression : public BoundExpression {

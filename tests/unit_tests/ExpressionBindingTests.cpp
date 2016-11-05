@@ -11,7 +11,7 @@ Diagnostics diagnostics;
 
 SyntaxTree parse(StringRef text) { return SyntaxTree::fromText(sourceManager, text); }
 
-const ParameterInstance& testParameter(std::string text) {
+const ParameterInstanceSymbol& testParameter(std::string text, int index = 0) {
     auto tree = parse("module Top; " + text + " endmodule");
 
 	SemanticModel sem(alloc, diagnostics);
@@ -20,14 +20,15 @@ const ParameterInstance& testParameter(std::string text) {
 
 	auto instance = sem.bindImplicitInstance(element);
 	REQUIRE(instance);
-	REQUIRE(instance->parameters.count() > 0);
+	REQUIRE(instance->parameters.count() > (uint32_t)index);
 
-	return instance->parameters[0];
+	return *instance->parameters[index];
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {
     CHECK(get<SVInt>(testParameter("parameter foo = 4;").value) == 4);
-    CHECK(get<SVInt>(testParameter("parameter foo = 4 + 5;").value) == 9);
+	CHECK(get<SVInt>(testParameter("parameter foo = 4 + 5;").value) == 9);
+	CHECK(get<SVInt>(testParameter("parameter bar = 9, foo = bar + 1;", 1).value) == 10);
 }
 
 }
