@@ -6,7 +6,9 @@
 
 namespace slang {
 
-SemanticModel::SemanticModel() {
+SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics) :
+	alloc(alloc), diagnostics(diagnostics)
+{
     specialTypes[(int)SpecialType::ShortInt] = alloc.emplace<IntegralTypeSymbol>(16, true, false);
     specialTypes[(int)SpecialType::Int] = alloc.emplace<IntegralTypeSymbol>(32, true, false);
     specialTypes[(int)SpecialType::LongInt] = alloc.emplace<IntegralTypeSymbol>(64, true, false);
@@ -17,6 +19,29 @@ SemanticModel::SemanticModel() {
     specialTypes[(int)SpecialType::Integer] = alloc.emplace<IntegralTypeSymbol>(32, true, true);
     specialTypes[(int)SpecialType::Time] = alloc.emplace<IntegralTypeSymbol>(64, false, true);
     specialTypes[(int)SpecialType::Error] = alloc.emplace<ErrorTypeSymbol>();
+}
+
+CompilationUnitSymbol* SemanticModel::bindCompilationUnit(const CompilationUnitSyntax* syntax) {
+	auto buffer = symbolPool.getAs<DesignElementSymbol*>();
+	for (const MemberSyntax* member : syntax->members) {
+		switch (member->kind) {
+			case SyntaxKind::ModuleDeclaration:
+			case SyntaxKind::InterfaceDeclaration:
+			case SyntaxKind::ProgramDeclaration: {
+				// ignore empty names
+				auto decl = member->as<ModuleDeclarationSyntax>();
+				auto name = decl->header->name;
+				if (!name.valueText())
+					continue;
+
+				buffer->append(bindDesignElement(decl));
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	return alloc.emplace<CompilationUnitSymbol>(syntax, buffer->copy(alloc));
 }
 
 DesignElementSymbol* SemanticModel::bindDesignElement(const ModuleDeclarationSyntax* syntax) {

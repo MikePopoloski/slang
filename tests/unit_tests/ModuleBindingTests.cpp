@@ -47,7 +47,8 @@ endmodule
 
     REQUIRE(topLevelModules.count() == 1);
 
-    SemanticModel sem;
+	BumpAllocator alloc;
+    SemanticModel sem(alloc, diagnostics);
     sem.bindDesignElement(topLevelModules[0]);
 }
 

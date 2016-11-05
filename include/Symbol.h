@@ -31,6 +31,17 @@ public:
     }
 };
 
+class CompilationUnitSymbol : public Symbol {
+public:
+	const CompilationUnitSyntax* syntax;
+	ArrayRef<DesignElementSymbol*> elements;
+
+	CompilationUnitSymbol(const CompilationUnitSyntax* syntax, ArrayRef<DesignElementSymbol*> elements) :
+		syntax(syntax), elements(elements)
+	{
+	}
+};
+
 /// A SystemVerilog parameter (or localparam)
 //class ParameterSymbol : public Symbol {
 //public:

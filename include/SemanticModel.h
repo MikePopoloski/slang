@@ -43,11 +43,10 @@ enum class SpecialType {
 /// type checking based on input parse trees.
 class SemanticModel {
 public:
-    SemanticModel();
+    SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics);
 
-    DesignElementSymbol* bindDesignElement(const ModuleDeclarationSyntax* module);
-
-    //ParameterSymbol* bindParameterDecl(const ParameterDeclarationSyntax* syntax);
+	CompilationUnitSymbol* bindCompilationUnit(const CompilationUnitSyntax* syntax);
+    DesignElementSymbol* bindDesignElement(const ModuleDeclarationSyntax* syntax);
 
 	/// Expression binding methods.
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
@@ -83,8 +82,8 @@ private:
     void pushContext(BindContext* c);
     void popContext();
 
-    Diagnostics diagnostics;
-    BumpAllocator alloc;
+    BumpAllocator& alloc;
+    Diagnostics& diagnostics;
     BufferPool<Symbol*> symbolPool;
     std::unordered_set<StringRef> stringSet;
 
