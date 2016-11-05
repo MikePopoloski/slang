@@ -10,7 +10,7 @@
 #ifndef FMT_POSIX_H_
 #define FMT_POSIX_H_
 
-#ifdef __MINGW32__
+#if defined(__MINGW32__) || defined(__CYGWIN__)
 // Workaround MinGW bug https://sourceforge.net/p/mingw/bugs/2024/.
 # undef __STRICT_ANSI__
 #endif
@@ -27,7 +27,7 @@
 # include <xlocale.h>  // for LC_NUMERIC_MASK on OS X
 #endif
 
-#include "fmt/format.h"
+#include "format.h"
 
 #ifndef FMT_POSIX
 # if defined(_WIN32) && !defined(__MINGW32__)
@@ -321,7 +321,8 @@ class File {
 // Returns the memory page size.
 long getpagesize();
 
-#if (defined(LC_NUMERIC_MASK) || defined(_MSC_VER)) && !defined(__ANDROID__)
+#if (defined(LC_NUMERIC_MASK) || defined(_MSC_VER)) && \
+    !defined(__ANDROID__) && !defined(__CYGWIN__)
 # define FMT_LOCALE
 #endif
 
@@ -356,7 +357,7 @@ class Locale {
 
   Locale() : locale_(newlocale(LC_NUMERIC_MASK, "C", NULL)) {
     if (!locale_)
-      throw fmt::SystemError(errno, "cannot create locale");
+      FMT_THROW(fmt::SystemError(errno, "cannot create locale"));
   }
   ~Locale() { freelocale(locale_); }
 

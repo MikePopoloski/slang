@@ -88,28 +88,16 @@
     <ClInclude Include="..\..\external\xxhash\xxhash.h">
       <Filter>util\3ps</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\external\pempek_assert\pempek_assert.h">
-      <Filter>util\3ps</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\SyntaxTree.h">
       <Filter>parsing</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\SemanticModel.h">
       <Filter>analysis</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\external\cppformat\format.h">
-      <Filter>util\3ps\fmt</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\external\fmt\ostream.h">
       <Filter>util\3ps\fmt</Filter>
     </ClInclude>
     <ClInclude Include="..\..\external\fmt\posix.h">
-      <Filter>util\3ps\fmt</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\fmt\printf.h">
-      <Filter>util\3ps\fmt</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\fmt\string.h">
       <Filter>util\3ps\fmt</Filter>
     </ClInclude>
     <ClInclude Include="..\..\external\fmt\time.h">
@@ -150,6 +138,12 @@
     </ClInclude>
     <ClInclude Include="..\..\include\VectorBuilder.h">
       <Filter>numeric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\ppk_assert\ppk_assert.h">
+      <Filter>util\3ps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\fmt\format.h">
+      <Filter>util\3ps\fmt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -195,9 +189,6 @@
     <ClCompile Include="..\..\source\BumpAllocator.cpp">
       <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp">
-      <Filter>util\3ps</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\Parser_statements.cpp">
       <Filter>parsing</Filter>
     </ClCompile>
@@ -230,6 +221,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\VectorBuilder.cpp">
       <Filter>numeric</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\ppk_assert\ppk_assert.cpp">
+      <Filter>util\3ps</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

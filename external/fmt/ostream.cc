@@ -7,8 +7,7 @@
  For the license information refer to format.h.
  */
 
-#include "fmt/ostream.h"
-#include "fmt/printf.h"
+#include "ostream.h"
 
 namespace fmt {
 

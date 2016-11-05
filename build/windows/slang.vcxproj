@@ -19,13 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\external\cppformat\format.h" />
+    <ClInclude Include="..\..\external\fmt\format.h" />
     <ClInclude Include="..\..\external\fmt\ostream.h" />
     <ClInclude Include="..\..\external\fmt\posix.h" />
-    <ClInclude Include="..\..\external\fmt\printf.h" />
-    <ClInclude Include="..\..\external\fmt\string.h" />
     <ClInclude Include="..\..\external\fmt\time.h" />
-    <ClInclude Include="..\..\external\pempek_assert\pempek_assert.h" />
+    <ClInclude Include="..\..\external\ppk_assert\ppk_assert.h" />
     <ClInclude Include="..\..\external\variant.hpp" />
     <ClInclude Include="..\..\external\xxhash\xxhash.h" />
     <ClInclude Include="..\..\include\AllSyntax.h" />
@@ -65,7 +63,7 @@
     <ClCompile Include="..\..\external\fmt\format.cc" />
     <ClCompile Include="..\..\external\fmt\ostream.cc" />
     <ClCompile Include="..\..\external\fmt\posix.cc" />
-    <ClCompile Include="..\..\external\pempek_assert\pempek_assert.cpp" />
+    <ClCompile Include="..\..\external\ppk_assert\ppk_assert.cpp" />
     <ClCompile Include="..\..\source\BindContext.cpp" />
     <ClCompile Include="..\..\source\VectorBuilder.cpp" />
     <ClCompile Include="..\..\source\BumpAllocator.cpp" />

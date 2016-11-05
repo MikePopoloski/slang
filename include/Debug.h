@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "pempek_assert/pempek_assert.h"
+#include "ppk_assert/ppk_assert.h"
 
 // Just delegate our assert handling to the 3rd part lib
 #define ASSERT PPK_ASSERT

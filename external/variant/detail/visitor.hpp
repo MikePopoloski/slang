@@ -130,11 +130,14 @@ namespace eggs { namespace variants { namespace detail
     struct destroy
       : visitor<destroy, void(void*)>
     {
+#pragma warning(push)
+#pragma warning(disable:4100)
         template <typename T>
         static void call(void* ptr)
         {
             static_cast<T*>(ptr)->~T();
         }
+#pragma warning(pop)
     };
 
     struct swap

@@ -9,7 +9,6 @@
 #ifndef EGGS_VARIANT_BAD_VARIANT_ACCESS_HPP
 #define EGGS_VARIANT_BAD_VARIANT_ACCESS_HPP
 
-#include <stdexcept>
 #include <exception>
 
 #include <variant/detail/config/prefix.hpp>
@@ -17,23 +16,27 @@
 namespace eggs { namespace variants
 {
     ///////////////////////////////////////////////////////////////////////////
-    //! class bad_variant_access : public std::logic_error
+    //! class bad_variant_access : public std::exception
     //!
-    //! The class `bad_variant_access` defines the type of objects thrown as
-    //! exceptions to report the situation where an attempt is made to access
-    //! an inactive member of a `variant` object.
+    //! Objects of type `bad_variant_access` are thrown to report attempts to
+    //! access an inactive member of a `variant` object.
     class bad_variant_access
-      : public std::logic_error
+      : public std::exception
     {
     public:
-        //! bad_variant_access();
+        //! bad_variant_access() noexcept;
         //!
-        //! \effects Constructs an object of class `bad_variant_access`.
-        //!
-        //! \postconditions `what()` returns an implementation-defined NTBS.
-        bad_variant_access()
-          : std::logic_error{"bad_variant_access"}
+        //! \effects Constructs a `bad_variant_access` object.
+        bad_variant_access() EGGS_CXX11_NOEXCEPT
         {}
+
+        //! char const* what() const noexcept override;
+        //!
+        //! \returns An implementation-defined NTBS.
+        char const* what() const EGGS_CXX11_NOEXCEPT /*override*/
+        {
+            return "bad_variant_access";
+        }
     };
 
     namespace detail

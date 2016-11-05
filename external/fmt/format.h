@@ -194,6 +194,17 @@ typedef __int64          intmax_t;
 # endif
 #endif
 
+#ifndef FMT_OVERRIDE
+# if FMT_USE_OVERRIDE || FMT_HAS_FEATURE(cxx_override) || \
+   (FMT_GCC_VERSION >= 408 && FMT_HAS_GXX_CXX11) || \
+   FMT_MSC_VER >= 1900
+#  define FMT_OVERRIDE override
+# else
+#  define FMT_OVERRIDE
+# endif
+#endif
+
+
 // A macro to disallow the copy constructor and operator= functions
 // This should be used in the private: declarations for a class
 #ifndef FMT_USE_DELETED_FUNCTIONS
@@ -380,9 +391,6 @@ typedef BasicWriter<wchar_t> WWriter;
 
 template <typename Char>
 class ArgFormatter;
-
-template <typename Impl, typename Char>
-class BasicPrintfArgFormatter;
 
 template <typename CharType,
           typename ArgFormatter = fmt::ArgFormatter<CharType> >
@@ -678,7 +686,7 @@ class MemoryBuffer : private Allocator, public Buffer<T> {
   }
 
  protected:
-  void grow(std::size_t size);
+  void grow(std::size_t size) FMT_OVERRIDE;
 
  public:
   explicit MemoryBuffer(const Allocator &alloc = Allocator())
@@ -992,6 +1000,9 @@ FMT_API void format_windows_error(fmt::Writer &out, int error_code,
                                   fmt::StringRef message) FMT_NOEXCEPT;
 #endif
 
+FMT_API void format_system_error(fmt::Writer &out, int error_code,
+                                 fmt::StringRef message) FMT_NOEXCEPT;
+
 // A formatting argument value.
 struct Value {
   template <typename Char>
@@ -1245,7 +1256,9 @@ class MakeValue : public Arg {
 
   FMT_MAKE_VALUE(char *, string.value, CSTRING)
   FMT_MAKE_VALUE(const char *, string.value, CSTRING)
+  FMT_MAKE_VALUE(signed char *, sstring.value, CSTRING)
   FMT_MAKE_VALUE(const signed char *, sstring.value, CSTRING)
+  FMT_MAKE_VALUE(unsigned char *, ustring.value, CSTRING)
   FMT_MAKE_VALUE(const unsigned char *, ustring.value, CSTRING)
   FMT_MAKE_STR_VALUE(const std::string &, STRING)
   FMT_MAKE_STR_VALUE(StringRef, STRING)
@@ -1321,6 +1334,9 @@ class RuntimeError : public std::runtime_error {
   RuntimeError() : std::runtime_error("") {}
   ~RuntimeError() throw();
 };
+
+template <typename Char>
+class PrintfArgFormatter;
 
 template <typename Char>
 class ArgMap;
@@ -1853,21 +1869,21 @@ class ArgFormatterBase : public ArgVisitor<Impl, void> {
     typedef typename BasicWriter<Char>::CharPtr CharPtr;
     Char fill = internal::CharTraits<Char>::cast(spec_.fill());
     CharPtr out = CharPtr();
-    const unsigned CHAR_WIDTH = 1;
-    if (spec_.width_ > CHAR_WIDTH) {
+    const unsigned CHAR_SIZE = 1;
+    if (spec_.width_ > CHAR_SIZE) {
       out = writer_.grow_buffer(spec_.width_);
       if (spec_.align_ == ALIGN_RIGHT) {
-        std::uninitialized_fill_n(out, spec_.width_ - CHAR_WIDTH, fill);
-        out += spec_.width_ - CHAR_WIDTH;
+        std::uninitialized_fill_n(out, spec_.width_ - CHAR_SIZE, fill);
+        out += spec_.width_ - CHAR_SIZE;
       } else if (spec_.align_ == ALIGN_CENTER) {
         out = writer_.fill_padding(out, spec_.width_,
-                                   internal::const_check(CHAR_WIDTH), fill);
+                                   internal::const_check(CHAR_SIZE), fill);
       } else {
-        std::uninitialized_fill_n(out + CHAR_WIDTH,
-                                  spec_.width_ - CHAR_WIDTH, fill);
+        std::uninitialized_fill_n(out + CHAR_SIZE,
+                                  spec_.width_ - CHAR_SIZE, fill);
       }
     } else {
-      out = writer_.grow_buffer(CHAR_WIDTH);
+      out = writer_.grow_buffer(CHAR_SIZE);
     }
     *out = internal::CharTraits<Char>::cast(value);
   }
@@ -1940,6 +1956,26 @@ class FormatterBase {
       w << BasicStringRef<Char>(start, internal::to_unsigned(end - start));
   }
 };
+
+// A printf formatter.
+template <typename Char>
+class PrintfFormatter : private FormatterBase {
+ private:
+  void parse_flags(FormatSpec &spec, const Char *&s);
+
+  // Returns the argument with specified index or, if arg_index is equal
+  // to the maximum unsigned value, the next argument.
+  Arg get_arg(const Char *s,
+      unsigned arg_index = (std::numeric_limits<unsigned>::max)());
+
+  // Parses argument index, flags and width and returns the argument index.
+  unsigned parse_header(const Char *&s, FormatSpec &spec);
+
+ public:
+  explicit PrintfFormatter(const ArgList &args) : FormatterBase(args) {}
+  FMT_API void format(BasicWriter<Char> &writer,
+                      BasicCStringRef<Char> format_str);
+};
 }  // namespace internal
 
 /**
@@ -1979,7 +2015,7 @@ class BasicArgFormatter : public internal::ArgFormatterBase<Impl, Char> {
   : internal::ArgFormatterBase<Impl, Char>(formatter.writer(), spec),
     formatter_(formatter), format_(fmt) {}
 
-  /** Formats an argument of a custom (user-defined) type. */
+  /** Formats argument of a custom (user-defined) type. */
   void visit_custom(internal::Arg::CustomValue c) {
     c.format(&formatter_, c.value, &format_);
   }
@@ -2241,10 +2277,17 @@ class SystemError : public internal::RuntimeError {
  public:
   /**
    \rst
-   Constructs a :class:`fmt::SystemError` object with a description
-   formatted with `fmt::format_system_error`. *message* and additional
-   arguments passed into the constructor are formatted similarly to
-   `fmt::format`.
+   Constructs a :class:`fmt::SystemError` object with the description
+   of the form
+
+   .. parsed-literal::
+     *<message>*: *<system-message>*
+
+   where *<message>* is the formatted message and *<system-message>* is
+   the system message corresponding to the error code.
+   *error_code* is a system error code as given by ``errno``.
+   If *error_code* is not a valid error code such as -1, the system message
+   may look like "Unknown error -1" and is platform-dependent.
 
    **Example**::
 
@@ -2266,25 +2309,6 @@ class SystemError : public internal::RuntimeError {
 
   int error_code() const { return error_code_; }
 };
-
-/**
-  \rst
-  Formats an error returned by an operating system or a language runtime,
-  for example a file opening error, and writes it to *out* in the following
-  form:
-
-  .. parsed-literal::
-     *<message>*: *<system-message>*
-
-  where *<message>* is the passed message and *<system-message>* is
-  the system message corresponding to the error code.
-  *error_code* is a system error code as given by ``errno``.
-  If *error_code* is not a valid error code such as -1, the system message
-  may look like "Unknown error -1" and is platform-dependent.
-  \endrst
- */
-FMT_API void format_system_error(fmt::Writer &out, int error_code,
-                                 fmt::StringRef message) FMT_NOEXCEPT;
 
 /**
   \rst
@@ -2405,8 +2429,7 @@ class BasicWriter {
   template <typename Impl, typename Char_>
   friend class internal::ArgFormatterBase;
 
-  template <typename Impl, typename Char_>
-  friend class BasicPrintfArgFormatter;
+  friend class internal::PrintfArgFormatter<Char>;
 
  protected:
   /**
@@ -2778,7 +2801,10 @@ void BasicWriter<Char>::write_int(T value, Spec spec) {
   }
   case 'n': {
     unsigned num_digits = internal::count_digits(abs_value);
-    fmt::StringRef sep = internal::thousands_sep(std::localeconv());
+    fmt::StringRef sep = "";
+#ifndef ANDROID
+    sep = internal::thousands_sep(std::localeconv());
+#endif
     unsigned size = static_cast<unsigned>(
           num_digits + sep.size() * ((num_digits - 1) / 3));
     CharPtr p = prepare_int_buffer(size, spec, prefix, prefix_size) + 1;
@@ -3172,6 +3198,56 @@ FMT_API void print(std::FILE *f, CStringRef format_str, ArgList args);
  */
 FMT_API void print(CStringRef format_str, ArgList args);
 
+template <typename Char>
+void printf(BasicWriter<Char> &w, BasicCStringRef<Char> format, ArgList args) {
+  internal::PrintfFormatter<Char>(args).format(w, format);
+}
+
+/**
+  \rst
+  Formats arguments and returns the result as a string.
+
+  **Example**::
+
+    std::string message = fmt::sprintf("The answer is %d", 42);
+  \endrst
+*/
+inline std::string sprintf(CStringRef format, ArgList args) {
+  MemoryWriter w;
+  printf(w, format, args);
+  return w.str();
+}
+
+inline std::wstring sprintf(WCStringRef format, ArgList args) {
+  WMemoryWriter w;
+  printf(w, format, args);
+  return w.str();
+}
+
+/**
+  \rst
+  Prints formatted data to the file *f*.
+
+  **Example**::
+
+    fmt::fprintf(stderr, "Don't %s!", "panic");
+  \endrst
+ */
+FMT_API int fprintf(std::FILE *f, CStringRef format, ArgList args);
+
+/**
+  \rst
+  Prints formatted data to ``stdout``.
+
+  **Example**::
+
+    fmt::printf("Elapsed time: %.2f seconds", 1.23);
+  \endrst
+ */
+inline int printf(CStringRef format, ArgList args) {
+  return fprintf(stdout, format, args);
+}
+
 /**
   Fast integer formatter.
  */
@@ -3437,7 +3513,12 @@ FMT_VARIADIC(std::string, format, CStringRef)
 FMT_VARIADIC_W(std::wstring, format, WCStringRef)
 FMT_VARIADIC(void, print, CStringRef)
 FMT_VARIADIC(void, print, std::FILE *, CStringRef)
+
 FMT_VARIADIC(void, print_colored, Color, CStringRef)
+FMT_VARIADIC(std::string, sprintf, CStringRef)
+FMT_VARIADIC_W(std::wstring, sprintf, WCStringRef)
+FMT_VARIADIC(int, printf, CStringRef)
+FMT_VARIADIC(int, fprintf, std::FILE *, CStringRef)
 
 namespace internal {
 template <typename Char>
