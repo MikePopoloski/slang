@@ -9,12 +9,12 @@
 #include <unordered_set>
 
 #include "AllSyntax.h"
-#include "BoundNodes.h"
 #include "Buffer.h"
 #include "BufferPool.h"
 #include "BumpAllocator.h"
 #include "DeclarationTable.h"
 #include "Diagnostics.h"
+#include "Symbol.h"
 
 namespace slang {
 
@@ -47,6 +47,7 @@ public:
 
 	CompilationUnitSymbol* bindCompilationUnit(const CompilationUnitSyntax* syntax);
     DesignElementSymbol* bindDesignElement(const ModuleDeclarationSyntax* syntax);
+	InstanceSymbol* bindImplicitInstance(DesignElementSymbol* element);
 
 	/// Expression binding methods.
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);

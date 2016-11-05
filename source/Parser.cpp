@@ -1364,10 +1364,14 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
         if (!allowImplicit)
             return alloc.emplace<NamedTypeSyntax>(parseName());
         else {
+			// If we're allowed to have an implicit type here, it means there's a chance this
+			// identifier is actually the name of something else (like a declaration) and that the
+			// type should be implicit. Check if there's another identifier right after us
+			// before deciding which one we're looking at.
             int index = 1;
             if (scanDimensionList(index) && peek(index).kind == TokenKind::Identifier)
                 return alloc.emplace<NamedTypeSyntax>(parseName());
-            return alloc.emplace<ImplicitTypeSyntax>(Token(), nullptr);
+            return nullptr;
         }
     }
 
@@ -1376,6 +1380,9 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
 
     if (!allowImplicit)
         addError(DiagCode::ImplicitNotAllowed, peek().location());
+
+	if (!signing && dimensions.empty())
+		return nullptr;
 
     return alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
 }

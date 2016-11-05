@@ -2,6 +2,7 @@
 
 #include "AllSyntax.h"
 #include "ArrayRef.h"
+#include "BoundNodes.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 
@@ -23,24 +24,28 @@ public:
 
 class ParameterSymbol : public Symbol {
 public:
+	const DataTypeSyntax* typeSyntax;
+	const ExpressionSyntax* initializer;
     bool isLocal;
 
-    ParameterSymbol(StringRef name, SourceLocation location, bool isLocal) :
-        Symbol(name, location), isLocal(isLocal) {}
+    ParameterSymbol(StringRef name, SourceLocation location, const DataTypeSyntax* typeSyntax, const ExpressionSyntax* initializer, bool isLocal) :
+        Symbol(name, location), typeSyntax(typeSyntax), initializer(initializer), isLocal(isLocal)
+	{
+	}
 };
 
 /// Symbol for design elements, which includes things like modules, interfaces, programs, etc.
+/// Note that this basically just ties together parameters, since we can't reliably know the types
+/// of anything else, including ports, until we know each instance's parameter values.
 class DesignElementSymbol : public Symbol {
 public:
     const ModuleDeclarationSyntax* syntax;
     ArrayRef<ParameterSymbol*> parameters;
-    bool isReferenced;
+    bool isReferenced = false;
     
-    DesignElementSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<ParameterSymbol*> parameters) :
-        Symbol(syntax->header->name.valueText(), syntax->header->name.location()),
-        syntax(syntax), parameters(parameters)
-    {
-    }
+	DesignElementSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<ParameterSymbol*> parameters);
+
+	bool canImplicitlyInstantiate() const;
 };
 
 class CompilationUnitSymbol : public Symbol {
@@ -50,6 +55,27 @@ public:
 
 	CompilationUnitSymbol(const CompilationUnitSyntax* syntax, ArrayRef<DesignElementSymbol*> elements) :
 		syntax(syntax), elements(elements)
+	{
+	}
+};
+
+class ParameterInstance {
+public:
+	const ParameterSymbol* symbol;
+	ConstantValue value;
+
+	ParameterInstance(const ParameterSymbol* symbol, ConstantValue value) :
+		symbol(symbol), value(value)
+	{
+	}
+};
+
+class InstanceSymbol : public Symbol {
+public:
+	ArrayRef<ParameterInstance> parameters;
+
+	InstanceSymbol(ArrayRef<ParameterInstance> parameters) :
+		parameters(parameters)
 	{
 	}
 };

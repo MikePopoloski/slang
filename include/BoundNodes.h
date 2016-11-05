@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Symbol.h"
 #include "SVInt.h"
 
 namespace slang {
+
+class TypeSymbol;
 
 using ConstantValue = variant<SVInt, double>;
 
@@ -59,18 +60,6 @@ public:
 
     BoundBinaryExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, BoundExpression* left, BoundExpression* right, bool bad) :
         BoundExpression(BoundNodeKind::BinaryExpression, syntax, type, bad), left(left), right(right)
-    {
-    }
-};
-
-class BoundParameterDeclaration : public BoundNode {
-public:
-    const ParameterDeclarationSyntax* syntax;
-    BoundExpression* initializer;
-    ConstantValue value;
-
-    BoundParameterDeclaration(const ParameterDeclarationSyntax* syntax, BoundExpression* initializer) :
-        BoundNode(BoundNodeKind::Unknown), syntax(syntax), initializer(initializer), value(initializer->constantValue)
     {
     }
 };

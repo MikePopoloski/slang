@@ -225,5 +225,8 @@
     <ClCompile Include="..\..\external\ppk_assert\ppk_assert.cpp">
       <Filter>util\3ps</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\Symbol.cpp">
+      <Filter>analysis</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

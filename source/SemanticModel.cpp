@@ -96,12 +96,36 @@ bool SemanticModel::bindParameters(const ParameterPortDeclarationSyntax* syntax,
 
             // ensure uniqueness of parameter names
             if (!stringSet.insert(name).second)
+				// TODO: note previous location
                 diagnostics.add(DiagCode::DuplicateParameter, declarator->name.location()) << name;
-            else
-                buffer.append(alloc.emplace<ParameterSymbol>(name, declarator->name.location(), local));
+			else {
+				ExpressionSyntax* init = nullptr;
+				if (declarator->initializer)
+					init = declarator->initializer->expr;
+				buffer.append(alloc.emplace<ParameterSymbol>(name, declarator->name.location(), p->type, init, local));
+			}
         }
     }
     return local;
+}
+
+InstanceSymbol* SemanticModel::bindImplicitInstance(DesignElementSymbol* element) {
+	ASSERT(element);
+	
+	// First of all, evaluate all parameters now.
+	Buffer<ParameterInstance> parameters; // TODO: cache this buffer?
+	for (const ParameterSymbol* param : element->parameters) {
+		// If no type is given, infer the type from the initializer
+		if (!param->typeSyntax) {
+			BoundExpression* expr = bindSelfDeterminedExpression(param->initializer);
+			parameters.emplace(param, expr->constantValue);
+		}
+		else {
+			// TODO
+		}
+	}
+
+	return alloc.emplace<InstanceSymbol>(parameters.copy(alloc));
 }
 
 BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
