@@ -66,7 +66,7 @@ DesignElementSymbol* SemanticModel::bindDesignElement(const ModuleDeclarationSyn
             bindParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, parameters, false, overrideLocal);
     }
 
-    return alloc.emplace<DesignElementSymbol>(syntax, header->name.valueText(), parameters->copy(alloc));
+    return alloc.emplace<DesignElementSymbol>(syntax, parameters->copy(alloc));
 }
 
 bool SemanticModel::bindParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
@@ -98,7 +98,7 @@ bool SemanticModel::bindParameters(const ParameterPortDeclarationSyntax* syntax,
             if (!stringSet.insert(name).second)
                 diagnostics.add(DiagCode::DuplicateParameter, declarator->name.location()) << name;
             else
-                buffer.append(alloc.emplace<ParameterSymbol>(name, local));
+                buffer.append(alloc.emplace<ParameterSymbol>(name, declarator->name.location(), local));
         }
     }
     return local;

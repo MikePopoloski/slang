@@ -1,32 +1,44 @@
 #pragma once
 
+#include "AllSyntax.h"
 #include "ArrayRef.h"
-#include "BoundNodes.h"
+#include "SourceLocation.h"
+#include "StringRef.h"
 
 namespace slang {
 
 class IntegralTypeSymbol;
 
 class Symbol {
+public:
+    StringRef name;
+    SourceLocation location;
+
+    Symbol() {}
+    Symbol(StringRef name, SourceLocation location) :
+        name(name), location(location)
+    {
+    }
 };
 
 class ParameterSymbol : public Symbol {
 public:
-    StringRef name;
     bool isLocal;
 
-    ParameterSymbol(StringRef name, bool isLocal) : name(name), isLocal(isLocal) {}
+    ParameterSymbol(StringRef name, SourceLocation location, bool isLocal) :
+        Symbol(name, location), isLocal(isLocal) {}
 };
 
 /// Symbol for design elements, which includes things like modules, interfaces, programs, etc.
 class DesignElementSymbol : public Symbol {
 public:
     const ModuleDeclarationSyntax* syntax;
-    StringRef name;
     ArrayRef<ParameterSymbol*> parameters;
+    bool isReferenced;
     
-    DesignElementSymbol(const ModuleDeclarationSyntax* syntax, StringRef name, ArrayRef<ParameterSymbol*> parameters) :
-        syntax(syntax), name(name), parameters(parameters)
+    DesignElementSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<ParameterSymbol*> parameters) :
+        Symbol(syntax->header->name.valueText(), syntax->header->name.location()),
+        syntax(syntax), parameters(parameters)
     {
     }
 };

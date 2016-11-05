@@ -1,7 +1,14 @@
+//------------------------------------------------------------------------------
+// DeclarationTable.h
+// Module declaration tracking.
+//
+// File is under the MIT license:
+//------------------------------------------------------------------------------
 #pragma once
 
-#include <deque>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "ArrayRef.h"
 #include "Buffer.h"
@@ -11,45 +18,33 @@
 
 namespace slang {
 
+class Diagnostics;
+class CompilationUnitSymbol;
+class DesignElementSymbol;
 struct MemberSyntax;
 struct ModuleDeclarationSyntax;
 struct HierarchyInstantiationSyntax;
 
-/// A DeclarationTable keeps a view of all modules in design scope.
-/// It is used for two purposes:
+/// The DeclarationTable merges a view of all modules (and interfaces and programs) in design scope.
+/// It is used for three purposes:
 ///   1. Figure out which modules aren't instantiated and are therefore "top-level".
-///   2. Allow instantiation of modules from other files once we start binding the hierarchy.
+///   2. Allow instantiation of design elements from other files once we start binding the hierarchy.
+///   3. Check if we have any defparam statements in the design.
 class DeclarationTable {
 public:
-    void addSyntaxTree(const SyntaxTree* tree);
+    DeclarationTable(ArrayRef<CompilationUnitSymbol*> compilationUnits, Diagnostics& diagnostics);
 
-    ArrayRef<ModuleDeclarationSyntax*> getTopLevelModules(Diagnostics& diagnostics);
+    DesignElementSymbol* findSymbol(StringRef name) const;
+    bool anyDefParams() const { return hasDefParams; }
 
 private:
-    // Track each compilation unit's declarations separately and then merge them
-    // once we have them all. This allows parallelizing the search process.
-    struct UnitDecls {
-        Buffer<ModuleDeclarationSyntax*> rootNodes;
-        Buffer<HierarchyInstantiationSyntax*> instantiations;
-        bool hasDefParams;
-    };
+    using NameSet = std::unordered_set<StringRef>;
+    void visit(const ModuleDeclarationSyntax* module, std::vector<NameSet>& scopeStack);
+    void visit(const MemberSyntax* node, std::vector<NameSet>& scopeStack);
+    static bool containsName(const std::vector<NameSet>& scopeStack, StringRef name);
 
-    struct DeclAndFlag {
-        ModuleDeclarationSyntax* decl;
-        bool instantiated = false;
-
-        DeclAndFlag(ModuleDeclarationSyntax* decl) : decl(decl) {}
-    };
-
-    using NameList = std::deque<StringRef>;
-    static void visit(ModuleDeclarationSyntax* module, UnitDecls& unit, std::deque<NameList>& scopeStack);
-    static void visit(MemberSyntax* node, UnitDecls& unit, std::deque<NameList>& scopeStack);
-    static bool containsName(const std::deque<NameList>& scopeStack, StringRef name);
-
-    Buffer<UnitDecls> units;
-    std::unordered_map<StringRef, DeclAndFlag> nameLookup;
-    Buffer<ModuleDeclarationSyntax*> topLevelModules;
-    bool dirty = false;
+    std::unordered_map<StringRef, DesignElementSymbol*> nameLookup;
+    bool hasDefParams = false;
 };
 
 }
