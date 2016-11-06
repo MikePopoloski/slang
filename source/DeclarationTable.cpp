@@ -7,40 +7,83 @@
 #include "DeclarationTable.h"
 
 #include "AllSyntax.h"
-#include "Symbol.h"
 
 namespace slang {
 
-DeclarationTable::DeclarationTable(ArrayRef<CompilationUnitSymbol*> compilationUnits, Diagnostics& diagnostics) {
-    // merge all top level modules
-    for (CompilationUnitSymbol* unit : compilationUnits) {
-        for (DesignElementSymbol* element : unit->elements) {
-            auto pair = nameLookup.try_emplace(element->name, element);
-            if (!pair.second) {
-                // report the duplicate name, along with the original location
-                diagnostics.add(DiagCode::DuplicateModule, element->location) << element->name;
-                diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second->location);
-            }
-        }
-    }
-
-    // find which modules are instantiated
-    for (CompilationUnitSymbol* unit : compilationUnits) {
-        for (DesignElementSymbol* element : unit->elements) {
-            std::vector<NameSet> scopeStack;
-            visit(element->syntax, scopeStack);
-        }
-    }
+DeclarationTable::DeclarationTable(Diagnostics& diagnostics) :
+	diagnostics(diagnostics)
+{
 }
 
-DesignElementSymbol* DeclarationTable::findSymbol(StringRef name) const {
-    auto it = nameLookup.find(name);
-    if (it == nameLookup.end())
-        return nullptr;
-    return it->second;
+ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() {
+	if (!dirty)
+		return ArrayRef<const ModuleDeclarationSyntax*>(topLevel.begin(), topLevel.end());
+
+	topLevel.clear();
+	nameLookup.clear();
+	dirty = false;
+
+	// merge all module declarations
+	for (auto& unit : units) {
+		for (const ModuleDeclarationSyntax* node : unit.rootNodes) {
+			auto name = node->header->name;
+			auto pair = nameLookup.try_emplace(name.valueText(), node);
+			if (!pair.second) {
+				// report the duplicate name, along with the original location
+				diagnostics.add(DiagCode::DuplicateModule, name.location()) << name.valueText();
+				diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second.decl->header->name.location());
+			}
+		}
+	}
+
+	// figure out which ones are instantiated and error on any that we can't find
+	for (auto& unit : units) {
+		for (const HierarchyInstantiationSyntax* instantiation : unit.instantiations) {
+			auto name = instantiation->type;
+			auto it = nameLookup.find(name.valueText());
+			if (it == nameLookup.end())
+				diagnostics.add(DiagCode::UnknownModule, name.location()) << name.valueText();
+			else
+				it->second.instantiated = true;
+		}
+	}
+
+	// finally consolidate the list of top level modules
+	for (auto& pair : nameLookup) {
+		if (!pair.second.instantiated)
+			topLevel.append(pair.second.decl);
+	}
+
+	return ArrayRef<const ModuleDeclarationSyntax*>(topLevel.begin(), topLevel.end());
 }
 
-void DeclarationTable::visit(const ModuleDeclarationSyntax* module, std::vector<NameSet>& scopeStack) {
+void DeclarationTable::addSyntaxTree(const SyntaxTree* tree) {
+	// find all root modules in this compilation unit
+	UnitDecls unit;
+	for (const MemberSyntax* member : tree->root()->members) {
+		switch (member->kind) {
+			case SyntaxKind::ModuleDeclaration:
+			case SyntaxKind::InterfaceDeclaration:
+			case SyntaxKind::ProgramDeclaration: {
+				// ignore empty names
+				auto decl = member->as<ModuleDeclarationSyntax>();
+				auto name = decl->header->name;
+				if (name.valueText())
+					unit.rootNodes.append(decl);
+
+				std::vector<NameSet> scopeStack;
+				visit(decl, unit, scopeStack);
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	units.emplace(std::move(unit));
+	dirty = true;
+}
+
+void DeclarationTable::visit(const ModuleDeclarationSyntax* module, UnitDecls& unit, std::vector<NameSet>& scopeStack) {
     // first find all local module declarations (most modules probably don't have any nested children)
     NameSet* localDefs = nullptr;
     for (auto& member : module->members) {
@@ -67,13 +110,13 @@ void DeclarationTable::visit(const ModuleDeclarationSyntax* module, std::vector<
 
     // now traverse all children
     for (auto& member : module->members)
-        visit(member, scopeStack);
+        visit(member, unit, scopeStack);
     
     if (localDefs)
         scopeStack.pop_back();
 }
 
-void DeclarationTable::visit(const MemberSyntax* node, std::vector<NameSet>& scopeStack) {
+void DeclarationTable::visit(const MemberSyntax* node, UnitDecls& unit, std::vector<NameSet>& scopeStack) {
     if (!node)
         return;
 
@@ -83,37 +126,34 @@ void DeclarationTable::visit(const MemberSyntax* node, std::vector<NameSet>& sco
             // don't worry about local instantiations right now, they can't be root.
             auto his = node->as<HierarchyInstantiationSyntax>();
             auto name = his->type.valueText();
-            if (name && !containsName(scopeStack, name)) {
-                auto it = nameLookup.find(name);
-                if (it != nameLookup.end())
-                    it->second->isReferenced = true;
-            }
+			if (name && !containsName(scopeStack, name))
+				unit.instantiations.append(his);
             break;
         }
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration:
-            visit(node->as<ModuleDeclarationSyntax>(), scopeStack);
+            visit(node->as<ModuleDeclarationSyntax>(), unit, scopeStack);
             break;
         case SyntaxKind::GenerateRegion:
             for (auto& child : node->as<GenerateRegionSyntax>()->members)
-                visit(child, scopeStack);
+                visit(child, unit, scopeStack);
             break;
         case SyntaxKind::GenerateBlock:
             for (auto& child : node->as<GenerateBlockSyntax>()->members)
-                visit(child, scopeStack);
+                visit(child, unit, scopeStack);
             break;
         case SyntaxKind::LoopGenerate:
-            visit(node->as<LoopGenerateSyntax>()->block, scopeStack);
+            visit(node->as<LoopGenerateSyntax>()->block, unit, scopeStack);
             break;
         case SyntaxKind::CaseGenerate:
             for (auto& item : node->as<CaseGenerateSyntax>()->items) {
                 switch (item->kind) {
                     case SyntaxKind::DefaultCaseItem:
-                        visit(item->as<DefaultCaseItemSyntax>()->clause->as<MemberSyntax>(), scopeStack);
+                        visit(item->as<DefaultCaseItemSyntax>()->clause->as<MemberSyntax>(), unit, scopeStack);
                         break;
                     case SyntaxKind::StandardCaseItem:
-                        visit(item->as<StandardCaseItemSyntax>()->clause->as<MemberSyntax>(), scopeStack);
+                        visit(item->as<StandardCaseItemSyntax>()->clause->as<MemberSyntax>(), unit, scopeStack);
                         break;
                     default:
                         break;
@@ -122,14 +162,14 @@ void DeclarationTable::visit(const MemberSyntax* node, std::vector<NameSet>& sco
             break;
         case SyntaxKind::IfGenerate: {
             auto ifGen = node->as<IfGenerateSyntax>();
-            visit(ifGen->block, scopeStack);
+            visit(ifGen->block, unit, scopeStack);
             if (ifGen->elseClause)
-                visit(ifGen->elseClause->clause->as<MemberSyntax>(), scopeStack);
+                visit(ifGen->elseClause->clause->as<MemberSyntax>(), unit, scopeStack);
             break;
         }
         case SyntaxKind::DefParam:
             // no going back! muahahaha
-            hasDefParams = true;
+            unit.hasDefParams = true;
             break;
         default:
             break;

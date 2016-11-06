@@ -560,8 +560,8 @@ public:
 
     uint32_t count() const { return elements.count(); }
 
-    T* const* begin() const { return elements.begin(); }
-    T* const* end() const { return elements.end(); }
+    const T* const* begin() const { return elements.begin(); }
+    const T* const* end() const { return elements.end(); }
 
     const T* operator[](uint32_t index) const { return elements[index]; }
     T* operator[](uint32_t index) { return elements[index]; }
