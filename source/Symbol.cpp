@@ -2,9 +2,13 @@
 
 namespace slang {
 
-DesignElementSymbol::DesignElementSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<ParameterSymbol*> parameters) :
-	Symbol(SymbolKind::Unknown, syntax->header->name.valueText(), syntax->header->name.location()),
-	syntax(syntax), parameters(parameters)
+ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location,
+								 const ParameterDeclarationSyntax* syntax,
+								 const ExpressionSyntax* initializer, bool isLocal) :
+	Symbol(SymbolKind::Parameter, name, location),
+	syntax(syntax),
+	initializer(initializer),
+	isLocal(isLocal)
 {
 }
 

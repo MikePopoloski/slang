@@ -101,8 +101,9 @@ enum class DiagCode : uint8_t {
     // declarations
     DuplicateModule,
     NotePreviousDefinition,
-    DuplicateParameter,
     UnknownModule,
+    DuplicateParameter,
+	LocalParamNoInitializer,
 
 	MaxValue
 };

@@ -11,18 +11,15 @@ Diagnostics diagnostics;
 
 SyntaxTree parse(StringRef text) { return SyntaxTree::fromText(sourceManager, text); }
 
-const ParameterInstanceSymbol& testParameter(std::string text, int index = 0) {
+const ParameterSymbol& testParameter(std::string text, int index = 0) {
     auto tree = parse("module Top; " + text + " endmodule");
 
 	SemanticModel sem(alloc, diagnostics);
-	auto element = sem.bindDesignElement(tree.root()->members[0]->as<ModuleDeclarationSyntax>());
-	REQUIRE(element);
-
-	auto instance = sem.bindImplicitInstance(element);
+	auto instance = sem.makeImplicitInstance(tree.root()->members[0]->as<ModuleDeclarationSyntax>());
 	REQUIRE(instance);
-	REQUIRE(instance->parameters.count() > (uint32_t)index);
+	REQUIRE(instance->bodyParameters.count() > (uint32_t)index);
 
-	return *instance->parameters[index];
+	return *instance->bodyParameters[index];
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {

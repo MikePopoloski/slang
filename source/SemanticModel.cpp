@@ -22,121 +22,102 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics) :
     specialTypes[(int)SpecialType::Error] = alloc.emplace<ErrorTypeSymbol>();
 }
 
-CompilationUnitSymbol* SemanticModel::bindCompilationUnit(const CompilationUnitSyntax* syntax) {
-	auto buffer = symbolPool.getAs<DesignElementSymbol*>();
-	for (const MemberSyntax* member : syntax->members) {
-		switch (member->kind) {
-			case SyntaxKind::ModuleDeclaration:
-			case SyntaxKind::InterfaceDeclaration:
-			case SyntaxKind::ProgramDeclaration: {
-				// ignore empty names
-				auto decl = member->as<ModuleDeclarationSyntax>();
-				auto name = decl->header->name;
-				if (!name.valueText())
-					continue;
+InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
+	ASSERT(syntax);
 
-				buffer->append(bindDesignElement(decl));
-				break;
-			}
-			default:
-				break;
-		}
+	// TODO: check that this can actually be implicit (i.e. no parameters without initializers)
+	
+	// Discover all of the element's parameters. If we have a parameter port list, the only
+	// publicly visible parameters are the ones in that list. Otherwise, parameters declared
+	// in the module body are publicly visible.
+	const ModuleHeaderSyntax* header = syntax->header;
+	auto portParameters = symbolPool.getAs<ParameterSymbol*>();
+	stringSet.clear();
+
+	bool overrideLocal = false;
+	if (header->parameters) {
+		bool lastLocal = false;
+		for (const ParameterPortDeclarationSyntax* decl : header->parameters->declarations)
+			lastLocal = makeParameters(decl, portParameters, lastLocal, false);
+		overrideLocal = true;
 	}
-	return alloc.emplace<CompilationUnitSymbol>(syntax, buffer->copy(alloc));
+
+	// also find direct body parameters
+	auto bodyParameters = symbolPool.getAs<ParameterSymbol*>();
+	for (const MemberSyntax* member : syntax->members) {
+		if (member->kind == SyntaxKind::ParameterDeclarationStatement)
+			makeParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, bodyParameters, false, overrideLocal);
+	}
+
+	// Now evaluate initializers and finalize the type of each parameter.
+	// Do ports separately from body parameters.
+	auto scope = pushScope(portParameters.get());
+	for (ParameterSymbol* param : portParameters.get())
+		evaluateParameter(param);
+
+	scope.reset();
+	scope = pushScope(bodyParameters.get());
+	for (ParameterSymbol* param : bodyParameters.get())
+		evaluateParameter(param);
+
+	return alloc.emplace<InstanceSymbol>(portParameters->copy(alloc), bodyParameters->copy(alloc));
 }
 
-DesignElementSymbol* SemanticModel::bindDesignElement(const ModuleDeclarationSyntax* syntax) {
-    // Discover all of the element's parameters. If we have a parameter port list, the only
-    // publicly visible parameters are the ones in that list. Otherwise, parameters declared
-    // in the module body are publicly visible.
-    const ModuleHeaderSyntax* header = syntax->header;
-    auto parameters = symbolPool.getAs<ParameterSymbol*>();
-    stringSet.clear();
-
-    bool overrideLocal = false;
-    if (header->parameters) {
-        bool lastLocal = false;
-        for (const ParameterPortDeclarationSyntax* decl : header->parameters->declarations)
-            lastLocal = bindParameters(decl, parameters, lastLocal, false);
-        overrideLocal = true;
-    }
-
-    // also find direct body parameters
-    for (const MemberSyntax* member : syntax->members) {
-        if (member->kind == SyntaxKind::ParameterDeclarationStatement)
-            bindParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, parameters, false, overrideLocal);
-    }
-
-    return alloc.emplace<DesignElementSymbol>(syntax, parameters->copy(alloc));
-}
-
-bool SemanticModel::bindParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
-                                   bool lastLocal, bool overrideLocal)
+bool SemanticModel::makeParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
+								   bool lastLocal, bool overrideLocal)
 {
-    bool local = false;
-    if (syntax->kind == SyntaxKind::TypeParameterDeclaration) {
-        // TODO: unsupported
-    }
-    else {
-        // It's legal to leave off the parameter keyword in the parameter port list.
-        // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
-        // This isn't allowed in a module body, but the parser will take care of the error for us.
-        auto p = syntax->as<ParameterDeclarationSyntax>();
-        if (!p->keyword)
-            local = lastLocal;
-        else {
-            // In the body of a module that has a parameter port list in its header, parameters are
-            // actually just localparams. overrideLocal will be true in this case.
-            local = p->keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
-        }
+	bool local = false;
+	if (syntax->kind == SyntaxKind::TypeParameterDeclaration) {
+		// TODO: unsupported
+	}
+	else {
+		// It's legal to leave off the parameter keyword in the parameter port list.
+		// If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
+		// This isn't allowed in a module body, but the parser will take care of the error for us.
+		auto p = syntax->as<ParameterDeclarationSyntax>();
+		if (!p->keyword)
+			local = lastLocal;
+		else {
+			// In the body of a module that has a parameter port list in its header, parameters are
+			// actually just localparams. overrideLocal will be true in this case.
+			local = p->keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
+		}
 
-        for (const VariableDeclaratorSyntax* declarator : p->declarators) {
-            auto name = declarator->name.valueText();
-            if (!name)
-                continue;
+		for (const VariableDeclaratorSyntax* declarator : p->declarators) {
+			auto name = declarator->name.valueText();
+			if (!name)
+				continue;
 
-            // ensure uniqueness of parameter names
-            if (!stringSet.insert(name).second)
+			// ensure uniqueness of parameter names
+			if (!stringSet.insert(name).second)
 				// TODO: note previous location
-                diagnostics.add(DiagCode::DuplicateParameter, declarator->name.location()) << name;
+				diagnostics.add(DiagCode::DuplicateParameter, declarator->name.location()) << name;
 			else {
 				ExpressionSyntax* init = nullptr;
 				if (declarator->initializer)
 					init = declarator->initializer->expr;
-				buffer.append(alloc.emplace<ParameterSymbol>(name, declarator->name.location(), p->type, init, local));
+				else if (local) {
+					// localparams without initializers are not allowed
+					diagnostics.add(DiagCode::LocalParamNoInitializer, declarator->name.location());
+				}
+				buffer.append(alloc.emplace<ParameterSymbol>(name, declarator->name.location(), p, init, local));
 			}
-        }
-    }
-    return local;
-}
-
-InstanceSymbol* SemanticModel::bindImplicitInstance(DesignElementSymbol* element) {
-	ASSERT(element);
-	
-	// First of all, evaluate all parameters now. Go through and
-	// create all of the symbols, then come back around and evaluate their
-	// initializers and figure out their final types. We do this so that
-	// parameters can depend on previously declared parameters.
-	auto parameters = symbolPool.getAs<ParameterInstanceSymbol*>();
-	for (const ParameterSymbol* param : element->parameters)
-		parameters->append(alloc.emplace<ParameterInstanceSymbol>(param));
-
-	auto scope = pushScope(parameters.get());
-	auto it = element->parameters.begin();
-	for (ParameterInstanceSymbol* param : parameters.get()) {
-		// If no type is given, infer the type from the initializer
-		const ParameterSymbol* decl = *it++;
-		if (!decl->typeSyntax) {
-			BoundExpression* expr = bindSelfDeterminedExpression(decl->initializer);
-			param->type = expr->type;
-			param->value = expr->constantValue;
-		}
-		else {
-			// TODO
 		}
 	}
+	return local;
+}
 
-	return alloc.emplace<InstanceSymbol>(parameters->copy(alloc));
+void SemanticModel::evaluateParameter(ParameterSymbol* parameter) {
+	// If no type is given, infer the type from the initializer
+	DataTypeSyntax* typeSyntax = parameter->syntax->type;
+	if (!typeSyntax) {
+		BoundExpression* expr = bindSelfDeterminedExpression(parameter->initializer);
+		parameter->type = expr->type;
+		parameter->value = expr->constantValue;
+	}
+	else {
+		// TODO
+	}
 }
 
 BoundExpression* SemanticModel::bindExpression(const ExpressionSyntax* syntax) {
@@ -231,7 +212,7 @@ BoundExpression* SemanticModel::bindSimpleName(const IdentifierNameSyntax* synta
 	const Symbol* symbol = lookupSymbol(identifier);
 	ASSERT(symbol && symbol->kind == SymbolKind::Parameter);
 
-	return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterInstanceSymbol>(), false);
+	return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterSymbol>(), false);
 }
 
 BoundExpression* SemanticModel::bindLiteral(const IntegerVectorExpressionSyntax* syntax) {

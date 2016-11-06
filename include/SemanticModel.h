@@ -49,9 +49,7 @@ class SemanticModel {
 public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics);
 
-	CompilationUnitSymbol* bindCompilationUnit(const CompilationUnitSyntax* syntax);
-    DesignElementSymbol* bindDesignElement(const ModuleDeclarationSyntax* syntax);
-	InstanceSymbol* bindImplicitInstance(DesignElementSymbol* element);
+	InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
 
 	/// Expression binding methods.
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
@@ -72,7 +70,8 @@ public:
     const TypeSymbol* getIntegralType(int width, bool isSigned);
 
 private:
-    bool bindParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer, bool lastLocal, bool overrideLocal);
+	bool makeParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer, bool lastLocal, bool overrideLocal);
+	void evaluateParameter(ParameterSymbol* parameter);
 
 	// propagates the type of the expression back down to its operands
 	// and folds constants on the way back up

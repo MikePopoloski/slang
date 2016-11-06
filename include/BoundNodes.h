@@ -55,9 +55,9 @@ public:
 
 class BoundParameter : public BoundExpression {
 public:
-	const ParameterInstanceSymbol* symbol;
+	const ParameterSymbol* symbol;
 
-	BoundParameter(const ExpressionSyntax* syntax, const ParameterInstanceSymbol* symbol, bool bad) :
+	BoundParameter(const ExpressionSyntax* syntax, const ParameterSymbol* symbol, bool bad) :
 		BoundExpression(BoundNodeKind::Parameter, syntax, symbol->type, bad), symbol(symbol)
 	{
 	}

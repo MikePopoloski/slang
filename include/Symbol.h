@@ -87,58 +87,24 @@ class ErrorTypeSymbol : public TypeSymbol {
 
 class ParameterSymbol : public Symbol {
 public:
-	const DataTypeSyntax* typeSyntax;
+	const ParameterDeclarationSyntax* syntax;
 	const ExpressionSyntax* initializer;
-    bool isLocal;
-
-    ParameterSymbol(StringRef name, SourceLocation location, const DataTypeSyntax* typeSyntax, const ExpressionSyntax* initializer, bool isLocal) :
-        Symbol(SymbolKind::Unknown, name, location), typeSyntax(typeSyntax), initializer(initializer), isLocal(isLocal)
-	{
-	}
-};
-
-/// Symbol for design elements, which includes things like modules, interfaces, programs, etc.
-/// Note that this basically just ties together parameters, since we can't reliably know the types
-/// of anything else, including ports, until we know each instance's parameter values.
-class DesignElementSymbol : public Symbol {
-public:
-    const ModuleDeclarationSyntax* syntax;
-    ArrayRef<ParameterSymbol*> parameters;
-    bool isReferenced = false;
-    
-	DesignElementSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<ParameterSymbol*> parameters);
-
-	bool canImplicitlyInstantiate() const;
-};
-
-class CompilationUnitSymbol : public Symbol {
-public:
-	const CompilationUnitSyntax* syntax;
-	ArrayRef<DesignElementSymbol*> elements;
-
-	CompilationUnitSymbol(const CompilationUnitSyntax* syntax, ArrayRef<DesignElementSymbol*> elements) :
-		syntax(syntax), elements(elements)
-	{
-	}
-};
-
-class ParameterInstanceSymbol : public Symbol {
-public:
 	const TypeSymbol* type = nullptr;
 	ConstantValue value;
+	bool isLocal;
 
-	ParameterInstanceSymbol(const ParameterSymbol* symbol) :
-		Symbol(SymbolKind::Parameter, symbol->name, symbol->location)
-	{
-	}
+	ParameterSymbol(StringRef name, SourceLocation location,
+		const ParameterDeclarationSyntax* syntax,
+		const ExpressionSyntax* initializer, bool isLocal);
 };
 
 class InstanceSymbol : public Symbol {
 public:
-	ArrayRef<ParameterInstanceSymbol*> parameters;
+	ArrayRef<ParameterSymbol*> portParameters;
+	ArrayRef<ParameterSymbol*> bodyParameters;
 
-	InstanceSymbol(ArrayRef<ParameterInstanceSymbol*> parameters) :
-		parameters(parameters)
+	InstanceSymbol(ArrayRef<ParameterSymbol*> portParameters, ArrayRef<ParameterSymbol*> bodyParameters) :
+		portParameters(portParameters), bodyParameters(bodyParameters)
 	{
 	}
 };
