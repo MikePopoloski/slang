@@ -1468,19 +1468,10 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
     }
 
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
+		Token semi;
         auto keyword = consume();
-
-        Token semi;
-        ParameterPortDeclarationSyntax* parameter;
-
-        if (peek(TokenKind::TypeKeyword)) {
-            auto typeKeyword = consume();
-            parameter = alloc.emplace<TypeParameterDeclarationSyntax>(keyword, typeKeyword, parseVariableDeclarators(semi));
-        }
-        else {
-            auto type = parseDataType(/* allowImplicit */ true);
-            parameter = alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseVariableDeclarators(semi));
-        }
+		auto type = parseDataType(/* allowImplicit */ true);
+        auto parameter = alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseVariableDeclarators(semi));
 
         return alloc.emplace<ParameterDeclarationStatementSyntax>(attributes, parameter, semi);
     }
@@ -1622,22 +1613,11 @@ PackageImportItemSyntax* Parser::parsePackageImportItem() {
     return alloc.emplace<PackageImportItemSyntax>(package, doubleColon, item);
 }
 
-ParameterPortDeclarationSyntax* Parser::parseParameterPort() {
+ParameterDeclarationSyntax* Parser::parseParameterPort() {
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
         auto keyword = consume();
-
-        if (peek(TokenKind::TypeKeyword)) {
-            auto typeKeyword = consume();
-            return alloc.emplace<TypeParameterDeclarationSyntax>(keyword, typeKeyword, parseOneVariableDeclarator());
-        }
-
         auto type = parseDataType(/* allowImplicit */ true);
         return alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseOneVariableDeclarator());
-    }
-
-    if (peek(TokenKind::TypeKeyword)) {
-        auto typeKeyword = consume();
-        return alloc.emplace<TypeParameterDeclarationSyntax>(Token(), typeKeyword, parseOneVariableDeclarator());
     }
 
     // this is a normal parameter without the actual parameter keyword (stupid implicit nonsense)

@@ -463,21 +463,13 @@ token keyword
 separated_list<PackageImportItemSyntax> items
 token semi
 
-ParameterPortDeclarationSyntax final=false
-empty
-
-ParameterDeclarationSyntax base=ParameterPortDeclarationSyntax kind=ParameterDeclaration
+ParameterDeclarationSyntax kind=ParameterDeclaration
 token keyword
 DataTypeSyntax type
 separated_list<VariableDeclaratorSyntax> declarators
 
-TypeParameterDeclarationSyntax base=ParameterPortDeclarationSyntax kind=TypeParameterDeclaration
-token keyword
-token type
-separated_list<VariableDeclaratorSyntax> declarators
-
 ParameterDeclarationStatementSyntax base=MemberSyntax kind=ParameterDeclarationStatement
-ParameterPortDeclarationSyntax parameter
+ParameterDeclarationSyntax parameter
 token semi
 
 PortHeaderSyntax final=false
@@ -843,7 +835,7 @@ token closeParen
 ParameterPortListSyntax kind=ParameterPortList
 token hash
 token openParen
-separated_list<ParameterPortDeclarationSyntax> declarations
+separated_list<ParameterDeclarationSyntax> declarations
 token closeParen
 
 ModuleHeaderSyntax

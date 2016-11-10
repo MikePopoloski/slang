@@ -36,13 +36,13 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 	// in the module body are publicly visible.
 	const ModuleHeaderSyntax* header = syntax->header;
 	auto portParameters = symbolPool.getAs<ParameterSymbol*>();
-	stringSet.clear();
+	nameDupMap.clear();
 
 	bool overrideLocal = false;
 	if (header->parameters) {
 		bool lastLocal = false;
-		for (const ParameterPortDeclarationSyntax* decl : header->parameters->declarations)
-			lastLocal = makeParameters(decl, portParameters, lastLocal, false);
+		for (const ParameterDeclarationSyntax* decl : header->parameters->declarations)
+			lastLocal = makeParameters(decl, portParameters, lastLocal, false, false);
 		overrideLocal = true;
 	}
 
@@ -50,8 +50,8 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 	auto bodyParameters = symbolPool.getAs<ParameterSymbol*>();
 	for (const MemberSyntax* member : syntax->members) {
 		if (member->kind == SyntaxKind::ParameterDeclarationStatement)
-			// TODO: body parameters must alawys have initializers
-			makeParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, bodyParameters, false, overrideLocal);
+			makeParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, bodyParameters,
+						   false, overrideLocal, true);
 	}
 
 	// Now evaluate initializers and finalize the type of each parameter.
@@ -68,45 +68,43 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 	return alloc.emplace<InstanceSymbol>(portParameters->copy(alloc), bodyParameters->copy(alloc));
 }
 
-bool SemanticModel::makeParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
-								   bool lastLocal, bool overrideLocal)
+bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
+								   bool lastLocal, bool overrideLocal, bool bodyParam)
 {
+	// It's legal to leave off the parameter keyword in the parameter port list.
+	// If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
+	// This isn't allowed in a module body, but the parser will take care of the error for us.
 	bool local = false;
-	if (syntax->kind == SyntaxKind::TypeParameterDeclaration) {
-		// TODO: unsupported
-	}
+	auto p = syntax->as<ParameterDeclarationSyntax>();
+	if (!p->keyword)
+		local = lastLocal;
 	else {
-		// It's legal to leave off the parameter keyword in the parameter port list.
-		// If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
-		// This isn't allowed in a module body, but the parser will take care of the error for us.
-		auto p = syntax->as<ParameterDeclarationSyntax>();
-		if (!p->keyword)
-			local = lastLocal;
-		else {
-			// In the body of a module that has a parameter port list in its header, parameters are
-			// actually just localparams. overrideLocal will be true in this case.
-			local = p->keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
-		}
+		// In the body of a module that has a parameter port list in its header, parameters are
+		// actually just localparams. overrideLocal will be true in this case.
+		local = p->keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
+	}
 
-		for (const VariableDeclaratorSyntax* declarator : p->declarators) {
-			auto name = declarator->name.valueText();
-			if (!name)
-				continue;
+	for (const VariableDeclaratorSyntax* declarator : p->declarators) {
+		auto name = declarator->name.valueText();
+		if (!name)
+			continue;
 
+		auto location = declarator->name.location();
+		auto pair = nameDupMap.try_emplace(name, location);
+		if (!pair.second) {
 			// ensure uniqueness of parameter names
-			if (!stringSet.insert(name).second)
-				// TODO: note previous location
-				diagnostics.add(DiagCode::DuplicateParameter, declarator->name.location()) << name;
-			else {
-				ExpressionSyntax* init = nullptr;
-				if (declarator->initializer)
-					init = declarator->initializer->expr;
-				else if (local) {
-					// localparams without initializers are not allowed
-					diagnostics.add(DiagCode::LocalParamNoInitializer, declarator->name.location());
-				}
-				buffer.append(alloc.emplace<ParameterSymbol>(name, declarator->name.location(), p, init, local));
-			}
+			diagnostics.add(DiagCode::DuplicateParameter, location) << name;
+			diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second);
+		}
+		else {
+			ExpressionSyntax* init = nullptr;
+			if (declarator->initializer)
+				init = declarator->initializer->expr;
+			else if (local)
+				diagnostics.add(DiagCode::LocalParamNoInitializer, location);
+			else if (bodyParam)
+				diagnostics.add(DiagCode::BodyParamNoInitializer, location);
+			buffer.append(alloc.emplace<ParameterSymbol>(name, location, p, init, local));
 		}
 	}
 	return local;

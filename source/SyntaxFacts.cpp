@@ -400,6 +400,7 @@ bool isPossibleStatement(TokenKind kind) {
         case TokenKind::DoublePlus:
         case TokenKind::DoubleMinus:
         case TokenKind::VoidKeyword:
+		case TokenKind::TypeKeyword:
         case TokenKind::DisableKeyword:
         case TokenKind::MinusArrow:
         case TokenKind::OrMinusDoubleArrow:
@@ -458,7 +459,8 @@ SyntaxKind getKeywordType(TokenKind kind) {
         case TokenKind::StringKeyword: return SyntaxKind::StringType;
         case TokenKind::CHandleKeyword: return SyntaxKind::CHandleType;
         case TokenKind::EventKeyword: return SyntaxKind::EventType;
-        case TokenKind::VoidKeyword: return SyntaxKind::VoidType;
+		case TokenKind::VoidKeyword: return SyntaxKind::VoidType;
+		case TokenKind::TypeKeyword: return SyntaxKind::TypeType;
         default: return SyntaxKind::Unknown;
     }
 }

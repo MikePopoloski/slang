@@ -2660,21 +2660,13 @@ protected:
     }
 };
 
-struct ParameterPortDeclarationSyntax : public SyntaxNode {
-
-    ParameterPortDeclarationSyntax(SyntaxKind kind) :
-        SyntaxNode(kind)
-    {
-    }
-};
-
-struct ParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
+struct ParameterDeclarationSyntax : public SyntaxNode {
     Token keyword;
     DataTypeSyntax* type;
     SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
 
     ParameterDeclarationSyntax(Token keyword, DataTypeSyntax* type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
-        ParameterPortDeclarationSyntax(SyntaxKind::ParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
+        SyntaxNode(SyntaxKind::ParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
     {
         childCount += 3;
     }
@@ -2698,41 +2690,11 @@ protected:
     }
 };
 
-struct TypeParameterDeclarationSyntax : public ParameterPortDeclarationSyntax {
-    Token keyword;
-    Token type;
-    SeparatedSyntaxList<VariableDeclaratorSyntax> declarators;
-
-    TypeParameterDeclarationSyntax(Token keyword, Token type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
-        ParameterPortDeclarationSyntax(SyntaxKind::TypeParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return type;
-            case 2: return &declarators;
-            default: return nullptr;
-        }
-    }
-
-    void replaceChild(uint32_t index, Token token) override final {
-        switch (index) {
-            case 0: keyword = token; break;
-            case 1: type = token; break;
-            case 2: ASSERT(false); break;
-        }
-    }
-};
-
 struct ParameterDeclarationStatementSyntax : public MemberSyntax {
-    ParameterPortDeclarationSyntax* parameter;
+    ParameterDeclarationSyntax* parameter;
     Token semi;
 
-    ParameterDeclarationStatementSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ParameterPortDeclarationSyntax* parameter, Token semi) :
+    ParameterDeclarationStatementSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ParameterDeclarationSyntax* parameter, Token semi) :
         MemberSyntax(SyntaxKind::ParameterDeclarationStatement, attributes), parameter(parameter), semi(semi)
     {
         childCount += 2;
@@ -4845,10 +4807,10 @@ protected:
 struct ParameterPortListSyntax : public SyntaxNode {
     Token hash;
     Token openParen;
-    SeparatedSyntaxList<ParameterPortDeclarationSyntax> declarations;
+    SeparatedSyntaxList<ParameterDeclarationSyntax> declarations;
     Token closeParen;
 
-    ParameterPortListSyntax(Token hash, Token openParen, SeparatedSyntaxList<ParameterPortDeclarationSyntax> declarations, Token closeParen) :
+    ParameterPortListSyntax(Token hash, Token openParen, SeparatedSyntaxList<ParameterDeclarationSyntax> declarations, Token closeParen) :
         SyntaxNode(SyntaxKind::ParameterPortList), hash(hash), openParen(openParen), declarations(declarations), closeParen(closeParen)
     {
         childCount += 4;

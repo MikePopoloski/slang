@@ -105,7 +105,7 @@ private:
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportDeclarationSyntax* parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     PackageImportItemSyntax* parsePackageImportItem();
-    ParameterPortDeclarationSyntax* parseParameterPort();
+    ParameterDeclarationSyntax* parseParameterPort();
     MemberSyntax* parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     HierarchyInstantiationSyntax* parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes);

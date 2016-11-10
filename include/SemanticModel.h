@@ -8,7 +8,7 @@
 
 #include <functional>
 #include <memory>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 #include "AllSyntax.h"
@@ -63,7 +63,8 @@ public:
 	BumpAllocator& getAllocator() { return alloc; }
 
 private:
-	bool makeParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer, bool lastLocal, bool overrideLocal);
+	bool makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
+						bool lastLocal, bool overrideLocal, bool bodyParam);
 	void evaluateParameter(ParameterSymbol* parameter);
 
 	using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;
@@ -77,7 +78,7 @@ private:
     Diagnostics& diagnostics;
 	ExpressionBinder binder;
     BufferPool<Symbol*> symbolPool;
-    std::unordered_set<StringRef> stringSet;
+    std::unordered_map<StringRef, SourceLocation> nameDupMap;
 	std::vector<Scope> scopeStack;
 
     // preallocated type symbols for common types

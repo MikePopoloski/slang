@@ -104,6 +104,7 @@ enum class DiagCode : uint8_t {
     UnknownModule,
     DuplicateParameter,
 	LocalParamNoInitializer,
+	BodyParamNoInitializer,
 
 	MaxValue
 };
