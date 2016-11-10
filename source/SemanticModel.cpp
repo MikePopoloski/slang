@@ -71,7 +71,42 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
 	ASSERT(syntax);
 
+	switch (syntax->kind) {
+		case SyntaxKind::BitType:
+		case SyntaxKind::LogicType:
+		case SyntaxKind::RegType: {
+			// bit vector (possibly of just one element)
+			auto its = syntax->as<IntegerTypeSyntax>();
+			bool isSigned = its->signing.kind == TokenKind::SignedKeyword;
+
+			break;
+		}
+	}
+
 	return nullptr;
+}
+
+bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, Buffer<ConstantRange>& results) {
+	for (const VariableDimensionSyntax* dim : dimensions) {
+		const SelectorSyntax* selector;
+		if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
+			(selector = dim->specifier->as<RangeDimensionSpecifierSyntax>()->selector)->kind != SyntaxKind::SimpleRangeSelect) {
+
+			auto& diag = diagnostics.add(DiagCode::PackedDimRequiresConstantRange, dim->closeBracket.location());
+			// TODO: source range
+			return false;
+		}
+
+		const RangeSelectSyntax* range = selector->as<RangeSelectSyntax>();
+		auto msbExpr = binder.bindConstantExpression(range->left);
+		auto lsbExpr = binder.bindConstantExpression(range->right);
+		if (msbExpr->bad || lsbExpr->bad)
+			return false;
+
+		// TODO: ensure integer here
+		results.emplace(ConstantRange {get<SVInt>(msbExpr->constantValue), get<SVInt>(lsbExpr->constantValue)});
+	}
+	return true;
 }
 
 bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,

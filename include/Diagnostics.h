@@ -105,6 +105,7 @@ enum class DiagCode : uint8_t {
     DuplicateParameter,
 	LocalParamNoInitializer,
 	BodyParamNoInitializer,
+	PackedDimRequiresConstantRange,
 
 	MaxValue
 };

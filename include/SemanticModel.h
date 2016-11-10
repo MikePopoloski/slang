@@ -48,9 +48,15 @@ public:
 	BumpAllocator& getAllocator() { return alloc; }
 
 private:
+	struct ConstantRange {
+		SVInt msb;
+		SVInt lsb;
+	};
+
 	bool makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
 						bool lastLocal, bool overrideLocal, bool bodyParam);
 	void evaluateParameter(ParameterSymbol* parameter);
+	bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, Buffer<ConstantRange>& results);
 
 	using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;
 	ScopePtr pushScope();
@@ -63,6 +69,7 @@ private:
     Diagnostics& diagnostics;
 	ExpressionBinder binder;
     BufferPool<Symbol*> symbolPool;
+	BufferPool<ConstantRange> constantRangePool;
     std::unordered_map<StringRef, SourceLocation> nameDupMap;
 	std::vector<Scope> scopeStack;
 

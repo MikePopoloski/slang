@@ -18,6 +18,8 @@ class ExpressionBinder {
 public:
 	ExpressionBinder(SemanticModel& sem);
 
+	BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax);
+
 	BoundExpression* bindExpression(const ExpressionSyntax* syntax);
 	BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
 	BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
