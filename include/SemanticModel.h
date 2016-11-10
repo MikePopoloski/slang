@@ -27,23 +27,6 @@ namespace slang {
 class SyntaxTree;
 class Symbol;
 
-enum class SpecialType {
-    ShortInt,
-    Int,
-    LongInt,
-    Byte,
-    Bit,
-    Logic,
-    Reg,
-    Integer,
-    Time,
-    Real,
-    ShortReal,
-    RealTime,
-    // note: Error must always be the last value
-    Error
-};
-
 /// SemanticModel is responsible for binding symbols and performing
 /// type checking based on input parse trees.
 class SemanticModel {
@@ -52,10 +35,12 @@ public:
 
 	InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
 
+	const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax);
+
 	/// Utilities for getting various common type symbols.
-    const TypeSymbol* getErrorType() const { return getSpecialType(SpecialType::Error); }
-    const TypeSymbol* getSpecialType(SpecialType type) const { return specialTypes[(int)type]; }
-    const TypeSymbol* getIntegralType(int width, bool isSigned);
+    const TypeSymbol* getErrorType() const { return getKnownType(SyntaxKind::Unknown); }
+	const TypeSymbol* getKnownType(SyntaxKind kind) const;
+    const TypeSymbol* getIntegralType(int width, bool isSigned, bool isFourState = true);
 
 	// Generalized symbol lookup based on the current scope stack.
 	const Symbol* lookupSymbol(StringRef name);
@@ -81,8 +66,8 @@ private:
     std::unordered_map<StringRef, SourceLocation> nameDupMap;
 	std::vector<Scope> scopeStack;
 
-    // preallocated type symbols for common types
-    TypeSymbol* specialTypes[(int)SpecialType::Error+1];
+    // preallocated type symbols for known types
+	std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
 
 	// cache of simple integral types; maps from width -> type, arrayed by 4-state/2-state and signed/unsigned
 	std::unordered_map<int, const TypeSymbol*> integralTypeCache[2][2];

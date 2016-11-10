@@ -14,16 +14,16 @@ namespace slang {
 SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics) :
 	alloc(alloc), diagnostics(diagnostics), binder(*this)
 {
-    specialTypes[(int)SpecialType::ShortInt] = alloc.emplace<IntegralTypeSymbol>(16, true, false);
-    specialTypes[(int)SpecialType::Int] = alloc.emplace<IntegralTypeSymbol>(32, true, false);
-    specialTypes[(int)SpecialType::LongInt] = alloc.emplace<IntegralTypeSymbol>(64, true, false);
-    specialTypes[(int)SpecialType::Byte] = alloc.emplace<IntegralTypeSymbol>(8, true, false);
-    specialTypes[(int)SpecialType::Bit] = alloc.emplace<IntegralTypeSymbol>(1, false, false);
-    specialTypes[(int)SpecialType::Logic] = alloc.emplace<IntegralTypeSymbol>(1, false, true);
-    specialTypes[(int)SpecialType::Reg] = alloc.emplace<IntegralTypeSymbol>(1, false, true);
-    specialTypes[(int)SpecialType::Integer] = alloc.emplace<IntegralTypeSymbol>(32, true, true);
-    specialTypes[(int)SpecialType::Time] = alloc.emplace<IntegralTypeSymbol>(64, false, true);
-    specialTypes[(int)SpecialType::Error] = alloc.emplace<ErrorTypeSymbol>();
+    knownTypes[SyntaxKind::ShortIntType] = getIntegralType(16, true, false);
+    knownTypes[SyntaxKind::IntType] = getIntegralType(32, true, false);
+    knownTypes[SyntaxKind::LongIntType] = getIntegralType(64, true, false);
+    knownTypes[SyntaxKind::ByteType] = getIntegralType(8, true, false);
+    knownTypes[SyntaxKind::BitType] = getIntegralType(1, false, false);
+    knownTypes[SyntaxKind::LogicType] = getIntegralType(1, false, true);
+    knownTypes[SyntaxKind::RegType] = getIntegralType(1, false, true);
+    knownTypes[SyntaxKind::IntegerType] = getIntegralType(32, true, true);
+    knownTypes[SyntaxKind::TimeType] = getIntegralType(64, false, true);
+    knownTypes[SyntaxKind::Unknown] = alloc.emplace<ErrorTypeSymbol>();
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
@@ -68,6 +68,12 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 	return alloc.emplace<InstanceSymbol>(portParameters->copy(alloc), bodyParameters->copy(alloc));
 }
 
+const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
+	ASSERT(syntax);
+
+	return nullptr;
+}
+
 bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
 								   bool lastLocal, bool overrideLocal, bool bodyParam)
 {
@@ -92,7 +98,6 @@ bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Buf
 		auto location = declarator->name.location();
 		auto pair = nameDupMap.try_emplace(name, location);
 		if (!pair.second) {
-			// ensure uniqueness of parameter names
 			diagnostics.add(DiagCode::DuplicateParameter, location) << name;
 			diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second);
 		}
@@ -123,8 +128,15 @@ void SemanticModel::evaluateParameter(ParameterSymbol* parameter) {
 	}
 }
 
-const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned) {
-	std::unordered_map<int, const TypeSymbol*>& cache = integralTypeCache[true][isSigned]; // always use the 4-state cache
+const TypeSymbol* SemanticModel::getKnownType(SyntaxKind kind) const {
+	auto it = knownTypes.find(kind);
+	if (it == knownTypes.end())
+		return getErrorType();
+	return it->second;
+}
+
+const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool isFourState) {
+	std::unordered_map<int, const TypeSymbol*>& cache = integralTypeCache[isFourState][isSigned]; // always use the 4-state cache
 
 	auto it = cache.find(width);
 	if (it != cache.end())

@@ -94,7 +94,7 @@ BoundExpression* ExpressionBinder::bindSelfDeterminedExpression(const Expression
 BoundExpression* ExpressionBinder::bindLiteral(const LiteralExpressionSyntax* syntax) {
 	switch (syntax->kind) {
 		case SyntaxKind::IntegerLiteralExpression: {
-			return alloc.emplace<BoundLiteral>(syntax, sem.getSpecialType(SpecialType::Int), false);
+			return alloc.emplace<BoundLiteral>(syntax, sem.getKnownType(SyntaxKind::IntType), false);
 		}
 		default:
 			return nullptr;
@@ -114,7 +114,7 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
 }
 
 BoundExpression* ExpressionBinder::bindLiteral(const IntegerVectorExpressionSyntax* syntax) {
-	return alloc.emplace<BoundLiteral>(syntax, sem.getSpecialType(SpecialType::Int), false);
+	return alloc.emplace<BoundLiteral>(syntax, sem.getKnownType(SyntaxKind::IntType), false);
 }
 
 BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax) {
@@ -128,7 +128,7 @@ BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnary
 BoundExpression* ExpressionBinder::bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax* syntax) {
 	// result type is always a single bit
 	BoundExpression* operand = bindSelfDeterminedExpression(syntax->operand);
-	return alloc.emplace<BoundUnaryExpression>(syntax, sem.getSpecialType(SpecialType::Logic), operand, operand->bad);
+	return alloc.emplace<BoundUnaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), operand, operand->bad);
 }
 
 BoundExpression* ExpressionBinder::bindArithmeticOperator(const BinaryExpressionSyntax* syntax) {
@@ -153,7 +153,7 @@ BoundExpression* ExpressionBinder::bindComparisonOperator(const BinaryExpression
 		return alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs, true);
 
 	// result type is always a single bit
-	return alloc.emplace<BoundBinaryExpression>(syntax, sem.getSpecialType(SpecialType::Logic), lhs, rhs, false);
+	return alloc.emplace<BoundBinaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), lhs, rhs, false);
 }
 
 BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpressionSyntax* syntax) {
@@ -163,7 +163,7 @@ BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpression
 		return alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs, true);
 
 	// result type is always a single bit
-	return alloc.emplace<BoundBinaryExpression>(syntax, sem.getSpecialType(SpecialType::Logic), lhs, rhs, false);
+	return alloc.emplace<BoundBinaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), lhs, rhs, false);
 }
 
 BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax) {
