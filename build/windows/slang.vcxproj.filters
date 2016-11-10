@@ -145,6 +145,9 @@
     <ClInclude Include="..\..\include\Scope.h">
       <Filter>analysis</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ExpressionBinder.h">
+      <Filter>analysis</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">
@@ -226,6 +229,9 @@
       <Filter>analysis</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\Scope.cpp">
+      <Filter>analysis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\ExpressionBinder.cpp">
       <Filter>analysis</Filter>
     </ClCompile>
   </ItemGroup>

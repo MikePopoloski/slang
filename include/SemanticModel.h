@@ -18,6 +18,7 @@
 #include "BumpAllocator.h"
 #include "DeclarationTable.h"
 #include "Diagnostics.h"
+#include "ExpressionBinder.h"
 #include "Scope.h"
 #include "Symbol.h"
 
@@ -51,50 +52,30 @@ public:
 
 	InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
 
-	/// Expression binding methods.
-    BoundExpression* bindExpression(const ExpressionSyntax* syntax);
-    BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
-    BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
-    BoundExpression* bindLiteral(const IntegerVectorExpressionSyntax* syntax);
-	BoundExpression* bindSimpleName(const IdentifierNameSyntax* syntax);
-    BoundExpression* bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax);
-    BoundExpression* bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax* syntax);
-    BoundExpression* bindArithmeticOperator(const BinaryExpressionSyntax* syntax);
-    BoundExpression* bindComparisonOperator(const BinaryExpressionSyntax* syntax);
-    BoundExpression* bindRelationalOperator(const BinaryExpressionSyntax* syntax);
-    BoundExpression* bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax);
-
-	/// Utilities for getting various type symbols.
+	/// Utilities for getting various common type symbols.
     const TypeSymbol* getErrorType() const { return getSpecialType(SpecialType::Error); }
     const TypeSymbol* getSpecialType(SpecialType type) const { return specialTypes[(int)type]; }
     const TypeSymbol* getIntegralType(int width, bool isSigned);
+
+	// Generalized symbol lookup based on the current scope stack.
+	const Symbol* lookupSymbol(StringRef name);
+
+	BumpAllocator& getAllocator() { return alloc; }
 
 private:
 	bool makeParameters(const ParameterPortDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer, bool lastLocal, bool overrideLocal);
 	void evaluateParameter(ParameterSymbol* parameter);
 
-	// propagates the type of the expression back down to its operands
-	// and folds constants on the way back up
-	void propagateAndFold(BoundExpression* expression, const TypeSymbol* type);
-	void propagateAndFoldLiteral(BoundLiteral* expression, const TypeSymbol* type);
-	void propagateAndFoldParameter(BoundParameter* expression, const TypeSymbol* type);
-	void propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpression* expression, const TypeSymbol* type);
-	void propagateAndFoldUnaryReductionOperator(BoundUnaryExpression* expression, const TypeSymbol* type);
-	void propagateAndFoldArithmeticOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
-	void propagateAndFoldComparisonOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
-	void propagateAndFoldRelationalOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
-	void propagateAndFoldShiftOrPowerOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
-
 	using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;
 	ScopePtr pushScope();
 	void popScope(const Scope* scope);
-	const Symbol* lookupSymbol(StringRef name);
 
 	template<typename TContainer>
 	ScopePtr pushScope(const TContainer& range);
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
+	ExpressionBinder binder;
     BufferPool<Symbol*> symbolPool;
     std::unordered_set<StringRef> stringSet;
 	std::vector<Scope> scopeStack;
