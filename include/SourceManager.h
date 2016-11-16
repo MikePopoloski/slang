@@ -77,6 +77,9 @@ public:
     /// Gets the expansion location of a given macro location.
     SourceLocation getExpansionLoc(SourceLocation location);
 
+    /// Gets the expansion range of a given macro location.
+    SourceRange getExpansionRange(SourceLocation location);
+
     /// Gets the original source location of a given macro location.
     SourceLocation getOriginalLoc(SourceLocation location);
 

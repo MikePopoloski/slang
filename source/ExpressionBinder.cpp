@@ -85,6 +85,10 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
 	return nullptr;
 }
 
+BoundExpression* ExpressionBinder::bindConstantExpression(const ExpressionSyntax* syntax) {
+    return bindSelfDeterminedExpression(syntax);
+}
+
 BoundExpression* ExpressionBinder::bindSelfDeterminedExpression(const ExpressionSyntax* syntax) {
 	BoundExpression* expr = bindExpression(syntax);
 	propagateAndFold(expr, expr->type);

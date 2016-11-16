@@ -16,7 +16,7 @@
 namespace slang {
 
 static const char* severityToString[] = {
-    "info",
+    "note",
     "warning",
     "error"
 };
@@ -27,7 +27,10 @@ Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
 }
 
 Diagnostic& operator<<(Diagnostic& diag, Diagnostic::Arg&& arg) {
-    diag.args.push_back(std::move(arg));
+    if (arg.target<SourceRange>())
+        diag.ranges.push_back(get<SourceRange>(arg));
+    else
+        diag.args.push_back(std::move(arg));
     return diag;
 }
 
@@ -126,8 +129,13 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
 	*d++ = { "expected dist item", DiagnosticSeverity::Error };
 
 	// declarations
-	*d++ = { "ExpectedDistItem", DiagnosticSeverity::Error };
-	*d++ = { "ExpectedDistItem", DiagnosticSeverity::Error };
+	*d++ = { "duplicate module definition '{}'", DiagnosticSeverity::Error };
+    *d++ = { "previous definition here", DiagnosticSeverity::Note };
+    *d++ = { "unknown module named '{}'", DiagnosticSeverity::Error };
+    *d++ = { "duplicate parameter definition '{}'", DiagnosticSeverity::Error };
+    *d++ = { "local parameter is missing an initializer", DiagnosticSeverity::Error };
+    *d++ = { "parameters declaration is missing an initializer", DiagnosticSeverity::Error };
+    *d++ = { "packed dimension requires a constant range", DiagnosticSeverity::Error };
 
 	ASSERT((int)DiagCode::MaxValue == (d - &descriptors[0]), "When you add a new diagnostic code you need to update default messages");
 }
@@ -165,13 +173,14 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
 	}
 
 	fmt::MemoryWriter writer;
-	formatDiag(writer, location, severityToString[(int)desc.severity], msg);
+	formatDiag(writer, location, diagnostic.ranges, severityToString[(int)desc.severity], msg);
 
 	// write out macro expansions, if we have any
 	while (!expansionLocs.empty()) {
 		location = expansionLocs.back();
 		expansionLocs.pop();
-		formatDiag(writer, sourceManager.getOriginalLoc(location), "note", "expanded from here");
+		formatDiag(writer, sourceManager.getOriginalLoc(location), std::vector<SourceRange>(),
+                   "note", "expanded from here");
 	}
 
 	return writer.str();
@@ -244,8 +253,60 @@ void DiagnosticWriter::getIncludeStack(BufferID buffer, std::deque<SourceLocatio
 	}
 }
 
+void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col,
+                                      StringRef sourceLine, std::string& buffer) {
+    // If the end location is within a macro, we want to push it out to the
+    // end of the expanded location so that it encompasses the entire macro usage
+    SourceLocation startLoc = getFullyExpandedLoc(range.start());
+    SourceLocation endLoc = range.end();
+    while (sourceManager.isMacroLoc(endLoc)) {
+        SourceRange endRange = sourceManager.getExpansionRange(endLoc);
+        if (!sourceManager.isMacroLoc(endRange.start()))
+            endLoc = endRange.end();
+        else
+            endLoc = endRange.start();
+    }
+
+    // If they're in different files just give up
+    if (startLoc.buffer() != caretLoc.buffer() || endLoc.buffer() != caretLoc.buffer())
+        return;
+
+    // Trim the range so that it only falls on the same line as the cursor
+    uint32_t start = startLoc.offset();
+    uint32_t end = endLoc.offset();
+    uint32_t startOfLine = caretLoc.offset() - (col - 1);
+    uint32_t endOfLine = startOfLine + sourceLine.length();
+    if (start < startOfLine)
+        start = startOfLine;
+    if (end > endOfLine)
+        end = endOfLine;
+
+    if (start >= end)
+        return;
+
+    // walk the range in to skip any leading or trailing whitespace
+    start -= startOfLine;
+    end -= startOfLine;
+    const char* c = sourceLine.begin() + (start - startOfLine);
+    while (sourceLine[start] == ' ' || sourceLine[start] == '\t') {
+        start++;
+        if (start == end)
+            return;
+    }
+    while (sourceLine[end - 1] == ' ' || sourceLine[end - 1] == '\t') {
+        end--;
+        if (start == end)
+            return;
+    }
+
+    // finally add the highlight chars
+    for (; start != end; start++)
+        buffer[start] = '~';
+}
+
 template<typename T>
-void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const char* severity, const std::string& msg) {
+void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,
+                                  const char* severity, const std::string& msg) {
 	uint32_t col = sourceManager.getColumnNumber(loc);
 	writer.write("{}:{}:{}: {}: {}",
 		sourceManager.getBufferName(loc.buffer()),
@@ -258,13 +319,15 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const char* sev
 	StringRef line = getBufferLine(loc, col);
 	if (line) {
 		writer.write("\n{}\n", line);
-		for (unsigned i = 0; i < col - 1; i++) {
-			if (line[i] == '\t')
-				writer << '\t';
-			else
-				writer << ' ';
-		}
-		writer << '^';
+
+        // Highlight any ranges and print the caret location.
+        // TODO: handle tabs
+        std::string buffer(line.length(), ' ');
+        for (SourceRange range : ranges)
+            highlightRange(range, loc, col, line, buffer);
+
+        buffer[col - 1] = '^';
+        writer << buffer;
 	}
 	writer << '\n';
 }

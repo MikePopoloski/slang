@@ -76,4 +76,22 @@ private:
     uint32_t charOffset;
 };
 
+/// Combines a pair of source locations that denote a range of source text.
+/// This is mostly used for diagnostic reporting purposes.
+class SourceRange {
+public:
+    SourceRange() {}
+    SourceRange(SourceLocation startLoc, SourceLocation endLoc) :
+        startLoc(startLoc), endLoc(endLoc)
+    {
+    }
+
+    SourceLocation start() const { return startLoc; }
+    SourceLocation end() const { return endLoc; }
+
+private:
+    SourceLocation startLoc;
+    SourceLocation endLoc;
+};
+
 }

@@ -78,8 +78,41 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
 			// bit vector (possibly of just one element)
 			auto its = syntax->as<IntegerTypeSyntax>();
 			bool isSigned = its->signing.kind == TokenKind::SignedKeyword;
+            bool isFourState = syntax->kind != SyntaxKind::BitType;
+            auto dims = constantRangePool.get();
+            if (!evaluateConstantDims(its->dimensions, dims))
+                return getErrorType();
 
-			break;
+            // TODO: bounds checking on sizes, no X allowed
+
+            if (dims->empty())
+                // TODO: signing
+                return getKnownType(syntax->kind);
+            else if (dims->count() == 1 && dims.get()[0].lsb == 0) {
+                // if we have the common case of only one dimension and lsb == 0
+                // then we can use the shared representation
+                uint16_t width = dims.get()[0].msb.getAssertUInt16() + 1;
+                return getIntegralType(width, isSigned, isFourState);
+            }
+            else {
+                auto lowerBounds = intPool.get();
+                auto widths = intPool.get();
+                uint16_t totalWidth = 0;
+                for (auto& dim : dims.get()) {
+                    // TODO: msb < lsb
+                    uint16_t msb = dim.msb.getAssertUInt16();
+                    uint16_t lsb = dim.lsb.getAssertUInt16();
+                    uint16_t width = msb - lsb + 1;
+                    lowerBounds->append(lsb);
+                    widths->append(width);
+
+                    // TODO: overflow
+                    totalWidth += width;
+                }
+                return alloc.emplace<IntegerVectorTypeSymbol>(
+                    totalWidth, isSigned, isFourState,
+                    lowerBounds->copy(alloc), widths->copy(alloc));
+            }
 		}
 	}
 
@@ -92,8 +125,8 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
 		if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
 			(selector = dim->specifier->as<RangeDimensionSpecifierSyntax>()->selector)->kind != SyntaxKind::SimpleRangeSelect) {
 
-			auto& diag = diagnostics.add(DiagCode::PackedDimRequiresConstantRange, dim->closeBracket.location());
-			// TODO: source range
+			auto& diag = diagnostics.add(DiagCode::PackedDimRequiresConstantRange, dim->specifier->getFirstToken().location());
+            diag << dim->specifier->sourceRange();
 			return false;
 		}
 
@@ -159,7 +192,7 @@ void SemanticModel::evaluateParameter(ParameterSymbol* parameter) {
 		parameter->value = expr->constantValue;
 	}
 	else {
-		// TODO
+        parameter->type = makeTypeSymbol(typeSyntax);
 	}
 }
 

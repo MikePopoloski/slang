@@ -74,7 +74,13 @@ public:
 	ArrayRef<int> lowerBounds;
 
 	// Sizes for dimensions, by position.
-	ArrayRef<int> sizes;
+	ArrayRef<int> widths;
+
+    IntegerVectorTypeSymbol(int width, bool isSigned, bool isFourState,
+                            ArrayRef<int> lowerBounds, ArrayRef<int> widths) :
+        IntegralTypeSymbol(width, isSigned, isFourState), lowerBounds(lowerBounds), widths(widths)
+    {
+    }
 };
 
 class EnumTypeSymbol : public TypeSymbol {

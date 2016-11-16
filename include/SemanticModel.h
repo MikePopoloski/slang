@@ -69,6 +69,7 @@ private:
     Diagnostics& diagnostics;
 	ExpressionBinder binder;
     BufferPool<Symbol*> symbolPool;
+    BufferPool<int> intPool;
 	BufferPool<ConstantRange> constantRangePool;
     std::unordered_map<StringRef, SourceLocation> nameDupMap;
 	std::vector<Scope> scopeStack;

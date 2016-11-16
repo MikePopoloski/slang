@@ -104,6 +104,16 @@ SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
     return get<ExpansionInfo>(bufferEntries[buffer.id]).expansionStart;
 }
 
+SourceRange SourceManager::getExpansionRange(SourceLocation location) {
+    auto buffer = location.buffer();
+    if (!buffer)
+        return SourceRange();
+
+    ASSERT(buffer.id < bufferEntries.size());
+    ExpansionInfo& info = get<ExpansionInfo>(bufferEntries[buffer.id]);
+    return SourceRange(info.expansionStart, info.expansionEnd);
+}
+
 SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
     auto buffer = location.buffer();
     if (!buffer)

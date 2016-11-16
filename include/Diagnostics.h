@@ -115,7 +115,7 @@ class Diagnostic;
 /// The severity of a given diagnostic. This is not tied to the diagnostic itself;
 /// it can be configured on a per-diagnostic basis at runtime.
 enum class DiagnosticSeverity {
-    Info,
+    Note,
     Warning,
     Error
 };
@@ -124,8 +124,9 @@ enum class DiagnosticSeverity {
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = variant<StringRef, int>;
+    using Arg = variant<StringRef, SourceRange, int>;
     std::vector<Arg> args;
+    std::vector<SourceRange> ranges;
 
     /// The specific kind of diagnostic that was issued.
     DiagCode code;
@@ -176,9 +177,11 @@ private:
 	StringRef getBufferLine(SourceLocation location, uint32_t col);
 	bool sortDiagnostics(const Diagnostic& x, const Diagnostic& y);
 	void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);
+    void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col, StringRef sourceLine, std::string& buffer);
 	
 	template<typename T>
-	void formatDiag(T& writer, SourceLocation loc, const char* severity, const std::string& msg);
+	void formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,
+                    const char* severity, const std::string& msg);
 
 	SourceManager& sourceManager;
 

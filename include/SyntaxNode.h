@@ -527,6 +527,12 @@ public:
 	/// Get the first leaf token in this subtree.
     Token getFirstToken();
 
+    /// Get the last leaf token in this subtree.
+    Token getLastToken();
+
+    /// Get the source range of the node.
+    SourceRange sourceRange();
+
 	/// Replace the first token in the subtree with the given token.
     bool replaceFirstToken(Token token);
 

@@ -43,6 +43,27 @@ Token SyntaxNode::getFirstToken() {
     return Token();
 }
 
+Token SyntaxNode::getLastToken() {
+    for (uint32_t i = childCount - 1; i >= 0; i--) {
+        auto child = getChild(i);
+        if (child.isToken) {
+            if (child.token)
+                return child.token;
+        }
+        else if (child.node) {
+            auto result = child.node->getLastToken();
+            if (result)
+                return result;
+        }
+    }
+    return Token();
+}
+
+SourceRange SyntaxNode::sourceRange() {
+    Token lastToken = getLastToken();
+    return SourceRange(getFirstToken().location(), lastToken.location() + lastToken.rawText().length());
+}
+
 bool SyntaxNode::replaceFirstToken(Token token) {
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
