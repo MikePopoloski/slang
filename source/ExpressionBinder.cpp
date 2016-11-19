@@ -95,6 +95,20 @@ BoundExpression* ExpressionBinder::bindSelfDeterminedExpression(const Expression
 	return expr;
 }
 
+BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyntax* syntax, const TypeSymbol* assignmentType) {
+	// The rules for determining expression type in an assignment-like context are as follows:
+	// - If the destination type width is larger than the width of the expression, propagate that type back down
+	// - If the destination width is smaller, insert an implicit truncation of bits
+	BoundExpression* expr = bindExpression(syntax);
+	if (expr->type->integral().width < assignmentType->integral().width)
+		propagateAndFold(expr, assignmentType);
+	else
+		propagateAndFold(expr, expr->type);
+
+	// TODO: truncation
+	return expr;
+}
+
 BoundExpression* ExpressionBinder::bindLiteral(const LiteralExpressionSyntax* syntax) {
 	switch (syntax->kind) {
 		case SyntaxKind::IntegerLiteralExpression: {

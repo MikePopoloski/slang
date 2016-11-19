@@ -19,9 +19,10 @@ public:
 	ExpressionBinder(SemanticModel& sem);
 
 	BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax);
+	BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
+	BoundExpression* bindAssignmentLikeContext(const ExpressionSyntax* syntax, const TypeSymbol* assignmentType);
 
 	BoundExpression* bindExpression(const ExpressionSyntax* syntax);
-	BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
 	BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
 	BoundExpression* bindLiteral(const IntegerVectorExpressionSyntax* syntax);
 	BoundExpression* bindSimpleName(const IdentifierNameSyntax* syntax);

@@ -193,6 +193,8 @@ void SemanticModel::evaluateParameter(ParameterSymbol* parameter) {
 	}
 	else {
         parameter->type = makeTypeSymbol(typeSyntax);
+		BoundExpression* expr = binder.bindAssignmentLikeContext(parameter->initializer, parameter->type);
+		parameter->value = expr->constantValue;
 	}
 }
 
