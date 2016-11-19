@@ -38,14 +38,12 @@ public:
 	bool isAggregate : 1;
 	bool isSingular : 1;
 	bool isIntegral : 1;
-	bool isSimpleBitVector : 1;
 	bool isReal : 1;
 
 	TypeSymbol() {
 		isAggregate = false;
-		isSingular = false;
+		isSingular = true;
 		isIntegral = false;
-		isSimpleBitVector = false;
 		isReal = false;
 	}
 
@@ -65,6 +63,17 @@ public:
 		width(width), isSigned(isSigned), isFourState(isFourState)
 	{
 		isIntegral = true;
+	}
+};
+
+class RealTypeSymbol : public TypeSymbol {
+public:
+	int width;
+
+	RealTypeSymbol(int width) :
+		width(width)
+	{
+		isReal = true;
 	}
 };
 

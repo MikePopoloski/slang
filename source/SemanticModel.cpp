@@ -23,6 +23,13 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics) :
     knownTypes[SyntaxKind::RegType] = getIntegralType(1, false, true);
     knownTypes[SyntaxKind::IntegerType] = getIntegralType(32, true, true);
     knownTypes[SyntaxKind::TimeType] = getIntegralType(64, false, true);
+	knownTypes[SyntaxKind::RealType] = alloc.emplace<RealTypeSymbol>(64);
+	knownTypes[SyntaxKind::RealTimeType] = knownTypes[SyntaxKind::RealType];
+	knownTypes[SyntaxKind::ShortRealType] = alloc.emplace<RealTypeSymbol>(32);
+	knownTypes[SyntaxKind::StringType] = alloc.emplace<TypeSymbol>();
+	knownTypes[SyntaxKind::CHandleType] = alloc.emplace<TypeSymbol>();
+	knownTypes[SyntaxKind::VoidType] = alloc.emplace<TypeSymbol>();
+	knownTypes[SyntaxKind::EventType] = alloc.emplace<TypeSymbol>();
     knownTypes[SyntaxKind::Unknown] = alloc.emplace<ErrorTypeSymbol>();
 }
 
@@ -114,7 +121,32 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
                     lowerBounds->copy(alloc), widths->copy(alloc));
             }
 		}
+		case SyntaxKind::ByteType:
+		case SyntaxKind::ShortIntType:
+		case SyntaxKind::IntType:
+		case SyntaxKind::LongIntType:
+		case SyntaxKind::IntegerType:
+		case SyntaxKind::TimeType: {
+			// TODO: signing
+			auto its = syntax->as<IntegerTypeSyntax>();
+			if (its->dimensions.count() > 0) {
+				// Error but don't fail out; just remove the dims and keep trucking
+				auto& diag = diagnostics.add(DiagCode::PackedDimsOnPredefinedType, its->dimensions[0]->openBracket.location());
+				diag << getTokenKindText(its->keyword.kind);
+			}
+			return getKnownType(syntax->kind);
+		}
+		case SyntaxKind::RealType:
+		case SyntaxKind::RealTimeType:
+		case SyntaxKind::ShortRealType:
+		case SyntaxKind::StringType:
+		case SyntaxKind::CHandleType:
+		case SyntaxKind::EventType:
+			return getKnownType(syntax->kind);
+
 	}
+
+	// TODO: consider Void Type
 
 	return nullptr;
 }

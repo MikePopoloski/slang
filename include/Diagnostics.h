@@ -111,6 +111,7 @@ enum class DiagCode : uint8_t {
 	LocalParamNoInitializer,
 	BodyParamNoInitializer,
 	PackedDimRequiresConstantRange,
+	PackedDimsOnPredefinedType,
 
 	MaxValue
 };
