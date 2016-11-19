@@ -51,105 +51,108 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
 DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
 	sourceManager(sourceManager)
 {
-	Descriptor* d = descriptors;
 	// lexer
-	*d++ = { "non-printable character in source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
-	*d++ = { "UTF-8 sequence in source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
-	*d++ = { "Unicode BOM at start of source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
-	*d++ = { "embedded NUL in source text; are you sure this is source code?", DiagnosticSeverity::Error };
-	*d++ = { "expected directive name", DiagnosticSeverity::Error };
-	*d++ = { "unexpected whitespace after escape character", DiagnosticSeverity::Error };
-	*d++ = { "missing closing quote", DiagnosticSeverity::Error };
-	*d++ = { "block comment unclosed at end of file", DiagnosticSeverity::Error };
-	*d++ = { "nested block comments are disallowed by SystemVerilog", DiagnosticSeverity::Error };
-	*d++ = { "block comments on the same line as a directive must also be terminated on that line", DiagnosticSeverity::Error };
-	*d++ = { "expected integer base specifier after signed specifier", DiagnosticSeverity::Error };
-	*d++ = { "expected fractional digits after decimal", DiagnosticSeverity::Error };
-	*d++ = { "octal escape code is too large to be an ASCII character", DiagnosticSeverity::Error };
-	*d++ = { "invalid hexadecimal number", DiagnosticSeverity::Error };
-	*d++ = { "unknown character escape sequence", DiagnosticSeverity::Error };
-	*d++ = { "expected an include file name", DiagnosticSeverity::Error };
-	*d++ = { "expected exponent digits", DiagnosticSeverity::Error };
-	*d++ = { "vector literals must not start with a leading underscore", DiagnosticSeverity::Error };
-	*d++ = { "decimal literals cannot have multiple X or Z digits", DiagnosticSeverity::Error };
-	*d++ = { "expected binary digit", DiagnosticSeverity::Error };
-	*d++ = { "expected octal digit", DiagnosticSeverity::Error };
-	*d++ = { "expected decimal digit", DiagnosticSeverity::Error };
-	*d++ = { "expected hexadecimal digit", DiagnosticSeverity::Error };
+	descriptors[DiagCode::NonPrintableChar] = { "non-printable character in source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
+	descriptors[DiagCode::UTF8Char] = { "UTF-8 sequence in source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
+	descriptors[DiagCode::UnicodeBOM] = { "Unicode BOM at start of source text; SystemVerilog only supports ASCII text", DiagnosticSeverity::Error };
+	descriptors[DiagCode::EmbeddedNull] = { "embedded NUL in source text; are you sure this is source code?", DiagnosticSeverity::Error };
+	descriptors[DiagCode::MisplacedDirectiveChar] = { "expected directive name", DiagnosticSeverity::Error };
+	descriptors[DiagCode::EscapedWhitespace] = { "unexpected whitespace after escape character", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedClosingQuote] = { "missing closing quote", DiagnosticSeverity::Error };
+	descriptors[DiagCode::UnterminatedBlockComment] = { "block comment unclosed at end of file", DiagnosticSeverity::Error };
+	descriptors[DiagCode::NestedBlockComment] = { "nested block comments are disallowed by SystemVerilog", DiagnosticSeverity::Error };
+	descriptors[DiagCode::SplitBlockCommentInDirective] = { "block comments on the same line as a directive must also be terminated on that line", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedIntegerBaseAfterSigned] = { "expected integer base specifier after signed specifier", DiagnosticSeverity::Error };
+	descriptors[DiagCode::MissingFractionalDigits] = { "expected fractional digits after decimal", DiagnosticSeverity::Error };
+	descriptors[DiagCode::OctalEscapeCodeTooBig] = { "octal escape code is too large to be an ASCII character", DiagnosticSeverity::Error };
+	descriptors[DiagCode::InvalidHexEscapeCode] = { "invalid hexadecimal number", DiagnosticSeverity::Error };
+	descriptors[DiagCode::UnknownEscapeCode] = { "unknown character escape sequence", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedIncludeFileName] = { "expected an include file name", DiagnosticSeverity::Error };
+	descriptors[DiagCode::MissingExponentDigits] = { "expected exponent digits", DiagnosticSeverity::Error };
+	descriptors[DiagCode::VectorDigitsLeadingUnderscore] = { "vector literals must not start with a leading underscore", DiagnosticSeverity::Error };
+	descriptors[DiagCode::DecimalDigitMultipleUnknown] = { "decimal literals cannot have multiple X or Z digits", DiagnosticSeverity::Error };
+	descriptors[DiagCode::BadBinaryDigit] = { "expected binary digit", DiagnosticSeverity::Error };
+	descriptors[DiagCode::BadOctalDigit] = { "expected octal digit", DiagnosticSeverity::Error };
+	descriptors[DiagCode::BadDecimalDigit] = { "expected decimal digit", DiagnosticSeverity::Error };
+	descriptors[DiagCode::BadHexDigit] = { "expected hexadecimal digit", DiagnosticSeverity::Error };
 
 	// numeric
-	*d++ = { "size of vector literal cannot be zero", DiagnosticSeverity::Error };
-	*d++ = { "size of vector literal is too large (> {} bits)", DiagnosticSeverity::Error };
-	*d++ = { "real literal overflows 64 bits", DiagnosticSeverity::Error };
-	*d++ = { "signed integer overflows 32 bits", DiagnosticSeverity::Error };
-	*d++ = { "decimal literal overflows 32 bits", DiagnosticSeverity::Error };
-	*d++ = { "vector literal too large for the given number of bits", DiagnosticSeverity::Error };
+	descriptors[DiagCode::LiteralSizeIsZero] = { "size of vector literal cannot be zero", DiagnosticSeverity::Error };
+	descriptors[DiagCode::LiteralSizeTooLarge] = { "size of vector literal is too large (> {} bits)", DiagnosticSeverity::Error };
+	descriptors[DiagCode::RealExponentOverflow] = { "real literal overflows 64 bits", DiagnosticSeverity::Error };
+	descriptors[DiagCode::SignedIntegerOverflow] = { "signed integer overflows 32 bits", DiagnosticSeverity::Error };
+	descriptors[DiagCode::DecimalLiteralOverflow] = { "decimal literal overflows 32 bits", DiagnosticSeverity::Error };
+	descriptors[DiagCode::VectorLiteralOverflow] = { "vector literal too large for the given number of bits", DiagnosticSeverity::Error };
 
 	// preprocessor
-	*d++ = { "could not find or open include file", DiagnosticSeverity::Error };
-	*d++ = { "exceeded max include depth", DiagnosticSeverity::Error };
-	*d++ = { "unknown macro or compiler directive", DiagnosticSeverity::Error };
-	*d++ = { "expected end of directive (missing newline?)", DiagnosticSeverity::Error };
-	*d++ = { "expected end of macro arguments (missing closing parenthesis?)", DiagnosticSeverity::Error };
-	*d++ = { "unexpected conditional directive", DiagnosticSeverity::Error };
-	*d++ = { "unbalanced macro argument delimiters ((), [], or {{}}); didn't see an end '{}'", DiagnosticSeverity::Error };
-	*d++ = { "expected macro arguments for function-like macro", DiagnosticSeverity::Error };
-	*d++ = { "expected net type specifier", DiagnosticSeverity::Error };
-	*d++ = { "can't redefine compiler directive as a macro", DiagnosticSeverity::Error };
-	*d++ = { "too many arguments provided to function-like macro", DiagnosticSeverity::Error };
-	*d++ = { "not enough arguments provided to function-like macro", DiagnosticSeverity::Error };
+	descriptors[DiagCode::CouldNotOpenIncludeFile] = { "could not find or open include file", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExceededMaxIncludeDepth] = { "exceeded max include depth", DiagnosticSeverity::Error };
+	descriptors[DiagCode::UnknownDirective] = { "unknown macro or compiler directive", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedEndOfDirective] = { "expected end of directive (missing newline?)", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedEndOfMacroArgs] = { "expected end of macro arguments (missing closing parenthesis?)", DiagnosticSeverity::Error };
+	descriptors[DiagCode::UnexpectedConditionalDirective] = { "unexpected conditional directive", DiagnosticSeverity::Error };
+	descriptors[DiagCode::UnbalancedMacroArgDims] = { "unbalanced macro argument delimiters ((), [], or {{}}); didn't see an end '{}'", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedMacroArgs] = { "expected macro arguments for function-like macro", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedNetType] = { "expected net type specifier", DiagnosticSeverity::Error };
+	descriptors[DiagCode::InvalidMacroName] = { "can't redefine compiler directive as a macro", DiagnosticSeverity::Error };
+	descriptors[DiagCode::TooManyActualMacroArgs] = { "too many arguments provided to function-like macro", DiagnosticSeverity::Error };
+	descriptors[DiagCode::NotEnoughMacroArgs] = { "not enough arguments provided to function-like macro", DiagnosticSeverity::Error };
 
 	// parser
-	*d++ = { "expected identifier", DiagnosticSeverity::Error };
-	*d++ = { "expected '{}'", DiagnosticSeverity::Error };
-	*d++ = { "expected data type (implicit type name not allowed)", DiagnosticSeverity::Error };
-	*d++ = { "multiple types given in single declaration; this is not allowed in SystemVerilog", DiagnosticSeverity::Error };
-	*d++ = { "misplaced colon; did you mean to use a dot?", DiagnosticSeverity::Error };
-	*d++ = { "invalid token in member list", DiagnosticSeverity::Error };
-	*d++ = { "invalid token in sequential block", DiagnosticSeverity::Error };
-	*d++ = { "expected statement", DiagnosticSeverity::Error };
-	*d++ = { "expected parameter declaration", DiagnosticSeverity::Error };
-	*d++ = { "expected non-ansi port declaration", DiagnosticSeverity::Error };
-	*d++ = { "expected ansi port declaration", DiagnosticSeverity::Error };
-	*d++ = { "expected for loop initializer", DiagnosticSeverity::Error };
-	*d++ = { "expected expression", DiagnosticSeverity::Error };
-	*d++ = { "expected open range element", DiagnosticSeverity::Error };
-	*d++ = { "expected stream expression", DiagnosticSeverity::Error };
-	*d++ = { "expected argument", DiagnosticSeverity::Error };
-	*d++ = { "expected variable declarator", DiagnosticSeverity::Error };
-	*d++ = { "expected conditional pattern", DiagnosticSeverity::Error };
-	*d++ = { "expected attribute", DiagnosticSeverity::Error };
-	*d++ = { "expected package import", DiagnosticSeverity::Error };
-	*d++ = { "expected hierarhical instantiation", DiagnosticSeverity::Error };
-	*d++ = { "expected port connection", DiagnosticSeverity::Error };
-	*d++ = { "expected vector literal digits", DiagnosticSeverity::Error };
-	*d++ = { "expected variable assignment", DiagnosticSeverity::Error };
-	*d++ = { "expected interface class name", DiagnosticSeverity::Error };
-	*d++ = { "expected assignment key", DiagnosticSeverity::Error };
-	*d++ = { "expected dist item", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedIdentifier] = { "expected identifier", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedToken] = { "expected '{}'", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ImplicitNotAllowed] = { "expected data type (implicit type name not allowed)", DiagnosticSeverity::Error };
+	descriptors[DiagCode::MultipleTypesInDeclaration] = { "multiple types given in single declaration; this is not allowed in SystemVerilog", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ColonShouldBeDot] = { "misplaced colon; did you mean to use a dot?", DiagnosticSeverity::Error };
+	descriptors[DiagCode::InvalidTokenInMemberList] = { "invalid token in member list", DiagnosticSeverity::Error };
+	descriptors[DiagCode::InvalidTokenInSequentialBlock] = { "invalid token in sequential block", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedStatement] = { "expected statement", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedParameterPort] = { "expected parameter declaration", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedNonAnsiPort] = { "expected non-ansi port declaration", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedAnsiPort] = { "expected ansi port declaration", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedForInitializer] = { "expected for loop initializer", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedExpression] = { "expected expression", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedOpenRangeElement] = { "expected open range element", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedStreamExpression] = { "expected stream expression", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedArgument] = { "expected argument", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedVariableDeclarator] = { "expected variable declarator", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedConditionalPattern] = { "expected conditional pattern", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedAttribute] = { "expected attribute", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedPackageImport] = { "expected package import", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedHierarchicalInstantiation] = { "expected hierarhical instantiation", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedPortConnection] = { "expected port connection", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedVectorDigits] = { "expected vector literal digits", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedVariableAssignment] = { "expected variable assignment", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedInterfaceClassName] = { "expected interface class name", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedAssignmentKey] = { "expected assignment key", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedDistItem] = { "expected dist item", DiagnosticSeverity::Error };
+	descriptors[DiagCode::ExpectedIfOrCase] = { "expected 'if' or 'case' after '{}' keyword", DiagnosticSeverity::Error };
+	descriptors[DiagCode::NoLabelOnSemicolon] = { "labels are not allowed on empty semicolon", DiagnosticSeverity::Error };
+	descriptors[DiagCode::DeferredDelayMustBeZero] = { "deferred assertion delay must be zero", DiagnosticSeverity::Error };
+	descriptors[DiagCode::AttributesNotSupported] = { "attributes are not allowed to be attached to {}", DiagnosticSeverity::Error };
 
 	// declarations
-	*d++ = { "duplicate module definition '{}'", DiagnosticSeverity::Error };
-    *d++ = { "previous definition here", DiagnosticSeverity::Note };
-    *d++ = { "unknown module named '{}'", DiagnosticSeverity::Error };
-    *d++ = { "duplicate parameter definition '{}'", DiagnosticSeverity::Error };
-    *d++ = { "local parameter is missing an initializer", DiagnosticSeverity::Error };
-    *d++ = { "parameters declaration is missing an initializer", DiagnosticSeverity::Error };
-    *d++ = { "packed dimension requires a constant range", DiagnosticSeverity::Error };
+	descriptors[DiagCode::DuplicateModule] = { "duplicate module definition '{}'", DiagnosticSeverity::Error };
+	descriptors[DiagCode::NotePreviousDefinition] = { "previous definition here", DiagnosticSeverity::Note };
+	descriptors[DiagCode::UnknownModule] = { "unknown module named '{}'", DiagnosticSeverity::Error };
+	descriptors[DiagCode::DuplicateParameter] = { "duplicate parameter definition '{}'", DiagnosticSeverity::Error };
+	descriptors[DiagCode::LocalParamNoInitializer] = { "local parameter is missing an initializer", DiagnosticSeverity::Error };
+	descriptors[DiagCode::BodyParamNoInitializer] = { "parameters declaration is missing an initializer", DiagnosticSeverity::Error };
+	descriptors[DiagCode::PackedDimRequiresConstantRange] = { "packed dimension requires a constant range", DiagnosticSeverity::Error };
 
-	ASSERT((int)DiagCode::MaxValue == (d - &descriptors[0]), "When you add a new diagnostic code you need to update default messages");
+	ASSERT((int)DiagCode::MaxValue == descriptors.size(), "When you add a new diagnostic code you need to update default messages");
 }
 
 void DiagnosticWriter::setMessage(DiagCode code, std::string format) {
-	descriptors[(int)code].format = std::move(format);
+	descriptors[code].format = std::move(format);
 }
 
 void DiagnosticWriter::setSeverity(DiagCode code, DiagnosticSeverity severity) {
-	descriptors[(int)code].severity = severity;
+	descriptors[code].severity = severity;
 }
 
 DiagnosticSeverity DiagnosticWriter::getSeverity(DiagCode code) const {
-	return descriptors[(int)code].severity;
+	return descriptors.find(code)->second.severity;
 }
 
 std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
@@ -162,7 +165,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
 	}
 
 	// build the error message from arguments, if we have any
-	Descriptor& desc = descriptors[(int)diagnostic.code];
+	Descriptor& desc = descriptors[diagnostic.code];
 	std::string msg;
 	switch (diagnostic.args.size()) {
 		case 0: msg = desc.format; break;

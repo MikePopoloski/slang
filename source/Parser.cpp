@@ -292,11 +292,10 @@ MemberSyntax* Parser::parseMember() {
     if (isVariableDeclaration())
         return parseVariableDeclaration(attributes);
 
-    // TODO: error on attributes that don't attach to a valid construct
-
     switch (peek().kind) {
         case TokenKind::GenerateKeyword: {
-            auto keyword = consume();
+			errorIfAttributes(attributes, "a generate region");
+			auto keyword = consume();
 
             // It's definitely not legal to have a generate block here on its own (without an if or for loop)
             // but some simulators seems to accept it and I've found code in the wild that depends on it.
@@ -314,6 +313,7 @@ MemberSyntax* Parser::parseMember() {
         }
         case TokenKind::TimeUnitKeyword:
         case TokenKind::TimePrecisionKeyword:
+			errorIfAttributes(attributes, "a time units declaration");
             return parseTimeUnitsDeclaration(attributes);
         case TokenKind::ModuleKeyword:
         case TokenKind::MacromoduleKeyword:
@@ -348,7 +348,10 @@ MemberSyntax* Parser::parseMember() {
             return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, parseConcurrentAssertion(nullptr, nullptr));
         case TokenKind::AssignKeyword:
             return parseContinuousAssign(attributes);
-        case TokenKind::InitialKeyword:
+        case TokenKind::InitialKeyword: {
+			auto keyword = consume();
+			return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement(false));
+		}
         case TokenKind::FinalKeyword:
         case TokenKind::AlwaysKeyword:
         case TokenKind::AlwaysCombKeyword:
@@ -691,7 +694,6 @@ ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstance
 }
 
 MemberSyntax* Parser::parseClassMember() {
-    // TODO: error on attributes that don't attach to a valid construct
     auto attributes = parseAttributes();
 
     // virtual keyword can either be a class decl, virtual interface, or a method qualifier;
@@ -719,8 +721,12 @@ MemberSyntax* Parser::parseClassMember() {
     }
     auto qualifiers = qualifierBuffer->copy(alloc);
 
-    if (isVariableDeclaration())
-        return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, qualifiers, parseVariableDeclaration(nullptr));
+	if (isVariableDeclaration()) {
+		auto decl = parseVariableDeclaration(nullptr);
+		if (decl->kind == SyntaxKind::ParameterDeclarationStatement)
+			errorIfAttributes(attributes, "a class parameter");
+		return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, qualifiers, decl);
+	}
 
     if (kind == TokenKind::TaskKeyword || kind == TokenKind::FunctionKeyword) {
         if (isPureOrExtern)
@@ -751,6 +757,7 @@ MemberSyntax* Parser::parseClassMember() {
         case TokenKind::CoverGroupKeyword:
             return parseCovergroupDeclaration(attributes);
         case TokenKind::Semicolon:
+			errorIfAttributes(attributes, "an empty member");
             return alloc.emplace<EmptyMemberSyntax>(attributes, qualifiers, consume());
         default:
             break;
@@ -826,7 +833,6 @@ CoverageOptionSyntax* Parser::parseCoverageOption(ArrayRef<AttributeInstanceSynt
 }
 
 MemberSyntax* Parser::parseCoverageMember() {
-    // TODO: error on attributes that don't attach to a valid construct
     auto attributes = parseAttributes();
 
     // check for coverage option
@@ -913,7 +919,6 @@ WithClauseSyntax* Parser::parseWithClause() {
 }
 
 MemberSyntax* Parser::parseCoverpointMember() {
-    // TODO: error on attributes that don't attach to a valid construct
     auto attributes = parseAttributes();
 
     // check for coverage option
@@ -932,6 +937,11 @@ MemberSyntax* Parser::parseCoverpointMember() {
         default:
             break;
     }
+
+	if (peek(TokenKind::Semicolon)) {
+		errorIfAttributes(attributes, "an empty item");
+		return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, consume());
+	}
 
     // error out if we have total junk here
     if (!wildcard && !bins && attributes.empty())
@@ -1852,6 +1862,11 @@ bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
                 return true;
         }
     }
+}
+
+void Parser::errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg) {
+	if (!attributes.empty())
+		addError(DiagCode::AttributesNotSupported, peek().location()) << StringRef(msg, strlen(msg));
 }
 
 }

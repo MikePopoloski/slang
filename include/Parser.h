@@ -29,7 +29,7 @@ public:
 	/// These are mostly for testing; only use if you know that the
 	/// source stream is currently looking at one of these.
     ExpressionSyntax* parseExpression();
-    StatementSyntax* parseStatement();
+    StatementSyntax* parseStatement(bool allowEmpty = true);
     ModuleDeclarationSyntax* parseModule();
     ClassDeclarationSyntax* parseClass();
 
@@ -151,6 +151,8 @@ private:
     bool isPlainPortName();
     bool scanDimensionList(int& index);
     bool scanQualifiedName(int& index);
+
+	void errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg);
 
 	/// Various options for parsing expressions.
     struct ExpressionOptions {

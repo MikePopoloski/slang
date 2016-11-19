@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <deque>
 #include <string>
+#include <unordered_map>
 #include <variant.hpp>
 #include <vector>
 
@@ -97,6 +98,10 @@ enum class DiagCode : uint8_t {
     ExpectedInterfaceClassName,
     ExpectedAssignmentKey,
     ExpectedDistItem,
+	ExpectedIfOrCase,
+	NoLabelOnSemicolon,
+	DeferredDelayMustBeZero,
+	AttributesNotSupported,
 
     // declarations
     DuplicateModule,
@@ -190,7 +195,8 @@ private:
 		std::string format;
 		DiagnosticSeverity severity;
 	};
-	Descriptor descriptors[(int)DiagCode::MaxValue];
+
+	std::unordered_map<DiagCode, Descriptor> descriptors;
 };
 
 }
