@@ -10,6 +10,10 @@
 #include <climits>
 #include <cstdint>
 
+#if defined (_MSC_VER)
+#include <intrin.h>
+#endif
+
 namespace slang {
 
 inline uint32_t clog2(uint64_t value) {

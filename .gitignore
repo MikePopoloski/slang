@@ -32,3 +32,4 @@ _ReSharper*/
 *.vsp
 *.vspx
 *.VC.db
+.vs/
