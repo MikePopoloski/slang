@@ -43,10 +43,10 @@ public:
     Trivia(TriviaKind kind, ArrayRef<Token> tokens) : kind(kind), tokens(tokens) {}
     Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
 
-	/// Writes the trivia's text to the given buffer.
+    /// Writes the trivia's text to the given buffer.
     void writeTo(Buffer<char>& buffer, uint8_t flags = 0) const;
 
-	/// If this trivia is tracking a skipped syntax node, return that now.
+    /// If this trivia is tracking a skipped syntax node, return that now.
     SyntaxNode* syntax() const;
 
 private:

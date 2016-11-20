@@ -30,20 +30,20 @@ StatementSyntax* Parser::parseStatement(bool allowEmpty) {
                 case TokenKind::CaseXKeyword:
                 case TokenKind::CaseZKeyword:
                     return parseCaseStatement(label, attributes, modifier, consume());
-				default: {
-					addError(DiagCode::ExpectedIfOrCase, peek().location()) << getTokenKindText(modifier.kind);
+                default: {
+                    addError(DiagCode::ExpectedIfOrCase, peek().location()) << getTokenKindText(modifier.kind);
 
-					// Construct an empty syntax construct to hold this misplaced token
-					auto tokens = tokenPool.get();
-					tokens->append(modifier);
+                    // Construct an empty syntax construct to hold this misplaced token
+                    auto tokens = tokenPool.get();
+                    tokens->append(modifier);
 
-					auto trivia = triviaPool.get();
-					trivia->append(Trivia(TriviaKind::SkippedTokens, tokens->copy(alloc)));
+                    auto trivia = triviaPool.get();
+                    trivia->append(Trivia(TriviaKind::SkippedTokens, tokens->copy(alloc)));
 
-					Token semi = Token::createMissing(alloc, TokenKind::Semicolon, modifier.location());
-					semi = semi.withTrivia(alloc, trivia->copy(alloc));
-					return alloc.emplace<EmptyStatementSyntax>(label, attributes, semi);
-				}
+                    Token semi = Token::createMissing(alloc, TokenKind::Semicolon, modifier.location());
+                    semi = semi.withTrivia(alloc, trivia->copy(alloc));
+                    return alloc.emplace<EmptyStatementSyntax>(label, attributes, semi);
+                }
             }
             break;
         }
@@ -107,8 +107,8 @@ StatementSyntax* Parser::parseStatement(bool allowEmpty) {
         case TokenKind::RandCaseKeyword:
             return parseRandCaseStatement(label, attributes);
         case TokenKind::Semicolon:
-			if (label)
-				addError(DiagCode::NoLabelOnSemicolon, peek().location());
+            if (label)
+                addError(DiagCode::NoLabelOnSemicolon, peek().location());
             else if (!allowEmpty)
                 addError(DiagCode::ExpectedStatement, peek().location());
             return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
@@ -449,9 +449,9 @@ StatementSyntax* Parser::parseAssertionStatement(NamedLabelSyntax* label, ArrayR
     DeferredAssertionSyntax* deferred = nullptr;
     if (peek(TokenKind::Hash)) {
         auto hash = consume();
-		auto zero = expect(TokenKind::IntegerLiteral);
-		if (!zero.isMissing() && get<SVInt>(zero.numericValue()) != 0)
-			addError(DiagCode::DeferredDelayMustBeZero, zero.location());
+        auto zero = expect(TokenKind::IntegerLiteral);
+        if (!zero.isMissing() && get<SVInt>(zero.numericValue()) != 0)
+            addError(DiagCode::DeferredDelayMustBeZero, zero.location());
         deferred = alloc.emplace<DeferredAssertionSyntax>(hash, zero, Token());
     }
     else if (peek(TokenKind::FinalKeyword)) {

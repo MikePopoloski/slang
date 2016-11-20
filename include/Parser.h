@@ -22,12 +22,12 @@ class Parser : ParserBase {
 public:
     Parser(Preprocessor& preprocessor);
 
-	/// Parse a whole compilation unit.
+    /// Parse a whole compilation unit.
     CompilationUnitSyntax* parseCompilationUnit();
 
-	/// Parse an expression / statement / module / class.
-	/// These are mostly for testing; only use if you know that the
-	/// source stream is currently looking at one of these.
+    /// Parse an expression / statement / module / class.
+    /// These are mostly for testing; only use if you know that the
+    /// source stream is currently looking at one of these.
     ExpressionSyntax* parseExpression();
     StatementSyntax* parseStatement(bool allowEmpty = true);
     ModuleDeclarationSyntax* parseModule();
@@ -152,9 +152,9 @@ private:
     bool scanDimensionList(int& index);
     bool scanQualifiedName(int& index);
 
-	void errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg);
+    void errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg);
 
-	/// Various options for parsing expressions.
+    /// Various options for parsing expressions.
     struct ExpressionOptions {
         enum Enum {
             None = 0,
@@ -184,7 +184,7 @@ private:
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);
 
-	// Scratch space for building up integer vector literals.
+    // Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;
 };
 

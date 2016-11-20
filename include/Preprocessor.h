@@ -38,11 +38,11 @@ class Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-	/// Push a new source file onto the stack.
+    /// Push a new source file onto the stack.
     void pushSource(StringRef source);
     void pushSource(SourceBuffer buffer);
 
-	/// Gets the next token in the stream, after applying preprocessor rules.
+    /// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
 
     SourceManager& getSourceManager() const { return sourceManager; }
@@ -50,11 +50,11 @@ public:
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
 private:
-	// Internal methods to grab and handle the next token
+    // Internal methods to grab and handle the next token
     Token next(LexerMode mode);
     Token nextRaw(LexerMode mode);
 
-	// directive handling methods
+    // directive handling methods
     Trivia handleIncludeDirective(Token directive);
     Trivia handleResetAllDirective(Token directive);
     Trivia handleDefineDirective(Token directive);
@@ -66,20 +66,20 @@ private:
     Trivia handleTimescaleDirective(Token directive);
     Trivia handleDefaultNetTypeDirective(Token directive);
 
-	// Shared method to consume up to the end of a directive line
+    // Shared method to consume up to the end of a directive line
     Token parseEndOfDirective(bool suppressError = false);
     Trivia createSimpleDirective(Token directive, bool suppressError = false);
 
-	// Determines whether the else branch of a conditional directive should be taken
+    // Determines whether the else branch of a conditional directive should be taken
     bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName);
 
-	// Handle parsing a branch of a conditional directive
+    // Handle parsing a branch of a conditional directive
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
 
-	// Timescale specifier parser
+    // Timescale specifier parser
     void expectTimescaleSpecifier(Token& unit, Token& precision);
 
-	// Macro handling methods
+    // Macro handling methods
     DefineDirectiveSyntax* findMacro(Token directive);
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
     bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, MacroActualArgumentListSyntax* actualArgs, Buffer<Token>& dest);
@@ -91,7 +91,7 @@ private:
     Token expect(TokenKind kind, LexerMode mode = LexerMode::Directive);
     bool peek(TokenKind kind, LexerMode mode = LexerMode::Directive) { return peek(mode).kind == kind; }
 
-	Diagnostic& addError(DiagCode code, SourceLocation location);
+    Diagnostic& addError(DiagCode code, SourceLocation location);
 
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.

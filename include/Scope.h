@@ -12,18 +12,18 @@ class Symbol;
 // contexts so that symbol lookup can be performed.
 class Scope {
 public:
-	void add(const Symbol* symbol);
+    void add(const Symbol* symbol);
 
-	template<typename TContainer>
-	void addRange(const TContainer& container) {
-		for (const auto& symbol : container)
-			add(symbol);
-	}
+    template<typename TContainer>
+    void addRange(const TContainer& container) {
+        for (const auto& symbol : container)
+            add(symbol);
+    }
 
-	const Symbol* lookup(StringRef name);
+    const Symbol* lookup(StringRef name);
 
 private:
-	std::unordered_map<StringRef, const Symbol*> table;
+    std::unordered_map<StringRef, const Symbol*> table;
 };
 
 }

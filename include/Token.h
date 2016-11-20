@@ -83,22 +83,22 @@ using NumericTokenValue = variant<logic_t, double, SVInt>;
 /// hot path only cares about the token's kind, so that's given priority.
 class Token {
 public:
-	/// Heap-allocated info block.
+    /// Heap-allocated info block.
     struct Info {
-		/// Numeric-related information.
+        /// Numeric-related information.
         struct NumericLiteralInfo {
-			NumericTokenValue value;
+            NumericTokenValue value;
             NumericTokenFlags numericFlags;
         };
 
-		/// Leading trivia.
+        /// Leading trivia.
         ArrayRef<slang::Trivia> trivia;
 
-		/// The raw source span.
+        /// The raw source span.
         StringRef rawText;
 
-		/// The original location in the source text (or a macro location
-		/// if the token was generated during macro expansion).
+        /// The original location in the source text (or a macro location
+        /// if the token was generated during macro expansion).
         SourceLocation location;
 
         /// Extra kind-specific data associated with the token.
@@ -108,7 +108,7 @@ public:
         /// NumericLiteralInfo: Info for numeric tokens.
         variant<StringRef, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
 
-		/// Various token flags.
+        /// Various token flags.
         uint8_t flags;
 
         Info();
@@ -124,8 +124,8 @@ public:
         const NumericLiteralInfo& numInfo() const { return get<NumericLiteralInfo>(extra); }
     };
 
-	/// The kind of the token; this is not in the info block because
-	/// we almost always want to look at it (perf).
+    /// The kind of the token; this is not in the info block because
+    /// we almost always want to look at it (perf).
     TokenKind kind;
 
     Token();
@@ -162,13 +162,13 @@ public:
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;
 
-	/// Determines whether the token has the given trivia.
+    /// Determines whether the token has the given trivia.
     bool hasTrivia(TriviaKind triviaKind) const;
 
     bool valid() const { return info != nullptr; }
     explicit operator bool() const { return valid(); }
 
-	/// Modification methods to make it easier to deal with immutable tokens.
+    /// Modification methods to make it easier to deal with immutable tokens.
     Token asPreprocessed(BumpAllocator& alloc) const;
     Token withTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const;
     Token withLocation(BumpAllocator& alloc, SourceLocation location) const;

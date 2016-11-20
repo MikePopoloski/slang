@@ -15,10 +15,10 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     auto file1 = parse("module A; A a(); endmodule\nmodule B; endmodule\nmodule C; endmodule");
     auto file2 = parse("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
-	Diagnostics diagnostics;
+    Diagnostics diagnostics;
     DeclarationTable declTable(diagnostics);
-	declTable.addSyntaxTree(&file1);
-	declTable.addSyntaxTree(&file2);
+    declTable.addSyntaxTree(&file1);
+    declTable.addSyntaxTree(&file2);
 
     auto topLevelModules = declTable.getTopLevelModules();
 

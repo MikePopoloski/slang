@@ -10,10 +10,10 @@ static const char RelativeTestPath[] = "tests/file_tests/corpus";
 
 int main() {
     // run through all external files in our corpus and make sure they parse without error
-	SourceManager sourceManager;
+    SourceManager sourceManager;
     sourceManager.addUserDirectory(RelativeTestPath + "/include"s);
 
-	DiagnosticWriter diagWriter(sourceManager);
+    DiagnosticWriter diagWriter(sourceManager);
     int errors = 0;
     int files = 0;
     for (auto& p : getFilesInDirectory(RelativeTestPath)) {

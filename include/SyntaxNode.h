@@ -297,7 +297,7 @@ enum class SyntaxKind : uint16_t {
     NamedType,
     EventType,
     VoidType,
-	TypeType,
+    TypeType,
     ImplicitType,
     TypeReference,
     StructUnionMember,
@@ -510,21 +510,21 @@ struct TokenOrSyntax {
 /// Base class for all syntax nodes.
 class SyntaxNode {
 public:
-	/// Number of child nodes.
+    /// Number of child nodes.
     uint32_t childCount = 0;
 
-	/// The kind of syntax node.
+    /// The kind of syntax node.
     SyntaxKind kind;
 
     SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
-	/// Utility method to wrap writeTo and generate an std::string.
+    /// Utility method to wrap writeTo and generate an std::string.
     std::string toString(uint8_t flags = 0);
 
-	/// Write the node and all of its children to a string.
+    /// Write the node and all of its children to a string.
     void writeTo(Buffer<char>& buffer, uint8_t flags);
 
-	/// Get the first leaf token in this subtree.
+    /// Get the first leaf token in this subtree.
     Token getFirstToken();
 
     /// Get the last leaf token in this subtree.
@@ -533,7 +533,7 @@ public:
     /// Get the source range of the node.
     SourceRange sourceRange();
 
-	/// Replace the first token in the subtree with the given token.
+    /// Replace the first token in the subtree with the given token.
     bool replaceFirstToken(Token token);
 
     template<typename T>

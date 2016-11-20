@@ -20,8 +20,8 @@ StatementSyntax* parse(StringRef text) {
     auto node = parser.parseStatement();
     REQUIRE(node);
 
-	if (!diagnostics.empty())
-		WARN(diagWriter.report(diagnostics).c_str());
+    if (!diagnostics.empty())
+        WARN(diagWriter.report(diagnostics).c_str());
 
     return node;
 }

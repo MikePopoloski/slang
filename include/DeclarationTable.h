@@ -36,36 +36,36 @@ class DeclarationTable {
 public:
     DeclarationTable(Diagnostics& diagnostics);
 
-	void addSyntaxTree(const SyntaxTree* tree);
+    void addSyntaxTree(const SyntaxTree* tree);
 
-	ArrayRef<const ModuleDeclarationSyntax*> getTopLevelModules();
+    ArrayRef<const ModuleDeclarationSyntax*> getTopLevelModules();
 
 private:
-	// Track each compilation unit's declarations separately and then merge them
-	// once we have them all. This allows parallelizing the search process.
-	struct UnitDecls {
-		Buffer<const ModuleDeclarationSyntax*> rootNodes;
-		Buffer<const HierarchyInstantiationSyntax*> instantiations;
-		bool hasDefParams;
-	};
+    // Track each compilation unit's declarations separately and then merge them
+    // once we have them all. This allows parallelizing the search process.
+    struct UnitDecls {
+        Buffer<const ModuleDeclarationSyntax*> rootNodes;
+        Buffer<const HierarchyInstantiationSyntax*> instantiations;
+        bool hasDefParams;
+    };
 
-	struct DeclAndFlag {
-		const ModuleDeclarationSyntax* decl;
-		bool instantiated = false;
+    struct DeclAndFlag {
+        const ModuleDeclarationSyntax* decl;
+        bool instantiated = false;
 
-		DeclAndFlag(const ModuleDeclarationSyntax* decl) : decl(decl) {}
-	};
+        DeclAndFlag(const ModuleDeclarationSyntax* decl) : decl(decl) {}
+    };
 
     using NameSet = std::unordered_set<StringRef>;
     static void visit(const ModuleDeclarationSyntax* module, UnitDecls& unit, std::vector<NameSet>& scopeStack);
     static void visit(const MemberSyntax* node, UnitDecls& unit, std::vector<NameSet>& scopeStack);
     static bool containsName(const std::vector<NameSet>& scopeStack, StringRef name);
 
-	Diagnostics& diagnostics;
-	Buffer<UnitDecls> units;
-	Buffer<const ModuleDeclarationSyntax*> topLevel;
+    Diagnostics& diagnostics;
+    Buffer<UnitDecls> units;
+    Buffer<const ModuleDeclarationSyntax*> topLevel;
     std::unordered_map<StringRef, DeclAndFlag> nameLookup;
-	bool dirty = false;
+    bool dirty = false;
 };
 
 }

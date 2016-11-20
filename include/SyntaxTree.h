@@ -34,10 +34,10 @@ public:
     static SyntaxTree fromFile(SourceManager& sourceManager, StringRef path);
     static SyntaxTree fromText(SourceManager& sourceManager, StringRef text);
 
-	/// Gets the root of the syntax tree.
+    /// Gets the root of the syntax tree.
     const CompilationUnitSyntax* root() const { return rootNode; }
 
-	/// Gets any diagnostics generated while parsing.
+    /// Gets any diagnostics generated while parsing.
     Diagnostics& diagnostics() { return diagnosticsBuffer; }
 
 private:

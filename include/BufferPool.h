@@ -29,15 +29,15 @@ public:
     /// Simple RAII wrapper so that pooled buffers get returned automatically at the end of a scope.
     template<typename TWrapped>
     class BufferWrapper {
-	public:
-		BufferWrapper(BufferPool<T>* pool, Buffer<TWrapped>* buffer) : pool(pool), buffer(buffer) {}
-		~BufferWrapper() { pool->free(buffer); }
+    public:
+        BufferWrapper(BufferPool<T>* pool, Buffer<TWrapped>* buffer) : pool(pool), buffer(buffer) {}
+        ~BufferWrapper() { pool->free(buffer); }
 
-		Buffer<TWrapped>& get() { return *buffer; }
-		Buffer<TWrapped>* operator->() { return buffer; }
-		operator Buffer<TWrapped>&() { return *buffer; }
+        Buffer<TWrapped>& get() { return *buffer; }
+        Buffer<TWrapped>* operator->() { return buffer; }
+        operator Buffer<TWrapped>&() { return *buffer; }
 
-	private:
+    private:
         BufferPool<T>* pool;
         Buffer<TWrapped>* buffer;
     };

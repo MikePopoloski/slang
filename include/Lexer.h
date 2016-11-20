@@ -23,15 +23,15 @@ struct SourceBuffer;
 
 /// The lexer can interpret source characters differently depending on mode.
 enum class LexerMode {
-	/// Normal lexing mode.
+    /// Normal lexing mode.
     Normal,
 
-	/// We're inside a directive; end of line turns into EndOfDirective
-	/// tokens instead of whitespace.
+    /// We're inside a directive; end of line turns into EndOfDirective
+    /// tokens instead of whitespace.
     Directive,
 
-	/// We're lexing an include file name; we're looking at a special
-	/// kind of string that might be delimited by angle brackets.
+    /// We're lexing an include file name; we're looking at a special
+    /// kind of string that might be delimited by angle brackets.
     IncludeFileName
 };
 
@@ -45,7 +45,7 @@ class Lexer {
 public:
     Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics);
 
-	// Not copyable
+    // Not copyable
     Lexer(const Lexer&) = delete;
     Lexer& operator=(const Lexer&) = delete;
 

@@ -98,22 +98,22 @@ enum class DiagCode : uint8_t {
     ExpectedInterfaceClassName,
     ExpectedAssignmentKey,
     ExpectedDistItem,
-	ExpectedIfOrCase,
-	NoLabelOnSemicolon,
-	DeferredDelayMustBeZero,
-	AttributesNotSupported,
+    ExpectedIfOrCase,
+    NoLabelOnSemicolon,
+    DeferredDelayMustBeZero,
+    AttributesNotSupported,
 
     // declarations
     DuplicateModule,
     NotePreviousDefinition,
     UnknownModule,
     DuplicateParameter,
-	LocalParamNoInitializer,
-	BodyParamNoInitializer,
-	PackedDimRequiresConstantRange,
-	PackedDimsOnPredefinedType,
+    LocalParamNoInitializer,
+    BodyParamNoInitializer,
+    PackedDimRequiresConstantRange,
+    PackedDimsOnPredefinedType,
 
-	MaxValue
+    MaxValue
 };
 
 class Diagnostic;
@@ -140,7 +140,7 @@ public:
     /// The location in source of the cause of the diagnostic.
     SourceLocation location;
 
-	/// Constructs a new Diagnostic entry with the given code and location.
+    /// Constructs a new Diagnostic entry with the given code and location.
     Diagnostic(DiagCode code, SourceLocation location);
 
     /// Adds an argument to the diagnostic.
@@ -160,44 +160,44 @@ public:
 
 class DiagnosticWriter {
 public:
-	DiagnosticWriter(SourceManager& sourceManager);
+    DiagnosticWriter(SourceManager& sourceManager);
 
-	/// Sets the message to use for the given diagnostic.
-	void setMessage(DiagCode code, std::string format);
+    /// Sets the message to use for the given diagnostic.
+    void setMessage(DiagCode code, std::string format);
 
-	/// Sets the severity to use for the given diagnostic.
-	void setSeverity(DiagCode code, DiagnosticSeverity severity);
+    /// Sets the severity to use for the given diagnostic.
+    void setSeverity(DiagCode code, DiagnosticSeverity severity);
 
-	/// Gets the current severity of the given diagnostic.
-	DiagnosticSeverity getSeverity(DiagCode code) const;
+    /// Gets the current severity of the given diagnostic.
+    DiagnosticSeverity getSeverity(DiagCode code) const;
 
-	/// Writes a report for the given diagnostic.
-	std::string report(const Diagnostic& diagnostic);
+    /// Writes a report for the given diagnostic.
+    std::string report(const Diagnostic& diagnostic);
 
-	/// Writes a report for all of the diagnostics in the given collection.
-	/// Note that this modifies the collection by sorting it.
-	std::string report(Diagnostics& diagnostics);
+    /// Writes a report for all of the diagnostics in the given collection.
+    /// Note that this modifies the collection by sorting it.
+    std::string report(Diagnostics& diagnostics);
 
 private:
-	SourceLocation getFullyExpandedLoc(SourceLocation loc);
-	StringRef getBufferLine(SourceLocation location, uint32_t col);
-	bool sortDiagnostics(const Diagnostic& x, const Diagnostic& y);
-	void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);
+    SourceLocation getFullyExpandedLoc(SourceLocation loc);
+    StringRef getBufferLine(SourceLocation location, uint32_t col);
+    bool sortDiagnostics(const Diagnostic& x, const Diagnostic& y);
+    void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);
     void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col, StringRef sourceLine, std::string& buffer);
-	
-	template<typename T>
-	void formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,
+    
+    template<typename T>
+    void formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,
                     const char* severity, const std::string& msg);
 
-	SourceManager& sourceManager;
+    SourceManager& sourceManager;
 
-	// Little structure to hold a diagnostic's format and severity.
-	struct Descriptor {
-		std::string format;
-		DiagnosticSeverity severity;
-	};
+    // Little structure to hold a diagnostic's format and severity.
+    struct Descriptor {
+        std::string format;
+        DiagnosticSeverity severity;
+    };
 
-	std::unordered_map<DiagCode, Descriptor> descriptors;
+    std::unordered_map<DiagCode, Descriptor> descriptors;
 };
 
 }

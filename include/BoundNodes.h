@@ -12,7 +12,7 @@ using ConstantValue = variant<SVInt, double>;
 enum class BoundNodeKind {
     Unknown,
     Literal,
-	Parameter,
+    Parameter,
     UnaryExpression,
     BinaryExpression,
 };
@@ -39,10 +39,10 @@ public:
 
 class BadBoundExpression : public BoundExpression {
 public:
-	BadBoundExpression() :
-		BoundExpression(BoundNodeKind::Unknown, nullptr, nullptr, true)
-	{
-	}
+    BadBoundExpression() :
+        BoundExpression(BoundNodeKind::Unknown, nullptr, nullptr, true)
+    {
+    }
 };
 
 class BoundLiteral : public BoundExpression {
@@ -55,12 +55,12 @@ public:
 
 class BoundParameter : public BoundExpression {
 public:
-	const ParameterSymbol* symbol;
+    const ParameterSymbol* symbol;
 
-	BoundParameter(const ExpressionSyntax* syntax, const ParameterSymbol* symbol, bool bad) :
-		BoundExpression(BoundNodeKind::Parameter, syntax, symbol->type, bad), symbol(symbol)
-	{
-	}
+    BoundParameter(const ExpressionSyntax* syntax, const ParameterSymbol* symbol, bool bad) :
+        BoundExpression(BoundNodeKind::Parameter, syntax, symbol->type, bad), symbol(symbol)
+    {
+    }
 };
 
 class BoundUnaryExpression : public BoundExpression {

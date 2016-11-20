@@ -294,8 +294,8 @@ MemberSyntax* Parser::parseMember() {
 
     switch (peek().kind) {
         case TokenKind::GenerateKeyword: {
-			errorIfAttributes(attributes, "a generate region");
-			auto keyword = consume();
+            errorIfAttributes(attributes, "a generate region");
+            auto keyword = consume();
 
             // It's definitely not legal to have a generate block here on its own (without an if or for loop)
             // but some simulators seems to accept it and I've found code in the wild that depends on it.
@@ -313,7 +313,7 @@ MemberSyntax* Parser::parseMember() {
         }
         case TokenKind::TimeUnitKeyword:
         case TokenKind::TimePrecisionKeyword:
-			errorIfAttributes(attributes, "a time units declaration");
+            errorIfAttributes(attributes, "a time units declaration");
             return parseTimeUnitsDeclaration(attributes);
         case TokenKind::ModuleKeyword:
         case TokenKind::MacromoduleKeyword:
@@ -349,9 +349,9 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::AssignKeyword:
             return parseContinuousAssign(attributes);
         case TokenKind::InitialKeyword: {
-			auto keyword = consume();
-			return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement(false));
-		}
+            auto keyword = consume();
+            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement(false));
+        }
         case TokenKind::FinalKeyword:
         case TokenKind::AlwaysKeyword:
         case TokenKind::AlwaysCombKeyword:
@@ -721,12 +721,12 @@ MemberSyntax* Parser::parseClassMember() {
     }
     auto qualifiers = qualifierBuffer->copy(alloc);
 
-	if (isVariableDeclaration()) {
-		auto decl = parseVariableDeclaration(nullptr);
-		if (decl->kind == SyntaxKind::ParameterDeclarationStatement)
-			errorIfAttributes(attributes, "a class parameter");
-		return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, qualifiers, decl);
-	}
+    if (isVariableDeclaration()) {
+        auto decl = parseVariableDeclaration(nullptr);
+        if (decl->kind == SyntaxKind::ParameterDeclarationStatement)
+            errorIfAttributes(attributes, "a class parameter");
+        return alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, qualifiers, decl);
+    }
 
     if (kind == TokenKind::TaskKeyword || kind == TokenKind::FunctionKeyword) {
         if (isPureOrExtern)
@@ -757,7 +757,7 @@ MemberSyntax* Parser::parseClassMember() {
         case TokenKind::CoverGroupKeyword:
             return parseCovergroupDeclaration(attributes);
         case TokenKind::Semicolon:
-			errorIfAttributes(attributes, "an empty member");
+            errorIfAttributes(attributes, "an empty member");
             return alloc.emplace<EmptyMemberSyntax>(attributes, qualifiers, consume());
         default:
             break;
@@ -938,10 +938,10 @@ MemberSyntax* Parser::parseCoverpointMember() {
             break;
     }
 
-	if (peek(TokenKind::Semicolon)) {
-		errorIfAttributes(attributes, "an empty item");
-		return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, consume());
-	}
+    if (peek(TokenKind::Semicolon)) {
+        errorIfAttributes(attributes, "an empty item");
+        return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, consume());
+    }
 
     // error out if we have total junk here
     if (!wildcard && !bins && attributes.empty())
@@ -1374,10 +1374,10 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
         if (!allowImplicit)
             return alloc.emplace<NamedTypeSyntax>(parseName());
         else {
-			// If we're allowed to have an implicit type here, it means there's a chance this
-			// identifier is actually the name of something else (like a declaration) and that the
-			// type should be implicit. Check if there's another identifier right after us
-			// before deciding which one we're looking at.
+            // If we're allowed to have an implicit type here, it means there's a chance this
+            // identifier is actually the name of something else (like a declaration) and that the
+            // type should be implicit. Check if there's another identifier right after us
+            // before deciding which one we're looking at.
             int index = 1;
             if (scanDimensionList(index) && peek(index).kind == TokenKind::Identifier)
                 return alloc.emplace<NamedTypeSyntax>(parseName());
@@ -1391,8 +1391,8 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
     if (!allowImplicit)
         addError(DiagCode::ImplicitNotAllowed, peek().location());
 
-	if (!signing && dimensions.empty())
-		return nullptr;
+    if (!signing && dimensions.empty())
+        return nullptr;
 
     return alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
 }
@@ -1478,9 +1478,9 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
     }
 
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
-		Token semi;
+        Token semi;
         auto keyword = consume();
-		auto type = parseDataType(/* allowImplicit */ true);
+        auto type = parseDataType(/* allowImplicit */ true);
         auto parameter = alloc.emplace<ParameterDeclarationSyntax>(keyword, type, parseVariableDeclarators(semi));
 
         return alloc.emplace<ParameterDeclarationStatementSyntax>(attributes, parameter, semi);
@@ -1865,8 +1865,8 @@ bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
 }
 
 void Parser::errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg) {
-	if (!attributes.empty())
-		addError(DiagCode::AttributesNotSupported, peek().location()) << StringRef(msg, (uint32_t)strlen(msg));
+    if (!attributes.empty())
+        addError(DiagCode::AttributesNotSupported, peek().location()) << StringRef(msg, (uint32_t)strlen(msg));
 }
 
 }

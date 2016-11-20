@@ -33,52 +33,52 @@ class SemanticModel {
 public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics);
 
-	InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
+    InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
 
-	const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax);
+    const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax);
 
-	/// Utilities for getting various common type symbols.
+    /// Utilities for getting various common type symbols.
     const TypeSymbol* getErrorType() const { return getKnownType(SyntaxKind::Unknown); }
-	const TypeSymbol* getKnownType(SyntaxKind kind) const;
+    const TypeSymbol* getKnownType(SyntaxKind kind) const;
     const TypeSymbol* getIntegralType(int width, bool isSigned, bool isFourState = true);
 
-	// Generalized symbol lookup based on the current scope stack.
-	const Symbol* lookupSymbol(StringRef name);
+    // Generalized symbol lookup based on the current scope stack.
+    const Symbol* lookupSymbol(StringRef name);
 
-	BumpAllocator& getAllocator() { return alloc; }
+    BumpAllocator& getAllocator() { return alloc; }
 
 private:
-	struct ConstantRange {
-		SVInt msb;
-		SVInt lsb;
-	};
+    struct ConstantRange {
+        SVInt msb;
+        SVInt lsb;
+    };
 
-	bool makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
-						bool lastLocal, bool overrideLocal, bool bodyParam);
-	void evaluateParameter(ParameterSymbol* parameter);
-	bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, Buffer<ConstantRange>& results);
+    bool makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
+                        bool lastLocal, bool overrideLocal, bool bodyParam);
+    void evaluateParameter(ParameterSymbol* parameter);
+    bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, Buffer<ConstantRange>& results);
 
-	using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;
-	ScopePtr pushScope();
-	void popScope(const Scope* scope);
+    using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;
+    ScopePtr pushScope();
+    void popScope(const Scope* scope);
 
-	template<typename TContainer>
-	ScopePtr pushScope(const TContainer& range);
+    template<typename TContainer>
+    ScopePtr pushScope(const TContainer& range);
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
-	ExpressionBinder binder;
+    ExpressionBinder binder;
     BufferPool<Symbol*> symbolPool;
     BufferPool<int> intPool;
-	BufferPool<ConstantRange> constantRangePool;
+    BufferPool<ConstantRange> constantRangePool;
     std::unordered_map<StringRef, SourceLocation> nameDupMap;
-	std::vector<Scope> scopeStack;
+    std::vector<Scope> scopeStack;
 
     // preallocated type symbols for known types
-	std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
+    std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
 
-	// cache of simple integral types; maps from width -> type, arrayed by 4-state/2-state and signed/unsigned
-	std::unordered_map<int, const TypeSymbol*> integralTypeCache[2][2];
+    // cache of simple integral types; maps from width -> type, arrayed by 4-state/2-state and signed/unsigned
+    std::unordered_map<int, const TypeSymbol*> integralTypeCache[2][2];
 };
 
 }

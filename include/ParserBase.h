@@ -23,25 +23,25 @@ class ParserBase {
 protected:
     ParserBase(Preprocessor& preprocessor);
 
-	/// Preprend trivia to the given syntax node / token.
+    /// Preprend trivia to the given syntax node / token.
     SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
     Token prependTrivia(Token token, Trivia* trivia);
 
-	/// Prepend a set of trivia to the given syntax node / token.
+    /// Prepend a set of trivia to the given syntax node / token.
     void prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia);
     Token prependTrivia(Token token, Buffer<Trivia>& trivia);
 
-	/// Prepend a set of skipped tokens to the given syntax node / token.
+    /// Prepend a set of skipped tokens to the given syntax node / token.
     SyntaxNode* prependSkippedTokens(SyntaxNode* node, Buffer<Token>& tokens);
     Token prependSkippedTokens(Token node, Buffer<Token>& tokens);
 
-	/// Reduce the given skipped tokens into trivia in the given buffer.
+    /// Reduce the given skipped tokens into trivia in the given buffer.
     void reduceSkippedTokens(Buffer<Token>& skipped, Buffer<Trivia>& trivia);
 
     Diagnostics& getDiagnostics();
     Diagnostic& addError(DiagCode code, SourceLocation location);
 
-	// Helper methods to manipulate the underlying token stream.
+    // Helper methods to manipulate the underlying token stream.
     Token peek(int offset);
     Token peek();
     bool peek(TokenKind kind);
@@ -61,23 +61,23 @@ protected:
 
         ~Window() { delete[] buffer; }
 
-		// not copyable
+        // not copyable
         Window(const Window&) = delete;
         Window& operator=(const Window&) = delete;
 
-		// the source of all tokens
+        // the source of all tokens
         Preprocessor& tokenSource;
 
-		// a buffer of tokens for implementing lookahead
+        // a buffer of tokens for implementing lookahead
         Token* buffer = nullptr;
 
-		// the current token we're looking at
+        // the current token we're looking at
         Token currentToken;
 
-		// the last token we consumed
+        // the last token we consumed
         Token lastConsumed;
 
-		// the current offset within the lookahead buffer
+        // the current offset within the lookahead buffer
         int currentOffset = 0;
         int count = 0;
         int capacity = 0;

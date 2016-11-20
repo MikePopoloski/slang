@@ -34,7 +34,7 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     auto current = peek();
     if (current.kind == TokenKind::NewKeyword)
         return parseNewExpression();
-	// TODO:
+    // TODO:
     /*else if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
         return alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
@@ -289,11 +289,11 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     uint32_t length = 0;
     NumericTokenFlags baseFlags = baseToken.numericFlags();
 
-	vectorBuilder.start(baseFlags.base, sizeBits, baseFlags.isSigned, first.location());
+    vectorBuilder.start(baseFlags.base, sizeBits, baseFlags.isSigned, first.location());
     do {
         length += next.rawText().length();
         consume();
-		vectorBuilder.append(next);
+        vectorBuilder.append(next);
         next = peek();
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
