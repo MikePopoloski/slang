@@ -1866,7 +1866,7 @@ bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
 
 void Parser::errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg) {
 	if (!attributes.empty())
-		addError(DiagCode::AttributesNotSupported, peek().location()) << StringRef(msg, strlen(msg));
+		addError(DiagCode::AttributesNotSupported, peek().location()) << StringRef(msg, (uint32_t)strlen(msg));
 }
 
 }

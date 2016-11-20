@@ -12,8 +12,17 @@
 
 namespace slang {
 
-// TODO: better impl of this
-inline uint32_t clog2(uint64_t value) { return (uint32_t)std::ceil(std::log2(value)); }
+inline uint32_t clog2(uint64_t value) {
+#if defined (_MSC_VER)
+    unsigned long index;
+    if (!_BitScanReverse64(&index, value))
+        return 0;
+    return index + (value & (value - 1) ? 1 : 0);
+#else
+    uint32_t log = sizeof(value) * CHAR_BIT - 1 - __builtin_clzll(value);
+    return (value - (1 << log)) ? log + 1 : log;
+#endif
+}
 
 /// If value is zero, returns 64. Otherwise, returns the number of zeros, starting
 /// from the MSB.

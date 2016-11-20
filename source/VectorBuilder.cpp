@@ -123,55 +123,66 @@ SVInt VectorBuilder::finish() {
     if (!valid)
         return SVInt(0);
 
-    // figure out how much space we actually need for our digits
-    ASSERT(digits.count(), "No digits somehow?");
-
-    // do some error checking on the bit size
-    switch (literalBase) {
-        case LiteralBase::Binary:
-            if (digits.count() > sizeBits) {
-                diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
-                return SVInt(0);
-            }
-            break;
-        case LiteralBase::Octal:
-            if (digits.count() * 3 > sizeBits) {
-                diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
-                return SVInt(0);
-            }
-            break;
-        case LiteralBase::Hex:
-            if (digits.count() * 4 > sizeBits) {
-                diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
-                return SVInt(0);
-            }
-            break;
-        case LiteralBase::Decimal:
-            if (!hasUnknown) {
-                uint64_t value = 0;
-                for (logic_t d : digits) {
-                    value *= 10;
-                    value += d.value;
-                    if (value > UINT32_MAX) {
-                        diagnostics.add(DiagCode::DecimalLiteralOverflow, firstLocation);
-                        return SVInt(0);
-                    }
+    if (digits.empty())
+        digits.append(logic_t(0));
+    else if (literalBase == LiteralBase::Decimal) {
+        if (!hasUnknown) {
+            uint64_t value = 0;
+            for (logic_t d : digits) {
+                value *= 10;
+                value += d.value;
+                if (value > UINT32_MAX) {
+                    diagnostics.add(DiagCode::DecimalLiteralOverflow, firstLocation);
+                    return SVInt(0);
                 }
             }
-            break;
-        default:
-            ASSERT(false, "Unknown base");
+        }
     }
+    else {
+        int multiplier = 0;
+        switch (literalBase) {
+            case LiteralBase::Binary:
+                multiplier = 1;
+                break;
+            case LiteralBase::Octal:
+                multiplier = 3;
+                break;
+            case LiteralBase::Hex:
+                multiplier = 4;
+                break;
+            DEFAULT_UNREACHABLE;
+        }
+        // All of the digits in the number require `multiplier` bits, except for
+        // possibly the first (leading) digit. This one has leading zeros in it,
+        // so only requires clog2(d+1) bits. If the leading digit is unknown
+        // however, we go with the default multiplier amount.
+        int bits = 0;
+        if (digits.count() > 1)
+            bits = (digits.count() - 1) * multiplier;
 
+        if (digits[0].isUnknown())
+            bits += multiplier;
+        else
+            bits += clog2(digits[0].value + 1);
+
+        if (bits > sizeBits) {
+            diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
+            return SVInt(0);
+        }
+    }
     return SVInt(sizeBits, literalBase, signFlag, hasUnknown, ArrayRef<logic_t>(digits.begin(), digits.count()));
 }
 
 void VectorBuilder::addDigit(logic_t digit, int maxValue) {
-    digits.append(digit);
-    if (digit.isUnknown())
-        hasUnknown = true;
-    else
-        ASSERT(digit.value < maxValue);
+    // Leading zeros obviously don't count towards our bit limit, so
+    // only count them if we've seen other non-zero digits
+    if (digit.value != 0 || digits.count() != 0) {
+        digits.append(digit);
+        if (digit.isUnknown())
+            hasUnknown = true;
+        else
+            ASSERT(digit.value < maxValue);
+    }
 }
 
 }

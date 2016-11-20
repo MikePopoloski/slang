@@ -109,6 +109,8 @@ StatementSyntax* Parser::parseStatement(bool allowEmpty) {
         case TokenKind::Semicolon:
 			if (label)
 				addError(DiagCode::NoLabelOnSemicolon, peek().location());
+            else if (!allowEmpty)
+                addError(DiagCode::ExpectedStatement, peek().location());
             return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
         default:
             break;
@@ -558,7 +560,10 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
 
     while (!isEndKeyword(kind) && kind != TokenKind::EndOfFile) {
         SyntaxNode* newNode = nullptr;
-        if (isVariableDeclaration())
+        if (isPortDeclaration())
+            // TODO: isPortDeclaration doesn't skip over attributes
+            newNode = parsePortDeclaration(parseAttributes());
+        else if (isVariableDeclaration())
             newNode = parseVariableDeclaration(parseAttributes());
         else if (isPossibleStatement(kind))
             newNode = parseStatement();

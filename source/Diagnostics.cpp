@@ -291,7 +291,6 @@ void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc
     // walk the range in to skip any leading or trailing whitespace
     start -= startOfLine;
     end -= startOfLine;
-    const char* c = sourceLine.begin() + (start - startOfLine);
     while (sourceLine[start] == ' ' || sourceLine[start] == '\t') {
         start++;
         if (start == end)
