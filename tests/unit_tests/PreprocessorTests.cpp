@@ -129,7 +129,7 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 42);
+    CHECK(std::get<SVInt>(token.numericValue()) == 42);
     CHECK(diagnostics.empty());
 }
 
@@ -138,7 +138,7 @@ TEST_CASE("Function macro (simple)", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 3);
+    CHECK(std::get<SVInt>(token.numericValue()) == 3);
     CHECK(diagnostics.empty());
 }
 
@@ -147,7 +147,7 @@ TEST_CASE("Function macro (defaults)", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 9);
+    CHECK(std::get<SVInt>(token.numericValue()) == 9);
     CHECK(diagnostics.empty());
 }
 
@@ -164,7 +164,7 @@ TEST_CASE("Function macro (simple nesting)", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 15);
+    CHECK(std::get<SVInt>(token.numericValue()) == 15);
     CHECK(diagnostics.empty());
 }
 
@@ -173,7 +173,7 @@ TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 3);
+    CHECK(std::get<SVInt>(token.numericValue()) == 3);
     CHECK(diagnostics.empty());
 }
 
@@ -217,7 +217,7 @@ TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 42);
+    CHECK(std::get<SVInt>(token.numericValue()) == 42);
     CHECK(diagnostics.empty());
 }
 
@@ -234,7 +234,7 @@ TEST_CASE("IfNDef branch", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 42);
+    CHECK(std::get<SVInt>(token.numericValue()) == 42);
     CHECK(diagnostics.empty());
 }
 
@@ -243,7 +243,7 @@ TEST_CASE("ElseIf branch", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 99);
+    CHECK(std::get<SVInt>(token.numericValue()) == 99);
     CHECK(diagnostics.empty());
 }
 
@@ -252,7 +252,7 @@ TEST_CASE("EndIf not done", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::RealLiteral);
-    CHECK(get<double>(token.numericValue()) == 42.3);
+    CHECK(std::get<double>(token.numericValue()) == 42.3);
     CHECK(diagnostics.empty());
 }
 
@@ -282,7 +282,7 @@ TEST_CASE("Nested branches", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 99);
+    CHECK(std::get<SVInt>(token.numericValue()) == 99);
     CHECK(diagnostics.empty());
 }
 
@@ -300,7 +300,7 @@ TEST_CASE("IfDef inside macro", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(get<SVInt>(token.numericValue()) == 32);
+    CHECK(std::get<SVInt>(token.numericValue()) == 32);
     CHECK(diagnostics.empty());
 }
 

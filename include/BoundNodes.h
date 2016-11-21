@@ -7,7 +7,7 @@ namespace slang {
 
 class TypeSymbol;
 
-using ConstantValue = variant<SVInt, double>;
+using ConstantValue = std::variant<SVInt, double>;
 
 enum class BoundNodeKind {
     Unknown,

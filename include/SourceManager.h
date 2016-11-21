@@ -11,7 +11,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
-#include <variant.hpp>
+#include <variant>
 #include <vector>
 
 #include "Buffer.h"
@@ -158,7 +158,7 @@ private:
     };
 
     // index from BufferID to buffer metadata
-    std::deque<variant<FileInfo, ExpansionInfo>> bufferEntries;
+    std::deque<std::variant<FileInfo, ExpansionInfo>> bufferEntries;
 
     // cache for file lookups; this holds on to the actual file data
     std::unordered_map<std::string, std::unique_ptr<FileData>> lookupCache;

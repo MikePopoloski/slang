@@ -10,7 +10,7 @@
 #include <deque>
 #include <string>
 #include <unordered_map>
-#include <variant.hpp>
+#include <variant>
 #include <vector>
 
 #include "Buffer.h"
@@ -130,7 +130,7 @@ enum class DiagnosticSeverity {
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = variant<StringRef, SourceRange, int>;
+    using Arg = std::variant<StringRef, SourceRange, int>;
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
 

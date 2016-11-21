@@ -24,7 +24,6 @@
     <ClInclude Include="..\..\external\fmt\posix.h" />
     <ClInclude Include="..\..\external\fmt\time.h" />
     <ClInclude Include="..\..\external\ppk_assert\ppk_assert.h" />
-    <ClInclude Include="..\..\external\variant.hpp" />
     <ClInclude Include="..\..\external\xxhash\xxhash.h" />
     <ClInclude Include="..\..\include\AllSyntax.h" />
     <ClInclude Include="..\..\include\ArrayRef.h" />
@@ -168,7 +167,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)../../external;$(SolutionDir)../../include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <DisableSpecificWarnings>4127</DisableSpecificWarnings>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <DiagnosticsFormat>Classic</DiagnosticsFormat>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
@@ -187,7 +186,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)../../external;$(SolutionDir)../../include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <DisableSpecificWarnings>4127</DisableSpecificWarnings>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <DiagnosticsFormat>Classic</DiagnosticsFormat>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
@@ -208,7 +207,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)../../external;$(SolutionDir)../../include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <DisableSpecificWarnings>4127</DisableSpecificWarnings>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <DiagnosticsFormat>Classic</DiagnosticsFormat>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
@@ -231,7 +230,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)../../external;$(SolutionDir)../../include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <DisableSpecificWarnings>4127</DisableSpecificWarnings>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <DiagnosticsFormat>Classic</DiagnosticsFormat>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>

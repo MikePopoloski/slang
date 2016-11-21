@@ -22,7 +22,7 @@ Token::Info::Info(ArrayRef<Trivia> trivia, StringRef rawText, SourceLocation loc
 }
 
 void Token::Info::setNumInfo(NumericTokenValue&& value) {
-    NumericLiteralInfo* target = extra.target<NumericLiteralInfo>();
+    NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
     if (target)
         target->value = std::move(value);
     else {
@@ -33,7 +33,7 @@ void Token::Info::setNumInfo(NumericTokenValue&& value) {
 }
 
 void Token::Info::setNumFlags(LiteralBase base, bool isSigned) {
-    NumericLiteralInfo* target = extra.target<NumericLiteralInfo>();
+    NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
     if (target) {
         target->numericFlags.base = base;
         target->numericFlags.isSigned = isSigned;
@@ -47,7 +47,7 @@ void Token::Info::setNumFlags(LiteralBase base, bool isSigned) {
 }
 
 void Token::Info::setTimeUnit(TimeUnit unit) {
-    NumericLiteralInfo* target = extra.target<NumericLiteralInfo>();
+    NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
     if (target)
         target->numericFlags.unit = unit;
     else {

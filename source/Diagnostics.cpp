@@ -27,15 +27,16 @@ Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
 }
 
 Diagnostic& operator<<(Diagnostic& diag, Diagnostic::Arg&& arg) {
-    if (arg.target<SourceRange>())
-        diag.ranges.push_back(get<SourceRange>(arg));
+    SourceRange* range = std::get_if<SourceRange>(&arg);
+    if (range)
+        diag.ranges.push_back(*range);
     else
         diag.args.push_back(std::move(arg));
     return diag;
 }
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
-    return apply([&](auto&& t) -> auto& { return os << t; }, arg);
+    return visit([&](auto&& t) -> auto& { return os << t; }, arg);
 }
 
 Diagnostics::Diagnostics() :

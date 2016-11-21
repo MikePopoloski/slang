@@ -263,7 +263,7 @@ void ExpressionBinder::propagateAndFold(BoundExpression* expression, const TypeS
 void ExpressionBinder::propagateAndFoldLiteral(BoundLiteral* expression, const TypeSymbol* type) {
     switch (expression->syntax->kind) {
         case SyntaxKind::IntegerLiteralExpression: {
-            const SVInt& v = get<SVInt>(expression->syntax->as<LiteralExpressionSyntax>()->literal.numericValue());
+            const SVInt& v = std::get<SVInt>(expression->syntax->as<LiteralExpressionSyntax>()->literal.numericValue());
             if (v.getBitWidth() < type->integral().width)
                 expression->constantValue = extend(v, (uint16_t)type->integral().width, type->integral().isSigned);
             else
@@ -281,7 +281,7 @@ void ExpressionBinder::propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpress
     propagateAndFold(expression->operand, type);
 
     ConstantValue cv;
-    SVInt& v = get<SVInt>(expression->operand->constantValue);
+    SVInt& v = std::get<SVInt>(expression->operand->constantValue);
 
     switch (expression->syntax->kind) {
         case SyntaxKind::UnaryPlusExpression: cv = v; break;
@@ -295,7 +295,7 @@ void ExpressionBinder::propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpress
 void ExpressionBinder::propagateAndFoldUnaryReductionOperator(BoundUnaryExpression* expression, const TypeSymbol* type) {
     // operands are self-determined and result type is always 1 bit
     ConstantValue cv;
-    SVInt& v = get<SVInt>(expression->operand->constantValue);
+    SVInt& v = std::get<SVInt>(expression->operand->constantValue);
 
     switch (expression->syntax->kind) {
         case SyntaxKind::UnaryBitwiseAndExpression: cv = SVInt(v.reductionAnd()); break;
@@ -316,8 +316,8 @@ void ExpressionBinder::propagateAndFoldArithmeticOperator(BoundBinaryExpression*
     propagateAndFold(expression->right, type);
 
     ConstantValue cv;
-    SVInt& l = get<SVInt>(expression->left->constantValue);
-    SVInt& r = get<SVInt>(expression->right->constantValue);
+    SVInt& l = std::get<SVInt>(expression->left->constantValue);
+    SVInt& r = std::get<SVInt>(expression->right->constantValue);
 
     switch (expression->syntax->kind) {
         case SyntaxKind::AddExpression: cv = l + r; break;

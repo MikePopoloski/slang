@@ -183,6 +183,11 @@
 #define CATCH_INTERNAL_CONFIG_CPP11_GENERATED_METHODS
 #endif
 
+#if (_MSC_VER >= 1910)
+#define CATCH_CPP11_OR_GREATER
+#define CATCH_CPP14_OR_GREATER
+#endif
+
 #endif // _MSC_VER
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -27,10 +27,10 @@ const ParameterSymbol& testParameter(std::string text, int index = 0) {
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {
-    CHECK(get<SVInt>(testParameter("parameter foo = 4;").value) == 4);
-    CHECK(get<SVInt>(testParameter("parameter foo = 4 + 5;").value) == 9);
-    CHECK(get<SVInt>(testParameter("parameter bar = 9, foo = bar + 1;", 1).value) == 10);
-    CHECK(get<SVInt>(testParameter("parameter logic [3:0] foo = 4;").value) == 4);
+    CHECK(std::get<SVInt>(testParameter("parameter foo = 4;").value) == 4);
+    CHECK(std::get<SVInt>(testParameter("parameter foo = 4 + 5;").value) == 9);
+    CHECK(std::get<SVInt>(testParameter("parameter bar = 9, foo = bar + 1;", 1).value) == 10);
+    CHECK(std::get<SVInt>(testParameter("parameter logic [3:0] foo = 4;").value) == 4);
 }
 
 }

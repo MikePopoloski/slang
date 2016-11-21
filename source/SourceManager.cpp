@@ -74,7 +74,7 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
         return SourceLocation();
 
     ASSERT(buffer.id < bufferEntries.size());
-    return get<FileInfo>(bufferEntries[buffer.id]).includedFrom;
+    return std::get<FileInfo>(bufferEntries[buffer.id]).includedFrom;
 }
 
 bool SourceManager::isFileLoc(SourceLocation location) {
@@ -83,7 +83,7 @@ bool SourceManager::isFileLoc(SourceLocation location) {
         return false;
 
     ASSERT(buffer.id < bufferEntries.size());
-    return bufferEntries[buffer.id].target<FileInfo>() != nullptr;
+    return std::get_if<FileInfo>(&bufferEntries[buffer.id]) != nullptr;
 }
 
 bool SourceManager::isMacroLoc(SourceLocation location) {
@@ -92,7 +92,7 @@ bool SourceManager::isMacroLoc(SourceLocation location) {
         return false;
 
     ASSERT(buffer.id < bufferEntries.size());
-    return bufferEntries[buffer.id].target<ExpansionInfo>() != nullptr;
+    return std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]) != nullptr;
 }
 
 SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
@@ -101,7 +101,7 @@ SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
         return SourceLocation();
 
     ASSERT(buffer.id < bufferEntries.size());
-    return get<ExpansionInfo>(bufferEntries[buffer.id]).expansionStart;
+    return std::get<ExpansionInfo>(bufferEntries[buffer.id]).expansionStart;
 }
 
 SourceRange SourceManager::getExpansionRange(SourceLocation location) {
@@ -110,7 +110,7 @@ SourceRange SourceManager::getExpansionRange(SourceLocation location) {
         return SourceRange();
 
     ASSERT(buffer.id < bufferEntries.size());
-    ExpansionInfo& info = get<ExpansionInfo>(bufferEntries[buffer.id]);
+    ExpansionInfo& info = std::get<ExpansionInfo>(bufferEntries[buffer.id]);
     return SourceRange(info.expansionStart, info.expansionEnd);
 }
 
@@ -120,7 +120,7 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
         return SourceLocation();
 
     ASSERT(buffer.id < bufferEntries.size());
-    return get<ExpansionInfo>(bufferEntries[buffer.id]).originalLoc + location.offset();
+    return std::get<ExpansionInfo>(bufferEntries[buffer.id]).originalLoc + location.offset();
 }
 
 StringRef SourceManager::getSourceText(BufferID buffer) {
@@ -204,7 +204,7 @@ SourceManager::FileData* SourceManager::getFileData(BufferID buffer) {
         return nullptr;
 
     ASSERT(buffer.id < bufferEntries.size());
-    return get<FileInfo>(bufferEntries[buffer.id]).data;
+    return std::get<FileInfo>(bufferEntries[buffer.id]).data;
 }
 
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom) {

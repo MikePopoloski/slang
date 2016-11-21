@@ -7,7 +7,7 @@
 
 namespace slang {
 
-using ConstantValue = variant<SVInt, double>;
+using ConstantValue = std::variant<SVInt, double>;
 
 enum class SymbolKind {
     Unknown,

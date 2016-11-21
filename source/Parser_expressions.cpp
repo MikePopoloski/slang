@@ -159,7 +159,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
         case TokenKind::RealLiteral: {
             // have to check for overflow here, now that we know this is actually a real
             auto literal = consume();
-            if (!std::isfinite(get<double>(literal.numericValue())))
+            if (!std::isfinite(std::get<double>(literal.numericValue())))
                 addError(DiagCode::RealExponentOverflow, literal.location());
             expr = alloc.emplace<LiteralExpressionSyntax>(SyntaxKind::RealLiteralExpression, literal);
             break;
@@ -253,7 +253,7 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
     if (token.kind == TokenKind::IntegerBase)
         baseToken = token;
     else {
-        const SVInt& tokenValue = get<SVInt>(token.numericValue());
+        const SVInt& tokenValue = std::get<SVInt>(token.numericValue());
 
         if (!peek(TokenKind::IntegerBase)) {
             if (tokenValue > INT32_MAX)

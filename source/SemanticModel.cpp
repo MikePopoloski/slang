@@ -169,7 +169,7 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
             return false;
 
         // TODO: ensure integer here
-        results.emplace(ConstantRange {get<SVInt>(msbExpr->constantValue), get<SVInt>(lsbExpr->constantValue)});
+        results.emplace(ConstantRange {std::get<SVInt>(msbExpr->constantValue), std::get<SVInt>(lsbExpr->constantValue)});
     }
     return true;
 }
