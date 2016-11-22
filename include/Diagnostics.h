@@ -113,6 +113,10 @@ enum class DiagCode : uint8_t {
     PackedDimRequiresConstantRange,
     PackedDimsOnPredefinedType,
 
+    // expressions
+    BadUnaryExpression,
+    BadBinaryExpression,
+
     MaxValue
 };
 
@@ -130,7 +134,7 @@ enum class DiagnosticSeverity {
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = std::variant<StringRef, SourceRange, int>;
+    using Arg = std::variant<std::string, SourceRange, int>;
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
 
@@ -145,6 +149,7 @@ public:
 
     /// Adds an argument to the diagnostic.
     friend Diagnostic& operator<<(Diagnostic& diag, Arg&& arg);
+    friend Diagnostic& operator<<(Diagnostic& diag, StringRef arg);
 };
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg);

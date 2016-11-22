@@ -46,6 +46,7 @@ public:
     const Symbol* lookupSymbol(StringRef name);
 
     BumpAllocator& getAllocator() { return alloc; }
+    Diagnostics& getDiagnostics() { return diagnostics; }
 
 private:
     struct ConstantRange {

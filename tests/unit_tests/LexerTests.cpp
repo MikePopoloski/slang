@@ -13,9 +13,9 @@ bool withinUlp(double a, double b) {
     return std::abs(((int64_t)a - (int64_t)b)) <= 1;
 }
 
-Token lexToken(StringRef text) {
+Token lexToken(const std::string& text) {
     diagnostics.clear();
-    auto buffer = sourceManager.assignText(text);
+    auto buffer = sourceManager.assignText(StringRef(text));
     Lexer lexer(buffer, alloc, diagnostics);
 
     Token token = lexer.lex();
@@ -59,11 +59,11 @@ TEST_CASE("Unicode BOMs", "[lexer]") {
 
 TEST_CASE("Embedded null", "[lexer]") {
     const char text[] = "\0\0";
-    auto str = std::string(text, text + sizeof(text) - 2);
-    Token token = lexToken(text);
+    auto str = std::string(text, text + sizeof(text) - 1);
+    Token token = lexToken(str);
 
     CHECK(token.kind == TokenKind::Unknown);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == str);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == str.substr(0, str.length() - 1));
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
 }
@@ -531,7 +531,7 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
 
 void testKeyword(TokenKind kind) {
     auto text = getTokenKindText(kind);
-    Token token = lexToken(text);
+    Token token = lexToken(text.toString());
 
     CHECK(token.kind == kind);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -793,7 +793,7 @@ TEST_CASE("All Keywords", "[preprocessor]") {
 
 void testPunctuation(TokenKind kind) {
     StringRef text = getTokenKindText(kind);
-    Token token = lexToken(text);
+    Token token = lexToken(text.toString());
 
     CHECK(token.kind == kind);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);

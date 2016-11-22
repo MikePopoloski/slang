@@ -9,11 +9,11 @@ BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceManager sourceManager;
 
-ExpressionSyntax* parse(StringRef text) {
+ExpressionSyntax* parse(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-    preprocessor.pushSource(text);
+    preprocessor.pushSource(StringRef(text));
 
     Parser parser(preprocessor);
     auto node = parser.parseExpression();
@@ -60,7 +60,7 @@ TEST_CASE("MinTypMax expression", "[parser:expressions]") {
 
 void testImplicitClassHandle(TokenKind kind) {
     auto text = getTokenKindText(kind);
-    auto expr = parse(text);
+    auto expr = parse(text.toString());
 
     REQUIRE(expr->kind == getKeywordNameExpression(kind));
     CHECK(((KeywordNameSyntax*)expr)->keyword.kind == kind);
@@ -230,7 +230,7 @@ TEST_CASE("Binary operators", "[parser:expression]") {
 }
 
 void testScopedName(StringRef text) {
-    auto expr = parse(text);
+    auto expr = parse(text.toString());
 
     REQUIRE(expr->kind == SyntaxKind::ScopedName);
     CHECK(expr->toString() == text.begin());
@@ -310,7 +310,7 @@ TEST_CASE("Element Access", "[parser:expressions]") {
 }
 
 void testElementRange(StringRef text, SyntaxKind kind) {
-    auto expr = parse(text);
+    auto expr = parse(text.toString());
     REQUIRE(expr->kind == SyntaxKind::ElementSelectExpression);
     CHECK(((ElementSelectExpressionSyntax*)expr)->select->selector->kind == kind);
     CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());

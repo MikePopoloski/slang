@@ -9,6 +9,7 @@
 
 #include "AllSyntax.h"
 #include "BoundNodes.h"
+#include "Diagnostics.h"
 
 namespace slang {
 
@@ -34,6 +35,10 @@ public:
     BoundExpression* bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax);
 
 private:
+    // functions to check whether operators are applicable to the given operand types
+    bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand);
+    bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** lhs, BoundExpression** rhs);
+
     // propagates the type of the expression back down to its operands
     // and folds constants on the way back up
     void propagateAndFold(BoundExpression* expression, const TypeSymbol* type);
@@ -48,6 +53,8 @@ private:
 
     SemanticModel& sem;
     BumpAllocator& alloc;
+
+    Diagnostic& addError(DiagCode code, SourceLocation location);
 };
 
 }

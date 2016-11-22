@@ -23,7 +23,6 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
     switch (syntax->kind) {
         case SyntaxKind::NullLiteralExpression:
         case SyntaxKind::StringLiteralExpression:
-        case SyntaxKind::RealLiteralExpression:
         case SyntaxKind::TimeLiteralExpression:
         case SyntaxKind::WildcardLiteralExpression:
         case SyntaxKind::OneStepLiteralExpression:
@@ -31,6 +30,7 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
             break;
         case SyntaxKind::IdentifierName:
             return bindSimpleName(syntax->as<IdentifierNameSyntax>());
+        case SyntaxKind::RealLiteralExpression:
         case SyntaxKind::IntegerLiteralExpression:
             return bindLiteral(syntax->as<LiteralExpressionSyntax>());
         case SyntaxKind::IntegerVectorExpression:
@@ -112,11 +112,28 @@ BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyn
 BoundExpression* ExpressionBinder::bindLiteral(const LiteralExpressionSyntax* syntax) {
     switch (syntax->kind) {
         case SyntaxKind::IntegerLiteralExpression: {
-            return alloc.emplace<BoundLiteral>(syntax, sem.getKnownType(SyntaxKind::IntType), false);
+            BoundLiteral* expr = alloc.emplace<BoundLiteral>(syntax, sem.getKnownType(SyntaxKind::IntType), false);
+            expr->constantValue = std::get<SVInt>(syntax->literal.numericValue());
+            return expr;
         }
-        default:
-            return nullptr;
+        case SyntaxKind::RealLiteralExpression: {
+            BoundLiteral* expr = alloc.emplace<BoundLiteral>(syntax, sem.getKnownType(SyntaxKind::RealType), false);
+            expr->constantValue = std::get<double>(syntax->literal.numericValue());
+            return expr;
+        }
+        DEFAULT_UNREACHABLE;
     }
+}
+
+BoundExpression* ExpressionBinder::bindLiteral(const IntegerVectorExpressionSyntax* syntax) {
+    if (syntax->value.isMissing())
+        return alloc.emplace<BoundLiteral>(syntax, sem.getErrorType(), true);
+
+    const SVInt& value = std::get<SVInt>(syntax->value.numericValue());
+    const TypeSymbol* type = sem.getIntegralType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    BoundLiteral* expr = alloc.emplace<BoundLiteral>(syntax, type, false);
+    expr->constantValue = value;
+    return expr;
 }
 
 BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* syntax) {
@@ -131,13 +148,9 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
     return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterSymbol>(), false);
 }
 
-BoundExpression* ExpressionBinder::bindLiteral(const IntegerVectorExpressionSyntax* syntax) {
-    return alloc.emplace<BoundLiteral>(syntax, sem.getKnownType(SyntaxKind::IntType), false);
-}
-
 BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax) {
     BoundExpression* operand = bindExpression(syntax->operand);
-    if (operand->bad)
+    if (operand->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
         return alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand, true);
 
     return alloc.emplace<BoundUnaryExpression>(syntax, operand->type, operand, false);
@@ -146,13 +159,16 @@ BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnary
 BoundExpression* ExpressionBinder::bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax* syntax) {
     // result type is always a single bit
     BoundExpression* operand = bindSelfDeterminedExpression(syntax->operand);
+    if (operand->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
+        return alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand, true);
+
     return alloc.emplace<BoundUnaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), operand, operand->bad);
 }
 
 BoundExpression* ExpressionBinder::bindArithmeticOperator(const BinaryExpressionSyntax* syntax) {
     BoundExpression* lhs = bindExpression(syntax->left);
     BoundExpression* rhs = bindExpression(syntax->right);
-    if (lhs->bad || rhs->bad)
+    if (lhs->bad || rhs->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs, true);
 
     const IntegralTypeSymbol& l = lhs->type->integral();
@@ -167,7 +183,7 @@ BoundExpression* ExpressionBinder::bindArithmeticOperator(const BinaryExpression
 BoundExpression* ExpressionBinder::bindComparisonOperator(const BinaryExpressionSyntax* syntax) {
     BoundExpression* lhs = bindExpression(syntax->left);
     BoundExpression* rhs = bindExpression(syntax->right);
-    if (lhs->bad || rhs->bad)
+    if (lhs->bad || rhs->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs, true);
 
     // result type is always a single bit
@@ -177,7 +193,7 @@ BoundExpression* ExpressionBinder::bindComparisonOperator(const BinaryExpression
 BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpressionSyntax* syntax) {
     BoundExpression* lhs = bindSelfDeterminedExpression(syntax->left);
     BoundExpression* rhs = bindSelfDeterminedExpression(syntax->right);
-    if (lhs->bad || rhs->bad)
+    if (lhs->bad || rhs->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs, true);
 
     // result type is always a single bit
@@ -189,7 +205,7 @@ BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressi
     // operand is evaluated in a self determined context.
     BoundExpression* lhs = bindExpression(syntax->left);
     BoundExpression* rhs = bindSelfDeterminedExpression(syntax->right);
-    if (lhs->bad || rhs->bad)
+    if (lhs->bad || rhs->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs, true);
 
     const IntegralTypeSymbol& l = lhs->type->integral();
@@ -199,6 +215,31 @@ BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressi
     const TypeSymbol* type = sem.getIntegralType(width, isSigned);
 
     return alloc.emplace<BoundBinaryExpression>(syntax, type, lhs, rhs, false);
+}
+
+bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
+    const TypeSymbol* type = (*operand)->type;
+    bool good;
+    switch (op) {
+        case SyntaxKind::UnaryPlusExpression:
+        case SyntaxKind::UnaryMinusExpression:
+        case SyntaxKind::UnaryLogicalNotExpression:
+            good = type->isIntegral || type->isReal;
+            break;
+        default:
+            good = type->isIntegral;
+            break;
+    }
+    if (good)
+        return true;
+
+    auto& diag = addError(DiagCode::BadUnaryExpression, location);
+    diag << type->toString();
+    return false;
+}
+
+bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** lhs, BoundExpression** rhs) {
+    return true;
 }
 
 void ExpressionBinder::propagateAndFold(BoundExpression* expression, const TypeSymbol* type) {
@@ -262,12 +303,11 @@ void ExpressionBinder::propagateAndFold(BoundExpression* expression, const TypeS
 
 void ExpressionBinder::propagateAndFoldLiteral(BoundLiteral* expression, const TypeSymbol* type) {
     switch (expression->syntax->kind) {
-        case SyntaxKind::IntegerLiteralExpression: {
-            const SVInt& v = std::get<SVInt>(expression->syntax->as<LiteralExpressionSyntax>()->literal.numericValue());
+        case SyntaxKind::IntegerLiteralExpression:
+        case SyntaxKind::IntegerVectorExpression: {
+            const SVInt& v = std::get<SVInt>(expression->constantValue);
             if (v.getBitWidth() < type->integral().width)
                 expression->constantValue = extend(v, (uint16_t)type->integral().width, type->integral().isSigned);
-            else
-                expression->constantValue = v;
         }
     }
 }
@@ -341,6 +381,10 @@ void ExpressionBinder::propagateAndFoldRelationalOperator(BoundBinaryExpression*
 }
 
 void ExpressionBinder::propagateAndFoldShiftOrPowerOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
+}
+
+Diagnostic& ExpressionBinder::addError(DiagCode code, SourceLocation location) {
+    return sem.getDiagnostics().add(code, location);
 }
 
 }

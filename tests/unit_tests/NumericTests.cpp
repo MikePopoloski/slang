@@ -26,7 +26,7 @@ TEST_CASE("Construction", "[numeric]") {
 }
 
 void checkRoundTrip(std::string str, LiteralBase base) {
-    SVInt sv(str);
+    SVInt sv { StringRef(str) };
     str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
     CHECK(sv.toString(base) == str);
 }

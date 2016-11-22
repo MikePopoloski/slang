@@ -13,7 +13,7 @@ TEST_CASE("Read source", "[files]") {
 
     CHECK(!manager.readSource("X:\\nonsense.txt"));
 
-    auto file = manager.readSource(testPath);
+    auto file = manager.readSource(StringRef(testPath));
     REQUIRE(file);
     CHECK(file.data.length() > 0);
 }
@@ -26,13 +26,13 @@ TEST_CASE("Read header (absolute)", "[files]") {
     CHECK(!manager.readHeader("X:\\nonsense.txt", SourceLocation(), false));
 
     // successful load
-    SourceBuffer buffer = manager.readHeader(testPath, SourceLocation(), false);
+    SourceBuffer buffer = manager.readHeader(StringRef(testPath), SourceLocation(), false);
     REQUIRE(buffer);
     CHECK(!buffer.data.empty());
 
     // next load should be cached
     BufferID id1 = buffer.id;
-    buffer = manager.readHeader(testPath, SourceLocation(), false);
+    buffer = manager.readHeader(StringRef(testPath), SourceLocation(), false);
     CHECK(!buffer.data.empty());
 }
 
@@ -43,7 +43,7 @@ TEST_CASE("Read header (relative)", "[files]") {
     CHECK(!manager.readHeader("relative", SourceLocation(), false));
 
     // get a file ID to load relative to
-    SourceBuffer buffer1 = manager.readHeader(manager.makeAbsolutePath(RelativeTestPath), SourceLocation(), false);
+    SourceBuffer buffer1 = manager.readHeader(StringRef(manager.makeAbsolutePath(RelativeTestPath)), SourceLocation(), false);
     REQUIRE(buffer1);
 
     // reading the same header by name should return the same ID
@@ -60,12 +60,12 @@ TEST_CASE("Read header (relative)", "[files]") {
 
 TEST_CASE("Read header (include dirs)", "[files]") {
     SourceManager manager;
-    manager.addSystemDirectory(manager.makeAbsolutePath("tests/unit_tests/data/"));
+    manager.addSystemDirectory(StringRef(manager.makeAbsolutePath("tests/unit_tests/data/")));
 
     SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), true);
     REQUIRE(buffer);
 
-    manager.addUserDirectory(manager.makeAbsolutePath("tests/unit_tests/data/nested"));
+    manager.addUserDirectory(StringRef(manager.makeAbsolutePath("tests/unit_tests/data/nested")));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
 }

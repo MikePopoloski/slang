@@ -9,11 +9,11 @@ BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceManager sourceManager;
 
-ModuleDeclarationSyntax* parseModule(StringRef text) {
+ModuleDeclarationSyntax* parseModule(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-    preprocessor.pushSource(text);
+    preprocessor.pushSource(StringRef(text));
 
     Parser parser(preprocessor);
     auto node = parser.parseModule();
@@ -21,11 +21,11 @@ ModuleDeclarationSyntax* parseModule(StringRef text) {
     return node;
 }
 
-ClassDeclarationSyntax* parseClass(StringRef text) {
+ClassDeclarationSyntax* parseClass(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-    preprocessor.pushSource(text);
+    preprocessor.pushSource(StringRef(text));
 
     Parser parser(preprocessor);
     auto node = parser.parseClass();

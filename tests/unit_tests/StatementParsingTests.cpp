@@ -10,11 +10,11 @@ Diagnostics diagnostics;
 SourceManager sourceManager;
 DiagnosticWriter diagWriter(sourceManager);
 
-StatementSyntax* parse(StringRef text) {
+StatementSyntax* parse(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-    preprocessor.pushSource(text);
+    preprocessor.pushSource(StringRef(text));
 
     Parser parser(preprocessor);
     auto node = parser.parseStatement();
@@ -124,7 +124,7 @@ TEST_CASE("Disable fork statement", "[parser:statements]") {
 }
 
 void testTimingControl(StringRef text, SyntaxKind kind) {
-    auto stmt = parse(text);
+    auto stmt = parse(text.toString());
 
     REQUIRE(stmt->kind == SyntaxKind::TimingControlStatement);
     CHECK(((TimingControlStatementSyntax*)stmt)->timingControl->kind == kind);
@@ -145,7 +145,7 @@ TEST_CASE("Timing control statements", "[parser:statements]") {
 }
 
 void testStatement(StringRef text, SyntaxKind kind) {
-    auto stmt = parse(text);
+    auto stmt = parse(text.toString());
 
     REQUIRE(stmt->kind == kind);
     CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());

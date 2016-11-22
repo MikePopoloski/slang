@@ -51,6 +51,8 @@ public:
         ASSERT(isIntegral);
         return *(IntegralTypeSymbol*)this;
     }
+
+    std::string toString() const;
 };
 
 class IntegralTypeSymbol : public TypeSymbol {
@@ -95,6 +97,12 @@ public:
 class EnumTypeSymbol : public TypeSymbol {
 public:
     TypeSymbol* baseType;
+};
+
+class StructTypeSymbol : public TypeSymbol {
+public:
+    bool isPacked;
+    bool isSigned;
 };
 
 class ErrorTypeSymbol : public TypeSymbol {

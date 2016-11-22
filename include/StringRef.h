@@ -25,7 +25,7 @@ public:
     StringRef();
     StringRef(std::nullptr_t);
     StringRef(const char* ptr, uint32_t length);
-    StringRef(const std::string& str);
+    explicit StringRef(const std::string& str);
 
     template<typename Container>
     explicit StringRef(const Container& container) :
