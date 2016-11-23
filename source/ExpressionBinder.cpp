@@ -241,7 +241,40 @@ bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation 
 }
 
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** lhs, BoundExpression** rhs) {
-    return true;
+    const TypeSymbol* lt = (*lhs)->type;
+    const TypeSymbol* rt = (*rhs)->type;
+    bool good;
+    switch (op) {
+        case SyntaxKind::AddExpression:
+        case SyntaxKind::SubtractExpression:
+        case SyntaxKind::MultiplyExpression:
+        case SyntaxKind::DivideExpression:
+        case SyntaxKind::PowerExpression:
+        case SyntaxKind::LogicalAndExpression:
+        case SyntaxKind::LogicalOrExpression:
+        case SyntaxKind::LogicalImplicationExpression:
+        case SyntaxKind::LogicalEquivalenceExpression:
+        case SyntaxKind::LessThanEqualExpression:
+        case SyntaxKind::LessThanExpression:
+        case SyntaxKind::GreaterThanEqualExpression:
+        case SyntaxKind::GreaterThanExpression:
+        case SyntaxKind::EqualityExpression:
+        case SyntaxKind::InequalityExpression:
+            good = (lt->isIntegral() || lt->kind == SymbolKind::RealType) &&
+                   (rt->isIntegral() || rt->kind == SymbolKind::RealType);
+            break;
+        default:
+            good = lt->isIntegral() && rt->isIntegral();
+            break;
+    }
+    if (good)
+        return true;
+
+    auto& diag = addError(DiagCode::BadBinaryExpression, location);
+    diag << lt->toString() << rt->toString();
+    diag << (*lhs)->syntax->sourceRange();
+    diag << (*rhs)->syntax->sourceRange();
+    return false;
 }
 
 void ExpressionBinder::propagateAndFold(BoundExpression* expression, const TypeSymbol* type) {
