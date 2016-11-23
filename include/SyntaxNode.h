@@ -531,7 +531,7 @@ public:
     Token getLastToken();
 
     /// Get the source range of the node.
-    SourceRange sourceRange();
+    SourceRange sourceRange() const;
 
     /// Replace the first token in the subtree with the given token.
     bool replaceFirstToken(Token token);

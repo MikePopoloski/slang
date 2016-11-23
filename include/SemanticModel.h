@@ -40,7 +40,7 @@ public:
     /// Utilities for getting various common type symbols.
     const TypeSymbol* getErrorType() const { return getKnownType(SyntaxKind::Unknown); }
     const TypeSymbol* getKnownType(SyntaxKind kind) const;
-    const TypeSymbol* getIntegralType(int width, bool isSigned, bool isFourState = true);
+    const TypeSymbol* getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false);
 
     // Generalized symbol lookup based on the current scope stack.
     const Symbol* lookupSymbol(StringRef name);
@@ -78,8 +78,8 @@ private:
     // preallocated type symbols for known types
     std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
 
-    // cache of simple integral types; maps from width -> type, arrayed by 4-state/2-state and signed/unsigned
-    std::unordered_map<int, const TypeSymbol*> integralTypeCache[2][2];
+    // cache of simple integral types keyed by {width, signedness, 4-state, isReg}
+    std::unordered_map<uint64_t, const TypeSymbol*> integralTypeCache;
 };
 
 }

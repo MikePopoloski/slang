@@ -100,7 +100,8 @@ BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyn
     // - If the destination type width is larger than the width of the expression, propagate that type back down
     // - If the destination width is smaller, insert an implicit truncation of bits
     BoundExpression* expr = bindExpression(syntax);
-    if (expr->type->integral().width < assignmentType->integral().width)
+    const IntegralTypeSymbol& exprType = expr->type->as<IntegralTypeSymbol>();
+    if (exprType.width < assignmentType->as<IntegralTypeSymbol>().width)
         propagateAndFold(expr, assignmentType);
     else
         propagateAndFold(expr, expr->type);
@@ -171,8 +172,8 @@ BoundExpression* ExpressionBinder::bindArithmeticOperator(const BinaryExpression
     if (lhs->bad || rhs->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs, true);
 
-    const IntegralTypeSymbol& l = lhs->type->integral();
-    const IntegralTypeSymbol& r = rhs->type->integral();
+    const IntegralTypeSymbol& l = lhs->type->as<IntegralTypeSymbol>();
+    const IntegralTypeSymbol& r = rhs->type->as<IntegralTypeSymbol>();
     int width = std::max(l.width, r.width);
     bool isSigned = l.isSigned && r.isSigned;
     const TypeSymbol* type = sem.getIntegralType(width, isSigned);
@@ -208,8 +209,8 @@ BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressi
     if (lhs->bad || rhs->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs, true);
 
-    const IntegralTypeSymbol& l = lhs->type->integral();
-    const IntegralTypeSymbol& r = rhs->type->integral();
+    const IntegralTypeSymbol& l = lhs->type->as<IntegralTypeSymbol>();
+    const IntegralTypeSymbol& r = rhs->type->as<IntegralTypeSymbol>();
     int width = l.width;
     bool isSigned = l.isSigned && r.isSigned;
     const TypeSymbol* type = sem.getIntegralType(width, isSigned);
@@ -224,10 +225,10 @@ bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation 
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryLogicalNotExpression:
-            good = type->isIntegral || type->isReal;
+            good = type->isIntegral() || type->kind == SymbolKind::RealType;
             break;
         default:
-            good = type->isIntegral;
+            good = type->isIntegral();
             break;
     }
     if (good)
@@ -235,6 +236,7 @@ bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation 
 
     auto& diag = addError(DiagCode::BadUnaryExpression, location);
     diag << type->toString();
+    diag << (*operand)->syntax->sourceRange();
     return false;
 }
 
@@ -306,14 +308,15 @@ void ExpressionBinder::propagateAndFoldLiteral(BoundLiteral* expression, const T
         case SyntaxKind::IntegerLiteralExpression:
         case SyntaxKind::IntegerVectorExpression: {
             const SVInt& v = std::get<SVInt>(expression->constantValue);
-            if (v.getBitWidth() < type->integral().width)
-                expression->constantValue = extend(v, (uint16_t)type->integral().width, type->integral().isSigned);
+            const IntegralTypeSymbol& integral = type->as<IntegralTypeSymbol>();
+            if (v.getBitWidth() < integral.width)
+                expression->constantValue = extend(v, (uint16_t)integral.width, integral.isSigned);
         }
     }
 }
 
 void ExpressionBinder::propagateAndFoldParameter(BoundParameter* expression, const TypeSymbol* type) {
-    expression->constantValue = expression->symbol->value;
+    expression->constantValue = expression->symbol.value;
 }
 
 void ExpressionBinder::propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpression* expression, const TypeSymbol* type) {

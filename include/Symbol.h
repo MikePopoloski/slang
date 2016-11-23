@@ -11,6 +11,13 @@ using ConstantValue = std::variant<SVInt, double>;
 
 enum class SymbolKind {
     Unknown,
+    IntegralType,
+    VectorIntegralType,
+    RealType,
+    StringType,
+    CHandleType,
+    VoidType,
+    EventType,
     Parameter
 };
 
@@ -22,35 +29,19 @@ public:
 
     Symbol() {}
     Symbol(SymbolKind kind, StringRef name, SourceLocation location) :
-        kind(kind), name(name), location(location)
-    {
-    }
+        kind(kind), name(name), location(location) {}
 
     template<typename T>
-    const T* as() const { return static_cast<const T*>(this); }
+    const T& as() const { return *static_cast<const T*>(this); }
 };
-
-class IntegralTypeSymbol;
 
 /// Base class for all data types
 class TypeSymbol : public Symbol {
 public:
-    bool isAggregate : 1;
-    bool isSingular : 1;
-    bool isIntegral : 1;
-    bool isReal : 1;
+    TypeSymbol(SymbolKind kind, StringRef name, SourceLocation location) :
+        Symbol(kind, name, location) {}
 
-    TypeSymbol() {
-        isAggregate = false;
-        isSingular = true;
-        isIntegral = false;
-        isReal = false;
-    }
-
-    const IntegralTypeSymbol& integral() const {
-        ASSERT(isIntegral);
-        return *(IntegralTypeSymbol*)this;
-    }
+    bool isIntegral() const;
 
     std::string toString() const;
 };
@@ -58,25 +49,18 @@ public:
 class IntegralTypeSymbol : public TypeSymbol {
 public:
     int width;
-    bool isSigned : 1;
-    bool isFourState : 1;
+    TokenKind keywordType;
+    bool isSigned;
+    bool isFourState;
 
-    IntegralTypeSymbol(int width, bool isSigned, bool isFourState) :
-        width(width), isSigned(isSigned), isFourState(isFourState)
-    {
-        isIntegral = true;
-    }
-};
+    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState) :
+        TypeSymbol(SymbolKind::IntegralType, getTokenKindText(keywordType), SourceLocation()),
+        width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
 
-class RealTypeSymbol : public TypeSymbol {
-public:
-    int width;
-
-    RealTypeSymbol(int width) :
-        width(width)
-    {
-        isReal = true;
-    }
+protected:
+    IntegralTypeSymbol(SymbolKind kind, StringRef name, int width, bool isSigned, bool isFourState) :
+        TypeSymbol(kind, name, SourceLocation()),
+        width(width), isSigned(isSigned), isFourState(isFourState) {}
 };
 
 class IntegerVectorTypeSymbol : public IntegralTypeSymbol {
@@ -89,9 +73,18 @@ public:
 
     IntegerVectorTypeSymbol(int width, bool isSigned, bool isFourState,
                             ArrayRef<int> lowerBounds, ArrayRef<int> widths) :
-        IntegralTypeSymbol(width, isSigned, isFourState), lowerBounds(lowerBounds), widths(widths)
-    {
-    }
+        IntegralTypeSymbol(SymbolKind::VectorIntegralType, nullptr, width, isSigned, isFourState),
+        lowerBounds(lowerBounds), widths(widths) {}
+};
+
+class RealTypeSymbol : public TypeSymbol {
+public:
+    int width;
+    TokenKind keywordType;
+
+    RealTypeSymbol(TokenKind keywordType, int width) :
+        TypeSymbol(SymbolKind::RealType, getTokenKindText(keywordType), SourceLocation()),
+        width(width), keywordType(keywordType) {}
 };
 
 class EnumTypeSymbol : public TypeSymbol {
@@ -106,6 +99,9 @@ public:
 };
 
 class ErrorTypeSymbol : public TypeSymbol {
+public:
+    ErrorTypeSymbol() :
+        TypeSymbol(SymbolKind::Unknown, nullptr, SourceLocation()) {}
 };
 
 class ParameterSymbol : public Symbol {
@@ -127,9 +123,7 @@ public:
     ArrayRef<ParameterSymbol*> bodyParameters;
 
     InstanceSymbol(ArrayRef<ParameterSymbol*> portParameters, ArrayRef<ParameterSymbol*> bodyParameters) :
-        portParameters(portParameters), bodyParameters(bodyParameters)
-    {
-    }
+        portParameters(portParameters), bodyParameters(bodyParameters) {}
 };
 
 }

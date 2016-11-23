@@ -14,22 +14,22 @@ namespace slang {
 SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc), diagnostics(diagnostics), binder(*this)
 {
-    knownTypes[SyntaxKind::ShortIntType] = getIntegralType(16, true, false);
-    knownTypes[SyntaxKind::IntType] = getIntegralType(32, true, false);
-    knownTypes[SyntaxKind::LongIntType] = getIntegralType(64, true, false);
-    knownTypes[SyntaxKind::ByteType] = getIntegralType(8, true, false);
-    knownTypes[SyntaxKind::BitType] = getIntegralType(1, false, false);
-    knownTypes[SyntaxKind::LogicType] = getIntegralType(1, false, true);
-    knownTypes[SyntaxKind::RegType] = getIntegralType(1, false, true);
-    knownTypes[SyntaxKind::IntegerType] = getIntegralType(32, true, true);
-    knownTypes[SyntaxKind::TimeType] = getIntegralType(64, false, true);
-    knownTypes[SyntaxKind::RealType] = alloc.emplace<RealTypeSymbol>(64);
-    knownTypes[SyntaxKind::RealTimeType] = knownTypes[SyntaxKind::RealType];
-    knownTypes[SyntaxKind::ShortRealType] = alloc.emplace<RealTypeSymbol>(32);
-    knownTypes[SyntaxKind::StringType] = alloc.emplace<TypeSymbol>();
-    knownTypes[SyntaxKind::CHandleType] = alloc.emplace<TypeSymbol>();
-    knownTypes[SyntaxKind::VoidType] = alloc.emplace<TypeSymbol>();
-    knownTypes[SyntaxKind::EventType] = alloc.emplace<TypeSymbol>();
+    knownTypes[SyntaxKind::ShortIntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword, 16, true, false);
+    knownTypes[SyntaxKind::IntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword, 32, true, false);
+    knownTypes[SyntaxKind::LongIntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::LongIntKeyword, 64, true, false);
+    knownTypes[SyntaxKind::ByteType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::ByteKeyword, 8, true, false);
+    knownTypes[SyntaxKind::BitType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::BitKeyword, 1, false, false);
+    knownTypes[SyntaxKind::LogicType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::LogicKeyword, 1, false, true);
+    knownTypes[SyntaxKind::RegType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::RegKeyword, 1, false, true);
+    knownTypes[SyntaxKind::IntegerType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntegerKeyword, 32, true, true);
+    knownTypes[SyntaxKind::TimeType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::TimeKeyword, 64, false, true);
+    knownTypes[SyntaxKind::RealType] = alloc.emplace<RealTypeSymbol>(TokenKind::RealKeyword, 64);
+    knownTypes[SyntaxKind::RealTimeType] = alloc.emplace<RealTypeSymbol>(TokenKind::RealTimeKeyword, 64);
+    knownTypes[SyntaxKind::ShortRealType] = alloc.emplace<RealTypeSymbol>(TokenKind::ShortRealKeyword, 32);
+    knownTypes[SyntaxKind::StringType] = alloc.emplace<TypeSymbol>(SymbolKind::StringType, "string", SourceLocation());
+    knownTypes[SyntaxKind::CHandleType] = alloc.emplace<TypeSymbol>(SymbolKind::CHandleType, "chandle", SourceLocation());
+    knownTypes[SyntaxKind::VoidType] = alloc.emplace<TypeSymbol>(SymbolKind::VoidType, "void", SourceLocation());
+    knownTypes[SyntaxKind::EventType] = alloc.emplace<TypeSymbol>(SymbolKind::EventType, "event", SourceLocation());
     knownTypes[SyntaxKind::Unknown] = alloc.emplace<ErrorTypeSymbol>();
 }
 
@@ -99,7 +99,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
                 // if we have the common case of only one dimension and lsb == 0
                 // then we can use the shared representation
                 uint16_t width = dims.get()[0].msb.getAssertUInt16() + 1;
-                return getIntegralType(width, isSigned, isFourState);
+                return getIntegralType(width, isSigned, isFourState, its->keyword.kind == TokenKind::RegKeyword);
             }
             else {
                 auto lowerBounds = intPool.get();
@@ -237,15 +237,20 @@ const TypeSymbol* SemanticModel::getKnownType(SyntaxKind kind) const {
     return it->second;
 }
 
-const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool isFourState) {
-    std::unordered_map<int, const TypeSymbol*>& cache = integralTypeCache[isFourState][isSigned]; // always use the 4-state cache
+const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool isFourState, bool isReg) {
+    uint64_t key = width;
+    key |= uint64_t(isSigned) << 32;
+    key |= uint64_t(isFourState) << 33;
+    key |= uint64_t(isReg) << 34;
 
-    auto it = cache.find(width);
-    if (it != cache.end())
+    auto it = integralTypeCache.find(key);
+    if (it != integralTypeCache.end())
         return it->second;
 
-    it = cache.emplace_hint(it, width, alloc.emplace<IntegralTypeSymbol>(width, isSigned, true));
-    return it->second;
+    TokenKind type = !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
+    auto symbol = alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
+    integralTypeCache.emplace_hint(it, key, symbol);
+    return symbol;
 }
 
 SemanticModel::ScopePtr SemanticModel::pushScope() {

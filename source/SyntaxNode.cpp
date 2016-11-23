@@ -59,9 +59,11 @@ Token SyntaxNode::getLastToken() {
     return Token();
 }
 
-SourceRange SyntaxNode::sourceRange() {
-    Token lastToken = getLastToken();
-    return SourceRange(getFirstToken().location(), lastToken.location() + lastToken.rawText().length());
+SourceRange SyntaxNode::sourceRange() const {
+    // TODO: the const case is ugly
+    Token firstToken = const_cast<SyntaxNode*>(this)->getFirstToken();
+    Token lastToken = const_cast<SyntaxNode*>(this)->getLastToken();
+    return SourceRange(firstToken.location(), lastToken.location() + lastToken.rawText().length());
 }
 
 bool SyntaxNode::replaceFirstToken(Token token) {
