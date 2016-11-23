@@ -9,6 +9,16 @@
 #include "Scope.h"
 #include "SyntaxTree.h"
 
+namespace {
+
+using namespace slang;
+
+TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
+    return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
+}
+
+}
+
 namespace slang {
 
 SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics) :
@@ -84,6 +94,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
         case SyntaxKind::RegType: {
             // bit vector (possibly of just one element)
             auto its = syntax->as<IntegerTypeSyntax>();
+            bool isReg = its->keyword.kind == TokenKind::RegKeyword;
             bool isSigned = its->signing.kind == TokenKind::SignedKeyword;
             bool isFourState = syntax->kind != SyntaxKind::BitType;
             auto dims = constantRangePool.get();
@@ -99,7 +110,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
                 // if we have the common case of only one dimension and lsb == 0
                 // then we can use the shared representation
                 uint16_t width = dims.get()[0].msb.getAssertUInt16() + 1;
-                return getIntegralType(width, isSigned, isFourState, its->keyword.kind == TokenKind::RegKeyword);
+                return getIntegralType(width, isSigned, isFourState, isReg);
             }
             else {
                 auto lowerBounds = intPool.get();
@@ -116,7 +127,8 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
                     // TODO: overflow
                     totalWidth += width;
                 }
-                return alloc.emplace<IntegerVectorTypeSymbol>(
+                return alloc.emplace<IntegralTypeSymbol>(
+                    getIntegralKeywordKind(isFourState, isReg),
                     totalWidth, isSigned, isFourState,
                     lowerBounds->copy(alloc), widths->copy(alloc));
             }
@@ -247,7 +259,7 @@ const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool 
     if (it != integralTypeCache.end())
         return it->second;
 
-    TokenKind type = !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
+    TokenKind type = getIntegralKeywordKind(isFourState, isReg);
     auto symbol = alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
     integralTypeCache.emplace_hint(it, key, symbol);
     return symbol;

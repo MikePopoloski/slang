@@ -66,7 +66,7 @@ StringRef SourceManager::getBufferName(BufferID buffer) {
     if (!fd)
         return nullptr;
 
-    return fd->name;
+    return StringRef(fd->name);
 }
 
 SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
@@ -138,7 +138,7 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, Sou
 
 SourceBuffer SourceManager::assignText(StringRef text) {
     // Generate a placeholder name for this "file"
-    return assignText("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">", text);
+    return assignText(StringRef("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">"), text);
 }
 
 SourceBuffer SourceManager::assignText(StringRef path, StringRef text) {

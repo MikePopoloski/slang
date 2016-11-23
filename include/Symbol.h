@@ -12,7 +12,6 @@ using ConstantValue = std::variant<SVInt, double>;
 enum class SymbolKind {
     Unknown,
     IntegralType,
-    VectorIntegralType,
     RealType,
     StringType,
     CHandleType,
@@ -41,40 +40,28 @@ public:
     TypeSymbol(SymbolKind kind, StringRef name, SourceLocation location) :
         Symbol(kind, name, location) {}
 
-    bool isIntegral() const;
-
     std::string toString() const;
 };
 
 class IntegralTypeSymbol : public TypeSymbol {
 public:
+    ArrayRef<int> lowerBounds;
+    ArrayRef<int> widths;
     int width;
     TokenKind keywordType;
     bool isSigned;
     bool isFourState;
 
     IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState) :
+        IntegralTypeSymbol(keywordType, width, isSigned, isFourState, EmptyLowerBound, ArrayRef<int>(&width, 1)) {}
+
+    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, ArrayRef<int> lowerBounds, ArrayRef<int> widths) :
         TypeSymbol(SymbolKind::IntegralType, getTokenKindText(keywordType), SourceLocation()),
-        width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
-
-protected:
-    IntegralTypeSymbol(SymbolKind kind, StringRef name, int width, bool isSigned, bool isFourState) :
-        TypeSymbol(kind, name, SourceLocation()),
-        width(width), isSigned(isSigned), isFourState(isFourState) {}
-};
-
-class IntegerVectorTypeSymbol : public IntegralTypeSymbol {
-public:
-    // Lower bounds for dimensions, by position.
-    ArrayRef<int> lowerBounds;
-
-    // Sizes for dimensions, by position.
-    ArrayRef<int> widths;
-
-    IntegerVectorTypeSymbol(int width, bool isSigned, bool isFourState,
-                            ArrayRef<int> lowerBounds, ArrayRef<int> widths) :
-        IntegralTypeSymbol(SymbolKind::VectorIntegralType, nullptr, width, isSigned, isFourState),
+        width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState),
         lowerBounds(lowerBounds), widths(widths) {}
+
+private:
+    static ArrayRef<int> EmptyLowerBound;
 };
 
 class RealTypeSymbol : public TypeSymbol {

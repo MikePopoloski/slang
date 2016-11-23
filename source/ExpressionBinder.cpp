@@ -225,10 +225,10 @@ bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation 
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryLogicalNotExpression:
-            good = type->isIntegral() || type->kind == SymbolKind::RealType;
+            good = type->kind == SymbolKind::IntegralType || type->kind == SymbolKind::RealType;
             break;
         default:
-            good = type->isIntegral();
+            good = type->kind == SymbolKind::IntegralType;
             break;
     }
     if (good)
@@ -260,11 +260,11 @@ bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation 
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
-            good = (lt->isIntegral() || lt->kind == SymbolKind::RealType) &&
-                   (rt->isIntegral() || rt->kind == SymbolKind::RealType);
+            good = (lt->kind == SymbolKind::IntegralType || lt->kind == SymbolKind::RealType) &&
+                   (rt->kind == SymbolKind::IntegralType || rt->kind == SymbolKind::RealType);
             break;
         default:
-            good = lt->isIntegral() && rt->isIntegral();
+            good = lt->kind == SymbolKind::IntegralType && rt->kind == SymbolKind::IntegralType;
             break;
     }
     if (good)

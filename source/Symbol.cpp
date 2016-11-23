@@ -2,18 +2,11 @@
 
 namespace slang {
 
+static int zero = 0;
+ArrayRef<int> IntegralTypeSymbol::EmptyLowerBound { &zero, 1 };
+
 bool isDefaultSigned(TokenKind kind) {
     return false;
-}
-
-bool TypeSymbol::isIntegral() const {
-    switch (kind) {
-        case SymbolKind::IntegralType:
-        case SymbolKind::VectorIntegralType:
-            return true;
-        default:
-            return false;
-    }
 }
 
 std::string TypeSymbol::toString() const {
