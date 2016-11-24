@@ -5,11 +5,7 @@ namespace slang {
 
 void Scope::add(const Symbol* symbol) {
     ASSERT(symbol);
-    
-    StringRef name = symbol->name();
-    ASSERT(name.length() > 0);
-
-    table.emplace(symbol->name(), symbol);
+    table.emplace(symbol->name, symbol);
 }
 
 const Symbol* Scope::lookup(StringRef name) {

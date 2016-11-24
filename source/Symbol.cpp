@@ -14,13 +14,13 @@ std::string TypeSymbol::toString() const {
     switch (kind) {
         case SymbolKind::IntegralType: {
             const auto& s = as<IntegralTypeSymbol>();
-            result = name().toString();
+            result = name.toString();
             if (isDefaultSigned(s.keywordType) != s.isSigned)
                 result += s.isSigned ? " signed" : " unsigned";
             break;
         }
         case SymbolKind::RealType:
-            result = name().toString();
+            result = name.toString();
             break;
         default:
             break;
@@ -31,12 +31,10 @@ std::string TypeSymbol::toString() const {
 ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location,
                                  const ParameterDeclarationSyntax* syntax,
                                  const ExpressionSyntax* initializer, bool isLocal) :
-    Symbol(SymbolKind::Parameter),
+    Symbol(SymbolKind::Parameter, name, location),
     syntax(syntax),
     initializer(initializer),
-    isLocal(isLocal),
-    _name(name),
-    _location(location)
+    isLocal(isLocal)
 {
 }
 
