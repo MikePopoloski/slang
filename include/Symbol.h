@@ -17,28 +17,27 @@ enum class SymbolKind {
     CHandleType,
     VoidType,
     EventType,
-    Parameter
+    Parameter,
+    Instance
 };
 
 class Symbol {
 public:
     SymbolKind kind;
-    StringRef name;
-    SourceLocation location;
 
-    Symbol() {}
-    Symbol(SymbolKind kind, StringRef name, SourceLocation location) :
-        kind(kind), name(name), location(location) {}
+    Symbol(SymbolKind kind) : kind(kind) {}
 
     template<typename T>
     const T& as() const { return *static_cast<const T*>(this); }
+
+    virtual SourceLocation location() const { return SourceLocation(); }
+    virtual StringRef name() const { return nullptr; }
 };
 
 /// Base class for all data types
 class TypeSymbol : public Symbol {
 public:
-    TypeSymbol(SymbolKind kind, StringRef name, SourceLocation location) :
-        Symbol(kind, name, location) {}
+    TypeSymbol(SymbolKind kind) : Symbol(kind) {}
 
     std::string toString() const;
 };
@@ -56,7 +55,7 @@ public:
         IntegralTypeSymbol(keywordType, width, isSigned, isFourState, EmptyLowerBound, ArrayRef<int>(&width, 1)) {}
 
     IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, ArrayRef<int> lowerBounds, ArrayRef<int> widths) :
-        TypeSymbol(SymbolKind::IntegralType, getTokenKindText(keywordType), SourceLocation()),
+        TypeSymbol(SymbolKind::IntegralType),
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState),
         lowerBounds(lowerBounds), widths(widths) {}
 
@@ -70,7 +69,7 @@ public:
     TokenKind keywordType;
 
     RealTypeSymbol(TokenKind keywordType, int width) :
-        TypeSymbol(SymbolKind::RealType, getTokenKindText(keywordType), SourceLocation()),
+        TypeSymbol(SymbolKind::RealType),
         width(width), keywordType(keywordType) {}
 };
 
@@ -88,7 +87,7 @@ public:
 class ErrorTypeSymbol : public TypeSymbol {
 public:
     ErrorTypeSymbol() :
-        TypeSymbol(SymbolKind::Unknown, nullptr, SourceLocation()) {}
+        TypeSymbol(SymbolKind::Unknown) {}
 };
 
 class ParameterSymbol : public Symbol {
@@ -99,9 +98,16 @@ public:
     ConstantValue value;
     bool isLocal;
 
+    // TODO: decide what we're doing here
+    StringRef _name;
+    SourceLocation _location;
+
     ParameterSymbol(StringRef name, SourceLocation location,
         const ParameterDeclarationSyntax* syntax,
         const ExpressionSyntax* initializer, bool isLocal);
+
+    StringRef name() const override { return _name; }
+    SourceLocation location() const override { return _location; }
 };
 
 class InstanceSymbol : public Symbol {
@@ -110,6 +116,7 @@ public:
     ArrayRef<ParameterSymbol*> bodyParameters;
 
     InstanceSymbol(ArrayRef<ParameterSymbol*> portParameters, ArrayRef<ParameterSymbol*> bodyParameters) :
+        Symbol(SymbolKind::Instance),
         portParameters(portParameters), bodyParameters(bodyParameters) {}
 };
 
