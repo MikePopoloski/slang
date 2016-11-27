@@ -21,8 +21,8 @@ TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
 
 namespace slang {
 
-SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics) :
-    alloc(alloc), diagnostics(diagnostics), binder(*this)
+SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable) :
+    alloc(alloc), diagnostics(diagnostics), binder(*this), declTable(declTable)
 {
     knownTypes[SyntaxKind::ShortIntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword, 16, true, false);
     knownTypes[SyntaxKind::IntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword, 32, true, false);
@@ -44,28 +44,51 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics) :
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
-    ASSERT(syntax);
+    return makeInstance(syntax, nullptr);
+}
+
+InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl, const ParameterValueAssignmentSyntax* parameterAssignments) {
+    ASSERT(decl);
 
     // TODO: check that this can actually be implicit (i.e. no parameters without initializers)
+
+    // If we were given a set of parameter assignments, build up some data structures to
+    // allow us to easily index them. We need to handle both ordered assignment as well as
+    // named assignment (though a specific instance can only use one method or the other).
+    bool hasParamAssignments = false;
+    bool orderedAssignments = false;
+    if (parameterAssignments) {
+        for (auto paramBase : parameterAssignments->parameters->parameters) {
+            bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
+            if (!hasParamAssignments) {
+                hasParamAssignments = true;
+                orderedAssignments = isOrdered;
+            }
+            else if (isOrdered != orderedAssignments) {
+                diagnostics.add(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
+                break;
+            }
+        }
+    }
     
     // Discover all of the element's parameters. If we have a parameter port list, the only
     // publicly visible parameters are the ones in that list. Otherwise, parameters declared
     // in the module body are publicly visible.
-    const ModuleHeaderSyntax* header = syntax->header;
+    const ModuleHeaderSyntax* header = decl->header;
     auto portParameters = symbolPool.getAs<ParameterSymbol*>();
     nameDupMap.clear();
 
     bool overrideLocal = false;
     if (header->parameters) {
         bool lastLocal = false;
-        for (const ParameterDeclarationSyntax* decl : header->parameters->declarations)
-            lastLocal = makeParameters(decl, portParameters, lastLocal, false, false);
+        for (const ParameterDeclarationSyntax* paramDecl : header->parameters->declarations)
+            lastLocal = makeParameters(paramDecl, portParameters, lastLocal, false, false);
         overrideLocal = true;
     }
 
     // also find direct body parameters
     auto bodyParameters = symbolPool.getAs<ParameterSymbol*>();
-    for (const MemberSyntax* member : syntax->members) {
+    for (const MemberSyntax* member : decl->members) {
         if (member->kind == SyntaxKind::ParameterDeclarationStatement)
             makeParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, bodyParameters,
                            false, overrideLocal, true);
@@ -73,14 +96,25 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 
     // Now evaluate initializers and finalize the type of each parameter.
     // Do ports separately from body parameters.
-    auto scope = pushScope(portParameters.get());
+    auto portScope = pushScope(portParameters.get());
     for (ParameterSymbol* param : portParameters.get())
         evaluateParameter(param);
 
-    scope.reset();
-    scope = pushScope(bodyParameters.get());
+    auto bodyScope = pushScope(bodyParameters.get());
     for (ParameterSymbol* param : bodyParameters.get())
         evaluateParameter(param);
+
+    // Handle all child instantiations.
+    for (const MemberSyntax* member : decl->members) {
+        if (member->kind == SyntaxKind::HierarchyInstantiation) {
+            // Look up the module declaration for this instance. If we don't find it just
+            // silently continue; an error has already been issued for it.
+            auto his = member->as<HierarchyInstantiationSyntax>();
+            const ModuleDeclarationSyntax* module = declTable.find(his->type.valueText());
+            if (!module)
+                makeInstance(module, his->parameters);
+        }
+    }
 
     return alloc.emplace<InstanceSymbol>(portParameters->copy(alloc), bodyParameters->copy(alloc));
 }
@@ -155,7 +189,11 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
         case SyntaxKind::CHandleType:
         case SyntaxKind::EventType:
             return getKnownType(syntax->kind);
-
+        case SyntaxKind::TypedefDeclaration: {
+            auto tds = syntax->as<TypedefDeclarationSyntax>();
+            auto type = makeTypeSymbol(tds->type);
+            return alloc.emplace<TypeAliasSymbol>(syntax, tds->name.location(), type, tds->name.valueText());
+        }
     }
 
     // TODO: consider Void Type

@@ -40,6 +40,8 @@ public:
 
     ArrayRef<const ModuleDeclarationSyntax*> getTopLevelModules();
 
+    const ModuleDeclarationSyntax* find(StringRef name) const;
+
 private:
     // Track each compilation unit's declarations separately and then merge them
     // once we have them all. This allows parallelizing the search process.

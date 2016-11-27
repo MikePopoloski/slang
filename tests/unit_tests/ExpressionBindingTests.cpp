@@ -15,7 +15,10 @@ const ParameterSymbol& testParameter(const std::string& text, int index = 0) {
     auto tree = parse("module Top; " + text + " endmodule");
 
     Diagnostics& diagnostics = tree.diagnostics();
-    SemanticModel sem(alloc, diagnostics);
+    DeclarationTable declTable(diagnostics);
+    declTable.addSyntaxTree(&tree);
+
+    SemanticModel sem(alloc, diagnostics, declTable);
     auto instance = sem.makeImplicitInstance(tree.root()->members[0]->as<ModuleDeclarationSyntax>());
     REQUIRE(instance);
     REQUIRE(instance->bodyParameters.count() > (uint32_t)index);

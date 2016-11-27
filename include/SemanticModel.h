@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <deque>
 #include <functional>
 #include <memory>
 #include <unordered_map>
@@ -31,9 +32,10 @@ class Symbol;
 /// type checking based on input parse trees.
 class SemanticModel {
 public:
-    SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics);
+    SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
+    InstanceSymbol* makeInstance(const ModuleDeclarationSyntax* decl, const ParameterValueAssignmentSyntax* parameterAssignments);
 
     const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax);
 
@@ -69,11 +71,12 @@ private:
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
     ExpressionBinder binder;
+    DeclarationTable& declTable;
     BufferPool<Symbol*> symbolPool;
     BufferPool<int> intPool;
     BufferPool<ConstantRange> constantRangePool;
     std::unordered_map<StringRef, SourceLocation> nameDupMap;
-    std::vector<Scope> scopeStack;
+    std::deque<Scope> scopeStack;
 
     // preallocated type symbols for known types
     std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;

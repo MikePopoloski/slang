@@ -112,6 +112,7 @@ enum class DiagCode : uint8_t {
     BodyParamNoInitializer,
     PackedDimRequiresConstantRange,
     PackedDimsOnPredefinedType,
+    MixingOrderedAndNamedParams,
 
     // expressions
     BadUnaryExpression,

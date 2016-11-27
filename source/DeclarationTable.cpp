@@ -15,6 +15,13 @@ DeclarationTable::DeclarationTable(Diagnostics& diagnostics) :
 {
 }
 
+const ModuleDeclarationSyntax* DeclarationTable::find(StringRef name) const {
+    auto it = nameLookup.find(name);
+    if (it == nameLookup.end())
+        return nullptr;
+    return it->second.decl;
+}
+
 ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() {
     if (!dirty)
         return ArrayRef<const ModuleDeclarationSyntax*>(topLevel.begin(), topLevel.end());

@@ -17,6 +17,7 @@ enum class SymbolKind {
     CHandleType,
     VoidType,
     EventType,
+    TypeAlias,
     Parameter
 };
 
@@ -96,6 +97,16 @@ class ErrorTypeSymbol : public TypeSymbol {
 public:
     ErrorTypeSymbol() :
         TypeSymbol(SymbolKind::Unknown, nullptr, SourceLocation()) {}
+};
+
+class TypeAliasSymbol : public TypeSymbol {
+public:
+    const SyntaxNode* syntax;
+    const TypeSymbol* underlying;
+
+    TypeAliasSymbol(const SyntaxNode* syntax, SourceLocation location, const TypeSymbol* underlying, StringRef alias) :
+        TypeSymbol(SymbolKind::TypeAlias, alias, location),
+        syntax(syntax), underlying(underlying) {}
 };
 
 class ParameterSymbol : public Symbol {
