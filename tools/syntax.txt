@@ -411,12 +411,6 @@ token name
 list<VariableDimensionSyntax> dimensions
 token semi
 
-TypedefModportDeclarationSyntax base=MemberSyntax kind=TypedefKeywordDeclaration
-token typedefKeyword
-NameSyntax modportName
-token name
-token semi
-
 TypedefKeywordDeclarationSyntax base=MemberSyntax kind=TypedefKeywordDeclaration
 token typedefKeyword
 token keyword

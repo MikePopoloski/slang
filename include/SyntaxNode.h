@@ -262,7 +262,6 @@ enum class SyntaxKind : uint16_t {
     VariableDeclarator,
     DataDeclaration,
     TypedefDeclaration,
-    TypedefModportDeclaration,
     TypedefKeywordDeclaration,
     TypedefInterfaceClassDeclaration,
     PackageImportItem,

@@ -1450,30 +1450,29 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
                     name,
                     expect(TokenKind::Semicolon));
             }
-            default:
-                // TODO: this should check for modport instead and then default to var decl
-                if (isVariableDeclaration()) {
-                    auto type = parseDataType(/* allowImplicit */ false);
-                    auto name = expect(TokenKind::Identifier);
-                    auto dims = parseDimensionList();
-                    return alloc.emplace<TypedefDeclarationSyntax>(
+            case TokenKind::Identifier:
+                if (peek(1).kind == TokenKind::Semicolon) {
+                    auto name = consume();
+                    return alloc.emplace<TypedefKeywordDeclarationSyntax>(
                         attributes,
                         typedefKeyword,
-                        type,
+                        Token(),
                         name,
-                        dims,
-                        expect(TokenKind::Semicolon));
+                        consume());
                 }
-                else {
-                    auto modport = parseName();
-                    auto name = expect(TokenKind::Identifier);
-                    return alloc.emplace<TypedefModportDeclarationSyntax>(
-                        attributes,
-                        typedefKeyword,
-                        modport,
-                        name,
-                        expect(TokenKind::Semicolon));
-                }
+                // EXPLICIT FALLTHROUGH
+            default: {
+                auto type = parseDataType(/* allowImplicit */ false);
+                auto name = expect(TokenKind::Identifier);
+                auto dims = parseDimensionList();
+                return alloc.emplace<TypedefDeclarationSyntax>(
+                    attributes,
+                    typedefKeyword,
+                    type,
+                    name,
+                    dims,
+                    expect(TokenKind::Semicolon));
+            }
         }
     }
 

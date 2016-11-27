@@ -2375,41 +2375,6 @@ protected:
     }
 };
 
-struct TypedefModportDeclarationSyntax : public MemberSyntax {
-    Token typedefKeyword;
-    NameSyntax* modportName;
-    Token name;
-    Token semi;
-
-    TypedefModportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, NameSyntax* modportName, Token name, Token semi) :
-        MemberSyntax(SyntaxKind::TypedefKeywordDeclaration, attributes), typedefKeyword(typedefKeyword), modportName(modportName), name(name), semi(semi)
-    {
-        childCount += 4;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return typedefKeyword;
-            case 2: return modportName;
-            case 3: return name;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
-
-    void replaceChild(uint32_t index, Token token) override final {
-        switch (index) {
-            case 0: ASSERT(false); break;
-            case 1: typedefKeyword = token; break;
-            case 2: ASSERT(false); break;
-            case 3: name = token; break;
-            case 4: semi = token; break;
-        }
-    }
-};
-
 struct TypedefKeywordDeclarationSyntax : public MemberSyntax {
     Token typedefKeyword;
     Token keyword;
