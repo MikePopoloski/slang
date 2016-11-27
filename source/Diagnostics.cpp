@@ -149,6 +149,8 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadBinaryExpression] = { "invalid operands to binary expression ({} and {})", DiagnosticSeverity::Error };
+    descriptors[DiagCode::BadAssignment] = { "type {} cannot be assigned to variable of type {}", DiagnosticSeverity::Error };
+    descriptors[DiagCode::NoImplicitConversion] = { "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?", DiagnosticSeverity::Error };
 
     ASSERT((int)DiagCode::MaxValue == descriptors.size(), "When you add a new diagnostic code you need to update default messages");
 }

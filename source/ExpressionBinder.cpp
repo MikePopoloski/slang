@@ -95,16 +95,21 @@ BoundExpression* ExpressionBinder::bindSelfDeterminedExpression(const Expression
     return expr;
 }
 
-BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyntax* syntax, const TypeSymbol* assignmentType) {
-    // The rules for determining expression type in an assignment-like context are as follows:
-    // - If the destination type width is larger than the width of the expression, propagate that type back down
-    // - If the destination width is smaller, insert an implicit truncation of bits
+BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyntax* syntax, SourceLocation location, const TypeSymbol* assignmentType) {
     BoundExpression* expr = bindExpression(syntax);
-    const IntegralTypeSymbol& exprType = expr->type->as<IntegralTypeSymbol>();
-    if (exprType.width < assignmentType->as<IntegralTypeSymbol>().width)
-        propagateAndFold(expr, assignmentType);
-    else
-        propagateAndFold(expr, expr->type);
+    const TypeSymbol* type = expr->type;
+    if (!assignmentType->isAssignmentCompatible(type)) {
+        DiagCode code = assignmentType->isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
+        addError(code, location) << syntax->sourceRange();
+        expr->bad = true;
+    }
+    else {
+        const IntegralTypeSymbol& exprType = expr->type->as<IntegralTypeSymbol>();
+        if (exprType.width < assignmentType->as<IntegralTypeSymbol>().width)
+            propagateAndFold(expr, assignmentType);
+        else
+            propagateAndFold(expr, expr->type);
+    }
 
     // TODO: truncation
     return expr;
@@ -150,6 +155,7 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
 }
 
 BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax) {
+    // Supported for both integral and real types. Can be overloaded for others.
     BoundExpression* operand = bindExpression(syntax->operand);
     if (operand->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
         return alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand, true);
@@ -158,7 +164,7 @@ BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnary
 }
 
 BoundExpression* ExpressionBinder::bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax* syntax) {
-    // result type is always a single bit
+    // Result type is always a single bit. Supported on integral types.
     BoundExpression* operand = bindSelfDeterminedExpression(syntax->operand);
     if (operand->bad || !checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
         return alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand, true);

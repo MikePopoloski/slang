@@ -92,7 +92,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
         case SyntaxKind::RegType: {
-            // bit vector (possibly of just one element)
+            // simple integral vector (possibly of just one element)
             auto its = syntax->as<IntegerTypeSyntax>();
             bool isReg = its->keyword.kind == TokenKind::RegKeyword;
             bool isSigned = its->signing.kind == TokenKind::SignedKeyword;
@@ -237,7 +237,7 @@ void SemanticModel::evaluateParameter(ParameterSymbol* parameter) {
     }
     else {
         parameter->type = makeTypeSymbol(typeSyntax);
-        BoundExpression* expr = binder.bindAssignmentLikeContext(parameter->initializer, parameter->type);
+        BoundExpression* expr = binder.bindAssignmentLikeContext(parameter->initializer, parameter->location, parameter->type);
         parameter->value = expr->constantValue;
     }
 }

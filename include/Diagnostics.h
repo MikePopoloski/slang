@@ -116,6 +116,8 @@ enum class DiagCode : uint8_t {
     // expressions
     BadUnaryExpression,
     BadBinaryExpression,
+    BadAssignment,
+    NoImplicitConversion,
 
     MaxValue
 };

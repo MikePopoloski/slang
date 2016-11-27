@@ -40,6 +40,13 @@ public:
     TypeSymbol(SymbolKind kind, StringRef name, SourceLocation location) :
         Symbol(kind, name, location) {}
 
+    // SystemVerilog defines various level of type compatibility, which are used
+    // in various scenarios. See the spec, section 6.22.
+    bool isMatching(const TypeSymbol* rhs) const;
+    bool isEquivalent(const TypeSymbol* rhs) const;
+    bool isAssignmentCompatible(const TypeSymbol* rhs) const;
+    bool isCastCompatible(const TypeSymbol* rhs) const;
+
     std::string toString() const;
 };
 

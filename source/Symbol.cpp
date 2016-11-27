@@ -9,6 +9,31 @@ bool isDefaultSigned(TokenKind kind) {
     return false;
 }
 
+bool TypeSymbol::isMatching(const TypeSymbol* rhs) const {
+    return true;
+}
+
+bool TypeSymbol::isEquivalent(const TypeSymbol* rhs) const {
+    if (isMatching(rhs))
+        return true;
+
+    return true;
+}
+
+bool TypeSymbol::isAssignmentCompatible(const TypeSymbol* rhs) const {
+    if (isEquivalent(rhs))
+        return true;
+
+    return true;
+}
+
+bool TypeSymbol::isCastCompatible(const TypeSymbol* rhs) const {
+    if (isAssignmentCompatible(rhs))
+        return true;
+
+    return true;
+}
+
 std::string TypeSymbol::toString() const {
     std::string result;
     switch (kind) {
