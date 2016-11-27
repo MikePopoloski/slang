@@ -129,7 +129,7 @@ StringRef Token::rawText() const {
     return nullptr;
 }
 
-void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
+void Token::writeTo(SmallVector<char>& buffer, uint8_t writeFlags) const {
     if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
         return;
 
@@ -145,7 +145,7 @@ void Token::writeTo(Buffer<char>& buffer, uint8_t writeFlags) const {
 }
 
 std::string Token::toString(uint8_t writeFlags) const {
-    Buffer<char> buffer;
+    SmallVectorSized<char, 256> buffer;
     writeTo(buffer, writeFlags);
     return std::string(buffer.begin(), buffer.end());
 }

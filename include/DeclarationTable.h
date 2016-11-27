@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "ArrayRef.h"
-#include "Buffer.h"
+#include "SmallVector.h"
 #include "StringRef.h"
 #include "SyntaxNode.h"
 #include "SyntaxTree.h"
@@ -46,8 +46,8 @@ private:
     // Track each compilation unit's declarations separately and then merge them
     // once we have them all. This allows parallelizing the search process.
     struct UnitDecls {
-        Buffer<const ModuleDeclarationSyntax*> rootNodes;
-        Buffer<const HierarchyInstantiationSyntax*> instantiations;
+        std::vector<const ModuleDeclarationSyntax*> rootNodes;
+        std::vector<const HierarchyInstantiationSyntax*> instantiations;
         bool hasDefParams;
     };
 
@@ -64,8 +64,8 @@ private:
     static bool containsName(const std::vector<NameSet>& scopeStack, StringRef name);
 
     Diagnostics& diagnostics;
-    Buffer<UnitDecls> units;
-    Buffer<const ModuleDeclarationSyntax*> topLevel;
+    Vector<UnitDecls> units;
+    Vector<const ModuleDeclarationSyntax*> topLevel;
     std::unordered_map<StringRef, DeclAndFlag> nameLookup;
     bool dirty = false;
 };

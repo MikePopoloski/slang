@@ -10,8 +10,8 @@
 #include <string>
 
 #include "ArrayRef.h"
-#include "Buffer.h"
 #include "MathUtils.h"
+#include "SmallVector.h"
 #include "StringRef.h"
 
 namespace slang {
@@ -215,7 +215,7 @@ public:
     void setAllZ();
 
     size_t hash(size_t seed = Seed) const;
-    void writeTo(Buffer<char>& buffer, LiteralBase base) const;
+    void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
     std::string toString(LiteralBase base) const;
 
     /// Power function. Note that the result will have the same bitwidth

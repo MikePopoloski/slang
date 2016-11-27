@@ -13,7 +13,7 @@
 #include <variant>
 #include <vector>
 
-#include "Buffer.h"
+#include "SmallVector.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 
@@ -158,7 +158,7 @@ public:
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg);
 
 /// A collection of diagnostics.
-class Diagnostics : public Buffer<Diagnostic> {
+class Diagnostics : public SmallVectorSized<Diagnostic, 8> {
 public:
     Diagnostics();
 

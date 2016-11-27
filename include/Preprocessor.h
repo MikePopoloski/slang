@@ -10,10 +10,9 @@
 #include <deque>
 #include <unordered_map>
 
-#include "Buffer.h"
-#include "BufferPool.h"
 #include "Diagnostics.h"
 #include "Lexer.h"
+#include "SmallVector.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 #include "SyntaxNode.h"
@@ -82,7 +81,7 @@ private:
     // Macro handling methods
     DefineDirectiveSyntax* findMacro(Token directive);
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
-    bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, MacroActualArgumentListSyntax* actualArgs, Buffer<Token>& dest);
+    bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest);
     bool expandReplacementList(ArrayRef<Token>& tokens);
 
     // functions to advance the underlying token stream
@@ -131,7 +130,7 @@ private:
 
     private:
         template<typename TFunc>
-        void parseArgumentList(Buffer<TokenOrSyntax>& buffer, TFunc&& parseItem);
+        void parseArgumentList(SmallVector<TokenOrSyntax>& buffer, TFunc&& parseItem);
 
         MacroActualArgumentSyntax* parseActualArgument();
         MacroFormalArgumentSyntax* parseFormalArgument();
@@ -165,20 +164,12 @@ private:
     // map from macro name to macro definition
     std::unordered_map<StringRef, DefineDirectiveSyntax*> macros;
 
-    // when parsing macros, keep track of paired delimiters
-    Buffer<TokenKind> delimPairStack;
-
     // scratch space for mapping macro formal parameters to argument values
     std::unordered_map<StringRef, const TokenList*> argumentMap;
 
     // list of expanded macro tokens to drain before continuing with active lexer
-    Buffer<Token> expandedTokens;
+    SmallVectorSized<Token, 16> expandedTokens;
     Token* currentMacroToken = nullptr;
-
-    // pools for constructing lists of trivia, tokens, syntax nodes
-    BufferPool<Trivia> triviaPool;
-    BufferPool<Token> tokenPool;
-    BufferPool<TokenOrSyntax> syntaxPool;
 
     // the latest token pulled from a lexer
     Token currentToken;

@@ -30,10 +30,9 @@
     <ClInclude Include="..\..\include\ExpressionBinder.h" />
     <ClInclude Include="..\..\include\Scope.h" />
     <ClInclude Include="..\..\include\BoundNodes.h" />
-    <ClInclude Include="..\..\include\BufferPool.h" />
     <ClInclude Include="..\..\include\Debug.h" />
+    <ClInclude Include="..\..\include\SmallVector.h" />
     <ClInclude Include="..\..\include\VectorBuilder.h" />
-    <ClInclude Include="..\..\include\Buffer.h" />
     <ClInclude Include="..\..\include\DeclarationTable.h" />
     <ClInclude Include="..\..\include\Diagnostics.h" />
     <ClInclude Include="..\..\include\MathUtils.h" />

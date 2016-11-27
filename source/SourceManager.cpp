@@ -142,7 +142,7 @@ SourceBuffer SourceManager::assignText(StringRef text) {
 }
 
 SourceBuffer SourceManager::assignText(StringRef path, StringRef text) {
-    Buffer<char> buffer;
+    SmallVectorSized<char, 2> buffer;
     buffer.appendRange(text);
     if (buffer.empty() || buffer.back() != '\0')
         buffer.append('\0');
@@ -150,7 +150,7 @@ SourceBuffer SourceManager::assignText(StringRef path, StringRef text) {
     return assignBuffer(path, std::move(buffer));
 }
 
-SourceBuffer SourceManager::assignBuffer(StringRef path, Buffer<char>&& buffer) {
+SourceBuffer SourceManager::assignBuffer(StringRef path, Vector<char>&& buffer) {
     Path fullPath = path;
     std::string canonicalStr = fullPath.str();
     auto it = lookupCache.find(canonicalStr);
@@ -233,7 +233,7 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
     }
 
     // do the read
-    Buffer<char> buffer(0);
+    Vector<char> buffer;
     if (!readFile(absPath, buffer)) {
         lookupCache.emplace(std::move(canonicalStr), nullptr);
         return SourceBuffer();
@@ -242,7 +242,7 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
     return cacheBuffer(std::move(canonicalStr), absPath, includedFrom, std::move(buffer));
 }
 
-SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Buffer<char>&& buffer) {
+SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Vector<char>&& buffer) {
     std::string name = path.filename();
     auto fd = std::make_unique<FileData>(
         &*directories.insert(path.parentPath()).first,
@@ -254,7 +254,7 @@ SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, const Path&
     return createBufferEntry(fdPtr, includedFrom);
 }
 
-bool SourceManager::readFile(const Path& path, Buffer<char>& buffer) {
+bool SourceManager::readFile(const Path& path, Vector<char>& buffer) {
     size_t size;
     try {
         size = path.fileSize();
@@ -274,7 +274,7 @@ bool SourceManager::readFile(const Path& path, Buffer<char>& buffer) {
     return stream.good();
 }
 
-void SourceManager::computeLineOffsets(const Buffer<char>& buffer, std::vector<uint32_t>& offsets) {
+void SourceManager::computeLineOffsets(const Vector<char>& buffer, std::vector<uint32_t>& offsets) {
     // first line always starts at offset 0
     offsets.push_back(0);
 

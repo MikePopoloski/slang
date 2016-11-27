@@ -14,9 +14,9 @@
 #include <variant>
 #include <vector>
 
-#include "Buffer.h"
 #include "BumpAllocator.h"
 #include "Path.h"
+#include "SmallVector.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 
@@ -98,7 +98,7 @@ public:
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignBuffer(StringRef path, Buffer<char>&& buffer);
+    SourceBuffer assignBuffer(StringRef path, Vector<char>&& buffer);
 
     /// Read in a source file from disk.
     SourceBuffer readSource(StringRef path);
@@ -112,12 +112,12 @@ private:
 
     // Stores actual file contents and metadata; only one per loaded file
     struct FileData {
-        Buffer<char> mem;                   // file contents
+        Vector<char> mem;                   // file contents
         std::string name;                   // name of the file
         std::vector<uint32_t> lineOffsets;  // char offset for each line
         const Path* directory;              // directory that the file exists in
 
-        FileData(const Path* directory, const std::string& name, Buffer<char>&& data) :
+        FileData(const Path* directory, const std::string& name, SmallVector<char>&& data) :
             directory(directory),
             name(name),
             mem(std::move(data))
@@ -174,10 +174,10 @@ private:
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom);
 
     SourceBuffer openCached(const Path& fullPath, SourceLocation includedFrom);
-    SourceBuffer cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Buffer<char>&& buffer);
+    SourceBuffer cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Vector<char>&& buffer);
 
-    static void computeLineOffsets(const Buffer<char>& buffer, std::vector<uint32_t>& offsets);
-    static bool readFile(const Path& path, Buffer<char>& buffer);
+    static void computeLineOffsets(const Vector<char>& buffer, std::vector<uint32_t>& offsets);
+    static bool readFile(const Path& path, Vector<char>& buffer);
 };
 
 }

@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// Buffer.h
-// Implements fast resizable buffer template.
+// SmallVector.h
+// Implements fast resizable array template.
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
@@ -15,51 +15,16 @@
 
 namespace slang {
 
-/// Buffer<T> - A fast growable array.
+/// SmallVector<T> - A fast growable array.
 ///
-/// In the name of performance and simplicity, we avoid adding lots of junk
-/// that comes with std::vector, such as exception safety, inserting in the
-/// middle, copy constructors, etc.
+/// SmallVector a vector-like growable array that allocates its first N elements
+/// on the stack. As long as you don't need more room than that, there are no
+/// heap allocations. Otherwise we spill over into the heap. This is the base class
+/// for the actual sized implementation; it's split apart so that this one can be
+/// used in more general interfaces that don't care about the explicit stack size.
 template<typename T>
-class Buffer {
+class SmallVector {
 public:
-    explicit Buffer(uint32_t capacity = 16) :
-        len(0), capacity(capacity)
-    {
-        data = (T*)malloc(capacity * sizeof(T));
-    }
-
-    Buffer(Buffer&& other) :
-        data(other.data), len(other.len), capacity(other.capacity)
-    {
-        other.data = nullptr;
-        other.len = 0;
-        other.capacity = 0;
-    }
-
-    ~Buffer() {
-        cleanup();
-    }
-
-    // not copyable
-    Buffer(const Buffer&) = delete;
-    Buffer& operator=(const Buffer&) = delete;
-
-    Buffer& operator=(Buffer&& other) {
-        if (this != &other) {
-            cleanup();
-
-            data = other.data;
-            len = other.len;
-            capacity = other.capacity;
-
-            other.data = nullptr;
-            other.len = 0;
-            other.capacity = 0;
-        }
-        return *this;
-    }
-
     T* begin() { return data; }
     T* end() { return data + len; }
     const T* begin() const { return data; }
@@ -96,26 +61,26 @@ public:
         len = 0;
     }
 
-    /// Remove the last element from the buffer. Asserts if empty.
+    /// Remove the last element from the array. Asserts if empty.
     void pop() {
         ASSERT(len);
         len--;
         data[len].~T();
     }
 
-    /// Add an element to the end of the buffer.
+    /// Add an element to the end of the array.
     void append(const T& item) {
         amortizeCapacity();
         new (&data[len++]) T(item);
     }
 
-    /// Add a range of elements to the end of the buffer.
+    /// Add a range of elements to the end of the array.
     template<typename Container>
     void appendRange(const Container& container) {
         appendIterator(std::begin(container), std::end(container));
     }
 
-    /// Add a range of elements to the end of the buffer.
+    /// Add a range of elements to the end of the array.
     void appendRange(const T* begin, const T* end) {
         if (std::is_trivially_copyable<T>()) {
             uint32_t count = (uint32_t)(end - begin);
@@ -131,6 +96,8 @@ public:
         }
     }
 
+    /// Add a range of elements to the end of the array, supporting
+    /// simple forward iterators.
     template<typename It>
     void appendIterator(It begin, It end) {
         uint32_t count = (uint32_t)(end - begin);
@@ -144,20 +111,20 @@ public:
         len = newLen;
     }
 
-    /// Construct a new element at the end of the buffer.
+    /// Construct a new element at the end of the array.
     template<typename... Args>
     void emplace(Args&&... args) {
         amortizeCapacity();
         new (&data[len++]) T(std::forward<Args>(args)...);
     }
 
-    /// Adds @a size elements to the buffer (default constructed).
+    /// Adds @a size elements to the array (default constructed).
     void extend(uint32_t size) {
         ensureSize(len + size);
         len += size;
     }
 
-    /// Creates a copy of the buffer using the given allocator.
+    /// Creates a copy of the array using the given allocator.
     ArrayRef<T> copy(BumpAllocator& alloc) const {
         if (len == 0)
             return nullptr;
@@ -172,10 +139,29 @@ public:
     T& operator[](int index) { return data[index]; }
     const T& operator[](int index) const { return data[index]; }
 
-private:
-    T* data;
-    uint32_t len;
+    /// Indicates whether we are still "small", which means we are still on the stack.
+    bool isSmall() const { return (void*)data == (void*)firstElement; }
+
+protected:
+    // Protected to disallow construction or deletion via base class.
+    // This way we don't need a virtual destructor, or vtable at all.
+    SmallVector() {}
+    explicit SmallVector(uint32_t capacity) : capacity(capacity) {}
+    ~SmallVector() { cleanup(); }
+
+    template<typename T, uint32_t N>
+    friend class SmallVectorSized;
+
+    T* data = reinterpret_cast<T*>(&firstElement[0]);
+    uint32_t len = 0;
     uint32_t capacity;
+
+    // Always allocate room for one element, the first stack allocated element.
+    // This way the base class can be generic with respect to how many elements
+    // can actually fit onto the stack.
+    char firstElement[sizeof(T)];
+    // Don't put any variables after firstElement; we expect that the derived
+    // class will fill in stack space here.
 
     void resize() {
         T* newData = (T*)malloc(capacity * sizeof(T));
@@ -194,7 +180,7 @@ private:
 
     void amortizeCapacity() {
         if (len == capacity) {
-            capacity = (uint32_t)(capacity * 1.5);
+            capacity = capacity * 2;
             if (capacity == 0)
                 capacity = 4;
             resize();
@@ -217,8 +203,56 @@ private:
 
     void cleanup() {
         destructElements();
-        free(data);
+        if (!isSmall())
+            free(data);
     }
 };
+
+template<typename T, uint32_t N>
+class SmallVectorSized : public SmallVector<T> {
+    static_assert(N > 1, "Must have at least two elements in SmallVector stack size");
+    static_assert(sizeof(T) * N <= 1024, "Initial size of SmallVector is over 1KB");
+
+public:
+    SmallVectorSized() : SmallVector<T>(N) {}
+
+    SmallVectorSized(SmallVector<T>&& other) {
+        if (other.isSmall()) {
+            this->len = 0;
+            this->capacity = sizeof(T) * N;
+            this->data = reinterpret_cast<T*>(&firstElement[0]);
+            this->appendRange(other.begin(), other.end());
+        }
+        else {
+            this->data = other.data;
+            this->len = other.len;
+            this->capacity = other.capacity;
+        }
+
+        other.data = nullptr;
+        other.len = 0;
+        other.capacity = 0;
+    }
+
+    // not copyable
+    SmallVectorSized(const SmallVectorSized&) = delete;
+    SmallVectorSized& operator=(const SmallVectorSized&) = delete;
+
+    SmallVectorSized& operator=(SmallVector&& other) {
+        if (this != &other) {
+            cleanup();
+            new (this) SmallVectorSized(other);
+        }
+        return *this;
+    }
+
+private:
+    char stackBase[(N - 1) * sizeof(T)];
+};
+
+/// Vector is a specific alias of SmallVectorSized for cases where
+/// we don't really care about the stack allocation aspects of SmallVector.
+template<typename T>
+using Vector = SmallVectorSized<T, 4>;
 
 }

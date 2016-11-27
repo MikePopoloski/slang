@@ -34,14 +34,14 @@ StatementSyntax* Parser::parseStatement(bool allowEmpty) {
                     addError(DiagCode::ExpectedIfOrCase, peek().location()) << getTokenKindText(modifier.kind);
 
                     // Construct an empty syntax construct to hold this misplaced token
-                    auto tokens = tokenPool.get();
-                    tokens->append(modifier);
+                    SmallVectorSized<Token, 4> tokens;
+                    tokens.append(modifier);
 
-                    auto trivia = triviaPool.get();
-                    trivia->append(Trivia(TriviaKind::SkippedTokens, tokens->copy(alloc)));
+                    SmallVectorSized<Trivia, 8> trivia;
+                    trivia.append(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
 
                     Token semi = Token::createMissing(alloc, TokenKind::Semicolon, modifier.location());
-                    semi = semi.withTrivia(alloc, trivia->copy(alloc));
+                    semi = semi.withTrivia(alloc, trivia.copy(alloc));
                     return alloc.emplace<EmptyStatementSyntax>(label, attributes, semi);
                 }
             }
@@ -162,7 +162,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
     Token matchesOrInside;
-    auto itemBuffer = nodePool.getAs<CaseItemSyntax*>();
+    SmallVectorSized<CaseItemSyntax*, 16> itemBuffer;
 
     switch (peek().kind) {
         case TokenKind::MatchesKeyword:
@@ -171,7 +171,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
             while (true) {
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword)
-                    itemBuffer->append(parseDefaultCaseItem());
+                    itemBuffer.append(parseDefaultCaseItem());
                 else if (isPossiblePattern(kind)) {
                     auto pattern = parsePattern();
                     Token tripleAnd;
@@ -183,7 +183,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                     }
 
                     auto colon = expect(TokenKind::Colon);
-                    itemBuffer->append(alloc.emplace<PatternCaseItemSyntax>(pattern, tripleAnd, patternExpr, colon, parseStatement()));
+                    itemBuffer.append(alloc.emplace<PatternCaseItemSyntax>(pattern, tripleAnd, patternExpr, colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -198,10 +198,10 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
             while (true) {
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword)
-                    itemBuffer->append(parseDefaultCaseItem());
+                    itemBuffer.append(parseDefaultCaseItem());
                 else if (isPossibleOpenRangeElement(kind)) {
                     Token colon;
-                    auto buffer = tosPool.get();
+                    SmallVectorSized<TokenOrSyntax, 8> buffer;
 
                     parseSeparatedList<isPossibleOpenRangeElement, isEndOfCaseItem>(
                         buffer,
@@ -211,7 +211,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                         DiagCode::ExpectedOpenRangeElement,
                         [this](bool) { return parseOpenRangeElement(); }
                     );
-                    itemBuffer->append(alloc.emplace<StandardCaseItemSyntax>(buffer->copy(alloc), colon, parseStatement()));
+                    itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -225,10 +225,10 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
             while (true) {
                 auto kind = peek().kind;
                 if (kind == TokenKind::DefaultKeyword)
-                    itemBuffer->append(parseDefaultCaseItem());
+                    itemBuffer.append(parseDefaultCaseItem());
                 else if (isPossibleExpression(kind)) {
                     Token colon;
-                    auto buffer = tosPool.get();
+                    SmallVectorSized<TokenOrSyntax, 8> buffer;
 
                     parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                         buffer,
@@ -238,7 +238,7 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                         DiagCode::ExpectedExpression,
                         [this](bool) { return parseExpression(); }
                     );
-                    itemBuffer->append(alloc.emplace<StandardCaseItemSyntax>(buffer->copy(alloc), colon, parseStatement()));
+                    itemBuffer.append(alloc.emplace<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
                 }
                 else {
                     // no idea what this is; break out and clean up
@@ -258,9 +258,8 @@ CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
         caseExpr,
         closeParen,
         matchesOrInside,
-        itemBuffer->copy(alloc),
-        endcase
-        );
+        itemBuffer.copy(alloc),
+        endcase);
 }
 
 DefaultCaseItemSyntax* Parser::parseDefaultCaseItem() {
@@ -307,7 +306,7 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token semi1;
-    auto initializers = tosPool.get();
+    SmallVectorSized<TokenOrSyntax, 4> initializers;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
         initializers,
         TokenKind::Semicolon,
@@ -321,7 +320,7 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
     auto semi2 = expect(TokenKind::Semicolon);
 
     Token closeParen;
-    auto steps = tosPool.get();
+    SmallVectorSized<TokenOrSyntax, 4> steps;
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfParenList>(
         steps,
         TokenKind::CloseParenthesis,
@@ -336,11 +335,11 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
         attributes,
         forKeyword,
         openParen,
-        initializers->copy(alloc),
+        initializers.copy(alloc),
         semi1,
         stopExpr,
         semi2,
-        steps->copy(alloc),
+        steps.copy(alloc),
         closeParen,
         parseStatement()
     );
@@ -349,7 +348,7 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
 ForeachLoopListSyntax* Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto arrayName = parseName();
-    auto buffer = tosPool.get();
+    SmallVectorSized<TokenOrSyntax, 4> buffer;
 
     Token closeParen;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
@@ -361,7 +360,7 @@ ForeachLoopListSyntax* Parser::parseForeachLoopVariables() {
         [this](bool) { return parseName(); }
     );
 
-    return alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, buffer->copy(alloc), closeParen);
+    return alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, buffer.copy(alloc), closeParen);
 }
 
 ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -553,8 +552,8 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
 }
 
 ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
-    auto buffer = nodePool.get();
-    auto skipped = tokenPool.get();
+    SmallVectorSized<SyntaxNode*, 16> buffer;
+    SmallVectorSized<Token, 8> skipped;
     auto kind = peek().kind;
     bool error = false;
 
@@ -569,7 +568,7 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
             newNode = parseStatement();
         else {
             auto token = consume();
-            skipped->append(token);
+            skipped.append(token);
             if (!error) {
                 addError(DiagCode::InvalidTokenInSequentialBlock, token.location());
                 error = true;
@@ -577,7 +576,7 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         }
 
         if (newNode) {
-            buffer->append(prependSkippedTokens(newNode, skipped));
+            buffer.append(prependSkippedTokens(newNode, skipped));
             error = false;
         }
         kind = peek().kind;
@@ -601,7 +600,7 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
     }
 
     end = prependSkippedTokens(end, skipped);
-    return buffer->copy(alloc);
+    return buffer.copy(alloc);
 }
 
 BlockStatementSyntax* Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind, NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
@@ -630,7 +629,7 @@ StatementSyntax* Parser::parseWaitStatement(NamedLabelSyntax* label, ArrayRef<At
 WaitOrderStatementSyntax* Parser::parseWaitOrderStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
-    auto buffer = tosPool.get();
+    SmallVectorSized<TokenOrSyntax, 4> buffer;
 
     Token closeParen;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
@@ -647,20 +646,20 @@ WaitOrderStatementSyntax* Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
         attributes,
         keyword,
         openParen,
-        buffer->copy(alloc),
+        buffer.copy(alloc),
         closeParen,
         parseActionBlock()
-        );
+    );
 }
 
 RandCaseStatementSyntax* Parser::parseRandCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto randCase = consume();
-    auto itemBuffer = nodePool.getAs<RandCaseItemSyntax*>();
+    SmallVectorSized<RandCaseItemSyntax*, 16> itemBuffer;
 
     while (isPossibleExpression(peek().kind)) {
         auto expr = parseExpression();
         auto colon = expect(TokenKind::Colon);
-        itemBuffer->append(alloc.emplace<RandCaseItemSyntax>(expr, colon, parseStatement()));
+        itemBuffer.append(alloc.emplace<RandCaseItemSyntax>(expr, colon, parseStatement()));
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
@@ -668,9 +667,9 @@ RandCaseStatementSyntax* Parser::parseRandCaseStatement(NamedLabelSyntax* label,
         label,
         attributes,
         randCase,
-        itemBuffer->copy(alloc),
+        itemBuffer.copy(alloc),
         endcase
-        );
+    );
 }
 
 }

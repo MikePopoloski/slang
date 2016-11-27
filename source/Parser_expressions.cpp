@@ -338,14 +338,14 @@ ExpressionSyntax* Parser::parseOpenRangeElement() {
 }
 
 ConcatenationExpressionSyntax* Parser::parseConcatenation(Token openBrace, ExpressionSyntax* first) {
-    auto buffer = tosPool.get();
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
     if (first) {
         // it's possible to have just one element in the concatenation list, so check for a close brace
-        buffer->append(first);
+        buffer.append(first);
         if (peek(TokenKind::CloseBrace))
-            return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer->copy(alloc), consume());
+            return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), consume());
 
-        buffer->append(expect(TokenKind::Comma));
+        buffer.append(expect(TokenKind::Comma));
     }
 
     Token closeBrace;
@@ -357,7 +357,7 @@ ConcatenationExpressionSyntax* Parser::parseConcatenation(Token openBrace, Expre
         DiagCode::ExpectedExpression,
         [this](bool) { return parseExpression(); }
     );
-    return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer->copy(alloc), closeBrace);
+    return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
 }
 
 StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token openBrace) {
@@ -417,11 +417,11 @@ AssignmentPatternExpressionSyntax* Parser::parseAssignmentPatternExpression(Data
 
     Token closeBrace;
     AssignmentPatternSyntax* pattern;
-    auto buffer = tosPool.get();
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
 
     switch (peek().kind) {
         case TokenKind::Colon:
-            buffer->append(parseAssignmentPatternItem(firstExpr));
+            buffer.append(parseAssignmentPatternItem(firstExpr));
             parseSeparatedList<isPossibleExpressionOrCommaOrDefault, isEndOfBracedList>(
                 buffer,
                 TokenKind::CloseBrace,
@@ -432,9 +432,8 @@ AssignmentPatternExpressionSyntax* Parser::parseAssignmentPatternExpression(Data
             );
             pattern = alloc.emplace<StructuredAssignmentPatternSyntax>(
                 openBrace,
-                buffer->copy(alloc),
-                closeBrace
-                );
+                buffer.copy(alloc),
+                closeBrace);
             break;
         case TokenKind::OpenBrace: {
             auto innerOpenBrace = consume();
@@ -450,14 +449,14 @@ AssignmentPatternExpressionSyntax* Parser::parseAssignmentPatternExpression(Data
                 openBrace,
                 firstExpr,
                 innerOpenBrace,
-                buffer->copy(alloc),
+                buffer.copy(alloc),
                 closeBrace,
                 expect(TokenKind::CloseBrace)
                 );
             break;
         }
         default:
-            buffer->append(firstExpr);
+            buffer.append(firstExpr);
             parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
                 buffer,
                 TokenKind::CloseBrace,
@@ -468,9 +467,8 @@ AssignmentPatternExpressionSyntax* Parser::parseAssignmentPatternExpression(Data
             );
             pattern = alloc.emplace<SimpleAssignmentPatternSyntax>(
                 openBrace,
-                buffer->copy(alloc),
-                closeBrace
-                );
+                buffer.copy(alloc),
+                closeBrace);
             break;
     }
     return alloc.emplace<AssignmentPatternExpressionSyntax>(type, pattern);
@@ -607,12 +605,12 @@ NameSyntax* Parser::parseNamePart() {
             return alloc.emplace<ClassNameSyntax>(identifier, parameterValues);
         }
         case TokenKind::OpenBracket: {
-            auto buffer = nodePool.getAs<ElementSelectSyntax*>();
+            SmallVectorSized<ElementSelectSyntax*, 4> buffer;
             do {
-                buffer->append(parseElementSelect());
+                buffer.append(parseElementSelect());
             } while (peek(TokenKind::OpenBracket));
 
-            return alloc.emplace<IdentifierSelectNameSyntax>(identifier, buffer->copy(alloc));
+            return alloc.emplace<IdentifierSelectNameSyntax>(identifier, buffer.copy(alloc));
         }
         default:
             return alloc.emplace<IdentifierNameSyntax>(identifier);
@@ -688,7 +686,7 @@ PatternSyntax* Parser::parsePattern() {
 }
 
 ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token& end) {
-    auto buffer = tosPool.get();
+    SmallVectorSized<TokenOrSyntax, 4> buffer;
 
     MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
@@ -696,9 +694,9 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
         matchesClause = alloc.emplace<MatchesClauseSyntax>(matches, parsePattern());
     }
 
-    buffer->append(alloc.emplace<ConditionalPatternSyntax>(first, matchesClause));
+    buffer.append(alloc.emplace<ConditionalPatternSyntax>(first, matchesClause));
     if (peek(TokenKind::TripleAnd))
-        buffer->append(consume());
+        buffer.append(consume());
 
     parseSeparatedList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
         buffer,
@@ -709,7 +707,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
         [this](bool) { return parseConditionalPattern(); }
     );
 
-    return alloc.emplace<ConditionalPredicateSyntax>(buffer->copy(alloc));
+    return alloc.emplace<ConditionalPredicateSyntax>(buffer.copy(alloc));
 }
 
 ConditionalPatternSyntax* Parser::parseConditionalPattern() {
@@ -847,7 +845,7 @@ ExpressionSyntax* Parser::parseArrayOrRandomizeWithClause() {
 
     // otherwise we have an identifier list here
     Token closeParen;
-    auto buffer = tosPool.get();
+    SmallVectorSized<TokenOrSyntax, 4> buffer;
     parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
         buffer,
         TokenKind::CloseParenthesis,
@@ -857,7 +855,7 @@ ExpressionSyntax* Parser::parseArrayOrRandomizeWithClause() {
         [this](bool) { return alloc.emplace<IdentifierNameSyntax>(consume()); }
     );
 
-    auto idList = alloc.emplace<IdentifierListSyntax>(openParen, buffer->copy(alloc), closeParen);
+    auto idList = alloc.emplace<IdentifierListSyntax>(openParen, buffer.copy(alloc), closeParen);
     return alloc.emplace<RandomizeMethodWithClauseSyntax>(with, idList, parseConstraintBlock());
 }
 

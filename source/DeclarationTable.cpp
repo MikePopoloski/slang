@@ -76,7 +76,7 @@ void DeclarationTable::addSyntaxTree(const SyntaxTree* tree) {
                 auto decl = member->as<ModuleDeclarationSyntax>();
                 auto name = decl->header->name;
                 if (name.valueText())
-                    unit.rootNodes.append(decl);
+                    unit.rootNodes.push_back(decl);
 
                 std::vector<NameSet> scopeStack;
                 visit(decl, unit, scopeStack);
@@ -134,7 +134,7 @@ void DeclarationTable::visit(const MemberSyntax* node, UnitDecls& unit, std::vec
             auto his = node->as<HierarchyInstantiationSyntax>();
             auto name = his->type.valueText();
             if (name && !containsName(scopeStack, name))
-                unit.instantiations.append(his);
+                unit.instantiations.push_back(his);
             break;
         }
         case SyntaxKind::ModuleDeclaration:

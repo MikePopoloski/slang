@@ -8,9 +8,8 @@
 
 #include <cstdint>
 
-#include "Buffer.h"
-#include "BufferPool.h"
 #include "Diagnostics.h"
+#include "SmallVector.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 #include "Token.h"
@@ -80,16 +79,16 @@ private:
     bool lexIntegerBase(Token::Info* info, bool isSigned);
     bool lexTimeLiteral(Token::Info* info);
 
-    bool lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode);
+    bool lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
     
-    bool scanBlockComment(Buffer<Trivia>& triviaBuffer, bool directiveMode);
-    void scanLineComment(Buffer<Trivia>& triviaBuffer, bool directiveMode);
-    void scanWhitespace(Buffer<Trivia>& triviaBuffer);
+    bool scanBlockComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
+    void scanLineComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
+    void scanWhitespace(SmallVector<Trivia>& triviaBuffer);
     void scanIdentifier();
     void scanUnsignedNumber(uint64_t& value, int& digits);
     bool scanExponent(uint64_t& value, bool& negative);
     
-    void addTrivia(TriviaKind kind, Buffer<Trivia>& triviaBuffer);
+    void addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer);
     void addError(DiagCode code, uint32_t offset);
 
     // source pointer manipulation
@@ -117,12 +116,6 @@ private:
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
-
-    // buffer for building string literals
-    Buffer<char> stringBuffer;
-
-    // pool of trivia buffers
-    BufferPool<Trivia> triviaPool;
 
     // the source text and start and end pointers within it
     BufferID bufferId;

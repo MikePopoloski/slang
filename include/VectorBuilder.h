@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "Buffer.h"
+#include "SmallVector.h"
 #include "SourceLocation.h"
 #include "SVInt.h"
 #include "Token.h"
@@ -36,7 +36,7 @@ private:
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
-    Buffer<logic_t> digits;
+    SmallVectorSized<logic_t, 16> digits;
     SourceLocation firstLocation;
     uint16_t sizeBits;
     LiteralBase literalBase;

@@ -6,9 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "Buffer.h"
-#include "BufferPool.h"
 #include "Diagnostics.h"
+#include "SmallVector.h"
 #include "SourceLocation.h"
 #include "SyntaxNode.h"
 #include "Token.h"
@@ -28,15 +27,15 @@ protected:
     Token prependTrivia(Token token, Trivia* trivia);
 
     /// Prepend a set of trivia to the given syntax node / token.
-    void prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia);
-    Token prependTrivia(Token token, Buffer<Trivia>& trivia);
+    void prependTrivia(SyntaxNode* node, SmallVector<Trivia>& trivia);
+    Token prependTrivia(Token token, SmallVector<Trivia>& trivia);
 
     /// Prepend a set of skipped tokens to the given syntax node / token.
-    SyntaxNode* prependSkippedTokens(SyntaxNode* node, Buffer<Token>& tokens);
-    Token prependSkippedTokens(Token node, Buffer<Token>& tokens);
+    SyntaxNode* prependSkippedTokens(SyntaxNode* node, SmallVector<Token>& tokens);
+    Token prependSkippedTokens(Token node, SmallVector<Token>& tokens);
 
     /// Reduce the given skipped tokens into trivia in the given buffer.
-    void reduceSkippedTokens(Buffer<Token>& skipped, Buffer<Trivia>& trivia);
+    void reduceSkippedTokens(SmallVector<Token>& skipped, SmallVector<Trivia>& trivia);
 
     Diagnostics& getDiagnostics();
     Diagnostic& addError(DiagCode code, SourceLocation location);
@@ -87,10 +86,6 @@ protected:
     };
 
     BumpAllocator& alloc;
-    BufferPool<Trivia> triviaPool;
-    BufferPool<Token> tokenPool;
-    BufferPool<SyntaxNode*> nodePool;
-    BufferPool<TokenOrSyntax> tosPool;
 
     enum class SkipAction {
         Continue,
@@ -112,14 +107,14 @@ protected:
     ) {
         openToken = expect(openKind);
 
-        auto buffer = tosPool.get();
+        SmallVectorSized<TokenOrSyntax, 32> buffer;
         parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken, code, std::forward<TParserFunc>(parseItem));
-        list = buffer->copy(alloc);
+        list = buffer.copy(alloc);
     }
 
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
     void parseSeparatedList(
-        Buffer<TokenOrSyntax>& buffer,
+        SmallVector<TokenOrSyntax>& buffer,
         TokenKind closeKind,
         TokenKind separatorKind,
         Token& closeToken,
@@ -160,7 +155,7 @@ protected:
 
     template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
     SkipAction skipBadTokens(Trivia* skippedTokens, DiagCode code) {
-        auto tokens = tokenPool.get();
+        SmallVectorSized<Token, 8> tokens;
         auto result = SkipAction::Continue;
         auto current = peek();
         bool error = false;
@@ -175,14 +170,14 @@ protected:
                 result = SkipAction::Abort;
                 break;
             }
-            tokens->append(consume());
+            tokens.append(consume());
             current = peek();
         }
 
-        if (tokens->empty())
+        if (tokens.empty())
             *skippedTokens = Trivia();
         else
-            *skippedTokens = Trivia(TriviaKind::SkippedTokens, tokens->copy(alloc));
+            *skippedTokens = Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc));
 
         return result;
     }

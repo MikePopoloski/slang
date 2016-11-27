@@ -14,13 +14,12 @@
 
 #include "AllSyntax.h"
 #include "BoundNodes.h"
-#include "Buffer.h"
-#include "BufferPool.h"
 #include "BumpAllocator.h"
 #include "DeclarationTable.h"
 #include "Diagnostics.h"
 #include "ExpressionBinder.h"
 #include "Scope.h"
+#include "SmallVector.h"
 #include "Symbol.h"
 
 namespace slang {
@@ -56,10 +55,10 @@ private:
         SVInt lsb;
     };
 
-    bool makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
+    bool makeParameters(const ParameterDeclarationSyntax* syntax, SmallVector<ParameterSymbol*>& buffer,
                         bool lastLocal, bool overrideLocal, bool bodyParam);
     void evaluateParameter(ParameterSymbol* parameter);
-    bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, Buffer<ConstantRange>& results);
+    bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results);
 
     using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;
     ScopePtr pushScope();
@@ -72,9 +71,6 @@ private:
     Diagnostics& diagnostics;
     ExpressionBinder binder;
     DeclarationTable& declTable;
-    BufferPool<Symbol*> symbolPool;
-    BufferPool<int> intPool;
-    BufferPool<ConstantRange> constantRangePool;
     std::unordered_map<StringRef, SourceLocation> nameDupMap;
     std::deque<Scope> scopeStack;
 

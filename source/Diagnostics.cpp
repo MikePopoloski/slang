@@ -43,9 +43,7 @@ std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
     return visit([&](auto&& t) -> auto& { return os << t; }, arg);
 }
 
-Diagnostics::Diagnostics() :
-    Buffer::Buffer(8)
-{
+Diagnostics::Diagnostics() {
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
@@ -170,7 +168,7 @@ DiagnosticSeverity DiagnosticWriter::getSeverity(DiagCode code) const {
 
 std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     // walk out until we find a location for this diagnostic that isn't inside a macro
-    Buffer<SourceLocation> expansionLocs;
+    SmallVectorSized<SourceLocation, 8> expansionLocs;
     SourceLocation location = diagnostic.location;
     while (sourceManager.isMacroLoc(location)) {
         expansionLocs.append(location);

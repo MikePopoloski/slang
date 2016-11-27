@@ -12,7 +12,7 @@
 #include <string>
 
 #include "ArrayRef.h"
-#include "Buffer.h"
+#include "SmallVector.h"
 #include "Token.h"
 
 namespace slang {
@@ -521,7 +521,7 @@ public:
     std::string toString(uint8_t flags = 0);
 
     /// Write the node and all of its children to a string.
-    void writeTo(Buffer<char>& buffer, uint8_t flags);
+    void writeTo(SmallVector<char>& buffer, uint8_t flags);
 
     /// Get the first leaf token in this subtree.
     Token getFirstToken();

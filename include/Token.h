@@ -10,12 +10,12 @@
 #include <variant>
 
 #include "ArrayRef.h"
-#include "Buffer.h"
-#include "Trivia.h"
+#include "SmallVector.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 #include "StringTable.h"
 #include "SVInt.h"
+#include "Trivia.h"
 
 namespace slang {
 
@@ -153,7 +153,7 @@ public:
 
     /// Write the string representation of the token to the given buffer.
     /// flags control what exactly gets written.
-    void writeTo(Buffer<char>& buffer, uint8_t flags) const;
+    void writeTo(SmallVector<char>& buffer, uint8_t flags) const;
 
     /// Data accessors for specific kinds of tokens.
     /// These will generally assert if the kind is wrong.

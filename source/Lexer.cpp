@@ -161,7 +161,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
 }
 
 Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end) {
-    Buffer<char> text;
+    SmallVectorSized<char, 64> text;
     text.append('"');
 
     // TODO: need to think a lot more about where and how much we insert spacing
@@ -206,13 +206,13 @@ Token Lexer::lex(LexerMode mode) {
         return lexIncludeFileName();
 
     auto info = alloc.emplace<Token::Info>();
-    auto triviaBuffer = triviaPool.get();
+    SmallVectorSized<Trivia, 8> triviaBuffer;
     bool directiveMode = mode == LexerMode::Directive;
 
     // Lex any leading trivia; if we're in directive mode this might require
     // us to return an EndOfDirective token right away.
     bool eod = lexTrivia(triviaBuffer, directiveMode);
-    info->trivia = triviaBuffer->copy(alloc);
+    info->trivia = triviaBuffer.copy(alloc);
     if (eod)
         return Token(TokenKind::EndOfDirective, info);
 
@@ -522,8 +522,7 @@ TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode) {
 }
 
 void Lexer::lexStringLiteral(Token::Info* info) {
-    stringBuffer.clear();
-
+    SmallVectorSized<char, 128> stringBuffer;
     while (true) {
         uint32_t offset = currentOffset();
         char c = peek();
@@ -662,13 +661,13 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
 
 Token Lexer::lexIncludeFileName() {
     // leading whitespace should lex into trivia
-    auto triviaBuffer = triviaPool.get();
+    SmallVectorSized<Trivia, 8> triviaBuffer;
     if (isHorizontalWhitespace(peek())) {
         mark();
         scanWhitespace(triviaBuffer);
     }
 
-    ArrayRef<Trivia> trivia = triviaBuffer->copy(alloc);
+    ArrayRef<Trivia> trivia = triviaBuffer.copy(alloc);
     uint32_t offset = currentOffset();
     auto location = SourceLocation(getBufferID(), offset);
 
@@ -880,7 +879,7 @@ bool Lexer::lexTimeLiteral(Token::Info* info) {
     return false;
 }
 
-bool Lexer::lexTrivia(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
+bool Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
     while (true) {
         mark();
 
@@ -971,7 +970,7 @@ void Lexer::scanUnsignedNumber(uint64_t& value, int& digits) {
     }
 }
 
-void Lexer::scanWhitespace(Buffer<Trivia>& triviaBuffer) {
+void Lexer::scanWhitespace(SmallVector<Trivia>& triviaBuffer) {
     bool done = false;
     while (!done) {
         switch (peek()) {
@@ -989,7 +988,7 @@ void Lexer::scanWhitespace(Buffer<Trivia>& triviaBuffer) {
     addTrivia(TriviaKind::Whitespace, triviaBuffer);
 }
 
-void Lexer::scanLineComment(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
+void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
     while (true) {
         char c = peek();
         if (isNewline(c))
@@ -1012,7 +1011,7 @@ void Lexer::scanLineComment(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
     addTrivia(TriviaKind::LineComment, triviaBuffer);
 }
 
-bool Lexer::scanBlockComment(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
+bool Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
     bool eod = false;
     while (true) {
         char c = peek();
@@ -1050,7 +1049,7 @@ bool Lexer::scanBlockComment(Buffer<Trivia>& triviaBuffer, bool directiveMode) {
     return eod;
 }
 
-void Lexer::addTrivia(TriviaKind kind, Buffer<Trivia>& triviaBuffer) {
+void Lexer::addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer) {
     triviaBuffer.emplace(kind, lexeme());
 }
 

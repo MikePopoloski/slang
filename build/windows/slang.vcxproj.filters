@@ -52,9 +52,6 @@
     <ClInclude Include="..\..\include\ArrayRef.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\Buffer.h">
-      <Filter>util</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\Hash.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -65,9 +62,6 @@
       <Filter>util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\StringTable.h">
-      <Filter>util</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\BufferPool.h">
       <Filter>util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\SyntaxNode.h">
@@ -144,6 +138,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\ExpressionBinder.h">
       <Filter>analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\SmallVector.h">
+      <Filter>util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

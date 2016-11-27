@@ -16,7 +16,7 @@ SyntaxNode* Trivia::syntax() const {
     return syntaxNode;
 }
 
-void Trivia::writeTo(Buffer<char>& buffer, uint8_t flags) const {
+void Trivia::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
     switch (kind) {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:

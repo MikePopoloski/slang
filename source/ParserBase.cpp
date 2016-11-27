@@ -17,7 +17,7 @@ ParserBase::ParserBase(Preprocessor& preprocessor) :
 {
 }
 
-void ParserBase::reduceSkippedTokens(Buffer<Token>& skipped, Buffer<Trivia>& trivia) {
+void ParserBase::reduceSkippedTokens(SmallVector<Token>& skipped, SmallVector<Trivia>& trivia) {
     if (skipped.empty())
         return;
     trivia.append(Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc)));
@@ -34,17 +34,17 @@ SyntaxNode* ParserBase::prependTrivia(SyntaxNode* node, Trivia* trivia) {
 
 Token ParserBase::prependTrivia(Token token, Trivia* trivia) {
     if (trivia->kind != TriviaKind::Unknown && token) {
-        auto buffer = triviaPool.get();
-        buffer->append(*trivia);
-        buffer->appendRange(token.trivia());
+        SmallVectorSized<Trivia, 8> buffer;
+        buffer.append(*trivia);
+        buffer.appendRange(token.trivia());
 
-        token = token.withTrivia(alloc, buffer->copy(alloc));
+        token = token.withTrivia(alloc, buffer.copy(alloc));
         *trivia = Trivia();
     }
     return token;
 }
 
-Token ParserBase::prependTrivia(Token token, Buffer<Trivia>& trivia) {
+Token ParserBase::prependTrivia(Token token, SmallVector<Trivia>& trivia) {
     ASSERT(token);
     trivia.appendRange(token.trivia());
     token = token.withTrivia(alloc, trivia.copy(alloc));
@@ -52,7 +52,7 @@ Token ParserBase::prependTrivia(Token token, Buffer<Trivia>& trivia) {
     return token;
 }
 
-void ParserBase::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
+void ParserBase::prependTrivia(SyntaxNode* node, SmallVector<Trivia>& trivia) {
     if (!trivia.empty()) {
         ASSERT(node);
         Token newToken = prependTrivia(node->getFirstToken(), trivia);
@@ -60,7 +60,7 @@ void ParserBase::prependTrivia(SyntaxNode* node, Buffer<Trivia>& trivia) {
     }
 }
 
-SyntaxNode* ParserBase::prependSkippedTokens(SyntaxNode* node, Buffer<Token>& tokens) {
+SyntaxNode* ParserBase::prependSkippedTokens(SyntaxNode* node, SmallVector<Token>& tokens) {
     if (!tokens.empty()) {
         Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
         prependTrivia(node, &t);
@@ -69,7 +69,7 @@ SyntaxNode* ParserBase::prependSkippedTokens(SyntaxNode* node, Buffer<Token>& to
     return node;
 }
 
-Token ParserBase::prependSkippedTokens(Token token, Buffer<Token>& tokens) {
+Token ParserBase::prependSkippedTokens(Token token, SmallVector<Token>& tokens) {
     if (!tokens.empty()) {
         Trivia t(TriviaKind::SkippedTokens, tokens.copy(alloc));
         prependTrivia(token, &t);

@@ -481,12 +481,12 @@ size_t SVInt::hash(size_t seed) const {
 }
 
 std::string SVInt::toString(LiteralBase base) const {
-    Buffer<char> buffer(16);
+    SmallVectorSized<char, 32> buffer;
     writeTo(buffer, base);
     return std::string(buffer.begin(), buffer.end());
 }
 
-void SVInt::writeTo(Buffer<char>& buffer, LiteralBase base) const {
+void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
     // negative sign if necessary
     SVInt tmp(*this);
     if (signFlag && !unknownFlag && isNegative()) {

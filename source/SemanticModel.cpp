@@ -75,7 +75,7 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
     // publicly visible parameters are the ones in that list. Otherwise, parameters declared
     // in the module body are publicly visible.
     const ModuleHeaderSyntax* header = decl->header;
-    auto portParameters = symbolPool.getAs<ParameterSymbol*>();
+    SmallVectorSized<ParameterSymbol*, 8> portParameters;
     nameDupMap.clear();
 
     bool overrideLocal = false;
@@ -87,7 +87,7 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
     }
 
     // also find direct body parameters
-    auto bodyParameters = symbolPool.getAs<ParameterSymbol*>();
+    SmallVectorSized<ParameterSymbol*, 8> bodyParameters;
     for (const MemberSyntax* member : decl->members) {
         if (member->kind == SyntaxKind::ParameterDeclarationStatement)
             makeParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, bodyParameters,
@@ -96,12 +96,12 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
 
     // Now evaluate initializers and finalize the type of each parameter.
     // Do ports separately from body parameters.
-    auto portScope = pushScope(portParameters.get());
-    for (ParameterSymbol* param : portParameters.get())
+    auto portScope = pushScope(portParameters);
+    for (ParameterSymbol* param : portParameters)
         evaluateParameter(param);
 
-    auto bodyScope = pushScope(bodyParameters.get());
-    for (ParameterSymbol* param : bodyParameters.get())
+    auto bodyScope = pushScope(bodyParameters);
+    for (ParameterSymbol* param : bodyParameters)
         evaluateParameter(param);
 
     // Handle all child instantiations.
@@ -116,7 +116,7 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
         }
     }
 
-    return alloc.emplace<InstanceSymbol>(portParameters->copy(alloc), bodyParameters->copy(alloc));
+    return alloc.emplace<InstanceSymbol>(portParameters.copy(alloc), bodyParameters.copy(alloc));
 }
 
 const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
@@ -131,32 +131,32 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
             bool isReg = its->keyword.kind == TokenKind::RegKeyword;
             bool isSigned = its->signing.kind == TokenKind::SignedKeyword;
             bool isFourState = syntax->kind != SyntaxKind::BitType;
-            auto dims = constantRangePool.get();
+            SmallVectorSized<ConstantRange, 4> dims;
             if (!evaluateConstantDims(its->dimensions, dims))
                 return getErrorType();
 
             // TODO: bounds checking on sizes, no X allowed
 
-            if (dims->empty())
+            if (dims.empty())
                 // TODO: signing
                 return getKnownType(syntax->kind);
-            else if (dims->count() == 1 && dims.get()[0].lsb == 0) {
+            else if (dims.count() == 1 && dims[0].lsb == 0) {
                 // if we have the common case of only one dimension and lsb == 0
                 // then we can use the shared representation
-                uint16_t width = dims.get()[0].msb.getAssertUInt16() + 1;
+                uint16_t width = dims[0].msb.getAssertUInt16() + 1;
                 return getIntegralType(width, isSigned, isFourState, isReg);
             }
             else {
-                auto lowerBounds = intPool.get();
-                auto widths = intPool.get();
+                SmallVectorSized<int, 4> lowerBounds;
+                SmallVectorSized<int, 4> widths;
                 uint16_t totalWidth = 0;
-                for (auto& dim : dims.get()) {
+                for (auto& dim : dims) {
                     // TODO: msb < lsb
                     uint16_t msb = dim.msb.getAssertUInt16();
                     uint16_t lsb = dim.lsb.getAssertUInt16();
                     uint16_t width = msb - lsb + 1;
-                    lowerBounds->append(lsb);
-                    widths->append(width);
+                    lowerBounds.append(lsb);
+                    widths.append(width);
 
                     // TODO: overflow
                     totalWidth += width;
@@ -164,7 +164,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
                 return alloc.emplace<IntegralTypeSymbol>(
                     getIntegralKeywordKind(isFourState, isReg),
                     totalWidth, isSigned, isFourState,
-                    lowerBounds->copy(alloc), widths->copy(alloc));
+                    lowerBounds.copy(alloc), widths.copy(alloc));
             }
         }
         case SyntaxKind::ByteType:
@@ -201,7 +201,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
     return nullptr;
 }
 
-bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, Buffer<ConstantRange>& results) {
+bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results) {
     for (const VariableDimensionSyntax* dim : dimensions) {
         const SelectorSyntax* selector;
         if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
@@ -224,7 +224,7 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
     return true;
 }
 
-bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Buffer<ParameterSymbol*>& buffer,
+bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, SmallVector<ParameterSymbol*>& buffer,
                                    bool lastLocal, bool overrideLocal, bool bodyParam)
 {
     // It's legal to leave off the parameter keyword in the parameter port list.
