@@ -227,11 +227,11 @@ public:
             this->data = other.data;
             this->len = other.len;
             this->capacity = other.capacity;
-        }
 
-        other.data = nullptr;
-        other.len = 0;
-        other.capacity = 0;
+            other.data = nullptr;
+            other.len = 0;
+            other.capacity = 0;
+        }
     }
 
     // not copyable
@@ -241,7 +241,7 @@ public:
     SmallVectorSized& operator=(SmallVector&& other) {
         if (this != &other) {
             cleanup();
-            new (this) SmallVectorSized(other);
+            new (this) SmallVectorSized(std::move(other));
         }
         return *this;
     }

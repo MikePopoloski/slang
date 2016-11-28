@@ -142,6 +142,9 @@
     <ClInclude Include="..\..\include\SmallVector.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\HashMap.h">
+      <Filter>util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Lexer.cpp">

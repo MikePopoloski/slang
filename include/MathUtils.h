@@ -54,4 +54,8 @@ inline int countPopulation(uint64_t value) {
 #endif
 }
 
+inline constexpr bool isPowerOfTwo(uint32_t value) {
+    return value && ((value & (value - 1)) == 0);
+}
+
 }

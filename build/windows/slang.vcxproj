@@ -28,6 +28,7 @@
     <ClInclude Include="..\..\include\AllSyntax.h" />
     <ClInclude Include="..\..\include\ArrayRef.h" />
     <ClInclude Include="..\..\include\ExpressionBinder.h" />
+    <ClInclude Include="..\..\include\HashMap.h" />
     <ClInclude Include="..\..\include\Scope.h" />
     <ClInclude Include="..\..\include\BoundNodes.h" />
     <ClInclude Include="..\..\include\Debug.h" />
