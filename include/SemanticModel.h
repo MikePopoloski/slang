@@ -18,6 +18,7 @@
 #include "DeclarationTable.h"
 #include "Diagnostics.h"
 #include "ExpressionBinder.h"
+#include "HashMap.h"
 #include "Scope.h"
 #include "SmallVector.h"
 #include "Symbol.h"
@@ -56,6 +57,7 @@ private:
     };
 
     bool makeParameters(const ParameterDeclarationSyntax* syntax, SmallVector<ParameterSymbol*>& buffer,
+                        HashMapBase<StringRef, SourceLocation>& nameDupMap,
                         bool lastLocal, bool overrideLocal, bool bodyParam);
     void evaluateParameter(ParameterSymbol* parameter);
     bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results);
@@ -71,7 +73,6 @@ private:
     Diagnostics& diagnostics;
     ExpressionBinder binder;
     DeclarationTable& declTable;
-    std::unordered_map<StringRef, SourceLocation> nameDupMap;
     std::deque<Scope> scopeStack;
 
     // preallocated type symbols for known types

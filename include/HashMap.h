@@ -24,7 +24,7 @@ namespace slang {
 /// As you'll notice this class lacks *many* features since I'm
 /// only adding what I need as I need it.
 ///
-template<typename TKey, typename TValue, typename TDerived>
+template<typename TKey, typename TValue>
 class HashMapBase {
 public:
     uint32_t count() const { return len; }
@@ -61,28 +61,14 @@ public:
         return true;
     }
 
-    template<typename U = TValue>
-    typename std::enable_if<std::is_pointer<U>::value, const U>::type operator[](const TKey& key) const {
+    TValue operator[](const TKey& key) const {
         Element* slot = findSlot(key);
-        return slot ? slot->value : nullptr;
+        return slot ? slot->value : TValue();
     }
 
-    template<typename U = TValue>
-    typename std::enable_if<!std::is_pointer<U>::value, const U*>::type operator[](const TKey& key) const {
+    TValue operator[](const TKey& key) {
         Element* slot = findSlot(key);
-        return slot ? &slot->value : nullptr;
-    }
-
-    template<typename U = TValue>
-    typename std::enable_if<std::is_pointer<U>::value, U>::type operator[](const TKey& key) {
-        Element* slot = findSlot(key);
-        return slot ? slot->value : nullptr;
-    }
-
-    template<typename U = TValue>
-    typename std::enable_if<!std::is_pointer<U>::value, U*>::type operator[](const TKey& key) {
-        Element* slot = findSlot(key);
-        return slot ? &slot->value : nullptr;
+        return slot ? slot->value : TValue();
     }
 
 protected:
@@ -104,6 +90,7 @@ protected:
     Element* data;
     uint32_t len = 0;
     uint32_t capacity;
+    bool isSmall = false;
 
     explicit HashMapBase(uint32_t capacity = 0) : capacity(capacity) {}
     ~HashMapBase() { cleanup(); }
@@ -177,7 +164,6 @@ protected:
     }
 
     void resize() {
-        bool isSmall = static_cast<TDerived*>(this)->isSmall();
         Element* oldData = data;
         Element* oldEnd = oldData + capacity;
 
@@ -199,6 +185,7 @@ protected:
 
         if (!isSmall)
             free(oldData);
+        isSmall = false;
     }
 
     void destructElements() {
@@ -212,13 +199,13 @@ protected:
 
     void cleanup() {
         destructElements();
-        if (!static_cast<TDerived*>(this)->isSmall())
+        if (!isSmall)
             free(data);
     }
 };
 
 template<typename TKey, typename TValue>
-class HashMap : public HashMapBase<TKey, TValue, HashMap<TKey, TValue>> {
+class HashMap : public HashMapBase<TKey, TValue> {
 public:
     HashMap() : HashMapBase(4) {
         this->data = (Element*)malloc(this->capacity * sizeof(Element));
@@ -246,17 +233,16 @@ public:
         }
         return *this;
     }
-
-    bool isSmall() const { return false; }
 };
 
 template<typename TKey, typename TValue, uint32_t N>
-class SmallHashMap : public HashMapBase<TKey, TValue, SmallHashMap<TKey, TValue, N>> {
+class SmallHashMap : public HashMapBase<TKey, TValue> {
     static_assert(N >= 1 && isPowerOfTwo(N), "Size must be greater than zero and a power of two");
     static_assert(sizeof(Element) * N < 1024, "Initial size of SmallHashMap is over 1KB");
 
 public:
     SmallHashMap() : HashMapBase(N) {
+        this->isSmall = true;
         this->data = (Element*)stackData;
         memset(this->data, 0, capacity * sizeof(Element));
     }
@@ -265,6 +251,7 @@ public:
     SmallHashMap(SmallHashMap<TKey, TValue, OtherN>&& other) {
         if (other.isSmall()) {
             this->len = 0;
+            this->isSmall = true;
             this->capacity = sizeof(Element) * N;
             this->data = (Element*)stackData;
 
@@ -296,14 +283,12 @@ public:
 
     template<uint32_t OtherN>
     SmallHashMap& operator=(SmallHashMap<TKey, TValue, OtherN>&& other) {
-        if ((void*)this != (void*)&other) {
+        if (static_cast<HashMapBase*>(this) != static_cast<HashMapBase*>(&other)) {
             cleanup();
             new (this) SmallHashMap(std::move(other));
         }
         return *this;
     }
-
-    bool isSmall() const { return (void*)this->data == (void*)stackData; }
 
 private:
     char stackData[sizeof(Element) * N];

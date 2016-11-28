@@ -38,20 +38,6 @@ TEST_CASE("Bind parameter", "[binding:expressions]") {
     CHECK(std::get<SVInt>(testParameter("parameter logic [3:0] foo = 4;").value) == 4);
     CHECK(std::get<SVInt>(testParameter("parameter logic [3:0] foo = 4'b100;").value) == 4);
     CHECK(std::get<SVInt>(testParameter("parameter foo = 3.14159 & 13'hf;").value) == 4);
-
-    SmallHashMap<int, StringRef, 8> map;
-
-    CHECK(map.add(3, "SDF"));
-    CHECK(*map[3] == "SDF");
-    CHECK(map[4] == nullptr);
-
-    SmallHashMap<int, StringRef, 4> blah;
-    blah = std::move(map);
-
-    SmallVectorSized<int, 8> f;
-
-    SmallVectorSized<int, 4> g;
-    g = std::move(f);
 }
 
 }

@@ -57,6 +57,9 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
     // named assignment (though a specific instance can only use one method or the other).
     bool hasParamAssignments = false;
     bool orderedAssignments = false;
+    SmallVectorSized<OrderedArgumentSyntax*, 8> orderedParams;
+    SmallHashMap<StringRef, NamedArgumentSyntax*, 8> namedParams;
+
     if (parameterAssignments) {
         for (auto paramBase : parameterAssignments->parameters->parameters) {
             bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
@@ -68,6 +71,15 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
                 diagnostics.add(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
                 break;
             }
+
+            if (isOrdered)
+                orderedParams.append(paramBase->as<OrderedArgumentSyntax>());
+            else {
+                NamedArgumentSyntax* nas = paramBase->as<NamedArgumentSyntax>();
+                if (!namedParams.add(nas->name.valueText(), nas)) {
+
+                }
+            }
         }
     }
     
@@ -76,13 +88,13 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
     // in the module body are publicly visible.
     const ModuleHeaderSyntax* header = decl->header;
     SmallVectorSized<ParameterSymbol*, 8> portParameters;
-    nameDupMap.clear();
+    SmallHashMap<StringRef, SourceLocation, 16> nameDupMap;
 
     bool overrideLocal = false;
     if (header->parameters) {
         bool lastLocal = false;
         for (const ParameterDeclarationSyntax* paramDecl : header->parameters->declarations)
-            lastLocal = makeParameters(paramDecl, portParameters, lastLocal, false, false);
+            lastLocal = makeParameters(paramDecl, portParameters, nameDupMap, lastLocal, false, false);
         overrideLocal = true;
     }
 
@@ -91,7 +103,7 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
     for (const MemberSyntax* member : decl->members) {
         if (member->kind == SyntaxKind::ParameterDeclarationStatement)
             makeParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, bodyParameters,
-                           false, overrideLocal, true);
+                           nameDupMap, false, overrideLocal, true);
     }
 
     // Now evaluate initializers and finalize the type of each parameter.
@@ -225,6 +237,7 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
 }
 
 bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, SmallVector<ParameterSymbol*>& buffer,
+                                   HashMapBase<StringRef, SourceLocation>& nameDupMap,
                                    bool lastLocal, bool overrideLocal, bool bodyParam)
 {
     // It's legal to leave off the parameter keyword in the parameter port list.
@@ -246,10 +259,9 @@ bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Sma
             continue;
 
         auto location = declarator->name.location();
-        auto pair = nameDupMap.try_emplace(name, location);
-        if (!pair.second) {
+        if (!nameDupMap.add(name, location)) {
             diagnostics.add(DiagCode::DuplicateParameter, location) << name;
-            diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second);
+            diagnostics.add(DiagCode::NotePreviousDefinition, nameDupMap[name]);
         }
         else {
             ExpressionSyntax* init = nullptr;
