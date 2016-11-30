@@ -76,7 +76,7 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
                 orderedParams.append(paramBase->as<OrderedArgumentSyntax>());
             else {
                 NamedArgumentSyntax* nas = paramBase->as<NamedArgumentSyntax>();
-                if (!namedParams.add(nas->name.valueText(), nas)) {
+                if (!namedParams.emplace(nas->name.valueText(), nas).second) {
 
                 }
             }
@@ -259,9 +259,10 @@ bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Sma
             continue;
 
         auto location = declarator->name.location();
-        if (!nameDupMap.add(name, location)) {
-            diagnostics.add(DiagCode::DuplicateParameter, location) << name;
-            diagnostics.add(DiagCode::NotePreviousDefinition, nameDupMap[name]);
+        auto pair = nameDupMap.emplace(name, location);
+        if (!pair.second) {
+            diagnostics.add(DiagCode::DuplicateDefinition, location) << StringRef("parameter") << name;
+            diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second);
         }
         else {
             ExpressionSyntax* init = nullptr;

@@ -104,10 +104,9 @@ enum class DiagCode : uint8_t {
     AttributesNotSupported,
 
     // declarations
-    DuplicateModule,
+    DuplicateDefinition,
     NotePreviousDefinition,
     UnknownModule,
-    DuplicateParameter,
     LocalParamNoInitializer,
     BodyParamNoInitializer,
     PackedDimRequiresConstantRange,

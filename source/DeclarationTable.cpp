@@ -37,7 +37,7 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
             auto pair = nameLookup.try_emplace(name.valueText(), node);
             if (!pair.second) {
                 // report the duplicate name, along with the original location
-                diagnostics.add(DiagCode::DuplicateModule, name.location()) << name.valueText();
+                diagnostics.add(DiagCode::DuplicateDefinition, name.location()) << StringRef("module") << name.valueText();
                 diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second.decl->header->name.location());
             }
         }
