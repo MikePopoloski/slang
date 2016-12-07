@@ -112,6 +112,14 @@ enum class DiagCode : uint8_t {
     PackedDimRequiresConstantRange,
     PackedDimsOnPredefinedType,
     MixingOrderedAndNamedParams,
+    DuplicateParamAssignment,
+    NotePreviousUsage,
+    ParamHasNoValue,
+    ModuleUnreferenced,
+    NoteDeclarationHere,
+    TooManyParamAssignments,
+    AssignedToLocalPortParam,
+    AssignedToLocalBodyParam,
 
     // expressions
     BadUnaryExpression,

@@ -47,8 +47,9 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
     return makeInstance(syntax, nullptr);
 }
 
-InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl, const ParameterValueAssignmentSyntax* parameterAssignments) {
+InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl, const ParameterValueAssignmentSyntax* parameterAssignments, bool isTopLevel) {
     ASSERT(decl);
+    StringRef moduleName = decl->header->name.valueText();
 
     // TODO: check that this can actually be implicit (i.e. no parameters without initializers)
 
@@ -56,7 +57,7 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
     // allow us to easily index them. We need to handle both ordered assignment as well as
     // named assignment (though a specific instance can only use one method or the other).
     bool hasParamAssignments = false;
-    bool orderedAssignments = false;
+    bool orderedAssignments = true;
     SmallVectorSized<OrderedArgumentSyntax*, 8> orderedParams;
     SmallHashMap<StringRef, NamedArgumentSyntax*, 8> namedParams;
 
@@ -76,45 +77,90 @@ InstanceSymbol* SemanticModel::makeInstance(const ModuleDeclarationSyntax* decl,
                 orderedParams.append(paramBase->as<OrderedArgumentSyntax>());
             else {
                 NamedArgumentSyntax* nas = paramBase->as<NamedArgumentSyntax>();
-                if (!namedParams.emplace(nas->name.valueText(), nas).second) {
-
+                auto pair = namedParams.emplace(nas->name.valueText(), nas);
+                if (!pair.second) {
+                    diagnostics.add(DiagCode::DuplicateParamAssignment, nas->name.location()) << nas->name.valueText();
+                    diagnostics.add(DiagCode::NotePreviousUsage, pair.first->second->name.location());
                 }
             }
         }
     }
     
-    // Discover all of the element's parameters. If we have a parameter port list, the only
-    // publicly visible parameters are the ones in that list. Otherwise, parameters declared
-    // in the module body are publicly visible.
-    const ModuleHeaderSyntax* header = decl->header;
-    SmallVectorSized<ParameterSymbol*, 8> portParameters;
-    SmallHashMap<StringRef, SourceLocation, 16> nameDupMap;
+    // Obtain the set of parameters actually declared in the module. This is a shared
+    // representation. We'll turn this into actual parameter values using any provided
+    // overrides. At this point any parameters without a default or an assigned value
+    // get marked as an error.
+    if (orderedAssignments) {
+        // We take this branch if we had ordered parameter assignments,
+        // or if we didn't have any parameter assignments at all.
+        int orderedIndex = 0;
+        bool moduleUnreferencedError = false;
+        for (const auto& info : getModuleParams(decl)) {
+            ExpressionSyntax* initializer;
+            if (info.local || orderedIndex >= orderedParams.count())
+                initializer = info.initializer;
+            else
+                initializer = orderedParams[orderedIndex++]->expr;
 
-    bool overrideLocal = false;
-    if (header->parameters) {
-        bool lastLocal = false;
-        for (const ParameterDeclarationSyntax* paramDecl : header->parameters->declarations)
-            lastLocal = makeParameters(paramDecl, portParameters, nameDupMap, lastLocal, false, false);
-        overrideLocal = true;
+            // If we have an initializer, evaluate it now
+            if (initializer)
+                evaluateParameter();
+            else if (!info.local && !info.bodyParam) {
+                // Otherwise error. Only report an error if this is a non-local non-body parameter;
+                // we've already reported an error otherwise. The error we report differs slightly
+                // depending on whether this is an implicit instantiation (top-level) or explicit.
+                if (isTopLevel && !moduleUnreferencedError) {
+                    auto& diag = diagnostics.add(DiagCode::ModuleUnreferenced, decl->header->name.location());
+                    diag << moduleName;
+                    moduleUnreferencedError = true;
+                }
+                else if (!isTopLevel) {
+                    auto& diag = diagnostics.add(DiagCode::ParamHasNoValue, );
+                    diag << moduleName;
+                    diag << info.name;
+                }
+                diagnostics.add(DiagCode::NoteDeclarationHere, info.location) << StringRef("parameter");
+            }
+        }
+
+        // Make sure there aren't extra param assignments for non-existent params.
+        if (orderedIndex < orderedParams.count()) {
+            auto& diag = diagnostics.add(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
+            diag << moduleName;
+            diag << orderedParams.count();
+            diag << orderedIndex;
+        }
     }
+    else {
+        // Otherwise handle named assignments.
+        for (const auto& info : getModuleParams(decl)) {
+            ExpressionSyntax* initializer = nullptr;
+            auto it = namedParams.find(info.name);
+            if (it != namedParams.end()) {
+                if (info.local) {
+                    // Can't assign to localparams, so this is an error.
+                    diagnostics.add(info.bodyParam ? DiagCode::AssignedToLocalBodyParam : DiagCode::AssignedToLocalPortParam, it->second->getFirstToken().location());
+                    diagnostics.add(DiagCode::NoteDeclarationHere, info.location) << StringRef("parameter");
+                }
+                else {
+                    initializer = it->second->expr;
+                }
+            }
 
-    // also find direct body parameters
-    SmallVectorSized<ParameterSymbol*, 8> bodyParameters;
-    for (const MemberSyntax* member : decl->members) {
-        if (member->kind == SyntaxKind::ParameterDeclarationStatement)
-            makeParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, bodyParameters,
-                           nameDupMap, false, overrideLocal, true);
+            // If no initializer provided, use the default
+            if (!initializer)
+                initializer = info.initializer;
+
+            if (initializer)
+                evaluateParameter();
+            else if (!info.local && !info.bodyParam) {
+                auto& diag = diagnostics.add(DiagCode::ParamHasNoValue, );
+                diag << moduleName;
+                diag << info.name;
+                diagnostics.add(DiagCode::NoteDeclarationHere, info.location) << StringRef("parameter");
+            }
+        }
     }
-
-    // Now evaluate initializers and finalize the type of each parameter.
-    // Do ports separately from body parameters.
-    auto portScope = pushScope(portParameters);
-    for (ParameterSymbol* param : portParameters)
-        evaluateParameter(param);
-
-    auto bodyScope = pushScope(bodyParameters);
-    for (ParameterSymbol* param : bodyParameters)
-        evaluateParameter(param);
 
     // Handle all child instantiations.
     for (const MemberSyntax* member : decl->members) {
@@ -236,7 +282,32 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
     return true;
 }
 
-bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, SmallVector<ParameterSymbol*>& buffer,
+const std::vector<SemanticModel::ParameterInfo>& SemanticModel::getModuleParams(const ModuleDeclarationSyntax* syntax) {
+    // Discover all of the element's parameters. If we have a parameter port list, the only
+    // publicly visible parameters are the ones in that list. Otherwise, parameters declared
+    // in the module body are publicly visible.
+    const ModuleHeaderSyntax* header = decl->header;
+    SmallVectorSized<ParameterSymbol*, 8> portParameters;
+    SmallHashMap<StringRef, SourceLocation, 16> nameDupMap;
+
+    bool overrideLocal = false;
+    if (header->parameters) {
+        bool lastLocal = false;
+        for (const ParameterDeclarationSyntax* paramDecl : header->parameters->declarations)
+            lastLocal = makeParameters(paramDecl, portParameters, nameDupMap, lastLocal, false, false);
+        overrideLocal = true;
+    }
+
+    // also find direct body parameters
+    SmallVectorSized<ParameterSymbol*, 8> bodyParameters;
+    for (const MemberSyntax* member : decl->members) {
+        if (member->kind == SyntaxKind::ParameterDeclarationStatement)
+            makeParameters(member->as<ParameterDeclarationStatementSyntax>()->parameter, bodyParameters,
+                nameDupMap, false, overrideLocal, true);
+    }
+}
+
+bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, std::vector<ParameterInfo>& buffer,
                                    HashMapBase<StringRef, SourceLocation>& nameDupMap,
                                    bool lastLocal, bool overrideLocal, bool bodyParam)
 {
@@ -244,16 +315,15 @@ bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Sma
     // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
     // This isn't allowed in a module body, but the parser will take care of the error for us.
     bool local = false;
-    auto p = syntax->as<ParameterDeclarationSyntax>();
-    if (!p->keyword)
+    if (!syntax->keyword)
         local = lastLocal;
     else {
         // In the body of a module that has a parameter port list in its header, parameters are
         // actually just localparams. overrideLocal will be true in this case.
-        local = p->keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
+        local = syntax->keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
     }
 
-    for (const VariableDeclaratorSyntax* declarator : p->declarators) {
+    for (const VariableDeclaratorSyntax* declarator : syntax->declarators) {
         auto name = declarator->name.valueText();
         if (!name)
             continue;
@@ -272,7 +342,7 @@ bool SemanticModel::makeParameters(const ParameterDeclarationSyntax* syntax, Sma
                 diagnostics.add(DiagCode::LocalParamNoInitializer, location);
             else if (bodyParam)
                 diagnostics.add(DiagCode::BodyParamNoInitializer, location);
-            buffer.append(alloc.emplace<ParameterSymbol>(name, location, p, init, local));
+            buffer.push_back({ syntax, name, location, init, local, bodyParam });
         }
     }
     return local;

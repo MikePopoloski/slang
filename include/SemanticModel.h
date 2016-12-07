@@ -35,7 +35,7 @@ public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
-    InstanceSymbol* makeInstance(const ModuleDeclarationSyntax* decl, const ParameterValueAssignmentSyntax* parameterAssignments);
+    InstanceSymbol* makeInstance(const ModuleDeclarationSyntax* decl, const ParameterValueAssignmentSyntax* parameterAssignments, bool isTopLevel);
 
     const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax);
 
@@ -51,12 +51,24 @@ public:
     Diagnostics& getDiagnostics() { return diagnostics; }
 
 private:
+    // Represents a simple constant range.
     struct ConstantRange {
         SVInt msb;
         SVInt lsb;
     };
 
-    bool makeParameters(const ParameterDeclarationSyntax* syntax, SmallVector<ParameterSymbol*>& buffer,
+    // Small collection of info extracted from a parameter definition
+    struct ParameterInfo {
+        const ParameterDeclarationSyntax* paramDecl;
+        StringRef name;
+        SourceLocation location;
+        ExpressionSyntax* initializer;
+        bool local;
+        bool bodyParam;
+    };
+
+    const std::vector<ParameterInfo>& getModuleParams(const ModuleDeclarationSyntax* syntax);
+    bool makeParameters(const ParameterDeclarationSyntax* syntax, std::vector<ParameterInfo>& buffer,
                         HashMapBase<StringRef, SourceLocation>& nameDupMap,
                         bool lastLocal, bool overrideLocal, bool bodyParam);
     void evaluateParameter(ParameterSymbol* parameter);
@@ -74,6 +86,8 @@ private:
     ExpressionBinder binder;
     DeclarationTable& declTable;
     std::deque<Scope> scopeStack;
+
+    HashMap<const ModuleDeclarationSyntax*, std::vector<ParameterInfo>> parameterCache;
 
     // preallocated type symbols for known types
     std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
