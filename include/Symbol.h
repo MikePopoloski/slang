@@ -18,7 +18,10 @@ enum class SymbolKind {
     VoidType,
     EventType,
     TypeAlias,
-    Parameter
+    Parameter,
+    Module,
+    Interface,
+    Program
 };
 
 class Symbol {
@@ -112,23 +115,33 @@ public:
 class ParameterSymbol : public Symbol {
 public:
     const ParameterDeclarationSyntax* syntax;
-    const ExpressionSyntax* initializer;
-    const TypeSymbol* type = nullptr;
+    const TypeSymbol* type;
     ConstantValue value;
     bool isLocal;
 
     ParameterSymbol(StringRef name, SourceLocation location,
-        const ParameterDeclarationSyntax* syntax,
-        const ExpressionSyntax* initializer, bool isLocal);
+                    const ParameterDeclarationSyntax* syntax,
+                    const TypeSymbol* type,
+                    ConstantValue value,
+                    bool isLocal);
+};
+
+class ModuleSymbol : public Symbol {
+public:
+    const ModuleDeclarationSyntax* syntax;
+    ArrayRef<const ParameterSymbol*> parameters;
+
+    ModuleSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) :
+        syntax(syntax), parameters(parameters) {}
 };
 
 class InstanceSymbol : public Symbol {
 public:
-    ArrayRef<ParameterSymbol*> portParameters;
-    ArrayRef<ParameterSymbol*> bodyParameters;
+    const ModuleSymbol* module;
+    bool implicit;
 
-    InstanceSymbol(ArrayRef<ParameterSymbol*> portParameters, ArrayRef<ParameterSymbol*> bodyParameters) :
-        portParameters(portParameters), bodyParameters(bodyParameters) {}
+    InstanceSymbol(const ModuleSymbol* module, bool implicit) :
+        module(module), implicit(implicit) {}
 };
 
 }

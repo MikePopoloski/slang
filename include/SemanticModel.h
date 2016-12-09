@@ -35,7 +35,6 @@ public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
-    InstanceSymbol* makeInstance(const ModuleDeclarationSyntax* decl, const ParameterValueAssignmentSyntax* parameterAssignments, bool isTopLevel);
 
     const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax);
 
@@ -67,11 +66,28 @@ private:
         bool bodyParam;
     };
 
+    // Gets the parameters declared in the module, with additional information about whether
+    // they're public or not. These results are cached in `parameterCache`.
     const std::vector<ParameterInfo>& getModuleParams(const ModuleDeclarationSyntax* syntax);
-    bool makeParameters(const ParameterDeclarationSyntax* syntax, std::vector<ParameterInfo>& buffer,
-                        HashMapBase<StringRef, SourceLocation>& nameDupMap,
-                        bool lastLocal, bool overrideLocal, bool bodyParam);
-    void evaluateParameter(ParameterSymbol* parameter);
+
+    // Helper function used by getModuleParams to convert a single parameter declaration into
+    // one or more ParameterInfo instances.
+    bool getParamDecls(const ParameterDeclarationSyntax* syntax, std::vector<ParameterInfo>& buffer,
+                       HashMapBase<StringRef, SourceLocation>& nameDupMap,
+                       bool lastLocal, bool overrideLocal, bool bodyParam);
+
+    // Evaluates an individual parameter using its initializer and results in a parameter symbol.
+    const ParameterSymbol* evaluateParameter(const ParameterInfo& parameter);
+
+    // Uses a module declaration and an optional set of parameter assignments to create all of the
+    // evaluated parameter symbols for a particular module instance. Note that these parameter symbols
+    // can potentially be shared by instances if they are in the same declaration.
+    void makeParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
+                        const ParameterValueAssignmentSyntax* parameterAssignments,
+                        SourceLocation instanceLocation, bool isTopLevel);
+
+    const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters);
+
     bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results);
 
     using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;

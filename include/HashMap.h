@@ -63,6 +63,9 @@ public:
         bool operator!=(const iterator_templ<TElement, true>& other) const { return ptr != other.ptr; }
 
     private:
+        template<typename TElement, bool IsConst>
+        friend class iterator_templ;
+
         TElement* ptr;
         TElement* end;
 

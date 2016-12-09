@@ -22,13 +22,14 @@ const ParameterSymbol& testParameter(const std::string& text, int index = 0) {
 
     SemanticModel sem(alloc, diagnostics, declTable);
     auto instance = sem.makeImplicitInstance(tree.root()->members[0]->as<ModuleDeclarationSyntax>());
-    REQUIRE(instance);
-    REQUIRE(instance->bodyParameters.count() > (uint32_t)index);
+    auto module = instance->module;
+    REQUIRE(module);
+    REQUIRE(module->parameters.count() > (uint32_t)index);
 
     if (!diagnostics.empty())
         WARN(diagWriter.report(diagnostics).c_str());
 
-    return *instance->bodyParameters[index];
+    return *module->parameters[index];
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {
