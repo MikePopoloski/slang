@@ -22,7 +22,7 @@ TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
 namespace slang {
 
 SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable) :
-    alloc(alloc), diagnostics(diagnostics), binder(*this), declTable(declTable)
+    alloc(alloc), diagnostics(diagnostics), declTable(declTable)
 {
     knownTypes[SyntaxKind::ShortIntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword, 16, true, false);
     knownTypes[SyntaxKind::IntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword, 32, true, false);
@@ -45,7 +45,7 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
     SmallVectorSized<const ParameterSymbol*, 8> parameters;
-    makeParameters(parameters, syntax, nullptr, SourceLocation(), true);
+    makeParameters(parameters, syntax, nullptr, Scope::Empty, SourceLocation(), true);
 
     const ModuleSymbol* module = makeModule(syntax, parameters.copy(alloc));
     return alloc.emplace<InstanceSymbol>(module, true);
@@ -56,7 +56,7 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
     return alloc.emplace<ModuleSymbol>(syntax, parameters);
 }
 
-const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
+const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope) {
     ASSERT(syntax);
 
     switch (syntax->kind) {
@@ -69,7 +69,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
             bool isSigned = its->signing.kind == TokenKind::SignedKeyword;
             bool isFourState = syntax->kind != SyntaxKind::BitType;
             SmallVectorSized<ConstantRange, 4> dims;
-            if (!evaluateConstantDims(its->dimensions, dims))
+            if (!evaluateConstantDims(its->dimensions, dims, scope))
                 return getErrorType();
 
             // TODO: bounds checking on sizes, no X allowed
@@ -128,7 +128,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
             return getKnownType(syntax->kind);
         case SyntaxKind::TypedefDeclaration: {
             auto tds = syntax->as<TypedefDeclarationSyntax>();
-            auto type = makeTypeSymbol(tds->type);
+            auto type = makeTypeSymbol(tds->type, scope);
             return alloc.emplace<TypeAliasSymbol>(syntax, tds->name.location(), type, tds->name.valueText());
         }
     }
@@ -138,7 +138,8 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax) {
     return nullptr;
 }
 
-bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results) {
+bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope) {
+    ExpressionBinder binder { *this, scope };
     for (const VariableDimensionSyntax* dim : dimensions) {
         const SelectorSyntax* selector;
         if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
@@ -232,37 +233,26 @@ bool SemanticModel::getParamDecls(const ParameterDeclarationSyntax* syntax, std:
     return local;
 }
 
-const ParameterSymbol* SemanticModel::evaluateParameter(const ParameterInfo& parameter) {
+void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax* initializer, const Scope* scope) {
     // If no type is given, infer the type from the initializer
-    DataTypeSyntax* typeSyntax = parameter.paramDecl->type;
+    ExpressionBinder binder { *this, scope };
+    DataTypeSyntax* typeSyntax = symbol->syntax->type;
     if (!typeSyntax) {
-        BoundExpression* expr = binder.bindSelfDeterminedExpression(parameter.initializer);
-        return alloc.emplace<ParameterSymbol>(
-            parameter.name,
-            parameter.location,
-            parameter.paramDecl,
-            expr->type,
-            expr->constantValue,
-            parameter.local
-        );
+        BoundExpression* expr = binder.bindSelfDeterminedExpression(initializer);
+        symbol->type = expr->type;
+        symbol->value = expr->constantValue;
     }
     else {
-        const TypeSymbol* type = makeTypeSymbol(typeSyntax);
-        BoundExpression* expr = binder.bindAssignmentLikeContext(parameter.initializer, parameter.location, type);
-        return alloc.emplace<ParameterSymbol>(
-            parameter.name,
-            parameter.location,
-            parameter.paramDecl,
-            type,
-            expr->constantValue,
-            parameter.local
-        );
+        const TypeSymbol* type = makeTypeSymbol(typeSyntax, scope);
+        BoundExpression* expr = binder.bindAssignmentLikeContext(initializer, symbol->location, type);
+        symbol->type = type;
+        symbol->value = expr->constantValue;
     }
 }
 
 void SemanticModel::makeParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
                                    const ParameterValueAssignmentSyntax* parameterAssignments,
-                                   SourceLocation instanceLocation, bool isTopLevel) {
+                                   const Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel) {
     // If we were given a set of parameter assignments, build up some data structures to
     // allow us to easily index them. We need to handle both ordered assignment as well as
     // named assignment (though a specific instance can only use one method or the other).
@@ -297,6 +287,15 @@ void SemanticModel::makeParameters(SmallVector<const ParameterSymbol*>& results,
         }
     }
 
+    // Pre-create parameter symbol entries so that we can give better errors about use before decl.
+    Scope declScope;
+    const auto& moduleParamInfo = getModuleParams(decl);
+    for (const auto& info : moduleParamInfo) {
+        ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local);
+        results.append(symbol);
+        declScope.add(symbol);
+    }
+
     // Obtain the set of parameters actually declared in the module. This is a shared
     // representation. We'll turn this into actual parameter values using any provided
     // overrides. At this point any parameters without a default or an assigned value
@@ -305,17 +304,25 @@ void SemanticModel::makeParameters(SmallVector<const ParameterSymbol*>& results,
         // We take this branch if we had ordered parameter assignments,
         // or if we didn't have any parameter assignments at all.
         uint32_t orderedIndex = 0;
+        int resultIndex = 0;
         bool moduleUnreferencedError = false;
-        for (const auto& info : getModuleParams(decl)) {
+        for (const auto& info : moduleParamInfo) {
             ExpressionSyntax* initializer;
-            if (info.local || orderedIndex >= orderedParams.count())
+            const Scope* scope;
+            if (info.local || orderedIndex >= orderedParams.count()) {
                 initializer = info.initializer;
-            else
+                scope = &declScope;
+            }
+            else {
                 initializer = orderedParams[orderedIndex++]->expr;
+                scope = instantiationScope;
+            }
 
-            // If we have an initializer, evaluate it now
+            // If we have an initializer, evaluate it now. The const_cast is kosher, since we
+            // just created the object up above. The reason it's const is that we are returning
+            // the array to the caller and don't want him to modify it after this method finishes.
             if (initializer)
-                results.append(evaluateParameter(info));
+                evaluateParameter(const_cast<ParameterSymbol*>(results[resultIndex]), initializer, scope);
             else if (!info.local && !info.bodyParam) {
                 // Otherwise error. Only report an error if this is a non-local non-body parameter;
                 // we've already reported an error otherwise. The error we report differs slightly
@@ -332,6 +339,7 @@ void SemanticModel::makeParameters(SmallVector<const ParameterSymbol*>& results,
                 }
                 diagnostics.add(DiagCode::NoteDeclarationHere, info.location) << StringRef("parameter");
             }
+            resultIndex++;
         }
 
         // Make sure there aren't extra param assignments for non-existent params.
@@ -344,8 +352,10 @@ void SemanticModel::makeParameters(SmallVector<const ParameterSymbol*>& results,
     }
     else {
         // Otherwise handle named assignments.
-        for (const auto& info : getModuleParams(decl)) {
+        int resultIndex = 0;
+        for (const auto& info : moduleParamInfo) {
             ExpressionSyntax* initializer = nullptr;
+            const Scope* scope = nullptr;
             auto it = namedParams.find(info.name);
             if (it != namedParams.end()) {
                 if (info.local) {
@@ -355,21 +365,27 @@ void SemanticModel::makeParameters(SmallVector<const ParameterSymbol*>& results,
                 }
                 else {
                     initializer = it->second->expr;
+                    scope = instantiationScope;
                 }
             }
 
             // If no initializer provided, use the default
-            if (!initializer)
+            if (!initializer) {
                 initializer = info.initializer;
+                scope = &declScope;
+            }
 
+            // See above for note about const_cast.
             if (initializer)
-                results.append(evaluateParameter(info));
+                evaluateParameter(const_cast<ParameterSymbol*>(results[resultIndex]), initializer, scope);
             else if (!info.local && !info.bodyParam) {
+                ASSERT(!isTopLevel);
                 auto& diag = diagnostics.add(DiagCode::ParamHasNoValue, instanceLocation);
                 diag << moduleName;
                 diag << info.name;
                 diagnostics.add(DiagCode::NoteDeclarationHere, info.location) << StringRef("parameter");
             }
+            resultIndex++;
         }
     }
 }
@@ -397,30 +413,13 @@ const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool 
     return symbol;
 }
 
-SemanticModel::ScopePtr SemanticModel::pushScope() {
-    scopeStack.emplace_back();
-    return ScopePtr(&scopeStack.back(), [this](Scope* s) { popScope(s); });
-}
-
-template<typename TContainer>
-SemanticModel::ScopePtr SemanticModel::pushScope(const TContainer& range) {
-    auto scope = pushScope();
-    scope->addRange(range);
-    return scope;
-}
-
-void SemanticModel::popScope(const Scope* scope) {
-    ASSERT(!scopeStack.empty());
-    ASSERT(&scopeStack.back() == scope);
-    scopeStack.pop_back();
-}
-
-const Symbol* SemanticModel::lookupSymbol(StringRef name) {
+const Symbol* SemanticModel::lookupSymbol(StringRef name, const Scope* scope) {
     // TODO: soooo many things here...
-    for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
-        const Symbol* result = it->lookup(name);
+    while (scope) {
+        const Symbol* result = scope->lookup(name);
         if (result)
             return result;
+        scope = scope->parent();
     }
     return nullptr;
 }

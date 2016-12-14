@@ -36,7 +36,7 @@ public:
 
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
 
-    const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax);
+    const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope);
 
     /// Utilities for getting various common type symbols.
     const TypeSymbol* getErrorType() const { return getKnownType(SyntaxKind::Unknown); }
@@ -44,7 +44,7 @@ public:
     const TypeSymbol* getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false);
 
     // Generalized symbol lookup based on the current scope stack.
-    const Symbol* lookupSymbol(StringRef name);
+    const Symbol* lookupSymbol(StringRef name, const Scope* scope);
 
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
@@ -66,6 +66,12 @@ private:
         bool bodyParam;
     };
 
+    // Small collection of info tied to a module/interface/program declaration
+    struct ModuleDeclInfo {
+        ;
+        const Scope* scope;
+    };
+
     // Gets the parameters declared in the module, with additional information about whether
     // they're public or not. These results are cached in `parameterCache`.
     const std::vector<ParameterInfo>& getModuleParams(const ModuleDeclarationSyntax* syntax);
@@ -76,32 +82,23 @@ private:
                        HashMapBase<StringRef, SourceLocation>& nameDupMap,
                        bool lastLocal, bool overrideLocal, bool bodyParam);
 
-    // Evaluates an individual parameter using its initializer and results in a parameter symbol.
-    const ParameterSymbol* evaluateParameter(const ParameterInfo& parameter);
+    // Evaluates an individual parameter using its initializer. This also finalizes its type.
+    void evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax* initializer, const Scope* scope);
 
     // Uses a module declaration and an optional set of parameter assignments to create all of the
     // evaluated parameter symbols for a particular module instance. Note that these parameter symbols
     // can potentially be shared by instances if they are in the same declaration.
     void makeParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
                         const ParameterValueAssignmentSyntax* parameterAssignments,
-                        SourceLocation instanceLocation, bool isTopLevel);
+                        const Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel);
 
     const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters);
 
-    bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results);
-
-    using ScopePtr = std::unique_ptr<Scope, std::function<void(Scope*)>>;
-    ScopePtr pushScope();
-    void popScope(const Scope* scope);
-
-    template<typename TContainer>
-    ScopePtr pushScope(const TContainer& range);
+    bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope);
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
-    ExpressionBinder binder;
     DeclarationTable& declTable;
-    std::deque<Scope> scopeStack;
 
     HashMap<const ModuleDeclarationSyntax*, std::vector<ParameterInfo>> parameterCache;
 

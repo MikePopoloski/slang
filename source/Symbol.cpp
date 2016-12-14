@@ -55,13 +55,9 @@ std::string TypeSymbol::toString() const {
 
 ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location,
                                  const ParameterDeclarationSyntax* syntax,
-                                 const TypeSymbol* type,
-                                 ConstantValue value,
                                  bool isLocal) :
     Symbol(SymbolKind::Parameter, name, location),
     syntax(syntax),
-    type(type),
-    value(value),
     isLocal(isLocal)
 {
 }

@@ -14,10 +14,11 @@
 namespace slang {
 
 class SemanticModel;
+class Scope;
 
 class ExpressionBinder {
 public:
-    ExpressionBinder(SemanticModel& sem);
+    ExpressionBinder(SemanticModel& sem, const Scope* scope);
 
     BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
@@ -53,6 +54,7 @@ private:
 
     SemanticModel& sem;
     BumpAllocator& alloc;
+    const Scope* scope;
 
     Diagnostic& addError(DiagCode code, SourceLocation location);
 };

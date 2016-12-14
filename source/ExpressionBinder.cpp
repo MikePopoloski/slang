@@ -13,9 +13,10 @@
 
 namespace slang {
 
-ExpressionBinder::ExpressionBinder(SemanticModel& sem) :
-    sem(sem), alloc(sem.getAllocator())
+ExpressionBinder::ExpressionBinder(SemanticModel& sem, const Scope* scope) :
+    sem(sem), alloc(sem.getAllocator()), scope(scope)
 {
+    ASSERT(scope);
 }
 
 BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax) {
@@ -148,7 +149,7 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
     if (!identifier)
         return alloc.emplace<BadBoundExpression>();
 
-    const Symbol* symbol = sem.lookupSymbol(identifier);
+    const Symbol* symbol = sem.lookupSymbol(identifier, scope);
     ASSERT(symbol && symbol->kind == SymbolKind::Parameter);
 
     return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterSymbol>(), false);

@@ -121,8 +121,6 @@ public:
 
     ParameterSymbol(StringRef name, SourceLocation location,
                     const ParameterDeclarationSyntax* syntax,
-                    const TypeSymbol* type,
-                    ConstantValue value,
                     bool isLocal);
 };
 

@@ -20,10 +20,15 @@ public:
             add(symbol);
     }
 
-    const Symbol* lookup(StringRef name);
+    const Symbol* lookup(StringRef name) const;
+
+    const Scope* parent() const { return parentScope; }
+
+    static const Scope* const Empty;
 
 private:
     std::unordered_map<StringRef, const Symbol*> table;
+    Scope* parentScope;
 };
 
 }
