@@ -525,9 +525,11 @@ public:
 
     /// Get the first leaf token in this subtree.
     Token getFirstToken();
+    Token getFirstToken() const;
 
     /// Get the last leaf token in this subtree.
     Token getLastToken();
+    Token getLastToken() const;
 
     /// Get the source range of the node.
     SourceRange sourceRange() const;

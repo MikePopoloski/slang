@@ -120,6 +120,7 @@ enum class DiagCode : uint8_t {
     TooManyParamAssignments,
     AssignedToLocalPortParam,
     AssignedToLocalBodyParam,
+    DuplicateAttribute,
 
     // expressions
     BadUnaryExpression,

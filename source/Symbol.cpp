@@ -53,6 +53,12 @@ std::string TypeSymbol::toString() const {
     return "'" + result + "'";
 }
 
+AttributeSymbol::AttributeSymbol(const AttributeSpecSyntax* syntax, const TypeSymbol* type, ConstantValue value) :
+    Symbol(SymbolKind::Attribute, syntax->name.valueText(), syntax->name.location()),
+    syntax(syntax), type(type), value(value)
+{
+}
+
 ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location,
                                  const ParameterDeclarationSyntax* syntax,
                                  bool isLocal) :

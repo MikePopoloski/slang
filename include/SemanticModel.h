@@ -66,12 +66,6 @@ private:
         bool bodyParam;
     };
 
-    // Small collection of info tied to a module/interface/program declaration
-    struct ModuleDeclInfo {
-        ;
-        const Scope* scope;
-    };
-
     // Gets the parameters declared in the module, with additional information about whether
     // they're public or not. These results are cached in `parameterCache`.
     const std::vector<ParameterInfo>& getModuleParams(const ModuleDeclarationSyntax* syntax);
@@ -88,13 +82,19 @@ private:
     // Uses a module declaration and an optional set of parameter assignments to create all of the
     // evaluated parameter symbols for a particular module instance. Note that these parameter symbols
     // can potentially be shared by instances if they are in the same declaration.
-    void makeParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
-                        const ParameterValueAssignmentSyntax* parameterAssignments,
-                        const Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel);
+    void makePublicParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
+                              const ParameterValueAssignmentSyntax* parameterAssignments,
+                              const Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel);
+
+    // Process attributes and convert them to a normalized form. No specific handling is done for attribute
+    // types, we just pull out their values here.
+    void makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes);
 
     const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters);
+    void handleInstantiation(const HierarchyInstantiationSyntax* syntax);
 
     bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope);
+
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;

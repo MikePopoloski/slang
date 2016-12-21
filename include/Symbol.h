@@ -21,7 +21,8 @@ enum class SymbolKind {
     Parameter,
     Module,
     Interface,
-    Program
+    Program,
+    Attribute
 };
 
 class Symbol {
@@ -110,6 +111,15 @@ public:
     TypeAliasSymbol(const SyntaxNode* syntax, SourceLocation location, const TypeSymbol* underlying, StringRef alias) :
         TypeSymbol(SymbolKind::TypeAlias, alias, location),
         syntax(syntax), underlying(underlying) {}
+};
+
+class AttributeSymbol : public Symbol {
+public:
+    const AttributeSpecSyntax* syntax;
+    const TypeSymbol* type;
+    ConstantValue value;
+
+    AttributeSymbol(const AttributeSpecSyntax* syntax, const TypeSymbol* type, ConstantValue value);
 };
 
 class ParameterSymbol : public Symbol {

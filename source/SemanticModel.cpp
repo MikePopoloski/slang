@@ -45,13 +45,22 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
     SmallVectorSized<const ParameterSymbol*, 8> parameters;
-    makeParameters(parameters, syntax, nullptr, Scope::Empty, SourceLocation(), true);
+    makePublicParameters(parameters, syntax, nullptr, Scope::Empty, SourceLocation(), true);
 
     const ModuleSymbol* module = makeModule(syntax, parameters.copy(alloc));
     return alloc.emplace<InstanceSymbol>(module, true);
 }
 
 const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) {
+    for (const MemberSyntax* member : syntax->members) {
+        switch (member->kind) {
+            case SyntaxKind::HierarchyInstantiation:
+                handleInstantiation(member->as<HierarchyInstantiationSyntax>());
+                break;
+        }
+    }
+
+
     // TODO: cache this shit
     return alloc.emplace<ModuleSymbol>(syntax, parameters);
 }
@@ -250,9 +259,24 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     }
 }
 
-void SemanticModel::makeParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
-                                   const ParameterValueAssignmentSyntax* parameterAssignments,
-                                   const Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel) {
+void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax) {
+    // Try to find the module/interface/program being instantiated; we can't do anything without it.
+    // We've already reported an error for missing modules.
+    const ModuleDeclarationSyntax* decl = declTable.find(syntax->type.valueText());
+    if (!decl)
+        return;
+
+    // Evaluate public parameter assignments
+    SmallVectorSized<const ParameterSymbol*, 8> parameters;
+    makePublicParameters(parameters, decl, syntax->parameters, Scope::Empty, syntax->getFirstToken().location(), false);
+
+    for (const HierarchicalInstanceSyntax* instance : syntax->instances) {
+    }
+}
+
+void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
+                                         const ParameterValueAssignmentSyntax* parameterAssignments,
+                                         const Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel) {
     // If we were given a set of parameter assignments, build up some data structures to
     // allow us to easily index them. We need to handle both ordered assignment as well as
     // named assignment (though a specific instance can only use one method or the other).
@@ -387,6 +411,54 @@ void SemanticModel::makeParameters(SmallVector<const ParameterSymbol*>& results,
             }
             resultIndex++;
         }
+    }
+}
+
+void SemanticModel::makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes) {
+    struct Entry {
+        const AttributeSpecSyntax* attr;
+        bool warned;
+    };
+
+    SmallHashMap<StringRef, Entry, 2> names;
+    for (const AttributeInstanceSyntax* instance : attributes) {
+        for (const AttributeSpecSyntax* attr : instance->specs) {
+            StringRef name = attr->name.valueText();
+            SourceLocation loc = attr->name.location();
+            auto pair = names.emplace(name, Entry { attr, false });
+            if (!pair.second) {
+                // Duplicate name; spec says we should warn and take the last value we find.
+                // The value in our hash is a pair, where the second element indicates whether
+                // we've already warned about this name.
+                Entry& entry = pair.first->second;
+                if (!entry.warned) {
+                    diagnostics.add(DiagCode::DuplicateAttribute, loc) << name;
+                    diagnostics.add(DiagCode::NotePreviousDefinition, entry.attr->name.location());
+                    entry.warned = true;
+                }
+                entry.attr = attr;
+            }
+        }
+    }
+
+    // Create the symbol entries
+    for (const auto& pair : names) {
+        const AttributeSpecSyntax* attr = pair.second.attr;
+        const TypeSymbol* type;
+        ConstantValue value;
+
+        if (!attr->value) {
+            // Default to a one bit value of 1
+            type = getKnownType(SyntaxKind::BitType);
+            value = SVInt(1, 1, false);
+        }
+        else {
+            ExpressionBinder binder { *this, Scope::Empty };
+            auto expr = binder.bindConstantExpression(attr->value->expr);
+            type = expr->type;
+            value = expr->constantValue;
+        }
+        results.append(alloc.emplace<AttributeSymbol>(attr, type, value));
     }
 }
 

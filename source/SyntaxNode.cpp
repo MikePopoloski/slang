@@ -43,6 +43,11 @@ Token SyntaxNode::getFirstToken() {
     return Token();
 }
 
+Token SyntaxNode::getFirstToken() const {
+    // TODO: the const cast is ugly
+    return const_cast<SyntaxNode*>(this)->getFirstToken();
+}
+
 Token SyntaxNode::getLastToken() {
     for (uint32_t i = childCount - 1; i >= 0; i--) {
         auto child = getChild(i);
@@ -59,10 +64,14 @@ Token SyntaxNode::getLastToken() {
     return Token();
 }
 
+Token SyntaxNode::getLastToken() const {
+    // TODO: the const cast is ugly
+    return const_cast<SyntaxNode*>(this)->getLastToken();
+}
+
 SourceRange SyntaxNode::sourceRange() const {
-    // TODO: the const case is ugly
-    Token firstToken = const_cast<SyntaxNode*>(this)->getFirstToken();
-    Token lastToken = const_cast<SyntaxNode*>(this)->getLastToken();
+    Token firstToken = getFirstToken();
+    Token lastToken = getLastToken();
     return SourceRange(firstToken.location(), lastToken.location() + lastToken.rawText().length());
 }
 
