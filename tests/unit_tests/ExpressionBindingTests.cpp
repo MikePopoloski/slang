@@ -38,7 +38,6 @@ TEST_CASE("Bind parameter", "[binding:expressions]") {
     CHECK(std::get<SVInt>(testParameter("parameter bar = 9, foo = bar + 1;", 1).value) == 10);
     CHECK(std::get<SVInt>(testParameter("parameter logic [3:0] foo = 4;").value) == 4);
     CHECK(std::get<SVInt>(testParameter("parameter logic [3:0] foo = 4'b100;").value) == 4);
-    CHECK(std::get<SVInt>(testParameter("parameter foo = 3.14159 & 13'hf;").value) == 4);
 }
 
 }

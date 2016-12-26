@@ -52,10 +52,11 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 }
 
 const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) {
+    SmallVectorSized<const InstanceSymbol*, 8> instances;
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
             case SyntaxKind::HierarchyInstantiation:
-                handleInstantiation(member->as<HierarchyInstantiationSyntax>());
+                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), instances);
                 break;
         }
     }
@@ -259,7 +260,7 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     }
 }
 
-void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax) {
+void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const InstanceSymbol*>& results) {
     // Try to find the module/interface/program being instantiated; we can't do anything without it.
     // We've already reported an error for missing modules.
     const ModuleDeclarationSyntax* decl = declTable.find(syntax->type.valueText());
@@ -271,6 +272,9 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
     makePublicParameters(parameters, decl, syntax->parameters, Scope::Empty, syntax->getFirstToken().location(), false);
 
     for (const HierarchicalInstanceSyntax* instance : syntax->instances) {
+        // Get a symbol for this particular parameterized form of the module
+        const ModuleSymbol* module = makeModule(decl, nullptr);
+        results.append(alloc.emplace<InstanceSymbol>(module, false));
     }
 }
 

@@ -145,7 +145,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::MixingOrderedAndNamedParams] = { "mixing ordered and named parameter assignments is not allowed", DiagnosticSeverity::Error };
     descriptors[DiagCode::DuplicateParamAssignment] = { "duplicate assignment for parameter '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotePreviousUsage] = { "previous usage here", DiagnosticSeverity::Note };
-    descriptors[DiagCode::ParamHasNoValue] = { "instance of module '{}' does not provide a value for parameter '{}' and it does not have a default value", DiagnosticSeverity::Note };
+    descriptors[DiagCode::ParamHasNoValue] = { "instance of module '{}' does not provide a value for parameter '{}' and it does not have a default value", DiagnosticSeverity::Error };
     descriptors[DiagCode::ModuleUnreferenced] = { "module '{}' is unreferenced and cannot be top level because it has parameters that do not have a default value", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoteDeclarationHere] = { "{} declaration here", DiagnosticSeverity::Note };
     descriptors[DiagCode::TooManyParamAssignments] = { "too many parameter assignments given to instantiation of module '{}' ({} given, expected {})", DiagnosticSeverity::Error };
@@ -184,18 +184,23 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     }
 
     // build the error message from arguments, if we have any
-    Descriptor& desc = descriptors[diagnostic.code];
-    std::string msg;
-    switch (diagnostic.args.size()) {
-        case 0: msg = desc.format; break;
-        case 1: msg = fmt::format(desc.format, diagnostic.args[0]); break;
-        case 2: msg = fmt::format(desc.format, diagnostic.args[0], diagnostic.args[1]); break;
-        default:
-            ASSERT(false, "Too many arguments to diagnostic format. Add another switch case!");
-    }
-
     fmt::MemoryWriter writer;
-    formatDiag(writer, location, diagnostic.ranges, severityToString[(int)desc.severity], msg);
+    Descriptor& desc = descriptors[diagnostic.code];
+    if (diagnostic.args.empty())
+        formatDiag(writer, location, diagnostic.ranges, severityToString[(int)desc.severity], desc.format);
+    else {
+        // The fmtlib API for arg lists isn't very pretty, but it gets the job done
+        ASSERT(diagnostic.args.size() < fmt::ArgList::MAX_PACKED_ARGS - 1, "Too many arguments to diagnostic format.");
+        typedef fmt::internal::ArgArray<fmt::ArgList::MAX_PACKED_ARGS - 1> ArgArray;
+        typename ArgArray::Type values;
+        uint64_t types = 0;
+        for (size_t i = 0; i < diagnostic.args.size(); i++) {
+            values[i] = ArgArray::template make<fmt::BasicFormatter<char>>(diagnostic.args[i]);
+            types |= fmt::internal::Arg::CUSTOM << (i * 4);
+        }
+        std::string msg = fmt::format(desc.format, fmt::ArgList(types, values));
+        formatDiag(writer, location, diagnostic.ranges, severityToString[(int)desc.severity], msg);
+    }
 
     // write out macro expansions, if we have any
     while (!expansionLocs.empty()) {
@@ -211,7 +216,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
 std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
     // first sort diagnostics by file so that we can cut down
     // on the amount of include information we print out
-    std::sort(diagnostics.begin(), diagnostics.end(), [this](auto& x, auto& y) { return sortDiagnostics(x, y); });
+    std::stable_sort(diagnostics.begin(), diagnostics.end(), [this](auto& x, auto& y) { return sortDiagnostics(x, y); });
 
     std::deque<SourceLocation> includeStack;
     BufferID lastBuffer;
@@ -247,7 +252,7 @@ bool DiagnosticWriter::sortDiagnostics(const Diagnostic& x, const Diagnostic& y)
     // start by expanding out macro locations
     SourceLocation xl = getFullyExpandedLoc(x.location);
     SourceLocation yl = getFullyExpandedLoc(y.location);
-    return xl < yl;
+    return xl.buffer() < yl.buffer();
 }
 
 StringRef DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {

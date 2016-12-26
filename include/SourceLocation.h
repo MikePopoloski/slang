@@ -20,6 +20,7 @@ struct BufferID {
     bool valid() const { return id != 0; }
     bool operator==(const BufferID& rhs) const { return id == rhs.id; }
     bool operator!=(const BufferID& rhs) const { return !(*this == rhs); }
+    bool operator<(const BufferID& rhs) const { return id < rhs.id; }
 
     explicit operator bool() const { return valid(); }
 

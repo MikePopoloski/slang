@@ -6,6 +6,8 @@ using namespace slang;
 namespace {
 
 SourceManager sourceManager;
+BumpAllocator alloc;
+DiagnosticWriter diagWriter(sourceManager);
 
 SyntaxTree parse(StringRef text) {
     return SyntaxTree::fromText(sourceManager, text);
@@ -45,6 +47,40 @@ endmodule
 
     auto topLevelModules = declTable.getTopLevelModules();
     REQUIRE(topLevelModules.count() == 1);
+}
+
+TEST_CASE("Module parameterization", "[binding:decls]") {
+    auto tree = parse(R"(
+module Top;
+    Leaf                        l1();
+    Leaf #(1, 2, 3, 4)          l2();
+    Leaf #(1, 2, 3, 4, 5)       l3();
+    Leaf #(.foo(3), .baz(9))    l4();
+    Leaf #(.unset(10))          l5();
+endmodule
+
+module Leaf #(
+    int foo = 4,
+    bar = 9,
+    localparam baz,
+    parameter bizz = baz,
+    parameter unset
+    )();
+endmodule
+)");
+
+    Diagnostics diagnostics;
+    DeclarationTable declTable(diagnostics);
+    declTable.addSyntaxTree(&tree);
+
+    auto topLevelModules = declTable.getTopLevelModules();
+    REQUIRE(topLevelModules.count() == 1);
+
+    SemanticModel sem(alloc, diagnostics, declTable);
+    auto instance = sem.makeImplicitInstance(topLevelModules[0]);
+
+    if (!diagnostics.empty())
+        WARN(diagWriter.report(diagnostics).c_str());
 }
 
 }
