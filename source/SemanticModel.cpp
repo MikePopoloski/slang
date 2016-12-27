@@ -287,7 +287,7 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
     bool hasParamAssignments = false;
     bool orderedAssignments = true;
     SmallVectorSized<OrderedArgumentSyntax*, 8> orderedParams;
-    SmallHashMap<StringRef, NamedArgumentSyntax*, 8> namedParams;
+    SmallHashMap<StringRef, std::pair<NamedArgumentSyntax*, bool>, 8> namedParams;
     StringRef moduleName = decl->header->name.valueText();
 
     if (parameterAssignments) {
@@ -306,10 +306,10 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
                 orderedParams.append(paramBase->as<OrderedArgumentSyntax>());
             else {
                 NamedArgumentSyntax* nas = paramBase->as<NamedArgumentSyntax>();
-                auto pair = namedParams.emplace(nas->name.valueText(), nas);
+                auto pair = namedParams.emplace(nas->name.valueText(), std::make_pair(nas, false));
                 if (!pair.second) {
                     diagnostics.add(DiagCode::DuplicateParamAssignment, nas->name.location()) << nas->name.valueText();
-                    diagnostics.add(DiagCode::NotePreviousUsage, pair.first->second->name.location());
+                    diagnostics.add(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
                 }
             }
         }
@@ -386,13 +386,15 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
             const Scope* scope = nullptr;
             auto it = namedParams.find(info.name);
             if (it != namedParams.end()) {
+                NamedArgumentSyntax* arg = it->second.first;
+                it->second.second = true;
                 if (info.local) {
                     // Can't assign to localparams, so this is an error.
-                    diagnostics.add(info.bodyParam ? DiagCode::AssignedToLocalBodyParam : DiagCode::AssignedToLocalPortParam, it->second->getFirstToken().location());
+                    diagnostics.add(info.bodyParam ? DiagCode::AssignedToLocalBodyParam : DiagCode::AssignedToLocalPortParam, arg->name.location());
                     diagnostics.add(DiagCode::NoteDeclarationHere, info.location) << StringRef("parameter");
                 }
                 else {
-                    initializer = it->second->expr;
+                    initializer = arg->expr;
                     scope = instantiationScope;
                 }
             }
@@ -414,6 +416,16 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
                 diagnostics.add(DiagCode::NoteDeclarationHere, info.location) << StringRef("parameter");
             }
             resultIndex++;
+        }
+
+        for (const auto& pair : namedParams) {
+            // We nulled out any args that we used, so anything left over is a param assignment
+            // for a non-existent parameter.
+            if (!pair.second.second) {
+                auto& diag = diagnostics.add(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
+                diag << pair.second.first->name.valueText();
+                diag << moduleName;
+            }
         }
     }
 }

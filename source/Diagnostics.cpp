@@ -150,7 +150,8 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::NoteDeclarationHere] = { "{} declaration here", DiagnosticSeverity::Note };
     descriptors[DiagCode::TooManyParamAssignments] = { "too many parameter assignments given to instantiation of module '{}' ({} given, expected {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::AssignedToLocalPortParam] = { "can't assign a value to a localparam", DiagnosticSeverity::Error };
-    descriptors[DiagCode::AssignedToLocalBodyParam] = { "can't assign a value to a localparam (parameters in the body of a module are implicitly local when you have a parameter port list)", DiagnosticSeverity::Error};
+    descriptors[DiagCode::AssignedToLocalBodyParam] = { "can't assign a value to a localparam (parameters in the body of a module are implicitly local when you have a parameter port list)", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ParameterDoesNotExist] = { "parameter '{}' does not exist in module '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::DuplicateAttribute] = { "duplicate attribute definition '{}'; taking last value", DiagnosticSeverity::Warning };
 
     // expressions

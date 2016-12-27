@@ -52,11 +52,15 @@ endmodule
 TEST_CASE("Module parameterization", "[binding:decls]") {
     auto tree = parse(R"(
 module Top;
-    Leaf                        l1();
-    Leaf #(1, 2, 3, 4)          l2();
-    Leaf #(1, 2, 3, 4, 5)       l3();
-    Leaf #(.foo(3), .baz(9))    l4();
-    Leaf #(.unset(10))          l5();
+    Leaf l1();
+    Leaf #(1, 2, 3, 4) l2();
+    Leaf #(1, 2, 3, 4, 5) l3();
+    Leaf #(.foo(3), .baz(9)) l4();
+    Leaf #(.unset(10), .bla(7)) l5();
+    Leaf #(.unset(10), .localp(7)) l6();
+    Leaf #(.unset(10), .unset(7)) l7();
+    Leaf #(.unset(10), 5) l8();
+    Leaf #(.unset(10)) l9(); // no errors on this one
 endmodule
 
 module Leaf #(
@@ -66,6 +70,9 @@ module Leaf #(
     parameter bizz = baz,
     parameter unset
     )();
+
+    parameter localp;
+
 endmodule
 )");
 
@@ -79,8 +86,7 @@ endmodule
     SemanticModel sem(alloc, diagnostics, declTable);
     auto instance = sem.makeImplicitInstance(topLevelModules[0]);
 
-    if (!diagnostics.empty())
-        WARN(diagWriter.report(diagnostics).c_str());
+    CHECK(diagnostics.count() == 15);
 }
 
 }
