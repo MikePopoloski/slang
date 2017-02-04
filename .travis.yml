@@ -3,8 +3,17 @@ compiler:
   - gcc-6
   - clang++3.9
 
+addons:
+  apt:
+    packages:
+      - gcc-6
+      - g++-6
+      - clang-3.9
+
 script:
   - cd build/linux && make -j 8
+  - cd ../..
+  - bin/linux/unittests
 
 branches:
   only:
