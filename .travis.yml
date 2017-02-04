@@ -8,6 +8,8 @@ addons:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-precise-3.9
     packages:
+      - gcc-6
+      - g++-6
       - clang-3.9
 
 script:
