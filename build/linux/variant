@@ -1,0 +1,7 @@
+#include "mpark/variant.hpp"
+
+namespace std {
+	using mpark::variant;
+	using mpark::get;
+	using mpark::get_if;
+}

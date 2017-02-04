@@ -1,7 +1,7 @@
 TOP:=../..
-CXX:=clang++-3.9
+CXX=clang++-3.9
 CXXFLAGS:=-std=c++1z -MMD -MP
-INCLUDES:=-I$(TOP)/external -I$(TOP)/include
+INCLUDES:=-I$(TOP)/external -I$(TOP)/include -I./
 ARFLAGS:=-rvs
 
 SOURCES:=$(wildcard $(TOP)/source/*.cpp) $(wildcard $(TOP)/external/ppk_assert/*.cpp) $(wildcard $(TOP)/external/fmt/*.cc)
