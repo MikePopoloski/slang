@@ -149,7 +149,7 @@ protected:
     explicit SmallVector(uint32_t capacity) : capacity(capacity) {}
     ~SmallVector() { cleanup(); }
 
-    template<typename T, uint32_t N>
+    template<typename TType, uint32_t N>
     friend class SmallVectorSized;
 
     T* data = reinterpret_cast<T*>(&firstElement[0]);
@@ -220,7 +220,7 @@ public:
         if (other.isSmall()) {
             this->len = 0;
             this->capacity = sizeof(T) * N;
-            this->data = reinterpret_cast<T*>(&firstElement[0]);
+            this->data = reinterpret_cast<T*>(&this->firstElement[0]);
             this->appendRange(other.begin(), other.end());
         }
         else {
@@ -238,9 +238,9 @@ public:
     SmallVectorSized(const SmallVectorSized&) = delete;
     SmallVectorSized& operator=(const SmallVectorSized&) = delete;
 
-    SmallVectorSized& operator=(SmallVector&& other) {
+    SmallVectorSized& operator=(SmallVector<T>&& other) {
         if (this != &other) {
-            cleanup();
+            this->cleanup();
             new (this) SmallVectorSized(std::move(other));
         }
         return *this;

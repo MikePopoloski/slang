@@ -19,75 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\external\fmt\format.h" />
-    <ClInclude Include="..\..\external\fmt\ostream.h" />
-    <ClInclude Include="..\..\external\fmt\posix.h" />
-    <ClInclude Include="..\..\external\fmt\time.h" />
-    <ClInclude Include="..\..\external\ppk_assert\ppk_assert.h" />
-    <ClInclude Include="..\..\external\xxhash\xxhash.h" />
-    <ClInclude Include="..\..\include\AllSyntax.h" />
-    <ClInclude Include="..\..\include\ArrayRef.h" />
-    <ClInclude Include="..\..\include\ExpressionBinder.h" />
-    <ClInclude Include="..\..\include\HashMap.h" />
-    <ClInclude Include="..\..\include\Scope.h" />
-    <ClInclude Include="..\..\include\BoundNodes.h" />
-    <ClInclude Include="..\..\include\Debug.h" />
-    <ClInclude Include="..\..\include\SmallVector.h" />
-    <ClInclude Include="..\..\include\VectorBuilder.h" />
-    <ClInclude Include="..\..\include\DeclarationTable.h" />
-    <ClInclude Include="..\..\include\Diagnostics.h" />
-    <ClInclude Include="..\..\include\MathUtils.h" />
-    <ClInclude Include="..\..\include\Parser.h" />
-    <ClInclude Include="..\..\include\ParserBase.h" />
-    <ClInclude Include="..\..\include\Path.h" />
-    <ClInclude Include="..\..\include\SemanticModel.h" />
-    <ClInclude Include="..\..\include\SourceLocation.h" />
-    <ClInclude Include="..\..\include\SourceManager.h" />
-    <ClInclude Include="..\..\include\Hash.h" />
-    <ClInclude Include="..\..\include\Lexer.h" />
-    <ClInclude Include="..\..\include\BumpAllocator.h" />
-    <ClInclude Include="..\..\include\Preprocessor.h" />
-    <ClInclude Include="..\..\include\slang.h" />
-    <ClInclude Include="..\..\include\StringRef.h" />
-    <ClInclude Include="..\..\include\StringTable.h" />
-    <ClInclude Include="..\..\include\SVInt.h" />
-    <ClInclude Include="..\..\include\Symbol.h" />
-    <ClInclude Include="..\..\include\SyntaxNode.h" />
-    <ClInclude Include="..\..\include\SyntaxTree.h" />
-    <ClInclude Include="..\..\include\Token.h" />
-    <ClInclude Include="..\..\include\Trivia.h" />
-    <ClInclude Include="..\..\source\CharInfo.h" />
-    <ClInclude Include="..\..\source\SVIntHelpers.h" />
+    <ClInclude Include="..\..\external\fmt\*.h" />
+    <ClInclude Include="..\..\external\ppk_assert\*.h" />
+    <ClInclude Include="..\..\external\xxhash\*.h" />
+    <ClInclude Include="..\..\include\*.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\external\fmt\format.cc" />
-    <ClCompile Include="..\..\external\fmt\ostream.cc" />
-    <ClCompile Include="..\..\external\fmt\posix.cc" />
-    <ClCompile Include="..\..\external\ppk_assert\ppk_assert.cpp" />
-    <ClCompile Include="..\..\source\ExpressionBinder.cpp" />
-    <ClCompile Include="..\..\source\Scope.cpp" />
-    <ClCompile Include="..\..\source\Symbol.cpp" />
-    <ClCompile Include="..\..\source\VectorBuilder.cpp" />
-    <ClCompile Include="..\..\source\BumpAllocator.cpp" />
-    <ClCompile Include="..\..\source\DeclarationTable.cpp" />
-    <ClCompile Include="..\..\source\Diagnostics.cpp" />
-    <ClCompile Include="..\..\source\LexerFacts.cpp" />
-    <ClCompile Include="..\..\source\Parser.cpp" />
-    <ClCompile Include="..\..\source\ParserBase.cpp" />
-    <ClCompile Include="..\..\source\Parser_expressions.cpp" />
-    <ClCompile Include="..\..\source\Parser_statements.cpp" />
-    <ClCompile Include="..\..\source\SemanticModel.cpp" />
-    <ClCompile Include="..\..\source\SVInt.cpp" />
-    <ClCompile Include="..\..\source\SourceManager.cpp" />
-    <ClCompile Include="..\..\source\Hash.cpp" />
-    <ClCompile Include="..\..\source\Lexer.cpp" />
-    <ClCompile Include="..\..\source\Preprocessor.cpp" />
-    <ClCompile Include="..\..\source\StringRef.cpp" />
-    <ClCompile Include="..\..\source\SyntaxFacts.cpp" />
-    <ClCompile Include="..\..\source\SyntaxNode.cpp" />
-    <ClCompile Include="..\..\source\SyntaxTree.cpp" />
-    <ClCompile Include="..\..\source\Token.cpp" />
-    <ClCompile Include="..\..\source\Trivia.cpp" />
+    <ClCompile Include="..\..\external\fmt\*.cc" />
+    <ClCompile Include="..\..\external\ppk_assert\*.cpp" />
+    <ClCompile Include="..\..\source\*.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ED4CEA60-96A0-4B04-9036-B8D5869ED8E3}</ProjectGuid>
