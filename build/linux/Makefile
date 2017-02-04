@@ -2,11 +2,12 @@ TOP:=../..
 CXX=clang++-3.9
 CXXFLAGS:=-std=c++1z -MMD -MP
 INCLUDES:=-I$(TOP)/external -I$(TOP)/include -I./
-ARFLAGS:=-rvs
+ARFLAGS:=-rs
 
 SOURCES:=$(wildcard $(TOP)/source/*.cpp) $(wildcard $(TOP)/external/ppk_assert/*.cpp) $(wildcard $(TOP)/external/fmt/*.cc)
-SOURCES_CPP:=$(SOURCES:.cc=.cpp)
-OBJECTS:=$(patsubst $(TOP)/%,obj/%,$(SOURCES_CPP:%.cpp=%.o))
+CPP_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(filter %.cpp,$(SOURCES)))
+CC_OBJECTS:=$(patsubst $(TOP)/%.cc,obj/%.o,$(filter %.cc,$(SOURCES)))
+OBJECTS:=$(CPP_OBJECTS) $(CC_OBJECTS)
 DEPS:=$(OBJECTS:.o=.d)
 
 -include $(DEPS)
@@ -14,7 +15,11 @@ DEPS:=$(OBJECTS:.o=.d)
 $(TOP)/bin/linux/libslang.a: $(OBJECTS) | $(TOP)/bin/linux
 	ar $(ARFLAGS) $@ $^
 
-$(OBJECTS): obj/%.o: $(TOP)/%.cpp
+$(CPP_OBJECTS): obj/%.o: $(TOP)/%.cpp
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
+
+$(CC_OBJECTS): obj/%.o: $(TOP)/%.cc
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
 
