@@ -30,7 +30,7 @@ $(FMTLIB_OBJECTS): obj/%.o: $(TOP)/%.cc
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
 
 $(TOP)/bin/linux/libslang.a: $(FMTLIB_OBJECTS) $(SLANG_OBJECTS) | $(TOP)/bin/linux
-	mkdir -p $@
+	mkdir -p $(dir $@)
 	ar $(ARFLAGS) $@ $^
 
 $(TOP)/bin/linux/unittests: $(UNITTEST_OBJECTS) $(TOP)/bin/linux/libslang.a

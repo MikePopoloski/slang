@@ -26,8 +26,8 @@ TEST_CASE("Finding top level", "[binding:decls]") {
 
     CHECK(diagnostics.empty());
     REQUIRE(topLevelModules.count() == 2);
-    CHECK(topLevelModules[0]->header->name.valueText() == "D");
-    CHECK(topLevelModules[1]->header->name.valueText() == "C");
+    CHECK(topLevelModules[0]->header->name.valueText() == "C");
+    CHECK(topLevelModules[1]->header->name.valueText() == "D");
 }
 
 TEST_CASE("Bind module implicit", "[binding:module_implicit]") {

@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "DeclarationTable.h"
 
+#include <algorithm>
+
 #include "AllSyntax.h"
 
 namespace slang {
@@ -60,6 +62,11 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
         if (!pair.second.instantiated)
             topLevel.append(pair.second.decl);
     }
+
+    // Sort the top level list so that we remain deterministic (don't rely on hash ordering)
+    std::sort(topLevel.begin(), topLevel.end(), [](auto a, auto b) { 
+        return a->header->name.valueText() < b->header->name.valueText();
+    });
 
     return ArrayRef<const ModuleDeclarationSyntax*>(topLevel.begin(), topLevel.end());
 }

@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <ostream>
@@ -79,6 +80,11 @@ public:
     friend bool operator!=(const StringRef& lhs, const char* rhs) { return !operator==(lhs, rhs); }
     friend bool operator!=(const char* lhs, const StringRef& rhs) { return !operator==(lhs, rhs); }
     friend bool operator!=(const StringRef& lhs, const StringRef& rhs) { return !operator==(lhs, rhs); }
+
+    friend bool operator<(const StringRef& lhs, const StringRef& rhs) { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
+    friend bool operator<=(const StringRef& lhs, const StringRef& rhs) { return lhs < rhs && lhs == rhs; }
+    friend bool operator>=(const StringRef& lhs, const StringRef& rhs) { return !(lhs < rhs); }
+    friend bool operator>(const StringRef& lhs, const StringRef& rhs) { return lhs >= rhs && lhs != rhs; }
 
 private:
     static constexpr uint64_t Seed = 0x3765936aa9a6c480; // chosen by fair dice roll
