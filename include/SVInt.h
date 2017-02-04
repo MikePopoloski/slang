@@ -245,8 +245,8 @@ public:
         if (isSingleWord() && rhs.isSingleWord()) {
             val = rhs.val;
             bitWidth = rhs.bitWidth;
-            signFlag = signFlag;
-            unknownFlag = unknownFlag;
+            signFlag = rhs.signFlag;
+            unknownFlag = rhs.unknownFlag;
             return *this;
         }
         return assignSlowCase(rhs);

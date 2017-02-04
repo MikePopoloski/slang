@@ -12,6 +12,8 @@ class Symbol;
 // contexts so that symbol lookup can be performed.
 class Scope {
 public:
+    Scope() {};
+
     void add(const Symbol* symbol);
 
     template<typename TContainer>
@@ -28,7 +30,7 @@ public:
 
 private:
     std::unordered_map<StringRef, const Symbol*> table;
-    Scope* parentScope;
+    Scope* parentScope = nullptr;
 };
 
 }

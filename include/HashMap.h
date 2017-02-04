@@ -51,7 +51,7 @@ public:
         }
 
         iterator_templ operator++(int) {
-            iterator_temp result = *this;
+            iterator_templ result = *this;
             ++(*this);
             return result;
         }
@@ -63,7 +63,7 @@ public:
         bool operator!=(const iterator_templ<TElement, true>& other) const { return ptr != other.ptr; }
 
     private:
-        template<typename TElement, bool IsConst>
+        template<typename TIterEl, bool IterIsConst>
         friend class iterator_templ;
 
         TElement* ptr;
@@ -75,7 +75,28 @@ public:
         }
     };
 
-    struct Element;
+    struct Element {
+        std::pair<TKey, TValue> pair;
+        size_t hash;
+        bool valid;
+
+        template<typename... Args>
+        Element(size_t hash, const TKey& key, Args&&... args) :
+            pair(std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(std::forward<Args>(args)...)),
+            hash(hash),
+            valid(true)
+        {
+        }
+
+        template<typename... Args>
+        Element(size_t hash, TKey&& key, Args&&... args) :
+            pair(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(std::forward<Args>(args)...)),
+            hash(hash),
+            valid(true)
+        {
+        }
+    };
+
     using iterator = iterator_templ<Element, false>;
     using const_iterator = iterator_templ<Element, true>;
 
@@ -131,29 +152,7 @@ public:
     TValue& operator[](TKey&& key) { return emplace(std::move(key)).first->second; }
 
 protected:
-    struct Element {
-        std::pair<TKey, TValue> pair;
-        size_t hash;
-        bool valid;
-
-        template<typename... Args>
-        Element(size_t hash, const TKey& key, Args&&... args) :
-            pair(std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(std::forward<Args>(args)...)),
-            hash(hash),
-            valid(true)
-        {
-        }
-
-        template<typename... Args>
-        Element(size_t hash, TKey&& key, Args&&... args) :
-            pair(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(std::forward<Args>(args)...)),
-            hash(hash),
-            valid(true)
-        {
-        }
-    };
-
-    template<typename TKey, typename TValue, uint32_t N>
+    template<typename TKey_, typename TValue_, uint32_t N>
     friend class SmallHashMap;
 
     Element* data;
@@ -277,9 +276,11 @@ protected:
 template<typename TKey, typename TValue>
 class HashMap : public HashMapBase<TKey, TValue> {
 public:
-    HashMap() : HashMapBase(4) {
+    using Element = typename HashMapBase<TKey, TValue>::Element;
+
+    HashMap() : HashMapBase<TKey, TValue>(4) {
         this->data = (Element*)malloc(this->capacity * sizeof(Element));
-        memset(this->data, 0, capacity * sizeof(Element));
+        memset(this->data, 0, this->capacity * sizeof(Element));
     }
 
     HashMap(HashMap&& other) {
@@ -298,7 +299,7 @@ public:
 
     HashMap& operator=(HashMap&& other) {
         if (this != &other) {
-            cleanup();
+            this->cleanup();
             new (this) HashMap(other);
         }
         return *this;
@@ -307,14 +308,15 @@ public:
 
 template<typename TKey, typename TValue, uint32_t N>
 class SmallHashMap : public HashMapBase<TKey, TValue> {
+public:
+    using Element = typename HashMapBase<TKey, TValue>::Element;
     static_assert(N >= 1 && isPowerOfTwo(N), "Size must be greater than zero and a power of two");
     static_assert(sizeof(Element) * N < 1024, "Initial size of SmallHashMap is over 1KB");
 
-public:
-    SmallHashMap() : HashMapBase(N) {
+    SmallHashMap() : HashMapBase<TKey, TValue>(N) {
         this->isSmall = true;
         this->data = (Element*)stackData;
-        memset(this->data, 0, capacity * sizeof(Element));
+        memset(this->data, 0, this->capacity * sizeof(Element));
     }
 
     template<uint32_t OtherN>
@@ -351,8 +353,8 @@ public:
 
     template<uint32_t OtherN>
     SmallHashMap& operator=(SmallHashMap<TKey, TValue, OtherN>&& other) {
-        if (static_cast<HashMapBase*>(this) != static_cast<HashMapBase*>(&other)) {
-            cleanup();
+        if (static_cast<HashMapBase<TKey, TValue>*>(this) != static_cast<HashMapBase<TKey, TValue>*>(&other)) {
+            this->cleanup();
             new (this) SmallHashMap(std::move(other));
         }
         return *this;

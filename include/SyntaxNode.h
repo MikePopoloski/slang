@@ -626,7 +626,7 @@ public:
 
         iterator_templ& operator++() { ++index; return *this; }
         iterator_templ operator++(int) {
-            iterator_temp result = *this;
+            iterator_templ result = *this;
             ++(*this);
             return result;
         }

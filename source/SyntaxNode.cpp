@@ -49,7 +49,7 @@ Token SyntaxNode::getFirstToken() const {
 }
 
 Token SyntaxNode::getLastToken() {
-    for (uint32_t i = childCount - 1; i >= 0; i--) {
+    for (int i = childCount - 1; i >= 0; i--) {
         auto child = getChild(i);
         if (child.isToken) {
             if (child.token)
