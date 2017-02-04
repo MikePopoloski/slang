@@ -1,0 +1,14 @@
+language: cpp
+compiler:
+  - gcc-6
+  - clang++3.9
+
+script:
+  - cd build/linux && make -j 8
+
+branches:
+  only:
+    - master
+
+git:
+  depth: 3
