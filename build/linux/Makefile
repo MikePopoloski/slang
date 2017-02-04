@@ -29,7 +29,7 @@ $(FMTLIB_OBJECTS): obj/%.o: $(TOP)/%.cc
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
 
-$(TOP)/bin/linux/libslang.a: $(FMTLIB_OBJECTS) $(SLANG_OBJECTS) | $(TOP)/bin/linux
+$(TOP)/bin/linux/libslang.a: $(FMTLIB_OBJECTS) $(SLANG_OBJECTS)
 	mkdir -p $(dir $@)
 	ar $(ARFLAGS) $@ $^
 
