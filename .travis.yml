@@ -11,7 +11,7 @@ addons:
       - clang-3.9
 
 script:
-  - cd build/linux && make -j 8
+  - cd build/linux && make -j 8 CXX=clang++-3.9
   - cd ../..
   - bin/linux/unittests
 
