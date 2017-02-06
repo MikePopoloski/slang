@@ -252,7 +252,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
 Trivia Preprocessor::handleMacroUsage(Token directive) {
     // delegate to a nested function to simplify the error handling paths
-    auto actualArgs = handleTopLevelMacro(directive);    
+    auto actualArgs = handleTopLevelMacro(directive);
     auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
     return Trivia(TriviaKind::Directive, syntax);
 }
@@ -505,6 +505,8 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         if (!actualArgs)
             return actualArgs;
     }
+    // TODO: if any of the actualArgs are themselves intrinsic macros, they
+    // should be expanded before expanding the outer macro
 
     // Expand out the macro
     SmallVectorSized<Token, 32> buffer;
@@ -523,18 +525,20 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     expandedTokens.clear();
     for (uint32_t i = 0; i < tokens.count(); i++) {
         Token newToken;
-        Token token = tokens[i];
 
         // replace intrinsic macros before we do anything else
-        // TODO: fill these in
+        Token token = tokens[i];
+
         if (token.kind == TokenKind::IntrinsicFileMacro) {
+            // TODO
             auto info = alloc.emplace<Token::Info>(token.trivia(), "", token.location(), 0);
-            info->extra = "";
+            info->extra = sourceManager.getFileName(token.location());
             token = Token(TokenKind::StringLiteral, info);
-        }
-        else if (token.kind == TokenKind::IntrinsicLineMacro) {
+        } else if (token.kind == TokenKind::IntrinsicLineMacro) {
             auto info = alloc.emplace<Token::Info>(token.trivia(), "", token.location(), 0);
-            info->setNumInfo(SVInt(0));
+            uint64_t lineNum = sourceManager.getLineNumber(token.location());
+            // sourceManager gives a 0-indexed line number
+            info->setNumInfo(SVInt(lineNum + 1));
             token = Token(TokenKind::IntegerLiteral, info);
         }
 
@@ -546,7 +550,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                 if (!stringify)
                     stringify = token;
                 else {
-                    // all done stringifying; convert saved tokens to string   
+                    // all done stringifying; convert saved tokens to string
                     newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(), buffer.begin(), buffer.end());
                     if (!newToken) {
                         // TODO: error
@@ -746,7 +750,7 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
                     if (!actualArgs)
                         return false;
                 }
-                
+
                 if (!expandMacro(definition, token, actualArgs, *currentBuffer))
                     return false;
 

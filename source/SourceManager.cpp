@@ -32,7 +32,16 @@ void SourceManager::addUserDirectory(StringRef path) {
     userDirectories.push_back(Path::makeAbsolute(path));
 }
 
+SourceLocation SourceManager::getFirstFileLocation(SourceLocation location) {
+    while (location.buffer() && std::get_if<FileInfo>(&bufferEntries[location.buffer().id]) == nullptr) {
+        location = getExpansionLoc(location);
+    }
+    return location;
+}
+
 uint32_t SourceManager::getLineNumber(SourceLocation location) {
+
+    location = getFirstFileLocation(location);
     FileData* fd = getFileData(location.buffer());
     if (!fd)
         return 0;
@@ -59,6 +68,10 @@ uint32_t SourceManager::getColumnNumber(SourceLocation location) {
         lineStart--;
 
     return location.offset() - lineStart + 1;
+}
+
+StringRef SourceManager::getFileName(SourceLocation location) {
+    return getBufferName(getFirstFileLocation(location).buffer());
 }
 
 StringRef SourceManager::getBufferName(BufferID buffer) {

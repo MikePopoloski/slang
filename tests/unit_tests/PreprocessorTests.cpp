@@ -17,6 +17,13 @@ SourceManager& getSourceManager() {
     return *sourceManager;
 }
 
+// A helper for when tests break and you want to see the diagnostics
+void logDiagnostic() {
+    for (auto& diag : diagnostics) {
+        fprintf(stderr, "%s\n", DiagnosticWriter(getSourceManager()).report(diag).c_str());
+    }
+}
+
 Token lexToken(StringRef text) {
     diagnostics.clear();
 
@@ -303,5 +310,75 @@ TEST_CASE("IfDef inside macro", "[preprocessor]") {
     CHECK(std::get<SVInt>(token.numericValue()) == 32);
     CHECK(diagnostics.empty());
 }
+
+TEST_CASE("LINE Directive", "[preprocessor]") {
+    auto& text = "\n\n\n`__LINE__\n\n\n\n";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 4);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("LINE Directive (include+nesting)", "[preprocessor]") {
+    auto& text =
+"`include \"local.svh\"\n"
+"`define BAZ `__LINE__\n"
+"`define BAR `BAZ\n"
+"`define FOO `BAR\n"
+"`FOO";
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    // Get the second token, the first token is the test string from the includes
+    Token token = preprocessor.next();
+    token = preprocessor.next();
+    REQUIRE(token);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 5);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("FILE Directive", "[preprocessor]") {
+    auto& text = "`__FILE__";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    // we set the name by default for files created this way as
+    // <unnamed_bufferN> for some N, let's not be sensitive to that number
+    CHECK(token.valueText().subString(0,15) == "<unnamed_buffer");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("FILE Directive (include+nesting)", "[preprocessor]") {
+    // file_uses_defn.svh includes file_defn.svh which has
+    // `define FOO `__FILE__
+    // and file_uses_defn.svh then has `FOO; that should expand to file_defn.svh
+    // but when we expand FOO here, it shouldn't
+    auto& text =
+"`include \"file_uses_defn.svh\"\n"
+"`BAR";
+
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token);
+
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "file_uses_defn.svh");
+
+    token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() != "file_uses_defn.svh");
+
+    CHECK(diagnostics.empty());
+}
+
 
 }

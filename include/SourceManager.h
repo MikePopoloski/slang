@@ -53,8 +53,10 @@ public:
     void addUserDirectory(StringRef path);
 
     /// Gets the source line number for a given source location.
-    /// @a location must be a file location.
     uint32_t getLineNumber(SourceLocation location);
+
+    /// Gets the source file number for a given source location
+    StringRef getFileName(SourceLocation location);
 
     /// Gets the column line number for a given source location.
     /// @a location must be a file location.
@@ -176,6 +178,9 @@ private:
     SourceBuffer openCached(const Path& fullPath, SourceLocation includedFrom);
     SourceBuffer cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Vector<char>&& buffer);
 
+    // For an ExpansionLocation, keeps returning the enclosing ExpansionLocation
+    // until it reaches a location with FileInfo
+    SourceLocation getFirstFileLocation(SourceLocation location);
     static void computeLineOffsets(const Vector<char>& buffer, std::vector<uint32_t>& offsets);
     static bool readFile(const Path& path, Vector<char>& buffer);
 };
