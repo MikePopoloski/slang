@@ -22,7 +22,8 @@ enum class SymbolKind {
     Module,
     Interface,
     Program,
-    Attribute
+    Attribute,
+    GenerateBlock
 };
 
 class Symbol {
@@ -138,9 +139,11 @@ class ModuleSymbol : public Symbol {
 public:
     const ModuleDeclarationSyntax* syntax;
     ArrayRef<const ParameterSymbol*> parameters;
+    ArrayRef<const Symbol*> children;
 
-    ModuleSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) :
-        syntax(syntax), parameters(parameters) {}
+    ModuleSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters,
+                 ArrayRef<const Symbol*> children) :
+        syntax(syntax), parameters(parameters), children(children) {}
 };
 
 class InstanceSymbol : public Symbol {
@@ -150,6 +153,20 @@ public:
 
     InstanceSymbol(const ModuleSymbol* module, bool implicit) :
         module(module), implicit(implicit) {}
+
+    template<typename T>
+    const T& getChild(uint32_t index) const { return module->children[index]->as<T>(); }
+};
+
+class GenerateBlock : public Symbol {
+public:
+    ArrayRef<const Symbol*> children;
+
+    GenerateBlock(ArrayRef<const Symbol*> children) :
+        children(children) {}
+
+    template<typename T>
+    const T& getChild(uint32_t index) const { return children[index]->as<T>(); }
 };
 
 }

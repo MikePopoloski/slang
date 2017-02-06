@@ -418,6 +418,26 @@ void ExpressionBinder::propagateAndFoldArithmeticOperator(BoundBinaryExpression*
 }
 
 void ExpressionBinder::propagateAndFoldComparisonOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
+    // operands are sized to max(l,r) but the result of the operation is always 1 bit
+    propagateAndFold(expression->left, type);
+    propagateAndFold(expression->right, type);
+
+    ConstantValue cv;
+    SVInt& l = std::get<SVInt>(expression->left->constantValue);
+    SVInt& r = std::get<SVInt>(expression->right->constantValue);
+
+    switch (expression->syntax->kind) {
+        case SyntaxKind::EqualityExpression: cv = SVInt(l == r); break;
+        case SyntaxKind::InequalityExpression: cv = SVInt(l != r); break;
+        case SyntaxKind::CaseEqualityExpression: cv = SVInt((logic_t)exactlyEqual(l, r)); break;
+        case SyntaxKind::CaseInequalityExpression: cv = SVInt((logic_t)!exactlyEqual(l, r)); break;
+        case SyntaxKind::GreaterThanEqualExpression: cv = SVInt(l >= r); break;
+        case SyntaxKind::GreaterThanExpression: cv = SVInt(l > r); break;
+        case SyntaxKind::LessThanEqualExpression: cv = SVInt(l <= r); break;
+        case SyntaxKind::LessThanExpression: cv = SVInt(l < r); break;
+            DEFAULT_UNREACHABLE;
+    }
+    expression->constantValue = cv;
 }
 
 void ExpressionBinder::propagateAndFoldRelationalOperator(BoundBinaryExpression* expression, const TypeSymbol* type) {
