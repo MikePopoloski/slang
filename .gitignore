@@ -1,6 +1,8 @@
 
 *.lib
 *.sublime-workspace
+*.sublime-project
+*.clang-*
 *.user
 *.VC.db
 *.sdf
