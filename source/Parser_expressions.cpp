@@ -11,10 +11,12 @@
 namespace slang {
 
 ExpressionSyntax* Parser::parseExpression() {
+    auto dg = setDepthGuard();
     return parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
 }
 
 ExpressionSyntax* Parser::parseMinTypMaxExpression() {
+    auto dg = setDepthGuard();
     ExpressionSyntax* first = parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
     if (!peek(TokenKind::Colon))
         return first;
@@ -28,6 +30,7 @@ ExpressionSyntax* Parser::parseMinTypMaxExpression() {
 }
 
 ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, int precedence) {
+    auto dg = setDepthGuard();
     ExpressionSyntax* leftOperand = nullptr;
     int newPrecedence = 0;
 
@@ -111,6 +114,7 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
 }
 
 ExpressionSyntax* Parser::parsePrefixExpression(ExpressionOptions::Enum options, SyntaxKind opKind) {
+    auto dg = setDepthGuard();
     switch (opKind) {
         case SyntaxKind::UnarySequenceDelayExpression:
         case SyntaxKind::UnarySequenceEventExpression: {
@@ -143,6 +147,7 @@ ExpressionSyntax* Parser::parsePrefixExpression(ExpressionOptions::Enum options,
 }
 
 ExpressionSyntax* Parser::parsePrimaryExpression() {
+    auto dg = setDepthGuard();
     ExpressionSyntax* expr;
     TokenKind kind = peek().kind;
     switch (kind) {
@@ -245,6 +250,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
 }
 
 ExpressionSyntax* Parser::parseIntegerExpression() {
+    auto dg = setDepthGuard();
     Token sizeToken;
     Token baseToken;
     uint16_t sizeBits = 32;
@@ -307,12 +313,14 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
 }
 
 ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
+    auto dg = setDepthGuard();
     auto inside = expect(TokenKind::InsideKeyword);
     auto list = parseOpenRangeList();
     return alloc.emplace<InsideExpressionSyntax>(expr, inside, list);
 }
 
 OpenRangeListSyntax* Parser::parseOpenRangeList() {
+    auto dg = setDepthGuard();
     Token openBrace;
     Token closeBrace;
     ArrayRef<TokenOrSyntax> list;
@@ -332,12 +340,14 @@ OpenRangeListSyntax* Parser::parseOpenRangeList() {
 }
 
 ExpressionSyntax* Parser::parseOpenRangeElement() {
+    auto dg = setDepthGuard();
     if (!peek(TokenKind::OpenBracket))
         return parseExpression();
     return parseElementSelect();
 }
 
 ConcatenationExpressionSyntax* Parser::parseConcatenation(Token openBrace, ExpressionSyntax* first) {
+    auto dg = setDepthGuard();
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     if (first) {
         // it's possible to have just one element in the concatenation list, so check for a close brace
@@ -361,6 +371,7 @@ ConcatenationExpressionSyntax* Parser::parseConcatenation(Token openBrace, Expre
 }
 
 StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token openBrace) {
+    auto dg = setDepthGuard();
     auto op = consume();
     ExpressionSyntax* sliceSize = nullptr;
     if (!peek(TokenKind::OpenBrace))
@@ -394,6 +405,7 @@ StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token o
 }
 
 StreamExpressionSyntax* Parser::parseStreamExpression() {
+    auto dg = setDepthGuard();
     auto expr = parseExpression();
 
     StreamExpressionWithRange* withRange = nullptr;
@@ -406,6 +418,7 @@ StreamExpressionSyntax* Parser::parseStreamExpression() {
 }
 
 AssignmentPatternExpressionSyntax* Parser::parseAssignmentPatternExpression(DataTypeSyntax* type) {
+    auto dg = setDepthGuard();
     auto openBrace = expect(TokenKind::ApostropheOpenBrace);
 
     // we either have an expression here, or the default keyword for a pattern key
@@ -475,6 +488,7 @@ AssignmentPatternExpressionSyntax* Parser::parseAssignmentPatternExpression(Data
 }
 
 AssignmentPatternItemSyntax* Parser::parseAssignmentPatternItem(ExpressionSyntax* key) {
+    auto dg = setDepthGuard();
     if (!key)
         key = parseExpression();
 
@@ -483,6 +497,7 @@ AssignmentPatternItemSyntax* Parser::parseAssignmentPatternItem(ExpressionSyntax
 }
 
 ElementSelectSyntax* Parser::parseElementSelect() {
+    auto dg = setDepthGuard();
     auto openBracket = expect(TokenKind::OpenBracket);
     auto selector = parseElementSelector();
     auto closeBracket = expect(TokenKind::CloseBracket);
@@ -490,6 +505,7 @@ ElementSelectSyntax* Parser::parseElementSelect() {
 }
 
 SelectorSyntax* Parser::parseElementSelector() {
+    auto dg = setDepthGuard();
     auto expr = parseExpression();
     switch (peek().kind) {
         case TokenKind::Colon: {
@@ -510,6 +526,7 @@ SelectorSyntax* Parser::parseElementSelector() {
 }
 
 ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
+    auto dg = setDepthGuard();
     while (true) {
         switch (peek().kind) {
             case TokenKind::OpenBracket:
@@ -571,6 +588,7 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
 }
 
 NameSyntax* Parser::parseName() {
+    auto dg = setDepthGuard();
     NameSyntax* name = parseNamePart();
 
     bool usedDot = false;
@@ -594,6 +612,7 @@ NameSyntax* Parser::parseName() {
 }
 
 NameSyntax* Parser::parseNamePart() {
+    auto dg = setDepthGuard();
     auto kind = getKeywordNameExpression(peek().kind);
     if (kind != SyntaxKind::Unknown)
         return alloc.emplace<KeywordNameSyntax>(kind, consume());
@@ -618,6 +637,7 @@ NameSyntax* Parser::parseNamePart() {
 }
 
 ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
+    auto dg = setDepthGuard();
     if (!peek(TokenKind::Hash))
         return nullptr;
 
@@ -626,6 +646,7 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
 }
 
 ArgumentListSyntax* Parser::parseArgumentList() {
+    auto dg = setDepthGuard();
     Token openParen;
     Token closeParen;
     ArrayRef<TokenOrSyntax> list = nullptr;
@@ -645,6 +666,7 @@ ArgumentListSyntax* Parser::parseArgumentList() {
 }
 
 ArgumentSyntax* Parser::parseArgument() {
+    auto dg = setDepthGuard();
     // check for named arguments
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
@@ -662,6 +684,7 @@ ArgumentSyntax* Parser::parseArgument() {
 }
 
 PatternSyntax* Parser::parsePattern() {
+    auto dg = setDepthGuard();
     switch (peek().kind) {
         case TokenKind::DotStar:
             return alloc.emplace<WildcardPatternSyntax>(consume());
@@ -686,6 +709,7 @@ PatternSyntax* Parser::parsePattern() {
 }
 
 ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token& end) {
+    auto dg = setDepthGuard();
     SmallVectorSized<TokenOrSyntax, 4> buffer;
 
     MatchesClauseSyntax* matchesClause = nullptr;
@@ -711,6 +735,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
 }
 
 ConditionalPatternSyntax* Parser::parseConditionalPattern() {
+    auto dg = setDepthGuard();
     auto expr = parseSubExpression(ExpressionOptions::None, 0);
 
     MatchesClauseSyntax* matchesClause = nullptr;
@@ -723,6 +748,7 @@ ConditionalPatternSyntax* Parser::parseConditionalPattern() {
 }
 
 EventExpressionSyntax* Parser::parseEventExpression() {
+    auto dg = setDepthGuard();
     EventExpressionSyntax* left;
     auto kind = peek().kind;
     if (kind == TokenKind::OpenParenthesis) {
@@ -749,6 +775,7 @@ EventExpressionSyntax* Parser::parseEventExpression() {
 }
 
 ExpressionSyntax* Parser::parseNewExpression() {
+    auto dg = setDepthGuard();
     auto newKeyword = consume();
     auto kind = peek().kind;
 
@@ -777,6 +804,7 @@ ExpressionSyntax* Parser::parseNewExpression() {
 }
 
 TimingControlSyntax* Parser::parseTimingControl() {
+    auto dg = setDepthGuard();
     switch (peek().kind) {
         case TokenKind::Hash:
         case TokenKind::DoubleHash: {
@@ -828,6 +856,7 @@ TimingControlSyntax* Parser::parseTimingControl() {
 }
 
 ExpressionSyntax* Parser::parseArrayOrRandomizeWithClause() {
+    auto dg = setDepthGuard();
     auto with = consume();
     if (!peek(TokenKind::OpenParenthesis))
         return alloc.emplace<RandomizeMethodWithClauseSyntax>(with, nullptr, parseConstraintBlock());

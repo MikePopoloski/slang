@@ -10,6 +10,7 @@ namespace slang {
 
 
 StatementSyntax* Parser::parseStatement(bool allowEmpty) {
+    auto dg = setDepthGuard();
     NamedLabelSyntax* label = nullptr;
     if (peek().kind == TokenKind::Identifier && peek(1).kind == TokenKind::Colon) {
         auto name = consume();
@@ -127,6 +128,7 @@ StatementSyntax* Parser::parseStatement(bool allowEmpty) {
 }
 
 ElseClauseSyntax* Parser::parseElseClause() {
+    auto dg = setDepthGuard();
     if (peek(TokenKind::ElseKeyword)) {
         auto elseKeyword = consume();
         return alloc.emplace<ElseClauseSyntax>(elseKeyword, parseStatement());
@@ -135,6 +137,7 @@ ElseClauseSyntax* Parser::parseElseClause() {
 }
 
 ConditionalStatementSyntax* Parser::parseConditionalStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority) {
+    auto dg = setDepthGuard();
     auto ifKeyword = expect(TokenKind::IfKeyword);
     auto openParen = expect(TokenKind::OpenParenthesis);
 
@@ -157,6 +160,7 @@ ConditionalStatementSyntax* Parser::parseConditionalStatement(NamedLabelSyntax* 
 }
 
 CaseStatementSyntax* Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority, Token caseKeyword) {
+    auto dg = setDepthGuard();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto caseExpr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -273,6 +277,7 @@ DefaultCaseItemSyntax* Parser::parseDefaultCaseItem() {
 }
 
 LoopStatementSyntax* Parser::parseLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto expr = parseExpression();
@@ -282,6 +287,7 @@ LoopStatementSyntax* Parser::parseLoopStatement(NamedLabelSyntax* label, ArrayRe
 }
 
 DoWhileStatementSyntax* Parser::parseDoWhileStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto doKeyword = consume();
     auto statement = parseStatement();
     auto whileKeyword = expect(TokenKind::WhileKeyword);
@@ -293,6 +299,7 @@ DoWhileStatementSyntax* Parser::parseDoWhileStatement(NamedLabelSyntax* label, A
 }
 
 SyntaxNode* Parser::parseForInitializer() {
+    auto dg = setDepthGuard();
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto type = parseDataType(/* allowImplicit */ false);
@@ -302,6 +309,7 @@ SyntaxNode* Parser::parseForInitializer() {
 }
 
 ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto forKeyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
 
@@ -346,6 +354,7 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
 }
 
 ForeachLoopListSyntax* Parser::parseForeachLoopVariables() {
+    auto dg = setDepthGuard();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto arrayName = parseName();
     SmallVectorSized<TokenOrSyntax, 4> buffer;
@@ -364,6 +373,7 @@ ForeachLoopListSyntax* Parser::parseForeachLoopVariables() {
 }
 
 ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto keyword = consume();
     auto vars = parseForeachLoopVariables();
     return alloc.emplace<ForeachLoopStatementSyntax>(
@@ -376,6 +386,7 @@ ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* 
 }
 
 ReturnStatementSyntax* Parser::parseReturnStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto keyword = consume();
 
     ExpressionSyntax* expr = nullptr;
@@ -387,12 +398,14 @@ ReturnStatementSyntax* Parser::parseReturnStatement(NamedLabelSyntax* label, Arr
 }
 
 JumpStatementSyntax* Parser::parseJumpStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto keyword = consume();
     auto semi = expect(TokenKind::Semicolon);
     return alloc.emplace<JumpStatementSyntax>(label, attributes, keyword, semi);
 }
 
 ProceduralAssignStatementSyntax* Parser::parseProceduralAssignStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
+    auto dg = setDepthGuard();
     auto keyword = consume();
     auto lvalue = parsePrimaryExpression();
     auto equals = expect(TokenKind::Equals);
@@ -402,6 +415,7 @@ ProceduralAssignStatementSyntax* Parser::parseProceduralAssignStatement(NamedLab
 }
 
 ProceduralDeassignStatementSyntax* Parser::parseProceduralDeassignStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind) {
+    auto dg = setDepthGuard();
     auto keyword = consume();
     auto variable = parsePrimaryExpression();
     auto semi = expect(TokenKind::Semicolon);
@@ -409,6 +423,7 @@ ProceduralDeassignStatementSyntax* Parser::parseProceduralDeassignStatement(Name
 }
 
 StatementSyntax* Parser::parseDisableStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto disable = consume();
     if (peek(TokenKind::ForkKeyword)) {
         auto fork = consume();
@@ -420,6 +435,7 @@ StatementSyntax* Parser::parseDisableStatement(NamedLabelSyntax* label, ArrayRef
 }
 
 StatementSyntax* Parser::parseAssertionStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     // figure out what kind of assertion we're looking at; concurrent assertions
     // are involved and get their own handling
     SyntaxKind assertionKind = SyntaxKind::Unknown;
@@ -465,6 +481,7 @@ StatementSyntax* Parser::parseAssertionStatement(NamedLabelSyntax* label, ArrayR
 }
 
 ConcurrentAssertionStatementSyntax* Parser::parseConcurrentAssertion(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     SyntaxKind kind;
     Token propertyOrSequence;
     auto keyword = consume();
@@ -506,6 +523,7 @@ ConcurrentAssertionStatementSyntax* Parser::parseConcurrentAssertion(NamedLabelS
 }
 
 PropertySpecSyntax* Parser::parsePropertySpec() {
+    auto dg = setDepthGuard();
     TimingControlSyntax* timing = nullptr;
     if (peek(TokenKind::At))
         timing = parseTimingControl();
@@ -522,6 +540,7 @@ PropertySpecSyntax* Parser::parsePropertySpec() {
 }
 
 ActionBlockSyntax* Parser::parseActionBlock() {
+    auto dg = setDepthGuard();
     StatementSyntax* statement = nullptr;
     ElseClauseSyntax* elseClause = nullptr;
 
@@ -536,6 +555,7 @@ ActionBlockSyntax* Parser::parseActionBlock() {
 }
 
 NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
+    auto dg = setDepthGuard();
     if (peek(TokenKind::Colon)) {
         auto colon = consume();
 
@@ -552,6 +572,7 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
 }
 
 ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
+    auto dg = setDepthGuard();
     SmallVectorSized<SyntaxNode*, 16> buffer;
     SmallVectorSized<Token, 8> skipped;
     auto kind = peek().kind;
@@ -604,6 +625,7 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
 }
 
 BlockStatementSyntax* Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind, NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto begin = consume();
     auto name = parseNamedBlockClause();
 
@@ -614,6 +636,7 @@ BlockStatementSyntax* Parser::parseBlock(SyntaxKind blockKind, TokenKind endKind
 }
 
 StatementSyntax* Parser::parseWaitStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto wait = consume();
     if (peek(TokenKind::ForkKeyword)) {
         auto fork = consume();
@@ -627,6 +650,7 @@ StatementSyntax* Parser::parseWaitStatement(NamedLabelSyntax* label, ArrayRef<At
 }
 
 WaitOrderStatementSyntax* Parser::parseWaitOrderStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     SmallVectorSized<TokenOrSyntax, 4> buffer;
@@ -653,6 +677,7 @@ WaitOrderStatementSyntax* Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
 }
 
 RandCaseStatementSyntax* Parser::parseRandCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto dg = setDepthGuard();
     auto randCase = consume();
     SmallVectorSized<RandCaseItemSyntax*, 16> itemBuffer;
 

@@ -20,6 +20,8 @@ class Preprocessor;
 /// Implements a full syntax parser for SystemVerilog.
 class Parser : ParserBase {
 public:
+    static constexpr size_t MaxDepth=100;
+
     Parser(Preprocessor& preprocessor);
 
     /// Parse a whole compilation unit.
@@ -154,6 +156,24 @@ private:
 
     void errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg);
 
+    class DepthGuard {
+      public:
+        DepthGuard(Parser &_parser)
+            : parser(_parser) {
+            ++parser.depth;
+            parser.throwIfTooDeep();
+        }
+        ~DepthGuard() {
+            --parser.depth;
+        }
+      private:
+        Parser &parser;
+    };
+    DepthGuard setDepthGuard() {
+        return DepthGuard(*this);
+    }
+    void throwIfTooDeep();
+
     /// Various options for parsing expressions.
     struct ExpressionOptions {
         enum Enum {
@@ -186,6 +206,7 @@ private:
 
     // Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;
+    size_t depth = 0;
 };
 
 }
