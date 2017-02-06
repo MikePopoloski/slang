@@ -1,5 +1,5 @@
 TOP:=../..
-CXX?=clang++-3.9
+CXX=clang++-3.8
 CXXFLAGS:=-std=c++1z -MMD -MP -g
 INCLUDES:=-I$(TOP)/external -I$(TOP)/include -I./
 ARFLAGS:=-rs
