@@ -9,3 +9,6 @@ obj/
 [Dd]ebug*/
 [Rr]elease*/
 .vs/
+.idea/
+CMakeLists.txt
+cmake-build-debug/
