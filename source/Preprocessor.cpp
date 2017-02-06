@@ -530,7 +530,6 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         Token token = tokens[i];
 
         if (token.kind == TokenKind::IntrinsicFileMacro) {
-            // TODO
             auto info = alloc.emplace<Token::Info>(token.trivia(), "", token.location(), 0);
             info->extra = sourceManager.getFileName(token.location());
             token = Token(TokenKind::StringLiteral, info);
