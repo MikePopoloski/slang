@@ -52,18 +52,28 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 }
 
 const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) {
-    SmallVectorSized<const InstanceSymbol*, 8> instances;
+    Scope scope;
+    scope.addRange(parameters);
+
+    SmallVectorSized<const Symbol*, 8> children;
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
             case SyntaxKind::HierarchyInstantiation:
-                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), instances);
+                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children);
+                break;
+            case SyntaxKind::LoopGenerate:
+                break;
+            case SyntaxKind::IfGenerate:
+                // TODO: scope
+                handleIfGenerate(member->as<IfGenerateSyntax>(), children, &scope);
+                break;
+            case SyntaxKind::CaseGenerate:
                 break;
         }
     }
 
-
     // TODO: cache this shit
-    return alloc.emplace<ModuleSymbol>(syntax, parameters);
+    return alloc.emplace<ModuleSymbol>(syntax, parameters, children.copy(alloc));
 }
 
 const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope) {
@@ -260,7 +270,7 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     }
 }
 
-void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const InstanceSymbol*>& results) {
+void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results) {
     // Try to find the module/interface/program being instantiated; we can't do anything without it.
     // We've already reported an error for missing modules.
     const ModuleDeclarationSyntax* decl = declTable.find(syntax->type.valueText());
@@ -268,13 +278,46 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
         return;
 
     // Evaluate public parameter assignments
-    SmallVectorSized<const ParameterSymbol*, 8> parameters;
-    makePublicParameters(parameters, decl, syntax->parameters, Scope::Empty, syntax->getFirstToken().location(), false);
+    SmallVectorSized<const ParameterSymbol*, 8> parameterBuilder;
+    makePublicParameters(parameterBuilder, decl, syntax->parameters, Scope::Empty, syntax->getFirstToken().location(), false);
 
+    ArrayRef<const ParameterSymbol*> parameters = parameterBuilder.copy(alloc);
     for (const HierarchicalInstanceSyntax* instance : syntax->instances) {
         // Get a symbol for this particular parameterized form of the module
-        const ModuleSymbol* module = makeModule(decl, nullptr);
+        const ModuleSymbol* module = makeModule(decl, parameters);
         results.append(alloc.emplace<InstanceSymbol>(module, false));
+    }
+}
+
+void SemanticModel::handleIfGenerate(const IfGenerateSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
+    // Evaluate the condition to decide if we should take the branch.
+    ExpressionBinder binder { *this, scope };
+    auto expr = binder.bindConstantExpression(syntax->condition);
+    if (expr->bad)
+        return;
+
+    // TODO: don't assume the expression type here
+    const SVInt& value = std::get<SVInt>(expr->constantValue);
+    if ((logic_t)value)
+        handleGenerateBlock(syntax->block, results, scope);
+    else if (syntax->elseClause)
+        handleGenerateBlock(syntax->elseClause->clause->as<MemberSyntax>(), results, scope);
+}
+
+void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
+    if (syntax->kind == SyntaxKind::GenerateBlock) {
+        SmallVectorSized<const Symbol*, 8> children;
+        for (const MemberSyntax* member : syntax->as<GenerateBlockSyntax>()->members) {
+            switch (member->kind) {
+                case SyntaxKind::HierarchyInstantiation:
+                    handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children);
+                    break;
+            }
+        }
+        results.append(alloc.emplace<GenerateBlock>(children.copy(alloc)));
+    }
+    else {
+        // TODO: handle simple member
     }
 }
 

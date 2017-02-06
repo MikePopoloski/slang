@@ -91,7 +91,9 @@ private:
     void makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes);
 
     const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters);
-    void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const InstanceSymbol*>& results);
+    void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results);
+    void handleIfGenerate(const IfGenerateSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
+    void handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
 
     bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope);
 

@@ -30,7 +30,7 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     CHECK(topLevelModules[1]->header->name.valueText() == "D");
 }
 
-TEST_CASE("Bind module implicit", "[binding:module_implicit]") {
+TEST_CASE("Bind module implicit", "[binding:modules]") {
     auto tree = parse(R"(
 module Top #(parameter int foo = 4) ();
     Leaf l();
@@ -49,7 +49,7 @@ endmodule
     REQUIRE(topLevelModules.count() == 1);
 }
 
-TEST_CASE("Module parameterization", "[binding:decls]") {
+TEST_CASE("Module parameterization errors", "[binding:modules]") {
     auto tree = parse(R"(
 module Top;
     Leaf l1();
@@ -87,6 +87,78 @@ endmodule
     auto instance = sem.makeImplicitInstance(topLevelModules[0]);
 
     CHECK(diagnostics.count() == 15);
+}
+
+TEST_CASE("Module children (simple)", "[binding:modules]") {
+    auto tree = parse(R"(
+module Top;
+    Child child();
+endmodule
+
+module Child;
+    Leaf leaf();
+endmodule
+
+module Leaf #(parameter int foo = 4)();
+    parameter localp = foo;
+endmodule
+)");
+
+    Diagnostics diagnostics;
+    DeclarationTable declTable(diagnostics);
+    declTable.addSyntaxTree(&tree);
+
+    auto topLevelModules = declTable.getTopLevelModules();
+    REQUIRE(topLevelModules.count() == 1);
+
+    SemanticModel sem(alloc, diagnostics, declTable);
+    auto instance = sem.makeImplicitInstance(topLevelModules[0]);
+
+    CHECK(diagnostics.count() == 0);
+
+    // Check that the tree of children has been instantiated correctly
+    const auto& leaf = instance->getChild<InstanceSymbol>(0).getChild<InstanceSymbol>(0);
+    CHECK(std::get<SVInt>(leaf.module->parameters[0]->value) == 4);
+}
+
+TEST_CASE("Module children (conditional generate)", "[binding:modules]") {
+    auto tree = parse(R"(
+module Top;
+    Child child();
+endmodule
+
+module Child #(parameter foo = 4)();
+    if (foo == 4) begin
+        Leaf #(1) leaf();
+    end
+    else begin
+        Leaf #(2) leaf();
+    end
+endmodule
+
+module Leaf #(parameter int foo = 4)();
+    parameter localp = foo;
+endmodule
+)");
+
+    Diagnostics diagnostics;
+    DeclarationTable declTable(diagnostics);
+    declTable.addSyntaxTree(&tree);
+
+    auto topLevelModules = declTable.getTopLevelModules();
+    REQUIRE(topLevelModules.count() == 1);
+
+    SemanticModel sem(alloc, diagnostics, declTable);
+    auto instance = sem.makeImplicitInstance(topLevelModules[0]);
+
+    CHECK(diagnostics.count() == 0);
+
+    // Check that the tree of children has been instantiated correctly
+    const auto& leaf = instance->getChild<InstanceSymbol>(0)
+        .getChild<GenerateBlock>(0)
+        .getChild<InstanceSymbol>(0);
+
+    CHECK(std::get<SVInt>(leaf.module->parameters[0]->value) == 1);
 }
 
 }
