@@ -23,8 +23,8 @@ struct SourceBuffer;
 /// live for as long as you need to access that.
 class SyntaxTree {
 public:
-    SyntaxTree(SyntaxTree&& other);
-    SyntaxTree& operator=(SyntaxTree&& other);
+    SyntaxTree(SyntaxTree&& other) = default;
+    SyntaxTree& operator=(SyntaxTree&&) = default;
 
     // not copyable
     SyntaxTree(const SyntaxTree&) = delete;

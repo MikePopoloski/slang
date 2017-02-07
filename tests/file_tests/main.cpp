@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 #include "slang.h"
 
@@ -14,6 +15,8 @@ int main() {
     sourceManager.addUserDirectory(StringRef(RelativeTestPath));
 
     DiagnosticWriter diagWriter(sourceManager);
+    std::vector<SyntaxTree> trees;
+
     int errors = 0;
     int files = 0;
     for (auto& p : getFilesInDirectory(RelativeTestPath)) {
@@ -26,6 +29,8 @@ int main() {
             toString(SyntaxToStringFlags::IncludeTrivia).c_str());
         errors += tree.diagnostics().count();
         files++;
+
+        trees.emplace_back(std::move(tree));
 
         //if (errors > 100)
         //  break;
