@@ -33,7 +33,7 @@ void SourceManager::addUserDirectory(StringRef path) {
 }
 
 SourceLocation SourceManager::getFirstFileLocation(SourceLocation location) {
-    while (location.buffer() && std::get_if<FileInfo>(&bufferEntries[location.buffer().id]) == nullptr) {
+    while (isMacroLoc(location)) {
         location = getExpansionLoc(location);
     }
     return location;
@@ -53,7 +53,10 @@ uint32_t SourceManager::getLineNumber(SourceLocation location) {
     // Find the first line offset that is greater than the given location offset. That iterator
     // then tells us how many lines away from the beginning we are.
     auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset());
-    return (uint32_t)(it - fd->lineOffsets.begin());
+
+    // We want to ensure the line we return is strictly greater than the given location offset.
+    // So if it is equal, add one to the lower bound we got
+    return (uint32_t)(it - fd->lineOffsets.begin()) + (*it == location.offset());
 }
 
 uint32_t SourceManager::getColumnNumber(SourceLocation location) {

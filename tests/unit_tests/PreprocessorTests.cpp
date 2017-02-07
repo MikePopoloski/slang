@@ -18,7 +18,7 @@ SourceManager& getSourceManager() {
 }
 
 // A helper for when tests break and you want to see the diagnostics
-void logDiagnostic() {
+void logDiagnostics() {
     for (auto& diag : diagnostics) {
         fprintf(stderr, "%s\n", DiagnosticWriter(getSourceManager()).report(diag).c_str());
     }
@@ -312,11 +312,11 @@ TEST_CASE("IfDef inside macro", "[preprocessor]") {
 }
 
 TEST_CASE("LINE Directive", "[preprocessor]") {
-    auto& text = "\n\n\n`__LINE__\n\n\n\n";
+    auto& text = "`__LINE__";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(std::get<SVInt>(token.numericValue()) == 4);
+    CHECK(std::get<SVInt>(token.numericValue()) == 1);
     CHECK(diagnostics.empty());
 }
 
