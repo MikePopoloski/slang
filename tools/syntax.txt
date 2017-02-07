@@ -129,6 +129,9 @@ token closeBrace
 
 // ----- EXPRESSIONS -----
 
+BadExpressionSyntax base=ExpressionSyntax kind=BadExpression
+ExpressionSyntax expr
+
 PrimaryExpressionSyntax base=ExpressionSyntax
 empty
 

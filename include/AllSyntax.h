@@ -752,6 +752,31 @@ protected:
 
 // ----- EXPRESSIONS -----
 
+struct BadExpressionSyntax : public ExpressionSyntax {
+    ExpressionSyntax* expr;
+
+    BadExpressionSyntax(ExpressionSyntax* expr) :
+        ExpressionSyntax(SyntaxKind::BadExpression), expr(expr)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return expr;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
 struct PrimaryExpressionSyntax : public ExpressionSyntax {
 
     PrimaryExpressionSyntax(SyntaxKind kind) :
