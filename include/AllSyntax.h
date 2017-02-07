@@ -7235,4 +7235,39 @@ protected:
     }
 };
 
+struct LineDirectiveSyntax : public DirectiveSyntax {
+    Token lineNumber;
+    Token fileName;
+    Token level;
+    Token endOfDirective;
+
+    LineDirectiveSyntax(Token directive, Token lineNumber, Token fileName, Token level, Token endOfDirective) :
+        DirectiveSyntax(SyntaxKind::LineDirective, directive), lineNumber(lineNumber), fileName(fileName), level(level), endOfDirective(endOfDirective)
+    {
+        childCount += 4;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return directive;
+            case 1: return lineNumber;
+            case 2: return fileName;
+            case 3: return level;
+            case 4: return endOfDirective;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: lineNumber = token; break;
+            case 2: fileName = token; break;
+            case 3: level = token; break;
+            case 4: endOfDirective = token; break;
+        }
+    }
+};
+
 }

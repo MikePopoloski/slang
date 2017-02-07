@@ -1253,3 +1253,9 @@ token endOfDirective
 DefaultNetTypeDirectiveSyntax base=DirectiveSyntax kind=DefaultNetTypeDirective
 token netType
 token endOfDirective
+
+LineDirectiveSyntax base=DirectiveSyntax kind=LineDirective
+token lineNumber
+token fileName
+token level
+token endOfDirective

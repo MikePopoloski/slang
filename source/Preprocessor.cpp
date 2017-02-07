@@ -74,6 +74,7 @@ Token Preprocessor::next(LexerMode mode) {
             case SyntaxKind::EndIfDirective: trivia.append(handleEndIfDirective(token)); break;
             case SyntaxKind::TimescaleDirective: trivia.append(handleTimescaleDirective(token)); break;
             case SyntaxKind::DefaultNetTypeDirective: trivia.append(handleDefaultNetTypeDirective(token)); break;
+            case SyntaxKind::LineDirective: trivia.append(handleLineDirective(token)); break;
             case SyntaxKind::UndefineAllDirective:
             case SyntaxKind::UnconnectedDriveDirective:
             case SyntaxKind::NoUnconnectedDriveDirective:
@@ -415,6 +416,23 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
     auto eod = parseEndOfDirective();
     auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash, precision, precisionUnit, eod);
     return Trivia(TriviaKind::Directive, timescale);
+}
+
+Trivia Preprocessor::handleLineDirective(Token directive) {
+    Token lineNumber = expect(TokenKind::IntegerLiteral);
+    Token fileName = expect(TokenKind::StringLiteral);
+    Token level = expect(TokenKind::IntegerLiteral);
+    const SVInt& levNum = std::get<SVInt>(level.numericValue());
+    if (!(levNum == 0 || levNum == 1 || levNum == 2)) {
+        // We don't actually use the level for anything, but the spec allows
+        // only the values 0,1,2
+        addError(DiagCode::InvalidLineDirectiveLevel, level.location());
+    }
+    auto result = alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level, parseEndOfDirective());
+    sourceManager.addLineDirective(directive.location(),
+        std::get<SVInt>(lineNumber.numericValue()).getAssertUInt32(),
+        fileName.valueText(), levNum.getAssertUInt16());
+    return Trivia(TriviaKind::Directive, result);
 }
 
 Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {

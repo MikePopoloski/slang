@@ -64,6 +64,7 @@ private:
     Trivia handleEndIfDirective(Token directive);
     Trivia handleTimescaleDirective(Token directive);
     Trivia handleDefaultNetTypeDirective(Token directive);
+    Trivia handleLineDirective(Token directive);
 
     // Shared method to consume up to the end of a directive line
     Token parseEndOfDirective(bool suppressError = false);

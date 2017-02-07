@@ -39,9 +39,7 @@ SourceLocation SourceManager::getFirstFileLocation(SourceLocation location) {
     return location;
 }
 
-uint32_t SourceManager::getLineNumber(SourceLocation location) {
-
-    location = getFirstFileLocation(location);
+uint32_t SourceManager::getRawLineNumber(SourceLocation location) {
     FileData* fd = getFileData(location.buffer());
     if (!fd)
         return 0;
@@ -59,6 +57,22 @@ uint32_t SourceManager::getLineNumber(SourceLocation location) {
     return (uint32_t)(it - fd->lineOffsets.begin()) + (*it == location.offset());
 }
 
+uint32_t SourceManager::getLineNumber(SourceLocation location) {
+    SourceLocation fileLocation = getFirstFileLocation(location);
+    uint32_t rawLineNumber = getRawLineNumber(fileLocation);
+    if (rawLineNumber == 0)
+        return 0;
+
+    FileData *fd = getFileData(fileLocation.buffer());
+    auto lineDirective = fd->getPreviousLineDirective(rawLineNumber);
+
+    if (!lineDirective) {
+        return rawLineNumber;
+    } else {
+        return lineDirective->lineOfDirective + (rawLineNumber - lineDirective->lineInFile) - 1;
+    }
+}
+
 uint32_t SourceManager::getColumnNumber(SourceLocation location) {
     FileData* fd = getFileData(location.buffer());
     if (!fd)
@@ -74,15 +88,19 @@ uint32_t SourceManager::getColumnNumber(SourceLocation location) {
 }
 
 StringRef SourceManager::getFileName(SourceLocation location) {
-    return getBufferName(getFirstFileLocation(location).buffer());
-}
-
-StringRef SourceManager::getBufferName(BufferID buffer) {
-    FileData* fd = getFileData(buffer);
+    SourceLocation fileLocation = getFirstFileLocation(location);
+    // Avoid computing line offsets if we just need a name of `line-less file
+    FileData *fd = getFileData(fileLocation.buffer());
     if (!fd)
         return nullptr;
+    else if (fd->lineDirectives.empty())
+        return StringRef(fd->name);
 
-    return StringRef(fd->name);
+    auto lineDirective = fd->getPreviousLineDirective(getRawLineNumber(fileLocation));
+    if (!lineDirective)
+        return StringRef(fd->name);
+    else
+        return StringRef(lineDirective->name);
 }
 
 SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
@@ -307,6 +325,37 @@ void SourceManager::computeLineOffsets(const Vector<char>& buffer, std::vector<u
         else {
             ptr++;
         }
+    }
+}
+
+void SourceManager::addLineDirective(SourceLocation location, uint32_t lineNum, StringRef name, uint8_t level) {
+    SourceLocation fileLocation = getFirstFileLocation(location);
+    FileData *fd = getFileData(fileLocation.buffer());
+    if (!fd) {
+        return;
+    }
+
+    uint32_t sourceLineNum = getRawLineNumber(fileLocation);
+    fd->lineDirectives.emplace_back(sourceLineNum, lineNum, name, level);
+}
+
+SourceManager::FileData::LineDirectiveInfo* SourceManager::FileData::getPreviousLineDirective(uint32_t rawLineNumber) {
+    auto it = std::lower_bound(lineDirectives.begin(), lineDirectives.end(),
+        LineDirectiveInfo(rawLineNumber, 0, "", 0), LineDirectiveComparator());
+
+    if (it != lineDirectives.begin()) {
+        // lower_bound will give us an iterator to the first directive after the command
+        // let's instead get a pointer to the one right before it
+        if (it == lineDirectives.end()) {
+            // Check to see whether the actual last directive is before the
+            // given line number
+            if (lineDirectives.back().lineInFile >= rawLineNumber) {
+                return nullptr;
+            }
+        }
+        return &*(it - 1);
+    } else {
+        return nullptr;
     }
 }
 
