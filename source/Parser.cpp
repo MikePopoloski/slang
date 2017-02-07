@@ -871,7 +871,7 @@ CoverpointSyntax* Parser::parseCoverpoint(ArrayRef<AttributeInstanceSyntax*> att
     // if we have total junk here don't bother trying to fabricate a working tree
     if (attributes.empty() && !type && !label && !peek(TokenKind::CoverPointKeyword))
         return nullptr;
-    
+
     Token keyword = expect(TokenKind::CoverPointKeyword);
     auto expr = parseExpression();
     // TODO: handle iff clause separately?
@@ -948,7 +948,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
         return nullptr;
 
     Token name = expect(TokenKind::Identifier);
-    
+
     ElementSelectSyntax* selector = nullptr;
     if (peek(TokenKind::OpenBracket))
         selector = parseElementSelect();
@@ -1171,7 +1171,7 @@ DistConstraintListSyntax* Parser::parseDistConstraintList() {
         return nullptr;
 
     auto dist = consume();
-   
+
     Token openBrace;
     Token closeBrace;
     ArrayRef<TokenOrSyntax> list;
@@ -1460,20 +1460,18 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
                         name,
                         consume());
                 }
-                // EXPLICIT FALLTHROUGH
-            default: {
-                auto type = parseDataType(/* allowImplicit */ false);
-                auto name = expect(TokenKind::Identifier);
-                auto dims = parseDimensionList();
-                return alloc.emplace<TypedefDeclarationSyntax>(
-                    attributes,
-                    typedefKeyword,
-                    type,
-                    name,
-                    dims,
-                    expect(TokenKind::Semicolon));
-            }
+                break;
         }
+        auto type = parseDataType(/* allowImplicit */ false);
+        auto name = expect(TokenKind::Identifier);
+        auto dims = parseDimensionList();
+        return alloc.emplace<TypedefDeclarationSyntax>(
+            attributes,
+            typedefKeyword,
+            type,
+            name,
+            dims,
+            expect(TokenKind::Semicolon));
     }
 
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
