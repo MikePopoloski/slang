@@ -24,12 +24,14 @@ SVInt testParameter(const std::string& text, int index = 0) {
     auto instance = sem.makeImplicitInstance(tree.root()->members[0]->as<ModuleDeclarationSyntax>());
     auto module = instance->module;
     REQUIRE(module);
-    REQUIRE(module->parameters.count() > (uint32_t)index);
+    const auto* param = reinterpret_cast<const ParameterSymbol*>(
+        module->scope->getNth(SymbolKind::Parameter, index));
+    REQUIRE(param);
 
     if (!diagnostics.empty())
         WARN(diagWriter.report(diagnostics).c_str());
 
-    return module->parameters[index]->value.integer();
+    return *param;
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {

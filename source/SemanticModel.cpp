@@ -53,8 +53,8 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 }
 
 const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) {
-    Scope scope;
-    scope.addRange(parameters);
+    Scope* scope = alloc.emplace<Scope>();
+    scope->addRange(parameters);
 
     SmallVectorSized<const Symbol*, 8> children;
     for (const MemberSyntax* member : syntax->members) {
@@ -66,7 +66,7 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
                 break;
             case SyntaxKind::IfGenerate:
                 // TODO: scope
-                handleIfGenerate(member->as<IfGenerateSyntax>(), children, &scope);
+                handleIfGenerate(member->as<IfGenerateSyntax>(), children, scope);
                 break;
             case SyntaxKind::CaseGenerate:
                 break;
@@ -74,7 +74,7 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
     }
 
     // TODO: cache this shit
-    return alloc.emplace<ModuleSymbol>(syntax, parameters, children.copy(alloc));
+    return alloc.emplace<ModuleSymbol>(syntax, scope, children.copy(alloc));
 }
 
 const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope) {

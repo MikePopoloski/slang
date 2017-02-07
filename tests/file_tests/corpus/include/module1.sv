@@ -1,3 +1,17 @@
+module helper
+#(
+    parameter int W = 4
+)
+(
+    input  logic [W-1:0]   foo,
+    output logic [W-1:0]   bar
+);
+
+    always_comb bar = ~foo;
+
+endmodule
+
+
 module module1
 #(
     parameter int P1 = 4,
@@ -9,17 +23,22 @@ module module1
     input  logic [3:0]      in3,
 
     output logic [P1-1:0]   out1,
-    output logic [P1-1:0]   out2,
-    output logic [P1-1:0]   out3
+    output logic [P2-1:0]   out2,
+    output logic [3:0]      out3
 );
+    helper #(.W(4)) helper1 (
+        .foo (in1),
+        .bar (out1)
+    );
 
-    always_comb out1 = in1;
+    helper #(.W(5)) helper2 (
+        .foo (in2),
+        .bar (out2)
+    );
 
-    always_comb begin
-        out2 = in2;
-        out3 = in3;
-    end
+    always_comb out3 = in3;
 
+/*
     logic [7:0] arr1 [2 * $bits(out2)];
 
     typedef struct {
@@ -28,5 +47,6 @@ module module1
     } type1;
 
     type1 x;
+*/
 
 endmodule

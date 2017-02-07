@@ -16,8 +16,11 @@ int main() {
 
     DiagnosticWriter diagWriter(sourceManager);
     std::vector<SyntaxTree> trees;
+    Diagnostics diags;
+    DeclarationTable table {diags};
 
     int errors = 0;
+    int modules = 0;
     int files = 0;
     for (auto& p : getFilesInDirectory(RelativeTestPath)) {
         SyntaxTree tree = SyntaxTree::fromFile(sourceManager, StringRef(p.str()));
@@ -31,6 +34,7 @@ int main() {
         files++;
 
         trees.emplace_back(std::move(tree));
+        table.addSyntaxTree(&tree);
 
         //if (errors > 100)
         //  break;
@@ -38,4 +42,17 @@ int main() {
 
     printf("\n");
     printf("Finished parsing %d files; %d errors found\n\n", files, errors);
+
+    printf("creating model ...\n");
+    BumpAllocator alloc {4096};
+    SemanticModel model {alloc, diags, table};
+
+    printf("iterating over top-level modules:\n");
+    for (const auto modulep : table.getTopLevelModules()) {
+        auto inst = model.makeImplicitInstance(modulep);
+        modules++;
+    }
+
+    printf("\n");
+    printf("Finished elaborating %d modules; %d errors found\n\n", modules, errors);
 }
