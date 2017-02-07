@@ -85,6 +85,7 @@ enum class SyntaxKind : uint16_t {
     InsideExpression,
     ConditionalExpression,
     ExpressionOrDist,
+    BadExpression,
 
     // unary expressions
     UnaryPlusExpression,

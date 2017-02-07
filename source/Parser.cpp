@@ -515,6 +515,50 @@ LoopGenerateSyntax* Parser::parseLoopGenerateConstruct(ArrayRef<AttributeInstanc
     auto semi2 = expect(TokenKind::Semicolon);
     auto iterationExpr = parseExpression();
     auto closeParen = expect(TokenKind::CloseParenthesis);
+
+    // Make sure that the iteration statement is one of the few allowed by the standard:
+    //      genvar_identifier assignment_operator genvar_expression
+    // |    inc_or_dec_operator genvar_identifier
+    // |    genvar_identifier inc_or_dec_operator
+
+    ExpressionSyntax* iterVarCheck = nullptr;
+    switch (iterationExpr->kind) {
+        case SyntaxKind::AssignmentExpression:
+        case SyntaxKind::AddAssignmentExpression:
+        case SyntaxKind::SubtractAssignmentExpression:
+        case SyntaxKind::MultiplyAssignmentExpression:
+        case SyntaxKind::DivideAssignmentExpression:
+        case SyntaxKind::ModAssignmentExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::XorAssignmentExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            iterVarCheck = iterationExpr->as<BinaryExpressionSyntax>()->left;
+            break;
+        case SyntaxKind::UnaryPreincrementExpression:
+        case SyntaxKind::UnaryPredecrementExpression:
+            iterVarCheck = iterationExpr->as<PrefixUnaryExpressionSyntax>()->operand;
+            break;
+        case SyntaxKind::PostincrementExpression:
+        case SyntaxKind::PostdecrementExpression:
+            iterVarCheck = iterationExpr->as<PostfixUnaryExpressionSyntax>()->operand;
+            break;
+        default:
+            addError(DiagCode::InvalidGenvarIterExpression, iterationExpr->getFirstToken().location())
+                << iterationExpr->sourceRange();
+            iterationExpr = alloc.emplace<BadExpressionSyntax>(iterationExpr);
+            break;
+    }
+
+    if (iterVarCheck && iterVarCheck->kind != SyntaxKind::IdentifierName) {
+        addError(DiagCode::ExpectedGenvarIterVar, iterVarCheck->getFirstToken().location())
+            << iterVarCheck->sourceRange();
+        iterationExpr = alloc.emplace<BadExpressionSyntax>(iterationExpr);
+    }
+
     return alloc.emplace<LoopGenerateSyntax>(
         attributes,
         keyword,
@@ -948,7 +992,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
         return nullptr;
 
     Token name = expect(TokenKind::Identifier);
-    
+
     ElementSelectSyntax* selector = nullptr;
     if (peek(TokenKind::OpenBracket))
         selector = parseElementSelect();

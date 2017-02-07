@@ -102,6 +102,8 @@ enum class DiagCode : uint8_t {
     NoLabelOnSemicolon,
     DeferredDelayMustBeZero,
     AttributesNotSupported,
+    InvalidGenvarIterExpression,
+    ExpectedGenvarIterVar,
 
     // declarations
     DuplicateDefinition,

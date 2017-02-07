@@ -350,7 +350,7 @@ public:
     friend SVInt extend(const SVInt& value, uint16_t bits, bool sign);
     friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
     friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
-    
+
     /// Optimized operators that work with direct integer values.
     friend logic_t operator==(const SVInt& lhs, uint64_t rhs) {
         if (lhs.hasUnknown())
@@ -472,7 +472,7 @@ private:
 
     // Unsigned remainder algorithm.
     static SVInt urem(const SVInt& lhs, const SVInt& rhs, bool bothSigned);
-    
+
     // Unsigned modular exponentiation algorithm.
     static SVInt modPow(const SVInt& base, const SVInt& exponent, bool bothSigned);
 
