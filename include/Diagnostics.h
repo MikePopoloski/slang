@@ -171,6 +171,10 @@ class Diagnostics : public SmallVectorSized<Diagnostic, 8> {
 public:
     Diagnostics();
 
+    Diagnostics(Diagnostics&& other) noexcept :
+        SmallVectorSized<Diagnostic, 8>(std::move(other)) {}
+    Diagnostics& operator=(Diagnostics&& other) = default;
+
     /// Adds a new diagnostic to the collection.
     Diagnostic& add(DiagCode code, SourceLocation location);
 };
@@ -201,7 +205,7 @@ private:
     bool sortDiagnostics(const Diagnostic& x, const Diagnostic& y);
     void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);
     void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col, StringRef sourceLine, std::string& buffer);
-    
+
     template<typename T>
     void formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,
                     const char* severity, const std::string& msg);

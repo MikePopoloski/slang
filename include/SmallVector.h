@@ -216,7 +216,10 @@ class SmallVectorSized : public SmallVector<T> {
 public:
     SmallVectorSized() : SmallVector<T>(N) {}
 
-    SmallVectorSized(SmallVector<T>&& other) {
+    SmallVectorSized(SmallVectorSized<T, N>&& other) noexcept :
+        SmallVectorSized(static_cast<SmallVector<T>&&>(other)) {}
+
+    SmallVectorSized(SmallVector<T>&& other) noexcept {
         if (other.isSmall()) {
             this->len = 0;
             this->capacity = sizeof(T) * N;
@@ -238,7 +241,7 @@ public:
     SmallVectorSized(const SmallVectorSized&) = delete;
     SmallVectorSized& operator=(const SmallVectorSized&) = delete;
 
-    SmallVectorSized& operator=(SmallVector<T>&& other) {
+    SmallVectorSized& operator=(SmallVector<T>&& other) noexcept {
         if (this != &other) {
             this->cleanup();
             new (this) SmallVectorSized(std::move(other));

@@ -55,7 +55,7 @@ public:
     {
     }
 
-    Path(Path&& path) :
+    Path(Path&& path) noexcept :
         pathType(path.pathType), elements(std::move(path.elements)), absolute(path.absolute)
     {
     }
@@ -142,7 +142,7 @@ public:
         return elements.back();
     }
 
-    /// Goes up one level in the directory hierarchy. 
+    /// Goes up one level in the directory hierarchy.
     Path parentPath() const {
         Path result;
         result.absolute = absolute;
@@ -210,7 +210,7 @@ public:
         return *this;
     }
 
-    Path& operator=(Path&& path) {
+    Path& operator=(Path&& path) noexcept {
         if (this != &path) {
             pathType = path.pathType;
             elements = std::move(path.elements);

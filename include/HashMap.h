@@ -133,7 +133,7 @@ public:
         auto pair = findOrInsert(hash, key);
         if (!pair.second)
             return std::make_pair(iterator(pair.first, dataEnd()), pair.second);
-        
+
         new (pair.first) Element(hash, std::move(key), std::forward<Args>(args)...);
         return std::make_pair(iterator(pair.first, dataEnd()), pair.second);
     }
@@ -283,7 +283,7 @@ public:
         memset(this->data, 0, this->capacity * sizeof(Element));
     }
 
-    HashMap(HashMap&& other) {
+    HashMap(HashMap&& other) noexcept {
         this->data = other.data;
         this->len = other.len;
         this->capacity = other.capacity;
@@ -297,7 +297,7 @@ public:
     HashMap(const HashMap&) = delete;
     HashMap& operator=(const HashMap&) = delete;
 
-    HashMap& operator=(HashMap&& other) {
+    HashMap& operator=(HashMap&& other) noexcept {
         if (this != &other) {
             this->cleanup();
             new (this) HashMap(other);
@@ -320,7 +320,7 @@ public:
     }
 
     template<uint32_t OtherN>
-    SmallHashMap(SmallHashMap<TKey, TValue, OtherN>&& other) {
+    SmallHashMap(SmallHashMap<TKey, TValue, OtherN>&& other) noexcept {
         if (other.isSmall()) {
             this->len = 0;
             this->isSmall = true;
@@ -352,7 +352,7 @@ public:
     SmallHashMap& operator=(const SmallHashMap&) = delete;
 
     template<uint32_t OtherN>
-    SmallHashMap& operator=(SmallHashMap<TKey, TValue, OtherN>&& other) {
+    SmallHashMap& operator=(SmallHashMap<TKey, TValue, OtherN>&& other) noexcept {
         if (static_cast<HashMapBase<TKey, TValue>*>(this) != static_cast<HashMapBase<TKey, TValue>*>(&other)) {
             this->cleanup();
             new (this) SmallHashMap(std::move(other));

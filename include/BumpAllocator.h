@@ -23,6 +23,9 @@ public:
     explicit BumpAllocator(uint32_t segmentSize = 8192);
     ~BumpAllocator();
 
+    BumpAllocator(BumpAllocator&& other) = default;
+    BumpAllocator& operator=(BumpAllocator&& other) = default;
+
     BumpAllocator(const BumpAllocator&) = delete;
     BumpAllocator& operator=(const BumpAllocator&) = delete;
 
