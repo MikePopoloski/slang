@@ -55,7 +55,7 @@ public:
     /// Gets the source line number for a given source location.
     uint32_t getLineNumber(SourceLocation location);
 
-    /// Gets the source file number for a given source location
+    /// Gets the source file name for a given source location
     StringRef getFileName(SourceLocation location);
 
     /// Gets the column line number for a given source location.

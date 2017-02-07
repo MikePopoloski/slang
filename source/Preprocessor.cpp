@@ -536,8 +536,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         } else if (token.kind == TokenKind::IntrinsicLineMacro) {
             auto info = alloc.emplace<Token::Info>(token.trivia(), "", token.location(), 0);
             uint64_t lineNum = sourceManager.getLineNumber(token.location());
-            // sourceManager gives a 0-indexed line number
-            info->setNumInfo(SVInt(lineNum + 1));
+            info->setNumInfo(SVInt(lineNum));
             token = Token(TokenKind::IntegerLiteral, info);
         }
 
