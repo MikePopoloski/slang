@@ -17,19 +17,16 @@ Parser::Parser(Preprocessor& preprocessor) :
 }
 
 CompilationUnitSyntax* Parser::parseCompilationUnit() {
-    auto dg = setDepthGuard();
     Token eof;
     auto members = parseMemberList<MemberSyntax>(TokenKind::EndOfFile, eof, [this]() { return parseMember(); });
     return alloc.emplace<CompilationUnitSyntax>(members, eof);
 }
 
 ModuleDeclarationSyntax* Parser::parseModule() {
-    auto dg = setDepthGuard();
     return parseModule(parseAttributes());
 }
 
 ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto header = parseModuleHeader();
     auto endKind = getModuleEndKind(header->moduleKeyword.kind);
 
@@ -46,7 +43,6 @@ ModuleDeclarationSyntax* Parser::parseModule(ArrayRef<AttributeInstanceSyntax*> 
 }
 
 ClassDeclarationSyntax* Parser::parseClass() {
-    auto dg = setDepthGuard();
     auto attributes = parseAttributes();
 
     Token virtualOrInterface;
@@ -57,7 +53,6 @@ ClassDeclarationSyntax* Parser::parseClass() {
 }
 
 Token Parser::parseLifetime() {
-    auto dg = setDepthGuard();
     auto kind = peek().kind;
     if (kind == TokenKind::StaticKeyword || kind == TokenKind::AutomaticKeyword)
         return consume();
@@ -65,7 +60,6 @@ Token Parser::parseLifetime() {
 }
 
 AnsiPortListSyntax* Parser::parseAnsiPortList(Token openParen) {
-    auto dg = setDepthGuard();
     if (peek(TokenKind::CloseParenthesis))
         return alloc.emplace<AnsiPortListSyntax>(openParen, nullptr, consume());
 
@@ -83,7 +77,6 @@ AnsiPortListSyntax* Parser::parseAnsiPortList(Token openParen) {
 }
 
 ModuleHeaderSyntax* Parser::parseModuleHeader() {
-    auto dg = setDepthGuard();
     auto moduleKeyword = consume();
     auto lifetime = parseLifetime();
     auto name = expect(TokenKind::Identifier);
@@ -119,7 +112,6 @@ ModuleHeaderSyntax* Parser::parseModuleHeader() {
 }
 
 ParameterPortListSyntax* Parser::parseParameterPortList() {
-    auto dg = setDepthGuard();
     if (!peek(TokenKind::Hash))
         return nullptr;
 
@@ -143,7 +135,6 @@ ParameterPortListSyntax* Parser::parseParameterPortList() {
 }
 
 NonAnsiPortSyntax* Parser::parseNonAnsiPort() {
-    auto dg = setDepthGuard();
     // TODO: error if unsupported expressions are used here
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
@@ -161,7 +152,6 @@ NonAnsiPortSyntax* Parser::parseNonAnsiPort() {
 }
 
 PortHeaderSyntax* Parser::parsePortHeader(Token direction) {
-    auto dg = setDepthGuard();
     auto kind = peek().kind;
     if (isNetType(kind)) {
         auto netType = consume();
@@ -204,7 +194,6 @@ PortHeaderSyntax* Parser::parsePortHeader(Token direction) {
 }
 
 AnsiPortSyntax* Parser::parseAnsiPort() {
-    auto dg = setDepthGuard();
     auto attributes = parseAttributes();
     auto kind = peek().kind;
 
@@ -232,7 +221,6 @@ AnsiPortSyntax* Parser::parseAnsiPort() {
 }
 
 PortDeclarationSyntax* Parser::parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     Token direction;
     if (isPortDirection(peek().kind))
         direction = consume();
@@ -293,7 +281,6 @@ bool Parser::isNonAnsiPort() {
 }
 
 MemberSyntax* Parser::parseMember() {
-    auto dg = setDepthGuard();
     auto attributes = parseAttributes();
 
     if (isHierarchyInstantiation())
@@ -411,7 +398,6 @@ MemberSyntax* Parser::parseMember() {
 
 template<typename TMember, typename TParseFunc>
 ArrayRef<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc) {
-    auto dg = setDepthGuard();
     SmallVectorSized<TMember*, 16> members;
     SmallVectorSized<Token, 4> skipped;
     SmallVectorSized<Trivia, 4> trivia;
@@ -448,7 +434,6 @@ ArrayRef<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, T
 }
 
 TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto kind = peek().kind;
     if (kind != TokenKind::TimeUnitKeyword && kind != TokenKind::TimePrecisionKeyword)
         return nullptr;
@@ -466,7 +451,6 @@ TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<Attribute
 }
 
 FunctionPrototypeSyntax* Parser::parseFunctionPrototype() {
-    auto dg = setDepthGuard();
     auto keyword = consume();
     auto lifetime = parseLifetime();
 
@@ -501,7 +485,6 @@ FunctionDeclarationSyntax* Parser::parseFunctionDeclaration(ArrayRef<AttributeIn
 }
 
 GenvarDeclarationSyntax* Parser::parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     Token keyword;
     Token semi;
     ArrayRef<TokenOrSyntax> identifiers = nullptr;
@@ -521,7 +504,6 @@ GenvarDeclarationSyntax* Parser::parseGenvarDeclaration(ArrayRef<AttributeInstan
 }
 
 LoopGenerateSyntax* Parser::parseLoopGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto genvar = consumeIf(TokenKind::GenVarKeyword);
@@ -551,7 +533,6 @@ LoopGenerateSyntax* Parser::parseLoopGenerateConstruct(ArrayRef<AttributeInstanc
 }
 
 IfGenerateSyntax* Parser::parseIfGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto condition = parseExpression();
@@ -576,7 +557,6 @@ IfGenerateSyntax* Parser::parseIfGenerateConstruct(ArrayRef<AttributeInstanceSyn
 }
 
 CaseGenerateSyntax* Parser::parseCaseGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto keyword = consume();
     auto openParen = expect(TokenKind::OpenParenthesis);
     auto condition = parseExpression();
@@ -621,7 +601,6 @@ CaseGenerateSyntax* Parser::parseCaseGenerateConstruct(ArrayRef<AttributeInstanc
 }
 
 MemberSyntax* Parser::parseGenerateBlock() {
-    auto dg = setDepthGuard();
     NamedLabelSyntax* label = nullptr;
     if (!peek(TokenKind::BeginKeyword)) {
         if (!peek(TokenKind::Identifier) || peek(1).kind != TokenKind::Colon || peek(2).kind != TokenKind::BeginKeyword)
@@ -650,7 +629,6 @@ MemberSyntax* Parser::parseGenerateBlock() {
 }
 
 ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Token& semi) {
-    auto dg = setDepthGuard();
     if (!peek(keywordKind)) {
         semi = expect(TokenKind::Semicolon);
         return nullptr;
@@ -671,7 +649,6 @@ ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Tok
 }
 
 ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token virtualOrInterface) {
-    auto dg = setDepthGuard();
     auto classKeyword = consume();
     auto lifetime = parseLifetime();
     auto name = expect(TokenKind::Identifier);
@@ -717,7 +694,6 @@ ClassDeclarationSyntax* Parser::parseClassDeclaration(ArrayRef<AttributeInstance
 }
 
 MemberSyntax* Parser::parseClassMember() {
-    auto dg = setDepthGuard();
     auto attributes = parseAttributes();
 
     // virtual keyword can either be a class decl, virtual interface, or a method qualifier;
@@ -796,7 +772,6 @@ MemberSyntax* Parser::parseClassMember() {
 }
 
 ContinuousAssignSyntax* Parser::parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     // TODO: timing control
     auto assign = consume();
     SmallVectorSized<TokenOrSyntax, 8> buffer;
@@ -815,7 +790,6 @@ ContinuousAssignSyntax* Parser::parseContinuousAssign(ArrayRef<AttributeInstance
 }
 
 DefParamAssignmentSyntax* Parser::parseDefParamAssignment() {
-    auto dg = setDepthGuard();
     auto name = parseName();
 
     EqualsValueClauseSyntax* initializer = nullptr;
@@ -827,7 +801,6 @@ DefParamAssignmentSyntax* Parser::parseDefParamAssignment() {
 }
 
 DefParamSyntax* Parser::parseDefParam(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto defparam = consume();
     SmallVectorSized<TokenOrSyntax, 8> buffer;
 
@@ -845,7 +818,6 @@ DefParamSyntax* Parser::parseDefParam(ArrayRef<AttributeInstanceSyntax*> attribu
 }
 
 CoverageOptionSyntax* Parser::parseCoverageOption(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto token = peek();
     if (token.kind == TokenKind::Identifier) {
         if (token.valueText() == "option" || token.valueText() == "type_option") {
@@ -861,7 +833,6 @@ CoverageOptionSyntax* Parser::parseCoverageOption(ArrayRef<AttributeInstanceSynt
 }
 
 MemberSyntax* Parser::parseCoverageMember() {
-    auto dg = setDepthGuard();
     auto attributes = parseAttributes();
 
     // check for coverage option
@@ -897,7 +868,6 @@ MemberSyntax* Parser::parseCoverageMember() {
 }
 
 CoverpointSyntax* Parser::parseCoverpoint(ArrayRef<AttributeInstanceSyntax*> attributes, DataTypeSyntax* type, NamedLabelSyntax* label) {
-    auto dg = setDepthGuard();
     // if we have total junk here don't bother trying to fabricate a working tree
     if (attributes.empty() && !type && !label && !peek(TokenKind::CoverPointKeyword))
         return nullptr;
@@ -939,7 +909,6 @@ CoverpointSyntax* Parser::parseCoverpoint(ArrayRef<AttributeInstanceSyntax*> att
 }
 
 WithClauseSyntax* Parser::parseWithClause() {
-    auto dg = setDepthGuard();
     if (!peek(TokenKind::WithKeyword))
         return nullptr;
 
@@ -950,7 +919,6 @@ WithClauseSyntax* Parser::parseWithClause() {
 }
 
 MemberSyntax* Parser::parseCoverpointMember() {
-    auto dg = setDepthGuard();
     auto attributes = parseAttributes();
 
     // check for coverage option
@@ -1033,7 +1001,6 @@ MemberSyntax* Parser::parseCoverpointMember() {
 }
 
 BlockEventExpressionSyntax* Parser::parseBlockEventExpression() {
-    auto dg = setDepthGuard();
     Token keyword;
     switch (peek().kind) {
         case TokenKind::BeginKeyword:
@@ -1058,7 +1025,6 @@ BlockEventExpressionSyntax* Parser::parseBlockEventExpression() {
 }
 
 CovergroupDeclarationSyntax* Parser::parseCovergroupDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
 
@@ -1107,7 +1073,6 @@ CovergroupDeclarationSyntax* Parser::parseCovergroupDeclaration(ArrayRef<Attribu
 }
 
 MemberSyntax* Parser::parseConstraint(ArrayRef<AttributeInstanceSyntax*> attributes, ArrayRef<Token> qualifiers) {
-    auto dg = setDepthGuard();
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
     if (peek(TokenKind::Semicolon)) {
@@ -1118,7 +1083,6 @@ MemberSyntax* Parser::parseConstraint(ArrayRef<AttributeInstanceSyntax*> attribu
 }
 
 ConstraintBlockSyntax* Parser::parseConstraintBlock() {
-    auto dg = setDepthGuard();
     Token closeBrace;
     auto openBrace = expect(TokenKind::OpenBrace);
     auto members = parseMemberList<ConstraintItemSyntax>(TokenKind::CloseBrace, closeBrace, [this]() { return parseConstraintItem(false); });
@@ -1126,7 +1090,6 @@ ConstraintBlockSyntax* Parser::parseConstraintBlock() {
 }
 
 ExpressionSyntax* Parser::parseExpressionOrDist() {
-    auto dg = setDepthGuard();
     auto expr = parseExpression();
     if (!peek(TokenKind::DistKeyword))
         return expr;
@@ -1136,7 +1099,6 @@ ExpressionSyntax* Parser::parseExpressionOrDist() {
 }
 
 ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
-    auto dg = setDepthGuard();
     switch (peek().kind) {
         case TokenKind::DisableKeyword: {
             auto disable = consume();
@@ -1205,7 +1167,6 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
 }
 
 DistConstraintListSyntax* Parser::parseDistConstraintList() {
-    auto dg = setDepthGuard();
     if (!peek(TokenKind::DistKeyword))
         return nullptr;
 
@@ -1230,7 +1191,6 @@ DistConstraintListSyntax* Parser::parseDistConstraintList() {
 }
 
 DistItemSyntax* Parser::parseDistItem() {
-    auto dg = setDepthGuard();
     auto range = parseOpenRangeElement();
 
     DistWeightSyntax* weight = nullptr;
@@ -1243,7 +1203,6 @@ DistItemSyntax* Parser::parseDistItem() {
 }
 
 Token Parser::parseSigning() {
-    auto dg = setDepthGuard();
     switch (peek().kind) {
         case TokenKind::SignedKeyword:
         case TokenKind::UnsignedKeyword:
@@ -1254,7 +1213,6 @@ Token Parser::parseSigning() {
 }
 
 VariableDimensionSyntax* Parser::parseDimension() {
-    auto dg = setDepthGuard();
     if (!peek(TokenKind::OpenBracket))
         return nullptr;
 
@@ -1289,7 +1247,6 @@ VariableDimensionSyntax* Parser::parseDimension() {
 }
 
 ArrayRef<VariableDimensionSyntax*> Parser::parseDimensionList() {
-    auto dg = setDepthGuard();
     SmallVectorSized<VariableDimensionSyntax*, 4> buffer;
     while (true) {
         auto dim = parseDimension();
@@ -1301,7 +1258,6 @@ ArrayRef<VariableDimensionSyntax*> Parser::parseDimensionList() {
 }
 
 DotMemberClauseSyntax* Parser::parseDotMemberClause() {
-    auto dg = setDepthGuard();
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
         return alloc.emplace<DotMemberClauseSyntax>(dot, expect(TokenKind::Identifier));
@@ -1310,7 +1266,6 @@ DotMemberClauseSyntax* Parser::parseDotMemberClause() {
 }
 
 StructUnionTypeSyntax* Parser::parseStructUnion(SyntaxKind syntaxKind) {
-    auto dg = setDepthGuard();
     auto keyword = consume();
     auto tagged = consumeIf(TokenKind::TaggedKeyword);
     auto packed = consumeIf(TokenKind::PackedKeyword);
@@ -1361,7 +1316,6 @@ StructUnionTypeSyntax* Parser::parseStructUnion(SyntaxKind syntaxKind) {
 }
 
 EnumTypeSyntax* Parser::parseEnum() {
-    auto dg = setDepthGuard();
     auto keyword = consume();
 
     DataTypeSyntax* baseType = nullptr;
@@ -1381,7 +1335,6 @@ EnumTypeSyntax* Parser::parseEnum() {
 }
 
 DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
-    auto dg = setDepthGuard();
     auto kind = peek().kind;
     auto type = getIntegerType(kind);
     if (type != SyntaxKind::Unknown) {
@@ -1445,7 +1398,6 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
 }
 
 MemberSyntax* Parser::parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto netType = consume();
 
     NetStrengthSyntax* strength = nullptr;
@@ -1468,7 +1420,6 @@ MemberSyntax* Parser::parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> att
 }
 
 MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     if (peek(TokenKind::TypedefKeyword)) {
         auto typedefKeyword = consume();
         switch (peek().kind) {
@@ -1555,7 +1506,6 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
 }
 
 VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
-    auto dg = setDepthGuard();
     auto name = expect(TokenKind::Identifier);
 
     // Give a better error message for cases like:
@@ -1576,7 +1526,6 @@ VariableDeclaratorSyntax* Parser::parseVariableDeclarator(bool isFirst) {
 }
 
 ArrayRef<TokenOrSyntax> Parser::parseOneVariableDeclarator() {
-    auto dg = setDepthGuard();
     SmallVectorSized<TokenOrSyntax, 2> buffer;
     buffer.append(parseVariableDeclarator(/* isFirst */ true));
     return buffer.copy(alloc);
@@ -1584,7 +1533,6 @@ ArrayRef<TokenOrSyntax> Parser::parseOneVariableDeclarator() {
 
 template<bool(*IsEnd)(TokenKind)>
 ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Token& end) {
-    auto dg = setDepthGuard();
     SmallVectorSized<TokenOrSyntax, 4> buffer;
     parseSeparatedList<isIdentifierOrComma, IsEnd>(
         buffer,
@@ -1599,12 +1547,10 @@ ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(TokenKind endKind, Toke
 }
 
 ArrayRef<TokenOrSyntax> Parser::parseVariableDeclarators(Token& semi) {
-    auto dg = setDepthGuard();
     return parseVariableDeclarators<isSemicolon>(TokenKind::Semicolon, semi);
 }
 
 ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
-    auto dg = setDepthGuard();
     SmallVectorSized<AttributeInstanceSyntax*, 4> buffer;
     while (peek(TokenKind::OpenParenthesisStar)) {
         Token openParen;
@@ -1628,7 +1574,6 @@ ArrayRef<AttributeInstanceSyntax*> Parser::parseAttributes() {
 }
 
 AttributeSpecSyntax* Parser::parseAttributeSpec() {
-    auto dg = setDepthGuard();
     auto name = expect(TokenKind::Identifier);
 
     EqualsValueClauseSyntax* initializer = nullptr;
@@ -1641,7 +1586,6 @@ AttributeSpecSyntax* Parser::parseAttributeSpec() {
 }
 
 ArrayRef<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
-    auto dg = setDepthGuard();
     SmallVectorSized<PackageImportDeclarationSyntax*, 4> buffer;
     while (peek(TokenKind::ImportKeyword))
         buffer.append(parseImportDeclaration(nullptr));
@@ -1649,7 +1593,6 @@ ArrayRef<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
 }
 
 PackageImportDeclarationSyntax* Parser::parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto keyword = consume();
 
     Token semi;
@@ -1667,7 +1610,6 @@ PackageImportDeclarationSyntax* Parser::parseImportDeclaration(ArrayRef<Attribut
 }
 
 PackageImportItemSyntax* Parser::parsePackageImportItem() {
-    auto dg = setDepthGuard();
     auto package = expect(TokenKind::Identifier);
     auto doubleColon = expect(TokenKind::DoubleColon);
 
@@ -1681,7 +1623,6 @@ PackageImportItemSyntax* Parser::parsePackageImportItem() {
 }
 
 ParameterDeclarationSyntax* Parser::parseParameterPort() {
-    auto dg = setDepthGuard();
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
         auto keyword = consume();
         auto type = parseDataType(/* allowImplicit */ true);
@@ -1694,7 +1635,6 @@ ParameterDeclarationSyntax* Parser::parseParameterPort() {
 }
 
 HierarchyInstantiationSyntax* Parser::parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes) {
-    auto dg = setDepthGuard();
     auto type = expect(TokenKind::Identifier);
     auto parameters = parseParameterValueAssignment();
 
@@ -1713,7 +1653,6 @@ HierarchyInstantiationSyntax* Parser::parseHierarchyInstantiation(ArrayRef<Attri
 }
 
 HierarchicalInstanceSyntax* Parser::parseHierarchicalInstance() {
-    auto dg = setDepthGuard();
     auto name = expect(TokenKind::Identifier);
     auto dimensions = parseDimensionList();
 
@@ -1736,7 +1675,6 @@ HierarchicalInstanceSyntax* Parser::parseHierarchicalInstance() {
 }
 
 PortConnectionSyntax* Parser::parsePortConnection() {
-    auto dg = setDepthGuard();
     auto attributes = parseAttributes();
 
     if (peek(TokenKind::DotStar))

@@ -20,6 +20,7 @@ class Preprocessor;
 /// Implements a full syntax parser for SystemVerilog.
 class Parser : ParserBase {
 public:
+    // TODO: This should be configurable through the Options system
     static constexpr size_t MaxDepth=100;
 
     Parser(Preprocessor& preprocessor);
