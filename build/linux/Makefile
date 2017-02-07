@@ -21,6 +21,15 @@ DEPS:=$(ALL_OBJECTS:.o=.d)
 
 -include $(DEPS)
 
+.PHONY: clean test all
+.DEFAULT_GOAL := all
+
+all: $(TOP)/bin/linux/unittests $(TOP)/bin/linux/filetests
+
+test: all
+	cd $(TOP); ./bin/linux/unittests
+	cd $(TOP); ./bin/linux/filetests
+
 $(SLANG_OBJECTS): obj/%.o: $(TOP)/%.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
@@ -51,5 +60,5 @@ clean:
 	rm -f $(ALL_OBJECTS)
 	rm -f $(TOP)/bin/linux/unittests $(TOP)/bin/linux/filetests
 
-.PHONY: clean
-.DEFAULT_GOAL:= $(TOP)/bin/linux/unittests $(TOP)/bin/linux/filetests
+
+
