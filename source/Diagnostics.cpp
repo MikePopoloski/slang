@@ -100,7 +100,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::InvalidMacroName] = { "can't redefine compiler directive as a macro", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyActualMacroArgs] = { "too many arguments provided to function-like macro", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotEnoughMacroArgs] = { "not enough arguments provided to function-like macro", DiagnosticSeverity::Error };
-    descriptors[DiagCode::InvalidLineDirectiveLevel] = { "Invalid level for `line directive, must be 0, 1, or 2", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InvalidLineDirectiveLevel] = { "invalid level for `line directive, must be 0, 1, or 2", DiagnosticSeverity::Error };
 
     // parser
     descriptors[DiagCode::ExpectedIdentifier] = { "expected identifier", DiagnosticSeverity::Error };
