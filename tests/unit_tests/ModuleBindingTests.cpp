@@ -118,9 +118,9 @@ endmodule
 
     // Check that the tree of children has been instantiated correctly
     const auto& leaf = instance->getChild<InstanceSymbol>(0).getChild<InstanceSymbol>(0);
-    const auto* foo = leaf.module->scope->lookupAs<ParameterSymbol>(StringRef(std::string("foo")));
+    const auto& foo = leaf.module->scope->lookup(StringRef(std::string("foo")))->as<ParameterSymbol>();
 
-    CHECK(std::get<SVInt>(foo->value) == 4);
+    CHECK(std::get<SVInt>(foo.value) == 4);
 }
 
 TEST_CASE("Module children (conditional generate)", "[binding:modules]") {
@@ -159,9 +159,9 @@ endmodule
     const auto& leaf = instance->getChild<InstanceSymbol>(0)
         .getChild<GenerateBlock>(0)
         .getChild<InstanceSymbol>(0);
-    const auto* foo = leaf.module->scope->lookupAs<ParameterSymbol>(StringRef(std::string("foo")));
+    const auto& foo = leaf.module->scope->lookup(StringRef(std::string("foo")))->as<ParameterSymbol>();
 
-    CHECK(std::get<SVInt>(foo->value) == 1);
+    CHECK(std::get<SVInt>(foo.value) == 1);
 }
 
 }
