@@ -1194,7 +1194,7 @@ token endOfFile
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false
-token directive
+token directiver
 
 SimpleDirectiveSyntax base=DirectiveSyntax
 token endOfDirective
@@ -1258,4 +1258,12 @@ LineDirectiveSyntax base=DirectiveSyntax kind=LineDirective
 token lineNumber
 token fileName
 token level
+token endOfDirective
+
+UndefDirectiveSyntax base=DirectiveSyntax kind=UndefDirective
+token name
+token endOfDirective
+
+BeginKeywordsDirectiveSyntax base=DirectiveSyntax kind=BeginKeywordsDirective
+token versionSpecifier
 token endOfDirective
