@@ -380,14 +380,48 @@ TEST_CASE("FILE Directive (include+nesting)", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
-TEST_CASE("line Directive", "[preprocessor]") {
+TEST_CASE("undef Directive", "[preprocessor]") {
     auto& text =
-"// A comment\n"
-"`line 57 \"foo.sv\" 0\n"
-"`__LINE__\n"
-"`line 78 \"bar.sv\" 0\n"
-"`__FILE__\n";
+"`define FOO 45\n"
+"`undef FOO\n"
+"`FOO";
+    Token token = lexToken(text);
 
+    // The macro doesn't expand at all, so we go to end of file,
+    // and there should be the error from the attempted expansion
+    REQUIRE(token.kind == TokenKind::EndOfFile);
+    CHECK(!diagnostics.empty());
+}
+
+TEST_CASE("undef Directive 2", "[preprocessor]") {
+    auto& text =
+"`define FOO 45\n"
+"`FOO\n"
+"`undef FOO\n";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 45);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("undefineall", "[preprocessor]") {
+    auto& text =
+"`define FOO 45\n"
+"`undefineall\n"
+"`FOO";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::EndOfFile);
+    CHECK(!diagnostics.empty());
+}
+
+TEST_CASE("begin_keywords", "[preprocessor]") {
+    auto& text =
+"`begin_keywords \"1364-1995\"\n"
+"soft\n"
+"`end_keywords\n"
+"soft";
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -396,12 +430,38 @@ TEST_CASE("line Directive", "[preprocessor]") {
     Token token = preprocessor.next();
     REQUIRE(token);
 
-    REQUIRE(token.kind == TokenKind::IntegerLiteral);
-    CHECK(std::get<SVInt>(token.numericValue()) == 57);
+    REQUIRE(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "soft");
 
     token = preprocessor.next();
-    REQUIRE(token.kind == TokenKind::StringLiteral);
-    CHECK(token.valueText() == "bar.sv");
+    REQUIRE(token.kind == TokenKind::SoftKeyword);
+
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("begin_keywords (nested)", "[preprocessor]") {
+    auto& text =
+"`begin_keywords \"1800-2009\"\n"
+"`begin_keywords \"1800-2005\"\n"
+"`begin_keywords \"1364-2001\"\n"
+"uwire\n"
+"`end_keywords\n"
+"uwire\n"
+"`end_keywords\n"
+"`end_keywords\n";
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token);
+
+    REQUIRE(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "uwire");
+
+    token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::UWireKeyword);
 
     CHECK(diagnostics.empty());
 }

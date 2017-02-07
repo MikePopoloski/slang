@@ -182,7 +182,18 @@ private:
 
 TokenKind getSystemKeywordKind(StringRef text);
 StringRef getTokenKindText(TokenKind kind);
-const StringTable<TokenKind>* getKeywordTable();
+// Different restricted sets of keywords that can b
+enum class KeywordVersion : uint8_t {
+    v1364_1995 = 0,
+    v1364_2001_noconfig = 1,
+    v1364_2001 = 2,
+    v1364_2005 = 3,
+    v1800_2005 = 4,
+    v1800_2009 = 5,
+    v1800_2012 = 6,
+};
+
+const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 
 enum class TokenKind : uint16_t {
     // general

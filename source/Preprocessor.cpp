@@ -27,7 +27,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, D
     alloc(alloc),
     diagnostics(diagnostics)
 {
-    keywordTable = getKeywordTable();
+    keywordVersionStack.push_back(KeywordVersion::v1800_2012);
     macros["__FILE__"] = &fileDirective;
     macros["__LINE__"] = &lineDirective;
 }
@@ -60,8 +60,6 @@ Token Preprocessor::next(LexerMode mode) {
     // burn through any preprocessor directives we find and convert them to trivia
     SmallVectorSized<Trivia, 16> trivia;
     do {
-        // TODO: handle all directive types
-        // TODO: check keyword eligibility
         switch (token.directiveKind()) {
             case SyntaxKind::IncludeDirective: trivia.append(handleIncludeDirective(token)); break;
             case SyntaxKind::ResetAllDirective: trivia.append(handleResetAllDirective(token)); break;
@@ -76,14 +74,14 @@ Token Preprocessor::next(LexerMode mode) {
             case SyntaxKind::DefaultNetTypeDirective: trivia.append(handleDefaultNetTypeDirective(token)); break;
             case SyntaxKind::LineDirective: trivia.append(handleLineDirective(token)); break;
             case SyntaxKind::UndefDirective: trivia.append(handleUndefDirective(token)); break;
-            case SyntaxKind::UndefineAllDirective: trivia.append(handleUndefineAllDirective(token)) break;
-            case SyntaxKind::UnconnectedDriveDirective:
+            case SyntaxKind::UndefineAllDirective: trivia.append(handleUndefineAllDirective(token)); break;
+            case SyntaxKind::BeginKeywordsDirective: trivia.append(handleBeginKeywordsDirective(token)); break;
+            case SyntaxKind::EndKeywordsDirective: trivia.append(handleEndKeywordsDirective(token)); break;
+            case SyntaxKind::PragmaDirective: // TODO, support pragmas
+            case SyntaxKind::UnconnectedDriveDirective: // Nothing to do for the rest of these
             case SyntaxKind::NoUnconnectedDriveDirective:
             case SyntaxKind::CellDefineDirective:
             case SyntaxKind::EndCellDefineDirective:
-            case SyntaxKind::BeginKeywordsDirective:
-            case SyntaxKind::EndKeywordsDirective:
-            case SyntaxKind::PragmaDirective:
             default:
                 trivia.append(createSimpleDirective(token));
                 break;
@@ -120,7 +118,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
     // Pull the next token from the active source.
     // This is the common case.
     auto& source = lexerStack.back();
-    auto token = source->lex(mode);
+    auto token = source->lex(mode, keywordVersionStack.back());
     if (token.kind != TokenKind::EndOfFile) {
         // The idea here is that if we have more things on the stack,
         // the current lexer must be for an include file
@@ -143,7 +141,7 @@ Token Preprocessor::nextRaw(LexerMode mode) {
 
     while (true) {
         auto& nextSource = lexerStack.back();
-        token = nextSource->lex(mode);
+        token = nextSource->lex(mode, keywordVersionStack.back());
         trivia.appendRange(token.trivia());
         if (token.kind != TokenKind::EndOfFile)
             break;
@@ -474,6 +472,70 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
 
     auto result = alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType, parseEndOfDirective());
     return Trivia(TriviaKind::Directive, result);
+}
+
+Trivia Preprocessor::handleUndefDirective(Token directive) {
+    Token nameToken = expect(TokenKind::Identifier);
+    StringRef name = nameToken.valueText();
+    // Other preprocessors consider an attempt to undef, say, `define to also
+    // be an error for undefining a builtin directive, and allow undefining
+    // undefined macros, making that just a warning. We instead only consider
+    // __LINE__ and __FILE__ illegal to undef as builtins, and consider all 
+    // undefining of undefined macros to be errors.
+    if (macros.count(name) > 0) {
+        if (name != "__LINE__" && name != "__FILE__") {
+            macros.erase(name);
+        } else {
+            addError(DiagCode::UndefineBuiltinDirective, nameToken.location());
+        }
+    } else {
+        addError(DiagCode::UnknownDirective, nameToken.location());
+    }
+    auto result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken, parseEndOfDirective());
+    return Trivia(TriviaKind::Directive, result);
+}
+
+Trivia Preprocessor::handleUndefineAllDirective(Token directive) {
+    for (auto it = macros.begin(); it != macros.end(); ++it) {
+        if (it->first != "__LINE__" && it->first != "__FILE__") {
+            macros.erase(it);
+        }
+    }
+    return createSimpleDirective(directive);
+}
+
+Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
+    Token versionToken = expect(TokenKind::StringLiteral);
+    StringRef verStr = versionToken.valueText();
+    if (verStr == "1364-1995") {
+        keywordVersionStack.push_back(KeywordVersion::v1364_1995);
+    } else if (verStr == "1364-2001-noconfig") {
+        keywordVersionStack.push_back(KeywordVersion::v1364_2001_noconfig);
+    } else if (verStr == "1364-2001") {
+        keywordVersionStack.push_back(KeywordVersion::v1364_2001);
+    } else if (verStr == "1364-2005") {
+        keywordVersionStack.push_back(KeywordVersion::v1364_2005);
+    } else if (verStr == "1800-2005") {
+        keywordVersionStack.push_back(KeywordVersion::v1800_2005);
+    } else if (verStr == "1800-2009") {
+        keywordVersionStack.push_back(KeywordVersion::v1800_2009);
+    } else if (verStr == "1800-2012") {
+        keywordVersionStack.push_back(KeywordVersion::v1800_2012);
+    } else {
+        addError(DiagCode::UnrecognizedKeywordVersion, versionToken.location());
+    }
+
+    auto result = alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionToken, parseEndOfDirective());
+    return Trivia(TriviaKind::Directive, result); 
+}
+
+Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
+    if (keywordVersionStack.size() == 1) {
+        addError(DiagCode::MismatchedEndKeywordsDirective, directive.location());
+    } else {
+        keywordVersionStack.pop_back();
+    }
+    return createSimpleDirective(directive);
 }
 
 Token Preprocessor::parseEndOfDirective(bool suppressError) {

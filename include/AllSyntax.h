@@ -7270,4 +7270,62 @@ protected:
     }
 };
 
+struct UndefDirectiveSyntax : public DirectiveSyntax {
+    Token name;
+    Token endOfDirective;
+
+    UndefDirectiveSyntax(Token directive, Token name, Token endOfDirective) :
+        DirectiveSyntax(SyntaxKind::UndefDirective, directive), name(name), endOfDirective(endOfDirective)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return directive;
+            case 1: return name;
+            case 2: return endOfDirective;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: name = token; break;
+            case 2: endOfDirective = token; break;
+        }
+    }
+};
+
+struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
+    Token versionSpecifier;
+    Token endOfDirective;
+
+    BeginKeywordsDirectiveSyntax(Token directive, Token versionSpecifier, Token endOfDirective) :
+        DirectiveSyntax(SyntaxKind::BeginKeywordsDirective, directive), versionSpecifier(versionSpecifier), endOfDirective(endOfDirective)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return directive;
+            case 1: return versionSpecifier;
+            case 2: return endOfDirective;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: directive = token; break;
+            case 1: versionSpecifier = token; break;
+            case 2: endOfDirective = token; break;
+        }
+    }
+};
+
 }

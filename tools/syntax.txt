@@ -1194,7 +1194,7 @@ token endOfFile
 // ----- DIRECTIVES -----
 
 DirectiveSyntax final=false
-token directiver
+token directive
 
 SimpleDirectiveSyntax base=DirectiveSyntax
 token endOfDirective
