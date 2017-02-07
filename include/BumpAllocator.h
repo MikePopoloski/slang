@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdint>
+#include <new>
 #include <utility>
 
 namespace slang {
@@ -23,8 +24,19 @@ public:
     explicit BumpAllocator(uint32_t segmentSize = 8192);
     ~BumpAllocator();
 
-    BumpAllocator(BumpAllocator&& other) = default;
-    BumpAllocator& operator=(BumpAllocator&& other) = default;
+    BumpAllocator(BumpAllocator&& other) noexcept :
+        head(other.head), endPtr(other.endPtr), segmentSize(other.segmentSize)
+    {
+        other.head = nullptr;
+    }
+
+    BumpAllocator& operator=(BumpAllocator&& other) noexcept {
+        if (this != &other) {
+            this->~BumpAllocator();
+            new (this) BumpAllocator(std::move(other));
+        }
+        return *this;
+    }
 
     BumpAllocator(const BumpAllocator&) = delete;
     BumpAllocator& operator=(const BumpAllocator&) = delete;
