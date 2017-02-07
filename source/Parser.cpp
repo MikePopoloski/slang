@@ -1504,20 +1504,18 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
                         name,
                         consume());
                 }
-                // EXPLICIT FALLTHROUGH
-            default: {
-                auto type = parseDataType(/* allowImplicit */ false);
-                auto name = expect(TokenKind::Identifier);
-                auto dims = parseDimensionList();
-                return alloc.emplace<TypedefDeclarationSyntax>(
-                    attributes,
-                    typedefKeyword,
-                    type,
-                    name,
-                    dims,
-                    expect(TokenKind::Semicolon));
-            }
+                break;
         }
+        auto type = parseDataType(/* allowImplicit */ false);
+        auto name = expect(TokenKind::Identifier);
+        auto dims = parseDimensionList();
+        return alloc.emplace<TypedefDeclarationSyntax>(
+            attributes,
+            typedefKeyword,
+            type,
+            name,
+            dims,
+            expect(TokenKind::Semicolon));
     }
 
     if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
