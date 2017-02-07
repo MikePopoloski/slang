@@ -429,9 +429,13 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
         addError(DiagCode::InvalidLineDirectiveLevel, level.location());
     }
     auto result = alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level, parseEndOfDirective());
-    sourceManager.addLineDirective(directive.location(),
-        std::get<SVInt>(lineNumber.numericValue()).getAssertUInt32(),
-        fileName.valueText(), levNum.getAssertUInt16());
+    if (!(lineNumber.isMissing() || fileName.isMissing() || level.isMissing())) {
+        // We should only notify the source manager about the line directive if it
+        // is well formed, to avoid very strange line number issues
+        sourceManager.addLineDirective(directive.location(),
+            std::get<SVInt>(lineNumber.numericValue()).getAssertUInt32(),
+            fileName.valueText(), levNum.getAssertUInt16());
+    }
     return Trivia(TriviaKind::Directive, result);
 }
 

@@ -117,7 +117,7 @@ private:
         std::string name;                   // name of the file
         std::vector<uint32_t> lineOffsets;  // char offset for each line
         struct LineDirectiveInfo {
-            uint32_t lineInFile; // Actual file line where direcitve occurred
+            uint32_t lineInFile; // Actual file line where directive occurred
             uint32_t lineOfDirective; // Line number set by directive
             std::string name; // File name set by directive
             uint8_t level; // level of directive
