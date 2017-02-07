@@ -65,6 +65,10 @@ private:
     Trivia handleTimescaleDirective(Token directive);
     Trivia handleDefaultNetTypeDirective(Token directive);
     Trivia handleLineDirective(Token directive);
+    Trivia handleUndefDirective(Token directive);
+    Trivia handleUndefineAllDirective(Token directive);
+    Trivia handleBeginKeywordsDirective(Token directive);
+    Trivia handleEndKeywordsDirective(Token directive);
 
     // Shared method to consume up to the end of a directive line
     Token parseEndOfDirective(bool suppressError = false);
@@ -182,8 +186,9 @@ private:
     // we adjust lexing behavior slightly when lexing within a macro body
     bool inMacroBody = false;
 
-    // the currently active set of keywords; this can be changed by compilation directives
-    const StringTable<TokenKind>* keywordTable;
+    // The stack of changes to which keyword versions to use, pushed to by
+    // `begin_keywords, popped to by `end_keywords
+    std::vector<KeywordVersion> keywordVersionStack;
 
     // maximum number of nested includes
     static constexpr int MaxIncludeDepth = 1024;

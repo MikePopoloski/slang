@@ -201,7 +201,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
     return Token(token.kind, info);
 }
 
-Token Lexer::lex(LexerMode mode) {
+Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
     if (mode == LexerMode::IncludeFileName)
         return lexIncludeFileName();
 
@@ -218,12 +218,12 @@ Token Lexer::lex(LexerMode mode) {
 
     // lex the next token
     mark();
-    TokenKind kind = lexToken(info, directiveMode);
+    TokenKind kind = lexToken(info, directiveMode, keywordVersion);
     info->rawText = lexeme();
     return Token(kind, info);
 }
 
-TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode) {
+TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode, KeywordVersion keywordVersion) {
     uint32_t offset = currentOffset();
     info->location = SourceLocation(getBufferID(), offset);
 
@@ -450,7 +450,7 @@ TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode) {
 
             // might be a keyword
             TokenKind kind;
-            if (getKeywordTable()->lookup(lexeme(), kind))
+            if (getKeywordTable(keywordVersion)->lookup(lexeme(), kind))
                 return kind;
 
             info->extra = IdentifierType::Normal;

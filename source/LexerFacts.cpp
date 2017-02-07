@@ -37,256 +37,310 @@ const static StringTable<SyntaxKind> directiveTable = {
     { "undefineall", SyntaxKind::UndefineAllDirective }
 };
 
-const static StringTable<TokenKind> allKeywords = {
-    { "accept_on", TokenKind::AcceptOnKeyword },
-    { "alias", TokenKind::AliasKeyword },
-    { "always", TokenKind::AlwaysKeyword },
-    { "always_comb", TokenKind::AlwaysCombKeyword },
-    { "always_ff", TokenKind::AlwaysFFKeyword },
-    { "always_latch", TokenKind::AlwaysLatchKeyword },
-    { "and", TokenKind::AndKeyword },
-    { "assert", TokenKind::AssertKeyword },
-    { "assign", TokenKind::AssignKeyword },
-    { "assume", TokenKind::AssumeKeyword },
-    { "automatic", TokenKind::AutomaticKeyword },
-    { "before", TokenKind::BeforeKeyword },
-    { "begin", TokenKind::BeginKeyword },
-    { "bind", TokenKind::BindKeyword },
-    { "bins", TokenKind::BinsKeyword },
-    { "binsof", TokenKind::BinsOfKeyword },
-    { "bit", TokenKind::BitKeyword },
-    { "break", TokenKind::BreakKeyword },
-    { "buf", TokenKind::BufKeyword },
-    { "bufif0", TokenKind::BufIf0Keyword },
-    { "bufif1", TokenKind::BufIf1Keyword },
-    { "byte", TokenKind::ByteKeyword },
-    { "case", TokenKind::CaseKeyword },
-    { "casex", TokenKind::CaseXKeyword },
-    { "casez", TokenKind::CaseZKeyword },
-    { "cell", TokenKind::CellKeyword },
-    { "chandle", TokenKind::CHandleKeyword },
-    { "checker", TokenKind::CheckerKeyword },
-    { "class", TokenKind::ClassKeyword },
-    { "clocking", TokenKind::ClockingKeyword },
-    { "cmos", TokenKind::CmosKeyword },
-    { "config", TokenKind::ConfigKeyword },
-    { "const", TokenKind::ConstKeyword },
-    { "constraint", TokenKind::ConstraintKeyword },
-    { "context", TokenKind::ContextKeyword },
-    { "continue", TokenKind::ContinueKeyword },
-    { "cover", TokenKind::CoverKeyword },
-    { "covergroup", TokenKind::CoverGroupKeyword },
-    { "coverpoint", TokenKind::CoverPointKeyword },
-    { "cross", TokenKind::CrossKeyword },
-    { "deassign", TokenKind::DeassignKeyword },
-    { "default", TokenKind::DefaultKeyword },
-    { "defparam", TokenKind::DefParamKeyword },
-    { "design", TokenKind::DesignKeyword },
-    { "disable", TokenKind::DisableKeyword },
-    { "dist", TokenKind::DistKeyword },
-    { "do", TokenKind::DoKeyword },
-    { "edge", TokenKind::EdgeKeyword },
-    { "else", TokenKind::ElseKeyword },
-    { "end", TokenKind::EndKeyword },
-    { "endcase", TokenKind::EndCaseKeyword },
-    { "endchecker", TokenKind::EndCheckerKeyword },
-    { "endclass", TokenKind::EndClassKeyword },
-    { "endclocking", TokenKind::EndClockingKeyword },
-    { "endconfig", TokenKind::EndConfigKeyword },
-    { "endfunction", TokenKind::EndFunctionKeyword },
-    { "endgenerate", TokenKind::EndGenerateKeyword },
-    { "endgroup", TokenKind::EndGroupKeyword },
-    { "endinterface", TokenKind::EndInterfaceKeyword },
-    { "endmodule", TokenKind::EndModuleKeyword },
-    { "endpackage", TokenKind::EndPackageKeyword },
-    { "endprimitive", TokenKind::EndPrimitiveKeyword },
-    { "endprogram", TokenKind::EndProgramKeyword },
-    { "endproperty", TokenKind::EndPropertyKeyword },
-    { "endspecify", TokenKind::EndSpecifyKeyword },
-    { "endsequence", TokenKind::EndSequenceKeyword },
-    { "endtable", TokenKind::EndTableKeyword },
-    { "endtask", TokenKind::EndTaskKeyword },
-    { "enum", TokenKind::EnumKeyword },
-    { "event", TokenKind::EventKeyword },
-    { "eventually", TokenKind::EventuallyKeyword },
-    { "expect", TokenKind::ExpectKeyword },
-    { "export", TokenKind::ExportKeyword },
-    { "extends", TokenKind::ExtendsKeyword },
-    { "extern", TokenKind::ExternKeyword },
-    { "final", TokenKind::FinalKeyword },
-    { "first_match", TokenKind::FirstMatchKeyword },
-    { "for", TokenKind::ForKeyword },
-    { "force", TokenKind::ForceKeyword },
-    { "foreach", TokenKind::ForeachKeyword },
-    { "forever", TokenKind::ForeverKeyword },
-    { "fork", TokenKind::ForkKeyword },
-    { "forkjoin", TokenKind::ForkJoinKeyword },
-    { "function", TokenKind::FunctionKeyword },
-    { "generate", TokenKind::GenerateKeyword },
-    { "genvar", TokenKind::GenVarKeyword },
-    { "global", TokenKind::GlobalKeyword },
-    { "highz0", TokenKind::HighZ0Keyword },
-    { "highz1", TokenKind::HighZ1Keyword },
-    { "if", TokenKind::IfKeyword },
-    { "iff", TokenKind::IffKeyword },
-    { "ifnone", TokenKind::IfNoneKeyword },
-    { "ignore_bins", TokenKind::IgnoreBinsKeyword },
-    { "illegal_bins", TokenKind::IllegalBinsKeyword },
-    { "implements", TokenKind::ImplementsKeyword },
-    { "implies", TokenKind::ImpliesKeyword },
-    { "import", TokenKind::ImportKeyword },
-    { "incdir", TokenKind::IncDirKeyword },
-    { "include", TokenKind::IncludeKeyword },
-    { "initial", TokenKind::InitialKeyword },
-    { "inout", TokenKind::InOutKeyword },
-    { "input", TokenKind::InputKeyword },
-    { "inside", TokenKind::InsideKeyword },
-    { "instance", TokenKind::InstanceKeyword },
-    { "int", TokenKind::IntKeyword },
-    { "integer", TokenKind::IntegerKeyword },
-    { "interconnect", TokenKind::InterconnectKeyword },
-    { "interface", TokenKind::InterfaceKeyword },
-    { "intersect", TokenKind::IntersectKeyword },
-    { "join", TokenKind::JoinKeyword },
-    { "join_any", TokenKind::JoinAnyKeyword },
-    { "join_none", TokenKind::JoinNoneKeyword },
-    { "large", TokenKind::LargeKeyword },
-    { "let", TokenKind::LetKeyword },
-    { "liblist", TokenKind::LibListKeyword },
-    { "library", TokenKind::LibraryKeyword },
-    { "local", TokenKind::LocalKeyword },
-    { "localparam", TokenKind::LocalParamKeyword },
-    { "logic", TokenKind::LogicKeyword },
-    { "longint", TokenKind::LongIntKeyword },
-    { "macromodule", TokenKind::MacromoduleKeyword },
-    { "matches", TokenKind::MatchesKeyword },
-    { "medium", TokenKind::MediumKeyword },
-    { "modport", TokenKind::ModPortKeyword },
-    { "module", TokenKind::ModuleKeyword },
-    { "nand", TokenKind::NandKeyword },
-    { "negedge", TokenKind::NegEdgeKeyword },
-    { "nettype", TokenKind::NetTypeKeyword },
-    { "new", TokenKind::NewKeyword },
-    { "nexttime", TokenKind::NextTimeKeyword },
-    { "nmos", TokenKind::NmosKeyword },
-    { "nor", TokenKind::NorKeyword },
-    { "noshowcancelled", TokenKind::NoShowCancelledKeyword },
-    { "not", TokenKind::NotKeyword },
-    { "notif0", TokenKind::NotIf0Keyword },
-    { "notif1", TokenKind::NotIf1Keyword },
-    { "null", TokenKind::NullKeyword },
-    { "or", TokenKind::OrKeyword },
-    { "output", TokenKind::OutputKeyword },
-    { "package", TokenKind::PackageKeyword },
-    { "packed", TokenKind::PackedKeyword },
-    { "parameter", TokenKind::ParameterKeyword },
-    { "pmos", TokenKind::PmosKeyword },
-    { "posedge", TokenKind::PosEdgeKeyword },
-    { "primitive", TokenKind::PrimitiveKeyword },
-    { "priority", TokenKind::PriorityKeyword },
-    { "program", TokenKind::ProgramKeyword },
-    { "property", TokenKind::PropertyKeyword },
-    { "protected", TokenKind::ProtectedKeyword },
-    { "pull0", TokenKind::Pull0Keyword },
-    { "pull1", TokenKind::Pull1Keyword },
-    { "pulldown", TokenKind::PullDownKeyword },
-    { "pullup", TokenKind::PullUpKeyword },
-    { "pulsestyle_ondetect", TokenKind::PulseStyleOnDetectKeyword },
-    { "pulsestyle_onevent", TokenKind::PulseStyleOnEventKeyword },
-    { "pure", TokenKind::PureKeyword },
-    { "rand", TokenKind::RandKeyword },
-    { "randc", TokenKind::RandCKeyword },
-    { "randcase", TokenKind::RandCaseKeyword },
-    { "randsequence", TokenKind::RandSequenceKeyword },
-    { "rcmos", TokenKind::RcmosKeyword },
-    { "real", TokenKind::RealKeyword },
-    { "realtime", TokenKind::RealTimeKeyword },
-    { "ref", TokenKind::RefKeyword },
-    { "reg", TokenKind::RegKeyword },
-    { "reject_on", TokenKind::RejectOnKeyword },
-    { "release", TokenKind::ReleaseKeyword },
-    { "repeat", TokenKind::RepeatKeyword },
-    { "restrict", TokenKind::RestrictKeyword },
-    { "return", TokenKind::ReturnKeyword },
-    { "rnmos", TokenKind::RnmosKeyword },
-    { "rpmos", TokenKind::RpmosKeyword },
-    { "rtran", TokenKind::RtranKeyword },
-    { "rtranif0", TokenKind::RtranIf0Keyword },
-    { "rtranif1", TokenKind::RtranIf1Keyword },
-    { "s_always", TokenKind::SAlwaysKeyword },
-    { "s_eventually", TokenKind::SEventuallyKeyword },
-    { "s_nexttime", TokenKind::SNextTimeKeyword },
-    { "s_until", TokenKind::SUntilKeyword },
-    { "s_until_with", TokenKind::SUntilWithKeyword },
-    { "scalared", TokenKind::ScalaredKeyword },
-    { "sequence", TokenKind::SequenceKeyword },
-    { "shortint", TokenKind::ShortIntKeyword },
-    { "shortreal", TokenKind::ShortRealKeyword },
-    { "showcancelled", TokenKind::ShowCancelledKeyword },
-    { "signed", TokenKind::SignedKeyword },
-    { "small", TokenKind::SmallKeyword },
-    { "soft", TokenKind::SoftKeyword },
-    { "solve", TokenKind::SolveKeyword },
-    { "specify", TokenKind::SpecifyKeyword },
-    { "specparam", TokenKind::SpecParamKeyword },
-    { "static", TokenKind::StaticKeyword },
-    { "string", TokenKind::StringKeyword },
-    { "strong", TokenKind::StrongKeyword },
-    { "strong0", TokenKind::Strong0Keyword },
-    { "strong1", TokenKind::Strong1Keyword },
-    { "struct", TokenKind::StructKeyword },
-    { "super", TokenKind::SuperKeyword },
-    { "supply0", TokenKind::Supply0Keyword },
-    { "supply1", TokenKind::Supply1Keyword },
-    { "sync_accept_on", TokenKind::SyncAcceptOnKeyword },
-    { "sync_reject_on", TokenKind::SyncRejectOnKeyword },
-    { "table", TokenKind::TableKeyword },
-    { "tagged", TokenKind::TaggedKeyword },
-    { "task", TokenKind::TaskKeyword },
-    { "this", TokenKind::ThisKeyword },
-    { "throughout", TokenKind::ThroughoutKeyword },
-    { "time", TokenKind::TimeKeyword },
-    { "timeprecision", TokenKind::TimePrecisionKeyword },
-    { "timeunit", TokenKind::TimeUnitKeyword },
-    { "tran", TokenKind::TranKeyword },
-    { "tranif0", TokenKind::TranIf0Keyword },
-    { "tranif1", TokenKind::TranIf1Keyword },
-    { "tri", TokenKind::TriKeyword },
-    { "tri0", TokenKind::Tri0Keyword },
-    { "tri1", TokenKind::Tri1Keyword },
-    { "triand", TokenKind::TriAndKeyword },
-    { "trior", TokenKind::TriOrKeyword },
-    { "trireg", TokenKind::TriRegKeyword },
-    { "type", TokenKind::TypeKeyword },
-    { "typedef", TokenKind::TypedefKeyword },
-    { "union", TokenKind::UnionKeyword },
-    { "unique", TokenKind::UniqueKeyword },
-    { "unique0", TokenKind::Unique0Keyword },
-    { "unsigned", TokenKind::UnsignedKeyword },
-    { "until", TokenKind::UntilKeyword },
-    { "until_with", TokenKind::UntilWithKeyword },
-    { "untyped", TokenKind::UntypedKeyword },
-    { "use", TokenKind::UseKeyword },
-    { "uwire", TokenKind::UWireKeyword },
-    { "var", TokenKind::VarKeyword },
-    { "vectored", TokenKind::VectoredKeyword },
-    { "virtual", TokenKind::VirtualKeyword },
-    { "void", TokenKind::VoidKeyword },
-    { "wait", TokenKind::WaitKeyword },
-    { "wait_order", TokenKind::WaitOrderKeyword },
-    { "wand", TokenKind::WAndKeyword },
-    { "weak", TokenKind::WeakKeyword },
-    { "weak0", TokenKind::Weak0Keyword },
-    { "weak1", TokenKind::Weak1Keyword },
-    { "while", TokenKind::WhileKeyword },
-    { "wildcard", TokenKind::WildcardKeyword },
-    { "wire", TokenKind::WireKeyword },
-    { "with", TokenKind::WithKeyword },
-    { "within", TokenKind::WithinKeyword },
-    { "wor", TokenKind::WOrKeyword },
-    { "xor", TokenKind::XorKeyword },
+// Lists of keywords, separated by which specification they were first introduced
+// in
+#define KEYWORDS_1364_1995 \
+    { "always", TokenKind::AlwaysKeyword },\
+    { "and", TokenKind::AndKeyword },\
+    { "assign", TokenKind::AssignKeyword },\
+    { "begin", TokenKind::BeginKeyword },\
+    { "buf", TokenKind::BufKeyword },\
+    { "bufif0", TokenKind::BufIf0Keyword },\
+    { "bufif1", TokenKind::BufIf1Keyword },\
+    { "case", TokenKind::CaseKeyword },\
+    { "casex", TokenKind::CaseXKeyword },\
+    { "casez", TokenKind::CaseZKeyword },\
+    { "cmos", TokenKind::CmosKeyword },\
+    { "deassign", TokenKind::DeassignKeyword },\
+    { "default", TokenKind::DefaultKeyword },\
+    { "defparam", TokenKind::DefParamKeyword },\
+    { "disable", TokenKind::DisableKeyword },\
+    { "edge", TokenKind::EdgeKeyword },\
+    { "else", TokenKind::ElseKeyword },\
+    { "end", TokenKind::EndKeyword },\
+    { "endcase", TokenKind::EndCaseKeyword },\
+    { "endfunction", TokenKind::EndFunctionKeyword },\
+    { "endmodule", TokenKind::EndModuleKeyword },\
+    { "endprimitive", TokenKind::EndPrimitiveKeyword },\
+    { "endspecify", TokenKind::EndSpecifyKeyword },\
+    { "endtable", TokenKind::EndTableKeyword },\
+    { "endtask", TokenKind::EndTaskKeyword },\
+    { "event", TokenKind::EventKeyword },\
+    { "for", TokenKind::ForKeyword },\
+    { "force", TokenKind::ForceKeyword },\
+    { "forever", TokenKind::ForeverKeyword },\
+    { "fork", TokenKind::ForkKeyword },\
+    { "function", TokenKind::FunctionKeyword },\
+    { "highz0", TokenKind::HighZ0Keyword },\
+    { "highz1", TokenKind::HighZ1Keyword },\
+    { "if", TokenKind::IfKeyword },\
+    { "ifnone", TokenKind::IfNoneKeyword },\
+    { "initial", TokenKind::InitialKeyword },\
+    { "inout", TokenKind::InOutKeyword },\
+    { "input", TokenKind::InputKeyword },\
+    { "integer", TokenKind::IntegerKeyword },\
+    { "join", TokenKind::JoinKeyword },\
+    { "large", TokenKind::LargeKeyword },\
+    { "macromodule", TokenKind::MacromoduleKeyword },\
+    { "medium", TokenKind::MediumKeyword },\
+    { "module", TokenKind::ModuleKeyword },\
+    { "nand", TokenKind::NandKeyword },\
+    { "negedge", TokenKind::NegEdgeKeyword },\
+    { "nmos", TokenKind::NmosKeyword },\
+    { "nor", TokenKind::NorKeyword },\
+    { "not", TokenKind::NotKeyword },\
+    { "notif0", TokenKind::NotIf0Keyword },\
+    { "notif1", TokenKind::NotIf1Keyword },\
+    { "or", TokenKind::OrKeyword },\
+    { "output", TokenKind::OutputKeyword },\
+    { "parameter", TokenKind::ParameterKeyword },\
+    { "pmos", TokenKind::PmosKeyword },\
+    { "posedge", TokenKind::PosEdgeKeyword },\
+    { "primitive", TokenKind::PrimitiveKeyword },\
+    { "pull0", TokenKind::Pull0Keyword },\
+    { "pull1", TokenKind::Pull1Keyword },\
+    { "pulldown", TokenKind::PullDownKeyword },\
+    { "pullup", TokenKind::PullUpKeyword },\
+    { "rcmos", TokenKind::RcmosKeyword },\
+    { "real", TokenKind::RealKeyword },\
+    { "realtime", TokenKind::RealTimeKeyword },\
+    { "reg", TokenKind::RegKeyword },\
+    { "release", TokenKind::ReleaseKeyword },\
+    { "repeat", TokenKind::RepeatKeyword },\
+    { "rnmos", TokenKind::RnmosKeyword },\
+    { "rpmos", TokenKind::RpmosKeyword },\
+    { "rtran", TokenKind::RtranKeyword },\
+    { "rtranif0", TokenKind::RtranIf0Keyword },\
+    { "rtranif1", TokenKind::RtranIf1Keyword },\
+    { "scalared", TokenKind::ScalaredKeyword },\
+    { "small", TokenKind::SmallKeyword },\
+    { "specify", TokenKind::SpecifyKeyword },\
+    { "specparam", TokenKind::SpecParamKeyword },\
+    { "strong0", TokenKind::Strong0Keyword },\
+    { "strong1", TokenKind::Strong1Keyword },\
+    { "supply0", TokenKind::Supply0Keyword },\
+    { "supply1", TokenKind::Supply1Keyword },\
+    { "table", TokenKind::TableKeyword },\
+    { "task", TokenKind::TaskKeyword },\
+    { "time", TokenKind::TimeKeyword },\
+    { "tran", TokenKind::TranKeyword },\
+    { "tranif0", TokenKind::TranIf0Keyword },\
+    { "tranif1", TokenKind::TranIf1Keyword },\
+    { "tri", TokenKind::TriKeyword },\
+    { "tri0", TokenKind::Tri0Keyword },\
+    { "tri1", TokenKind::Tri1Keyword },\
+    { "triand", TokenKind::TriAndKeyword },\
+    { "trior", TokenKind::TriOrKeyword },\
+    { "trireg", TokenKind::TriRegKeyword },\
+    { "vectored", TokenKind::VectoredKeyword },\
+    { "wait", TokenKind::WaitKeyword },\
+    { "wand", TokenKind::WAndKeyword },\
+    { "weak0", TokenKind::Weak0Keyword },\
+    { "weak1", TokenKind::Weak1Keyword },\
+    { "while", TokenKind::WhileKeyword },\
+    { "wire", TokenKind::WireKeyword },\
+    { "wor", TokenKind::WOrKeyword },\
+    { "xor", TokenKind::XorKeyword },\
     { "xnor", TokenKind::XnorKeyword }
-};
+
+#define NEWKEYWORDS_1364_2001_noconfig \
+    { "automatic", TokenKind::AutomaticKeyword },\
+    { "endgenerate", TokenKind::EndGenerateKeyword },\
+    { "generate", TokenKind::GenerateKeyword },\
+    { "genvar", TokenKind::GenVarKeyword },\
+    { "ifnone", TokenKind::IfNoneKeyword },\
+    { "localparam", TokenKind::LocalParamKeyword },\
+    { "noshowcancelled", TokenKind::NoShowCancelledKeyword },\
+    { "pulsestyle_ondetect", TokenKind::PulseStyleOnDetectKeyword },\
+    { "pulsestyle_onevent", TokenKind::PulseStyleOnEventKeyword },\
+    { "showcancelled", TokenKind::ShowCancelledKeyword },\
+    { "signed", TokenKind::SignedKeyword },\
+    { "unsigned", TokenKind::UnsignedKeyword }
+
+#define NEWKEYWORDS_1364_2001 \
+    { "cell", TokenKind::CellKeyword },\
+    { "config", TokenKind::ConfigKeyword },\
+    { "design", TokenKind::DesignKeyword },\
+    { "endconfig", TokenKind::EndConfigKeyword },\
+    { "incdir", TokenKind::IncDirKeyword },\
+    { "include", TokenKind::IncludeKeyword },\
+    { "instance", TokenKind::InstanceKeyword },\
+    { "liblist", TokenKind::LibListKeyword },\
+    { "library", TokenKind::LibraryKeyword },\
+    { "use", TokenKind::UseKeyword }
+
+#define NEWKEYWORDS_1364_2005 \
+    { "uwire", TokenKind::UWireKeyword }
+
+#define NEWKEYWORDS_1800_2005 \
+    { "alias", TokenKind::AliasKeyword },\
+    { "always_comb", TokenKind::AlwaysCombKeyword },\
+    { "always_ff", TokenKind::AlwaysFFKeyword },\
+    { "always_latch", TokenKind::AlwaysLatchKeyword },\
+    { "assert", TokenKind::AssertKeyword },\
+    { "assume", TokenKind::AssumeKeyword },\
+    { "before", TokenKind::BeforeKeyword },\
+    { "bind", TokenKind::BindKeyword },\
+    { "bins", TokenKind::BinsKeyword },\
+    { "binsof", TokenKind::BinsOfKeyword },\
+    { "bit", TokenKind::BitKeyword },\
+    { "break", TokenKind::BreakKeyword },\
+    { "byte", TokenKind::ByteKeyword },\
+    { "chandle", TokenKind::CHandleKeyword },\
+    { "class", TokenKind::ClassKeyword },\
+    { "clocking", TokenKind::ClockingKeyword },\
+    { "const", TokenKind::ConstKeyword },\
+    { "constraint", TokenKind::ConstraintKeyword },\
+    { "context", TokenKind::ContextKeyword },\
+    { "continue", TokenKind::ContinueKeyword },\
+    { "cover", TokenKind::CoverKeyword },\
+    { "covergroup", TokenKind::CoverGroupKeyword },\
+    { "coverpoint", TokenKind::CoverPointKeyword },\
+    { "cross", TokenKind::CrossKeyword },\
+    { "dist", TokenKind::DistKeyword },\
+    { "do", TokenKind::DoKeyword },\
+    { "endclass", TokenKind::EndClassKeyword },\
+    { "endclocking", TokenKind::EndClockingKeyword },\
+    { "endgroup", TokenKind::EndGroupKeyword },\
+    { "endinterface", TokenKind::EndInterfaceKeyword },\
+    { "endpackage", TokenKind::EndPackageKeyword },\
+    { "endprogram", TokenKind::EndProgramKeyword },\
+    { "endproperty", TokenKind::EndPropertyKeyword },\
+    { "endsequence", TokenKind::EndSequenceKeyword },\
+    { "enum", TokenKind::EnumKeyword },\
+    { "expect", TokenKind::ExpectKeyword },\
+    { "export", TokenKind::ExportKeyword },\
+    { "extends", TokenKind::ExtendsKeyword },\
+    { "extern", TokenKind::ExternKeyword },\
+    { "final", TokenKind::FinalKeyword },\
+    { "first_match", TokenKind::FirstMatchKeyword },\
+    { "foreach", TokenKind::ForeachKeyword },\
+    { "forkjoin", TokenKind::ForkJoinKeyword },\
+    { "iff", TokenKind::IffKeyword },\
+    { "ignore_bins", TokenKind::IgnoreBinsKeyword },\
+    { "illegal_bins", TokenKind::IllegalBinsKeyword },\
+    { "import", TokenKind::ImportKeyword },\
+    { "inside", TokenKind::InsideKeyword },\
+    { "int", TokenKind::IntKeyword },\
+    { "interface", TokenKind::InterfaceKeyword },\
+    { "intersect", TokenKind::IntersectKeyword },\
+    { "join_any", TokenKind::JoinAnyKeyword },\
+    { "join_none", TokenKind::JoinNoneKeyword },\
+    { "local", TokenKind::LocalKeyword },\
+    { "logic", TokenKind::LogicKeyword },\
+    { "longint", TokenKind::LongIntKeyword },\
+    { "matches", TokenKind::MatchesKeyword },\
+    { "modport", TokenKind::ModPortKeyword },\
+    { "new", TokenKind::NewKeyword },\
+    { "null", TokenKind::NullKeyword },\
+    { "package", TokenKind::PackageKeyword },\
+    { "packed", TokenKind::PackedKeyword },\
+    { "priority", TokenKind::PriorityKeyword },\
+    { "program", TokenKind::ProgramKeyword },\
+    { "property", TokenKind::PropertyKeyword },\
+    { "protected", TokenKind::ProtectedKeyword },\
+    { "pure", TokenKind::PureKeyword },\
+    { "rand", TokenKind::RandKeyword },\
+    { "randc", TokenKind::RandCKeyword },\
+    { "randcase", TokenKind::RandCaseKeyword },\
+    { "randsequence", TokenKind::RandSequenceKeyword },\
+    { "ref", TokenKind::RefKeyword },\
+    { "return", TokenKind::ReturnKeyword },\
+    { "sequence", TokenKind::SequenceKeyword },\
+    { "shortint", TokenKind::ShortIntKeyword },\
+    { "shortreal", TokenKind::ShortRealKeyword },\
+    { "solve", TokenKind::SolveKeyword },\
+    { "static", TokenKind::StaticKeyword },\
+    { "string", TokenKind::StringKeyword },\
+    { "struct", TokenKind::StructKeyword },\
+    { "super", TokenKind::SuperKeyword },\
+    { "tagged", TokenKind::TaggedKeyword },\
+    { "this", TokenKind::ThisKeyword },\
+    { "throughout", TokenKind::ThroughoutKeyword },\
+    { "timeprecision", TokenKind::TimePrecisionKeyword },\
+    { "timeunit", TokenKind::TimeUnitKeyword },\
+    { "type", TokenKind::TypeKeyword },\
+    { "typedef", TokenKind::TypedefKeyword },\
+    { "union", TokenKind::UnionKeyword },\
+    { "unique", TokenKind::UniqueKeyword },\
+    { "var", TokenKind::VarKeyword },\
+    { "virtual", TokenKind::VirtualKeyword },\
+    { "void", TokenKind::VoidKeyword },\
+    { "wait_order", TokenKind::WaitOrderKeyword },\
+    { "wildcard", TokenKind::WildcardKeyword },\
+    { "with", TokenKind::WithKeyword },\
+    { "within", TokenKind::WithinKeyword }
+
+#define NEWKEYWORDS_1800_2009 \
+    { "accept_on", TokenKind::AcceptOnKeyword },\
+    { "checker", TokenKind::CheckerKeyword },\
+    { "endchecker", TokenKind::EndCheckerKeyword },\
+    { "eventually", TokenKind::EventuallyKeyword },\
+    { "global", TokenKind::GlobalKeyword },\
+    { "implies", TokenKind::ImpliesKeyword },\
+    { "let", TokenKind::LetKeyword },\
+    { "nexttime", TokenKind::NextTimeKeyword },\
+    { "reject_on", TokenKind::RejectOnKeyword },\
+    { "restrict", TokenKind::RestrictKeyword },\
+    { "s_always", TokenKind::SAlwaysKeyword },\
+    { "s_eventually", TokenKind::SEventuallyKeyword },\
+    { "s_nexttime", TokenKind::SNextTimeKeyword },\
+    { "s_until", TokenKind::SUntilKeyword },\
+    { "s_until_with", TokenKind::SUntilWithKeyword },\
+    { "strong", TokenKind::StrongKeyword },\
+    { "sync_accept_on", TokenKind::SyncAcceptOnKeyword },\
+    { "sync_reject_on", TokenKind::SyncRejectOnKeyword },\
+    { "unique0", TokenKind::Unique0Keyword },\
+    { "until", TokenKind::UntilKeyword },\
+    { "until_with", TokenKind::UntilWithKeyword },\
+    { "untyped", TokenKind::UntypedKeyword },\
+    { "weak", TokenKind::WeakKeyword }
+
+#define NEWKEYWORDS_1800_2012 \
+    { "implements", TokenKind::ImplementsKeyword },\
+    { "interconnect", TokenKind::InterconnectKeyword },\
+    { "nettype", TokenKind::NetTypeKeyword },\
+    { "soft", TokenKind::SoftKeyword }
+
+// We maintain a separate table of keywords for all the various specifications,
+// to allow for easy switching between them when requested
+const static StringTable<TokenKind> allKeywords[7] = 
+{  { // IEEE 1364-1995
+    KEYWORDS_1364_1995
+}, { // IEEE 1364-2001-noconfig
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig
+}, { // IEEE 1364-2001
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig,
+    NEWKEYWORDS_1364_2001
+}, { // IEEE 1364-2005
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig,
+    NEWKEYWORDS_1364_2001,
+    NEWKEYWORDS_1364_2005
+}, { // IEEE 1800-2005
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig,
+    NEWKEYWORDS_1364_2001,
+    NEWKEYWORDS_1364_2005,
+    NEWKEYWORDS_1800_2005
+}, { // IEEE 1800-2009
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig,
+    NEWKEYWORDS_1364_2001,
+    NEWKEYWORDS_1364_2005,
+    NEWKEYWORDS_1800_2005,
+    NEWKEYWORDS_1800_2009
+}, { // IEEE 1800-2012
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig,
+    NEWKEYWORDS_1364_2001,
+    NEWKEYWORDS_1364_2005,
+    NEWKEYWORDS_1800_2005,
+    NEWKEYWORDS_1800_2009,
+    NEWKEYWORDS_1800_2012
+}  };
 
 TokenKind getSystemKeywordKind(StringRef text) {
     TokenKind kind;
@@ -302,8 +356,8 @@ SyntaxKind getDirectiveKind(StringRef directive) {
     return SyntaxKind::MacroUsage;
 }
 
-const StringTable<TokenKind>* getKeywordTable() {
-    return &allKeywords;
+const StringTable<TokenKind>* getKeywordTable(KeywordVersion version) {
+    return &allKeywords[(uint8_t)version];
 }
 
 StringRef getDirectiveText(SyntaxKind kind) {
