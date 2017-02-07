@@ -75,11 +75,15 @@ Token Preprocessor::next(LexerMode mode) {
             case SyntaxKind::TimescaleDirective: trivia.append(handleTimescaleDirective(token)); break;
             case SyntaxKind::DefaultNetTypeDirective: trivia.append(handleDefaultNetTypeDirective(token)); break;
             case SyntaxKind::LineDirective: trivia.append(handleLineDirective(token)); break;
-            case SyntaxKind::UndefineAllDirective:
+            case SyntaxKind::UndefDirective: trivia.append(handleUndefDirective(token)); break;
+            case SyntaxKind::UndefineAllDirective: trivia.append(handleUndefineAllDirective(token)) break;
             case SyntaxKind::UnconnectedDriveDirective:
             case SyntaxKind::NoUnconnectedDriveDirective:
             case SyntaxKind::CellDefineDirective:
             case SyntaxKind::EndCellDefineDirective:
+            case SyntaxKind::BeginKeywordsDirective:
+            case SyntaxKind::EndKeywordsDirective:
+            case SyntaxKind::PragmaDirective:
             default:
                 trivia.append(createSimpleDirective(token));
                 break;
