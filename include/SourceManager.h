@@ -62,10 +62,6 @@ public:
     /// @a location must be a file location.
     uint32_t getColumnNumber(SourceLocation location);
 
-    /// Gets the file name of the given buffer.
-    /// If @a buffer does not represent a file, the result will be an empty string.
-    StringRef getBufferName(BufferID buffer);
-
     /// Gets a location that indicates from where the given buffer was included.
     /// @a location must be a file location.
     SourceLocation getIncludedFrom(BufferID buffer);
@@ -108,6 +104,9 @@ public:
     /// Read in a header file from disk.
     SourceBuffer readHeader(StringRef path, SourceLocation includedFrom, bool isSystemPath);
 
+    /// Adds a line directive at the given location
+    void addLineDirective(SourceLocation location, uint32_t lineNum, StringRef name, uint8_t level);
+
 private:
     BumpAllocator alloc;
     uint32_t unnamedBufferCount = 0;
@@ -117,6 +116,28 @@ private:
         Vector<char> mem;                   // file contents
         std::string name;                   // name of the file
         std::vector<uint32_t> lineOffsets;  // char offset for each line
+        struct LineDirectiveInfo {
+            uint32_t lineInFile; // Actual file line where direcitve occurred
+            uint32_t lineOfDirective; // Line number set by directive
+            std::string name; // File name set by directive
+            uint8_t level; // level of directive
+
+            LineDirectiveInfo(uint32_t lif, uint32_t lod, StringRef fname, uint8_t _level) :
+                lineInFile(lif), lineOfDirective(lod), name(fname.begin(), fname.end()),
+                level(_level) {}
+        };
+
+        // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
+        // line directive of the given raw line number, or nullptr if there is none
+        FileData::LineDirectiveInfo* getPreviousLineDirective(uint32_t rawLineNumber);
+
+        struct LineDirectiveComparator {
+            bool operator()(const LineDirectiveInfo& info1, const LineDirectiveInfo& info2) {
+                return info1.lineInFile < info2.lineInFile;
+            }
+        };
+
+        std::vector<LineDirectiveInfo> lineDirectives; // info about `line in file
         const Path* directory;              // directory that the file exists in
 
         FileData(const Path* directory, const std::string& name, SmallVector<char>&& data) :
@@ -183,6 +204,9 @@ private:
     SourceLocation getFirstFileLocation(SourceLocation location);
     static void computeLineOffsets(const Vector<char>& buffer, std::vector<uint32_t>& offsets);
     static bool readFile(const Path& path, Vector<char>& buffer);
+
+    // Get raw line number of a file location, ignoring any line directives
+    uint32_t getRawLineNumber(SourceLocation location);
 };
 
 }

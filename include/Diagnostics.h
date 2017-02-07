@@ -69,6 +69,7 @@ enum class DiagCode : uint8_t {
     InvalidMacroName,
     TooManyActualMacroArgs,
     NotEnoughMacroArgs,
+    InvalidLineDirectiveLevel,
 
     // parser
     ExpectedIdentifier,

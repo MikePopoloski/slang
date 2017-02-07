@@ -380,5 +380,31 @@ TEST_CASE("FILE Directive (include+nesting)", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("line Directive", "[preprocessor]") {
+    auto& text =
+"// A comment\n"
+"`line 57 \"foo.sv\" 0\n"
+"`__LINE__\n"
+"`line 78 \"bar.sv\" 0\n"
+"`__FILE__\n";
+
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 57);
+
+    token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "bar.sv");
+
+    CHECK(diagnostics.empty());
+}
+
 
 }

@@ -44,8 +44,24 @@ TEST_CASE("Diagnostic Line Number", "[diagnostic]") {
     CHECK(diagnostics.count() == 1);
     std::string message = getDiagnostic(0);
     int bufNum, line, col;
-    sscanf(getDiagnostic(0).c_str(), "<unnamed_buffer%d>:%d:%d", &bufNum, &line, &col);
+    sscanf(message.c_str(), "<unnamed_buffer%d>:%d:%d", &bufNum, &line, &col);
     CHECK(line == 1);
+    CHECK(col == 10);
+}
+
+TEST_CASE("Diagnostic reporting with `line", "[diagnostic]") {
+    auto& text =
+"`line 100 \"foo.svh\" 0\n"
+"`include \"foofile\"\n"
+"ident";
+
+    Token token = lexToken(text);
+    CHECK(diagnostics.count() == 1);
+    std::string message = getDiagnostic(0);
+    int line, col;
+    int matches = sscanf(message.c_str(), "foo.svh:%d:%d", &line, &col);
+    REQUIRE(matches == 2);
+    CHECK(line == 100);
     CHECK(col == 10);
 }
 

@@ -100,6 +100,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::InvalidMacroName] = { "can't redefine compiler directive as a macro", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyActualMacroArgs] = { "too many arguments provided to function-like macro", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotEnoughMacroArgs] = { "not enough arguments provided to function-like macro", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InvalidLineDirectiveLevel] = { "Invalid level for `line directive, must be 0, 1, or 2", DiagnosticSeverity::Error };
 
     // parser
     descriptors[DiagCode::ExpectedIdentifier] = { "expected identifier", DiagnosticSeverity::Error };
@@ -235,7 +236,7 @@ std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
 
             for (auto& includeLoc : includeStack) {
                 writer.write("In file included from {}:{}:\n",
-                    sourceManager.getBufferName(includeLoc.buffer()),
+                    sourceManager.getFileName(includeLoc),
                     sourceManager.getLineNumber(includeLoc)
                 );
             }
@@ -338,7 +339,7 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
                                   const char* severity, const std::string& msg) {
     uint32_t col = sourceManager.getColumnNumber(loc);
     writer.write("{}:{}:{}: {}: {}",
-        sourceManager.getBufferName(loc.buffer()),
+        sourceManager.getFileName(loc),
         sourceManager.getLineNumber(loc),
         col,
         severity,
