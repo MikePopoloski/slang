@@ -68,9 +68,6 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
     SmallVectorSized<const Symbol*, 8> children;
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
-            case SyntaxKind::HierarchyInstantiation:
-                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
-                break;
             case SyntaxKind::LoopGenerate:
                 handleLoopGenerate(member->as<LoopGenerateSyntax>(), children, scope);
                 break;
@@ -79,10 +76,20 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
                 handleIfGenerate(member->as<IfGenerateSyntax>(), children, scope);
                 break;
             case SyntaxKind::CaseGenerate:
+                // TODO
                 break;
             case SyntaxKind::GenvarDeclaration:
                 handleGenvarDecl(member->as<GenvarDeclarationSyntax>(), children, scope);
                 break;
+            case SyntaxKind::HierarchyInstantiation:
+            case SyntaxKind::InitialBlock:
+            case SyntaxKind::FinalBlock:
+            case SyntaxKind::AlwaysBlock:
+            case SyntaxKind::AlwaysCombBlock:
+            case SyntaxKind::AlwaysFFBlock:
+            case SyntaxKind::AlwaysLatchBlock:
+            case SyntaxKind::DataDeclaration:
+                handleGenerateItem(member, children, scope);
         }
     }
     // TODO: cache this shit
@@ -359,20 +366,95 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVe
     }
 }
 
-void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
+void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* _scope) {
+    Scope *scope = alloc.emplace<Scope>(_scope);
     if (syntax->kind == SyntaxKind::GenerateBlock) {
         SmallVectorSized<const Symbol*, 8> children;
         for (const MemberSyntax* member : syntax->as<GenerateBlockSyntax>()->members) {
-            switch (member->kind) {
-                case SyntaxKind::HierarchyInstantiation:
-                    handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
-                    break;
-            }
+            handleGenerateItem(member, children, scope);
         }
-        results.append(alloc.emplace<GenerateBlock>(children.copy(alloc)));
+        results.append(alloc.emplace<GenerateBlock>(children.copy(alloc), scope));
     }
     else {
-        // TODO: handle simple member
+        handleGenerateItem(syntax, results, scope);
+    }
+}
+
+static ProceduralBlock::Kind proceduralBlockKindFromKeyword(Token kindKeyword) {
+    switch (kindKeyword.kind) {
+        case TokenKind::InitialKeyword: return ProceduralBlock::Initial;
+        case TokenKind::FinalKeyword:   return ProceduralBlock::Final;
+        case TokenKind::AlwaysKeyword:  return ProceduralBlock::Always;
+        case TokenKind::AlwaysCombKeyword:  return ProceduralBlock::AlwaysComb;
+        case TokenKind::AlwaysFFKeyword:  return ProceduralBlock::AlwaysFF;
+        case TokenKind::AlwaysLatchKeyword:  return ProceduralBlock::AlwaysLatch;
+        default:
+            ASSERT(false, "Unknown ProceduralBlock kind keyword: %s",
+                   kindKeyword.toString().c_str());
+            break;
+    }
+}
+
+void SemanticModel::handleProceduralBlock(const ProceduralBlockSyntax *syntax, SmallVector<const Symbol *>& results, const Scope* _scope) {
+    Scope *scope = alloc.emplace<Scope>(_scope);
+    SmallVectorSized<const Symbol*, 2> children;
+    //TODO handleStatement(syntax->statement, children, scope);
+    results.append(alloc.emplace<ProceduralBlock>(
+        children.copy(alloc), proceduralBlockKindFromKeyword(syntax->keyword), scope));
+}
+
+void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope) {
+    VariableSymbol::VariableSymbolModifiers modifiers;
+    for (auto token : syntax->modifiers) {
+        switch(token.kind) {
+            case TokenKind::ConstKeyword:
+                modifiers.constM = 1;
+                break;
+            case TokenKind::VarKeyword:
+                modifiers.varM = 1;
+                break;
+            case TokenKind::StaticKeyword:
+                modifiers.staticM = 1;
+                break;
+            case TokenKind::AutomaticKeyword:
+                modifiers.automaticM = 1;
+                break;
+            default:
+                ASSERT(false, "Unknown variable modifier: %s", token.toString().c_str());
+                break;
+        }
+    }
+    const TypeSymbol *typeSymbol = makeTypeSymbol(syntax->type, scope);
+
+    for (auto varDeclarator : syntax->declarators) {
+        handleVariableDeclarator(varDeclarator, results, scope, modifiers, typeSymbol);
+    }
+}
+
+void SemanticModel::handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::VariableSymbolModifiers &modifiers, const TypeSymbol *typeSymbol) {
+    ASSERT(typeSymbol);
+    // TODO handle dimensions
+    Symbol *dataSymbol = alloc.emplace<VariableSymbol>(syntax->name.valueText(), syntax->name.location(), modifiers, *typeSymbol/*TODO: , initializer*/);
+    results.append(dataSymbol);
+    scope->add(dataSymbol);
+}
+
+void SemanticModel::handleGenerateItem(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope) {
+    switch (syntax->kind) {
+        case SyntaxKind::HierarchyInstantiation:
+            handleInstantiation(syntax->as<HierarchyInstantiationSyntax>(), results, scope);
+            break;
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::FinalBlock:
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::AlwaysCombBlock:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::AlwaysLatchBlock:
+            handleProceduralBlock(syntax->as<ProceduralBlockSyntax>(), results, scope);
+            break;
+        case SyntaxKind::DataDeclaration:
+            handleDataDeclaration(syntax->as<DataDeclarationSyntax>(), results, scope);
+            break;
     }
 }
 

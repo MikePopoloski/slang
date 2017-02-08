@@ -25,7 +25,9 @@ enum class SymbolKind {
     Attribute,
     Genvar,
     GenerateBlock,
-    LocalVariable
+    LocalVariable,
+    ProceduralBlock,
+    Variable
 };
 
 class Symbol {
@@ -202,17 +204,55 @@ public:
         Symbol(SymbolKind::Genvar, name, location) {}
 };
 
+class VariableSymbol : public Symbol {
+public:
+    class VariableSymbolModifiers {
+    public:
+        unsigned int constM : 1;
+        unsigned int varM : 1;
+        unsigned int staticM : 1;
+        unsigned int automaticM : 1;
+    };
+
+    VariableSymbolModifiers modifiers;
+    const TypeSymbol &typeSymbol;
+    //TODO: initial value
+
+    VariableSymbol(StringRef name, SourceLocation location, VariableSymbolModifiers modifiers, const TypeSymbol &typeSymbol) :
+        Symbol(SymbolKind::Variable, name, location),
+        modifiers(modifiers),
+        typeSymbol(typeSymbol) {}
+};
+
 class GenerateBlock : public Symbol {
 public:
     ArrayRef<const Symbol*> children;
+    const Scope *scope;
 
-    GenerateBlock(ArrayRef<const Symbol*> children) :
-        children(children) {}
+    GenerateBlock(ArrayRef<const Symbol*> children, const Scope *scope) :
+        children(children), scope(scope) {}
 
     template<typename T>
     const T& getChild(uint32_t index) const { return children[index]->as<T>(); }
 
     static constexpr SymbolKind mykind = SymbolKind::GenerateBlock;
+};
+
+class ProceduralBlock : public Symbol {
+public:
+    ArrayRef<const Symbol *> children;
+    enum Kind {
+        Initial,
+        Final,
+        Always,
+        AlwaysComb,
+        AlwaysFF,
+        AlwaysLatch
+    } kind;
+    const Scope *scope;
+
+    ProceduralBlock(ArrayRef<const Symbol*> children, Kind kind, const Scope *scope)
+        : children(children), kind(kind), scope(scope) {}
 };
 
 }
