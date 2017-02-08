@@ -4,14 +4,15 @@
 namespace slang {
 
 static const Scope emptyScope;
-const Scope *const Scope::Empty = &emptyScope;
+const Scope* const Scope::Empty = &emptyScope;
 
 Scope::Scope() : parentScope{Scope::Empty} {}
 
 bool Scope::add(const Symbol *symbol) {
-        ASSERT(symbol);
+    ASSERT(symbol);
+    if (!table.emplace(symbol->name, symbol).second) return false;
     list.emplace_back(symbol);
-    return table.emplace(symbol->name, symbol).second;
+    return true;
 }
 
 const Symbol *Scope::lookup(StringRef name, bool local) const {
@@ -37,7 +38,7 @@ const Symbol* Scope::getNth(const SymbolKind& kind, size_t index) const {
 std::string Scope::toString() const {
     std::string result;
     for (const Symbol* sym : list)
-        result += std::string("[") + sym->name.toString() + std::string("[");
+        result += std::string("[") + sym->name.toString() + std::string("]");
     return result;
 }
 

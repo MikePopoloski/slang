@@ -21,7 +21,9 @@ public:
     template<typename TContainer>
     bool addRange(const TContainer& container) {
         for (const auto& symbol : container)
-            if (!add(symbol)) return false;
+            if (lookup(symbol->name, true)) return false;
+        for (const auto& symbol : container)
+            add(symbol);
         return true;
     }
 

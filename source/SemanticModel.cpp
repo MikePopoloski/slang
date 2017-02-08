@@ -60,7 +60,7 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
             case SyntaxKind::HierarchyInstantiation:
-                handleInstantiation(scope, member->as<HierarchyInstantiationSyntax>(), children);
+                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
                 break;
             case SyntaxKind::LoopGenerate:
                 break;
@@ -273,7 +273,7 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     }
 }
 
-void SemanticModel::handleInstantiation(const Scope* instantiationScope, const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results) {
+void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope) {
     // Try to find the module/interface/program being instantiated; we can't do anything without it.
     // We've already reported an error for missing modules.
     const ModuleDeclarationSyntax* decl = declTable.find(syntax->type.valueText());
@@ -313,7 +313,7 @@ void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<
         for (const MemberSyntax* member : syntax->as<GenerateBlockSyntax>()->members) {
             switch (member->kind) {
                 case SyntaxKind::HierarchyInstantiation:
-                    handleInstantiation(scope, member->as<HierarchyInstantiationSyntax>(), children);
+                    handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
                     break;
             }
         }

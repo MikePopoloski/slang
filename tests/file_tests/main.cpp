@@ -34,7 +34,7 @@ int main() {
         files++;
 
         trees.emplace_back(std::move(tree));
-        table.addSyntaxTree(&tree);
+        table.addSyntaxTree(&trees.back());
 
         //if (errors > 100)
         //  break;
