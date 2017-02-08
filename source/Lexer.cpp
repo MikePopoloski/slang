@@ -648,11 +648,13 @@ TokenKind Lexer::lexDollarSign(Token::Info* info) {
 }
 
 TokenKind Lexer::lexDirective(Token::Info* info) {
+    // store the offset before scanning in order to easily report error locations
+    uint32_t startingOffset = currentOffset();
     scanIdentifier();
 
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
-        addError(DiagCode::MisplacedDirectiveChar, currentOffset() - 1);
+        addError(DiagCode::MisplacedDirectiveChar, startingOffset);
         info->extra = SyntaxKind::Unknown;
         return TokenKind::Directive;
     }
@@ -660,7 +662,7 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
     info->extra = getDirectiveKind(lexeme().subString(1));
     if (!onNewLine && std::get<SyntaxKind>(info->extra) != SyntaxKind::MacroUsage) {
         // All directives other than a macro usage must be on their own line
-        addError(DiagCode::DirectiveNotFirstOnLine, currentOffset() - 1);
+        addError(DiagCode::DirectiveNotFirstOnLine, startingOffset);
     }
     return TokenKind::Directive;
 }
