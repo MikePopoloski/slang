@@ -23,6 +23,12 @@ class Scope;
 class ConstantEvaluator {
 public:
     ConstantValue evaluate(const BoundNode* tree);
+
+private:
+    ConstantValue evaluateLiteral(const BoundLiteral* expr);
+    ConstantValue evaluateParameter(const BoundParameter* expr);
+    ConstantValue evaluateUnary(const BoundUnaryExpression* expr);
+    ConstantValue evaluateBinary(const BoundBinaryExpression* expr);
 };
 
 }

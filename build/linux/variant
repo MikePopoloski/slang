@@ -4,4 +4,5 @@ namespace std {
 	using mpark::variant;
 	using mpark::get;
 	using mpark::get_if;
+    using mpark::monostate;
 }

@@ -2,12 +2,11 @@
 
 #include "AllSyntax.h"
 #include "ArrayRef.h"
+#include "ConstantValue.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
 
 namespace slang {
-
-using ConstantValue = std::variant<SVInt, double>;
 
 enum class SymbolKind {
     Unknown,

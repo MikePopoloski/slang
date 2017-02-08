@@ -174,7 +174,7 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
         const RangeSelectSyntax* range = selector->as<RangeSelectSyntax>();
         auto msbExpr = binder.bindConstantExpression(range->left);
         auto lsbExpr = binder.bindConstantExpression(range->right);
-        if (msbExpr->bad || lsbExpr->bad)
+        if (msbExpr->bad() || lsbExpr->bad())
             return false;
 
         // TODO: ensure integer here
@@ -297,7 +297,7 @@ void SemanticModel::handleIfGenerate(const IfGenerateSyntax* syntax, SmallVector
     // Evaluate the condition to decide if we should take the branch.
     ExpressionBinder binder { *this, scope };
     auto expr = binder.bindConstantExpression(syntax->condition);
-    if (expr->bad)
+    if (expr->bad())
         return;
 
     // TODO: don't assume the expression type here

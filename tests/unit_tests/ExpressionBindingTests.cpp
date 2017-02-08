@@ -13,7 +13,7 @@ DiagnosticWriter diagWriter(sourceManager);
 
 SyntaxTree parse(const std::string& text) { return SyntaxTree::fromText(sourceManager, StringRef(text)); }
 
-const ParameterSymbol& testParameter(const std::string& text, int index = 0) {
+SVInt testParameter(const std::string& text, int index = 0) {
     auto tree = parse("module Top; " + text + " endmodule");
 
     Diagnostics& diagnostics = tree.diagnostics();
@@ -29,15 +29,15 @@ const ParameterSymbol& testParameter(const std::string& text, int index = 0) {
     if (!diagnostics.empty())
         WARN(diagWriter.report(diagnostics).c_str());
 
-    return *module->parameters[index];
+    return module->parameters[index]->value.integer();
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {
-    CHECK(std::get<SVInt>(testParameter("parameter foo = 4;").value) == 4);
-    CHECK(std::get<SVInt>(testParameter("parameter foo = 4 + 5;").value) == 9);
-    CHECK(std::get<SVInt>(testParameter("parameter bar = 9, foo = bar + 1;", 1).value) == 10);
-    CHECK(std::get<SVInt>(testParameter("parameter logic [3:0] foo = 4;").value) == 4);
-    CHECK(std::get<SVInt>(testParameter("parameter logic [3:0] foo = 4'b100;").value) == 4);
+    CHECK(testParameter("parameter foo = 4;") == 4);
+    CHECK(testParameter("parameter foo = 4 + 5;") == 9);
+    CHECK(testParameter("parameter bar = 9, foo = bar + 1;", 1) == 10);
+    CHECK(testParameter("parameter logic [3:0] foo = 4;") == 4);
+    CHECK(testParameter("parameter logic [3:0] foo = 4'b100;") == 4);
 }
 
 }
