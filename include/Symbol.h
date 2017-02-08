@@ -5,6 +5,7 @@
 #include "ConstantValue.h"
 #include "SourceLocation.h"
 #include "StringRef.h"
+#include "Scope.h"
 
 namespace slang {
 
@@ -36,7 +37,11 @@ public:
         kind(kind), name(name), location(location) {}
 
     template<typename T>
-    const T& as() const { return *static_cast<const T*>(this); }
+    const T& as() const {
+        // TODO: if (T::mykind != this->kind) return nullptr;
+        return *static_cast<const T*>(this);
+    }
+    static constexpr SymbolKind mykind = SymbolKind::Unknown;
 };
 
 /// Base class for all data types
@@ -53,6 +58,7 @@ public:
     bool isCastCompatible(const TypeSymbol* rhs) const;
 
     std::string toString() const;
+    static constexpr SymbolKind mykind = SymbolKind::Unknown;
 };
 
 class IntegralTypeSymbol : public TypeSymbol {
@@ -72,7 +78,9 @@ public:
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState),
         lowerBounds(lowerBounds), widths(widths) {}
 
-private:
+    static constexpr SymbolKind mykind = SymbolKind::IntegralType;
+
+  private:
     static ArrayRef<int> EmptyLowerBound;
 };
 
@@ -84,23 +92,30 @@ public:
     RealTypeSymbol(TokenKind keywordType, int width) :
         TypeSymbol(SymbolKind::RealType, getTokenKindText(keywordType), SourceLocation()),
         width(width), keywordType(keywordType) {}
+
+    static constexpr SymbolKind mykind = SymbolKind::RealType;
 };
 
 class EnumTypeSymbol : public TypeSymbol {
 public:
     TypeSymbol* baseType;
+
+    static constexpr SymbolKind mykind = SymbolKind::Unknown;
 };
 
 class StructTypeSymbol : public TypeSymbol {
 public:
     bool isPacked;
     bool isSigned;
+    static constexpr SymbolKind mykind = SymbolKind::Unknown;
 };
 
 class ErrorTypeSymbol : public TypeSymbol {
 public:
     ErrorTypeSymbol() :
         TypeSymbol(SymbolKind::Unknown, nullptr, SourceLocation()) {}
+
+    static constexpr SymbolKind mykind = SymbolKind::Unknown;
 };
 
 class TypeAliasSymbol : public TypeSymbol {
@@ -111,6 +126,8 @@ public:
     TypeAliasSymbol(const SyntaxNode* syntax, SourceLocation location, const TypeSymbol* underlying, StringRef alias) :
         TypeSymbol(SymbolKind::TypeAlias, alias, location),
         syntax(syntax), underlying(underlying) {}
+
+    static constexpr SymbolKind mykind = SymbolKind::TypeAlias;
 };
 
 class AttributeSymbol : public Symbol {
@@ -120,6 +137,8 @@ public:
     ConstantValue value;
 
     AttributeSymbol(const AttributeSpecSyntax* syntax, const TypeSymbol* type, ConstantValue value);
+
+    static constexpr SymbolKind mykind = SymbolKind::Attribute;
 };
 
 class ParameterSymbol : public Symbol {
@@ -132,17 +151,22 @@ public:
     ParameterSymbol(StringRef name, SourceLocation location,
                     const ParameterDeclarationSyntax* syntax,
                     bool isLocal);
+
+    static constexpr SymbolKind mykind = SymbolKind::Parameter;
 };
 
 class ModuleSymbol : public Symbol {
 public:
     const ModuleDeclarationSyntax* syntax;
-    ArrayRef<const ParameterSymbol*> parameters;
+    Scope* scope;
     ArrayRef<const Symbol*> children;
 
-    ModuleSymbol(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters,
+    ModuleSymbol(const ModuleDeclarationSyntax* syntax, Scope* scope,
                  ArrayRef<const Symbol*> children) :
-        syntax(syntax), parameters(parameters), children(children) {}
+        Symbol(SymbolKind::Module, syntax->header->name.valueText(), syntax->header->name.location()),
+        syntax(syntax), scope(scope), children(children) {}
+
+    static constexpr SymbolKind mykind = SymbolKind::Module;
 };
 
 class InstanceSymbol : public Symbol {
@@ -155,6 +179,8 @@ public:
 
     template<typename T>
     const T& getChild(uint32_t index) const { return module->children[index]->as<T>(); }
+
+    static constexpr SymbolKind mykind = SymbolKind::Unknown;
 };
 
 class GenerateBlock : public Symbol {
@@ -166,6 +192,8 @@ public:
 
     template<typename T>
     const T& getChild(uint32_t index) const { return children[index]->as<T>(); }
+
+    static constexpr SymbolKind mykind = SymbolKind::GenerateBlock;
 };
 
 }

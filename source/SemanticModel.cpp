@@ -53,28 +53,27 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 }
 
 const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) {
-    Scope scope;
-    scope.addRange(parameters);
+    Scope* scope = alloc.emplace<Scope>();
+    scope->addRange(parameters);
 
     SmallVectorSized<const Symbol*, 8> children;
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
             case SyntaxKind::HierarchyInstantiation:
-                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children);
+                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
                 break;
             case SyntaxKind::LoopGenerate:
                 break;
             case SyntaxKind::IfGenerate:
                 // TODO: scope
-                handleIfGenerate(member->as<IfGenerateSyntax>(), children, &scope);
+                handleIfGenerate(member->as<IfGenerateSyntax>(), children, scope);
                 break;
             case SyntaxKind::CaseGenerate:
                 break;
         }
     }
-
     // TODO: cache this shit
-    return alloc.emplace<ModuleSymbol>(syntax, parameters, children.copy(alloc));
+    return alloc.emplace<ModuleSymbol>(syntax, scope, children.copy(alloc));
 }
 
 const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope) {
@@ -274,7 +273,7 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     }
 }
 
-void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results) {
+void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope) {
     // Try to find the module/interface/program being instantiated; we can't do anything without it.
     // We've already reported an error for missing modules.
     const ModuleDeclarationSyntax* decl = declTable.find(syntax->type.valueText());
@@ -283,7 +282,7 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
 
     // Evaluate public parameter assignments
     SmallVectorSized<const ParameterSymbol*, 8> parameterBuilder;
-    makePublicParameters(parameterBuilder, decl, syntax->parameters, Scope::Empty, syntax->getFirstToken().location(), false);
+    makePublicParameters(parameterBuilder, decl, syntax->parameters, instantiationScope, syntax->getFirstToken().location(), false);
 
     ArrayRef<const ParameterSymbol*> parameters = parameterBuilder.copy(alloc);
     for (const HierarchicalInstanceSyntax* instance : syntax->instances) {
@@ -314,7 +313,7 @@ void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<
         for (const MemberSyntax* member : syntax->as<GenerateBlockSyntax>()->members) {
             switch (member->kind) {
                 case SyntaxKind::HierarchyInstantiation:
-                    handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children);
+                    handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
                     break;
             }
         }
@@ -546,17 +545,6 @@ const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool 
     auto symbol = alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
     integralTypeCache.emplace_hint(it, key, symbol);
     return symbol;
-}
-
-const Symbol* SemanticModel::lookupSymbol(StringRef name, const Scope* scope) {
-    // TODO: soooo many things here...
-    while (scope) {
-        const Symbol* result = scope->lookup(name);
-        if (result)
-            return result;
-        scope = scope->parent();
-    }
-    return nullptr;
 }
 
 ConstantValue SemanticModel::evaluateConstant(const BoundNode* tree) {

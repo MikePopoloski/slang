@@ -43,9 +43,6 @@ public:
     const TypeSymbol* getKnownType(SyntaxKind kind) const;
     const TypeSymbol* getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false);
 
-    // Generalized symbol lookup based on the current scope stack.
-    const Symbol* lookupSymbol(StringRef name, const Scope* scope);
-
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
 
@@ -91,7 +88,7 @@ private:
     void makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes);
 
     const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters);
-    void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results);
+    void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope);
     void handleIfGenerate(const IfGenerateSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
     void handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
 

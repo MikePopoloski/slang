@@ -2,6 +2,20 @@
 
 namespace slang {
 
+constexpr SymbolKind Symbol                ::mykind;
+constexpr SymbolKind TypeSymbol            ::mykind;
+constexpr SymbolKind IntegralTypeSymbol    ::mykind;
+constexpr SymbolKind RealTypeSymbol        ::mykind;
+constexpr SymbolKind EnumTypeSymbol        ::mykind;
+constexpr SymbolKind StructTypeSymbol      ::mykind;
+constexpr SymbolKind ErrorTypeSymbol       ::mykind;
+constexpr SymbolKind TypeAliasSymbol       ::mykind;
+constexpr SymbolKind AttributeSymbol       ::mykind;
+constexpr SymbolKind ParameterSymbol       ::mykind;
+constexpr SymbolKind ModuleSymbol          ::mykind;
+constexpr SymbolKind InstanceSymbol        ::mykind;
+constexpr SymbolKind GenerateBlock         ::mykind;
+
 static int zero = 0;
 ArrayRef<int> IntegralTypeSymbol::EmptyLowerBound { &zero, 1 };
 
