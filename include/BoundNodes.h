@@ -11,8 +11,10 @@ enum class BoundNodeKind {
     Unknown,
     Literal,
     Parameter,
+    VarRef,
     UnaryExpression,
     BinaryExpression,
+    AssignmentExpression
 };
 
 class BoundNode {
@@ -60,6 +62,14 @@ public:
         BoundExpression(BoundNodeKind::Parameter, syntax, symbol.type), symbol(symbol) {}
 };
 
+class BoundVarRef : public BoundExpression {
+public:
+    const LocalVariableSymbol* symbol;
+
+    BoundVarRef(const ExpressionSyntax* syntax, const LocalVariableSymbol* symbol) :
+        BoundExpression(BoundNodeKind::VarRef, syntax, symbol->type), symbol(symbol) {}
+};
+
 class BoundUnaryExpression : public BoundExpression {
 public:
     BoundExpression* operand;
@@ -75,6 +85,15 @@ public:
 
     BoundBinaryExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, BoundExpression* left, BoundExpression* right) :
         BoundExpression(BoundNodeKind::BinaryExpression, syntax, type), left(left), right(right) {}
+};
+
+class BoundAssignmentExpression : public BoundExpression {
+public:
+    BoundExpression* left;
+    BoundExpression* right;
+
+    BoundAssignmentExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, BoundExpression* left, BoundExpression* right) :
+        BoundExpression(BoundNodeKind::AssignmentExpression, syntax, type), left(left), right(right) {}
 };
 
 }

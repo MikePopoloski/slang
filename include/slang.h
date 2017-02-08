@@ -6,7 +6,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+// TODO: eventually this file should probably go away
+
 #include "AllSyntax.h"
+#include "ConstantEvaluator.h"
 #include "Diagnostics.h"
 #include "Lexer.h"
 #include "Parser.h"

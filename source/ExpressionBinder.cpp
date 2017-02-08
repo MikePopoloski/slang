@@ -80,6 +80,20 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
         case SyntaxKind::ArithmeticShiftRightExpression:
         case SyntaxKind::PowerExpression:
             return bindShiftOrPowerOperator(syntax->as<BinaryExpressionSyntax>());
+        case SyntaxKind::AssignmentExpression:
+        case SyntaxKind::AddAssignmentExpression:
+        case SyntaxKind::SubtractAssignmentExpression:
+        case SyntaxKind::MultiplyAssignmentExpression:
+        case SyntaxKind::DivideAssignmentExpression:
+        case SyntaxKind::ModAssignmentExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::XorAssignmentExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            return bindAssignmentOperator(syntax->as<BinaryExpressionSyntax>());
 
             DEFAULT_UNREACHABLE;
     }
@@ -151,9 +165,17 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
         return makeBad(nullptr);
 
     const Symbol* symbol = scope->lookup(identifier);
-    ASSERT(symbol && symbol->kind == SymbolKind::Parameter);
+    ASSERT(symbol);
 
-    return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterSymbol>());
+    switch (symbol->kind) {
+        case SymbolKind::Parameter:
+            return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterSymbol>());
+        case SymbolKind::LocalVariable:
+            return alloc.emplace<BoundVarRef>(syntax, (const LocalVariableSymbol*)symbol);
+
+            DEFAULT_UNREACHABLE;
+    }
+    return nullptr;
 }
 
 BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax) {
@@ -224,6 +246,16 @@ BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressi
     const TypeSymbol* type = sem.getIntegralType(width, isSigned);
 
     return alloc.emplace<BoundBinaryExpression>(syntax, type, lhs, rhs);
+}
+
+BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpressionSyntax* syntax) {
+    BoundExpression* lhs = bindExpression(syntax->left);
+    BoundExpression* rhs = bindExpression(syntax->right);
+
+    // TODO: check applicability
+
+    // result type is always the type of the left hand side
+    return alloc.emplace<BoundAssignmentExpression>(syntax, lhs->type, lhs, rhs);
 }
 
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
@@ -366,6 +398,23 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
             // Only the left hand side gets propagated; the rhs is self determined
             expression->type = type;
             propagate(((BoundBinaryExpression*)expression)->left, type);
+            break;
+        case SyntaxKind::AssignmentExpression:
+        case SyntaxKind::AddAssignmentExpression:
+        case SyntaxKind::SubtractAssignmentExpression:
+        case SyntaxKind::MultiplyAssignmentExpression:
+        case SyntaxKind::DivideAssignmentExpression:
+        case SyntaxKind::ModAssignmentExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::XorAssignmentExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            // TODO: look at the actual rules for assignments
+            propagate(((BoundAssignmentExpression*)expression)->left, type);
+            propagate(((BoundAssignmentExpression*)expression)->right, type);
             break;
 
             DEFAULT_UNREACHABLE;
