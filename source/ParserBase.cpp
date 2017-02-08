@@ -27,7 +27,8 @@ void ParserBase::reduceSkippedTokens(SmallVector<Token>& skipped, SmallVector<Tr
 SyntaxNode* ParserBase::prependTrivia(SyntaxNode* node, Trivia* trivia) {
     if (trivia->kind != TriviaKind::Unknown && node) {
         Token newToken = prependTrivia(node->getFirstToken(), trivia);
-        ASSERT(node->replaceFirstToken(newToken));
+        bool result = node->replaceFirstToken(newToken);
+        ASSERT(result);
     }
     return node;
 }
@@ -56,7 +57,8 @@ void ParserBase::prependTrivia(SyntaxNode* node, SmallVector<Trivia>& trivia) {
     if (!trivia.empty()) {
         ASSERT(node);
         Token newToken = prependTrivia(node->getFirstToken(), trivia);
-        ASSERT(node->replaceFirstToken(newToken));
+        bool result = node->replaceFirstToken(newToken);
+        ASSERT(result);
     }
 }
 
