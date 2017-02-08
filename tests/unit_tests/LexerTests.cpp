@@ -529,6 +529,26 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
     CHECK(diagnostics.back().code == DiagCode::MisplacedDirectiveChar);
 }
 
+TEST_CASE("Directive not on own line", "[lexer]") {
+    auto& text = "`begin_keywords\nfoo `end_keywords";
+
+    diagnostics.clear();
+    auto buffer = sourceManager.assignText(StringRef(text));
+    Lexer lexer(buffer, alloc, diagnostics);
+
+    Token token = lexer.lex();
+    CHECK(token.kind == TokenKind::Directive);
+    token = lexer.lex();
+    CHECK(token.kind == TokenKind::Identifier);
+    token = lexer.lex();
+    CHECK(token.kind == TokenKind::Directive);
+    token = lexer.lex();
+    CHECK(token.kind == TokenKind::EndOfFile);
+
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == DiagCode::DirectiveNotFirstOnLine);
+}
+
 void testKeyword(TokenKind kind) {
     auto text = getTokenKindText(kind);
     Token token = lexToken(text.toString());
@@ -909,5 +929,7 @@ TEST_CASE("Directive Punctuation", "[lexer]") {
     testDirectivePunctuation(TokenKind::MacroEscapedQuote);
     testDirectivePunctuation(TokenKind::MacroPaste);
 }
+
+
 
 }
