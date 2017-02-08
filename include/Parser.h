@@ -36,6 +36,10 @@ public:
     ModuleDeclarationSyntax* parseModule();
     ClassDeclarationSyntax* parseClass();
 
+    /// Generalized node parse function. Only certain specializations are available.
+    template<typename T>
+    const T* parse();
+
 private:
     ExpressionSyntax* parseMinTypMaxExpression();
     ExpressionSyntax* parsePrimaryExpression();
@@ -209,5 +213,11 @@ private:
     VectorBuilder vectorBuilder;
     size_t depth = 0;
 };
+
+template<> inline const CompilationUnitSyntax* Parser::parse() { return parseCompilationUnit(); }
+template<> inline const ExpressionSyntax* Parser::parse() { return parseExpression(); }
+template<> inline const StatementSyntax* Parser::parse() { return parseStatement(); }
+template<> inline const ModuleDeclarationSyntax* Parser::parse() { return parseModule(); }
+template<> inline const ClassDeclarationSyntax* Parser::parse() { return parseClass(); }
 
 }

@@ -1,33 +1,23 @@
 #include "Catch/catch.hpp"
 #include "slang.h"
 
-#include "HashMap.h"
-
 using namespace slang;
 
 namespace {
 
-SourceManager sourceManager;
-BumpAllocator alloc;
-DiagnosticWriter diagWriter(sourceManager);
-
-SyntaxTree parse(const std::string& text) { return SyntaxTree::fromText(sourceManager, StringRef(text)); }
-
 SVInt testParameter(const std::string& text, int index = 0) {
-    auto tree = parse("module Top; " + text + " endmodule");
+    StringRef fullText { "module Top; " + text + " endmodule" };
+    auto tree = SyntaxTree::fromText<ModuleDeclarationSyntax>(fullText);
 
-    Diagnostics& diagnostics = tree.diagnostics();
-    DeclarationTable declTable(diagnostics);
-    declTable.addSyntaxTree(&tree);
+    auto instance = SemanticModel(tree).makeImplicitInstance(
+        tree.root()->as<ModuleDeclarationSyntax>());
 
-    SemanticModel sem(alloc, diagnostics, declTable);
-    auto instance = sem.makeImplicitInstance(tree.root()->members[0]->as<ModuleDeclarationSyntax>());
     auto module = instance->module;
     REQUIRE(module);
     REQUIRE(module->parameters.count() > (uint32_t)index);
 
-    if (!diagnostics.empty())
-        WARN(diagWriter.report(diagnostics).c_str());
+    if (!tree.diagnostics().empty())
+        WARN(tree.reportDiagnostics());
 
     return module->parameters[index]->value.integer();
 }
