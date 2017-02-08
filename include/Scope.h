@@ -36,7 +36,7 @@ public:
 private:
     std::unordered_map<StringRef, const Symbol*> table;
     std::vector<const Symbol*> list;
-    Scope* parentScope = nullptr;
+    Scope* parentScope = Empty;
 };
 
 }

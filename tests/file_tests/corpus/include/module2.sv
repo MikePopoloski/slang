@@ -12,7 +12,7 @@ module helper
 endmodule
 
 
-module module1
+module module2
 #(
     parameter int P1 = 4,
     parameter int P2 = 5
