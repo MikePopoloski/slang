@@ -367,7 +367,6 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
     for (const auto& info : moduleParamInfo) {
         ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local);
         results.append(symbol);
-        printf("\tadding param %s = %s to declScope\n", symbol->name.toString().c_str(), std::get<SVInt>(symbol->value).toString(LiteralBase::Decimal).c_str());
         declScope.add(symbol);
     }
 

@@ -31,7 +31,7 @@ SVInt testParameter(const std::string& text, int index = 0) {
     if (!diagnostics.empty())
         WARN(diagWriter.report(diagnostics).c_str());
 
-    return *param;
+    return param->value.integer();
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {
