@@ -476,21 +476,24 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
 
 Trivia Preprocessor::handleUndefDirective(Token directive) {
     Token nameToken = expect(TokenKind::Identifier);
-    StringRef name = nameToken.valueText();
+
     // Other preprocessors consider an attempt to undef, say, `define to also
     // be an error for undefining a builtin directive, and allow undefining
     // undefined macros, making that just a warning. We instead only consider
     // __LINE__ and __FILE__ illegal to undef as builtins, and consider all 
     // undefining of undefined macros to be errors.
-    if (macros.count(name) > 0) {
-        if (name != "__LINE__" && name != "__FILE__") {
-            macros.erase(name);
+    if (!nameToken.isMissing()) {
+        StringRef name = nameToken.valueText();
+        if (macros.count(name) > 0) {
+            if (name != "__LINE__" && name != "__FILE__") {
+                macros.erase(name);
+            } else {
+                addError(DiagCode::UndefineBuiltinDirective, nameToken.location());
+            }
         } else {
-            addError(DiagCode::UndefineBuiltinDirective, nameToken.location());
+            addError(DiagCode::UnknownDirective, nameToken.location());
         }
-    } else {
-        addError(DiagCode::UnknownDirective, nameToken.location());
-    }
+    } // else we add an error due to the missing token
     auto result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken, parseEndOfDirective());
     return Trivia(TriviaKind::Directive, result);
 }
@@ -504,25 +507,27 @@ Trivia Preprocessor::handleUndefineAllDirective(Token directive) {
 
 Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
     Token versionToken = expect(TokenKind::StringLiteral);
-    StringRef verStr = versionToken.valueText();
-    if (verStr == "1364-1995") {
-        keywordVersionStack.push_back(KeywordVersion::v1364_1995);
-    } else if (verStr == "1364-2001-noconfig") {
-        keywordVersionStack.push_back(KeywordVersion::v1364_2001_noconfig);
-    } else if (verStr == "1364-2001") {
-        keywordVersionStack.push_back(KeywordVersion::v1364_2001);
-    } else if (verStr == "1364-2005") {
-        keywordVersionStack.push_back(KeywordVersion::v1364_2005);
-    } else if (verStr == "1800-2005") {
-        keywordVersionStack.push_back(KeywordVersion::v1800_2005);
-    } else if (verStr == "1800-2009") {
-        keywordVersionStack.push_back(KeywordVersion::v1800_2009);
-    } else if (verStr == "1800-2012") {
-        keywordVersionStack.push_back(KeywordVersion::v1800_2012);
-    } else {
-        addError(DiagCode::UnrecognizedKeywordVersion, versionToken.location());
+    if (!versionToken.isMissing()) {
+        StringRef verStr = versionToken.valueText();
+        if (verStr == "1364-1995") {
+            keywordVersionStack.push_back(KeywordVersion::v1364_1995);
+        } else if (verStr == "1364-2001-noconfig") {
+            keywordVersionStack.push_back(KeywordVersion::v1364_2001_noconfig);
+        } else if (verStr == "1364-2001") {
+            keywordVersionStack.push_back(KeywordVersion::v1364_2001);
+        } else if (verStr == "1364-2005") {
+            keywordVersionStack.push_back(KeywordVersion::v1364_2005);
+        } else if (verStr == "1800-2005") {
+            keywordVersionStack.push_back(KeywordVersion::v1800_2005);
+        } else if (verStr == "1800-2009") {
+            keywordVersionStack.push_back(KeywordVersion::v1800_2009);
+        } else if (verStr == "1800-2012") {
+            keywordVersionStack.push_back(KeywordVersion::v1800_2012);
+        } else {
+            // An error will already have been added if the version is missing
+            addError(DiagCode::UnrecognizedKeywordVersion, versionToken.location());
+        }
     }
-
     auto result = alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionToken, parseEndOfDirective());
     return Trivia(TriviaKind::Directive, result); 
 }
