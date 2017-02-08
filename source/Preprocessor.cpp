@@ -82,8 +82,11 @@ Token Preprocessor::next(LexerMode mode) {
             case SyntaxKind::NoUnconnectedDriveDirective:
             case SyntaxKind::CellDefineDirective:
             case SyntaxKind::EndCellDefineDirective:
-            default:
                 trivia.append(createSimpleDirective(token));
+                break;
+            default:
+                // should never happen
+                addError(DiagCode::UnknownDirective, token.location());
                 break;
         }
         token = nextRaw(mode);
@@ -480,7 +483,7 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
     // Other preprocessors consider an attempt to undef, say, `define to also
     // be an error for undefining a builtin directive, and allow undefining
     // undefined macros, making that just a warning. We instead only consider
-    // __LINE__ and __FILE__ illegal to undef as builtins, and consider all 
+    // __LINE__ and __FILE__ illegal to undef as builtins, and consider all
     // undefining of undefined macros to be errors.
     if (!nameToken.isMissing()) {
         StringRef name = nameToken.valueText();
@@ -529,7 +532,7 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
         }
     }
     auto result = alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionToken, parseEndOfDirective());
-    return Trivia(TriviaKind::Directive, result); 
+    return Trivia(TriviaKind::Directive, result);
 }
 
 Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {

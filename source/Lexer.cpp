@@ -219,6 +219,8 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
     // lex the next token
     mark();
     TokenKind kind = lexToken(info, directiveMode, keywordVersion);
+
+    onNewLine = false;
     info->rawText = lexeme();
     return Token(kind, info);
 }
@@ -656,6 +658,10 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
     }
 
     info->extra = getDirectiveKind(lexeme().subString(1));
+    if (!onNewLine && std::get<SyntaxKind>(info->extra) != SyntaxKind::MacroUsage) {
+        // All directives other than a macro usage must be on their own line
+        addError(DiagCode::DirectiveNotFirstOnLine, currentOffset() - 1);
+    }
     return TokenKind::Directive;
 }
 
@@ -910,12 +916,14 @@ bool Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
             case '\r':
                 advance();
                 consume('\n');
+                onNewLine = true;
                 addTrivia(TriviaKind::EndOfLine, triviaBuffer);
                 if (directiveMode)
                     return true;
                 break;
             case '\n':
                 advance();
+                onNewLine = true;
                 addTrivia(TriviaKind::EndOfLine, triviaBuffer);
                 if (directiveMode)
                     return true;
@@ -930,6 +938,7 @@ bool Lexer::lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode) {
                 if (n == '\r')
                     consume('\n');
 
+                onNewLine = true;
                 addTrivia(TriviaKind::LineContinuation, triviaBuffer);
                 break;
             }
@@ -1002,7 +1011,7 @@ void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer, bool directiveMod
         if (c == '\0') {
             if (reallyAtEnd())
                 break;
-            
+
             // otherwise just error and ignore
             addError(DiagCode::EmbeddedNull, currentOffset());
         }
@@ -1044,7 +1053,7 @@ bool Lexer::scanBlockComment(SmallVector<Trivia>& triviaBuffer, bool directiveMo
             advance();
         }
     }
-    
+
     addTrivia(TriviaKind::BlockComment, triviaBuffer);
     return eod;
 }

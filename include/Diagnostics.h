@@ -47,6 +47,7 @@ enum class DiagCode : uint8_t {
     BadOctalDigit,
     BadDecimalDigit,
     BadHexDigit,
+    DirectiveNotFirstOnLine,
 
     // numeric
     LiteralSizeIsZero,

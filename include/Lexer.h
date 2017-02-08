@@ -80,14 +80,14 @@ private:
     bool lexTimeLiteral(Token::Info* info);
 
     bool lexTrivia(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
-    
+
     bool scanBlockComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
     void scanLineComment(SmallVector<Trivia>& triviaBuffer, bool directiveMode);
     void scanWhitespace(SmallVector<Trivia>& triviaBuffer);
     void scanIdentifier();
     void scanUnsignedNumber(uint64_t& value, int& digits);
     bool scanExponent(uint64_t& value, bool& negative);
-    
+
     void addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer);
     void addError(DiagCode code, uint32_t offset);
 
@@ -125,6 +125,10 @@ private:
 
     // save our place in the buffer to measure out the current lexeme
     const char* marker;
+
+    // Keeps track of whether we just entered a new line, to enforce tokens
+    // that must start on their own line
+    bool onNewLine = true;
 };
 
 }

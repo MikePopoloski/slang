@@ -255,7 +255,7 @@ TEST_CASE("ElseIf branch", "[preprocessor]") {
 }
 
 TEST_CASE("EndIf not done", "[preprocessor]") {
-    auto& text = "`ifdef FOO\n`ifdef BAR\n42\n`endif\n1000`endif\n42.3";
+    auto& text = "`ifdef FOO\n`ifdef BAR\n42\n`endif\n1000\n`endif\n42.3";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::RealLiteral);
