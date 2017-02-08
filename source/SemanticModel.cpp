@@ -548,17 +548,6 @@ const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool 
     return symbol;
 }
 
-const Symbol* SemanticModel::lookupSymbol(StringRef name, const Scope* scope) {
-    // TODO: soooo many things here...
-    while (scope) {
-        const Symbol* result = scope->lookup(name);
-        if (result)
-            return result;
-        scope = scope->parent();
-    }
-    return nullptr;
-}
-
 ConstantValue SemanticModel::evaluateConstant(const BoundNode* tree) {
     // TODO: eventually this will need diagnostics and other stuff
     ConstantEvaluator evaluator;

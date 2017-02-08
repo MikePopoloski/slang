@@ -150,7 +150,7 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
     if (!identifier)
         return makeBad(nullptr);
 
-    const Symbol* symbol = sem.lookupSymbol(identifier, scope);
+    const Symbol* symbol = scope->lookup(identifier);
     ASSERT(symbol && symbol->kind == SymbolKind::Parameter);
 
     return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterSymbol>());

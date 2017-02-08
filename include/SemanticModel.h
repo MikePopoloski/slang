@@ -43,9 +43,6 @@ public:
     const TypeSymbol* getKnownType(SyntaxKind kind) const;
     const TypeSymbol* getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false);
 
-    // Generalized symbol lookup based on the current scope stack.
-    const Symbol* lookupSymbol(StringRef name, const Scope* scope);
-
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
 

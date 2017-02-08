@@ -15,9 +15,9 @@ bool Scope::add(const Symbol *symbol) {
 }
 
 const Symbol *Scope::lookup(StringRef name, bool local) const {
-    for (auto scope = this; scope != Scope::Empty; scope = scope->parent()) {
-        auto it = table.find(name);
-        if (it != table.end()) return it->second;
+    for (auto scope = this; scope && scope != Scope::Empty; scope = scope->parent()) {
+        auto it = scope->table.find(name);
+        if (it != scope->table.end()) return it->second;
         if (local) return nullptr;
     }
     return nullptr;

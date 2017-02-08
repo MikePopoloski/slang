@@ -38,15 +38,4 @@ module module2
 
     always_comb out3 = in3;
 
-/*
-    logic [7:0] arr1 [2 * $bits(out2)];
-
-    typedef struct {
-        logic [$bits(arr1[0]):0] f1;
-        logic [$bits(arr1[1]):0] f2;
-    } type1;
-
-    type1 x;
-*/
-
 endmodule
