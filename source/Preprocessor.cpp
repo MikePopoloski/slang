@@ -84,10 +84,7 @@ Token Preprocessor::next(LexerMode mode) {
             case SyntaxKind::EndCellDefineDirective:
                 trivia.append(createSimpleDirective(token));
                 break;
-            default:
-                // should never happen
-                addError(DiagCode::UnknownDirective, token.location());
-                break;
+            DEFAULT_UNREACHABLE;
         }
         token = nextRaw(mode);
     } while (token.kind == TokenKind::Directive);
