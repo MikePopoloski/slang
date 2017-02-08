@@ -74,6 +74,7 @@ enum class DiagCode : uint8_t {
     UndefineBuiltinDirective,
     UnrecognizedKeywordVersion,
     MismatchedEndKeywordsDirective,
+    InvalidTimescaleSpecifier,
 
     // parser
     ExpectedIdentifier,
