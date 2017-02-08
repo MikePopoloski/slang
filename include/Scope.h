@@ -33,6 +33,8 @@ public:
 
     static const Scope* const Empty;
 
+    std::string toString() const;
+
 private:
     std::unordered_map<StringRef, const Symbol*> table;
     std::vector<const Symbol*> list;

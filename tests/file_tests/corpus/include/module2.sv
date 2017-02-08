@@ -1,6 +1,6 @@
 module helper
 #(
-    parameter int W = 4
+    parameter int W = 8
 )
 (
     input  logic [W-1:0]   foo,
@@ -26,12 +26,13 @@ module module2
     output logic [P2-1:0]   out2,
     output logic [3:0]      out3
 );
+
     helper #(.W(4)) helper1 (
         .foo (in1),
         .bar (out1)
     );
 
-    helper #(.W(5)) helper2 (
+    helper #(.W(P2)) helper2 (
         .foo (in2),
         .bar (out2)
     );

@@ -60,7 +60,7 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
             case SyntaxKind::HierarchyInstantiation:
-                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children);
+                handleInstantiation(scope, member->as<HierarchyInstantiationSyntax>(), children);
                 break;
             case SyntaxKind::LoopGenerate:
                 break;
@@ -72,7 +72,6 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
                 break;
         }
     }
-
     // TODO: cache this shit
     return alloc.emplace<ModuleSymbol>(syntax, scope, children.copy(alloc));
 }
@@ -274,7 +273,7 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     }
 }
 
-void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results) {
+void SemanticModel::handleInstantiation(const Scope* instantiationScope, const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results) {
     // Try to find the module/interface/program being instantiated; we can't do anything without it.
     // We've already reported an error for missing modules.
     const ModuleDeclarationSyntax* decl = declTable.find(syntax->type.valueText());
@@ -283,7 +282,7 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
 
     // Evaluate public parameter assignments
     SmallVectorSized<const ParameterSymbol*, 8> parameterBuilder;
-    makePublicParameters(parameterBuilder, decl, syntax->parameters, Scope::Empty, syntax->getFirstToken().location(), false);
+    makePublicParameters(parameterBuilder, decl, syntax->parameters, instantiationScope, syntax->getFirstToken().location(), false);
 
     ArrayRef<const ParameterSymbol*> parameters = parameterBuilder.copy(alloc);
     for (const HierarchicalInstanceSyntax* instance : syntax->instances) {
@@ -314,7 +313,7 @@ void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<
         for (const MemberSyntax* member : syntax->as<GenerateBlockSyntax>()->members) {
             switch (member->kind) {
                 case SyntaxKind::HierarchyInstantiation:
-                    handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children);
+                    handleInstantiation(scope, member->as<HierarchyInstantiationSyntax>(), children);
                     break;
             }
         }
@@ -368,6 +367,7 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
     for (const auto& info : moduleParamInfo) {
         ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local);
         results.append(symbol);
+        printf("\tadding param %s = %s to declScope\n", symbol->name.toString().c_str(), std::get<SVInt>(symbol->value).toString(LiteralBase::Decimal).c_str());
         declScope.add(symbol);
     }
 

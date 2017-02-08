@@ -34,4 +34,12 @@ const Symbol* Scope::getNth(const SymbolKind& kind, size_t index) const {
     return nullptr;
 }
 
+std::string Scope::toString() const {
+    std::string result;
+    for (const Symbol* sym : list)
+        result += std::string("[") + sym->name.toString() + std::string("[");
+    return result;
+}
+
+
 }
