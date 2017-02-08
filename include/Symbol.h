@@ -23,7 +23,8 @@ enum class SymbolKind {
     Interface,
     Program,
     Attribute,
-    GenerateBlock
+    GenerateBlock,
+    LocalVariable
 };
 
 class Symbol {
@@ -153,6 +154,14 @@ public:
                     bool isLocal);
 
     static constexpr SymbolKind mykind = SymbolKind::Parameter;
+};
+
+class LocalVariableSymbol : public Symbol {
+public:
+    const TypeSymbol* type;
+
+    LocalVariableSymbol(StringRef name, SourceLocation location, const TypeSymbol* type) :
+        Symbol(SymbolKind::LocalVariable, name, location), type(type) {}
 };
 
 class ModuleSymbol : public Symbol {

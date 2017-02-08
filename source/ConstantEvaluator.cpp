@@ -12,6 +12,16 @@
 
 namespace slang {
 
+ConstantEvaluator::ConstantEvaluator() {
+    currentFrame = &rootFrame;
+}
+
+ConstantValue& ConstantEvaluator::createTemporary(const Symbol* key) {
+    ConstantValue& result = rootFrame.temporaries[key];
+    ASSERT(!result, "Created multiple temporaries with the same key");
+    return result;
+}
+
 ConstantValue ConstantEvaluator::evaluate(const BoundNode* tree) {
     ASSERT(tree);
     if (tree->bad())
@@ -20,8 +30,10 @@ ConstantValue ConstantEvaluator::evaluate(const BoundNode* tree) {
     switch (tree->kind) {
         case BoundNodeKind::Literal: return evaluateLiteral((BoundLiteral*)tree);
         case BoundNodeKind::Parameter: return evaluateParameter((BoundParameter*)tree);
+        case BoundNodeKind::VarRef: return evaluateVarRef((BoundVarRef*)tree);
         case BoundNodeKind::UnaryExpression: return evaluateUnary((BoundUnaryExpression*)tree);
         case BoundNodeKind::BinaryExpression: return evaluateBinary((BoundBinaryExpression*)tree);
+        case BoundNodeKind::AssignmentExpression: return evaluateAssignment((BoundAssignmentExpression*)tree);
 
             DEFAULT_UNREACHABLE;
     }
@@ -34,6 +46,12 @@ ConstantValue ConstantEvaluator::evaluateLiteral(const BoundLiteral* expr) {
 
 ConstantValue ConstantEvaluator::evaluateParameter(const BoundParameter* expr) {
     return expr->symbol.value;
+}
+
+ConstantValue ConstantEvaluator::evaluateVarRef(const BoundVarRef* expr) {
+    ConstantValue& val = currentFrame->temporaries[expr->symbol];
+    ASSERT(val);
+    return val;
 }
 
 ConstantValue ConstantEvaluator::evaluateUnary(const BoundUnaryExpression* expr) {
@@ -80,6 +98,46 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* exp
             DEFAULT_UNREACHABLE;
     }
     return nullptr;
+}
+
+ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpression* expr) {
+    LValue lvalue;
+    if (!evaluateLValue(expr->left, lvalue))
+        return nullptr;
+
+    auto rvalue = evaluate(expr->right);
+    const SVInt& l = evaluate(expr->left).integer();
+    const SVInt& r = rvalue.integer();
+
+    switch (expr->syntax->kind) {
+        case SyntaxKind::AssignmentExpression: lvalue.store(std::move(rvalue)); break;
+        case SyntaxKind::AddAssignmentExpression: lvalue.store(l + r); break;
+        case SyntaxKind::SubtractAssignmentExpression: lvalue.store(l - r); break;
+        case SyntaxKind::MultiplyAssignmentExpression: lvalue.store(l * r); break;
+        case SyntaxKind::DivideAssignmentExpression: lvalue.store(l / r); break;
+        case SyntaxKind::ModAssignmentExpression: lvalue.store(l % r); break;
+        case SyntaxKind::AndAssignmentExpression: lvalue.store(l & r); break;
+        case SyntaxKind::OrAssignmentExpression: lvalue.store(l | r); break;
+        case SyntaxKind::XorAssignmentExpression: lvalue.store(l ^ r); break;
+        // case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        // case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        // case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        // case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            DEFAULT_UNREACHABLE;
+    }
+    return lvalue.load();
+}
+
+bool ConstantEvaluator::evaluateLValue(const BoundExpression* expr, LValue& lvalue) {
+    // lvalues have to be one of a few kinds of expressions
+    switch (expr->kind) {
+        case BoundNodeKind::VarRef:
+            lvalue.storage = &currentFrame->temporaries[((BoundVarRef*)expr)->symbol];
+            break;
+
+            DEFAULT_UNREACHABLE;
+    }
+    return true;
 }
 
 }

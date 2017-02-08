@@ -33,6 +33,7 @@ public:
     BoundExpression* bindComparisonOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindRelationalOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax);
+    BoundExpression* bindAssignmentOperator(const BinaryExpressionSyntax* syntax);
 
 private:
     // functions to check whether operators are applicable to the given operand types
