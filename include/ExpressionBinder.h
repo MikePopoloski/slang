@@ -1,7 +1,6 @@
 //------------------------------------------------------------------------------
 // ExpressionBinder.h
-// Centralized code for convert expressions into AST trees
-// (also includes constant folding).
+// Centralized code for convert expressions into an AST.
 //
 // File is under the MIT license:
 //------------------------------------------------------------------------------
@@ -40,17 +39,8 @@ private:
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand);
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** lhs, BoundExpression** rhs);
 
-    // propagates the type of the expression back down to its operands
-    // and folds constants on the way back up
-    void propagateAndFold(BoundExpression* expression, const TypeSymbol* type);
-    void propagateAndFoldLiteral(BoundLiteral* expression, const TypeSymbol* type);
-    void propagateAndFoldParameter(BoundParameter* expression, const TypeSymbol* type);
-    void propagateAndFoldUnaryArithmeticOperator(BoundUnaryExpression* expression, const TypeSymbol* type);
-    void propagateAndFoldUnaryReductionOperator(BoundUnaryExpression* expression, const TypeSymbol* type);
-    void propagateAndFoldArithmeticOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
-    void propagateAndFoldComparisonOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
-    void propagateAndFoldRelationalOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
-    void propagateAndFoldShiftOrPowerOperator(BoundBinaryExpression* expression, const TypeSymbol* type);
+    // Propagates the type of the expression back down to its operands.
+    void propagate(BoundExpression* expression, const TypeSymbol* type);
 
     SemanticModel& sem;
     BumpAllocator& alloc;
