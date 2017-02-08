@@ -6,6 +6,8 @@ namespace slang {
 static const Scope emptyScope;
 const Scope *const Scope::Empty = &emptyScope;
 
+Scope::Scope() : parentScope{Scope::Empty} {}
+
 bool Scope::add(const Symbol *symbol) {
         ASSERT(symbol);
     list.emplace_back(symbol);
