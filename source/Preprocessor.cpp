@@ -496,11 +496,9 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleUndefineAllDirective(Token directive) {
-    for (auto it = macros.begin(); it != macros.end(); ++it) {
-        if (it->first != "__LINE__" && it->first != "__FILE__") {
-            macros.erase(it);
-        }
-    }
+    macros.clear();
+    macros["__FILE__"] = &fileDirective;
+    macros["__LINE__"] = &lineDirective;
     return createSimpleDirective(directive);
 }
 
