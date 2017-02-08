@@ -159,7 +159,7 @@ endmodule
     const auto& leaf = instance->getChild<InstanceSymbol>(0)
         .getChild<GenerateBlock>(0)
         .getChild<InstanceSymbol>(0);
-    const auto& foo = leaf.module->scope->lookup(StringRef(std::string("foo")))->as<ParameterSymbol>();
+    const auto& foo = leaf.module->scope->lookup("foo")->as<ParameterSymbol>();
 
     CHECK(foo.value.integer() == 1);
 }
