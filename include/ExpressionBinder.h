@@ -42,6 +42,8 @@ private:
     // Propagates the type of the expression back down to its operands.
     void propagate(BoundExpression* expression, const TypeSymbol* type);
 
+    BadBoundExpression* makeBad(BoundExpression* expr);
+
     SemanticModel& sem;
     BumpAllocator& alloc;
     const Scope* scope;

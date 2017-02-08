@@ -496,6 +496,8 @@ ConcurrentAssertionStatementSyntax* Parser::parseConcurrentAssertion(NamedLabelS
         case TokenKind::ExpectKeyword:
             kind = SyntaxKind::ExpectPropertyStatement;
             break;
+
+            DEFAULT_UNREACHABLE;
     }
 
     auto openParen = expect(TokenKind::OpenParenthesis);
