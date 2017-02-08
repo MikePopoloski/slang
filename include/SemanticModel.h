@@ -25,13 +25,17 @@
 
 namespace slang {
 
-class SyntaxTree;
 class Symbol;
 
 /// SemanticModel is responsible for binding symbols and performing
 /// type checking based on input parse trees.
 class SemanticModel {
 public:
+    /// This constructor is a shortcut for cases where you don't need to do
+    /// a full compile; the full compilation process needs a declaration table
+    /// and presumably multiple syntax trees.
+    explicit SemanticModel(SyntaxTree& tree);
+
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
@@ -107,6 +111,10 @@ private:
 
     // cache of simple integral types keyed by {width, signedness, 4-state, isReg}
     std::unordered_map<uint64_t, const TypeSymbol*> integralTypeCache;
+
+    // An empty declaration table to make it easier to create SemanticModels
+    // where we don't care about the full compilation process.
+    static DeclarationTable EmptyDeclTable;
 };
 
 }

@@ -23,7 +23,7 @@ int main() {
     int modules = 0;
     int files = 0;
     for (auto& p : getFilesInDirectory(RelativeTestPath)) {
-        SyntaxTree tree = SyntaxTree::fromFile(sourceManager, StringRef(p.str()));
+        SyntaxTree tree = SyntaxTree::fromFile(StringRef(p.str()), sourceManager);
         if (!tree.diagnostics().empty()) {
             printf("Parsing '%s'\n", p.str().c_str());
             printf("%s\n\n", diagWriter.report(tree.diagnostics()).c_str());

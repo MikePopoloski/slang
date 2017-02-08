@@ -64,7 +64,7 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
     }
 
     // Sort the top level list so that we remain deterministic (don't rely on hash ordering)
-    std::sort(topLevel.begin(), topLevel.end(), [](auto a, auto b) { 
+    std::sort(topLevel.begin(), topLevel.end(), [](auto a, auto b) {
         return a->header->name.valueText() < b->header->name.valueText();
     });
 
@@ -73,8 +73,9 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
 
 void DeclarationTable::addSyntaxTree(const SyntaxTree* tree) {
     // find all root modules in this compilation unit
+    // TODO: check that tree has compilation unit
     UnitDecls unit;
-    for (const MemberSyntax* member : tree->root()->members) {
+    for (const MemberSyntax* member : tree->root()->as<CompilationUnitSyntax>()->members) {
         switch (member->kind) {
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::InterfaceDeclaration:
@@ -125,7 +126,7 @@ void DeclarationTable::visit(const ModuleDeclarationSyntax* module, UnitDecls& u
     // now traverse all children
     for (auto& member : module->members)
         visit(member, unit, scopeStack);
-    
+
     if (localDefs)
         scopeStack.pop_back();
 }

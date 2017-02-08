@@ -5,17 +5,11 @@ using namespace slang;
 
 namespace {
 
-SourceManager sourceManager;
 BumpAllocator alloc;
-DiagnosticWriter diagWriter(sourceManager);
-
-SyntaxTree parse(StringRef text) {
-    return SyntaxTree::fromText(sourceManager, text);
-}
 
 TEST_CASE("Finding top level", "[binding:decls]") {
-    auto file1 = parse("module A; A a(); endmodule\nmodule B; endmodule\nmodule C; endmodule");
-    auto file2 = parse("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
+    auto file1 = SyntaxTree::fromText("module A; A a(); endmodule\nmodule B; endmodule\nmodule C; endmodule");
+    auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
     Diagnostics diagnostics;
     DeclarationTable declTable(diagnostics);
@@ -31,7 +25,7 @@ TEST_CASE("Finding top level", "[binding:decls]") {
 }
 
 TEST_CASE("Bind module implicit", "[binding:modules]") {
-    auto tree = parse(R"(
+    auto tree = SyntaxTree::fromText(R"(
 module Top #(parameter int foo = 4) ();
     Leaf l();
 endmodule
@@ -50,7 +44,7 @@ endmodule
 }
 
 TEST_CASE("Module parameterization errors", "[binding:modules]") {
-    auto tree = parse(R"(
+    auto tree = SyntaxTree::fromText(R"(
 module Top;
     Leaf l1();
     Leaf #(1, 2, 3, 4) l2();
@@ -90,7 +84,7 @@ endmodule
 }
 
 TEST_CASE("Module children (simple)", "[binding:modules]") {
-    auto tree = parse(R"(
+    auto tree = SyntaxTree::fromText(R"(
 module Top;
     Child child();
 endmodule
@@ -124,7 +118,7 @@ endmodule
 }
 
 TEST_CASE("Module children (conditional generate)", "[binding:modules]") {
-    auto tree = parse(R"(
+    auto tree = SyntaxTree::fromText(R"(
 module Top;
     Child child();
 endmodule

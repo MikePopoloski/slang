@@ -18,9 +18,18 @@ TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
     return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
 }
 
+Diagnostics unusedDiagnostics;
+
 }
 
 namespace slang {
+
+DeclarationTable SemanticModel::EmptyDeclTable { unusedDiagnostics };
+
+SemanticModel::SemanticModel(SyntaxTree& tree) :
+    SemanticModel(tree.allocator(), tree.diagnostics(), EmptyDeclTable)
+{
+}
 
 SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable) :
     alloc(alloc), diagnostics(diagnostics), declTable(declTable)
