@@ -397,15 +397,24 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
 
 void Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
     // TODO: check for allowed values
-    auto token = peek();
-    if (token.kind == TokenKind::IntegerLiteral) {
+    SVInt val;
+    TimeUnit un;
+    if (peek().kind == TokenKind::IntegerLiteral) {
         value = consume();
         unit = expect(TokenKind::Identifier);
+        if (unit.isMissing()) {
+            return;
+        }
+        StringRef unitDesc = unit.valueText();
+        if ()
+
+    } else {
+        auto token = expect(TokenKind::TimeLiteral);
+        val = std::get<SVInt>(token.numericValue());
+        un = token.numericFlags();
+        consume();
     }
-    else if (token.kind == TokenKind::TimeLiteral) {
-        // TODO: split the token
-        value = consume();
-    }
+
 }
 
 Trivia Preprocessor::handleTimescaleDirective(Token directive) {
