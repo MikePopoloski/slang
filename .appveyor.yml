@@ -11,5 +11,4 @@ build:
   project: build/windows/slang.sln
 
 test_script:
-  - echo %CD%
-  - ./bin/x64/Release/unit_tests.exe
+  - cmd: bin/x64/Release/unit_tests.exe
