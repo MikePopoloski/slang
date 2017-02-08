@@ -28,7 +28,6 @@ class BoundExpression : public BoundNode {
 public:
     const ExpressionSyntax* syntax;
     const TypeSymbol* type;
-    ConstantValue constantValue;
     bool bad;
 
     BoundExpression(BoundNodeKind kind, const ExpressionSyntax* syntax, const TypeSymbol* type, bool bad) :
@@ -47,6 +46,8 @@ public:
 
 class BoundLiteral : public BoundExpression {
 public:
+    ConstantValue value;
+
     BoundLiteral(const ExpressionSyntax* syntax, const TypeSymbol* type, bool bad) :
         BoundExpression(BoundNodeKind::Literal, syntax, type, bad)
     {

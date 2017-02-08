@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "SemanticModel.h"
 
+#include "ConstantEvaluator.h"
 #include "Scope.h"
 #include "SyntaxTree.h"
 
@@ -177,7 +178,10 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
             return false;
 
         // TODO: ensure integer here
-        results.emplace(ConstantRange {std::get<SVInt>(msbExpr->constantValue), std::get<SVInt>(lsbExpr->constantValue)});
+        results.emplace(ConstantRange {
+            std::get<SVInt>(evaluateConstant(msbExpr)),
+            std::get<SVInt>(evaluateConstant(lsbExpr))
+        });
     }
     return true;
 }
@@ -260,13 +264,13 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     if (!typeSyntax) {
         BoundExpression* expr = binder.bindSelfDeterminedExpression(initializer);
         symbol->type = expr->type;
-        symbol->value = expr->constantValue;
+        symbol->value = evaluateConstant(expr);
     }
     else {
         const TypeSymbol* type = makeTypeSymbol(typeSyntax, scope);
         BoundExpression* expr = binder.bindAssignmentLikeContext(initializer, symbol->location, type);
         symbol->type = type;
-        symbol->value = expr->constantValue;
+        symbol->value = evaluateConstant(expr);
     }
 }
 
@@ -297,7 +301,7 @@ void SemanticModel::handleIfGenerate(const IfGenerateSyntax* syntax, SmallVector
         return;
 
     // TODO: don't assume the expression type here
-    const SVInt& value = std::get<SVInt>(expr->constantValue);
+    const SVInt& value = std::get<SVInt>(evaluateConstant(expr));
     if ((logic_t)value)
         handleGenerateBlock(syntax->block, results, scope);
     else if (syntax->elseClause)
@@ -515,7 +519,7 @@ void SemanticModel::makeAttributes(SmallVector<const AttributeSymbol*>& results,
             ExpressionBinder binder { *this, Scope::Empty };
             auto expr = binder.bindConstantExpression(attr->value->expr);
             type = expr->type;
-            value = expr->constantValue;
+            value = evaluateConstant(expr);
         }
         results.append(alloc.emplace<AttributeSymbol>(attr, type, value));
     }
@@ -553,6 +557,12 @@ const Symbol* SemanticModel::lookupSymbol(StringRef name, const Scope* scope) {
         scope = scope->parent();
     }
     return nullptr;
+}
+
+ConstantValue SemanticModel::evaluateConstant(const BoundNode* tree) {
+    // TODO: eventually this will need diagnostics and other stuff
+    ConstantEvaluator evaluator;
+    return evaluator.evaluate(tree);
 }
 
 }

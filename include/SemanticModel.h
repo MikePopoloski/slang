@@ -97,6 +97,7 @@ private:
 
     bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope);
 
+    static ConstantValue evaluateConstant(const BoundNode* tree);
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;

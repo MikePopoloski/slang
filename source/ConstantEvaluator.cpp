@@ -1,11 +1,10 @@
 //------------------------------------------------------------------------------
-// ExpressionBinder.cpp
-// Centralized code for convert expressions into AST trees
-// (also includes constant folding).
+// ConstantEvaluator.cpp
+// Compile-time constant evaluation.
 //
 // File is under the MIT license:
 //------------------------------------------------------------------------------
-#include "ExpressionBinder.h"
+#include "ConstantEvaluator.h"
 
 #include <algorithm>
 
