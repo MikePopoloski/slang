@@ -228,6 +228,22 @@ BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpression
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
+    // operands are sized to max(l,r) and the result of the operation is always 1 bit
+    // no propagations from above have an actual have an effect on the subexpressions
+    // This logic is similar to that of assignment operators, except for the
+    // reciprocality
+    if (lhs->type && rhs->type && lhs->type->kind == SymbolKind::IntegralType && rhs->type->kind == SymbolKind::IntegralType) {
+        const IntegralTypeSymbol& lhsym = lhs->type->as<IntegralTypeSymbol>();
+        const IntegralTypeSymbol& rhsym = rhs->type->as<IntegralTypeSymbol>();
+        if (lhsym.width < rhsym.width) {
+            lhs->type = sem.getIntegralType(rhsym.width, lhsym.isSigned, lhsym.isFourState);
+            propagate(lhs, lhs->type);
+        }
+        if (lhsym.width > rhsym.width) {
+            rhs->type = sem.getIntegralType(lhsym.width, rhsym.isSigned, rhsym.isFourState);
+            propagate(rhs, rhs->type);
+        }
+    }
     // result type is always a single bit
     return alloc.emplace<BoundBinaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), lhs, rhs);
 }
@@ -253,9 +269,39 @@ BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpression
     BoundExpression* lhs = bindExpression(syntax->left);
     BoundExpression* rhs = bindExpression(syntax->right);
 
-    // It seems that the assignment operator is always applicable, it just may cause
-    // truncation or other weird behaviour we should consider warning about
+    // Basic assignment (=) is always applicable, but operators like += are applicable iff
+    // the associated binary operator is applicable
+    SyntaxKind binopKind;
+    switch (syntax->kind) {
+        case SyntaxKind::AssignmentExpression: binopKind = SyntaxKind::Unknown; break;
+        case SyntaxKind::AddAssignmentExpression: binopKind = SyntaxKind::AddExpression; break;
+        case SyntaxKind::SubtractAssignmentExpression: binopKind = SyntaxKind::SubtractExpression; break;
+        case SyntaxKind::MultiplyAssignmentExpression: binopKind = SyntaxKind::MultiplyExpression; break;
+        case SyntaxKind::DivideAssignmentExpression: binopKind = SyntaxKind::DivideExpression; break;
+        case SyntaxKind::ModAssignmentExpression: binopKind = SyntaxKind::ModExpression; break;
+        case SyntaxKind::AndAssignmentExpression: binopKind = SyntaxKind::BinaryAndExpression; break;
+        case SyntaxKind::OrAssignmentExpression: binopKind = SyntaxKind::BinaryOrExpression; break;
+        case SyntaxKind::XorAssignmentExpression: binopKind = SyntaxKind::BinaryXorExpression; break;
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression: binopKind = SyntaxKind::LogicalShiftLeftExpression; break;
+        case SyntaxKind::LogicalRightShiftAssignmentExpression: binopKind = SyntaxKind::LogicalShiftRightExpression; break;
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression: binopKind = SyntaxKind::ArithmeticShiftLeftExpression; break;
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression: binopKind = SyntaxKind::ArithmeticShiftRightExpression; break;
+        DEFAULT_UNREACHABLE;
+    }
+    if (!checkOperatorApplicability(binopKind, syntax->operatorToken.location(), &lhs, &rhs))
+        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
+    // The operands of an assignment are themselves self determined,
+    // but we must increase the size of the RHS to the size of the LHS if it is larger, and then
+    // propagate that information down
+    if (lhs->type->kind == SymbolKind::IntegralType && rhs->type->kind == SymbolKind::IntegralType) {
+        const IntegralTypeSymbol& from = lhs->type->as<IntegralTypeSymbol>();
+        const IntegralTypeSymbol& to = rhs->type->as<IntegralTypeSymbol>();
+        if (from.width > to.width) {
+            rhs->type = sem.getIntegralType(from.width, to.isSigned, to.isFourState);
+            propagate(rhs, rhs->type);
+        }
+    }
     // result type is always the type of the left hand side
     return alloc.emplace<BoundAssignmentExpression>(syntax, lhs->type, lhs, rhs);
 }
@@ -387,27 +433,11 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::LessThanEqualExpression:
-        case SyntaxKind::LessThanExpression: {
-            // operands are sized to max(l,r) and the result of the operation is always 1 bit
-            // no propagations from above have an actual have an effect on the subexpressions
-            // This logic is similar to that of assignment operators, except for the
-            // reciprocality
-            BoundBinaryExpression* expr = ((BoundBinaryExpression*)expression);
-            BoundExpression *lhs = expr->left;
-            BoundExpression *rhs = expr->right;
-            if (lhs->type && rhs->type && lhs->type->kind == SymbolKind::IntegralType && rhs->type->kind == SymbolKind::IntegralType) {
-                const IntegralTypeSymbol& lhsym = lhs->type->as<IntegralTypeSymbol>();
-                const IntegralTypeSymbol& rhsym = rhs->type->as<IntegralTypeSymbol>();
-                if (lhsym.width < rhsym.width) {
-                    std::swap(lhs, rhs);
-                }
-                if (lhsym.width > rhsym.width) {
-                    rhs->type = sem.getIntegralType(lhsym.width, rhsym.isSigned, rhsym.isFourState);
-                    propagate(rhs, rhs->type);
-                }
-            }
+        case SyntaxKind::LessThanExpression:
+            // Equality expressions are essentially self-detetermined, the logic
+            // for how the left and right operands effect eachother is handled
+            // at bind time
             break;
-        }
         case SyntaxKind::LogicalAndExpression:
         case SyntaxKind::LogicalOrExpression:
         case SyntaxKind::LogicalImplicationExpression:
@@ -436,23 +466,10 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::LogicalLeftShiftAssignmentExpression:
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
-        case SyntaxKind::ArithmeticRightShiftAssignmentExpression: {
-            // The operands of an assignment are themselves self determined,
-            // but we must increase the size of the RHS to the size of the LHS if it is larger, and then
-            // propagate that information down
-            BoundBinaryExpression* expr = ((BoundBinaryExpression*)expression);
-            BoundExpression *lhs = expr->left;
-            BoundExpression *rhs = expr->right;
-            if (lhs->type->kind == SymbolKind::IntegralType && rhs->type->kind == SymbolKind::IntegralType) {
-                const IntegralTypeSymbol& from = lhs->type->as<IntegralTypeSymbol>();
-                const IntegralTypeSymbol& to = rhs->type->as<IntegralTypeSymbol>();
-                if (from.width > to.width) {
-                    rhs->type = sem.getIntegralType(from.width, to.isSigned, to.isFourState);
-                    propagate(rhs, rhs->type);
-                }
-            }
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            // Essentially self determined, logic handled at bind time
             break;
-        }
+
 
             DEFAULT_UNREACHABLE;
     }
