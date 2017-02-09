@@ -180,12 +180,6 @@ bool Token::hasTrivia(TriviaKind triviaKind) const {
     return false;
 }
 
-bool Token::isKeywordOrIdentifier() const {
-    const char start = *info->rawText.begin();
-    return kind == TokenKind::Identifier || isupper(start) || islower(start) ||
-           start == '_';
-}
-
 Token Token::asPreprocessed(BumpAllocator& alloc) const {
     auto newInfo = alloc.emplace<Info>(*info);
     newInfo->flags |= TokenFlags::IsFromPreprocessor;
