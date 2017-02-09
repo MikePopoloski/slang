@@ -304,7 +304,7 @@ const static StringTable<SyntaxKind> directiveTable = {
 
 // We maintain a separate table of keywords for all the various specifications,
 // to allow for easy switching between them when requested
-const static StringTable<TokenKind> allKeywords[7] = 
+const static StringTable<TokenKind> allKeywords[7] =
 {  { // IEEE 1364-1995
     KEYWORDS_1364_1995
 }, { // IEEE 1364-2001-noconfig
@@ -342,7 +342,7 @@ const static StringTable<TokenKind> allKeywords[7] =
     NEWKEYWORDS_1800_2012
 }  };
 
-bool isKeywordOrIdentifier(TokenKind kind) {
+bool isKeyword(TokenKind kind) {
     switch(kind) {
         case TokenKind::OneStep:
         case TokenKind::AcceptOnKeyword:
@@ -593,7 +593,6 @@ bool isKeywordOrIdentifier(TokenKind kind) {
         case TokenKind::WOrKeyword:
         case TokenKind::XnorKeyword:
         case TokenKind::XorKeyword:
-        case TokenKind::Identifier:
             return true;
         default:
             return false;

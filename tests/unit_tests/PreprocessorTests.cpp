@@ -184,6 +184,15 @@ TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Function macro (keyword as formal argument)", "[preprocessor]") {
+    auto& text = "`define FOO(type) type\n`FOO(3)";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 3);
+    CHECK(diagnostics.empty());
+}
+
 TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
     auto& text = "`define FOO(x,y) x   ``   _blah``y\n`FOO(   bar,    _BAZ)";
     Token token = lexToken(text);
