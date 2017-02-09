@@ -405,11 +405,25 @@ void SemanticModel::handleProceduralBlock(const ProceduralBlockSyntax *syntax, S
 
 void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope) {
     VariableSymbol::VariableSymbolModifiers modifiers;
-    modifiers.constM = std::find_if(syntax->modifiers.begin(), syntax->modifiers.end(), [](auto tk) {return tk.kind == TokenKind::ConstKeyword;}) != syntax->modifiers.end();
-    modifiers.varM = std::find_if(syntax->modifiers.begin(), syntax->modifiers.end(), [](auto tk) { return tk.kind == TokenKind::VarKeyword;}) != syntax->modifiers.end();
-    modifiers.staticM = std::find_if(syntax->modifiers.begin(), syntax->modifiers.end(), [](auto tk) {return tk.kind == TokenKind::StaticKeyword;}) != syntax->modifiers.end();
-    modifiers.automaticM = std::find_if(syntax->modifiers.begin(), syntax->modifiers.end(), [](auto tk) {return tk.kind == TokenKind::AutomaticKeyword;}) != syntax->modifiers.end();
-
+    for (auto token : syntax->modifiers) {
+        switch(token.kind) {
+            case TokenKind::ConstKeyword:
+                modifiers.constM = 1;
+                break;
+            case TokenKind::VarKeyword:
+                modifiers.varM = 1;
+                break;
+            case TokenKind::StaticKeyword:
+                modifiers.staticM = 1;
+                break;
+            case TokenKind::AutomaticKeyword:
+                modifiers.automaticM = 1;
+                break;
+            default:
+                ASSERT(false, "Unknown variable modifier: %s", token.toString().c_str());
+                break;
+        }
+    }
     const TypeSymbol *typeSymbol = makeTypeSymbol(syntax->type, scope);
 
     for (auto varDeclarator : syntax->declarators) {
