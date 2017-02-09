@@ -191,4 +191,54 @@ endmodule
     }
 }
 
+TEST_CASE("always_comb", "[binding:modules]") {
+    auto tree = SyntaxTree::fromText(R"(
+module module1
+#(
+    parameter int P1 = 4,
+    parameter int P2 = 5
+)
+(
+    input  logic [P1-1:0]   in1,
+    input  logic [P2-1:0]   in2,
+    input  logic [3:0]      in3,
+
+    output logic [P1-1:0]   out1,
+    output logic [P1-1:0]   out2,
+    output logic [P1-1:0]   out3
+);
+
+    always_comb out1 = in1;
+
+    always_comb begin
+        out2 = in2;
+        out3 = in3;
+    end
+
+    logic [7:0] arr1;
+
+endmodule
+)");
+
+    Diagnostics diagnostics;
+    DeclarationTable declTable(diagnostics);
+    declTable.addSyntaxTree(&tree);
+
+    auto topLevelModules = declTable.getTopLevelModules();
+    REQUIRE(topLevelModules.count() == 1);
+
+    SemanticModel sem(alloc, diagnostics, declTable);
+    auto instance = sem.makeImplicitInstance(topLevelModules[0]);
+
+    CHECK(diagnostics.count() == 0);
+
+    const auto& alwaysComb = instance->getChild<ProceduralBlock>(0);
+
+    CHECK(alwaysComb.kind == ProceduralBlock::AlwaysComb);
+
+    const auto& variable = instance->getChild<VariableSymbol>(2);
+    CHECK(variable.typeSymbol.kind == SymbolKind::IntegralType);
+    CHECK(variable.name == "arr1");
+}
+
 }
