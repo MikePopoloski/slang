@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "Lexer.h"
 
-#define NOMINMAX
-
 #include <algorithm>
 #include <cmath>
 

@@ -6,8 +6,8 @@ using namespace slang;
 namespace {
 
 SVInt testParameter(const std::string& text, int index = 0) {
-    StringRef fullText { "module Top; " + text + " endmodule" };
-    auto tree = SyntaxTree::fromText<ModuleDeclarationSyntax>(fullText);
+    const auto& fullText = "module Top; " + text + " endmodule";
+    auto tree = SyntaxTree::fromText<ModuleDeclarationSyntax>(StringRef(fullText));
 
     auto instance = SemanticModel(tree).makeImplicitInstance(
         tree.root()->as<ModuleDeclarationSyntax>());

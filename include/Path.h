@@ -17,6 +17,7 @@
 
 #if defined(_WIN32)
 # undef DEFAULT_UNREACHABLE
+# define NOMINMAX
 # include <windows.h>
 # undef DEFAULT_UNREACHABLE
 #else
@@ -29,6 +30,7 @@
 # include <linux/limits.h>
 #endif
 
+#include "Debug.h"
 #include "StringRef.h"
 
 namespace slang {

@@ -7,6 +7,7 @@
 #include "Preprocessor.h"
 
 #include "AllSyntax.h"
+#include "Debug.h"
 #include "BumpAllocator.h"
 #include "SourceManager.h"
 
@@ -436,7 +437,7 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
         // is well formed, to avoid very strange line number issues
         sourceManager.addLineDirective(directive.location(),
             std::get<SVInt>(lineNumber.numericValue()).getAssertUInt32(),
-            fileName.valueText(), levNum.getAssertUInt16());
+            fileName.valueText(), (uint8_t)levNum.getAssertUInt16());
     }
     return Trivia(TriviaKind::Directive, result);
 }

@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#pragma once
+//#pragma once // No pragma once; we want to reintroduce DEFAULT_UNREACHABLE if it's been undefined
 
 #include "ppk_assert/ppk_assert.h"
 
