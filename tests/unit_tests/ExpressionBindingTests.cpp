@@ -65,4 +65,64 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     CHECK(i.integer() == 7);
 }
 
+TEST_CASE("Check type propagation", "[binding:expressions]") {
+    // Assignment operator should increase RHS size to 20
+    auto syntax = SyntaxTree::fromText<ExpressionSyntax>("i = 5'b0101 + 4'b1100");
+    SemanticModel sem { syntax };
+
+    // Fabricate a symbol for the `i` variable
+    auto varToken = syntax.root()->getFirstToken();
+    LocalVariableSymbol local {
+        varToken.valueText(), varToken.location(),
+        sem.getIntegralType(20, false)
+    };
+
+    // Bind the expression tree to the symbol
+    Scope scope;
+    scope.add(&local);
+    ExpressionBinder binder(sem, &scope);
+    BoundExpression* bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
+    REQUIRE(syntax.diagnostics().empty());
+
+    CHECK(bound->type->as<IntegralTypeSymbol>().width == 20);
+    BoundExpression* rhs = ((BoundAssignmentExpression *)bound)->right;
+    CHECK(rhs->type->as<IntegralTypeSymbol>().width == 20);
+    BoundExpression* op1 = ((BoundBinaryExpression *)rhs)->left;
+    CHECK(op1->type->as<IntegralTypeSymbol>().width == 20);
+    BoundExpression* op2 = ((BoundBinaryExpression *)rhs)->right;
+    CHECK(op2->type->as<IntegralTypeSymbol>().width == 20);
+}
+
+TEST_CASE("Check type propagation 2", "[binding:expressions]") {
+    // Tests a number of rules of size propogation
+    auto syntax = SyntaxTree::fromText<ExpressionSyntax>("i = 2'b1 & (((17'b101 >> 1'b1) - 4'b1100) == 21'b1)");
+    SemanticModel sem { syntax };
+
+    // Fabricate a symbol for the `i` variable
+    auto varToken = syntax.root()->getFirstToken();
+    LocalVariableSymbol local {
+        varToken.valueText(), varToken.location(),
+        sem.getIntegralType(20, false)
+    };
+
+    // Bind the expression tree to the symbol
+    Scope scope;
+    scope.add(&local);
+    ExpressionBinder binder(sem, &scope);
+    BoundExpression* bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
+    REQUIRE(syntax.diagnostics().empty());
+
+    CHECK(bound->type->as<IntegralTypeSymbol>().width == 20);
+    BoundExpression* rhs = ((BoundAssignmentExpression *)bound)->right;
+    CHECK(rhs->type->as<IntegralTypeSymbol>().width == 20);
+    BoundExpression* rrhs = ((BoundAssignmentExpression *)rhs)->right;
+    CHECK(rrhs->type->as<IntegralTypeSymbol>().width == 1);
+    BoundExpression* op1 = ((BoundBinaryExpression *)rrhs)->left;
+    BoundExpression* shiftExpr = ((BoundBinaryExpression *)op1)->left;
+    CHECK(shiftExpr->type->as<IntegralTypeSymbol>().width == 17);
+    CHECK(op1->type->as<IntegralTypeSymbol>().width == 17);
+    BoundExpression* op2 = ((BoundBinaryExpression *)rrhs)->right;
+    CHECK(op2->type->as<IntegralTypeSymbol>().width == 21);
+}
+
 }
