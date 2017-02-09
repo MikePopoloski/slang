@@ -270,6 +270,7 @@ StringRef timeUnitToSuffix(TimeUnit unit) {
         case TimeUnit::Nanoseconds: return "ns";
         case TimeUnit::Picoseconds: return "ps";
         case TimeUnit::Femtoseconds: return "fs";
+        default: return "";
     }
 }
 
