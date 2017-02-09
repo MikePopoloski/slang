@@ -81,7 +81,7 @@ private:
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
 
     // Timescale specifier parser
-    void expectTimescaleSpecifier(Token& unit, Token& precision);
+    bool expectTimescaleSpecifier(Token& unit, Token& precision);
 
     // Macro handling methods
     DefineDirectiveSyntax* findMacro(Token directive);
