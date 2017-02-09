@@ -73,16 +73,4 @@ AttributeSymbol::AttributeSymbol(const AttributeSpecSyntax* syntax, const TypeSy
 {
 }
 
-ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location,
-                                 const ParameterDeclarationSyntax* syntax,
-                                 bool isLocal) :
-    Symbol(SymbolKind::Parameter, name, location),
-    syntax(syntax),
-    isLocal(isLocal),
-    // TODO: fill this in with something meaningful
-    // this is to prevent it from being uninitialized memory
-    type(new TypeSymbol(SymbolKind::Unknown,name,location))
-{
-}
-
 }

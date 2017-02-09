@@ -17,8 +17,10 @@ enum class SymbolKind {
     CHandleType,
     VoidType,
     EventType,
+    EnumType,
     TypeAlias,
     Parameter,
+    EnumValue,
     Module,
     Interface,
     Program,
@@ -115,11 +117,39 @@ public:
     static constexpr SymbolKind mykind = SymbolKind::RealType;
 };
 
+class ConstValueSymbol : public Symbol {
+public:
+    const TypeSymbol* type;
+    ConstantValue value;
+
+    ConstValueSymbol(SymbolKind kind, StringRef name, SourceLocation location) :
+        Symbol(kind, name, location),
+        // FIXME: fill this in with something meaningful
+        // this is to prevent it from being uninitialized memory
+        type(new TypeSymbol(SymbolKind::Unknown,"Unknown",location)) {}
+
+    ConstValueSymbol(SymbolKind kind, StringRef name, SourceLocation location,
+            const TypeSymbol * type, ConstantValue val) :
+        Symbol(kind, name, location), type(type), value(val) {}
+};
+
+class EnumValueSymbol : public ConstValueSymbol {
+public:
+    EnumValueSymbol(StringRef name, SourceLocation location, const TypeSymbol *type, ConstantValue val) :
+        ConstValueSymbol(SymbolKind::EnumValue, name, location, type, val) {}
+
+    static constexpr SymbolKind mykind = SymbolKind::EnumValue;
+};
+
 class EnumTypeSymbol : public TypeSymbol {
 public:
-    TypeSymbol* baseType;
+    const IntegralTypeSymbol* baseType;
+    ArrayRef<EnumValueSymbol *> values;
 
-    static constexpr SymbolKind mykind = SymbolKind::Unknown;
+    EnumTypeSymbol(const IntegralTypeSymbol *baseType, SourceLocation location, ArrayRef<EnumValueSymbol *> values) :
+        TypeSymbol(SymbolKind::EnumType, "", location),
+        baseType(baseType), values(values) {}
+    static constexpr SymbolKind mykind = SymbolKind::EnumType;
 };
 
 class StructTypeSymbol : public TypeSymbol {
@@ -160,16 +190,17 @@ public:
     static constexpr SymbolKind mykind = SymbolKind::Attribute;
 };
 
-class ParameterSymbol : public Symbol {
+class ParameterSymbol : public ConstValueSymbol {
 public:
     const ParameterDeclarationSyntax* syntax;
-    const TypeSymbol* type;
-    ConstantValue value;
     bool isLocal;
 
     ParameterSymbol(StringRef name, SourceLocation location,
                     const ParameterDeclarationSyntax* syntax,
-                    bool isLocal);
+                    bool isLocal) :
+        ConstValueSymbol(SymbolKind::Parameter, name, location),
+        syntax(syntax),
+        isLocal(isLocal) {}
 
     static constexpr SymbolKind mykind = SymbolKind::Parameter;
 };
