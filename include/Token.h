@@ -202,6 +202,11 @@ enum class KeywordVersion : uint8_t {
 
 const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 
+/// This checks all keywords, regardless of the current keyword table.  Should
+/// only be used when it is ok to get a false positive for a keyword that may
+/// not currently be in the keyword table (such as handling macro arguments).
+bool isKeyword(TokenKind kind);
+
 enum class TokenKind : uint16_t {
     // general
     Unknown,
