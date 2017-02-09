@@ -397,35 +397,36 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
 }
 
 bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
-    auto firstToken = peek();
-    if (firstToken.kind == TokenKind::IntegerLiteral) {
+    auto token = peek();
+    if (token.kind == TokenKind::IntegerLiteral) {
         value = consume();
         unit = expect(TokenKind::Identifier);
-    } else if (firstToken.kind == TokenKind::TimeLiteral) {
-        auto token = consume();
+        return true;
+    } else if (token.kind == TokenKind::TimeLiteral) {
+        bool success = true;
+        // So long as we are dealing with a time literal, we should consume and
+        // output the split tokens, even though those split tokens might be
+        // invalid if the data is poorly formated, i.e with a number other than
+        // 1,10,100
 
         // get_if necessary to check for the case where there is a double TimeLiteral
         const SVInt *val = std::get_if<SVInt>(&token.numericValue());
-        if (val == nullptr) {
-            addError(DiagCode::InvalidTimescaleSpecifier, token.location());
-            return false;
-        }
-
-        // check for the only allowed values: 1, 10, 100
         StringRef numText;
-        if      (*val == 1) numText = "1";
+        if (val == nullptr) {
+            // create a dummy value to place in the generated token
+            val = alloc.emplace<SVInt>(16, 0, true);
+            success = false;
+        }
+        else if (*val == 1) numText = "1";
         else if (*val == 10) numText = "10";
         else if (*val == 100) numText = "100";
-        else {
-            addError(DiagCode::InvalidTimescaleSpecifier, token.location());
-            return false;
-        }
+        else success = false;
 
-        // Split the TimeLiteral into a IntegerLiteral and Identifer token
+        // generate the tokens that come from splitting the TimeLiteral
         Token::Info* valueInfo = alloc.emplace<Token::Info>(token.trivia(),
             numText, token.location(), token.getInfo()->flags);
         value = *alloc.emplace<Token>(TokenKind::IntegerLiteral, valueInfo);
-        valueInfo->setNumInfo(SVInt(16, val->getAssertUInt16(), true));
+        valueInfo->setNumInfo(*val);
 
         StringRef timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit);
         Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
@@ -433,12 +434,19 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
             token.location() + numText.length(), token.getInfo()->flags);
         unit = *alloc.emplace<Token>(TokenKind::Identifier, unitInfo);
         unitInfo->extra = IdentifierType::Normal;
+
+        consume();
+        if (!success) {
+            addError(DiagCode::InvalidTimescaleSpecifier, token.location());
+            return false;
+        } else {
+            return true;
+        }
     } else {
-        value = Token::createExpected(alloc, diagnostics, firstToken, TokenKind::IntegerLiteral, lastConsumed);
-        unit  = Token::createExpected(alloc, diagnostics, firstToken, TokenKind::Identifier, lastConsumed);
-        return false;
+        value = Token::createExpected(alloc, diagnostics, token, TokenKind::IntegerLiteral, lastConsumed);
+        unit  = Token::createExpected(alloc, diagnostics, token, TokenKind::Identifier, lastConsumed);
     }
-    return true;
+    return false;
 }
 
 Trivia Preprocessor::handleTimescaleDirective(Token directive) {
