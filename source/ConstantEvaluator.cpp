@@ -22,6 +22,14 @@ ConstantValue& ConstantEvaluator::createTemporary(const Symbol* key) {
     return result;
 }
 
+bool ConstantEvaluator::evaluateBool(const BoundNode* tree) {
+    auto cv = evaluate(tree);
+    if (!cv)
+        return false;
+
+    return (bool)(logic_t)cv.integer();
+}
+
 ConstantValue ConstantEvaluator::evaluate(const BoundNode* tree) {
     ASSERT(tree);
     if (tree->bad())

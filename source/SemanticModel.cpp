@@ -72,12 +72,16 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
                 handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
                 break;
             case SyntaxKind::LoopGenerate:
+                handleLoopGenerate(member->as<LoopGenerateSyntax>(), children, scope);
                 break;
             case SyntaxKind::IfGenerate:
                 // TODO: scope
                 handleIfGenerate(member->as<IfGenerateSyntax>(), children, scope);
                 break;
             case SyntaxKind::CaseGenerate:
+                break;
+            case SyntaxKind::GenvarDeclaration:
+                handleGenvarDecl(member->as<GenvarDeclarationSyntax>(), children, scope);
                 break;
         }
     }
@@ -316,6 +320,45 @@ void SemanticModel::handleIfGenerate(const IfGenerateSyntax* syntax, SmallVector
         handleGenerateBlock(syntax->elseClause->clause->as<MemberSyntax>(), results, scope);
 }
 
+void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
+    // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
+    // we need to do a lookup to make sure we have the actual genvar.
+    // TODO: do the actual lookup
+
+    // Initialize the genvar
+    auto initial = evaluateConstant(syntax->initialExpr, scope);
+    if (!initial)
+        return;
+
+    // Fabricate a local variable that will serve as the loop iteration variable.
+    Scope iterScope { scope };
+    LocalVariableSymbol local { syntax->identifier, getKnownType(SyntaxKind::IntType) };
+    iterScope.add(&local);
+
+    // Bind the stop and iteration expressions so we can reuse them on each iteration.
+    auto stopExpr = bindConstantExpression(syntax->stopExpr, &iterScope);
+    auto iterExpr = bindConstantExpression(syntax->iterationExpr, &iterScope);
+
+    // Create storage for the iteration variable.
+    ConstantEvaluator ce;
+    auto& genvar = ce.createTemporary(&local);
+
+    // Generate blocks!
+    for (genvar = initial; ce.evaluateBool(stopExpr); ce.evaluate(iterExpr)) {
+        // Spec: each generate block gets their own scope, with an implicit
+        // localparam of the same name as the genvar.
+        Scope localScope { &iterScope };
+        ParameterSymbol iterParam {
+            syntax->identifier.valueText(),
+            syntax->identifier.location(), nullptr, true
+        };
+        iterParam.value = genvar;
+        localScope.add(&iterParam);
+
+        handleGenerateBlock(syntax->block, results, &localScope);
+    }
+}
+
 void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
     if (syntax->kind == SyntaxKind::GenerateBlock) {
         SmallVectorSized<const Symbol*, 8> children;
@@ -330,6 +373,16 @@ void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<
     }
     else {
         // TODO: handle simple member
+    }
+}
+
+void SemanticModel::handleGenvarDecl(const GenvarDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
+    for (auto identifierSyntax : syntax->identifiers) {
+        auto name = identifierSyntax->identifier;
+        if (!name.valueText())
+            continue;
+
+        results.append(alloc.emplace<GenvarSymbol>(name.valueText(), name.location()));
     }
 }
 
@@ -554,6 +607,19 @@ const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool 
     auto symbol = alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
     integralTypeCache.emplace_hint(it, key, symbol);
     return symbol;
+}
+
+BoundExpression* SemanticModel::bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope) {
+    ExpressionBinder binder { *this, scope };
+    return binder.bindConstantExpression(syntax);
+}
+
+ConstantValue SemanticModel::evaluateConstant(const ExpressionSyntax* syntax, const Scope* scope) {
+    auto expr = bindConstantExpression(syntax, scope);
+    if (expr->bad())
+        return nullptr;
+
+    return evaluateConstant(expr);
 }
 
 ConstantValue SemanticModel::evaluateConstant(const BoundNode* tree) {

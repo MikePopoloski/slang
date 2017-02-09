@@ -28,8 +28,8 @@ int main() {
             printf("Parsing '%s'\n", p.str().c_str());
             printf("%s\n\n", diagWriter.report(tree.diagnostics()).c_str());
         }
-        printf("%s", ((CompilationUnitSyntax*)tree.root())->
-            toString(SyntaxToStringFlags::IncludeTrivia).c_str());
+        //printf("%s", ((CompilationUnitSyntax*)tree.root())->
+          //  toString(SyntaxToStringFlags::IncludeTrivia).c_str());
         errors += tree.diagnostics().count();
         files++;
 
