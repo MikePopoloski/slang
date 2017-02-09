@@ -187,6 +187,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 
 Trivia Preprocessor::handleResetAllDirective(Token directive) {
     // TODO: reset all preprocessor state here
+    // TODO: keep track of any of the state that this resets
     return createSimpleDirective(directive);
 }
 
@@ -395,28 +396,81 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
     return parseBranchDirective(directive, Token(), taken);
 }
 
-void Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
-    // TODO: check for allowed values
+bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
     auto token = peek();
     if (token.kind == TokenKind::IntegerLiteral) {
         value = consume();
         unit = expect(TokenKind::Identifier);
+        return true;
+    } else if (token.kind == TokenKind::TimeLiteral) {
+        bool success = true;
+        // So long as we are dealing with a time literal, we should consume and
+        // output the split tokens, even though those split tokens might be
+        // invalid if the data is poorly formated, i.e with a number other than
+        // 1,10,100
+
+        // get_if necessary to check for the case where there is a double TimeLiteral
+        const SVInt *val = std::get_if<SVInt>(&token.numericValue());
+        StringRef numText;
+        if (val == nullptr) {
+            // create a dummy value to place in the generated token
+            val = alloc.emplace<SVInt>(16, 0, true);
+            success = false;
+        }
+        else if (*val == 1) numText = "1";
+        else if (*val == 10) numText = "10";
+        else if (*val == 100) numText = "100";
+        else success = false;
+
+        // generate the tokens that come from splitting the TimeLiteral
+        Token::Info* valueInfo = alloc.emplace<Token::Info>(token.trivia(),
+            numText, token.location(), token.getInfo()->flags);
+        value = *alloc.emplace<Token>(TokenKind::IntegerLiteral, valueInfo);
+        valueInfo->setNumInfo(*val);
+
+        StringRef timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit);
+        Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
+            timeUnitSuffix,
+            token.location() + numText.length(), token.getInfo()->flags);
+        unit = *alloc.emplace<Token>(TokenKind::Identifier, unitInfo);
+        unitInfo->extra = IdentifierType::Normal;
+
+        consume();
+        if (!success) {
+            addError(DiagCode::InvalidTimescaleSpecifier, token.location());
+            return false;
+        } else {
+            return true;
+        }
+    } else {
+        value = Token::createExpected(alloc, diagnostics, token, TokenKind::IntegerLiteral, lastConsumed);
+        unit  = Token::createExpected(alloc, diagnostics, token, TokenKind::Identifier, lastConsumed);
     }
-    else if (token.kind == TokenKind::TimeLiteral) {
-        // TODO: split the token
-        value = consume();
-    }
+    return false;
 }
 
 Trivia Preprocessor::handleTimescaleDirective(Token directive) {
-    // TODO: error checking
     Token value, valueUnit, precision, precisionUnit;
-    expectTimescaleSpecifier(value, valueUnit);
+    bool foundSpecifiers = expectTimescaleSpecifier(value, valueUnit);
 
     auto slash = expect(TokenKind::Slash);
-    expectTimescaleSpecifier(precision, precisionUnit);
+    foundSpecifiers |= expectTimescaleSpecifier(precision, precisionUnit);
 
     auto eod = parseEndOfDirective();
+
+    if (foundSpecifiers) {
+        bool success1, success2;
+        TimeUnit unitValue = suffixToTimeUnit(valueUnit.valueText(), success1);
+        TimeUnit unitPrecision = suffixToTimeUnit(precisionUnit.valueText(), success2);
+        // both unit and precision must have valid units, and
+        // the precision must be at least as precise as the value.
+        // larger values of TimeUnit are more precise than smaller values
+        if (!success1 || !success2 || unitPrecision < unitValue ||
+                (unitPrecision == unitValue &&
+                std::get<SVInt>(precision.numericValue()) > std::get<SVInt>(value.numericValue()))) {
+            addError(DiagCode::InvalidTimescaleSpecifier, directive.location());
+        }
+    }
     auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash, precision, precisionUnit, eod);
     return Trivia(TriviaKind::Directive, timescale);
 }

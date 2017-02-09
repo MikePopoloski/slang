@@ -500,22 +500,33 @@ TEST_CASE("Integer literal (not an exponent)", "[lexer]") {
     CHECK(diagnostics.empty());
 }
 
-void checkTimeLiteral(const std::string& s, TimeUnit flagCheck) {
+void checkTimeLiteral(const std::string& s, TimeUnit flagCheck, double num) {
     Token token = lexToken(s);
 
     CHECK(token.kind == TokenKind::TimeLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
     CHECK(token.numericFlags().unit == flagCheck);
+    double value;
+    const SVInt *svIntValue = std::get_if<SVInt>(&token.numericValue());
+    const double *doubValue = std::get_if<double>(&token.numericValue());
+    if (svIntValue) {
+        value = (double)svIntValue->getAssertUInt16();
+    } else if (doubValue) {
+        value = *doubValue;
+    } else {
+        value = 0.0; // will ensure check failure
+    }
+    CHECK(value == num);
     CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Time literals", "[lexer]") {
-    checkTimeLiteral("3.4s", TimeUnit::Seconds);
-    checkTimeLiteral("9999ms", TimeUnit::Milliseconds);
-    checkTimeLiteral("572.234us", TimeUnit::Microseconds);
-    checkTimeLiteral("97ns", TimeUnit::Nanoseconds);
-    checkTimeLiteral("42ps", TimeUnit::Picoseconds);
-    checkTimeLiteral("42fs", TimeUnit::Femtoseconds);
+    checkTimeLiteral("3.4s", TimeUnit::Seconds, 3.4);
+    checkTimeLiteral("9999ms", TimeUnit::Milliseconds, 9999);
+    checkTimeLiteral("572.234us", TimeUnit::Microseconds, 572.234);
+    checkTimeLiteral("97ns", TimeUnit::Nanoseconds, 97);
+    checkTimeLiteral("42ps", TimeUnit::Picoseconds, 42);
+    checkTimeLiteral("42fs", TimeUnit::Femtoseconds, 42);
 }
 
 TEST_CASE("Misplaced directive char", "[lexer]") {
@@ -939,7 +950,5 @@ TEST_CASE("Directive Punctuation", "[lexer]") {
     testDirectivePunctuation(TokenKind::MacroEscapedQuote);
     testDirectivePunctuation(TokenKind::MacroPaste);
 }
-
-
 
 }

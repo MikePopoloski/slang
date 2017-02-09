@@ -53,6 +53,10 @@ enum class TimeUnit : uint8_t {
     Femtoseconds
 };
 
+TimeUnit suffixToTimeUnit(StringRef timeSuffix, bool &success);
+
+StringRef timeUnitToSuffix(TimeUnit unit);
+
 /// Various flags for numeric tokens.
 struct NumericTokenFlags {
     LiteralBase base : 2;

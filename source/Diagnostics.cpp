@@ -105,6 +105,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::UndefineBuiltinDirective] = { "cannot `undef builtin macros `__LINE__ or `__FILE__", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnrecognizedKeywordVersion] = { "unsupported keyword version specified for `begin_keywords", DiagnosticSeverity::Error };
     descriptors[DiagCode::MismatchedEndKeywordsDirective] = { "no opening `begin_keywords directive", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InvalidTimescaleSpecifier] = { "timescale specifiers must be powers of ten with precision more precise than unit", DiagnosticSeverity::Error };
 
     // parser
     descriptors[DiagCode::ExpectedIdentifier] = { "expected identifier", DiagnosticSeverity::Error };

@@ -242,4 +242,36 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     return Token::createMissing(alloc, expected, location);
 }
 
+TimeUnit suffixToTimeUnit(StringRef timeSuffix, bool &success) {
+    success = true;
+    if (timeSuffix == "s") {
+        return TimeUnit::Seconds;
+    } else if (timeSuffix == "ms") {
+        return TimeUnit::Milliseconds;
+    } else if (timeSuffix == "us") {
+        return TimeUnit::Microseconds;
+    } else if (timeSuffix == "ns") {
+        return TimeUnit::Nanoseconds;
+    } else if (timeSuffix == "ps") {
+        return TimeUnit::Picoseconds;
+    } else if (timeSuffix == "fs") {
+        return TimeUnit::Femtoseconds;
+    } else {
+        success = false;
+        return TimeUnit::Seconds;
+    }
+}
+
+StringRef timeUnitToSuffix(TimeUnit unit) {
+    switch (unit) {
+        case TimeUnit::Seconds: return "s";
+        case TimeUnit::Milliseconds: return "ms";
+        case TimeUnit::Microseconds: return "us";
+        case TimeUnit::Nanoseconds: return "ns";
+        case TimeUnit::Picoseconds: return "ps";
+        case TimeUnit::Femtoseconds: return "fs";
+        default: return "";
+    }
+}
+
 }
