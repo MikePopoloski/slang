@@ -783,7 +783,7 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
     for (auto& token : macro->body) {
         int delta = token.location().offset() - start.offset();
 
-        if (token.kind != TokenKind::Identifier)
+        if (!token.isKeywordOrIdentifier())
             dest.append(token.withLocation(alloc, expansionLoc + delta));
         else {
             // check for formal param
@@ -938,7 +938,23 @@ MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
 }
 
 MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
-    auto arg = expect(TokenKind::Identifier);
+    Token arg;
+    if (currentIndex >= buffer.count()) {
+        arg = pp.peek(currentMode);
+        if (!arg.isKeywordOrIdentifier()) {
+            arg = Token::createExpected(pp.alloc, pp.diagnostics, arg, TokenKind::Identifier, pp.lastConsumed);
+        } else {
+            pp.lastConsumed = pp.currentToken;
+            pp.currentToken = Token();
+        }
+    } else if (!buffer[currentIndex].isKeywordOrIdentifier()) {
+        Token last = currentIndex > 0 ? buffer[currentIndex - 1] : Token();
+        arg = Token::createExpected(pp.alloc, pp.diagnostics,
+                                    buffer[currentIndex], TokenKind::Identifier,
+                                    last);
+    } else {
+        arg = next();
+    }
 
     MacroArgumentDefaultSyntax* argDef = nullptr;
     if (peek(TokenKind::Equals)) {

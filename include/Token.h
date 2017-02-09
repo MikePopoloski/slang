@@ -165,6 +165,8 @@ public:
     /// Determines whether the token has the given trivia.
     bool hasTrivia(TriviaKind triviaKind) const;
 
+    bool isKeywordOrIdentifier() const;
+
     bool valid() const { return info != nullptr; }
     explicit operator bool() const { return valid(); }
 
