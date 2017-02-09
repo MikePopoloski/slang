@@ -747,6 +747,10 @@ bool isEndOfBracedList(TokenKind kind) {
     return kind == TokenKind::CloseBrace || kind == TokenKind::Semicolon;
 }
 
+bool isEndOfBracketedList(TokenKind kind) {
+    return kind == TokenKind::CloseBracket || kind == TokenKind::Semicolon;
+}
+
 bool isEndOfCaseItem(TokenKind kind) {
     return kind == TokenKind::Colon || kind == TokenKind::Semicolon;
 }

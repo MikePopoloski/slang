@@ -1227,6 +1227,19 @@ protected:
     }
 };
 
+struct EmptyIdentifierNameSyntax : public NameSyntax {
+
+    EmptyIdentifierNameSyntax() :
+        NameSyntax(SyntaxKind::EmptyIdentifierName) {}
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        return nullptr;
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {}
+};
+
 struct KeywordNameSyntax : public NameSyntax {
     Token keyword;
 
@@ -3833,13 +3846,15 @@ protected:
 struct ForeachLoopListSyntax : public SyntaxNode {
     Token openParen;
     NameSyntax* arrayName;
+    Token openBracket;
     SeparatedSyntaxList<NameSyntax> loopVariables;
+    Token closeBracket;
     Token closeParen;
 
-    ForeachLoopListSyntax(Token openParen, NameSyntax* arrayName, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeParen) :
-        SyntaxNode(SyntaxKind::ForeachLoopList), openParen(openParen), arrayName(arrayName), loopVariables(loopVariables), closeParen(closeParen)
+    ForeachLoopListSyntax(Token openParen, NameSyntax* arrayName, Token openBracket, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeBracket, Token closeParen) :
+        SyntaxNode(SyntaxKind::ForeachLoopList), openParen(openParen), arrayName(arrayName), openBracket(openBracket), loopVariables(loopVariables), closeBracket(closeBracket), closeParen(closeParen)
     {
-        childCount += 4;
+        childCount += 6;
     }
 
 protected:
@@ -3847,8 +3862,10 @@ protected:
         switch (index) {
             case 0: return openParen;
             case 1: return arrayName;
-            case 2: return &loopVariables;
-            case 3: return closeParen;
+            case 2: return openBracket;
+            case 3: return &loopVariables;
+            case 4: return closeBracket;
+            case 5: return closeParen;
             default: return nullptr;
         }
     }
@@ -3857,8 +3874,10 @@ protected:
         switch (index) {
             case 0: openParen = token; break;
             case 1: ASSERT(false); break;
-            case 2: ASSERT(false); break;
-            case 3: closeParen = token; break;
+            case 2: openBracket = token; break;
+            case 3: ASSERT(false); break;
+            case 4: closeBracket = token; break;
+            case 5: closeParen = token; break;
         }
     }
 };

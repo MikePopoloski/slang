@@ -83,6 +83,13 @@ TEST_CASE("Do while statement", "[parser:statements]") {
     CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
 }
 
+TEST_CASE("Foreach statement", "[parser:statements]") {
+    auto& text = "foreach (a::b[,i,,j,]) begin end";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::ForeachLoopStatement);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+}
 TEST_CASE("Forever statement", "[parser:statements]") {
     auto& text = "forever ;";
     auto stmt = parse(text);

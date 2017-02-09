@@ -54,8 +54,8 @@ private:
     ExpressionSyntax* parseOpenRangeElement();
     ElementSelectSyntax* parseElementSelect();
     SelectorSyntax* parseElementSelector();
-    NameSyntax* parseName();
-    NameSyntax* parseNamePart();
+    NameSyntax* parseName(bool isForEach = false);
+    NameSyntax* parseNamePart(bool isForEach);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
@@ -220,4 +220,22 @@ template<> inline const StatementSyntax* Parser::parse() { return parseStatement
 template<> inline const ModuleDeclarationSyntax* Parser::parse() { return parseModule(); }
 template<> inline const ClassDeclarationSyntax* Parser::parse() { return parseClass(); }
 
+template<bool(*IsEnd)(TokenKind)>
+bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
+    int nesting = 1;
+    while (true) {
+        auto kind = peek(index).kind;
+        if (IsEnd(kind))
+            return false;
+
+        index++;
+        if (kind == start)
+            nesting++;
+        else if (kind == end) {
+            nesting--;
+            if (nesting <= 0)
+                return true;
+        }
+    }
+}
 }
