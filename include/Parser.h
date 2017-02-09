@@ -102,6 +102,8 @@ private:
     ModuleHeaderSyntax* parseModuleHeader();
     ParameterPortListSyntax* parseParameterPortList();
     ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
+    ModportItemSyntax* parseModportItem();
+    ModportDeclarationSyntax* parseModportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     NonAnsiPortSyntax* parseNonAnsiPort();
     AnsiPortSyntax* parseAnsiPort();
     AnsiPortListSyntax* parseAnsiPortList(Token openParen);

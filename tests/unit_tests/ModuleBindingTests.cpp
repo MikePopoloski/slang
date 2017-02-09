@@ -191,4 +191,41 @@ endmodule
     }
 }
 
+TEST_CASE("Interface instantiation", "[binding:modules]") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I2CBus(
+    input wire clk,
+    input wire rst);
+
+    logic scl_i;
+    logic sda_i;
+    logic scl_o;
+    logic sda_o;
+
+    modport master (input clk, rst, scl_i, sda_i,
+                    output scl_o, sda_o);
+
+endinterface
+
+module Top;
+    I2CBus bus();
+endmodule
+)");
+
+    Diagnostics& diagnostics = tree.diagnostics();
+    DeclarationTable declTable(diagnostics);
+    declTable.addSyntaxTree(&tree);
+
+    auto topLevelModules = declTable.getTopLevelModules();
+    REQUIRE(topLevelModules.count() == 1);
+
+    SemanticModel sem(alloc, diagnostics, declTable);
+    auto instance = sem.makeImplicitInstance(topLevelModules[0]);
+
+    if (!diagnostics.empty())
+        WARN(tree.reportDiagnostics());
+
+    const auto& bus = instance->getChild<InstanceSymbol>(0);
+}
+
 }

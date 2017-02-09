@@ -5817,6 +5817,65 @@ protected:
     }
 };
 
+struct ModportItemSyntax : public SyntaxNode {
+    Token name;
+    AnsiPortListSyntax* ports;
+
+    ModportItemSyntax(Token name, AnsiPortListSyntax* ports) :
+        SyntaxNode(SyntaxKind::ModportItem), name(name), ports(ports)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return name;
+            case 1: return ports;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: name = token; break;
+            case 1: ASSERT(false); break;
+        }
+    }
+};
+
+struct ModportDeclarationSyntax : public MemberSyntax {
+    Token keyword;
+    SeparatedSyntaxList<ModportItemSyntax> items;
+    Token semi;
+
+    ModportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<ModportItemSyntax> items, Token semi) :
+        MemberSyntax(SyntaxKind::ModportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return keyword;
+            case 2: return &items;
+            case 3: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: keyword = token; break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
+        }
+    }
+};
+
 // ----- CONSTRAINTS -----
 
 struct ConstraintItemSyntax : public SyntaxNode {

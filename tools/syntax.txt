@@ -1006,6 +1006,15 @@ token defparam
 separated_list<DefParamAssignmentSyntax> assignments
 token semi
 
+ModportItemSyntax kind=ModportItem
+token name
+AnsiPortListSyntax ports
+
+ModportDeclarationSyntax base=MemberSyntax kind=ModportDeclaration
+token keyword
+separated_list<ModportItemSyntax> items
+token semi
+
 // ----- CONSTRAINTS -----
 
 ConstraintItemSyntax final=false

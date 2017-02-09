@@ -411,6 +411,8 @@ enum class SyntaxKind : uint16_t {
     ContinuousAssign,
     DefParamAssignment,
     DefParam,
+    ModportItem,
+    ModportDeclaration,
 
     // constraints
     DistWeight,

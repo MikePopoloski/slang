@@ -327,6 +327,8 @@ MemberSyntax* Parser::parseMember() {
                 return parseClassDeclaration(attributes, consume());
             else
                 return parseModule(attributes);
+        case TokenKind::ModPortKeyword:
+            return parseModportDeclaration(attributes);
         case TokenKind::SpecParamKeyword:
         case TokenKind::BindKeyword:
         case TokenKind::AliasKeyword:
@@ -448,6 +450,29 @@ TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<Attribute
     }
 
     return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
+}
+
+ModportItemSyntax* Parser::parseModportItem() {
+    auto name = expect(TokenKind::Identifier);
+    auto ports = parseAnsiPortList(expect(TokenKind::OpenParenthesis));
+    return alloc.emplace<ModportItemSyntax>(name, ports);
+}
+
+ModportDeclarationSyntax* Parser::parseModportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
+        buffer,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        semi,
+        DiagCode::ExpectedIdentifier,
+        [this](bool) { return parseModportItem(); }
+    );
+
+    return alloc.emplace<ModportDeclarationSyntax>(attributes, keyword, buffer.copy(alloc), semi);
 }
 
 FunctionPrototypeSyntax* Parser::parseFunctionPrototype() {
@@ -1504,6 +1529,8 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
                         name,
                         consume());
                 }
+                break;
+            default:
                 break;
         }
         auto type = parseDataType(/* allowImplicit */ false);
