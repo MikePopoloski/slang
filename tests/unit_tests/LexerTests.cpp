@@ -549,6 +549,16 @@ TEST_CASE("Directive not on own line", "[lexer]") {
     CHECK(diagnostics.back().code == DiagCode::DirectiveNotFirstOnLine);
 }
 
+TEST_CASE("Escaped keyword identifiers", "[preprocessor]") {
+    auto& text = "\\wire";
+
+    auto token = lexToken(text);
+    CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "wire");
+    CHECK(token.identifierType() == IdentifierType::Escaped);
+    CHECK(diagnostics.empty());
+}
+
 void testKeyword(TokenKind kind) {
     auto text = getTokenKindText(kind);
     Token token = lexToken(text.toString());
