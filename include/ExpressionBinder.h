@@ -23,6 +23,7 @@ public:
     BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindAssignmentLikeContext(const ExpressionSyntax* syntax, SourceLocation location, const TypeSymbol* assignmentType);
 
+private:
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const IntegerVectorExpressionSyntax* syntax);
@@ -35,7 +36,6 @@ public:
     BoundExpression* bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindAssignmentOperator(const BinaryExpressionSyntax* syntax);
 
-private:
     // functions to check whether operators are applicable to the given operand types
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand);
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** lhs, BoundExpression** rhs);

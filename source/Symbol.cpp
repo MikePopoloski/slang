@@ -78,7 +78,10 @@ ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location,
                                  bool isLocal) :
     Symbol(SymbolKind::Parameter, name, location),
     syntax(syntax),
-    isLocal(isLocal)
+    isLocal(isLocal),
+    // TODO: fill this in with something meaningful
+    // this is to prevent it from being uninitialized memory
+    type(new TypeSymbol(SymbolKind::Unknown,name,location))
 {
 }
 
