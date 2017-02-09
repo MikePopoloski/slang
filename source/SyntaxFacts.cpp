@@ -577,9 +577,27 @@ bool isPossibleAnsiPort(TokenKind kind) {
         case TokenKind::InOutKeyword:
         case TokenKind::RefKeyword:
         case TokenKind::VarKeyword:
+        case TokenKind::OpenParenthesisStar:
             return true;
         default:
             return isNetType(kind) || isPossibleDataType(kind);
+    }
+}
+
+bool isPossibleFunctionPort(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Identifier:
+        case TokenKind::Comma:
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
+        case TokenKind::VarKeyword:
+        case TokenKind::ConstKeyword:
+        case TokenKind::OpenParenthesisStar:
+            return true;
+        default:
+            return isPossibleDataType(kind);
     }
 }
 

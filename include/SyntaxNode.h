@@ -400,6 +400,8 @@ enum class SyntaxKind : uint16_t {
     WildcardPortConnection,
     HierarchicalInstance,
     HierarchyInstantiation,
+    FunctionPort,
+    FunctionPortList,
     FunctionPrototype,
     FunctionDeclaration,
     TaskDeclaration,
@@ -494,6 +496,7 @@ bool isNotInPortReference(TokenKind kind);
 bool isNotInConcatenationExpr(TokenKind kind);
 bool isPossibleAnsiPort(TokenKind kind);
 bool isPossibleNonAnsiPort(TokenKind kind);
+bool isPossibleFunctionPort(TokenKind kind);
 bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);
 bool isPossibleVectorDigit(TokenKind kind);

@@ -5467,15 +5467,84 @@ protected:
     }
 };
 
+struct FunctionPortSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+    Token constKeyword;
+    Token direction;
+    Token varKeyword;
+    DataTypeSyntax* dataType;
+    VariableDeclaratorSyntax* declarator;
+
+    FunctionPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token constKeyword, Token direction, Token varKeyword, DataTypeSyntax* dataType, VariableDeclaratorSyntax* declarator) :
+        SyntaxNode(SyntaxKind::FunctionPort), attributes(attributes), constKeyword(constKeyword), direction(direction), varKeyword(varKeyword), dataType(dataType), declarator(declarator)
+    {
+        childCount += 6;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return constKeyword;
+            case 2: return direction;
+            case 3: return varKeyword;
+            case 4: return dataType;
+            case 5: return declarator;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: constKeyword = token; break;
+            case 2: direction = token; break;
+            case 3: varKeyword = token; break;
+            case 4: ASSERT(false); break;
+            case 5: ASSERT(false); break;
+        }
+    }
+};
+
+struct FunctionPortListSyntax : public SyntaxNode {
+    Token openParen;
+    SeparatedSyntaxList<FunctionPortSyntax> ports;
+    Token closeParen;
+
+    FunctionPortListSyntax(Token openParen, SeparatedSyntaxList<FunctionPortSyntax> ports, Token closeParen) :
+        SyntaxNode(SyntaxKind::FunctionPortList), openParen(openParen), ports(ports), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return openParen;
+            case 1: return &ports;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
+        }
+    }
+};
+
 struct FunctionPrototypeSyntax : public SyntaxNode {
     Token keyword;
     Token lifetime;
     DataTypeSyntax* returnType;
     NameSyntax* name;
-    AnsiPortListSyntax* portList;
+    FunctionPortListSyntax* portList;
     Token semi;
 
-    FunctionPrototypeSyntax(Token keyword, Token lifetime, DataTypeSyntax* returnType, NameSyntax* name, AnsiPortListSyntax* portList, Token semi) :
+    FunctionPrototypeSyntax(Token keyword, Token lifetime, DataTypeSyntax* returnType, NameSyntax* name, FunctionPortListSyntax* portList, Token semi) :
         SyntaxNode(SyntaxKind::FunctionPrototype), keyword(keyword), lifetime(lifetime), returnType(returnType), name(name), portList(portList), semi(semi)
     {
         childCount += 6;

@@ -88,6 +88,7 @@ enum class DiagCode : uint8_t {
     ExpectedParameterPort,
     ExpectedNonAnsiPort,
     ExpectedAnsiPort,
+    ExpectedFunctionPort,
     ExpectedForInitializer,
     ExpectedExpression,
     ExpectedOpenRangeElement,
@@ -110,6 +111,7 @@ enum class DiagCode : uint8_t {
     AttributesNotSupported,
     InvalidGenvarIterExpression,
     ExpectedGenvarIterVar,
+    ConstFunctionPortRequiresRef,
 
     // declarations
     DuplicateDefinition,
