@@ -938,7 +938,7 @@ MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
 }
 
 MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
-    Token arg = pp.peek(currentMode);
+    Token arg = peek();
     if (arg.kind == TokenKind::Identifier || isKeyword(arg.kind)) {
         consume();
     } else {
