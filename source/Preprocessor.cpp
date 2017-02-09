@@ -187,6 +187,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 
 Trivia Preprocessor::handleResetAllDirective(Token directive) {
     // TODO: reset all preprocessor state here
+    // TODO: keep track of any of the state that this resets
     return createSimpleDirective(directive);
 }
 
@@ -395,37 +396,70 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
     return parseBranchDirective(directive, Token(), taken);
 }
 
-void Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
-    // TODO: check for allowed values
-    SVInt val;
-    TimeUnit un;
+bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
     if (peek().kind == TokenKind::IntegerLiteral) {
         value = consume();
         unit = expect(TokenKind::Identifier);
-        if (unit.isMissing()) {
-            return;
-        }
-        StringRef unitDesc = unit.valueText();
-        if ()
-
     } else {
         auto token = expect(TokenKind::TimeLiteral);
-        val = std::get<SVInt>(token.numericValue());
-        un = token.numericFlags();
-        consume();
-    }
+        if (token.isMissing()) {
+            value = Token::createMissing(alloc, TokenKind::IntegerLiteral, token.location());
+            unit = Token::createMissing(alloc, TokenKind::Identifier, token.location());
+            return false;
+        }
 
+        const SVInt *val = std::get_if<SVInt>(&token.numericValue());
+        if (val == nullptr) {
+            addError(DiagCode::InvalidTimescaleSpecifier, token.location());
+            return false;
+        }
+        StringRef numText;
+        if      (*val == 1) numText = "1";
+        else if (*val == 10) numText = "10";
+        else if (*val == 100) numText = "100";
+        else {
+            addError(DiagCode::InvalidTimescaleSpecifier, token.location());
+            return false;
+        }
+
+        // Split the TimeLiteral into a IntegerLiteral and Identifer token
+        Token::Info* valueInfo = alloc.emplace<Token::Info>(token.trivia(),
+            numText, token.location(), token.getInfo()->flags | TokenFlags::IsFromPreprocessor);
+        value = *alloc.emplace<Token>(TokenKind::IntegerLiteral, valueInfo);
+        valueInfo->setNumInfo(SVInt(16, val->getAssertUInt16(), true));
+
+        StringRef timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit);
+        Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
+            timeUnitSuffix,
+            token.location() + numText.length(), token.getInfo()->flags | TokenFlags::IsFromPreprocessor);
+        unit = *alloc.emplace<Token>(TokenKind::Identifier, unitInfo);
+        unitInfo->extra = IdentifierType::Normal;
+    }
+    return true;
 }
 
 Trivia Preprocessor::handleTimescaleDirective(Token directive) {
-    // TODO: error checking
     Token value, valueUnit, precision, precisionUnit;
-    expectTimescaleSpecifier(value, valueUnit);
+    bool foundSpecifiers = expectTimescaleSpecifier(value, valueUnit);
 
     auto slash = expect(TokenKind::Slash);
-    expectTimescaleSpecifier(precision, precisionUnit);
+    foundSpecifiers |= expectTimescaleSpecifier(precision, precisionUnit);
 
     auto eod = parseEndOfDirective();
+
+    if (foundSpecifiers) {
+        bool success1, success2;
+        TimeUnit unitValue = suffixToTimeUnit(valueUnit.valueText(), success1);
+        TimeUnit unitPrecision = suffixToTimeUnit(precisionUnit.valueText(), success2);
+        // both unit and precision must have valid units, and
+        // the precision must be at least as precise as the value.
+        // larger values of TimeUnit are more precise than smaller values
+        if (!success1 || !success2 || unitPrecision < unitValue ||
+                (unitPrecision == unitValue &&
+                std::get<SVInt>(precision.numericValue()) > std::get<SVInt>(value.numericValue()))) {
+            addError(DiagCode::InvalidTimescaleSpecifier, directive.location());
+        }
+    }
     auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash, precision, precisionUnit, eod);
     return Trivia(TriviaKind::Directive, timescale);
 }

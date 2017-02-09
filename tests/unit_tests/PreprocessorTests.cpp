@@ -466,5 +466,30 @@ TEST_CASE("begin_keywords (nested)", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("timescale directive", "[preprocessor]") {
+    lexToken("`timescale 10 ns / 1 fs");
+    CHECK(diagnostics.empty());
+
+    lexToken("`timescale 100 s / 10fs");
+    CHECK(diagnostics.empty());
+
+    lexToken("`timescale 1s/1fs");
+    CHECK(diagnostics.empty());
+
+    lexToken("`timescale 10fs / 100fs");
+    CHECK(!diagnostics.empty());
+
+    lexToken("`timescale 10fs 100ns");
+    CHECK(!diagnostics.empty());
+
+    lexToken("`timescale 1fs / 10us");
+    CHECK(!diagnostics.empty());
+
+    lexToken("`timescale 1 bs / 2fs");
+    CHECK(!diagnostics.empty());
+
+    lexToken("`timescale 1.2fs / 1fs");
+    CHECK(!diagnostics.empty());
+}
 
 }
