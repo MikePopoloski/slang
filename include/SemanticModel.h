@@ -39,8 +39,8 @@ public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
-
     const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope);
+    const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax* syntax, const Scope* scope);
 
     /// Utilities for getting various common type symbols.
     const TypeSymbol* getErrorType() const { return getKnownType(SyntaxKind::Unknown); }

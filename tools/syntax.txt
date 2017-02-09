@@ -944,12 +944,25 @@ ParameterValueAssignmentSyntax parameters
 separated_list<HierarchicalInstanceSyntax> instances
 token semi
 
+FunctionPortSyntax kind=FunctionPort
+list<AttributeInstanceSyntax> attributes
+token constKeyword
+token direction
+token varKeyword
+DataTypeSyntax dataType
+VariableDeclaratorSyntax declarator
+
+FunctionPortListSyntax kind=FunctionPortList
+token openParen
+separated_list<FunctionPortSyntax> ports
+token closeParen
+
 FunctionPrototypeSyntax kind=FunctionPrototype
 token keyword
 token lifetime
 DataTypeSyntax returnType
 NameSyntax name
-AnsiPortListSyntax portList
+FunctionPortListSyntax portList
 token semi
 
 FunctionDeclarationSyntax base=MemberSyntax

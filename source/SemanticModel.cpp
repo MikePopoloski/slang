@@ -18,6 +18,14 @@ TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
     return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
 }
 
+VariableLifetime getLifetime(Token token, VariableLifetime defaultIfUnset) {
+    switch (token.kind) {
+        case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
+        case TokenKind::StaticKeyword: return VariableLifetime::Static;
+        default: return defaultIfUnset;
+    }
+}
+
 Diagnostics unusedDiagnostics;
 
 }
@@ -176,6 +184,65 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, co
     // TODO: consider Void Type
 
     return nullptr;
+}
+
+const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationSyntax* syntax, const Scope* scope) {
+    auto proto = syntax->prototype;
+    auto lifetime = getLifetime(proto->lifetime, VariableLifetime::Automatic);
+    auto returnType = makeTypeSymbol(proto->returnType, scope);
+    bool isTask = syntax->kind == SyntaxKind::TaskDeclaration;
+
+    // For now only support simple function names
+    auto name = proto->name->getFirstToken();
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
+
+    if (proto->portList) {
+        const TypeSymbol* lastType = getKnownType(SyntaxKind::LogicType);
+        auto lastDirection = FormalArgumentDirection::In;
+
+        for (const FunctionPortSyntax* portSyntax : proto->portList->ports) {
+            FormalArgumentDirection direction;
+            bool directionSpecified = true;
+            switch (portSyntax->direction.kind) {
+                case TokenKind::InputKeyword: direction = FormalArgumentDirection::In; break;
+                case TokenKind::OutputKeyword: direction = FormalArgumentDirection::Out; break;
+                case TokenKind::InOutKeyword: direction = FormalArgumentDirection::InOut; break;
+                case TokenKind::RefKeyword:
+                    if (portSyntax->constKeyword)
+                        direction = FormalArgumentDirection::ConstRef;
+                    else
+                        direction = FormalArgumentDirection::Ref;
+                    break;
+                default:
+                    // Otherwise, we "inherit" the previous argument
+                    direction = lastDirection;
+                    directionSpecified = false;
+                    break;
+            }
+
+            // If we're given a type, use that. Otherwise, if we were given a
+            // direction, default to logic. Otherwise, use the last type.
+            const TypeSymbol* type;
+            if (portSyntax->dataType)
+                type = makeTypeSymbol(portSyntax->dataType, scope);
+            else if (directionSpecified)
+                type = getKnownType(SyntaxKind::LogicType);
+            else
+                type = lastType;
+
+            arguments.append(alloc.emplace<FormalArgumentSymbol>(
+                portSyntax->declarator->name,
+                type,
+                direction
+            ));
+
+            lastDirection = direction;
+            lastType = type;
+        }
+    }
+
+    return alloc.emplace<SubroutineSymbol>(name, returnType, arguments.copy(alloc), lifetime, isTask);
 }
 
 bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope) {

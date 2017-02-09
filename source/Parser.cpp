@@ -475,6 +475,39 @@ ModportDeclarationSyntax* Parser::parseModportDeclaration(ArrayRef<AttributeInst
     return alloc.emplace<ModportDeclarationSyntax>(attributes, keyword, buffer.copy(alloc), semi);
 }
 
+FunctionPortSyntax* Parser::parseFunctionPort() {
+    auto attributes = parseAttributes();
+    auto constKeyword = consumeIf(TokenKind::ConstKeyword);
+
+    Token direction;
+    if (isPortDirection(peek().kind))
+        direction = consume();
+
+    if (constKeyword && direction.kind != TokenKind::RefKeyword) {
+        auto location = direction ? direction.location() : constKeyword.location();
+        addError(DiagCode::ConstFunctionPortRequiresRef, location);
+    }
+
+    Token varKeyword = consumeIf(TokenKind::VarKeyword);
+
+    // The data type is fully optional; if we see an identifier here we need
+    // to disambiguate. Otherwise see if we have a port name or nothing at all.
+    DataTypeSyntax* dataType = nullptr;
+    if (!peek(TokenKind::Identifier))
+        dataType = parseDataType(/* allowImplicit */ true);
+    else if (!isPlainPortName())
+        dataType = parseDataType(/* allowImplicit */ false);
+
+    return alloc.emplace<FunctionPortSyntax>(
+        attributes,
+        constKeyword,
+        direction,
+        varKeyword,
+        dataType,
+        parseVariableDeclarator(/* isFirst */ true)
+    );
+}
+
 FunctionPrototypeSyntax* Parser::parseFunctionPrototype() {
     auto keyword = consume();
     auto lifetime = parseLifetime();
@@ -492,9 +525,25 @@ FunctionPrototypeSyntax* Parser::parseFunctionPrototype() {
 
     auto name = parseName();
 
-    AnsiPortListSyntax* portList = nullptr;
-    if (peek(TokenKind::OpenParenthesis))
-        portList = parseAnsiPortList(consume());
+    FunctionPortListSyntax* portList = nullptr;
+    if (peek(TokenKind::OpenParenthesis)) {
+        auto openParen = consume();
+        if (peek(TokenKind::CloseParenthesis))
+            portList = alloc.emplace<FunctionPortListSyntax>(openParen, nullptr, consume());
+        else {
+            Token closeParen;
+            SmallVectorSized<TokenOrSyntax, 8> buffer;
+            parseSeparatedList<isPossibleFunctionPort, isEndOfParenList>(
+                buffer,
+                TokenKind::CloseParenthesis,
+                TokenKind::Comma,
+                closeParen,
+                DiagCode::ExpectedFunctionPort,
+                [this](bool) { return parseFunctionPort(); }
+            );
+            portList = alloc.emplace<FunctionPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+        }
+    }
 
     auto semi = expect(TokenKind::Semicolon);
     return alloc.emplace<FunctionPrototypeSyntax>(keyword, lifetime, returnType, name, portList, semi);

@@ -27,7 +27,22 @@ enum class SymbolKind {
     GenerateBlock,
     LocalVariable,
     ProceduralBlock,
-    Variable
+    Variable,
+    FormalArgument,
+    Subroutine
+};
+
+enum class VariableLifetime {
+    Automatic,
+    Static
+};
+
+enum class FormalArgumentDirection {
+    In,
+    Out,
+    InOut,
+    Ref,
+    ConstRef
 };
 
 class Symbol {
@@ -253,6 +268,29 @@ public:
 
     ProceduralBlock(ArrayRef<const Symbol*> children, Kind kind, const Scope *scope)
         : children(children), kind(kind), scope(scope) {}
+};
+
+class FormalArgumentSymbol : public Symbol {
+public:
+    const TypeSymbol* type;
+    FormalArgumentDirection direction;
+
+    FormalArgumentSymbol(Token name, const TypeSymbol* type, FormalArgumentDirection direction) :
+        Symbol(SymbolKind::FormalArgument, name.valueText(), name.location()),
+        type(type), direction(direction) {}
+};
+
+class SubroutineSymbol : public Symbol {
+public:
+    const TypeSymbol* returnType;
+    ArrayRef<const FormalArgumentSymbol*> arguments;
+    VariableLifetime defaultLifetime;
+    bool isTask;
+
+    SubroutineSymbol(Token name, const TypeSymbol* returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
+                     VariableLifetime defaultLifetime, bool isTask) :
+        Symbol(SymbolKind::Subroutine, name.valueText(), name.location()),
+        returnType(returnType), arguments(arguments), defaultLifetime(defaultLifetime), isTask(isTask) {}
 };
 
 }
