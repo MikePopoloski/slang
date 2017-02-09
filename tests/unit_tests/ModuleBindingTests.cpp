@@ -158,4 +158,37 @@ endmodule
     CHECK(foo.value.integer() == 1);
 }
 
+TEST_CASE("Module children (loop generate)", "[binding:modules]") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    for (genvar i = 0; i < 10; i += 1) begin
+        Leaf #(i) leaf();
+    end
+endmodule
+
+module Leaf #(parameter int foo)();
+endmodule
+)");
+
+    Diagnostics diagnostics;
+    DeclarationTable declTable(diagnostics);
+    declTable.addSyntaxTree(&tree);
+
+    auto topLevelModules = declTable.getTopLevelModules();
+    REQUIRE(topLevelModules.count() == 1);
+
+    SemanticModel sem(alloc, diagnostics, declTable);
+    auto instance = sem.makeImplicitInstance(topLevelModules[0]);
+    CHECK(diagnostics.count() == 0);
+
+    // Check that the tree of children has been instantiated correctly
+    REQUIRE(instance->module->children.count() == 10);
+
+    for (int i = 0; i < 10; i++) {
+        const auto& leaf = instance->getChild<GenerateBlock>(i).getChild<InstanceSymbol>(0);
+        const auto& foo = leaf.module->scope->lookup("foo")->as<ParameterSymbol>();
+        CHECK(foo.value.integer() == i);
+    }
+}
+
 }

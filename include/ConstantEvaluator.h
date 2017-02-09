@@ -25,9 +25,13 @@ class ConstantEvaluator {
 public:
     ConstantEvaluator();
 
-    /// Evaluate a bound tree, including all side effects. If this is not a
+    /// Evaluates a bound tree, including all side effects. If this is not a
     /// constant expression diagnostics will issued to help indicate why not.
     ConstantValue evaluate(const BoundNode* tree);
+
+    /// Evaluates a bound tree and then tries to interpret the result in
+    /// a boolean context.
+    bool evaluateBool(const BoundNode* tree);
 
     /// Creates a temporary on the root stack frame. Call this before calling
     /// `evaluate` to material temporaries that don't have declarations within

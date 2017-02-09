@@ -14,7 +14,8 @@ enum class SymbolKind;
 // contexts so that symbol lookup can be performed.
 class Scope {
 public:
-    Scope();
+    Scope() {}
+    explicit Scope(const Scope* parent) : parentScope(parent) {}
 
     bool add(const Symbol* symbol);
 
@@ -40,7 +41,7 @@ public:
 private:
     std::unordered_map<StringRef, const Symbol*> table;
     std::vector<const Symbol*> list;
-    const Scope* parentScope;
+    const Scope* parentScope = nullptr;
 };
 
 }

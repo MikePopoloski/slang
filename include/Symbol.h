@@ -23,6 +23,7 @@ enum class SymbolKind {
     Interface,
     Program,
     Attribute,
+    Genvar,
     GenerateBlock,
     LocalVariable
 };
@@ -160,6 +161,9 @@ class LocalVariableSymbol : public Symbol {
 public:
     const TypeSymbol* type;
 
+    LocalVariableSymbol(Token token, const TypeSymbol* type) :
+        LocalVariableSymbol(token.valueText(), token.location(), type) {}
+
     LocalVariableSymbol(StringRef name, SourceLocation location, const TypeSymbol* type) :
         Symbol(SymbolKind::LocalVariable, name, location), type(type) {}
 };
@@ -190,6 +194,12 @@ public:
     const T& getChild(uint32_t index) const { return module->children[index]->as<T>(); }
 
     static constexpr SymbolKind mykind = SymbolKind::Unknown;
+};
+
+class GenvarSymbol : public Symbol {
+public:
+    GenvarSymbol(StringRef name, SourceLocation location) :
+        Symbol(SymbolKind::Genvar, name, location) {}
 };
 
 class GenerateBlock : public Symbol {
