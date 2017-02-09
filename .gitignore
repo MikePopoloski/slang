@@ -6,6 +6,8 @@
 *.user
 *.VC.db
 *.sdf
+*.swp
+*.orig
 obj/
 [Bb]in
 [Dd]ebug*/
