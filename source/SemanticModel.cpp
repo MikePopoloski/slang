@@ -179,6 +179,26 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, co
         case SyntaxKind::CHandleType:
         case SyntaxKind::EventType:
             return getKnownType(syntax->kind);
+        case SyntaxKind::EnumType: {
+            ExpressionBinder binder {*this, scope};
+            const EnumTypeSyntax *enumSyntax = syntax->as<EnumTypeSyntax>();
+            const IntegralTypeSymbol &baseType = (enumSyntax->baseType ? makeTypeSymbol(enumSyntax->baseType, scope) : getKnownType(SyntaxKind::IntType))->as<IntegralTypeSymbol>();
+
+            SmallVectorSized<EnumValueSymbol *, 8> values;
+            SVInt nextVal;
+            for (auto member : enumSyntax->members) {
+                //TODO: add each member to the scope
+                if (member->initializer) {
+                    ASSERT(member->initializer->expr);
+                    auto bound = binder.bindConstantExpression(member->initializer->expr);
+                    nextVal = std::get<SVInt>(evaluateConstant(bound));
+                }
+                EnumValueSymbol *valSymbol = alloc.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location(), &baseType, nextVal);
+                values.append(valSymbol);
+                ++nextVal;
+            }
+            return alloc.emplace<EnumTypeSymbol>(&baseType, enumSyntax->keyword.location(), values.copy(alloc));
+        }
         case SyntaxKind::TypedefDeclaration: {
             auto tds = syntax->as<TypedefDeclarationSyntax>();
             auto type = makeTypeSymbol(tds->type, scope);

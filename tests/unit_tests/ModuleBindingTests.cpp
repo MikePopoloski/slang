@@ -279,4 +279,26 @@ endmodule
     CHECK(returnStmt.expr->type->as<IntegralTypeSymbol>().width == 32);
 }
 
+TEST_CASE("Enum declaration", "[binding:modules]") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    enum logic [3:0] {
+        A,
+        B = 4,
+        C
+    } someVar;
+endmodule
+)");
+
+    const auto& instance = evalModule(tree);
+    const auto& someVar = instance.getChild<VariableSymbol>(0);
+    REQUIRE(someVar.type->kind == SymbolKind::EnumType);
+    REQUIRE(someVar.type->as<EnumTypeSymbol>().values.count() == 3);
+    CHECK(someVar.type->as<EnumTypeSymbol>().values[0]->value.integer() == 0);
+    CHECK(someVar.type->as<EnumTypeSymbol>().values[1]->value.integer() == 4);
+    CHECK(someVar.type->as<EnumTypeSymbol>().values[2]->value.integer() == 5);
+
+    // TODO: test (and implement) all the restrictions on enum and enum values
+}
+
 }
