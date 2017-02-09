@@ -236,7 +236,7 @@ endmodule
 
     CHECK(alwaysComb.kind == ProceduralBlock::AlwaysComb);
 
-    const auto& variable = instance->getChild<DataSymbol>(2);
+    const auto& variable = instance->getChild<VariableSymbol>(2);
     CHECK(variable.typeSymbol.kind == SymbolKind::IntegralType);
     CHECK(variable.name == "arr1");
 }

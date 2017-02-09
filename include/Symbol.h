@@ -27,7 +27,7 @@ enum class SymbolKind {
     GenerateBlock,
     LocalVariable,
     ProceduralBlock,
-    Data
+    Variable
 };
 
 class Symbol {
@@ -204,9 +204,9 @@ public:
         Symbol(SymbolKind::Genvar, name, location) {}
 };
 
-class DataSymbol : public Symbol {
+class VariableSymbol : public Symbol {
 public:
-    class DataSymbolModifiers {
+    class VariableSymbolModifiers {
     public:
         unsigned int constM : 1;
         unsigned int varM : 1;
@@ -214,12 +214,12 @@ public:
         unsigned int automaticM : 1;
     };
 
-    DataSymbolModifiers modifiers;
+    VariableSymbolModifiers modifiers;
     const TypeSymbol &typeSymbol;
     //TODO: initial value
 
-    DataSymbol(StringRef name, SourceLocation location, DataSymbolModifiers modifiers, const TypeSymbol &typeSymbol) :
-        Symbol(SymbolKind::Data, name, location),
+    VariableSymbol(StringRef name, SourceLocation location, VariableSymbolModifiers modifiers, const TypeSymbol &typeSymbol) :
+        Symbol(SymbolKind::Variable, name, location),
         modifiers(modifiers),
         typeSymbol(typeSymbol) {}
 };

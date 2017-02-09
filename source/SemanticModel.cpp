@@ -404,7 +404,7 @@ void SemanticModel::handleProceduralBlock(const ProceduralBlockSyntax *syntax, S
 }
 
 void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope) {
-    DataSymbol::DataSymbolModifiers modifiers;
+    VariableSymbol::VariableSymbolModifiers modifiers;
     modifiers.constM = std::find_if(syntax->modifiers.begin(), syntax->modifiers.end(), [](auto tk) {return tk.kind == TokenKind::ConstKeyword;}) != syntax->modifiers.end();
     modifiers.varM = std::find_if(syntax->modifiers.begin(), syntax->modifiers.end(), [](auto tk) { return tk.kind == TokenKind::VarKeyword;}) != syntax->modifiers.end();
     modifiers.staticM = std::find_if(syntax->modifiers.begin(), syntax->modifiers.end(), [](auto tk) {return tk.kind == TokenKind::StaticKeyword;}) != syntax->modifiers.end();
@@ -417,10 +417,10 @@ void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax *syntax, S
     }
 }
 
-void SemanticModel::handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const DataSymbol::DataSymbolModifiers &modifiers, const TypeSymbol *typeSymbol) {
+void SemanticModel::handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::VariableSymbolModifiers &modifiers, const TypeSymbol *typeSymbol) {
     ASSERT(typeSymbol);
     // TODO handle dimensions
-    Symbol *dataSymbol = alloc.emplace<DataSymbol>(syntax->name.valueText(), syntax->name.location(), modifiers, *typeSymbol/*TODO: , initializer*/);
+    Symbol *dataSymbol = alloc.emplace<VariableSymbol>(syntax->name.valueText(), syntax->name.location(), modifiers, *typeSymbol/*TODO: , initializer*/);
     results.append(dataSymbol);
     scope->add(dataSymbol);
 }
