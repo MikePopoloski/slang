@@ -397,22 +397,21 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
 }
 
 bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
-    if (peek().kind == TokenKind::IntegerLiteral) {
+    auto firstToken = peek();
+    if (firstToken.kind == TokenKind::IntegerLiteral) {
         value = consume();
         unit = expect(TokenKind::Identifier);
-    } else {
-        auto token = expect(TokenKind::TimeLiteral);
-        if (token.isMissing()) {
-            value = Token::createMissing(alloc, TokenKind::IntegerLiteral, token.location());
-            unit = Token::createMissing(alloc, TokenKind::Identifier, token.location());
-            return false;
-        }
+    } else if (firstToken.kind == TokenKind::TimeLiteral) {
+        auto token = consume();
 
+        // get_if necessary to check for the case where there is a double TimeLiteral
         const SVInt *val = std::get_if<SVInt>(&token.numericValue());
         if (val == nullptr) {
             addError(DiagCode::InvalidTimescaleSpecifier, token.location());
             return false;
         }
+
+        // check for the only allowed values: 1, 10, 100
         StringRef numText;
         if      (*val == 1) numText = "1";
         else if (*val == 10) numText = "10";
@@ -424,16 +423,20 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
 
         // Split the TimeLiteral into a IntegerLiteral and Identifer token
         Token::Info* valueInfo = alloc.emplace<Token::Info>(token.trivia(),
-            numText, token.location(), token.getInfo()->flags | TokenFlags::IsFromPreprocessor);
+            numText, token.location(), token.getInfo()->flags);
         value = *alloc.emplace<Token>(TokenKind::IntegerLiteral, valueInfo);
         valueInfo->setNumInfo(SVInt(16, val->getAssertUInt16(), true));
 
         StringRef timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit);
         Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
             timeUnitSuffix,
-            token.location() + numText.length(), token.getInfo()->flags | TokenFlags::IsFromPreprocessor);
+            token.location() + numText.length(), token.getInfo()->flags);
         unit = *alloc.emplace<Token>(TokenKind::Identifier, unitInfo);
         unitInfo->extra = IdentifierType::Normal;
+    } else {
+        value = Token::createExpected(alloc, diagnostics, firstToken, TokenKind::IntegerLiteral, lastConsumed);
+        unit  = Token::createExpected(alloc, diagnostics, firstToken, TokenKind::Identifier, lastConsumed);
+        return false;
     }
     return true;
 }
