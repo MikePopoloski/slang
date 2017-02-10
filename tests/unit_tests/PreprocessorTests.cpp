@@ -501,4 +501,41 @@ TEST_CASE("timescale directive", "[preprocessor]") {
     CHECK(!diagnostics.empty());
 }
 
+TEST_CASE("macro-defined include file", "[preprocessor]") {
+    auto& text =
+"`define FILE <include.svh>\n"
+"`include `FILE";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "test string");
+    CHECK(diagnostics.empty());
+
+    auto& text2 =
+"`define FILE \"include.svh\"\n"
+"`include `FILE";
+    token = lexToken(text2);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "test string");
+    CHECK(diagnostics.empty());
+
+    auto& text3 =
+"`define FILE(arg) `\"arg`\"\n"
+"`include `FILE(include.svh)";
+    token = lexToken(text3);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "test string");
+    CHECK(diagnostics.empty());
+
+
+    auto& text4 =
+"`define FILE <includesh\n"
+"`include `FILE";
+    token = lexToken(text4);
+
+    CHECK(!diagnostics.empty());
+}
+
 }
