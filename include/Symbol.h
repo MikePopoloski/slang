@@ -9,6 +9,10 @@
 
 namespace slang {
 
+class BoundExpression;
+class BoundStatement;
+class BoundStatementList;
+
 enum class SymbolKind {
     Unknown,
     IntegralType,
@@ -25,7 +29,6 @@ enum class SymbolKind {
     Attribute,
     Genvar,
     GenerateBlock,
-    LocalVariable,
     ProceduralBlock,
     Variable,
     FormalArgument,
@@ -174,17 +177,6 @@ public:
     static constexpr SymbolKind mykind = SymbolKind::Parameter;
 };
 
-class LocalVariableSymbol : public Symbol {
-public:
-    const TypeSymbol* type;
-
-    LocalVariableSymbol(Token token, const TypeSymbol* type) :
-        LocalVariableSymbol(token.valueText(), token.location(), type) {}
-
-    LocalVariableSymbol(StringRef name, SourceLocation location, const TypeSymbol* type) :
-        Symbol(SymbolKind::LocalVariable, name, location), type(type) {}
-};
-
 class ModuleSymbol : public Symbol {
 public:
     const ModuleDeclarationSyntax* syntax;
@@ -221,7 +213,7 @@ public:
 
 class VariableSymbol : public Symbol {
 public:
-    class VariableSymbolModifiers {
+    class Modifiers {
     public:
         unsigned int constM : 1;
         unsigned int varM : 1;
@@ -229,14 +221,23 @@ public:
         unsigned int automaticM : 1;
     };
 
-    VariableSymbolModifiers modifiers;
-    const TypeSymbol &typeSymbol;
+    Modifiers modifiers;
+    const TypeSymbol* type;
     //TODO: initial value
 
-    VariableSymbol(StringRef name, SourceLocation location, VariableSymbolModifiers modifiers, const TypeSymbol &typeSymbol) :
+    VariableSymbol(Token name, const TypeSymbol* type, Modifiers modifiers = Modifiers()) :
+        Symbol(SymbolKind::Variable, name.valueText(), name.location()),
+        modifiers(modifiers),
+        type(type) {}
+
+    VariableSymbol(StringRef name, SourceLocation location, const TypeSymbol* type, Modifiers modifiers = Modifiers()) :
         Symbol(SymbolKind::Variable, name, location),
         modifiers(modifiers),
-        typeSymbol(typeSymbol) {}
+        type(type) {}
+
+protected:
+    VariableSymbol(SymbolKind childKind, StringRef name, SourceLocation location, const TypeSymbol* type) :
+        Symbol(childKind, name, location), type(type) {}
 };
 
 class GenerateBlock : public Symbol {
@@ -270,27 +271,29 @@ public:
         : children(children), kind(kind), scope(scope) {}
 };
 
-class FormalArgumentSymbol : public Symbol {
+class FormalArgumentSymbol : public VariableSymbol {
 public:
-    const TypeSymbol* type;
     FormalArgumentDirection direction;
 
     FormalArgumentSymbol(Token name, const TypeSymbol* type, FormalArgumentDirection direction) :
-        Symbol(SymbolKind::FormalArgument, name.valueText(), name.location()),
-        type(type), direction(direction) {}
+        VariableSymbol(SymbolKind::FormalArgument, name.valueText(), name.location(), type),
+        direction(direction) {}
 };
 
 class SubroutineSymbol : public Symbol {
 public:
+    const Scope* scope;
     const TypeSymbol* returnType;
+    const BoundStatementList* body;
     ArrayRef<const FormalArgumentSymbol*> arguments;
     VariableLifetime defaultLifetime;
     bool isTask;
 
     SubroutineSymbol(Token name, const TypeSymbol* returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
-                     VariableLifetime defaultLifetime, bool isTask) :
+                     VariableLifetime defaultLifetime, bool isTask, const Scope* scope) :
         Symbol(SymbolKind::Subroutine, name.valueText(), name.location()),
-        returnType(returnType), arguments(arguments), defaultLifetime(defaultLifetime), isTask(isTask) {}
+        returnType(returnType), arguments(arguments), defaultLifetime(defaultLifetime),
+        isTask(isTask), scope(scope) {}
 };
 
 }

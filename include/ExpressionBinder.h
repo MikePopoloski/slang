@@ -18,10 +18,14 @@ class Scope;
 class ExpressionBinder {
 public:
     ExpressionBinder(SemanticModel& sem, const Scope* scope);
+    ExpressionBinder(SemanticModel& sem, const SubroutineSymbol* subroutine);
 
     BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindSelfDeterminedExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindAssignmentLikeContext(const ExpressionSyntax* syntax, SourceLocation location, const TypeSymbol* assignmentType);
+
+    BoundStatement* bindStatement(const StatementSyntax* syntax);
+    BoundStatementList* bindStatementList(const SyntaxList<SyntaxNode>& items);
 
 private:
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
@@ -36,6 +40,8 @@ private:
     BoundExpression* bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindAssignmentOperator(const BinaryExpressionSyntax* syntax);
 
+    BoundStatement* bindReturnStatement(const ReturnStatementSyntax* syntax);
+
     // functions to check whether operators are applicable to the given operand types
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand);
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** lhs, BoundExpression** rhs);
@@ -43,11 +49,13 @@ private:
     // Propagates the type of the expression back down to its operands.
     void propagate(BoundExpression* expression, const TypeSymbol* type);
 
-    BadBoundExpression* makeBad(BoundExpression* expr);
+    BadBoundExpression* badExpr(BoundExpression* expr);
+    BadBoundStatement* badStmt(BoundStatement* stmt);
 
     SemanticModel& sem;
     BumpAllocator& alloc;
     const Scope* scope;
+    const SubroutineSymbol* subroutine = nullptr;
 
     Diagnostic& addError(DiagCode code, SourceLocation location);
 };

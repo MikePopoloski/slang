@@ -39,7 +39,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root()->getFirstToken();
-    LocalVariableSymbol local {
+    VariableSymbol local {
         varToken.valueText(), varToken.location(),
         sem.getKnownType(SyntaxKind::LogicType)
     };
@@ -72,7 +72,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root()->getFirstToken();
-    LocalVariableSymbol local {
+    VariableSymbol local {
         varToken.valueText(), varToken.location(),
         sem.getIntegralType(20, false)
     };
@@ -100,7 +100,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root()->getFirstToken();
-    LocalVariableSymbol local {
+    VariableSymbol local {
         varToken.valueText(), varToken.location(),
         sem.getIntegralType(20, false)
     };

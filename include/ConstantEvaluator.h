@@ -59,7 +59,7 @@ private:
 
     ConstantValue evaluateLiteral(const BoundLiteral* expr);
     ConstantValue evaluateParameter(const BoundParameter* expr);
-    ConstantValue evaluateVarRef(const BoundVarRef* expr);
+    ConstantValue evaluateVariable(const BoundVariable* expr);
     ConstantValue evaluateUnary(const BoundUnaryExpression* expr);
     ConstantValue evaluateBinary(const BoundBinaryExpression* expr);
     ConstantValue evaluateAssignment(const BoundAssignmentExpression* expr);

@@ -19,6 +19,13 @@ ExpressionBinder::ExpressionBinder(SemanticModel& sem, const Scope* scope) :
     ASSERT(scope);
 }
 
+ExpressionBinder::ExpressionBinder(SemanticModel& sem, const SubroutineSymbol* subroutine) :
+    sem(sem), alloc(sem.getAllocator()), subroutine(subroutine)
+{
+    scope = subroutine->scope;
+    ASSERT(scope);
+}
+
 BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax) {
     ASSERT(syntax);
 
@@ -113,11 +120,14 @@ BoundExpression* ExpressionBinder::bindSelfDeterminedExpression(const Expression
 
 BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyntax* syntax, SourceLocation location, const TypeSymbol* assignmentType) {
     BoundExpression* expr = bindExpression(syntax);
+    if (expr->bad())
+        return expr;
+
     const TypeSymbol* type = expr->type;
     if (!assignmentType->isAssignmentCompatible(type)) {
         DiagCode code = assignmentType->isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
         addError(code, location) << syntax->sourceRange();
-        expr = makeBad(expr);
+        expr = badExpr(expr);
     }
     else {
         const IntegralTypeSymbol& exprType = expr->type->as<IntegralTypeSymbol>();
@@ -152,7 +162,7 @@ BoundExpression* ExpressionBinder::bindLiteral(const LiteralExpressionSyntax* sy
 
 BoundExpression* ExpressionBinder::bindLiteral(const IntegerVectorExpressionSyntax* syntax) {
     if (syntax->value.isMissing())
-        return makeBad(alloc.emplace<BoundLiteral>(syntax, sem.getErrorType(), nullptr));
+        return badExpr(alloc.emplace<BoundLiteral>(syntax, sem.getErrorType(), nullptr));
 
     const SVInt& value = std::get<SVInt>(syntax->value.numericValue());
     const TypeSymbol* type = sem.getIntegralType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
@@ -163,16 +173,20 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
     // if we have an invalid name token just give up now; the error has already been reported
     StringRef identifier = syntax->identifier.valueText();
     if (!identifier)
-        return makeBad(nullptr);
+        return badExpr(nullptr);
 
     const Symbol* symbol = scope->lookup(identifier);
-    ASSERT(symbol);
+    if (!symbol) {
+        addError(DiagCode::UndeclaredIdentifier, syntax->identifier.location()) << identifier;
+        return badExpr(nullptr);
+    }
 
     switch (symbol->kind) {
         case SymbolKind::Parameter:
             return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterSymbol>());
-        case SymbolKind::LocalVariable:
-            return alloc.emplace<BoundVarRef>(syntax, (const LocalVariableSymbol*)symbol);
+        case SymbolKind::Variable:
+        case SymbolKind::FormalArgument:
+            return alloc.emplace<BoundVariable>(syntax, (const VariableSymbol*)symbol);
 
             DEFAULT_UNREACHABLE;
     }
@@ -183,7 +197,7 @@ BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnary
     // Supported for both integral and real types. Can be overloaded for others.
     BoundExpression* operand = bindExpression(syntax->operand);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
-        return makeBad(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
+        return badExpr(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
 
     return alloc.emplace<BoundUnaryExpression>(syntax, operand->type, operand);
 }
@@ -192,7 +206,7 @@ BoundExpression* ExpressionBinder::bindUnaryReductionOperator(const PrefixUnaryE
     // Result type is always a single bit. Supported on integral types.
     BoundExpression* operand = bindSelfDeterminedExpression(syntax->operand);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
-        return makeBad(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
+        return badExpr(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
 
     return alloc.emplace<BoundUnaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), operand);
 }
@@ -201,7 +215,7 @@ BoundExpression* ExpressionBinder::bindArithmeticOperator(const BinaryExpression
     BoundExpression* lhs = bindExpression(syntax->left);
     BoundExpression* rhs = bindExpression(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
     const IntegralTypeSymbol& l = lhs->type->as<IntegralTypeSymbol>();
     const IntegralTypeSymbol& r = rhs->type->as<IntegralTypeSymbol>();
@@ -216,7 +230,7 @@ BoundExpression* ExpressionBinder::bindComparisonOperator(const BinaryExpression
     BoundExpression* lhs = bindExpression(syntax->left);
     BoundExpression* rhs = bindExpression(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
     // result type is always a single bit
     return alloc.emplace<BoundBinaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), lhs, rhs);
@@ -226,7 +240,7 @@ BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpression
     BoundExpression* lhs = bindSelfDeterminedExpression(syntax->left);
     BoundExpression* rhs = bindSelfDeterminedExpression(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
     // operands are sized to max(l,r) and the result of the operation is always 1 bit
     // no propagations from above have an actual have an effect on the subexpressions
@@ -254,7 +268,7 @@ BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressi
     BoundExpression* lhs = bindExpression(syntax->left);
     BoundExpression* rhs = bindSelfDeterminedExpression(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
     const IntegralTypeSymbol& l = lhs->type->as<IntegralTypeSymbol>();
     const IntegralTypeSymbol& r = rhs->type->as<IntegralTypeSymbol>();
@@ -289,7 +303,7 @@ BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpression
         DEFAULT_UNREACHABLE;
     }
     if (!checkOperatorApplicability(binopKind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
     // The operands of an assignment are themselves self determined,
     // but we must increase the size of the RHS to the size of the LHS if it is larger, and then
@@ -475,8 +489,43 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
     }
 }
 
-BadBoundExpression* ExpressionBinder::makeBad(BoundExpression* expr) {
+BoundStatement* ExpressionBinder::bindStatement(const StatementSyntax* syntax) {
+    ASSERT(syntax);
+    switch (syntax->kind) {
+        case SyntaxKind::ReturnStatement: return bindReturnStatement((const ReturnStatementSyntax*)syntax);
+
+        DEFAULT_UNREACHABLE;
+    }
+    return nullptr;
+}
+
+BoundStatementList* ExpressionBinder::bindStatementList(const SyntaxList<SyntaxNode>& items) {
+    SmallVectorSized<const BoundStatement*, 8> buffer;
+    for (const auto& item : items) {
+        // TODO: declarations
+        if (isStatement(item->kind))
+            buffer.append(bindStatement((const StatementSyntax*)item));
+    }
+    return alloc.emplace<BoundStatementList>(buffer.copy(alloc));
+}
+
+BoundStatement* ExpressionBinder::bindReturnStatement(const ReturnStatementSyntax* syntax) {
+    auto location = syntax->returnKeyword.location();
+    if (!subroutine) {
+        addError(DiagCode::ReturnNotInSubroutine, location);
+        return badStmt(nullptr);
+    }
+
+    auto expr = bindAssignmentLikeContext(syntax->returnValue, location, subroutine->returnType);
+    return alloc.emplace<BoundReturnStatement>(syntax, expr);
+}
+
+BadBoundExpression* ExpressionBinder::badExpr(BoundExpression* expr) {
     return alloc.emplace<BadBoundExpression>(expr);
+}
+
+BadBoundStatement* ExpressionBinder::badStmt(BoundStatement* stmt) {
+    return alloc.emplace<BadBoundStatement>(stmt);
 }
 
 Diagnostic& ExpressionBinder::addError(DiagCode code, SourceLocation location) {
