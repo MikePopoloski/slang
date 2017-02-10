@@ -221,8 +221,17 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             // 3. implicit class handles
             // 4. any of [1-3] with an assignment pattern
             // 5. any of [1-3] with a cast expression
-            // 6. error
-            if (isPossibleDataType(kind) && kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName) {
+            // 6. signing cast expression
+            // 7. error
+            if (kind == TokenKind::SignedKeyword || kind == TokenKind::UnsignedKeyword) {
+                auto signing = consume();
+                auto apostrophe = expect(TokenKind::Apostrophe);
+                auto openParen = expect(TokenKind::OpenParenthesis);
+                auto innerExpr = parseExpression();
+                auto closeParen = expect(TokenKind::CloseParenthesis);
+                auto parenExpr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, innerExpr, closeParen);
+                expr = alloc.emplace<SignedCastExpressionSyntax>(signing, apostrophe, parenExpr);
+            } else if (isPossibleDataType(kind) && kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName) {
                 auto type = parseDataType(/* allowImplicit */ false);
                 if (peek(TokenKind::ApostropheOpenBrace))
                     expr = parseAssignmentPatternExpression(type);

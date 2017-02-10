@@ -1795,6 +1795,36 @@ protected:
     }
 };
 
+struct SignedCastExpressionSyntax : public ExpressionSyntax {
+    Token signing;
+    Token apostrophe;
+    ParenthesizedExpressionSyntax* inner;
+
+    SignedCastExpressionSyntax(Token signing, Token apostrophe, ParenthesizedExpressionSyntax* inner) :
+        ExpressionSyntax(SyntaxKind::SignedCastExpression), signing(signing), apostrophe(apostrophe), inner(inner)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return signing;
+            case 1: return apostrophe;
+            case 2: return inner;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: signing = token; break;
+            case 1: apostrophe = token; break;
+            case 2: ASSERT(false); break;
+        }
+    }
+};
+
 // ----- TIMING CONTROL -----
 
 struct TimingControlSyntax : public SyntaxNode {

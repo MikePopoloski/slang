@@ -311,6 +311,11 @@ ExpressionSyntax left
 token apostrophe
 ParenthesizedExpressionSyntax right
 
+SignedCastExpressionSyntax base=ExpressionSyntax kind=SignedCastExpression
+token signing
+token apostrophe
+ParenthesizedExpressionSyntax inner
+
 // ----- TIMING CONTROL -----
 
 TimingControlSyntax final=false
