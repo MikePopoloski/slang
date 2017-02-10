@@ -129,13 +129,9 @@ BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyn
         addError(code, location) << syntax->sourceRange();
         expr = badExpr(expr);
     }
-    else {
-        const IntegralTypeSymbol& exprType = expr->type->as<IntegralTypeSymbol>();
-        if (exprType.width < assignmentType->as<IntegralTypeSymbol>().width)
-            propagate(expr, assignmentType);
-        else
-            propagate(expr, expr->type);
-    }
+
+    if (!propagateAssignmentLike(expr, assignmentType))
+        propagate(expr, expr->type);
 
     // TODO: truncation
     return expr;
@@ -217,11 +213,9 @@ BoundExpression* ExpressionBinder::bindArithmeticOperator(const BinaryExpression
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
-    const IntegralTypeSymbol& l = lhs->type->as<IntegralTypeSymbol>();
-    const IntegralTypeSymbol& r = rhs->type->as<IntegralTypeSymbol>();
-    int width = std::max(l.width, r.width);
-    bool isSigned = l.isSigned && r.isSigned;
-    const TypeSymbol* type = sem.getIntegralType(width, isSigned);
+    // Get the result type; force the type to be four-state if it's a division, which can make a 4-state output
+    // out of 2-state inputs
+    const TypeSymbol* type = binaryOperatorResultType(lhs->type, rhs->type, syntax->kind == SyntaxKind::DivideExpression);
 
     return alloc.emplace<BoundBinaryExpression>(syntax, type, lhs, rhs);
 }
@@ -246,18 +240,10 @@ BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpression
     // no propagations from above have an actual have an effect on the subexpressions
     // This logic is similar to that of assignment operators, except for the
     // reciprocality
-    if (lhs->type && rhs->type && lhs->type->kind == SymbolKind::IntegralType && rhs->type->kind == SymbolKind::IntegralType) {
-        const IntegralTypeSymbol& lhsym = lhs->type->as<IntegralTypeSymbol>();
-        const IntegralTypeSymbol& rhsym = rhs->type->as<IntegralTypeSymbol>();
-        if (lhsym.width < rhsym.width) {
-            lhs->type = sem.getIntegralType(rhsym.width, lhsym.isSigned, lhsym.isFourState);
-            propagate(lhs, lhs->type);
-        }
-        if (lhsym.width > rhsym.width) {
-            rhs->type = sem.getIntegralType(lhsym.width, rhsym.isSigned, rhsym.isFourState);
-            propagate(rhs, rhs->type);
-        }
+    if (!propagateAssignmentLike(rhs, lhs->type)) {
+        propagateAssignmentLike(lhs, rhs->type);
     }
+
     // result type is always a single bit
     return alloc.emplace<BoundBinaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), lhs, rhs);
 }
@@ -270,11 +256,7 @@ BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressi
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
-    const IntegralTypeSymbol& l = lhs->type->as<IntegralTypeSymbol>();
-    const IntegralTypeSymbol& r = rhs->type->as<IntegralTypeSymbol>();
-    int width = l.width;
-    bool isSigned = l.isSigned && r.isSigned;
-    const TypeSymbol* type = sem.getIntegralType(width, isSigned);
+    const TypeSymbol* type = binaryOperatorResultType(lhs->type, rhs->type, false);
 
     return alloc.emplace<BoundBinaryExpression>(syntax, type, lhs, rhs);
 }
@@ -308,14 +290,8 @@ BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpression
     // The operands of an assignment are themselves self determined,
     // but we must increase the size of the RHS to the size of the LHS if it is larger, and then
     // propagate that information down
-    if (lhs->type->kind == SymbolKind::IntegralType && rhs->type->kind == SymbolKind::IntegralType) {
-        const IntegralTypeSymbol& from = lhs->type->as<IntegralTypeSymbol>();
-        const IntegralTypeSymbol& to = rhs->type->as<IntegralTypeSymbol>();
-        if (from.width > to.width) {
-            rhs->type = sem.getIntegralType(from.width, to.isSigned, to.isFourState);
-            propagate(rhs, rhs->type);
-        }
-    }
+    propagateAssignmentLike(rhs, lhs->type);
+
     // result type is always the type of the left hand side
     return alloc.emplace<BoundAssignmentExpression>(syntax, lhs->type, lhs, rhs);
 }
@@ -396,7 +372,7 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
 
     // If a type of real is propagated to an expression of a non-real type, the type of the
     // direct sub-expression is changed, but it is not propagated any further down
-    bool doNotPropogateRealDownToNonReal = type->kind == SymbolKind::RealType && expression->type->kind != SymbolKind::RealType;
+    bool doNotPropogateRealDownToNonReal = type->isReal() && !expression->type->isReal();
     switch (expression->syntax->kind) {
         case SyntaxKind::NullLiteralExpression:
         case SyntaxKind::StringLiteralExpression:
@@ -518,6 +494,37 @@ BoundStatement* ExpressionBinder::bindReturnStatement(const ReturnStatementSynta
 
     auto expr = bindAssignmentLikeContext(syntax->returnValue, location, subroutine->returnType);
     return alloc.emplace<BoundReturnStatement>(syntax, expr);
+}
+
+bool ExpressionBinder::propagateAssignmentLike(BoundExpression* rhs, const TypeSymbol* lhsType) {
+
+    // Integral case
+    if (lhsType->width() > rhs->type->width()) {
+        if (!lhsType->isReal() && !rhs->type->isReal()) {
+            rhs->type = sem.getIntegralType(lhsType->width(), rhs->type->isSigned(), rhs->type->isFourState());
+        } else {
+            if (lhsType->width() > 32) rhs->type = sem.getKnownType(SyntaxKind::RealType);
+            else rhs->type = sem.getKnownType(SyntaxKind::ShortRealType);
+        }
+        propagate(rhs, rhs->type);
+        return true;
+    }
+
+    return false;
+}
+
+const TypeSymbol* ExpressionBinder::binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState) {
+    int width = std::max(lhsType->width(), rhsType->width());
+    bool isSigned = lhsType->isSigned() && rhsType->isSigned();
+    bool fourState = forceFourState || lhsType->isFourState() || rhsType->isFourState();
+    if (lhsType->isReal() || rhsType->isReal()) {
+        // spec says that RealTime and RealType are interchangeable, so we will just use RealType for
+        // intermediate symbols
+        if (width > 32) return sem.getKnownType(SyntaxKind::RealType);
+        else return sem.getKnownType(SyntaxKind::ShortRealType);
+    } else {
+        return sem.getIntegralType(width, isSigned, fourState);
+    }
 }
 
 BadBoundExpression* ExpressionBinder::badExpr(BoundExpression* expr) {
