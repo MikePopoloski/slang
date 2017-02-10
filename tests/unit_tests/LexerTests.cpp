@@ -584,7 +584,7 @@ TEST_CASE("Too many errors", "[lexer]") {
     }
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(diagnostics.count() == Lexer::MAX_LEXER_ERRORS + 1);
-    CHECK(diagnostics.back().code == DiagCode::TooManyErrors);
+    CHECK(diagnostics.back().code == DiagCode::TooManyLexerErrors);
 }
 
 void testKeyword(TokenKind kind) {

@@ -200,9 +200,6 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
 }
 
 Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
-    if (sourceBuffer == nullptr) {
-        return Token(TokenKind::EndOfFile, alloc.emplace<Token::Info>());
-    }
     if (mode == LexerMode::IncludeFileName)
         return lexIncludeFileName();
 
@@ -213,9 +210,11 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
     // Lex any leading trivia; if we're in directive mode this might require
     // us to return an EndOfDirective token right away.
     bool eod = lexTrivia(triviaBuffer, directiveMode);
-    info->trivia = triviaBuffer.copy(alloc);
-    if (eod)
+
+    if (eod) {
+        info->trivia = triviaBuffer.copy(alloc);
         return Token(TokenKind::EndOfDirective, info);
+    }
 
     // lex the next token
     mark();
@@ -223,12 +222,16 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
 
     onNewLine = false;
     info->rawText = lexeme();
-    if (diagnostics.count() >= MAX_LEXER_ERRORS) {
+    if (kind != TokenKind::EndOfFile && diagnostics.count() >= MAX_LEXER_ERRORS) {
         // Stop any further lexing by claiming to at the end of the buffeer;
-        addError(DiagCode::TooManyErrors, currentOffset());
-        // Ensure we don't look at the source any more
-        sourceBuffer = nullptr;
+        addError(DiagCode::TooManyLexerErrors, currentOffset());
+        // consume the rest of the file and turn it into trivia
+        triviaBuffer.append(Trivia(TriviaKind::DisabledText, StringRef(marker, sourceEnd - marker)));
+        sourceBuffer = sourceEnd - 1;
+        mark();
+        kind = TokenKind::EndOfFile;
     }
+    info->trivia = triviaBuffer.copy(alloc);
     return Token(kind, info);
 }
 
