@@ -183,8 +183,8 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             // up to the '>'' in order to get the file name
             SourceLocation rootExpansionLoc = sourceManager.getExpansionLoc(fileName.location());
             Token concatenatedFileName = fileName;
-            std::vector<Token> tokens;
-            tokens.push_back(fileName);
+            SmallVectorSized<Token, 8> tokens;
+            tokens.append(fileName);
             Token nextToken = peek();
             while (nextToken.kind != TokenKind::GreaterThan) {
                 // TODO: we should probably stop at something like a >>, >>= token,
@@ -195,14 +195,14 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                     break;
                 }
                 consume();
-                tokens.push_back(nextToken);
+                tokens.append(nextToken);
                 nextToken = peek();
                 if (nextToken.kind == TokenKind::GreaterThan) {
-                    tokens.push_back(nextToken);
+                    tokens.append(nextToken);
                     // do stringification
                     fileName = Lexer::stringify(alloc, fileName.location(), fileName.getInfo()->trivia,
-                        &tokens.front(), &tokens.back() + 1, true);
-                    fileName = *alloc.emplace<Token>(TokenKind::IncludeFileName, fileName.getInfo());
+                        tokens.begin(), tokens.end(), true);
+                    fileName.kind = TokenKind::IncludeFileName;
                 }
             }
         } else if (fileName.kind == TokenKind::StringLiteral) {
@@ -225,8 +225,6 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     // path should be at least three chars: "a" or <a>
     StringRef path = fileName.valueText();
 
-    // An includeFileName's value
-    //bool isMacroExpanded = fileName.kind != TokenKind::IncludeFileName;
     if (path.length() < 3)
         addError(DiagCode::ExpectedIncludeFileName, fileName.location());
     else {
