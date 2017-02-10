@@ -38,7 +38,7 @@ ConstantValue ConstantEvaluator::evaluate(const BoundNode* tree) {
     switch (tree->kind) {
         case BoundNodeKind::Literal: return evaluateLiteral((BoundLiteral*)tree);
         case BoundNodeKind::Parameter: return evaluateParameter((BoundParameter*)tree);
-        case BoundNodeKind::VarRef: return evaluateVarRef((BoundVarRef*)tree);
+        case BoundNodeKind::Variable: return evaluateVariable((BoundVariable*)tree);
         case BoundNodeKind::UnaryExpression: return evaluateUnary((BoundUnaryExpression*)tree);
         case BoundNodeKind::BinaryExpression: return evaluateBinary((BoundBinaryExpression*)tree);
         case BoundNodeKind::AssignmentExpression: return evaluateAssignment((BoundAssignmentExpression*)tree);
@@ -56,7 +56,7 @@ ConstantValue ConstantEvaluator::evaluateParameter(const BoundParameter* expr) {
     return expr->symbol.value;
 }
 
-ConstantValue ConstantEvaluator::evaluateVarRef(const BoundVarRef* expr) {
+ConstantValue ConstantEvaluator::evaluateVariable(const BoundVariable* expr) {
     ConstantValue& val = currentFrame->temporaries[expr->symbol];
     ASSERT(val);
     return val;
@@ -139,8 +139,8 @@ ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpress
 bool ConstantEvaluator::evaluateLValue(const BoundExpression* expr, LValue& lvalue) {
     // lvalues have to be one of a few kinds of expressions
     switch (expr->kind) {
-        case BoundNodeKind::VarRef:
-            lvalue.storage = &currentFrame->temporaries[((BoundVarRef*)expr)->symbol];
+        case BoundNodeKind::Variable:
+            lvalue.storage = &currentFrame->temporaries[((BoundVariable*)expr)->symbol];
             break;
 
             DEFAULT_UNREACHABLE;

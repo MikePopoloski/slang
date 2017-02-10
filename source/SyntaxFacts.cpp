@@ -831,4 +831,45 @@ bool isNotInConcatenationExpr(TokenKind kind) {
     }
 }
 
+bool isStatement(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::NamedLabel:
+        case SyntaxKind::EmptyStatement:
+        case SyntaxKind::ElseClause:
+        case SyntaxKind::ConditionalStatement:
+        case SyntaxKind::DefaultCaseItem:
+        case SyntaxKind::PatternCaseItem:
+        case SyntaxKind::StandardCaseItem:
+        case SyntaxKind::CaseStatement:
+        case SyntaxKind::ForeverStatement:
+        case SyntaxKind::LoopStatement:
+        case SyntaxKind::DoWhileStatement:
+        case SyntaxKind::ForVariableDeclaration:
+        case SyntaxKind::ForLoopStatement:
+        case SyntaxKind::ForeachLoopList:
+        case SyntaxKind::ForeachLoopStatement:
+        case SyntaxKind::ReturnStatement:
+        case SyntaxKind::JumpStatement:
+        case SyntaxKind::TimingControlStatement:
+        case SyntaxKind::ExpressionStatement:
+        case SyntaxKind::ProceduralAssignStatement:
+        case SyntaxKind::ProceduralForceStatement:
+        case SyntaxKind::ProceduralDeassignStatement:
+        case SyntaxKind::ProceduralReleaseStatement:
+        case SyntaxKind::DisableStatement:
+        case SyntaxKind::DisableForkStatement:
+        case SyntaxKind::NamedBlockClause:
+        case SyntaxKind::SequentialBlockStatement:
+        case SyntaxKind::ParallelBlockStatement:
+        case SyntaxKind::WaitStatement:
+        case SyntaxKind::WaitForkStatement:
+        case SyntaxKind::WaitOrderStatement:
+        case SyntaxKind::RandCaseItem:
+        case SyntaxKind::RandCaseStatement:
+            return true;
+        default:
+            return false;
+    }
+}
+
 }

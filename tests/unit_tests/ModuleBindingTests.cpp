@@ -235,7 +235,7 @@ endmodule
     CHECK(alwaysComb.kind == ProceduralBlock::AlwaysComb);
 
     const auto& variable = instance.getChild<VariableSymbol>(2);
-    CHECK(variable.typeSymbol.kind == SymbolKind::IntegralType);
+    CHECK(variable.type->kind == SymbolKind::IntegralType);
     CHECK(variable.name == "arr1");
 }
 
@@ -243,6 +243,7 @@ TEST_CASE("Function declaration", "[binding:modules]") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     function static logic [15:0] foo(a, int b, output logic [15:0] u, v, inout w);
+        return a + b;
     endfunction
 endmodule
 )");
@@ -264,6 +265,11 @@ endmodule
     CHECK(foo.arguments[3]->direction == FormalArgumentDirection::Out);
     CHECK(foo.arguments[4]->type->as<IntegralTypeSymbol>().width == 1);
     CHECK(foo.arguments[4]->direction == FormalArgumentDirection::InOut);
+
+    const auto& returnStmt = *(const BoundReturnStatement*)foo.body->list[0];
+    REQUIRE(returnStmt.kind == BoundNodeKind::ReturnStatement);
+    CHECK(!returnStmt.expr->bad());
+    CHECK(returnStmt.expr->type->as<IntegralTypeSymbol>().width == 32);
 }
 
 }

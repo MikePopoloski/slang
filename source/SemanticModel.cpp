@@ -199,6 +199,7 @@ const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationS
 
     // For now only support simple function names
     auto name = proto->name->getFirstToken();
+    auto funcScope = alloc.emplace<Scope>();
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
 
@@ -242,12 +243,25 @@ const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationS
                 direction
             ));
 
+            funcScope->add(arguments.back());
+
             lastDirection = direction;
             lastType = type;
         }
     }
 
-    return alloc.emplace<SubroutineSymbol>(name, returnType, arguments.copy(alloc), lifetime, isTask);
+    auto subroutine = alloc.emplace<SubroutineSymbol>(
+        name,
+        returnType,
+        arguments.copy(alloc),
+        lifetime,
+        isTask,
+        funcScope
+    );
+
+    ExpressionBinder binder { *this, subroutine };
+    subroutine->body = binder.bindStatementList(syntax->items);
+    return subroutine;
 }
 
 bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope) {
@@ -411,7 +425,7 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVe
 
     // Fabricate a local variable that will serve as the loop iteration variable.
     Scope iterScope { scope };
-    LocalVariableSymbol local { syntax->identifier, getKnownType(SyntaxKind::IntType) };
+    VariableSymbol local { syntax->identifier, getKnownType(SyntaxKind::IntType) };
     iterScope.add(&local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
@@ -476,7 +490,7 @@ void SemanticModel::handleProceduralBlock(const ProceduralBlockSyntax *syntax, S
 }
 
 void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope) {
-    VariableSymbol::VariableSymbolModifiers modifiers;
+    VariableSymbol::Modifiers modifiers;
     for (auto token : syntax->modifiers) {
         switch(token.kind) {
             case TokenKind::ConstKeyword:
@@ -503,10 +517,10 @@ void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax *syntax, S
     }
 }
 
-void SemanticModel::handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::VariableSymbolModifiers &modifiers, const TypeSymbol *typeSymbol) {
+void SemanticModel::handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::Modifiers &modifiers, const TypeSymbol *typeSymbol) {
     ASSERT(typeSymbol);
     // TODO handle dimensions
-    Symbol *dataSymbol = alloc.emplace<VariableSymbol>(syntax->name.valueText(), syntax->name.location(), modifiers, *typeSymbol/*TODO: , initializer*/);
+    Symbol *dataSymbol = alloc.emplace<VariableSymbol>(syntax->name, typeSymbol, modifiers/*TODO: , initializer*/);
     results.append(dataSymbol);
     scope->add(dataSymbol);
 }
