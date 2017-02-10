@@ -20,7 +20,6 @@ int main() {
     DeclarationTable table {diags};
 
     int errors = 0;
-    int modules = 0;
     int files = 0;
     for (auto& p : getFilesInDirectory(RelativeTestPath)) {
         SyntaxTree tree = SyntaxTree::fromFile(StringRef(p.str()), sourceManager);
@@ -36,19 +35,21 @@ int main() {
         trees.emplace_back(std::move(tree));
         table.addSyntaxTree(&trees.back());
 
-        //if (errors > 100)
-        //  break;
+        if (errors > 100)
+            return;
     }
 
     printf("\n");
     printf("Finished parsing %d files; %d errors found\n\n", files, errors);
 
-    printf("creating model ...\n");
+    //printf("creating model ...\n");
     BumpAllocator alloc {4096};
     SemanticModel model {alloc, diags, table};
 
-    printf("iterating over top-level modules:\n");
+    //printf("iterating over top-level modules:\n");
+    int modules = 0;
     for (const auto modulep : table.getTopLevelModules()) {
+        //printf("\tinstantiating module %s\n", modulep->header->name.toString().c_str());
         auto inst = model.makeImplicitInstance(modulep);
         modules++;
     }

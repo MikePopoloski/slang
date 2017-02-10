@@ -59,6 +59,8 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
     knownTypes[SyntaxKind::VoidType] = alloc.emplace<TypeSymbol>(SymbolKind::VoidType, "void", SourceLocation());
     knownTypes[SyntaxKind::EventType] = alloc.emplace<TypeSymbol>(SymbolKind::EventType, "event", SourceLocation());
     knownTypes[SyntaxKind::Unknown] = alloc.emplace<ErrorTypeSymbol>();
+
+    makePackages();
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
@@ -69,6 +71,55 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
     return alloc.emplace<InstanceSymbol>(module, true);
 }
 
+void SemanticModel::makePackages() {
+    HashMap<StringRef, SourceLocation> nameDupMap;
+    for (auto pkg : declTable.getPackages()) {
+        auto name = pkg->header->name.valueText();
+        Scope *scope = alloc.emplace<Scope>();
+        ASSERT(packages.add(alloc.emplace<ModuleSymbol>(pkg, scope, ArrayRef<const Symbol *>())));
+    }
+    for (auto pkg : declTable.getPackages()) {
+        auto name = pkg->header->name.valueText();
+        auto pkgSym = packages.lookup(name)->as<ModuleSymbol>();
+        HashMap<StringRef, SourceLocation> nameDupMap;
+        for (const MemberSyntax* member : pkg->members) {
+            switch (member->kind) {
+                case SyntaxKind::PackageImportDeclaration:
+                    handlePackageImport(member->as<PackageImportDeclarationSyntax>(), pkgSym.scope);
+                    break;
+                case SyntaxKind::ParameterDeclarationStatement:
+                    auto paramDecl = member->as<ParameterDeclarationStatementSyntax>()->parameter;
+                    for (const VariableDeclaratorSyntax *declarator : paramDecl->declarators) {
+                        auto name = declarator->name.valueText();
+                            ASSERT(name);
+                        auto location = declarator->name.location();
+                        auto pair = nameDupMap.emplace(name, location);
+                        if (!pair.second) {
+                            diagnostics.add(DiagCode::DuplicateDefinition, location)
+                                << StringRef("parameter") << name;
+                            diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second);
+                        } else if (!declarator->initializer) {
+                            diagnostics.add(DiagCode::ParamHasNoValue, location)
+                                << StringRef("parameter") << name;
+                        } else {
+                            pkgSym.scope->add(alloc.emplace<ParameterSymbol>(name, location, paramDecl, false));
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+    for (auto pkg : declTable.getPackages()) {
+        auto name = pkg->header->name.valueText();
+        auto pkgSym = packages.lookup(name)->as<ModuleSymbol>();
+        for (size_t i = 0; auto paramSym = (ParameterSymbol*)pkgSym.scope->getNth(SymbolKind::Parameter, i); i++) {
+            for (auto paramSyntax : paramSym->syntax->declarators)
+                if (paramSyntax->name.valueText() == paramSym->name)
+                    evaluateParameter(paramSym, paramSyntax->initializer->expr, pkgSym.scope);
+        }
+    }
+}
+
 const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) {
     Scope* scope = alloc.emplace<Scope>();
     scope->addRange(parameters);
@@ -76,6 +127,9 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
     SmallVectorSized<const Symbol*, 8> children;
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
+            case SyntaxKind::PackageImportDeclaration:
+                handlePackageImport(member->as<PackageImportDeclarationSyntax>(), scope);
+                break;
             case SyntaxKind::LoopGenerate:
                 handleLoopGenerate(member->as<LoopGenerateSyntax>(), children, scope);
                 break;
@@ -379,6 +433,31 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
         symbol->type = type;
         symbol->value = evaluateConstant(expr);
     }
+    printf("\t\t\teval(%s) = %s\n",
+           symbol->name.toString().c_str(),
+           symbol->value.integer().toString(LiteralBase::Decimal).c_str());
+}
+
+void SemanticModel::handlePackageImport(const PackageImportDeclarationSyntax* syntax, Scope* scope) {
+    // add imported wildcard scopes as parents
+    // for explicit imports create a scope specified items and add it as parent
+    for (const PackageImportItemSyntax* item : syntax->items) {
+        if (item->item.kind == TokenKind::Star) {
+            const Symbol* pkgSym = packages.lookup(item->package.valueText());
+            ASSERT(pkgSym && pkgSym->kind == SymbolKind::Module);
+            scope->addParentScope(pkgSym->as<ModuleSymbol>().scope);
+        }
+        else if (item->item.kind == TokenKind::Identifier) {
+            const Symbol* pkgSym = packages.lookup(item->package.valueText());
+            ASSERT(pkgSym && pkgSym->kind == SymbolKind::Module);
+            Scope* newScope = alloc.emplace<Scope>();
+            newScope->add(pkgSym->as<ModuleSymbol>().scope->lookup(item->item.valueText()));
+            scope->addParentScope(newScope);
+        }
+        else {
+            ASSERT(false);
+        }
+    }
 }
 
 void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope) {
@@ -601,6 +680,17 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
 
     // Pre-create parameter symbol entries so that we can give better errors about use before decl.
     Scope declScope;
+    for (auto import : decl->header->imports) {
+        handlePackageImport(import, &declScope);
+    }
+    // also find direct body imports
+    // TODO: check location of import vs usage
+    for (const MemberSyntax* member : decl->members) {
+        if (member->kind == SyntaxKind::PackageImportDeclaration) {
+            handlePackageImport(member->as<PackageImportDeclarationSyntax>(), &declScope);
+        }
+    }
+
     const auto& moduleParamInfo = getModuleParams(decl);
     for (const auto& info : moduleParamInfo) {
         ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local);

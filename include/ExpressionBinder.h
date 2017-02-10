@@ -31,7 +31,10 @@ private:
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const IntegerVectorExpressionSyntax* syntax);
-    BoundExpression* bindSimpleName(const IdentifierNameSyntax* syntax);
+    BoundExpression* bindName(const NameSyntax* syntax, const Scope* scope);
+    BoundExpression* bindSimpleName(const IdentifierNameSyntax* syntax, const Scope* currScope);
+    BoundExpression* bindSelectName(const IdentifierSelectNameSyntax* syntax, const Scope* currScope);
+    BoundExpression* bindScopedName(const ScopedNameSyntax* syntax, const Scope* currScope);
     BoundExpression* bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax);
     BoundExpression* bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax* syntax);
     BoundExpression* bindArithmeticOperator(const BinaryExpressionSyntax* syntax);

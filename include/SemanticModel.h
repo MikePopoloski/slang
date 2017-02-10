@@ -49,6 +49,7 @@ public:
 
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
+    const Scope* getPackages() { return &packages; }
 
 private:
     // Represents a simple constant range.
@@ -91,7 +92,10 @@ private:
     // types, we just pull out their values here.
     void makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes);
 
+    void makePackages();
+
     const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters);
+    void handlePackageImport(const PackageImportDeclarationSyntax* syntax, Scope* scope);
     void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope);
     void handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope);
     void handleProceduralBlock(const ProceduralBlockSyntax *syntax, SmallVector<const Symbol *>& results, const Scope* scope);
@@ -111,6 +115,7 @@ private:
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
     DeclarationTable& declTable;
+    Scope packages;
 
     HashMap<const ModuleDeclarationSyntax*, std::vector<ParameterInfo>> parameterCache;
 
