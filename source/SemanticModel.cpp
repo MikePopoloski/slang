@@ -97,7 +97,12 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
             case SyntaxKind::AlwaysFFBlock:
             case SyntaxKind::AlwaysLatchBlock:
             case SyntaxKind::DataDeclaration:
+            case SyntaxKind::FunctionDeclaration:
+            case SyntaxKind::TaskDeclaration:
                 handleGenerateItem(member, children, scope);
+                break;
+            default:
+                break;
         }
     }
     // TODO: cache this shit
@@ -183,7 +188,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, co
 
     // TODO: consider Void Type
 
-    return nullptr;
+    return getErrorType();
 }
 
 const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationSyntax* syntax, const Scope* scope) {
@@ -521,6 +526,10 @@ void SemanticModel::handleGenerateItem(const MemberSyntax* syntax, SmallVector<c
             break;
         case SyntaxKind::DataDeclaration:
             handleDataDeclaration(syntax->as<DataDeclarationSyntax>(), results, scope);
+            break;
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::TaskDeclaration:
+            results.append(makeSubroutine(syntax->as<FunctionDeclarationSyntax>(), scope));
             break;
     }
 }
