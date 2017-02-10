@@ -363,8 +363,12 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
         writer.write("\n{}\n", line);
 
         // Highlight any ranges and print the caret location.
-        // TODO: handle tabs
         std::string buffer(line.length(), ' ');
+
+        // handle tabs to get proper alignment on a terminal
+        for (size_t i = 0; i < buffer.length(); ++i)
+            if (line[i] == '\t') buffer[i] = '\t';
+
         for (SourceRange range : ranges)
             highlightRange(range, loc, col, line, buffer);
 
