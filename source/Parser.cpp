@@ -340,7 +340,7 @@ MemberSyntax* Parser::parseMember() {
             auto name = consume();
             auto label = alloc.emplace<NamedLabelSyntax>(name, expect(TokenKind::Colon));
             auto statement = parseAssertionStatement(label, nullptr);
-            if (statement.kind == SyntaxKind::ImmediateAssertStatement) {
+            if (statement->kind == SyntaxKind::ImmediateAssertStatement) {
                 return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
             }
             return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
@@ -350,7 +350,7 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::CoverKeyword:
         case TokenKind::RestrictKeyword: {
             auto statement = parseAssertionStatement(nullptr, nullptr);
-            if (statement.kind == SyntaxKind::ImmediateAssertStatement) {
+            if (statement->kind == SyntaxKind::ImmediateAssertStatement) {
                 return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
             }
             return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
