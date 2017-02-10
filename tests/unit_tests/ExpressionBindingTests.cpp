@@ -132,7 +132,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root()->getFirstToken();
-    LocalVariableSymbol local {
+    VariableSymbol local {
         varToken.valueText(), varToken.location(),
         sem.getIntegralType(20, false)
     };
