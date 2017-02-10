@@ -109,7 +109,7 @@ Lexer::Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnost
     }
 }
 
-Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
+Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right, bool& error) {
     // TODO: think about what happens if there is trivia in right token
     // TODO: think about what we should set the resulting location to be in order to capture expansion info
     auto location = left.location();
@@ -118,8 +118,10 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     // if either side is empty, we have an error; the user tried to concatenate some weird kind of token
     auto leftText = left.rawText();
     auto rightText = right.rawText();
-    if (!leftText || !rightText)
+    if (!leftText || !rightText) {
+        error = true;
         return Token();
+    }
 
     // combine the text for both sides; make sure to include room for a null
     uint32_t newLength = leftText.length() + rightText.length() + 1;
@@ -129,32 +131,29 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     mem[newLength - 1] = '\0';
     StringRef combined{ (char*)mem, newLength };
 
-    // common case: identifier + identifier
-    // TODO: test that this works for all kinds of identifiers
-    if (left.kind == TokenKind::Identifier && right.kind == TokenKind::Identifier) {
-        auto info = alloc.emplace<Token::Info>(trivia, combined.subString(0, newLength - 1), location, 0);
-        info->extra = IdentifierType::Normal;
-        return Token(TokenKind::Identifier, info);
-    }
-
     // TODO: handle other kinds of errors and invalid combinations
 
-    // slow path: spin up a new lexer and lex the combined text
     Diagnostics unused;
     Lexer lexer { BufferID(), combined, alloc, unused };
 
     auto token = lexer.lex();
-    if (token.kind == TokenKind::Unknown || !token.rawText())
+    if (token.kind == TokenKind::Unknown || !token.rawText()) {
+        error = true;
         return Token();
+    }
 
-    // make sure the next token is an EoF, otherwise there is junk left in the buffer
-    if (lexer.lex().kind != TokenKind::EndOfFile)
+    // make sure the next token is an EoF, otherwise the tokens were unable to
+    // be combined and should be left alone
+    if (lexer.lex().kind != TokenKind::EndOfFile) {
+        error = false;
         return Token();
+    }
 
     auto info = alloc.emplace<Token::Info>(*token.getInfo());
     info->location = location;
     info->trivia = trivia;
 
+    error = false;
     return Token(token.kind, info);
 }
 
@@ -468,7 +467,12 @@ TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode, KeywordVersion 
         case '`':
             switch (peek()) {
                 case '"': advance(); return TokenKind::MacroQuote;
-                case '`': advance(); return TokenKind::MacroPaste;
+                case '`':
+                    advance();
+                    if (offset < 3 || std::isspace(*(sourceBuffer-3)) || reallyAtEnd() || std::isspace(peek())) {
+                        return TokenKind::DummyMacroPaste;
+                    }
+                    return TokenKind::MacroPaste;
                 case '\\':
                     if (peek(1) == '`' && peek(2) == '"') {
                         advance(3);

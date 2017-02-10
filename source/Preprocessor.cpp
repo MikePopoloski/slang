@@ -711,9 +711,12 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                     newToken = token;
                 }
                 break;
+            case TokenKind::DummyMacroPaste:
+                break;
             case TokenKind::MacroPaste:
                 // Paste together previous token and next token; a macro paste on either end
-                // of the buffer is an error. This isn't specified in the standard so I'm just guessing.
+                // of the buffer should be treated like a DummyMacroPaste.
+                // This isn't specified in the standard so I'm just guessing.
                 if (i == 0 || i == tokens.count() - 1) {
                     // TODO: error
                 }
@@ -724,21 +727,29 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                         // TODO: error
                     }
                     else {
-                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[++i]);
-                        if (newToken)
+                        bool error;
+                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[i+1], error);
+                        if (newToken) {
                             buffer.pop();
-                        else {
+                            ++i;
+                        }
+                        else if (error) {
                             // TODO: handle error cases
                         }
+                        // else: just discard the MacroPaste
                     }
                 }
                 else {
-                    newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[++i]);
-                    if (newToken)
+                    bool error;
+                    newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[i+1], error);
+                    if (newToken) {
                         expandedTokens.pop();
-                    else {
+                        ++i;
+                    }
+                    else if (error) {
                         // TODO: handle error cases
                     }
+                    // else: just discard the MacroPaste
                 }
                 break;
             default:

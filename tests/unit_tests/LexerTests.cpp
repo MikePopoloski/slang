@@ -948,7 +948,6 @@ void testDirectivePunctuation(TokenKind kind) {
 TEST_CASE("Directive Punctuation", "[lexer]") {
     testDirectivePunctuation(TokenKind::MacroQuote);
     testDirectivePunctuation(TokenKind::MacroEscapedQuote);
-    testDirectivePunctuation(TokenKind::MacroPaste);
 }
 
 }

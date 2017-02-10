@@ -58,7 +58,7 @@ public:
     Diagnostics& getDiagnostics() { return diagnostics; }
 
     /// Concatenates two tokens together; used for macro pasting.
-    static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
+    static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right, bool& error);
 
     /// Converts a range of tokens into a string literal; used for macro stringification.
     static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end);
