@@ -712,6 +712,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                 }
                 break;
             case TokenKind::DummyMacroPaste:
+                // If this macro paste operator borders whitespace, the operator should have no effect
                 break;
             case TokenKind::MacroPaste:
                 // Paste together previous token and next token; a macro paste on either end
