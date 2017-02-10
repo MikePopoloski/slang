@@ -110,7 +110,10 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
 }
 
 const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope) {
-    ASSERT(syntax);
+    IntegerTypeSyntax implicitIntTypeSyntax(SyntaxKind::IntType, {}, {}, {nullptr});
+    if (!syntax) {
+        syntax = &implicitIntTypeSyntax;
+    }
 
     switch (syntax->kind) {
         case SyntaxKind::BitType:
@@ -427,9 +430,10 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVe
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         Scope localScope { &iterScope };
+        const TypeSymbol *type = local.type;
         ParameterSymbol iterParam {
             syntax->identifier.valueText(),
-            syntax->identifier.location(), nullptr, true
+            syntax->identifier.location(), nullptr, true, type
         };
         iterParam.value = genvar;
         localScope.add(&iterParam);
@@ -585,7 +589,9 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
     Scope declScope;
     const auto& moduleParamInfo = getModuleParams(decl);
     for (const auto& info : moduleParamInfo) {
-        ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local);
+        const TypeSymbol *type;
+        type = makeTypeSymbol(info.paramDecl->type, instantiationScope);
+        ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local, type);
         results.append(symbol);
         declScope.add(symbol);
     }
