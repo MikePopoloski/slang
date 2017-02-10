@@ -216,7 +216,7 @@ token identifier
 list<ElementSelectSyntax> selectors
 
 EmptyIdentifierNameSyntax base=NameSyntax kind=EmptyIdentifierName
-empty
+nothing
 
 KeywordNameSyntax base=NameSyntax
 token keyword
@@ -589,7 +589,7 @@ ConcurrentAssertionMemberSyntax base=MemberSyntax kind=ConcurrentAssertionMember
 ConcurrentAssertionStatementSyntax statement
 
 ImmediateAssertionMemberSyntax base=MemberSyntax kind=ImmediateAssertionMember
-ImmediateAssertionMemberSyntax statement
+ImmediateAssertionStatementSyntax statement
 
 AbortPropertyExpressionSyntax base=ExpressionSyntax
 token keyword

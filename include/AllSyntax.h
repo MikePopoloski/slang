@@ -1227,6 +1227,27 @@ protected:
     }
 };
 
+struct EmptyIdentifierNameSyntax : public NameSyntax {
+
+    EmptyIdentifierNameSyntax() :
+        NameSyntax(SyntaxKind::EmptyIdentifierName)
+    {
+        childCount += 0;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+        }
+    }
+};
+
 struct KeywordNameSyntax : public NameSyntax {
     Token keyword;
 
@@ -3392,6 +3413,7 @@ protected:
         (void)token;
     }
 };
+
 struct AbortPropertyExpressionSyntax : public ExpressionSyntax {
     Token keyword;
     Token openParen;

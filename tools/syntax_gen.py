@@ -35,9 +35,9 @@ namespace slang {
 		if line.startswith('//'):
 			outf.write(line)
 			outf.write('\n\n')
-		elif len(line) == 0 or (currtype is not None and line == 'empty'):
+		elif len(line) == 0 or (currtype is not None and line == 'empty') or (currtype is not None and line == 'nothing'):
 			if currtype is not None:
-				generate(outf, currtype_name, tags, currtype, alltypes)
+				generate(outf, currtype_name, tags, currtype, alltypes, line == 'nothing')
 			currtype = None
 		elif currtype is not None:
 			p = line.split(' ')
@@ -53,10 +53,10 @@ namespace slang {
 			currtype = []
 
 	if currtype:
-		generate(outf, currtype_name, tags, currtype, alltypes)
+		generate(outf, currtype_name, tags, currtype, alltypes, line == 'nothing')
 	outf.write('}')
 
-def generate(outf, name, tags, members, alltypes):
+def generate(outf, name, tags, members, alltypes, forceEmpty):
 	tagdict = {}
 	if tags:
 		for t in tags:
@@ -118,7 +118,7 @@ def generate(outf, name, tags, members, alltypes):
 	outf.write('        {}({}{}){}\n'.format(base, kindValue, baseInitializers, initializers))
 	outf.write('    {\n')
 
-	if len(members) == 0:
+	if len(members) == 0 and not forceEmpty:
 		outf.write('    }\n')
 	else:
 		outf.write('        childCount += {};\n'.format(len(members)))
@@ -151,7 +151,7 @@ def generate(outf, name, tags, members, alltypes):
 			index += 1
 
 		outf.write('        }\n')
-		if not anyTokens:
+		if not anyTokens and not forceEmpty:
 			outf.write('        (void)token;\n')
 		outf.write('    }\n')
 
