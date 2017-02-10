@@ -226,6 +226,7 @@ enum class SyntaxKind : uint16_t {
     RootScope,
     IdentifierName,
     IdentifierSelectName,
+    EmptyIdentifierName,
     ClassName,
     ScopedName,
     SystemName,
@@ -483,6 +484,7 @@ bool isDeclarationModifier(TokenKind kind);
 bool isMemberQualifier(TokenKind kind);
 bool isEndOfParenList(TokenKind kind);
 bool isEndOfBracedList(TokenKind kind);
+bool isEndOfBracketedList(TokenKind kind);
 bool isEndOfCaseItem(TokenKind kind);
 bool isEndOfConditionalPredicate(TokenKind kind);
 bool isEndOfAttribute(TokenKind kind);

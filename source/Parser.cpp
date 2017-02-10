@@ -1913,25 +1913,6 @@ bool Parser::scanQualifiedName(int& index) {
     return true;
 }
 
-template<bool(*IsEnd)(TokenKind)>
-bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
-    int nesting = 1;
-    while (true) {
-        auto kind = peek(index).kind;
-        if (IsEnd(kind))
-            return false;
-
-        index++;
-        if (kind == start)
-            nesting++;
-        else if (kind == end) {
-            nesting--;
-            if (nesting <= 0)
-                return true;
-        }
-    }
-}
-
 void Parser::errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg) {
     if (!attributes.empty())
         addError(DiagCode::AttributesNotSupported, peek().location()) << StringRef(msg, (uint32_t)strlen(msg));

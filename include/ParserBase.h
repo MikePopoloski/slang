@@ -106,7 +106,6 @@ protected:
         TParserFunc&& parseItem
     ) {
         openToken = expect(openKind);
-
         SmallVectorSized<TokenOrSyntax, 32> buffer;
         parseSeparatedList<IsExpected, IsEnd, TParserFunc>(buffer, closeKind, separatorKind, closeToken, code, std::forward<TParserFunc>(parseItem));
         list = buffer.copy(alloc);
