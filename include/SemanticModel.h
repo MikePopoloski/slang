@@ -25,8 +25,6 @@
 
 namespace slang {
 
-class Symbol;
-
 /// SemanticModel is responsible for binding symbols and performing
 /// type checking based on input parse trees.
 class SemanticModel {
@@ -41,6 +39,8 @@ public:
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
     const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope);
     const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax* syntax, const Scope* scope);
+
+    void makeVariables(const DataDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope);
 
     /// Utilities for getting various common type symbols.
     const TypeSymbol* getErrorType() const { return getKnownType(SyntaxKind::Unknown); }
@@ -104,7 +104,8 @@ private:
 
     bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope);
 
-    BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope);
+    const BoundExpression* bindInitializer(const VariableDeclaratorSyntax *syntax, const TypeSymbol* type, const Scope* scope);
+    const BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope);
     ConstantValue evaluateConstant(const ExpressionSyntax* syntax, const Scope* scope);
     static ConstantValue evaluateConstant(const BoundNode* tree);
 

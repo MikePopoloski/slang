@@ -23,7 +23,11 @@ CompilationUnitSyntax* Parser::parseCompilationUnit() {
 }
 
 const SyntaxNode* Parser::parseGuess() {
-    // First try to parse as a statement. This will also handle plain expressions,
+    // First try to parse as a variable declaration.
+    if (isVariableDeclaration())
+        return parseVariableDeclaration(parseAttributes());
+
+    // Now try to parse as a statement. This will also handle plain expressions,
     // though we might get an error about a missing semicolon that we should suppress.
     auto& diagnostics = getDiagnostics();
     auto statement = parseStatement(/* allowEmpty */ true);

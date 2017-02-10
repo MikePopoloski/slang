@@ -14,6 +14,7 @@
 #include "Lexer.h"
 #include "Parser.h"
 #include "Preprocessor.h"
+#include "ScriptSession.h"
 #include "SemanticModel.h"
 #include "SourceManager.h"
 #include "SyntaxTree.h"
