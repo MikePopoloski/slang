@@ -184,6 +184,8 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, co
             auto type = makeTypeSymbol(tds->type, scope);
             return alloc.emplace<TypeAliasSymbol>(syntax, tds->name.location(), type, tds->name.valueText());
         }
+        default:
+            break;
     }
 
     // TODO: consider Void Type
@@ -477,7 +479,7 @@ static ProceduralBlock::Kind proceduralBlockKindFromKeyword(Token kindKeyword) {
         default:
             ASSERT(false, "Unknown ProceduralBlock kind keyword: %s",
                    kindKeyword.toString().c_str());
-            break;
+            return ProceduralBlock::Initial;    // silence warnings
     }
 }
 
@@ -545,6 +547,8 @@ void SemanticModel::handleGenerateItem(const MemberSyntax* syntax, SmallVector<c
         case SyntaxKind::TaskDeclaration:
             results.append(makeSubroutine(syntax->as<FunctionDeclarationSyntax>(), scope));
             break;
+
+            DEFAULT_UNREACHABLE;
     }
 }
 
