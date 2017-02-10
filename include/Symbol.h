@@ -79,6 +79,13 @@ public:
     bool isAssignmentCompatible(const TypeSymbol* rhs) const;
     bool isCastCompatible(const TypeSymbol* rhs) const;
 
+    // Helpers to get the following pieces of information for any type symbol,
+    // though the information is stored differently for different types
+    bool isSigned() const;
+    bool isReal() const;
+    bool isFourState() const;
+    int width() const;
+
     std::string toString() const;
     static constexpr SymbolKind mykind = SymbolKind::Unknown;
 };
