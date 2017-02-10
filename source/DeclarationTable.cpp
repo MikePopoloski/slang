@@ -40,7 +40,8 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
     for (auto& unit : units) {
         for (const ModuleDeclarationSyntax* node : unit.rootNodes) {
             if (node->header->moduleKeyword.kind != TokenKind::ModuleKeyword &&
-                node->header->moduleKeyword.kind != TokenKind::MacromoduleKeyword)
+                node->header->moduleKeyword.kind != TokenKind::MacromoduleKeyword &&
+                node->header->moduleKeyword.kind != TokenKind::InterfaceKeyword)
                 continue;
 
             auto name = node->header->name;
@@ -67,7 +68,8 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
 
     // finally consolidate the list of top level modules
     for (auto& pair : nameLookup) {
-        if (!pair.second.instantiated)
+        if (!pair.second.instantiated &&
+            pair.second.decl->header->moduleKeyword.kind != TokenKind::InterfaceKeyword)
             topLevel.append(pair.second.decl);
     }
 

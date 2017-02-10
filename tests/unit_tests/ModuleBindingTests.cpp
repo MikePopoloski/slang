@@ -193,8 +193,8 @@ interface I2CBus(
 endinterface
 
 module Top;
-    logic clk,
-    logic rst);
+    logic clk;
+    logic rst;
 
     I2CBus bus(.*);
 endmodule
