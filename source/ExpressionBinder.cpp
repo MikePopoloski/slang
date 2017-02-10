@@ -484,7 +484,6 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
             // Essentially self determined, logic handled at bind time
             break;
 
-
             DEFAULT_UNREACHABLE;
     }
 }

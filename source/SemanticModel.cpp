@@ -239,9 +239,12 @@ const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationS
             else
                 type = lastType;
 
+            auto declarator = portSyntax->declarator;
+
             arguments.append(alloc.emplace<FormalArgumentSymbol>(
-                portSyntax->declarator->name,
+                declarator->name,
                 type,
+                bindInitializer(declarator, type, scope),
                 direction
             ));
 
@@ -264,6 +267,12 @@ const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationS
     ExpressionBinder binder { *this, subroutine };
     subroutine->body = binder.bindStatementList(syntax->items);
     return subroutine;
+}
+
+void SemanticModel::makeVariables(const DataDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope) {
+    // Just delegate to our internal function.
+    // TODO: think about whether to just make that public instead
+    handleDataDeclaration(syntax, results, scope);
 }
 
 bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope) {
@@ -522,7 +531,7 @@ void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax *syntax, S
 void SemanticModel::handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::Modifiers &modifiers, const TypeSymbol *typeSymbol) {
     ASSERT(typeSymbol);
     // TODO handle dimensions
-    Symbol *dataSymbol = alloc.emplace<VariableSymbol>(syntax->name, typeSymbol, modifiers/*TODO: , initializer*/);
+    Symbol *dataSymbol = alloc.emplace<VariableSymbol>(syntax->name, typeSymbol, bindInitializer(syntax, typeSymbol, scope), modifiers);
     results.append(dataSymbol);
     scope->add(dataSymbol);
 }
@@ -785,7 +794,15 @@ const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool 
     return symbol;
 }
 
-BoundExpression* SemanticModel::bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope) {
+const BoundExpression* SemanticModel::bindInitializer(const VariableDeclaratorSyntax *syntax, const TypeSymbol* type, const Scope* scope) {
+    if (!syntax->initializer)
+        return nullptr;
+
+    ExpressionBinder binder { *this, scope };
+    return binder.bindAssignmentLikeContext(syntax->initializer->expr, syntax->name.location(), type);
+}
+
+const BoundExpression* SemanticModel::bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope) {
     ExpressionBinder binder { *this, scope };
     return binder.bindConstantExpression(syntax);
 }

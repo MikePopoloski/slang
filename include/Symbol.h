@@ -223,21 +223,26 @@ public:
 
     Modifiers modifiers;
     const TypeSymbol* type;
-    //TODO: initial value
+    const BoundExpression* initializer;
 
-    VariableSymbol(Token name, const TypeSymbol* type, Modifiers modifiers = Modifiers()) :
+    VariableSymbol(Token name, const TypeSymbol* type, const BoundExpression* initializer = nullptr,
+                   Modifiers modifiers = Modifiers()) :
         Symbol(SymbolKind::Variable, name.valueText(), name.location()),
         modifiers(modifiers),
-        type(type) {}
+        type(type),
+        initializer(initializer) {}
 
-    VariableSymbol(StringRef name, SourceLocation location, const TypeSymbol* type, Modifiers modifiers = Modifiers()) :
+    VariableSymbol(StringRef name, SourceLocation location, const TypeSymbol* type,
+                   const BoundExpression* initializer = nullptr, Modifiers modifiers = Modifiers()) :
         Symbol(SymbolKind::Variable, name, location),
         modifiers(modifiers),
-        type(type) {}
+        type(type),
+        initializer(initializer) {}
 
 protected:
-    VariableSymbol(SymbolKind childKind, StringRef name, SourceLocation location, const TypeSymbol* type) :
-        Symbol(childKind, name, location), type(type) {}
+    VariableSymbol(SymbolKind childKind, StringRef name, SourceLocation location,
+                   const TypeSymbol* type, const BoundExpression* initializer) :
+        Symbol(childKind, name, location), type(type), initializer(initializer) {}
 };
 
 class GenerateBlock : public Symbol {
@@ -275,8 +280,8 @@ class FormalArgumentSymbol : public VariableSymbol {
 public:
     FormalArgumentDirection direction;
 
-    FormalArgumentSymbol(Token name, const TypeSymbol* type, FormalArgumentDirection direction) :
-        VariableSymbol(SymbolKind::FormalArgument, name.valueText(), name.location(), type),
+    FormalArgumentSymbol(Token name, const TypeSymbol* type, const BoundExpression* initializer, FormalArgumentDirection direction) :
+        VariableSymbol(SymbolKind::FormalArgument, name.valueText(), name.location(), type, initializer),
         direction(direction) {}
 };
 
