@@ -433,9 +433,6 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
         symbol->type = type;
         symbol->value = evaluateConstant(expr);
     }
-    printf("\t\t\teval(%s) = %s\n",
-           symbol->name.toString().c_str(),
-           symbol->value.integer().toString(LiteralBase::Decimal).c_str());
 }
 
 void SemanticModel::handlePackageImport(const PackageImportDeclarationSyntax* syntax, Scope* scope) {

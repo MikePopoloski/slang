@@ -36,7 +36,7 @@ int main() {
         table.addSyntaxTree(&trees.back());
 
         if (errors > 100)
-            return;
+            return 1;
     }
 
     printf("\n");
