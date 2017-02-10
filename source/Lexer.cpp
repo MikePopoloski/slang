@@ -467,12 +467,7 @@ TokenKind Lexer::lexToken(Token::Info* info, bool directiveMode, KeywordVersion 
         case '`':
             switch (peek()) {
                 case '"': advance(); return TokenKind::MacroQuote;
-                case '`':
-                    advance();
-                    if (offset < 3 || std::isspace(*(sourceBuffer-3)) || reallyAtEnd() || std::isspace(peek())) {
-                        return TokenKind::DummyMacroPaste;
-                    }
-                    return TokenKind::MacroPaste;
+                case '`': advance(); return TokenKind::MacroPaste;
                 case '\\':
                     if (peek(1) == '`' && peek(2) == '"') {
                         advance(3);

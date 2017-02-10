@@ -711,15 +711,12 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                     newToken = token;
                 }
                 break;
-            case TokenKind::DummyMacroPaste:
-                // If this macro paste operator borders whitespace, the operator should have no effect
-                break;
             case TokenKind::MacroPaste:
                 // Paste together previous token and next token; a macro paste on either end
-                // of the buffer should be treated like a DummyMacroPaste.
+                // of the buffer or one that borders whitespace should be ignored.
                 // This isn't specified in the standard so I'm just guessing.
-                if (i == 0 || i == tokens.count() - 1) {
-                    // TODO: error
+                if (i == 0 || i == tokens.count() - 1 || !token.trivia().empty() || !tokens[i+1].trivia().empty()) {
+                    // TODO: warning?
                 }
                 else if (stringify) {
                     // if this is right after the opening quote or right before the closing quote, we're
