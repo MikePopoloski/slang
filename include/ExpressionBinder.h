@@ -28,6 +28,7 @@ public:
     BoundStatementList* bindStatementList(const SyntaxList<SyntaxNode>& items);
 
 private:
+    BoundExpression* bindAndPropagate(const ExpressionSyntax* syntax);
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const IntegerVectorExpressionSyntax* syntax);

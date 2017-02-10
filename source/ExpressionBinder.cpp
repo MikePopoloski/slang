@@ -109,20 +109,24 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
 }
 
 BoundExpression* ExpressionBinder::bindConstantExpression(const ExpressionSyntax* syntax) {
-    return bindSelfDeterminedExpression(syntax);
+    return bindAndPropagate(syntax);
 }
 
 BoundExpression* ExpressionBinder::bindSelfDeterminedExpression(const ExpressionSyntax* syntax) {
+    return bindAndPropagate(syntax);
+}
+
+BoundExpression* ExpressionBinder::bindAndPropagate(const ExpressionSyntax* syntax) {
     BoundExpression* expr = bindExpression(syntax);
     propagate(expr, expr->type);
     return expr;
 }
 
 BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyntax* syntax, SourceLocation location, const TypeSymbol* assignmentType) {
-    BoundExpression* expr = bindExpression(syntax);
+    BoundExpression* expr = bindAndPropagate(syntax);
     if (expr->bad())
         return expr;
-
+    
     const TypeSymbol* type = expr->type;
     if (!assignmentType->isAssignmentCompatible(type)) {
         DiagCode code = assignmentType->isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
@@ -191,7 +195,7 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
 
 BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax) {
     // Supported for both integral and real types. Can be overloaded for others.
-    BoundExpression* operand = bindExpression(syntax->operand);
+    BoundExpression* operand = bindAndPropagate(syntax->operand);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
         return badExpr(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
 
@@ -200,7 +204,7 @@ BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnary
 
 BoundExpression* ExpressionBinder::bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax* syntax) {
     // Result type is always a single bit. Supported on integral types.
-    BoundExpression* operand = bindSelfDeterminedExpression(syntax->operand);
+    BoundExpression* operand = bindAndPropagate(syntax->operand);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
         return badExpr(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
 
@@ -208,21 +212,20 @@ BoundExpression* ExpressionBinder::bindUnaryReductionOperator(const PrefixUnaryE
 }
 
 BoundExpression* ExpressionBinder::bindArithmeticOperator(const BinaryExpressionSyntax* syntax) {
-    BoundExpression* lhs = bindExpression(syntax->left);
-    BoundExpression* rhs = bindExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
     // Get the result type; force the type to be four-state if it's a division, which can make a 4-state output
     // out of 2-state inputs
     const TypeSymbol* type = binaryOperatorResultType(lhs->type, rhs->type, syntax->kind == SyntaxKind::DivideExpression);
-
     return alloc.emplace<BoundBinaryExpression>(syntax, type, lhs, rhs);
 }
 
 BoundExpression* ExpressionBinder::bindComparisonOperator(const BinaryExpressionSyntax* syntax) {
-    BoundExpression* lhs = bindExpression(syntax->left);
-    BoundExpression* rhs = bindExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
@@ -231,8 +234,8 @@ BoundExpression* ExpressionBinder::bindComparisonOperator(const BinaryExpression
 }
 
 BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpressionSyntax* syntax) {
-    BoundExpression* lhs = bindSelfDeterminedExpression(syntax->left);
-    BoundExpression* rhs = bindSelfDeterminedExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
@@ -251,8 +254,8 @@ BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpression
 BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax) {
     // The shift and power operators are handled together here because in both cases the second
     // operand is evaluated in a self determined context.
-    BoundExpression* lhs = bindExpression(syntax->left);
-    BoundExpression* rhs = bindSelfDeterminedExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
@@ -262,8 +265,8 @@ BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressi
 }
 
 BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpressionSyntax* syntax) {
-    BoundExpression* lhs = bindExpression(syntax->left);
-    BoundExpression* rhs = bindExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
 
     // Basic assignment (=) is always applicable, but operators like += are applicable iff
     // the associated binary operator is applicable
@@ -284,6 +287,7 @@ BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpression
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression: binopKind = SyntaxKind::ArithmeticShiftRightExpression; break;
         DEFAULT_UNREACHABLE;
     }
+    // TODO: the LHS has to be assignable (i.e not a general expression)
     if (!checkOperatorApplicability(binopKind, syntax->operatorToken.location(), &lhs, &rhs))
         return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
