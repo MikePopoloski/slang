@@ -339,13 +339,22 @@ MemberSyntax* Parser::parseMember() {
             // TODO: Don't assume we have an assert here; this could be an accidental label or something
             auto name = consume();
             auto label = alloc.emplace<NamedLabelSyntax>(name, expect(TokenKind::Colon));
-            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, parseConcurrentAssertion(label, nullptr));
+            auto statement = parseAssertionStatement(label, nullptr);
+            if (dynamic_cast<ImmediateAssertionStatementSyntax*>(statement)) {
+                return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
+            }
+            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
         }
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
         case TokenKind::CoverKeyword:
-        case TokenKind::RestrictKeyword:
-            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, parseConcurrentAssertion(nullptr, nullptr));
+        case TokenKind::RestrictKeyword: {
+            auto statement = parseAssertionStatement(nullptr, nullptr);
+            if (dynamic_cast<ImmediateAssertionStatementSyntax*>(statement)) {
+                return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
+            }
+            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
+        }
         case TokenKind::AssignKeyword:
             return parseContinuousAssign(attributes);
         case TokenKind::InitialKeyword: {

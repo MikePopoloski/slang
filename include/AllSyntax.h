@@ -3366,6 +3366,32 @@ protected:
     }
 };
 
+struct ImmediateAssertionMemberSyntax : public MemberSyntax {
+    ImmediateAssertionStatementSyntax* statement;
+
+    ImmediateAssertionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ImmediateAssertionStatementSyntax* statement) :
+        MemberSyntax(SyntaxKind::ImmediateAssertionMember, attributes), statement(statement)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return statement;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
 struct AbortPropertyExpressionSyntax : public ExpressionSyntax {
     Token keyword;
     Token openParen;
