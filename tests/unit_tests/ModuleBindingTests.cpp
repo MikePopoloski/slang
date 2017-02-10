@@ -8,17 +8,24 @@ namespace {
 BumpAllocator alloc;
 
 const InstanceSymbol& evalModule(SyntaxTree& syntax) {
-    Diagnostics& diagnostics = syntax.diagnostics();
-    DeclarationTable declTable(diagnostics);
-    declTable.addSyntaxTree(&syntax);
+    const InstanceSymbol* instance;
+    if (syntax.root()->kind == SyntaxKind::ModuleDeclaration) {
+        SemanticModel sem { syntax };
+        instance = sem.makeImplicitInstance(syntax.root()->as<ModuleDeclarationSyntax>());
+    }
+    else {
+        Diagnostics& diagnostics = syntax.diagnostics();
+        DeclarationTable declTable(diagnostics);
+        declTable.addSyntaxTree(&syntax);
 
-    auto topLevelModules = declTable.getTopLevelModules();
-    REQUIRE(topLevelModules.count() == 1);
+        auto topLevelModules = declTable.getTopLevelModules();
+        REQUIRE(topLevelModules.count() == 1);
 
-    SemanticModel sem(alloc, diagnostics, declTable);
-    auto instance = sem.makeImplicitInstance(topLevelModules[0]);
+        SemanticModel sem(alloc, diagnostics, declTable);
+        instance = sem.makeImplicitInstance(topLevelModules[0]);
+    }
 
-    if (!diagnostics.empty())
+    if (!syntax.diagnostics().empty())
         WARN(syntax.reportDiagnostics());
 
     REQUIRE(instance);

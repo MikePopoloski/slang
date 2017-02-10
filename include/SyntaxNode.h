@@ -501,6 +501,7 @@ bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);
 bool isPossibleVectorDigit(TokenKind kind);
 bool isStatement(SyntaxKind kind);
+bool isExpression(SyntaxKind kind);
 
 // discriminated union of Token and SyntaxNode
 struct TokenOrSyntax {
