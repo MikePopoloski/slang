@@ -560,7 +560,7 @@ TEST_CASE("Directive not on own line", "[lexer]") {
     CHECK(diagnostics.back().code == DiagCode::DirectiveNotFirstOnLine);
 }
 
-TEST_CASE("Escaped keyword identifiers", "[preprocessor]") {
+TEST_CASE("Escaped keyword identifiers", "[lexer]") {
     auto& text = "\\wire";
 
     auto token = lexToken(text);
@@ -568,6 +568,23 @@ TEST_CASE("Escaped keyword identifiers", "[preprocessor]") {
     CHECK(token.valueText() == "wire");
     CHECK(token.identifierType() == IdentifierType::Escaped);
     CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Too many errors", "[lexer]") {
+    char buf[1024];
+    for (size_t i = 0; i < 1024 / 8; ++i) {
+        memcpy(buf + 8*i, "\x01\x02\x03\x04\x05\x06\x07\x08", 8);
+    }
+    diagnostics.clear();
+    auto buffer = sourceManager.assignText(StringRef((const char *)buf, 1024));
+    Lexer lexer(buffer, alloc, diagnostics);
+    Token token;
+    for (size_t i = 0; i < 1024; ++i) {
+        token = lexer.lex();
+    }
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(diagnostics.count() == Lexer::MAX_LEXER_ERRORS + 1);
+    CHECK(diagnostics.back().code == DiagCode::TooManyErrors);
 }
 
 void testKeyword(TokenKind kind) {

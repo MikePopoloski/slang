@@ -200,6 +200,9 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
 }
 
 Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
+    if (sourceBuffer == nullptr) {
+        return Token(TokenKind::EndOfFile, alloc.emplace<Token::Info>());
+    }
     if (mode == LexerMode::IncludeFileName)
         return lexIncludeFileName();
 
@@ -220,6 +223,12 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
 
     onNewLine = false;
     info->rawText = lexeme();
+    if (diagnostics.count() >= MAX_LEXER_ERRORS) {
+        // Stop any further lexing by claiming to at the end of the buffeer;
+        addError(DiagCode::TooManyErrors, currentOffset());
+        // Ensure we don't look at the source any more
+        sourceBuffer = nullptr;
+    }
     return Token(kind, info);
 }
 

@@ -63,6 +63,9 @@ public:
     /// Converts a range of tokens into a string literal; used for macro stringification.
     static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end, bool noWhitespace = false);
 
+    // TODO: have this based on some options system or otherwise not just a randomly
+    // chosen number.
+    static constexpr size_t MAX_LEXER_ERRORS = 50;
 private:
     Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
 
