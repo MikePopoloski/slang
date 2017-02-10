@@ -110,7 +110,6 @@ Lexer::Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnost
 }
 
 Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right, bool& error) {
-    // TODO: think about what happens if there is trivia in right token
     // TODO: think about what we should set the resulting location to be in order to capture expansion info
     auto location = left.location();
     auto trivia = left.trivia();
