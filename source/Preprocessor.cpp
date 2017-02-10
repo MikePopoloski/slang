@@ -771,9 +771,10 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                 break;
             case TokenKind::MacroPaste:
                 // Paste together previous token and next token; a macro paste on either end
-                // of the buffer is an error. This isn't specified in the standard so I'm just guessing.
-                if (i == 0 || i == tokens.count() - 1) {
-                    // TODO: error
+                // of the buffer or one that borders whitespace should be ignored.
+                // This isn't specified in the standard so I'm just guessing.
+                if (i == 0 || i == tokens.count() - 1 || !token.trivia().empty() || !tokens[i+1].trivia().empty()) {
+                    // TODO: warning?
                 }
                 else if (stringify) {
                     // if this is right after the opening quote or right before the closing quote, we're
@@ -782,21 +783,29 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                         // TODO: error
                     }
                     else {
-                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[++i]);
-                        if (newToken)
+                        bool error;
+                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[i+1], error);
+                        if (newToken) {
                             buffer.pop();
-                        else {
+                            ++i;
+                        }
+                        else if (error) {
                             // TODO: handle error cases
                         }
+                        // else: just discard the MacroPaste
                     }
                 }
                 else {
-                    newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[++i]);
-                    if (newToken)
+                    bool error;
+                    newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[i+1], error);
+                    if (newToken) {
                         expandedTokens.pop();
-                    else {
+                        ++i;
+                    }
+                    else if (error) {
                         // TODO: handle error cases
                     }
+                    // else: just discard the MacroPaste
                 }
                 break;
             default:

@@ -194,7 +194,7 @@ TEST_CASE("Function macro (keyword as formal argument)", "[preprocessor]") {
 }
 
 TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
-    auto& text = "`define FOO(x,y) x   ``   _blah``y\n`FOO(   bar,    _BAZ)";
+    auto& text = "`define FOO(x,y) x``_blah``y\n`FOO(   bar,    _BAZ)";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::Identifier);
@@ -216,6 +216,33 @@ TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "bar_foo3242");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro pasting (keyword)", "[preprocessor]") {
+    auto& text = "`define FOO(x) x``gic\n`FOO(lo)";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::LogicKeyword);
+    CHECK(token.valueText() == "logic");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro pasting (mixed)", "[preprocessor]") {
+    auto& text = "`define FOO(x) ;``x\n`FOO(y)";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::Semicolon);
+    CHECK(token.valueText() == ";");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro pasting (whitespace)", "[preprocessor]") {
+    auto& text = "`define FOO(x) x`` y\n`FOO(a)";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "a");
     CHECK(diagnostics.empty());
 }
 
