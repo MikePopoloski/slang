@@ -79,6 +79,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::BadDecimalDigit] = { "expected decimal digit", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadHexDigit] = { "expected hexadecimal digit", DiagnosticSeverity::Error };
     descriptors[DiagCode::DirectiveNotFirstOnLine] = { "compiler directives must begin on their own line", DiagnosticSeverity::Error };
+    descriptors[DiagCode::TooManyErrors] = { "lexer has encountered too many errors (input is a binary file?)", DiagnosticSeverity::Error };
 
     // numeric
     descriptors[DiagCode::LiteralSizeIsZero] = { "size of vector literal cannot be zero", DiagnosticSeverity::Error };
