@@ -83,9 +83,10 @@ Token Preprocessor::next(LexerMode mode) {
             case SyntaxKind::NoUnconnectedDriveDirective:
             case SyntaxKind::CellDefineDirective:
             case SyntaxKind::EndCellDefineDirective:
+            default:
+            // default can be reached in certain error cases
                 trivia.append(createSimpleDirective(token));
                 break;
-            DEFAULT_UNREACHABLE;
         }
         token = nextRaw(mode);
     } while (token.kind == TokenKind::Directive);
@@ -160,13 +161,72 @@ Token Preprocessor::nextRaw(LexerMode mode) {
 }
 
 Trivia Preprocessor::handleIncludeDirective(Token directive) {
-    // next token should be a filename
-    // TODO: handle macro replaced include file name
+    // next token should be a filename, or something the preprocessor generated
+    // that we will make into a filename
     Token fileName = next(LexerMode::IncludeFileName);
-    Token end = parseEndOfDirective();
+
+    // If we have a macro-expanded filename, there won't be an EOD token
+    bool suppressEODError = false;
+    if (fileName.kind != TokenKind::IncludeFileName) {
+        suppressEODError = true;
+        // A raw include file name will always yield a IncludeFileName token.
+        // a (valid) macro-expanded include filename will be lexed as either
+        // a StringLiteral or the token sequence '<' ... '>'
+        bool angleBrackets = false;
+        if (fileName.kind == TokenKind::LessThan) {
+            angleBrackets = true;
+            // In this case, we know that the first token is LessThan, and
+            // if things are proper, the last token is >, but there can be an
+            // arbitrary number of tokens that the macro expanded to in-between
+            // (as file names have no restrictions like identifiers do)
+            // so let us now concatenate all of the tokens from the macro expansion
+            // up to the '>'' in order to get the file name
+            SourceLocation rootExpansionLoc = sourceManager.getExpansionLoc(fileName.location());
+            Token concatenatedFileName = fileName;
+            std::vector<Token> tokens;
+            tokens.push_back(fileName);
+            Token nextToken = peek();
+            while (nextToken.kind != TokenKind::GreaterThan) {
+                // TODO: we should probably stop at something like a >>, >>= token,
+                // but behavior when reaching those tokens is likely to be destructive either way
+                // unless you have some crazy filenames you want to include
+                if (sourceManager.getExpansionLoc(nextToken.location()) != rootExpansionLoc) {
+                    addError(DiagCode::ExpectedIncludeFileName, fileName.location());
+                    break;
+                }
+                consume();
+                tokens.push_back(nextToken);
+                nextToken = peek();
+                if (nextToken.kind == TokenKind::GreaterThan) {
+                    tokens.push_back(nextToken);
+                    // do stringification
+                    fileName = Lexer::stringify(alloc, fileName.location(), fileName.getInfo()->trivia,
+                        &tokens.front(), &tokens.back() + 1, true);
+                    fileName = *alloc.emplace<Token>(TokenKind::IncludeFileName, fileName.getInfo());
+                }
+            }
+        } else if (fileName.kind == TokenKind::StringLiteral) {
+            size_t len = fileName.valueText().length();
+            uint8_t* stringBuffer = alloc.allocate(len + 3);
+            stringBuffer[0] = '"';
+            memcpy(stringBuffer + 1, fileName.valueText().begin(), len);
+            stringBuffer[len + 1] = '"';
+            stringBuffer[len + 2] = '\0';
+            Token::Info *fileNameInfo = alloc.emplace<Token::Info>(fileName.trivia(),
+                fileName.rawText(), fileName.location(), fileName.getInfo()->flags);
+            fileNameInfo->extra = StringRef((const char *)stringBuffer, len + 2);
+            fileName = *alloc.emplace<Token>(TokenKind::IncludeFileName, fileNameInfo);
+        } else {
+            addError(DiagCode::ExpectedIncludeFileName, fileName.location());
+        }
+    }
+    Token end = parseEndOfDirective(suppressEODError);
 
     // path should be at least three chars: "a" or <a>
     StringRef path = fileName.valueText();
+
+    // An includeFileName's value
+    //bool isMacroExpanded = fileName.kind != TokenKind::IncludeFileName;
     if (path.length() < 3)
         addError(DiagCode::ExpectedIncludeFileName, fileName.location());
     else {

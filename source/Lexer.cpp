@@ -158,14 +158,14 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     return Token(token.kind, info);
 }
 
-Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end) {
+Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end, bool noWhitespace) {
     SmallVectorSized<char, 64> text;
     text.append('"');
 
     // TODO: need to think a lot more about where and how much we insert spacing
     while (begin != end) {
         Token cur = *begin;
-        if (cur.hasTrivia(TriviaKind::Whitespace))
+        if (!noWhitespace && cur.hasTrivia(TriviaKind::Whitespace))
             text.append(' ');
 
         if (cur.kind == TokenKind::MacroEscapedQuote) {
@@ -195,7 +195,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
     auto info = alloc.emplace<Token::Info>(*token.getInfo());
     info->location = location;
     info->trivia = trivia;
-
+    info->rawText = std::get<StringRef>(info->extra);
     return Token(token.kind, info);
 }
 
@@ -679,7 +679,16 @@ Token Lexer::lexIncludeFileName() {
 
     mark();
     char delim = peek();
-    if (delim != '"' && delim != '<') {
+    if (delim == '`') {
+        advance();
+        // macro file name
+        auto info = alloc.emplace<Token::Info>();
+        auto token = Token(lexDirective(info), info);
+        info->trivia = trivia;
+        info->rawText = lexeme();
+        info->location = location;
+        return token;
+    } else if (delim != '"' && delim != '<') {
         addError(DiagCode::ExpectedIncludeFileName, offset);
         return Token(TokenKind::IncludeFileName, alloc.emplace<Token::Info>(trivia, nullptr, location, TokenFlags::Missing));
     }

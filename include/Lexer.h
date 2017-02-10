@@ -61,7 +61,7 @@ public:
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
     /// Converts a range of tokens into a string literal; used for macro stringification.
-    static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end);
+    static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end, bool noWhitespace = false);
 
 private:
     Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
