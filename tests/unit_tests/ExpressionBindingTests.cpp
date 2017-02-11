@@ -127,7 +127,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 
 TEST_CASE("Check type propagation real", "[binding:expressions]") {
     // Tests a number of rules of size propogation
-    auto syntax = SyntaxTree::fromText<ExpressionSyntax>("i = 2'b1 & (((17'b101 >> 1'b1) - 2.0) == 21'b1)");
+    auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 2.0) == 21'b1)");
     SemanticModel sem { syntax };
 
     // Fabricate a symbol for the `i` variable
