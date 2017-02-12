@@ -104,6 +104,8 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
             return bindAssignmentOperator(syntax->as<BinaryExpressionSyntax>());
+        case SyntaxKind::InvocationExpression:
+            return bindSubroutineCall(syntax->as<InvocationExpressionSyntax>());
 
             DEFAULT_UNREACHABLE;
     }
@@ -349,6 +351,34 @@ BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpression
     return alloc.emplace<BoundAssignmentExpression>(syntax, lhs->type, lhs, rhs);
 }
 
+BoundExpression* ExpressionBinder::bindSubroutineCall(const InvocationExpressionSyntax* syntax) {
+    // TODO: check for something other than a simple name on the LHS
+    auto name = syntax->left->getFirstToken();
+    const Symbol* symbol = scope->lookup(name.valueText());
+    ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
+
+    auto actualArgs = syntax->arguments->parameters;
+    const SubroutineSymbol& subroutine = symbol->as<SubroutineSymbol>();
+
+    // TODO: handle too few args as well, which requires looking at default values
+    if (subroutine.arguments.count() < actualArgs.count()) {
+        auto& diag = addError(DiagCode::TooManyArguments, name.location());
+        diag << syntax->left->sourceRange();
+        diag << subroutine.arguments.count();
+        diag << actualArgs.count();
+        return badExpr(nullptr);
+    }
+
+    // TODO: handle named arguments in addition to ordered
+    SmallVectorSized<const BoundExpression*, 8> buffer;
+    for (uint32_t i = 0; i < actualArgs.count(); i++) {
+        auto arg = (const OrderedArgumentSyntax*)actualArgs[i];
+        buffer.append(bindAssignmentLikeContext(arg->expr, arg->sourceRange().start(), subroutine.arguments[i]->type));
+    }
+
+    return alloc.emplace<BoundCallExpression>(syntax, &subroutine, buffer.copy(alloc));
+}
+
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
     if ((*operand)->bad())
         return false;
@@ -437,6 +467,7 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::RealLiteralExpression:
         case SyntaxKind::IntegerLiteralExpression:
         case SyntaxKind::IntegerVectorExpression:
+        case SyntaxKind::InvocationExpression:
             expression->type = type;
             break;
         case SyntaxKind::UnaryPlusExpression:

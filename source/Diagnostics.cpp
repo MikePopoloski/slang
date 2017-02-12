@@ -120,7 +120,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ExpectedParameterPort] = { "expected parameter declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedNonAnsiPort] = { "expected non-ansi port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedAnsiPort] = { "expected ansi port declaration", DiagnosticSeverity::Error };
-    descriptors[DiagCode::ExpectedFunctionPort] = { "expected function port declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedFunctionPort] = { "expected subroutine port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedForInitializer] = { "expected for loop initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedExpression] = { "expected expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedOpenRangeElement] = { "expected open range element", DiagnosticSeverity::Error };
@@ -143,7 +143,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::AttributesNotSupported] = { "attributes are not allowed to be attached to {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::InvalidGenvarIterExpression] = { "invalid genvar iteration expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedGenvarIterVar] = { "expected genvar iteration variable", DiagnosticSeverity::Error };
-    descriptors[DiagCode::ConstFunctionPortRequiresRef] = { "'const' in function formal port requires 'ref' direction specifier", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ConstFunctionPortRequiresRef] = { "'const' in subroutine formal port requires 'ref' direction specifier", DiagnosticSeverity::Error };
 
     // declarations
     descriptors[DiagCode::DuplicateDefinition] = { "duplicate {} definition '{}'", DiagnosticSeverity::Error };
@@ -171,6 +171,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::BadAssignment] = { "type {} cannot be assigned to variable of type {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoImplicitConversion] = { "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?", DiagnosticSeverity::Error };
     descriptors[DiagCode::UndeclaredIdentifier] = { "use of undeclared identifier '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::TooManyArguments] = { "too many arguments to subroutine call; expected {} but {} were provided", DiagnosticSeverity::Error };
 
     // statements
     descriptors[DiagCode::ReturnNotInSubroutine] = { "return statement is only valid inside task and function blocks", DiagnosticSeverity::Error };
