@@ -43,6 +43,7 @@ private:
     BoundExpression* bindRelationalOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindAssignmentOperator(const BinaryExpressionSyntax* syntax);
+    BoundExpression* bindSubroutineCall(const InvocationExpressionSyntax* syntax);
 
     BoundStatement* bindReturnStatement(const ReturnStatementSyntax* syntax);
 
