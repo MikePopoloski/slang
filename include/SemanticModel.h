@@ -51,6 +51,8 @@ public:
     Diagnostics& getDiagnostics() { return diagnostics; }
     const Scope* getPackages() { return &packages; }
 
+    const Scope* getSystemScope() { return &systemScope; }
+
 private:
     // Represents a simple constant range.
     struct ConstantRange {
@@ -117,6 +119,7 @@ private:
     Diagnostics& diagnostics;
     DeclarationTable& declTable;
     Scope packages;
+    Scope systemScope;
 
     HashMap<const ModuleDeclarationSyntax*, std::vector<ParameterInfo>> parameterCache;
 

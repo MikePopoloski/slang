@@ -19,6 +19,7 @@ public:
     ScriptSession() :
         declTable(diagnostics),
         sem(alloc, diagnostics, declTable),
+        scriptScope(sem.getSystemScope()),
         binder(sem, &scriptScope)
     {
     }
@@ -76,13 +77,17 @@ public:
         return nullptr;
     }
 
+    std::string reportDiagnostics() {
+        return DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(diagnostics);
+    }
+
 private:
     std::vector<SyntaxTree> syntaxTrees;
-    Scope scriptScope;
     BumpAllocator alloc;
     Diagnostics diagnostics;
     DeclarationTable declTable;
     SemanticModel sem;
+    Scope scriptScope;
     ExpressionBinder binder;
     ConstantEvaluator evaluator;
 };

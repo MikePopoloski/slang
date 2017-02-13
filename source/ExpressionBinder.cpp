@@ -561,8 +561,9 @@ BoundStatement* ExpressionBinder::bindStatement(const StatementSyntax* syntax) {
 BoundStatementList* ExpressionBinder::bindStatementList(const SyntaxList<SyntaxNode>& items) {
     SmallVectorSized<const BoundStatement*, 8> buffer;
     for (const auto& item : items) {
-        // TODO: declarations
-        if (isStatement(item->kind))
+        if (item->kind == SyntaxKind::DataDeclaration)
+            bindVariableDecl((const DataDeclarationSyntax*)item, buffer);
+        else if (isStatement(item->kind))
             buffer.append(bindStatement((const StatementSyntax*)item));
     }
     return alloc.emplace<BoundStatementList>(buffer.copy(alloc));
@@ -577,6 +578,15 @@ BoundStatement* ExpressionBinder::bindReturnStatement(const ReturnStatementSynta
 
     auto expr = bindAssignmentLikeContext(syntax->returnValue, location, subroutine->returnType);
     return alloc.emplace<BoundReturnStatement>(syntax, expr);
+}
+
+void ExpressionBinder::bindVariableDecl(const DataDeclarationSyntax* syntax, SmallVector<const BoundStatement*>& results) {
+    // TODO: figure out const-ness of the scope here; shouldn't const cast obviously
+    SmallVectorSized<const Symbol*, 8> buffer;
+    sem.makeVariables(syntax, buffer, const_cast<Scope*>(scope));
+
+    for (auto symbol : buffer)
+        results.append(alloc.emplace<BoundVariableDecl>((const VariableSymbol*)symbol));
 }
 
 bool ExpressionBinder::propagateAssignmentLike(BoundExpression* rhs, const TypeSymbol* lhsType) {

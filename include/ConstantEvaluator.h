@@ -72,6 +72,9 @@ private:
     ConstantValue evaluateCall(const BoundCallExpression* expr);
     ConstantValue evaluateStatementList(const BoundStatementList* stmt);
     ConstantValue evaluateReturn(const BoundReturnStatement* stmt);
+    ConstantValue evaluateVariableDecl(const BoundVariableDecl* decl);
+
+    ConstantValue evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments);
 
     bool evaluateLValue(const BoundExpression* expr, LValue& lvalue);
 

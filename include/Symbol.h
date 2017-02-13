@@ -37,17 +37,25 @@ enum class SymbolKind {
     Subroutine
 };
 
+/// Specifies the storage lifetime of a variable.
 enum class VariableLifetime {
     Automatic,
     Static
 };
 
+/// Specifies behavior of an argument passed to a subroutine.
 enum class FormalArgumentDirection {
     In,
     Out,
     InOut,
     Ref,
     ConstRef
+};
+
+/// Indicates which built-in system function is represented by a symbol.
+enum class SystemFunction {
+    Unknown,
+    clog2
 };
 
 class Symbol {
@@ -316,27 +324,36 @@ public:
 
 class FormalArgumentSymbol : public VariableSymbol {
 public:
-    FormalArgumentDirection direction;
+    FormalArgumentDirection direction = FormalArgumentDirection::In;
 
     FormalArgumentSymbol(Token name, const TypeSymbol* type, const BoundExpression* initializer, FormalArgumentDirection direction) :
         VariableSymbol(SymbolKind::FormalArgument, name.valueText(), name.location(), type, initializer),
         direction(direction) {}
+
+    FormalArgumentSymbol(const TypeSymbol* type) :
+        VariableSymbol(SymbolKind::FormalArgument, nullptr, SourceLocation(), type, nullptr) {}
 };
 
 class SubroutineSymbol : public Symbol {
 public:
-    const Scope* scope;
+    const Scope* scope = nullptr;
     const TypeSymbol* returnType;
     const BoundStatementList* body;
     ArrayRef<const FormalArgumentSymbol*> arguments;
-    VariableLifetime defaultLifetime;
-    bool isTask;
+    VariableLifetime defaultLifetime = VariableLifetime::Automatic;
+    SystemFunction systemFunction = SystemFunction::Unknown;
+    bool isTask = false;
 
     SubroutineSymbol(Token name, const TypeSymbol* returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
                      VariableLifetime defaultLifetime, bool isTask, const Scope* scope) :
         Symbol(SymbolKind::Subroutine, name.valueText(), name.location()),
         returnType(returnType), arguments(arguments), defaultLifetime(defaultLifetime),
         isTask(isTask), scope(scope) {}
+
+    SubroutineSymbol(StringRef name, const TypeSymbol* returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
+                     SystemFunction systemFunction) :
+        Symbol(SymbolKind::Subroutine, name, SourceLocation()),
+        returnType(returnType), arguments(arguments), systemFunction(systemFunction) {}
 };
 
 }
