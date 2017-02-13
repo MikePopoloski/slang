@@ -16,7 +16,7 @@ namespace slang {
 ExpressionBinder::ExpressionBinder(SemanticModel& sem, const Scope* scope) :
     sem(sem), alloc(sem.getAllocator()), scope(scope)
 {
-        ASSERT(scope);
+    ASSERT(scope);
 }
 
 ExpressionBinder::ExpressionBinder(SemanticModel& sem, const SubroutineSymbol* subroutine) :
@@ -128,7 +128,7 @@ BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyn
     BoundExpression* expr = bindAndPropagate(syntax);
     if (expr->bad())
         return expr;
-    
+
     const TypeSymbol* type = expr->type;
     if (!assignmentType->isAssignmentCompatible(type)) {
         DiagCode code = assignmentType->isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
