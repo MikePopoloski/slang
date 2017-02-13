@@ -35,7 +35,6 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
         case SyntaxKind::TimeLiteralExpression:
         case SyntaxKind::WildcardLiteralExpression:
         case SyntaxKind::OneStepLiteralExpression:
-        case SyntaxKind::UnbasedUnsizedLiteralExpression:
             ASSERT("Not yet implemented");
             break;
         case SyntaxKind::IdentifierName:
@@ -44,6 +43,7 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
             return bindName(syntax->as<NameSyntax>(), scope);
         case SyntaxKind::RealLiteralExpression:
         case SyntaxKind::IntegerLiteralExpression:
+        case SyntaxKind::UnbasedUnsizedLiteralExpression:
             return bindLiteral(syntax->as<LiteralExpressionSyntax>());
         case SyntaxKind::IntegerVectorExpression:
             return bindLiteral(syntax->as<IntegerVectorExpressionSyntax>());
@@ -162,6 +162,15 @@ BoundExpression* ExpressionBinder::bindLiteral(const LiteralExpressionSyntax* sy
                 sem.getKnownType(SyntaxKind::RealType),
                 std::get<double>(syntax->literal.numericValue())
             );
+        case SyntaxKind::UnsizedUnbasedLiteralExpression:
+            // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
+            // context, but can grow
+            logic_t val = (logic_t)std::get<SVInt>(syntax->literal.numericValue());
+            return alloc.emplace<BoundLiteral>(
+                syntax,
+                sem.getIntegralType(1, false, val.isUnknown()),
+                val);
+
         DEFAULT_UNREACHABLE;
     }
     return nullptr;
