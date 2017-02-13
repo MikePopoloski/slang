@@ -76,7 +76,8 @@ void SemanticModel::makePackages() {
     for (auto pkg : declTable.getPackages()) {
         auto name = pkg->header->name.valueText();
         Scope *scope = alloc.emplace<Scope>();
-        ASSERT(packages.add(alloc.emplace<ModuleSymbol>(pkg, scope, ArrayRef<const Symbol *>())));
+        bool ok = packages.add(alloc.emplace<ModuleSymbol>(pkg, scope, ArrayRef<const Symbol *>()));
+        ASSERT(ok);
     }
     for (auto pkg : declTable.getPackages()) {
         auto name = pkg->header->name.valueText();
