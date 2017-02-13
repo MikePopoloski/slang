@@ -24,6 +24,10 @@ const ModuleDeclarationSyntax* DeclarationTable::find(StringRef name) const {
     return it->second.decl;
 }
 
+ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getPackages() {
+    return ArrayRef<const ModuleDeclarationSyntax*>(packages.begin(), packages.end());
+}
+
 ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() {
     if (!dirty)
         return ArrayRef<const ModuleDeclarationSyntax*>(topLevel.begin(), topLevel.end());
@@ -35,11 +39,16 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
     // merge all module declarations
     for (auto& unit : units) {
         for (const ModuleDeclarationSyntax* node : unit.rootNodes) {
+            if (node->header->moduleKeyword.kind != TokenKind::ModuleKeyword &&
+                node->header->moduleKeyword.kind != TokenKind::MacromoduleKeyword &&
+                node->header->moduleKeyword.kind != TokenKind::InterfaceKeyword)
+                continue;
+
             auto name = node->header->name;
             auto pair = nameLookup.try_emplace(name.valueText(), node);
             if (!pair.second) {
                 // report the duplicate name, along with the original location
-                diagnostics.add(DiagCode::DuplicateDefinition, name.location()) << StringRef("module") << name.valueText();
+                diagnostics.add(DiagCode::DuplicateDefinition, name.location()) << node->header->moduleKeyword.valueText() << name.valueText();
                 diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second.decl->header->name.location());
             }
         }
@@ -59,7 +68,8 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
 
     // finally consolidate the list of top level modules
     for (auto& pair : nameLookup) {
-        if (!pair.second.instantiated)
+        if (!pair.second.instantiated &&
+            pair.second.decl->header->moduleKeyword.kind != TokenKind::InterfaceKeyword)
             topLevel.append(pair.second.decl);
     }
 
@@ -77,6 +87,7 @@ void DeclarationTable::addSyntaxTree(const SyntaxTree* tree) {
     UnitDecls unit;
     for (const MemberSyntax* member : tree->root()->as<CompilationUnitSyntax>()->members) {
         switch (member->kind) {
+            case SyntaxKind::PackageDeclaration:
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ProgramDeclaration: {
@@ -85,7 +96,8 @@ void DeclarationTable::addSyntaxTree(const SyntaxTree* tree) {
                 auto name = decl->header->name;
                 if (name.valueText())
                     unit.rootNodes.push_back(decl);
-
+                if (decl->header->moduleKeyword.kind == TokenKind::PackageKeyword)
+                    packages.append(decl);
                 std::vector<NameSet> scopeStack;
                 visit(decl, unit, scopeStack);
                 break;

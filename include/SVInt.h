@@ -241,6 +241,18 @@ public:
     logic_t reductionAnd() const;
     logic_t reductionXor() const;
 
+    /// Get the number of "active bits". An SVInt might have a large bit width but be set
+    /// to a very small value, in which case it will have a low number of active bits.
+    uint32_t getActiveBits() const { return bitWidth - countLeadingZeros(); }
+
+    /// Count the number of leading zeros. This doesn't do anything special for
+    /// unknown values, so make sure you know what you're doing with it.
+    uint32_t countLeadingZeros() const {
+        if (isSingleWord())
+            return slang::countLeadingZeros(val) - (BITS_PER_WORD - bitWidth);
+        return countLeadingZerosSlowCase();
+    }
+
     SVInt& operator=(const SVInt& rhs) {
         if (isSingleWord() && rhs.isSingleWord()) {
             val = rhs.val;
@@ -425,20 +437,8 @@ private:
     // Get the number of bits that are useful in the top word
     void getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const;
 
-    // Get the number of "active bits". An SVInt might have a large bit width but be set
-    // to a very small value, in which case it will have a low number of active bits.
-    uint32_t getActiveBits() const { return bitWidth - countLeadingZeros(); }
-
     // Get a pointer to the data, either pVal or val depending on whether we have a single word.
     const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
-
-    // Count the number of leading zeros. This doesn't do anything special for
-    // unknown values, so make sure you know what you're doing with it.
-    uint32_t countLeadingZeros() const {
-        if (isSingleWord())
-            return slang::countLeadingZeros(val) - (BITS_PER_WORD - bitWidth);
-        return countLeadingZerosSlowCase();
-    }
 
     // Set a specific bit to be a specific 4-state value.
     void setUnknownBit(int index, logic_t bit);
@@ -513,6 +513,13 @@ inline logic_t logicalImplication(const SVInt& lhs, const SVInt& rhs) { return !
 /// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs -> lhs)).
 inline logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs) {
     return logicalImplication(lhs, rhs) && logicalImplication(rhs, lhs);
+}
+
+/// Returns the ceiling of the log_2 of the value. If value is zero, returns zero.
+inline uint32_t clog2(const SVInt& v) {
+    if (v == 0)
+        return 0;
+    return v.getBitWidth() - (v - SVInt(1)).countLeadingZeros();
 }
 
 }

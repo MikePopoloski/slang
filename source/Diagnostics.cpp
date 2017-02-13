@@ -79,6 +79,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::BadDecimalDigit] = { "expected decimal digit", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadHexDigit] = { "expected hexadecimal digit", DiagnosticSeverity::Error };
     descriptors[DiagCode::DirectiveNotFirstOnLine] = { "compiler directives must begin on their own line", DiagnosticSeverity::Error };
+    descriptors[DiagCode::TooManyLexerErrors] = { "lexer has encountered too many errors (input is a binary file?)", DiagnosticSeverity::Error };
 
     // numeric
     descriptors[DiagCode::LiteralSizeIsZero] = { "size of vector literal cannot be zero", DiagnosticSeverity::Error };
@@ -119,6 +120,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ExpectedParameterPort] = { "expected parameter declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedNonAnsiPort] = { "expected non-ansi port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedAnsiPort] = { "expected ansi port declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedFunctionPort] = { "expected subroutine port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedForInitializer] = { "expected for loop initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedExpression] = { "expected expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedOpenRangeElement] = { "expected open range element", DiagnosticSeverity::Error };
@@ -141,6 +143,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::AttributesNotSupported] = { "attributes are not allowed to be attached to {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::InvalidGenvarIterExpression] = { "invalid genvar iteration expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedGenvarIterVar] = { "expected genvar iteration variable", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ConstFunctionPortRequiresRef] = { "'const' in subroutine formal port requires 'ref' direction specifier", DiagnosticSeverity::Error };
 
     // declarations
     descriptors[DiagCode::DuplicateDefinition] = { "duplicate {} definition '{}'", DiagnosticSeverity::Error };
@@ -167,6 +170,11 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::BadBinaryExpression] = { "invalid operands to binary expression ({} and {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadAssignment] = { "type {} cannot be assigned to variable of type {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoImplicitConversion] = { "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UndeclaredIdentifier] = { "use of undeclared identifier '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::TooManyArguments] = { "too many arguments to subroutine call; expected {} but {} were provided", DiagnosticSeverity::Error };
+
+    // statements
+    descriptors[DiagCode::ReturnNotInSubroutine] = { "return statement is only valid inside task and function blocks", DiagnosticSeverity::Error };
 
     ASSERT((int)DiagCode::MaxValue == descriptors.size(), "When you add a new diagnostic code you need to update default messages");
 }
@@ -356,8 +364,12 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
         writer.write("\n{}\n", line);
 
         // Highlight any ranges and print the caret location.
-        // TODO: handle tabs
         std::string buffer(line.length(), ' ');
+
+        // handle tabs to get proper alignment on a terminal
+        for (size_t i = 0; i < buffer.length(); ++i)
+            if (line[i] == '\t') buffer[i] = '\t';
+
         for (SourceRange range : ranges)
             highlightRange(range, loc, col, line, buffer);
 

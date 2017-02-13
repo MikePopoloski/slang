@@ -38,6 +38,7 @@ public:
 
     void addSyntaxTree(const SyntaxTree* tree);
 
+    ArrayRef<const ModuleDeclarationSyntax*> getPackages();
     ArrayRef<const ModuleDeclarationSyntax*> getTopLevelModules();
 
     const ModuleDeclarationSyntax* find(StringRef name) const;
@@ -65,6 +66,7 @@ private:
 
     Diagnostics& diagnostics;
     Vector<UnitDecls> units;
+    Vector<const ModuleDeclarationSyntax*> packages;
     Vector<const ModuleDeclarationSyntax*> topLevel;
     std::unordered_map<StringRef, DeclAndFlag> nameLookup;
     bool dirty = false;

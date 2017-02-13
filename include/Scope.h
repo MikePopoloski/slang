@@ -15,7 +15,7 @@ enum class SymbolKind;
 class Scope {
 public:
     Scope() {}
-    explicit Scope(const Scope* parent) : parentScope(parent) {}
+    explicit Scope(const Scope* parent) : parents(1, parent) {}
 
     bool add(const Symbol* symbol);
 
@@ -32,16 +32,16 @@ public:
 
     const Symbol* getNth(const SymbolKind& kind, size_t index) const;
 
-    const Scope* parent() const { return parentScope; }
-
     static const Scope* const Empty;
 
     std::string toString() const;
 
+    void addParentScope(const Scope* scope) { parents.emplace_back(scope); }
+
 private:
     std::unordered_map<StringRef, const Symbol*> table;
     std::vector<const Symbol*> list;
-    const Scope* parentScope = nullptr;
+    std::vector<const Scope*> parents;
 };
 
 }

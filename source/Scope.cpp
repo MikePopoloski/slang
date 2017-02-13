@@ -14,15 +14,18 @@ bool Scope::add(const Symbol *symbol) {
 }
 
 const Symbol *Scope::lookup(StringRef name, bool local) const {
-    for (auto scope = this; scope && scope != Scope::Empty; scope = scope->parent()) {
-        auto it = scope->table.find(name);
-        if (it != scope->table.end()) return it->second;
-        if (local) return nullptr;
+    auto it = table.find(name);
+    if (it != table.end()) return it->second;
+    if (local) return nullptr;
+    for (auto scope : parents) {
+        auto sym = scope->lookup(name);
+        if (sym) return sym;
     }
     return nullptr;
 }
 
 const Symbol* Scope::getNth(const SymbolKind& kind, size_t index) const {
+    // TODO: poor man's iterator
     for (const Symbol* s : list) {
         if (s->kind == kind ) {
             if (index == 0)

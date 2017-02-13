@@ -351,20 +351,23 @@ ForLoopStatementSyntax* Parser::parseForLoopStatement(NamedLabelSyntax* label, A
 
 ForeachLoopListSyntax* Parser::parseForeachLoopVariables() {
     auto openParen = expect(TokenKind::OpenParenthesis);
-    auto arrayName = parseName();
-    SmallVectorSized<TokenOrSyntax, 4> buffer;
-
-    Token closeParen;
-    parseSeparatedList<isIdentifierOrComma, isEndOfParenList>(
-        buffer,
-        TokenKind::CloseParenthesis,
+    auto arrayName = parseName(true);
+    ArrayRef<TokenOrSyntax> list;
+    Token openBracket;
+    Token closeBracket;
+    parseSeparatedList<isIdentifierOrComma, isEndOfBracketedList>(
+        TokenKind::OpenBracket,
+        TokenKind::CloseBracket,
         TokenKind::Comma,
-        closeParen,
+        openBracket,
+        list,
+        closeBracket,
         DiagCode::ExpectedIdentifier,
-        [this](bool) { return parseName(); }
+        [this](bool) { return parseName(true); }
     );
+    auto closeParen = expect(TokenKind::CloseParenthesis);
 
-    return alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, buffer.copy(alloc), closeParen);
+    return alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, openBracket, list, closeBracket, closeParen);
 }
 
 ForeachLoopStatementSyntax* Parser::parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {

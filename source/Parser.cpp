@@ -22,6 +22,39 @@ CompilationUnitSyntax* Parser::parseCompilationUnit() {
     return alloc.emplace<CompilationUnitSyntax>(members, eof);
 }
 
+const SyntaxNode* Parser::parseGuess() {
+    // First try to parse as a variable declaration.
+    if (isVariableDeclaration())
+        return parseVariableDeclaration(parseAttributes());
+
+    // Now try to parse as a statement. This will also handle plain expressions,
+    // though we might get an error about a missing semicolon that we should suppress.
+    auto& diagnostics = getDiagnostics();
+    auto statement = parseStatement(/* allowEmpty */ true);
+    if (statement->kind == SyntaxKind::ExpressionStatement) {
+        if (!diagnostics.empty() && diagnostics.back().code == DiagCode::ExpectedToken)
+            diagnostics.pop();
+
+        // Always pull the expression out for convenience.
+        return statement->as<ExpressionStatementSyntax>()->expr;
+    }
+
+    // It might not have been a statement at all, in which case try a whole compilation unit
+    if (statement->kind == SyntaxKind::EmptyStatement && !diagnostics.empty() &&
+        diagnostics.back().code == DiagCode::ExpectedStatement) {
+
+        // If there's only one member, pull it out for convenience
+        diagnostics.pop();
+        auto unit = parseCompilationUnit();
+        if (unit->members.count() == 1)
+            return unit->members[0];
+        else
+            return unit;
+    }
+
+    return statement;
+}
+
 ModuleDeclarationSyntax* Parser::parseModule() {
     return parseModule(parseAttributes());
 }
@@ -327,6 +360,8 @@ MemberSyntax* Parser::parseMember() {
                 return parseClassDeclaration(attributes, consume());
             else
                 return parseModule(attributes);
+        case TokenKind::ModPortKeyword:
+            return parseModportDeclaration(attributes);
         case TokenKind::SpecParamKeyword:
         case TokenKind::BindKeyword:
         case TokenKind::AliasKeyword:
@@ -339,18 +374,35 @@ MemberSyntax* Parser::parseMember() {
             // TODO: Don't assume we have an assert here; this could be an accidental label or something
             auto name = consume();
             auto label = alloc.emplace<NamedLabelSyntax>(name, expect(TokenKind::Colon));
-            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, parseConcurrentAssertion(label, nullptr));
+            auto statement = parseAssertionStatement(label, nullptr);
+            switch (statement->kind) {
+                case SyntaxKind::ImmediateAssertStatement:
+                case SyntaxKind::ImmediateAssumeStatement:
+                case SyntaxKind::ImmediateCoverStatement:
+                    return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
+                default:
+                    return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
+            }
         }
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
         case TokenKind::CoverKeyword:
-        case TokenKind::RestrictKeyword:
-            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, parseConcurrentAssertion(nullptr, nullptr));
+        case TokenKind::RestrictKeyword: {
+            auto statement = parseAssertionStatement(nullptr, nullptr);
+            switch (statement->kind) {
+                case SyntaxKind::ImmediateAssertStatement:
+                case SyntaxKind::ImmediateAssumeStatement:
+                case SyntaxKind::ImmediateCoverStatement:
+                    return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
+                default:
+                    return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
+            }
+        }
         case TokenKind::AssignKeyword:
             return parseContinuousAssign(attributes);
         case TokenKind::InitialKeyword: {
             auto keyword = consume();
-            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement(false));
+            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement());
         }
         case TokenKind::FinalKeyword:
         case TokenKind::AlwaysKeyword:
@@ -358,7 +410,7 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::AlwaysFFKeyword:
         case TokenKind::AlwaysLatchKeyword: {
             auto keyword = consume();
-            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement());
+            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement(false));
         }
         case TokenKind::ForKeyword:
             return parseLoopGenerateConstruct(attributes);
@@ -450,6 +502,62 @@ TimeUnitsDeclarationSyntax* Parser::parseTimeUnitsDeclaration(ArrayRef<Attribute
     return alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
 }
 
+ModportItemSyntax* Parser::parseModportItem() {
+    auto name = expect(TokenKind::Identifier);
+    auto ports = parseAnsiPortList(expect(TokenKind::OpenParenthesis));
+    return alloc.emplace<ModportItemSyntax>(name, ports);
+}
+
+ModportDeclarationSyntax* Parser::parseModportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+
+    Token semi;
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    parseSeparatedList<isIdentifierOrComma, isSemicolon>(
+        buffer,
+        TokenKind::Semicolon,
+        TokenKind::Comma,
+        semi,
+        DiagCode::ExpectedIdentifier,
+        [this](bool) { return parseModportItem(); }
+    );
+
+    return alloc.emplace<ModportDeclarationSyntax>(attributes, keyword, buffer.copy(alloc), semi);
+}
+
+FunctionPortSyntax* Parser::parseFunctionPort() {
+    auto attributes = parseAttributes();
+    auto constKeyword = consumeIf(TokenKind::ConstKeyword);
+
+    Token direction;
+    if (isPortDirection(peek().kind))
+        direction = consume();
+
+    if (constKeyword && direction.kind != TokenKind::RefKeyword) {
+        auto location = direction ? direction.location() : constKeyword.location();
+        addError(DiagCode::ConstFunctionPortRequiresRef, location);
+    }
+
+    Token varKeyword = consumeIf(TokenKind::VarKeyword);
+
+    // The data type is fully optional; if we see an identifier here we need
+    // to disambiguate. Otherwise see if we have a port name or nothing at all.
+    DataTypeSyntax* dataType = nullptr;
+    if (!peek(TokenKind::Identifier))
+        dataType = parseDataType(/* allowImplicit */ true);
+    else if (!isPlainPortName())
+        dataType = parseDataType(/* allowImplicit */ false);
+
+    return alloc.emplace<FunctionPortSyntax>(
+        attributes,
+        constKeyword,
+        direction,
+        varKeyword,
+        dataType,
+        parseVariableDeclarator(/* isFirst */ true)
+    );
+}
+
 FunctionPrototypeSyntax* Parser::parseFunctionPrototype() {
     auto keyword = consume();
     auto lifetime = parseLifetime();
@@ -467,9 +575,25 @@ FunctionPrototypeSyntax* Parser::parseFunctionPrototype() {
 
     auto name = parseName();
 
-    AnsiPortListSyntax* portList = nullptr;
-    if (peek(TokenKind::OpenParenthesis))
-        portList = parseAnsiPortList(consume());
+    FunctionPortListSyntax* portList = nullptr;
+    if (peek(TokenKind::OpenParenthesis)) {
+        auto openParen = consume();
+        if (peek(TokenKind::CloseParenthesis))
+            portList = alloc.emplace<FunctionPortListSyntax>(openParen, nullptr, consume());
+        else {
+            Token closeParen;
+            SmallVectorSized<TokenOrSyntax, 8> buffer;
+            parseSeparatedList<isPossibleFunctionPort, isEndOfParenList>(
+                buffer,
+                TokenKind::CloseParenthesis,
+                TokenKind::Comma,
+                closeParen,
+                DiagCode::ExpectedFunctionPort,
+                [this](bool) { return parseFunctionPort(); }
+            );
+            portList = alloc.emplace<FunctionPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+        }
+    }
 
     auto semi = expect(TokenKind::Semicolon);
     return alloc.emplace<FunctionPrototypeSyntax>(keyword, lifetime, returnType, name, portList, semi);
@@ -1505,6 +1629,8 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
                         consume());
                 }
                 break;
+            default:
+                break;
         }
         auto type = parseDataType(/* allowImplicit */ false);
         auto name = expect(TokenKind::Identifier);
@@ -1884,25 +2010,6 @@ bool Parser::scanQualifiedName(int& index) {
             return false;
     }
     return true;
-}
-
-template<bool(*IsEnd)(TokenKind)>
-bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
-    int nesting = 1;
-    while (true) {
-        auto kind = peek(index).kind;
-        if (IsEnd(kind))
-            return false;
-
-        index++;
-        if (kind == start)
-            nesting++;
-        else if (kind == end) {
-            nesting--;
-            if (nesting <= 0)
-                return true;
-        }
-    }
 }
 
 void Parser::errorIfAttributes(ArrayRef<AttributeInstanceSyntax*> attributes, const char* msg) {

@@ -33,7 +33,7 @@ public:
     /// a boolean context.
     bool evaluateBool(const BoundNode* tree);
 
-    /// Creates a temporary on the root stack frame. Call this before calling
+    /// Creates a temporary on the current stack frame. Call this before calling
     /// `evaluate` to material temporaries that don't have declarations within
     /// the evaluated tree.
     ConstantValue& createTemporary(const Symbol* key);
@@ -44,6 +44,12 @@ private:
         // A set of temporary values materialized within the stack frame.
         // Use a map so that the values don't move around in memory.
         std::map<const Symbol*, ConstantValue> temporaries;
+
+        // A pointer to the frame that called into this frame.
+        Frame* parent = nullptr;
+
+        Frame() {}
+        explicit Frame(Frame* parent) : parent(parent) {}
     };
 
     // Represents an lvalue; something that can appear on the left hand side
@@ -59,10 +65,17 @@ private:
 
     ConstantValue evaluateLiteral(const BoundLiteral* expr);
     ConstantValue evaluateParameter(const BoundParameter* expr);
-    ConstantValue evaluateVarRef(const BoundVarRef* expr);
+    ConstantValue evaluateVariable(const BoundVariable* expr);
     ConstantValue evaluateUnary(const BoundUnaryExpression* expr);
     ConstantValue evaluateBinary(const BoundBinaryExpression* expr);
     ConstantValue evaluateAssignment(const BoundAssignmentExpression* expr);
+    ConstantValue evaluateCall(const BoundCallExpression* expr);
+    ConstantValue evaluateStatementList(const BoundStatementList* stmt);
+    ConstantValue evaluateReturn(const BoundReturnStatement* stmt);
+    ConstantValue evaluateVariableDecl(const BoundVariableDecl* decl);
+
+    ConstantValue evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments);
+
     bool evaluateLValue(const BoundExpression* expr, LValue& lvalue);
 
     // The root or bottom of the callstack.

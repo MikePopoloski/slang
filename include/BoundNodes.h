@@ -11,10 +11,14 @@ enum class BoundNodeKind {
     Unknown,
     Literal,
     Parameter,
-    VarRef,
+    Variable,
     UnaryExpression,
     BinaryExpression,
-    AssignmentExpression
+    AssignmentExpression,
+    CallExpression,
+    StatementList,
+    ReturnStatement,
+    VariableDeclaration
 };
 
 class BoundNode {
@@ -62,12 +66,12 @@ public:
         BoundExpression(BoundNodeKind::Parameter, syntax, symbol.type), symbol(symbol) {}
 };
 
-class BoundVarRef : public BoundExpression {
+class BoundVariable : public BoundExpression {
 public:
-    const LocalVariableSymbol* symbol;
+    const VariableSymbol* symbol;
 
-    BoundVarRef(const ExpressionSyntax* syntax, const LocalVariableSymbol* symbol) :
-        BoundExpression(BoundNodeKind::VarRef, syntax, symbol->type), symbol(symbol) {}
+    BoundVariable(const ExpressionSyntax* syntax, const VariableSymbol* symbol) :
+        BoundExpression(BoundNodeKind::Variable, syntax, symbol->type), symbol(symbol) {}
 };
 
 class BoundUnaryExpression : public BoundExpression {
@@ -94,6 +98,56 @@ public:
 
     BoundAssignmentExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, BoundExpression* left, BoundExpression* right) :
         BoundExpression(BoundNodeKind::AssignmentExpression, syntax, type), left(left), right(right) {}
+};
+
+class BoundCallExpression : public BoundExpression {
+public:
+    const SubroutineSymbol* subroutine;
+    ArrayRef<const BoundExpression*> arguments;
+
+    BoundCallExpression(const ExpressionSyntax* syntax, const SubroutineSymbol* subroutine, ArrayRef<const BoundExpression*> arguments) :
+        BoundExpression(BoundNodeKind::CallExpression, syntax, subroutine->returnType),
+        subroutine(subroutine), arguments(arguments) {}
+};
+
+class BoundStatement : public BoundNode {
+public:
+    const StatementSyntax* syntax;
+
+    BoundStatement(BoundNodeKind kind, const StatementSyntax* syntax) :
+        BoundNode(kind), syntax(syntax) {}
+};
+
+class BadBoundStatement : public BoundStatement {
+public:
+    BoundStatement* child;
+
+    BadBoundStatement(BoundStatement* child) :
+        BoundStatement(BoundNodeKind::Unknown, nullptr), child(child) {}
+};
+
+class BoundStatementList : public BoundStatement {
+public:
+    ArrayRef<const BoundStatement*> list;
+
+    BoundStatementList(ArrayRef<const BoundStatement*> list) :
+        BoundStatement(BoundNodeKind::StatementList, nullptr), list(list) {}
+};
+
+class BoundReturnStatement : public BoundStatement {
+public:
+    const BoundExpression* expr;
+
+    BoundReturnStatement(const StatementSyntax* syntax, const BoundExpression* expr) :
+        BoundStatement(BoundNodeKind::ReturnStatement, syntax), expr(expr) {}
+};
+
+class BoundVariableDecl : public BoundStatement {
+public:
+    const VariableSymbol* symbol;
+
+    BoundVariableDecl(const VariableSymbol* symbol) :
+        BoundStatement(BoundNodeKind::VariableDeclaration, nullptr), symbol(symbol) {}
 };
 
 }

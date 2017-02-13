@@ -19,8 +19,16 @@ ExpressionBinder::ExpressionBinder(SemanticModel& sem, const Scope* scope) :
     ASSERT(scope);
 }
 
+ExpressionBinder::ExpressionBinder(SemanticModel& sem, const SubroutineSymbol* subroutine) :
+    sem(sem), alloc(sem.getAllocator()), subroutine(subroutine)
+{
+    scope = subroutine->scope;
+    ASSERT(scope);
+}
+
 BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax) {
     ASSERT(syntax);
+
     switch (syntax->kind) {
         case SyntaxKind::NullLiteralExpression:
         case SyntaxKind::StringLiteralExpression:
@@ -30,7 +38,9 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
         case SyntaxKind::UnbasedUnsizedLiteralExpression:
             break;
         case SyntaxKind::IdentifierName:
-            return bindSimpleName(syntax->as<IdentifierNameSyntax>());
+        case SyntaxKind::IdentifierSelectName:
+        case SyntaxKind::ScopedName:
+            return bindName(syntax->as<NameSyntax>(), scope);
         case SyntaxKind::RealLiteralExpression:
         case SyntaxKind::IntegerLiteralExpression:
             return bindLiteral(syntax->as<LiteralExpressionSyntax>());
@@ -94,6 +104,8 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
             return bindAssignmentOperator(syntax->as<BinaryExpressionSyntax>());
+        case SyntaxKind::InvocationExpression:
+            return bindSubroutineCall(syntax->as<InvocationExpressionSyntax>());
 
             DEFAULT_UNREACHABLE;
     }
@@ -101,30 +113,33 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
 }
 
 BoundExpression* ExpressionBinder::bindConstantExpression(const ExpressionSyntax* syntax) {
-    return bindSelfDeterminedExpression(syntax);
+    return bindAndPropagate(syntax);
 }
 
 BoundExpression* ExpressionBinder::bindSelfDeterminedExpression(const ExpressionSyntax* syntax) {
+    return bindAndPropagate(syntax);
+}
+
+BoundExpression* ExpressionBinder::bindAndPropagate(const ExpressionSyntax* syntax) {
     BoundExpression* expr = bindExpression(syntax);
     propagate(expr, expr->type);
     return expr;
 }
 
 BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyntax* syntax, SourceLocation location, const TypeSymbol* assignmentType) {
-    BoundExpression* expr = bindExpression(syntax);
+    BoundExpression* expr = bindAndPropagate(syntax);
+    if (expr->bad())
+        return expr;
+
     const TypeSymbol* type = expr->type;
     if (!assignmentType->isAssignmentCompatible(type)) {
         DiagCode code = assignmentType->isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
         addError(code, location) << syntax->sourceRange();
-        expr = makeBad(expr);
+        expr = badExpr(expr);
     }
-    else {
-        const IntegralTypeSymbol& exprType = expr->type->as<IntegralTypeSymbol>();
-        if (exprType.width < assignmentType->as<IntegralTypeSymbol>().width)
-            propagate(expr, assignmentType);
-        else
-            propagate(expr, expr->type);
-    }
+
+    if (!propagateAssignmentLike(expr, assignmentType))
+        propagate(expr, expr->type);
 
     // TODO: truncation
     return expr;
@@ -151,81 +166,137 @@ BoundExpression* ExpressionBinder::bindLiteral(const LiteralExpressionSyntax* sy
 
 BoundExpression* ExpressionBinder::bindLiteral(const IntegerVectorExpressionSyntax* syntax) {
     if (syntax->value.isMissing())
-        return makeBad(alloc.emplace<BoundLiteral>(syntax, sem.getErrorType(), nullptr));
+        return badExpr(alloc.emplace<BoundLiteral>(syntax, sem.getErrorType(), nullptr));
 
     const SVInt& value = std::get<SVInt>(syntax->value.numericValue());
     const TypeSymbol* type = sem.getIntegralType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
     return alloc.emplace<BoundLiteral>(syntax, type, value);
 }
 
-BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* syntax) {
+BoundExpression* ExpressionBinder::bindName(const NameSyntax* syntax, const Scope* currScope) {
+    const Symbol* symbol = nullptr;
+    switch (syntax->kind) {
+        case SyntaxKind::IdentifierName:
+            return bindSimpleName(syntax->as<IdentifierNameSyntax>(), currScope);
+        case SyntaxKind::IdentifierSelectName:
+            return bindSelectName(syntax->as<IdentifierSelectNameSyntax>(), currScope);
+        case SyntaxKind::ScopedName:
+            return bindScopedName(syntax->as<ScopedNameSyntax>(), currScope);
+        DEFAULT_UNREACHABLE;
+    }
+    return nullptr;
+}
+
+BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* syntax, const Scope* currScope) {
     // if we have an invalid name token just give up now; the error has already been reported
     StringRef identifier = syntax->identifier.valueText();
     if (!identifier)
-        return makeBad(nullptr);
+        return badExpr(nullptr);
 
-    const Symbol* symbol = scope->lookup(identifier);
-    ASSERT(symbol);
+    const Symbol* symbol = currScope->lookup(identifier);
+    if (!symbol) {
+        addError(DiagCode::UndeclaredIdentifier, syntax->identifier.location()) << identifier;
+        return badExpr(nullptr);
+    }
 
     switch (symbol->kind) {
         case SymbolKind::Parameter:
             return alloc.emplace<BoundParameter>(syntax, symbol->as<ParameterSymbol>());
-        case SymbolKind::LocalVariable:
-            return alloc.emplace<BoundVarRef>(syntax, (const LocalVariableSymbol*)symbol);
+        case SymbolKind::Variable:
+        case SymbolKind::FormalArgument:
+            return alloc.emplace<BoundVariable>(syntax, (const VariableSymbol*)symbol);
 
-            DEFAULT_UNREACHABLE;
+        DEFAULT_UNREACHABLE;
+    }
+    return nullptr;
+}
+
+BoundExpression* ExpressionBinder::bindSelectName(const IdentifierSelectNameSyntax* syntax, const Scope* currScope) {
+    ASSERT(false); // TODO: implement this
+    return nullptr;
+}
+
+BoundExpression* ExpressionBinder::bindScopedName(const ScopedNameSyntax* syntax, const Scope* currScope) {
+    // if we have an invalid name token just give up now; the error has already been reported
+    const Symbol* symbol = nullptr;
+    if (syntax->separator.kind == TokenKind::DoubleColon) {
+        if (syntax->left->kind == SyntaxKind::UnitScope) { // TODO: check if this is correct
+            return bindName(syntax->right->as<NameSyntax>(), sem.getPackages());
+        } else if (syntax->left->kind == SyntaxKind::IdentifierName) {
+            auto package = syntax->left->as<IdentifierNameSyntax>();
+            auto pkgSym = sem.getPackages()->lookup(package->identifier.valueText());
+            ASSERT(pkgSym && pkgSym->kind == SymbolKind::Module);
+            auto nextScope = pkgSym->as<ModuleSymbol>().scope;
+            return bindName(syntax->right->as<NameSyntax>(), nextScope);
+        }
+    }
+    else if (syntax->separator.kind == TokenKind::Dot) {
+        if (syntax->left->kind == SyntaxKind::RootScope) { // TODO: check if this is correct
+            return bindName(syntax->right->as<NameSyntax>(), sem.getPackages());
+        } else if (syntax->left->kind == SyntaxKind::IdentifierName) {
+            auto parent = syntax->left->as<IdentifierNameSyntax>();
+            auto parentSym = currScope->lookup(parent->identifier.valueText());
+            ASSERT(parentSym && parentSym->kind == SymbolKind::Module);
+            auto nextScope = parentSym->as<ModuleSymbol>().scope;
+            return bindName(syntax->right->as<NameSyntax>(), nextScope);
+        }
     }
     return nullptr;
 }
 
 BoundExpression* ExpressionBinder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax* syntax) {
     // Supported for both integral and real types. Can be overloaded for others.
-    BoundExpression* operand = bindExpression(syntax->operand);
+    BoundExpression* operand = bindAndPropagate(syntax->operand);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
-        return makeBad(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
+        return badExpr(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
 
     return alloc.emplace<BoundUnaryExpression>(syntax, operand->type, operand);
 }
 
 BoundExpression* ExpressionBinder::bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax* syntax) {
     // Result type is always a single bit. Supported on integral types.
-    BoundExpression* operand = bindSelfDeterminedExpression(syntax->operand);
+    BoundExpression* operand = bindAndPropagate(syntax->operand);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &operand))
-        return makeBad(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
+        return badExpr(alloc.emplace<BoundUnaryExpression>(syntax, sem.getErrorType(), operand));
 
     return alloc.emplace<BoundUnaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), operand);
 }
 
 BoundExpression* ExpressionBinder::bindArithmeticOperator(const BinaryExpressionSyntax* syntax) {
-    BoundExpression* lhs = bindExpression(syntax->left);
-    BoundExpression* rhs = bindExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
-    const IntegralTypeSymbol& l = lhs->type->as<IntegralTypeSymbol>();
-    const IntegralTypeSymbol& r = rhs->type->as<IntegralTypeSymbol>();
-    int width = std::max(l.width, r.width);
-    bool isSigned = l.isSigned && r.isSigned;
-    const TypeSymbol* type = sem.getIntegralType(width, isSigned);
-
+    // Get the result type; force the type to be four-state if it's a division, which can make a 4-state output
+    // out of 2-state inputs
+    const TypeSymbol* type = binaryOperatorResultType(lhs->type, rhs->type, syntax->kind == SyntaxKind::DivideExpression);
     return alloc.emplace<BoundBinaryExpression>(syntax, type, lhs, rhs);
 }
 
 BoundExpression* ExpressionBinder::bindComparisonOperator(const BinaryExpressionSyntax* syntax) {
-    BoundExpression* lhs = bindExpression(syntax->left);
-    BoundExpression* rhs = bindExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
     // result type is always a single bit
     return alloc.emplace<BoundBinaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), lhs, rhs);
 }
 
 BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpressionSyntax* syntax) {
-    BoundExpression* lhs = bindSelfDeterminedExpression(syntax->left);
-    BoundExpression* rhs = bindSelfDeterminedExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+
+    // operands are sized to max(l,r) and the result of the operation is always 1 bit
+    // no propagations from above have an actual have an effect on the subexpressions
+    // This logic is similar to that of assignment operators, except for the
+    // reciprocality
+    if (!propagateAssignmentLike(rhs, lhs->type)) {
+        propagateAssignmentLike(lhs, rhs->type);
+    }
 
     // result type is always a single bit
     return alloc.emplace<BoundBinaryExpression>(syntax, sem.getKnownType(SyntaxKind::LogicType), lhs, rhs);
@@ -234,28 +305,78 @@ BoundExpression* ExpressionBinder::bindRelationalOperator(const BinaryExpression
 BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax) {
     // The shift and power operators are handled together here because in both cases the second
     // operand is evaluated in a self determined context.
-    BoundExpression* lhs = bindExpression(syntax->left);
-    BoundExpression* rhs = bindSelfDeterminedExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
-        return makeBad(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
-    const IntegralTypeSymbol& l = lhs->type->as<IntegralTypeSymbol>();
-    const IntegralTypeSymbol& r = rhs->type->as<IntegralTypeSymbol>();
-    int width = l.width;
-    bool isSigned = l.isSigned && r.isSigned;
-    const TypeSymbol* type = sem.getIntegralType(width, isSigned);
+    const TypeSymbol* type = binaryOperatorResultType(lhs->type, rhs->type, false);
 
     return alloc.emplace<BoundBinaryExpression>(syntax, type, lhs, rhs);
 }
 
 BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpressionSyntax* syntax) {
-    BoundExpression* lhs = bindExpression(syntax->left);
-    BoundExpression* rhs = bindExpression(syntax->right);
+    BoundExpression* lhs = bindAndPropagate(syntax->left);
+    BoundExpression* rhs = bindAndPropagate(syntax->right);
 
-    // TODO: check applicability
+    // Basic assignment (=) is always applicable, but operators like += are applicable iff
+    // the associated binary operator is applicable
+    SyntaxKind binopKind;
+    switch (syntax->kind) {
+        case SyntaxKind::AssignmentExpression: binopKind = SyntaxKind::Unknown; break;
+        case SyntaxKind::AddAssignmentExpression: binopKind = SyntaxKind::AddExpression; break;
+        case SyntaxKind::SubtractAssignmentExpression: binopKind = SyntaxKind::SubtractExpression; break;
+        case SyntaxKind::MultiplyAssignmentExpression: binopKind = SyntaxKind::MultiplyExpression; break;
+        case SyntaxKind::DivideAssignmentExpression: binopKind = SyntaxKind::DivideExpression; break;
+        case SyntaxKind::ModAssignmentExpression: binopKind = SyntaxKind::ModExpression; break;
+        case SyntaxKind::AndAssignmentExpression: binopKind = SyntaxKind::BinaryAndExpression; break;
+        case SyntaxKind::OrAssignmentExpression: binopKind = SyntaxKind::BinaryOrExpression; break;
+        case SyntaxKind::XorAssignmentExpression: binopKind = SyntaxKind::BinaryXorExpression; break;
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression: binopKind = SyntaxKind::LogicalShiftLeftExpression; break;
+        case SyntaxKind::LogicalRightShiftAssignmentExpression: binopKind = SyntaxKind::LogicalShiftRightExpression; break;
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression: binopKind = SyntaxKind::ArithmeticShiftLeftExpression; break;
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression: binopKind = SyntaxKind::ArithmeticShiftRightExpression; break;
+        DEFAULT_UNREACHABLE;
+    }
+    // TODO: the LHS has to be assignable (i.e not a general expression)
+    if (!checkOperatorApplicability(binopKind, syntax->operatorToken.location(), &lhs, &rhs))
+        return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
+
+    // The operands of an assignment are themselves self determined,
+    // but we must increase the size of the RHS to the size of the LHS if it is larger, and then
+    // propagate that information down
+    propagateAssignmentLike(rhs, lhs->type);
 
     // result type is always the type of the left hand side
     return alloc.emplace<BoundAssignmentExpression>(syntax, lhs->type, lhs, rhs);
+}
+
+BoundExpression* ExpressionBinder::bindSubroutineCall(const InvocationExpressionSyntax* syntax) {
+    // TODO: check for something other than a simple name on the LHS
+    auto name = syntax->left->getFirstToken();
+    const Symbol* symbol = scope->lookup(name.valueText());
+    ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
+
+    auto actualArgs = syntax->arguments->parameters;
+    const SubroutineSymbol& subroutine = symbol->as<SubroutineSymbol>();
+
+    // TODO: handle too few args as well, which requires looking at default values
+    if (subroutine.arguments.count() < actualArgs.count()) {
+        auto& diag = addError(DiagCode::TooManyArguments, name.location());
+        diag << syntax->left->sourceRange();
+        diag << subroutine.arguments.count();
+        diag << actualArgs.count();
+        return badExpr(nullptr);
+    }
+
+    // TODO: handle named arguments in addition to ordered
+    SmallVectorSized<const BoundExpression*, 8> buffer;
+    for (uint32_t i = 0; i < actualArgs.count(); i++) {
+        auto arg = (const OrderedArgumentSyntax*)actualArgs[i];
+        buffer.append(bindAssignmentLikeContext(arg->expr, arg->sourceRange().start(), subroutine.arguments[i]->type));
+    }
+
+    return alloc.emplace<BoundCallExpression>(syntax, &subroutine, buffer.copy(alloc));
 }
 
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
@@ -331,6 +452,10 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
     // SystemVerilog rules for width propagation are subtle and very specific
     // to each individual operator type. They also mainly only apply to
     // expressions of integral type (which will be the majority in most designs).
+
+    // If a type of real is propagated to an expression of a non-real type, the type of the
+    // direct sub-expression is changed, but it is not propagated any further down
+    bool doNotPropogateRealDownToNonReal = type->isReal() && !expression->type->isReal();
     switch (expression->syntax->kind) {
         case SyntaxKind::NullLiteralExpression:
         case SyntaxKind::StringLiteralExpression:
@@ -342,13 +467,15 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::RealLiteralExpression:
         case SyntaxKind::IntegerLiteralExpression:
         case SyntaxKind::IntegerVectorExpression:
-            // TODO: propagate type to simple operands
+        case SyntaxKind::InvocationExpression:
+            expression->type = type;
             break;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryBitwiseNotExpression:
             expression->type = type;
-            propagate(((BoundUnaryExpression*)expression)->operand, type);
+            if (!doNotPropogateRealDownToNonReal)
+                propagate(((BoundUnaryExpression*)expression)->operand, type);
             break;
         case SyntaxKind::UnaryBitwiseAndExpression:
         case SyntaxKind::UnaryBitwiseOrExpression:
@@ -369,8 +496,9 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::BinaryXorExpression:
         case SyntaxKind::BinaryXnorExpression:
             expression->type = type;
-            propagate(((BoundBinaryExpression*)expression)->left, type);
-            propagate(((BoundBinaryExpression*)expression)->right, type);
+            if (!doNotPropogateRealDownToNonReal)
+                propagate(((BoundBinaryExpression*)expression)->left, type);
+                propagate(((BoundBinaryExpression*)expression)->right, type);
             break;
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
@@ -380,9 +508,9 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::LessThanEqualExpression:
         case SyntaxKind::LessThanExpression:
-            // operands are sized to max(l,r) but the result of the operation is always 1 bit
-            propagate(((BoundBinaryExpression*)expression)->left, type);
-            propagate(((BoundBinaryExpression*)expression)->right, type);
+            // Equality expressions are essentially self-detetermined, the logic
+            // for how the left and right operands effect eachother is handled
+            // at bind time
             break;
         case SyntaxKind::LogicalAndExpression:
         case SyntaxKind::LogicalOrExpression:
@@ -397,7 +525,8 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::PowerExpression:
             // Only the left hand side gets propagated; the rhs is self determined
             expression->type = type;
-            propagate(((BoundBinaryExpression*)expression)->left, type);
+            if (!doNotPropogateRealDownToNonReal)
+                propagate(((BoundBinaryExpression*)expression)->left, type);
             break;
         case SyntaxKind::AssignmentExpression:
         case SyntaxKind::AddAssignmentExpression:
@@ -412,17 +541,91 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
-            // TODO: look at the actual rules for assignments
-            propagate(((BoundAssignmentExpression*)expression)->left, type);
-            propagate(((BoundAssignmentExpression*)expression)->right, type);
+            // Essentially self determined, logic handled at bind time
             break;
 
             DEFAULT_UNREACHABLE;
     }
 }
 
-BadBoundExpression* ExpressionBinder::makeBad(BoundExpression* expr) {
+BoundStatement* ExpressionBinder::bindStatement(const StatementSyntax* syntax) {
+    ASSERT(syntax);
+    switch (syntax->kind) {
+        case SyntaxKind::ReturnStatement: return bindReturnStatement((const ReturnStatementSyntax*)syntax);
+
+        DEFAULT_UNREACHABLE;
+    }
+    return nullptr;
+}
+
+BoundStatementList* ExpressionBinder::bindStatementList(const SyntaxList<SyntaxNode>& items) {
+    SmallVectorSized<const BoundStatement*, 8> buffer;
+    for (const auto& item : items) {
+        if (item->kind == SyntaxKind::DataDeclaration)
+            bindVariableDecl((const DataDeclarationSyntax*)item, buffer);
+        else if (isStatement(item->kind))
+            buffer.append(bindStatement((const StatementSyntax*)item));
+    }
+    return alloc.emplace<BoundStatementList>(buffer.copy(alloc));
+}
+
+BoundStatement* ExpressionBinder::bindReturnStatement(const ReturnStatementSyntax* syntax) {
+    auto location = syntax->returnKeyword.location();
+    if (!subroutine) {
+        addError(DiagCode::ReturnNotInSubroutine, location);
+        return badStmt(nullptr);
+    }
+
+    auto expr = bindAssignmentLikeContext(syntax->returnValue, location, subroutine->returnType);
+    return alloc.emplace<BoundReturnStatement>(syntax, expr);
+}
+
+void ExpressionBinder::bindVariableDecl(const DataDeclarationSyntax* syntax, SmallVector<const BoundStatement*>& results) {
+    // TODO: figure out const-ness of the scope here; shouldn't const cast obviously
+    SmallVectorSized<const Symbol*, 8> buffer;
+    sem.makeVariables(syntax, buffer, const_cast<Scope*>(scope));
+
+    for (auto symbol : buffer)
+        results.append(alloc.emplace<BoundVariableDecl>((const VariableSymbol*)symbol));
+}
+
+bool ExpressionBinder::propagateAssignmentLike(BoundExpression* rhs, const TypeSymbol* lhsType) {
+
+    // Integral case
+    if (lhsType->width() > rhs->type->width()) {
+        if (!lhsType->isReal() && !rhs->type->isReal()) {
+            rhs->type = sem.getIntegralType(lhsType->width(), rhs->type->isSigned(), rhs->type->isFourState());
+        } else {
+            if (lhsType->width() > 32) rhs->type = sem.getKnownType(SyntaxKind::RealType);
+            else rhs->type = sem.getKnownType(SyntaxKind::ShortRealType);
+        }
+        propagate(rhs, rhs->type);
+        return true;
+    }
+
+    return false;
+}
+
+const TypeSymbol* ExpressionBinder::binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState) {
+    int width = std::max(lhsType->width(), rhsType->width());
+    bool isSigned = lhsType->isSigned() && rhsType->isSigned();
+    bool fourState = forceFourState || lhsType->isFourState() || rhsType->isFourState();
+    if (lhsType->isReal() || rhsType->isReal()) {
+        // spec says that RealTime and RealType are interchangeable, so we will just use RealType for
+        // intermediate symbols
+        if (width > 32) return sem.getKnownType(SyntaxKind::RealType);
+        else return sem.getKnownType(SyntaxKind::ShortRealType);
+    } else {
+        return sem.getIntegralType(width, isSigned, fourState);
+    }
+}
+
+BadBoundExpression* ExpressionBinder::badExpr(BoundExpression* expr) {
     return alloc.emplace<BadBoundExpression>(expr);
+}
+
+BadBoundStatement* ExpressionBinder::badStmt(BoundStatement* stmt) {
+    return alloc.emplace<BadBoundStatement>(stmt);
 }
 
 Diagnostic& ExpressionBinder::addError(DiagCode code, SourceLocation location) {

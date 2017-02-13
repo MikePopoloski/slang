@@ -154,6 +154,7 @@ enum class SyntaxKind : uint16_t {
     PostincrementExpression,
     PostdecrementExpression,
     CastExpression,
+    SignedCastExpression,
     WithClause,
     IdentifierList,
     RandomizeMethodWithClause,
@@ -226,6 +227,7 @@ enum class SyntaxKind : uint16_t {
     RootScope,
     IdentifierName,
     IdentifierSelectName,
+    EmptyIdentifierName,
     ClassName,
     ScopedName,
     SystemName,
@@ -343,6 +345,7 @@ enum class SyntaxKind : uint16_t {
     // assertions
     DeferredAssertion,
     ConcurrentAssertionMember,
+    ImmediateAssertionMember,
     ActionBlock,
     ImmediateAssertStatement,
     ImmediateAssumeStatement,
@@ -401,6 +404,8 @@ enum class SyntaxKind : uint16_t {
     WildcardPortConnection,
     HierarchicalInstance,
     HierarchyInstantiation,
+    FunctionPort,
+    FunctionPortList,
     FunctionPrototype,
     FunctionDeclaration,
     TaskDeclaration,
@@ -413,6 +418,8 @@ enum class SyntaxKind : uint16_t {
     ContinuousAssign,
     DefParamAssignment,
     DefParam,
+    ModportItem,
+    ModportDeclaration,
 
     // constraints
     DistWeight,
@@ -483,6 +490,7 @@ bool isDeclarationModifier(TokenKind kind);
 bool isMemberQualifier(TokenKind kind);
 bool isEndOfParenList(TokenKind kind);
 bool isEndOfBracedList(TokenKind kind);
+bool isEndOfBracketedList(TokenKind kind);
 bool isEndOfCaseItem(TokenKind kind);
 bool isEndOfConditionalPredicate(TokenKind kind);
 bool isEndOfAttribute(TokenKind kind);
@@ -492,9 +500,12 @@ bool isNotInPortReference(TokenKind kind);
 bool isNotInConcatenationExpr(TokenKind kind);
 bool isPossibleAnsiPort(TokenKind kind);
 bool isPossibleNonAnsiPort(TokenKind kind);
+bool isPossibleFunctionPort(TokenKind kind);
 bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);
 bool isPossibleVectorDigit(TokenKind kind);
+bool isStatement(SyntaxKind kind);
+bool isExpression(SyntaxKind kind);
 
 // discriminated union of Token and SyntaxNode
 struct TokenOrSyntax {

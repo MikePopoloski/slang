@@ -18,6 +18,14 @@ TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
     return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
 }
 
+VariableLifetime getLifetime(Token token, VariableLifetime defaultIfUnset) {
+    switch (token.kind) {
+        case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
+        case TokenKind::StaticKeyword: return VariableLifetime::Static;
+        default: return defaultIfUnset;
+    }
+}
+
 Diagnostics unusedDiagnostics;
 
 }
@@ -34,6 +42,7 @@ SemanticModel::SemanticModel(SyntaxTree& tree) :
 SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable) :
     alloc(alloc), diagnostics(diagnostics), declTable(declTable)
 {
+    // Register built-in types
     knownTypes[SyntaxKind::ShortIntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword, 16, true, false);
     knownTypes[SyntaxKind::IntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword, 32, true, false);
     knownTypes[SyntaxKind::LongIntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::LongIntKeyword, 64, true, false);
@@ -51,6 +60,15 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
     knownTypes[SyntaxKind::VoidType] = alloc.emplace<TypeSymbol>(SymbolKind::VoidType, "void", SourceLocation());
     knownTypes[SyntaxKind::EventType] = alloc.emplace<TypeSymbol>(SymbolKind::EventType, "event", SourceLocation());
     knownTypes[SyntaxKind::Unknown] = alloc.emplace<ErrorTypeSymbol>();
+
+    // Register built-in system functions
+    auto intType = getKnownType(SyntaxKind::IntType);
+    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+    
+    args.append(alloc.emplace<FormalArgumentSymbol>(intType));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2));
+	
+	makePackages();
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
@@ -61,6 +79,56 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
     return alloc.emplace<InstanceSymbol>(module, true);
 }
 
+void SemanticModel::makePackages() {
+    HashMap<StringRef, SourceLocation> nameDupMap;
+    for (auto pkg : declTable.getPackages()) {
+        auto name = pkg->header->name.valueText();
+        Scope *scope = alloc.emplace<Scope>();
+        bool ok = packages.add(alloc.emplace<ModuleSymbol>(pkg, scope, ArrayRef<const Symbol *>()));
+        ASSERT(ok);
+    }
+    for (auto pkg : declTable.getPackages()) {
+        auto name = pkg->header->name.valueText();
+        auto pkgSym = packages.lookup(name)->as<ModuleSymbol>();
+        HashMap<StringRef, SourceLocation> nameDupMap;
+        for (const MemberSyntax* member : pkg->members) {
+            switch (member->kind) {
+                case SyntaxKind::PackageImportDeclaration:
+                    handlePackageImport(member->as<PackageImportDeclarationSyntax>(), pkgSym.scope);
+                    break;
+                case SyntaxKind::ParameterDeclarationStatement:
+                    auto paramDecl = member->as<ParameterDeclarationStatementSyntax>()->parameter;
+                    for (const VariableDeclaratorSyntax *declarator : paramDecl->declarators) {
+                        auto name = declarator->name.valueText();
+                            ASSERT(name);
+                        auto location = declarator->name.location();
+                        auto pair = nameDupMap.emplace(name, location);
+                        if (!pair.second) {
+                            diagnostics.add(DiagCode::DuplicateDefinition, location)
+                                << StringRef("parameter") << name;
+                            diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second);
+                        } else if (!declarator->initializer) {
+                            diagnostics.add(DiagCode::ParamHasNoValue, location)
+                                << StringRef("parameter") << name;
+                        } else {
+                            pkgSym.scope->add(alloc.emplace<ParameterSymbol>(name, location, paramDecl, false));
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+    for (auto pkg : declTable.getPackages()) {
+        auto name = pkg->header->name.valueText();
+        auto pkgSym = packages.lookup(name)->as<ModuleSymbol>();
+        for (size_t i = 0; auto paramSym = (ParameterSymbol*)pkgSym.scope->getNth(SymbolKind::Parameter, i); i++) {
+            for (auto paramSyntax : paramSym->syntax->declarators)
+                if (paramSyntax->name.valueText() == paramSym->name)
+                    evaluateParameter(paramSym, paramSyntax->initializer->expr, pkgSym.scope);
+        }
+    }
+}
+
 const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) {
     Scope* scope = alloc.emplace<Scope>();
     scope->addRange(parameters);
@@ -68,8 +136,8 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
     SmallVectorSized<const Symbol*, 8> children;
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
-            case SyntaxKind::HierarchyInstantiation:
-                handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
+            case SyntaxKind::PackageImportDeclaration:
+                handlePackageImport(member->as<PackageImportDeclarationSyntax>(), scope);
                 break;
             case SyntaxKind::LoopGenerate:
                 handleLoopGenerate(member->as<LoopGenerateSyntax>(), children, scope);
@@ -79,9 +147,24 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
                 handleIfGenerate(member->as<IfGenerateSyntax>(), children, scope);
                 break;
             case SyntaxKind::CaseGenerate:
+                // TODO
                 break;
             case SyntaxKind::GenvarDeclaration:
                 handleGenvarDecl(member->as<GenvarDeclarationSyntax>(), children, scope);
+                break;
+            case SyntaxKind::HierarchyInstantiation:
+            case SyntaxKind::InitialBlock:
+            case SyntaxKind::FinalBlock:
+            case SyntaxKind::AlwaysBlock:
+            case SyntaxKind::AlwaysCombBlock:
+            case SyntaxKind::AlwaysFFBlock:
+            case SyntaxKind::AlwaysLatchBlock:
+            case SyntaxKind::DataDeclaration:
+            case SyntaxKind::FunctionDeclaration:
+            case SyntaxKind::TaskDeclaration:
+                handleGenerateItem(member, children, scope);
+                break;
+            default:
                 break;
         }
     }
@@ -159,16 +242,120 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, co
         case SyntaxKind::CHandleType:
         case SyntaxKind::EventType:
             return getKnownType(syntax->kind);
+        case SyntaxKind::EnumType: {
+            ExpressionBinder binder {*this, scope};
+            const EnumTypeSyntax *enumSyntax = syntax->as<EnumTypeSyntax>();
+            const IntegralTypeSymbol &baseType = (enumSyntax->baseType ? makeTypeSymbol(enumSyntax->baseType, scope) : getKnownType(SyntaxKind::IntType))->as<IntegralTypeSymbol>();
+
+            SmallVectorSized<EnumValueSymbol *, 8> values;
+            SVInt nextVal;
+            for (auto member : enumSyntax->members) {
+                //TODO: add each member to the scope
+                if (member->initializer) {
+                    ASSERT(member->initializer->expr);
+                    auto bound = binder.bindConstantExpression(member->initializer->expr);
+                    nextVal = std::get<SVInt>(evaluateConstant(bound));
+                }
+                EnumValueSymbol *valSymbol = alloc.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location(), &baseType, nextVal);
+                values.append(valSymbol);
+                ++nextVal;
+            }
+            return alloc.emplace<EnumTypeSymbol>(&baseType, enumSyntax->keyword.location(), values.copy(alloc));
+        }
         case SyntaxKind::TypedefDeclaration: {
             auto tds = syntax->as<TypedefDeclarationSyntax>();
             auto type = makeTypeSymbol(tds->type, scope);
             return alloc.emplace<TypeAliasSymbol>(syntax, tds->name.location(), type, tds->name.valueText());
         }
+        default:
+            break;
     }
 
     // TODO: consider Void Type
 
-    return nullptr;
+    return getErrorType();
+}
+
+const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationSyntax* syntax, const Scope* scope) {
+    auto proto = syntax->prototype;
+    auto lifetime = getLifetime(proto->lifetime, VariableLifetime::Automatic);
+    auto returnType = makeTypeSymbol(proto->returnType, scope);
+    bool isTask = syntax->kind == SyntaxKind::TaskDeclaration;
+
+    // For now only support simple function names
+    auto name = proto->name->getFirstToken();
+    auto funcScope = alloc.emplace<Scope>(scope);
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
+
+    if (proto->portList) {
+        const TypeSymbol* lastType = getKnownType(SyntaxKind::LogicType);
+        auto lastDirection = FormalArgumentDirection::In;
+
+        for (const FunctionPortSyntax* portSyntax : proto->portList->ports) {
+            FormalArgumentDirection direction;
+            bool directionSpecified = true;
+            switch (portSyntax->direction.kind) {
+                case TokenKind::InputKeyword: direction = FormalArgumentDirection::In; break;
+                case TokenKind::OutputKeyword: direction = FormalArgumentDirection::Out; break;
+                case TokenKind::InOutKeyword: direction = FormalArgumentDirection::InOut; break;
+                case TokenKind::RefKeyword:
+                    if (portSyntax->constKeyword)
+                        direction = FormalArgumentDirection::ConstRef;
+                    else
+                        direction = FormalArgumentDirection::Ref;
+                    break;
+                default:
+                    // Otherwise, we "inherit" the previous argument
+                    direction = lastDirection;
+                    directionSpecified = false;
+                    break;
+            }
+
+            // If we're given a type, use that. Otherwise, if we were given a
+            // direction, default to logic. Otherwise, use the last type.
+            const TypeSymbol* type;
+            if (portSyntax->dataType)
+                type = makeTypeSymbol(portSyntax->dataType, scope);
+            else if (directionSpecified)
+                type = getKnownType(SyntaxKind::LogicType);
+            else
+                type = lastType;
+
+            auto declarator = portSyntax->declarator;
+
+            arguments.append(alloc.emplace<FormalArgumentSymbol>(
+                declarator->name,
+                type,
+                bindInitializer(declarator, type, scope),
+                direction
+            ));
+
+            funcScope->add(arguments.back());
+
+            lastDirection = direction;
+            lastType = type;
+        }
+    }
+
+    auto subroutine = alloc.emplace<SubroutineSymbol>(
+        name,
+        returnType,
+        arguments.copy(alloc),
+        lifetime,
+        isTask,
+        funcScope
+    );
+
+    ExpressionBinder binder { *this, subroutine };
+    subroutine->body = binder.bindStatementList(syntax->items);
+    return subroutine;
+}
+
+void SemanticModel::makeVariables(const DataDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope) {
+    // Just delegate to our internal function.
+    // TODO: think about whether to just make that public instead
+    handleDataDeclaration(syntax, results, scope);
 }
 
 bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope) {
@@ -286,6 +473,28 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     }
 }
 
+void SemanticModel::handlePackageImport(const PackageImportDeclarationSyntax* syntax, Scope* scope) {
+    // add imported wildcard scopes as parents
+    // for explicit imports create a scope specified items and add it as parent
+    for (const PackageImportItemSyntax* item : syntax->items) {
+        if (item->item.kind == TokenKind::Star) {
+            const Symbol* pkgSym = packages.lookup(item->package.valueText());
+            ASSERT(pkgSym && pkgSym->kind == SymbolKind::Module);
+            scope->addParentScope(pkgSym->as<ModuleSymbol>().scope);
+        }
+        else if (item->item.kind == TokenKind::Identifier) {
+            const Symbol* pkgSym = packages.lookup(item->package.valueText());
+            ASSERT(pkgSym && pkgSym->kind == SymbolKind::Module);
+            Scope* newScope = alloc.emplace<Scope>();
+            newScope->add(pkgSym->as<ModuleSymbol>().scope->lookup(item->item.valueText()));
+            scope->addParentScope(newScope);
+        }
+        else {
+            ASSERT(false);
+        }
+    }
+}
+
 void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope) {
     // Try to find the module/interface/program being instantiated; we can't do anything without it.
     // We've already reported an error for missing modules.
@@ -332,7 +541,7 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVe
 
     // Fabricate a local variable that will serve as the loop iteration variable.
     Scope iterScope { scope };
-    LocalVariableSymbol local { syntax->identifier, getKnownType(SyntaxKind::IntType) };
+    VariableSymbol local { syntax->identifier, getKnownType(SyntaxKind::IntType) };
     iterScope.add(&local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
@@ -359,20 +568,101 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVe
     }
 }
 
-void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
+void SemanticModel::handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* _scope) {
+    Scope *scope = alloc.emplace<Scope>(_scope);
     if (syntax->kind == SyntaxKind::GenerateBlock) {
         SmallVectorSized<const Symbol*, 8> children;
         for (const MemberSyntax* member : syntax->as<GenerateBlockSyntax>()->members) {
-            switch (member->kind) {
-                case SyntaxKind::HierarchyInstantiation:
-                    handleInstantiation(member->as<HierarchyInstantiationSyntax>(), children, scope);
-                    break;
-            }
+            handleGenerateItem(member, children, scope);
         }
-        results.append(alloc.emplace<GenerateBlock>(children.copy(alloc)));
+        results.append(alloc.emplace<GenerateBlock>(children.copy(alloc), scope));
     }
     else {
-        // TODO: handle simple member
+        handleGenerateItem(syntax, results, scope);
+    }
+}
+
+static ProceduralBlock::Kind proceduralBlockKindFromKeyword(Token kindKeyword) {
+    switch (kindKeyword.kind) {
+        case TokenKind::InitialKeyword: return ProceduralBlock::Initial;
+        case TokenKind::FinalKeyword:   return ProceduralBlock::Final;
+        case TokenKind::AlwaysKeyword:  return ProceduralBlock::Always;
+        case TokenKind::AlwaysCombKeyword:  return ProceduralBlock::AlwaysComb;
+        case TokenKind::AlwaysFFKeyword:  return ProceduralBlock::AlwaysFF;
+        case TokenKind::AlwaysLatchKeyword:  return ProceduralBlock::AlwaysLatch;
+        default:
+            ASSERT(false, "Unknown ProceduralBlock kind keyword: %s",
+                   kindKeyword.toString().c_str());
+            return ProceduralBlock::Initial;    // silence warnings
+    }
+}
+
+void SemanticModel::handleProceduralBlock(const ProceduralBlockSyntax *syntax, SmallVector<const Symbol *>& results, const Scope* _scope) {
+    Scope *scope = alloc.emplace<Scope>(_scope);
+    SmallVectorSized<const Symbol*, 2> children;
+    //TODO handleStatement(syntax->statement, children, scope);
+    results.append(alloc.emplace<ProceduralBlock>(
+        children.copy(alloc), proceduralBlockKindFromKeyword(syntax->keyword), scope));
+}
+
+void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope) {
+    VariableSymbol::Modifiers modifiers;
+    for (auto token : syntax->modifiers) {
+        switch(token.kind) {
+            case TokenKind::ConstKeyword:
+                modifiers.constM = 1;
+                break;
+            case TokenKind::VarKeyword:
+                modifiers.varM = 1;
+                break;
+            case TokenKind::StaticKeyword:
+                modifiers.staticM = 1;
+                break;
+            case TokenKind::AutomaticKeyword:
+                modifiers.automaticM = 1;
+                break;
+            default:
+                ASSERT(false, "Unknown variable modifier: %s", token.toString().c_str());
+                break;
+        }
+    }
+    const TypeSymbol *typeSymbol = makeTypeSymbol(syntax->type, scope);
+
+    for (auto varDeclarator : syntax->declarators) {
+        handleVariableDeclarator(varDeclarator, results, scope, modifiers, typeSymbol);
+    }
+}
+
+void SemanticModel::handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::Modifiers &modifiers, const TypeSymbol *typeSymbol) {
+    ASSERT(typeSymbol);
+    // TODO handle dimensions
+    Symbol *dataSymbol = alloc.emplace<VariableSymbol>(syntax->name, typeSymbol, bindInitializer(syntax, typeSymbol, scope), modifiers);
+    results.append(dataSymbol);
+    scope->add(dataSymbol);
+}
+
+void SemanticModel::handleGenerateItem(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope) {
+    switch (syntax->kind) {
+        case SyntaxKind::HierarchyInstantiation:
+            handleInstantiation(syntax->as<HierarchyInstantiationSyntax>(), results, scope);
+            break;
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::FinalBlock:
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::AlwaysCombBlock:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::AlwaysLatchBlock:
+            handleProceduralBlock(syntax->as<ProceduralBlockSyntax>(), results, scope);
+            break;
+        case SyntaxKind::DataDeclaration:
+            handleDataDeclaration(syntax->as<DataDeclarationSyntax>(), results, scope);
+            break;
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::TaskDeclaration:
+            results.append(makeSubroutine(syntax->as<FunctionDeclarationSyntax>(), scope));
+            break;
+
+            DEFAULT_UNREACHABLE;
     }
 }
 
@@ -425,6 +715,17 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
 
     // Pre-create parameter symbol entries so that we can give better errors about use before decl.
     Scope declScope;
+    for (auto import : decl->header->imports) {
+        handlePackageImport(import, &declScope);
+    }
+    // also find direct body imports
+    // TODO: check location of import vs usage
+    for (const MemberSyntax* member : decl->members) {
+        if (member->kind == SyntaxKind::PackageImportDeclaration) {
+            handlePackageImport(member->as<PackageImportDeclarationSyntax>(), &declScope);
+        }
+    }
+
     const auto& moduleParamInfo = getModuleParams(decl);
     for (const auto& info : moduleParamInfo) {
         ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local);
@@ -609,7 +910,15 @@ const TypeSymbol* SemanticModel::getIntegralType(int width, bool isSigned, bool 
     return symbol;
 }
 
-BoundExpression* SemanticModel::bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope) {
+const BoundExpression* SemanticModel::bindInitializer(const VariableDeclaratorSyntax *syntax, const TypeSymbol* type, const Scope* scope) {
+    if (!syntax->initializer)
+        return nullptr;
+
+    ExpressionBinder binder { *this, scope };
+    return binder.bindAssignmentLikeContext(syntax->initializer->expr, syntax->name.location(), type);
+}
+
+const BoundExpression* SemanticModel::bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope) {
     ExpressionBinder binder { *this, scope };
     return binder.bindConstantExpression(syntax);
 }

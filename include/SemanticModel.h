@@ -25,8 +25,6 @@
 
 namespace slang {
 
-class Symbol;
-
 /// SemanticModel is responsible for binding symbols and performing
 /// type checking based on input parse trees.
 class SemanticModel {
@@ -39,8 +37,10 @@ public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
-
     const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope);
+    const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax* syntax, const Scope* scope);
+
+    void makeVariables(const DataDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope);
 
     /// Utilities for getting various common type symbols.
     const TypeSymbol* getErrorType() const { return getKnownType(SyntaxKind::Unknown); }
@@ -49,6 +49,9 @@ public:
 
     BumpAllocator& getAllocator() { return alloc; }
     Diagnostics& getDiagnostics() { return diagnostics; }
+    const Scope* getPackages() { return &packages; }
+
+    const Scope* getSystemScope() { return &systemScope; }
 
 private:
     // Represents a simple constant range.
@@ -91,22 +94,32 @@ private:
     // types, we just pull out their values here.
     void makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes);
 
+    void makePackages();
+
     const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters);
+    void handlePackageImport(const PackageImportDeclarationSyntax* syntax, Scope* scope);
     void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope);
+    void handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope);
+    void handleProceduralBlock(const ProceduralBlockSyntax *syntax, SmallVector<const Symbol *>& results, const Scope* scope);
+    void handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::Modifiers &modifiers, const TypeSymbol *typeSymbol);
     void handleIfGenerate(const IfGenerateSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
     void handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
     void handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
     void handleGenvarDecl(const GenvarDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
+    void handleGenerateItem(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope);
 
     bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope);
 
-    BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope);
+    const BoundExpression* bindInitializer(const VariableDeclaratorSyntax *syntax, const TypeSymbol* type, const Scope* scope);
+    const BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope);
     ConstantValue evaluateConstant(const ExpressionSyntax* syntax, const Scope* scope);
     static ConstantValue evaluateConstant(const BoundNode* tree);
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
     DeclarationTable& declTable;
+    Scope packages;
+    Scope systemScope;
 
     HashMap<const ModuleDeclarationSyntax*, std::vector<ParameterInfo>> parameterCache;
 

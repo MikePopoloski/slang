@@ -132,7 +132,7 @@ token closeBrace
 BadExpressionSyntax base=ExpressionSyntax kind=BadExpression
 ExpressionSyntax expr
 
-PrimaryExpressionSyntax base=ExpressionSyntax
+PrimaryExpressionSyntax base=ExpressionSyntax final=false
 empty
 
 PrefixUnaryExpressionSyntax base=ExpressionSyntax
@@ -214,6 +214,9 @@ token identifier
 IdentifierSelectNameSyntax base=NameSyntax kind=IdentifierSelectName
 token identifier
 list<ElementSelectSyntax> selectors
+
+EmptyIdentifierNameSyntax base=NameSyntax kind=EmptyIdentifierName
+empty
 
 KeywordNameSyntax base=NameSyntax
 token keyword
@@ -310,6 +313,11 @@ CastExpressionSyntax base=ExpressionSyntax kind=CastExpression
 ExpressionSyntax left
 token apostrophe
 ParenthesizedExpressionSyntax right
+
+SignedCastExpressionSyntax base=ExpressionSyntax kind=SignedCastExpression
+token signing
+token apostrophe
+ParenthesizedExpressionSyntax inner
 
 // ----- TIMING CONTROL -----
 
@@ -584,6 +592,9 @@ ActionBlockSyntax action
 
 ConcurrentAssertionMemberSyntax base=MemberSyntax kind=ConcurrentAssertionMember
 ConcurrentAssertionStatementSyntax statement
+
+ImmediateAssertionMemberSyntax base=MemberSyntax kind=ImmediateAssertionMember
+ImmediateAssertionStatementSyntax statement
 
 AbortPropertyExpressionSyntax base=ExpressionSyntax
 token keyword
@@ -949,12 +960,25 @@ ParameterValueAssignmentSyntax parameters
 separated_list<HierarchicalInstanceSyntax> instances
 token semi
 
+FunctionPortSyntax kind=FunctionPort
+list<AttributeInstanceSyntax> attributes
+token constKeyword
+token direction
+token varKeyword
+DataTypeSyntax dataType
+VariableDeclaratorSyntax declarator
+
+FunctionPortListSyntax kind=FunctionPortList
+token openParen
+separated_list<FunctionPortSyntax> ports
+token closeParen
+
 FunctionPrototypeSyntax kind=FunctionPrototype
 token keyword
 token lifetime
 DataTypeSyntax returnType
 NameSyntax name
-AnsiPortListSyntax portList
+FunctionPortListSyntax portList
 token semi
 
 FunctionDeclarationSyntax base=MemberSyntax
@@ -1009,6 +1033,15 @@ EqualsValueClauseSyntax setter
 DefParamSyntax base=MemberSyntax kind=DefParam
 token defparam
 separated_list<DefParamAssignmentSyntax> assignments
+token semi
+
+ModportItemSyntax kind=ModportItem
+token name
+AnsiPortListSyntax ports
+
+ModportDeclarationSyntax base=MemberSyntax kind=ModportDeclaration
+token keyword
+separated_list<ModportItemSyntax> items
 token semi
 
 // ----- CONSTRAINTS -----
