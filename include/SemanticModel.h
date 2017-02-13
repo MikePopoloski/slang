@@ -37,8 +37,8 @@ public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
-    const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope);
-    const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax* syntax, const Scope* scope);
+    const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, Scope* scope);
+    const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax* syntax, Scope* scope);
 
     void makeVariables(const DataDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope);
 
@@ -78,21 +78,21 @@ private:
                        bool lastLocal, bool overrideLocal, bool bodyParam);
 
     // Evaluates an individual parameter using its initializer. This also finalizes its type.
-    void evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax* initializer, const Scope* scope);
+    void evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax* initializer, Scope* scope);
 
     // Uses a module declaration and an optional set of parameter assignments to create all of the
     // evaluated parameter symbols for a particular module instance. Note that these parameter symbols
     // can potentially be shared by instances if they are in the same declaration.
     void makePublicParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
                               const ParameterValueAssignmentSyntax* parameterAssignments,
-                              const Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel);
+                              Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel);
 
     // Process attributes and convert them to a normalized form. No specific handling is done for attribute
     // types, we just pull out their values here.
     void makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes);
 
-    const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters);
-    void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope);
+    const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters, Scope *scope);
+    void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* instantiationScope);
     void handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope);
     void handleProceduralBlock(const ProceduralBlockSyntax *syntax, SmallVector<const Symbol *>& results, const Scope* scope);
     void handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::Modifiers &modifiers, const TypeSymbol *typeSymbol);

@@ -63,14 +63,14 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
     SmallVectorSized<const ParameterSymbol*, 8> parameters;
-    makePublicParameters(parameters, syntax, nullptr, Scope::Empty, SourceLocation(), true);
+    Scope* scope = alloc.emplace<Scope>();
+    makePublicParameters(parameters, syntax, nullptr, scope, SourceLocation(), true);
 
-    const ModuleSymbol* module = makeModule(syntax, parameters.copy(alloc));
+    const ModuleSymbol* module = makeModule(syntax, parameters.copy(alloc), scope);
     return alloc.emplace<InstanceSymbol>(module, true);
 }
 
-const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters) {
-    Scope* scope = alloc.emplace<Scope>();
+const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters, Scope *scope) {
     scope->addRange(parameters);
 
     SmallVectorSized<const Symbol*, 8> children;
@@ -109,7 +109,7 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
     return alloc.emplace<ModuleSymbol>(syntax, scope, children.copy(alloc));
 }
 
-const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, const Scope* scope) {
+const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, Scope* scope) {
     ASSERT(syntax);
 
     switch (syntax->kind) {
@@ -213,7 +213,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, co
     return getErrorType();
 }
 
-const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationSyntax* syntax, const Scope* scope) {
+const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationSyntax* syntax, Scope* scope) {
     auto proto = syntax->prototype;
     auto lifetime = getLifetime(proto->lifetime, VariableLifetime::Automatic);
     auto returnType = makeTypeSymbol(proto->returnType, scope);
@@ -393,7 +393,7 @@ bool SemanticModel::getParamDecls(const ParameterDeclarationSyntax* syntax, std:
     return local;
 }
 
-void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax* initializer, const Scope* scope) {
+void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax* initializer, Scope* scope) {
     // If no type is given, infer the type from the initializer
     ExpressionBinder binder { *this, scope };
     DataTypeSyntax* typeSyntax = symbol->syntax->type;
@@ -410,7 +410,7 @@ void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionS
     }
 }
 
-void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* instantiationScope) {
+void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* instantiationScope) {
     // Try to find the module/interface/program being instantiated; we can't do anything without it.
     // We've already reported an error for missing modules.
     const ModuleDeclarationSyntax* decl = declTable.find(syntax->type.valueText());
@@ -424,7 +424,8 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
     ArrayRef<const ParameterSymbol*> parameters = parameterBuilder.copy(alloc);
     for (const HierarchicalInstanceSyntax* instance : syntax->instances) {
         // Get a symbol for this particular parameterized form of the module
-        const ModuleSymbol* module = makeModule(decl, parameters);
+        Scope * scope = alloc.emplace<Scope>();
+        const ModuleSymbol* module = makeModule(decl, parameters, scope);
         results.append(alloc.emplace<InstanceSymbol>(module, false));
     }
 }
@@ -593,7 +594,7 @@ void SemanticModel::handleGenvarDecl(const GenvarDeclarationSyntax* syntax, Smal
 
 void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
                                          const ParameterValueAssignmentSyntax* parameterAssignments,
-                                         const Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel) {
+                                         Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel) {
     // If we were given a set of parameter assignments, build up some data structures to
     // allow us to easily index them. We need to handle both ordered assignment as well as
     // named assignment (though a specific instance can only use one method or the other).
@@ -649,7 +650,7 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
         bool moduleUnreferencedError = false;
         for (const auto& info : moduleParamInfo) {
             ExpressionSyntax* initializer;
-            const Scope* scope;
+            Scope* scope;
             if (info.local || orderedIndex >= orderedParams.count()) {
                 initializer = info.initializer;
                 scope = &declScope;
@@ -696,7 +697,7 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
         int resultIndex = 0;
         for (const auto& info : moduleParamInfo) {
             ExpressionSyntax* initializer = nullptr;
-            const Scope* scope = nullptr;
+            Scope* scope = nullptr;
             auto it = namedParams.find(info.name);
             if (it != namedParams.end()) {
                 NamedArgumentSyntax* arg = it->second.first;
