@@ -132,7 +132,7 @@ token closeBrace
 BadExpressionSyntax base=ExpressionSyntax kind=BadExpression
 ExpressionSyntax expr
 
-PrimaryExpressionSyntax base=ExpressionSyntax
+PrimaryExpressionSyntax base=ExpressionSyntax final=false
 empty
 
 PrefixUnaryExpressionSyntax base=ExpressionSyntax
@@ -216,7 +216,7 @@ token identifier
 list<ElementSelectSyntax> selectors
 
 EmptyIdentifierNameSyntax base=NameSyntax kind=EmptyIdentifierName
-nothing
+empty
 
 KeywordNameSyntax base=NameSyntax
 token keyword

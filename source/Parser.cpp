@@ -340,20 +340,28 @@ MemberSyntax* Parser::parseMember() {
             auto name = consume();
             auto label = alloc.emplace<NamedLabelSyntax>(name, expect(TokenKind::Colon));
             auto statement = parseAssertionStatement(label, nullptr);
-            if (statement->kind == SyntaxKind::ImmediateAssertStatement) {
-                return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
+            switch (statement->kind) {
+                case SyntaxKind::ImmediateAssertStatement:
+                case SyntaxKind::ImmediateAssumeStatement:
+                case SyntaxKind::ImmediateCoverStatement:
+                    return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
+                default:
+                    return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
             }
-            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
         }
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
         case TokenKind::CoverKeyword:
         case TokenKind::RestrictKeyword: {
             auto statement = parseAssertionStatement(nullptr, nullptr);
-            if (statement->kind == SyntaxKind::ImmediateAssertStatement) {
-                return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
+            switch (statement->kind) {
+                case SyntaxKind::ImmediateAssertStatement:
+                case SyntaxKind::ImmediateAssumeStatement:
+                case SyntaxKind::ImmediateCoverStatement:
+                    return alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, (ImmediateAssertionStatementSyntax*) statement);
+                default:
+                    return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
             }
-            return alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, (ConcurrentAssertionStatementSyntax*) statement);
         }
         case TokenKind::AssignKeyword:
             return parseContinuousAssign(attributes);
