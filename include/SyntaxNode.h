@@ -154,6 +154,7 @@ enum class SyntaxKind : uint16_t {
     PostincrementExpression,
     PostdecrementExpression,
     CastExpression,
+    SignedCastExpression,
     WithClause,
     IdentifierList,
     RandomizeMethodWithClause,

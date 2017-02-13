@@ -214,6 +214,17 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             }
             break;
         }
+        case TokenKind::SignedKeyword:
+        case TokenKind::UnsignedKeyword: {
+            auto signing = consume();
+            auto apostrophe = expect(TokenKind::Apostrophe);
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            auto innerExpr = parseExpression();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            auto parenExpr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, innerExpr, closeParen);
+            expr = alloc.emplace<SignedCastExpressionSyntax>(signing, apostrophe, parenExpr);
+            break;
+        }
         default:
             // possibilities here:
             // 1. data type
