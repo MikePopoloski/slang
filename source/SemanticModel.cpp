@@ -67,8 +67,6 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
     args.append(alloc.emplace<FormalArgumentSymbol>(intType));
     systemScope.add(alloc.emplace<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2));
-
-	makePackages();
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
@@ -122,10 +120,12 @@ void SemanticModel::makePackages() {
     for (auto pkg : declTable.getPackages()) {
         auto name = pkg->header->name.valueText();
         auto pkgSym = packages.lookup(name)->as<ModuleSymbol>();
-        for (size_t i = 0; auto paramSym = (ParameterSymbol*)pkgSym.scope->getNth(SymbolKind::Parameter, i); i++) {
-            for (auto paramSyntax : paramSym->syntax->declarators)
-                if (paramSyntax->name.valueText() == paramSym->name)
-                    evaluateParameter(paramSym, paramSyntax->initializer->expr, pkgSym.scope);
+        for (auto sym : pkgSym.scope->symbols()) {
+            if (sym->kind != SymbolKind::Parameter) continue;
+            auto paramSym = sym->as<ParameterSymbol>();
+            for (auto paramSyntax : paramSym.syntax->declarators)
+                if (paramSyntax->name.valueText() == paramSym.name)
+                    evaluateParameter(&paramSym, paramSyntax->initializer->expr, pkgSym.scope);
         }
     }
 }

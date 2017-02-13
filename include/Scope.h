@@ -30,6 +30,8 @@ public:
 
     const Symbol* lookup(StringRef name, bool local = false) const;
 
+    const std::vector<const Symbol*>& symbols() { return list; }
+
     const Symbol* getNth(const SymbolKind& kind, size_t index) const;
 
     static const Scope* const Empty;

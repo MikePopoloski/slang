@@ -236,8 +236,13 @@ BoundExpression* ExpressionBinder::bindScopedName(const ScopedNameSyntax* syntax
         } else if (syntax->left->kind == SyntaxKind::IdentifierName) {
             auto parent = syntax->left->as<IdentifierNameSyntax>();
             auto parentSym = currScope->lookup(parent->identifier.valueText());
-            ASSERT(parentSym && parentSym->kind == SymbolKind::Module);
-            auto nextScope = parentSym->as<ModuleSymbol>().scope;
+            ASSERT(parentSym);
+            const Scope* nextScope = nullptr;
+            if (parentSym->kind == SymbolKind::Instance)
+                nextScope = parentSym->as<InstanceSymbol>().module->scope;
+            if (parentSym->kind == SymbolKind::Module)
+                nextScope = parentSym->as<ModuleSymbol>().scope;
+            ASSERT(nextScope);
             return bindName(syntax->right->as<NameSyntax>(), nextScope);
         }
     }
