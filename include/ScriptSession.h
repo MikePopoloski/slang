@@ -27,15 +27,20 @@ public:
         syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text)));
 
         auto root = syntaxTrees.back().root();
-        if (isExpression(root->kind))
-            return evalExpression(root->as<ExpressionSyntax>());
-        else if (isStatement(root->kind))
-            return evalStatement(root->as<StatementSyntax>());
-        else if (root->kind == SyntaxKind::DataDeclaration)
-            return evalDeclaration(root->as<DataDeclarationSyntax>());
-        else
-            ASSERT(false, "Not supported yet");
-
+        switch (root->kind) {
+            case SyntaxKind::DataDeclaration:
+                return evalVariableDeclaration(root->as<DataDeclarationSyntax>());
+            case SyntaxKind::FunctionDeclaration:
+            case SyntaxKind::TaskDeclaration:
+                return evalSubroutineDeclaration(root->as<FunctionDeclarationSyntax>());
+            default:
+                if (isExpression(root->kind))
+                    return evalExpression(root->as<ExpressionSyntax>());
+                else if (isStatement(root->kind))
+                    return evalStatement(root->as<StatementSyntax>());
+                else
+                    ASSERT(false, "Not supported yet");
+        }
         return nullptr;
     }
 
@@ -48,7 +53,7 @@ public:
         return nullptr;
     }
 
-    ConstantValue evalDeclaration(const DataDeclarationSyntax* decl) {
+    ConstantValue evalVariableDeclaration(const DataDeclarationSyntax* decl) {
         SmallVectorSized<const Symbol*, 8> results;
         sem.makeVariables(decl, results, &scriptScope);
 
@@ -62,6 +67,12 @@ public:
                 storage = SVInt(0); // TODO: uninitialized variable
         }
 
+        return nullptr;
+    }
+
+    ConstantValue evalSubroutineDeclaration(const FunctionDeclarationSyntax* decl) {
+        auto symbol = sem.makeSubroutine(decl, &scriptScope);
+        scriptScope.add(symbol);
         return nullptr;
     }
 

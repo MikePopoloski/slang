@@ -15,4 +15,12 @@ TEST_CASE("Simple eval", "[eval") {
     CHECK(value.integer() == 13);
 }
 
+TEST_CASE("Function call", "[eval") {
+    ScriptSession session;
+    session.eval("function logic [15:0] foo(int a, int b); return a + b; endfunction");
+
+    auto value = session.eval("foo(3, 4)");
+    CHECK(value.integer() == 7);
+}
+
 }

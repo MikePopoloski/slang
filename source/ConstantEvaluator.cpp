@@ -17,7 +17,7 @@ ConstantEvaluator::ConstantEvaluator() {
 }
 
 ConstantValue& ConstantEvaluator::createTemporary(const Symbol* key) {
-    ConstantValue& result = rootFrame.temporaries[key];
+    ConstantValue& result = currentFrame->temporaries[key];
     ASSERT(!result, "Created multiple temporaries with the same key");
     return result;
 }
@@ -42,6 +42,9 @@ ConstantValue ConstantEvaluator::evaluate(const BoundNode* tree) {
         case BoundNodeKind::UnaryExpression: return evaluateUnary((BoundUnaryExpression*)tree);
         case BoundNodeKind::BinaryExpression: return evaluateBinary((BoundBinaryExpression*)tree);
         case BoundNodeKind::AssignmentExpression: return evaluateAssignment((BoundAssignmentExpression*)tree);
+        case BoundNodeKind::CallExpression: return evaluateCall((BoundCallExpression*)tree);
+        case BoundNodeKind::StatementList: return evaluateStatementList((BoundStatementList*)tree);
+        case BoundNodeKind::ReturnStatement: return evaluateReturn((BoundReturnStatement*)tree);
 
             DEFAULT_UNREACHABLE;
     }
@@ -134,6 +137,34 @@ ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpress
             DEFAULT_UNREACHABLE;
     }
     return lvalue.load();
+}
+
+ConstantValue ConstantEvaluator::evaluateCall(const BoundCallExpression* expr) {
+    // Create a new frame that will become the head of the call stack.
+    // Don't actually update that pointer until we finish evaluating arguments.
+    Frame newFrame { currentFrame };
+
+    auto subroutine = expr->subroutine;
+    for (uint32_t i = 0; i < subroutine->arguments.count(); i++)
+        newFrame.temporaries[subroutine->arguments[i]] = evaluate(expr->arguments[i]);
+
+    // Now update the call stack and evaluate the function body
+    currentFrame = &newFrame;
+    auto&& result = evaluate(subroutine->body);
+
+    // Pop the frame and return the value
+    currentFrame = newFrame.parent;
+    return std::move(result);
+}
+
+ConstantValue ConstantEvaluator::evaluateStatementList(const BoundStatementList* stmt) {
+    for (auto item : stmt->list)
+        return evaluate(item);
+    return nullptr;
+}
+
+ConstantValue ConstantEvaluator::evaluateReturn(const BoundReturnStatement* stmt) {
+    return evaluate(stmt->expr);
 }
 
 bool ConstantEvaluator::evaluateLValue(const BoundExpression* expr, LValue& lvalue) {
