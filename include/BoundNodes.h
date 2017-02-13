@@ -19,7 +19,8 @@ enum class BoundNodeKind {
     CallExpression,
     StatementList,
     ReturnStatement,
-    VariableDeclaration
+    VariableDeclaration,
+    ConditionalStatement
 };
 
 class BoundNode {
@@ -160,6 +161,18 @@ public:
 
     BoundVariableDecl(const VariableSymbol* symbol) :
         BoundStatement(BoundNodeKind::VariableDeclaration, nullptr), symbol(symbol) {}
+};
+
+class BoundConditionalStatement : public BoundStatement {
+public:
+    const BoundExpression* cond;
+    const BoundStatement* ifTrue;
+    const BoundStatement* ifFalse;
+
+    BoundConditionalStatement(const StatementSyntax *syntax, const BoundExpression* cond,
+                              const BoundStatement* ifTrue, const BoundStatement* ifFalse) :
+        BoundStatement(BoundNodeKind::ConditionalStatement, syntax),
+        cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 };
 
 }

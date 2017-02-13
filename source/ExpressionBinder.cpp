@@ -593,6 +593,7 @@ BoundStatement* ExpressionBinder::bindStatement(const StatementSyntax* syntax) {
     ASSERT(syntax);
     switch (syntax->kind) {
         case SyntaxKind::ReturnStatement: return bindReturnStatement((const ReturnStatementSyntax*)syntax);
+        case SyntaxKind::ConditionalStatement: return bindConditionalStatement((const ConditionalStatementSyntax *)syntax);
 
         DEFAULT_UNREACHABLE;
     }
@@ -619,6 +620,22 @@ BoundStatement* ExpressionBinder::bindReturnStatement(const ReturnStatementSynta
 
     auto expr = bindAssignmentLikeContext(syntax->returnValue, location, subroutine->returnType);
     return alloc.emplace<BoundReturnStatement>(syntax, expr);
+}
+
+BoundStatement* ExpressionBinder::bindConditionalStatement(const ConditionalStatementSyntax *syntax) {
+    ASSERT(syntax);
+    ASSERT(syntax->predicate);
+    ASSERT(syntax->predicate->conditions.count() == 1,
+           " The &&& operator in if condition is not yet supported");
+    ASSERT(syntax->predicate->conditions[0]->matchesClause == nullptr,
+           " Pattern-matching is not yet supported");
+    auto cond = bindExpression(syntax->predicate->conditions[0]->expr);
+    auto ifTrue = bindStatement(syntax->statement);
+    const BoundStatement* ifFalse = nullptr;
+    if (syntax->elseClause) {
+        ifFalse = bindStatement((const StatementSyntax *)syntax->elseClause->clause);
+    }
+    return alloc.emplace<BoundConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
 void ExpressionBinder::bindVariableDecl(const DataDeclarationSyntax* syntax, SmallVector<const BoundStatement*>& results) {

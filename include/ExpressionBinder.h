@@ -26,6 +26,7 @@ public:
 
     BoundStatement* bindStatement(const StatementSyntax* syntax);
     BoundStatementList* bindStatementList(const SyntaxList<SyntaxNode>& items);
+    BoundStatement* bindConditionalStatement(const ConditionalStatementSyntax *syntax);
 
 private:
     BoundExpression* bindAndPropagate(const ExpressionSyntax* syntax);
