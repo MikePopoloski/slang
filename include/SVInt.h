@@ -237,6 +237,9 @@ public:
     /// Bitwise xnor.
     SVInt xnor(const SVInt& rhs) const;
 
+    /// The operation SV applies for 'x ? lhs : rhs
+    SVInt ambiguousConditionalCombination(const SVInt& rhs) const;
+
     logic_t reductionOr() const;
     logic_t reductionAnd() const;
     logic_t reductionXor() const;

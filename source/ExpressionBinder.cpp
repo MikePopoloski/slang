@@ -106,6 +106,8 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
             return bindAssignmentOperator(syntax->as<BinaryExpressionSyntax>());
         case SyntaxKind::InvocationExpression:
             return bindSubroutineCall(syntax->as<InvocationExpressionSyntax>());
+        case SyntaxKind::ConditionalExpression:
+            return bindConditionalExpression(syntax->as<ConditionalExpressionSyntax>());
 
             DEFAULT_UNREACHABLE;
     }
@@ -315,7 +317,8 @@ BoundExpression* ExpressionBinder::bindShiftOrPowerOperator(const BinaryExpressi
     if (!checkOperatorApplicability(syntax->kind, syntax->operatorToken.location(), &lhs, &rhs))
         return badExpr(alloc.emplace<BoundBinaryExpression>(syntax, sem.getErrorType(), lhs, rhs));
 
-    const TypeSymbol* type = binaryOperatorResultType(lhs->type, rhs->type, false);
+    // Power operator can result in division by zero 'x
+    const TypeSymbol* type = binaryOperatorResultType(lhs->type, rhs->type, syntax->kind == SyntaxKind::PowerExpression);
 
     return alloc.emplace<BoundBinaryExpression>(syntax, type, lhs, rhs);
 }
@@ -382,6 +385,21 @@ BoundExpression* ExpressionBinder::bindSubroutineCall(const InvocationExpression
     }
 
     return alloc.emplace<BoundCallExpression>(syntax, &subroutine, buffer.copy(alloc));
+}
+
+BoundExpression* ExpressionBinder::bindConditionalExpression(const ConditionalExpressionSyntax* syntax) {
+    // TODO: handle the pattern matching conditioanl predicate case, rather than just assuming that it's a simple
+    // expression
+    BoundExpression* pred = bindAndPropagate(syntax->predicate->conditions[0]->expr);
+    BoundExpression* left = bindAndPropagate(syntax->left);
+    BoundExpression* right = bindAndPropagate(syntax->right);
+
+    // TODO: handle non-integral and non-real types properly
+    // force four-state return type for ambiguous condition case
+    const TypeSymbol* type = binaryOperatorResultType(left->type, right->type, true);
+
+    return alloc.emplace<BoundTernaryExpression>(syntax, type, pred, left, right);
+
 }
 
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
@@ -501,9 +519,10 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::BinaryXorExpression:
         case SyntaxKind::BinaryXnorExpression:
             expression->type = type;
-            if (!doNotPropogateRealDownToNonReal)
+            if (!doNotPropogateRealDownToNonReal) {
                 propagate(((BoundBinaryExpression*)expression)->left, type);
                 propagate(((BoundBinaryExpression*)expression)->right, type);
+            }
             break;
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
@@ -548,7 +567,14 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
             // Essentially self determined, logic handled at bind time
             break;
-
+        case SyntaxKind::ConditionalExpression:
+            // predicate is self determined
+            expression->type = type;
+            if (!doNotPropogateRealDownToNonReal) {
+                propagate(((BoundTernaryExpression*)expression)->left, type);
+                propagate(((BoundTernaryExpression*)expression)->right, type);
+            }
+            break;
             DEFAULT_UNREACHABLE;
     }
 }
@@ -618,7 +644,10 @@ const TypeSymbol* ExpressionBinder::binaryOperatorResultType(const TypeSymbol* l
     if (lhsType->isReal() || rhsType->isReal()) {
         // spec says that RealTime and RealType are interchangeable, so we will just use RealType for
         // intermediate symbols
-        if (width > 32) return sem.getKnownType(SyntaxKind::RealType);
+        // TODO: The spec is unclear for binary operators what to do if the operands are a shortreal and a larger
+        // integral type. For the conditional operator it is clear that this case should lead to a shortreal, and
+        // it isn't explicitly mentioned for other binary operators
+        if (width >= 64) return sem.getKnownType(SyntaxKind::RealType);
         else return sem.getKnownType(SyntaxKind::ShortRealType);
     } else {
         return sem.getIntegralType(width, isSigned, fourState);

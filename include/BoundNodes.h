@@ -14,6 +14,7 @@ enum class BoundNodeKind {
     Variable,
     UnaryExpression,
     BinaryExpression,
+    TernaryExpression,
     AssignmentExpression,
     CallExpression,
     StatementList,
@@ -108,6 +109,17 @@ public:
     BoundCallExpression(const ExpressionSyntax* syntax, const SubroutineSymbol* subroutine, ArrayRef<const BoundExpression*> arguments) :
         BoundExpression(BoundNodeKind::CallExpression, syntax, subroutine->returnType),
         subroutine(subroutine), arguments(arguments) {}
+};
+
+class BoundTernaryExpression : public BoundExpression {
+public:
+    BoundExpression* pred;
+    BoundExpression* left;
+    BoundExpression* right;
+
+    BoundTernaryExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, BoundExpression* pred, BoundExpression* left, BoundExpression* right) :
+        BoundExpression(BoundNodeKind::TernaryExpression, syntax, type), pred(pred), left(left), right(right) {}
+
 };
 
 class BoundStatement : public BoundNode {

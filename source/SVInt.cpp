@@ -476,6 +476,69 @@ SVInt SVInt::lshr(uint32_t amount) const {
     return result;
 }
 
+SVInt SVInt::ashr(const SVInt& rhs) const {
+    if (!signFlag)
+        return lshr(rhs);
+    if (rhs.hasUnknown())
+        return createFillX(bitWidth, signFlag);
+    if (rhs >= bitWidth)
+        return SVInt(bitWidth, *this >= 0 ? 0 : -1, signFlag);
+
+    uint16_t contractedWidth = bitWidth - rhs.getAssertUInt64();
+    SVInt tmp = lshr(rhs);
+    tmp.bitWidth = contractedWidth;
+    return signExtend(tmp, bitWidth);
+}
+
+SVInt SVInt::ashr(uint32_t amount) const {
+    if (amount == 0)
+        return *this;
+    if (amount >= bitWidth)
+        return SVInt(bitWidth, *this >= 0 ? 0 : -1, signFlag);
+
+    uint16_t contractedWidth = bitWidth - amount;
+    SVInt tmp = lshr(amount);
+    tmp.bitWidth = contractedWidth;
+    return signExtend(tmp, bitWidth);
+}
+
+SVInt SVInt::ambiguousConditionalCombination(const SVInt& rhs) const {
+    if (exactlyEqual(*this, rhs)) return rhs;
+
+    bool bothSigned = signFlag && rhs.signFlag;
+
+    if (bitWidth != rhs.bitWidth) {
+        if (bitWidth < rhs.bitWidth)
+            return extend(*this, rhs.bitWidth, bothSigned).ambiguousConditionalCombination(rhs);
+        else
+            return this->ambiguousConditionalCombination(extend(rhs, bitWidth, bothSigned));
+    }
+
+    if (isSingleWord()) {
+        // If the inputs are single word, as the inputs are unequal, we need to
+        // combine into a 2-word output with a word for unknowns
+        SVInt tmp = createFillX(1, bothSigned);
+        tmp.pVal[1] = val ^ rhs.val;
+        tmp.pVal[0] = ~tmp.pVal[1] & val & rhs.val;
+        return tmp;
+    }
+
+    SVInt tmp(*this);
+    delete[] tmp.pVal;
+    uint32_t words = getNumWords(bitWidth, false) * 2;
+    tmp.pVal = new uint64_t[words];
+
+    // Unkown if either bit is unknown or bits differ
+    for (uint32_t i = 0; i < words; i++)
+        tmp.pVal[i + words] = (unknownFlag ? 0 : pVal[i + words]) | (rhs.unknownFlag ? 0 : rhs.pVal[i + words]) | (pVal[i] ^ rhs.pVal[i]);
+
+    for (uint32_t i = 0; i < words; i++)
+        tmp.pVal[i] = ~tmp.pVal[i + words] & pVal[i] & rhs.pVal[i];
+
+    tmp.clearUnusedBits();
+    return tmp;
+}
+
 size_t SVInt::hash(size_t seed) const {
     return xxhash(getRawData(), getNumWords() * WORD_SIZE, seed);
 }
@@ -1063,7 +1126,7 @@ SVInt SVInt::operator()(const SVInt& msb, const SVInt& lsb) const {
 SVInt SVInt::operator()(uint16_t msb, uint16_t lsb) const {
     if (lsb != 0)
         return lshr(lsb)(msb - lsb, 0);
-    
+
     // lsb is always zero from here on out
     SVInt result(msb + 1, 0, false);
     if (result.isSingleWord())
@@ -1216,7 +1279,7 @@ uint32_t SVInt::countPopulation() const {
     // don't worry about unknowns in this function; only use it if the number is all known
     if (isSingleWord())
         return slang::countPopulation(val);
-    
+
     uint32_t count = 0;
     for (uint32_t i = 0; i < getNumWords(); i++)
         count += slang::countPopulation(pVal[i]);
@@ -1557,7 +1620,7 @@ SVInt signExtend(const SVInt& value, uint16_t bits) {
             bits
         );
     }
-    
+
     return result;
 }
 

@@ -44,6 +44,7 @@ private:
     BoundExpression* bindShiftOrPowerOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindAssignmentOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindSubroutineCall(const InvocationExpressionSyntax* syntax);
+    BoundExpression* bindConditionalExpression(const ConditionalExpressionSyntax* syntax);
 
     BoundStatement* bindReturnStatement(const ReturnStatementSyntax* syntax);
 
