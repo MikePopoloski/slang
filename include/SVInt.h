@@ -93,6 +93,8 @@ struct logic_t {
         return os;
     }
 
+    static constexpr uint8_t X_VALUE = 1 << 7;
+    static constexpr uint8_t Z_VALUE = 1 << 6;
     static const logic_t x;
     static const logic_t z;
 };
@@ -213,6 +215,10 @@ public:
     void setAllZeros();
     void setAllX();
     void setAllZ();
+
+    // Create an integer of the given bit width filled with X's.
+    static SVInt createFillX(uint16_t bitWidth, bool isSigned);
+    static SVInt createFillZ(uint16_t bitWidth, bool isSigned);
 
     size_t hash(size_t seed = Seed) const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
@@ -457,9 +463,6 @@ private:
     static constexpr int whichWord(int bitIndex) { return bitIndex / BITS_PER_WORD; }
     static constexpr int whichBit(int bitIndex) { return bitIndex % BITS_PER_WORD; }
     static constexpr uint64_t maskBit(int bitIndex) { return 1ULL << whichBit(bitIndex); }
-
-    // Create an integer of the given bit width filled with X's.
-    static SVInt createFillX(uint16_t bitWidth, bool isSigned);
 
     // Split an integer's data into 32-bit words.
     static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);
