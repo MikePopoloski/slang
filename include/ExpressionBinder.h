@@ -28,6 +28,7 @@ public:
     BoundStatementList* bindStatementList(const SyntaxList<SyntaxNode>& items);
 
 private:
+    BoundExpression* bindAndPropagate(const ExpressionSyntax* syntax);
     BoundExpression* bindExpression(const ExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const LiteralExpressionSyntax* syntax);
     BoundExpression* bindLiteral(const IntegerVectorExpressionSyntax* syntax);
@@ -54,6 +55,12 @@ private:
 
     BadBoundExpression* badExpr(BoundExpression* expr);
     BadBoundStatement* badStmt(BoundStatement* stmt);
+
+    // Apply propagation rules for an assignment; increasing the rhs type to the lhs type if necessary
+    // apply to both sides if symmetric. Returns true if a type expansion was necessary
+    bool propagateAssignmentLike(BoundExpression* rhs, const TypeSymbol* lhsType);
+
+    const TypeSymbol* binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState);
 
     SemanticModel& sem;
     BumpAllocator& alloc;

@@ -34,32 +34,22 @@ public:
     SyntaxTree(const SyntaxTree&) = delete;
     SyntaxTree& operator=(const SyntaxTree&) = delete;
 
-    /// Creates a specialized syntax tree from text in memory.
-    template<typename T>
-    static SyntaxTree fromText(StringRef text) {
-        return fromText<T>(text, getDefaultSourceManager());
-    }
-
-    template<typename T>
-    static SyntaxTree fromText(StringRef text, SourceManager& sourceManager) {
-        return create<T>(sourceManager, sourceManager.assignText(text));
-    }
-
     /// Creates a syntax tree from a full compilation unit.
     static SyntaxTree fromFile(StringRef path) {
         return fromFile(path, getDefaultSourceManager());
     }
 
+    /// Creates a syntax tree by guessing at what might be in the given source snippet.
     static SyntaxTree fromText(StringRef text) {
         return fromText(text, getDefaultSourceManager());
     }
 
     static SyntaxTree fromFile(StringRef path, SourceManager& sourceManager) {
-        return create<CompilationUnitSyntax>(sourceManager, sourceManager.readSource(path));
+        return create(sourceManager, sourceManager.readSource(path), false);
     }
 
     static SyntaxTree fromText(StringRef text, SourceManager& sourceManager) {
-        return create<CompilationUnitSyntax>(sourceManager, sourceManager.assignText(text));
+        return create(sourceManager, sourceManager.assignText(text), true);
     }
 
     /// Gets any diagnostics generated while parsing.
@@ -84,16 +74,15 @@ private:
         rootNode(root), sourceMan(sourceManager),
         alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)) {}
 
-    template<typename T>
-    static SyntaxTree create(SourceManager& sourceManager, SourceBuffer source) {
+    static SyntaxTree create(SourceManager& sourceManager, SourceBuffer source, bool guess) {
         BumpAllocator alloc;
         Diagnostics diagnostics;
         Preprocessor preprocessor(sourceManager, alloc, diagnostics);
         preprocessor.pushSource(source);
 
         Parser parser(preprocessor);
-        return SyntaxTree(parser.parse<T>(), sourceManager,
-                          std::move(alloc), std::move(diagnostics));
+        return SyntaxTree(guess ? parser.parseGuess() : parser.parseCompilationUnit(),
+                          sourceManager, std::move(alloc), std::move(diagnostics));
     }
 
     const SyntaxNode* rootNode;

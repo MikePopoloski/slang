@@ -67,21 +67,41 @@ std::string TypeSymbol::toString() const {
     return "'" + result + "'";
 }
 
+bool TypeSymbol::isSigned() const {
+    switch (kind) {
+        case SymbolKind::IntegralType: return as<IntegralTypeSymbol>().isSigned;
+        case SymbolKind::RealType: return true;
+        default: return false;
+    }
+}
+
+bool TypeSymbol::isFourState() const {
+    switch (kind) {
+        case SymbolKind::IntegralType: return as<IntegralTypeSymbol>().isFourState;
+        case SymbolKind::RealType: return false;
+        default: return false;
+    }
+}
+
+bool TypeSymbol::isReal() const {
+    switch (kind) {
+        case SymbolKind::IntegralType: return false;
+        case SymbolKind::RealType: return true;
+        default: return false;
+    }
+}
+
+int TypeSymbol::width() const {
+    switch (kind) {
+        case SymbolKind::IntegralType: return as<IntegralTypeSymbol>().width;
+        case SymbolKind::RealType: return as<RealTypeSymbol>().width;
+        default: return 0;
+    }
+}
+
 AttributeSymbol::AttributeSymbol(const AttributeSpecSyntax* syntax, const TypeSymbol* type, ConstantValue value) :
     Symbol(SymbolKind::Attribute, syntax->name.valueText(), syntax->name.location()),
     syntax(syntax), type(type), value(value)
-{
-}
-
-ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location,
-                                 const ParameterDeclarationSyntax* syntax,
-                                 bool isLocal) :
-    Symbol(SymbolKind::Parameter, name, location),
-    syntax(syntax),
-    isLocal(isLocal),
-    // TODO: fill this in with something meaningful
-    // this is to prevent it from being uninitialized memory
-    type(new TypeSymbol(SymbolKind::Unknown,name,location))
 {
 }
 

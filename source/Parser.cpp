@@ -22,6 +22,39 @@ CompilationUnitSyntax* Parser::parseCompilationUnit() {
     return alloc.emplace<CompilationUnitSyntax>(members, eof);
 }
 
+const SyntaxNode* Parser::parseGuess() {
+    // First try to parse as a variable declaration.
+    if (isVariableDeclaration())
+        return parseVariableDeclaration(parseAttributes());
+
+    // Now try to parse as a statement. This will also handle plain expressions,
+    // though we might get an error about a missing semicolon that we should suppress.
+    auto& diagnostics = getDiagnostics();
+    auto statement = parseStatement(/* allowEmpty */ true);
+    if (statement->kind == SyntaxKind::ExpressionStatement) {
+        if (!diagnostics.empty() && diagnostics.back().code == DiagCode::ExpectedToken)
+            diagnostics.pop();
+
+        // Always pull the expression out for convenience.
+        return statement->as<ExpressionStatementSyntax>()->expr;
+    }
+
+    // It might not have been a statement at all, in which case try a whole compilation unit
+    if (statement->kind == SyntaxKind::EmptyStatement && !diagnostics.empty() &&
+        diagnostics.back().code == DiagCode::ExpectedStatement) {
+
+        // If there's only one member, pull it out for convenience
+        diagnostics.pop();
+        auto unit = parseCompilationUnit();
+        if (unit->members.count() == 1)
+            return unit->members[0];
+        else
+            return unit;
+    }
+
+    return statement;
+}
+
 ModuleDeclarationSyntax* Parser::parseModule() {
     return parseModule(parseAttributes());
 }

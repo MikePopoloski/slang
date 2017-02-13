@@ -7,7 +7,7 @@ namespace {
 
 SVInt testParameter(const std::string& text, int index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
-    auto tree = SyntaxTree::fromText<ModuleDeclarationSyntax>(StringRef(fullText));
+    auto tree = SyntaxTree::fromText(StringRef(fullText));
 
     auto instance = SemanticModel(tree).makeImplicitInstance(
         tree.root()->as<ModuleDeclarationSyntax>());
@@ -34,7 +34,7 @@ TEST_CASE("Bind parameter", "[binding:expressions]") {
 
 TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     // Evaluate an assignment expression (has an LValue we can observe)
-    auto syntax = SyntaxTree::fromText<ExpressionSyntax>("i = i + 3");
+    auto syntax = SyntaxTree::fromText("i = i + 3");
     SemanticModel sem { syntax };
 
     // Fabricate a symbol for the `i` variable
@@ -67,7 +67,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
 TEST_CASE("Check type propagation", "[binding:expressions]") {
     // Assignment operator should increase RHS size to 20
-    auto syntax = SyntaxTree::fromText<ExpressionSyntax>("i = 5'b0101 + 4'b1100");
+    auto syntax = SyntaxTree::fromText("i = 5'b0101 + 4'b1100");
     SemanticModel sem { syntax };
 
     // Fabricate a symbol for the `i` variable
@@ -84,18 +84,18 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     BoundExpression* bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
-    CHECK(bound->type->as<IntegralTypeSymbol>().width == 20);
+    CHECK(bound->type->width() == 20);
     BoundExpression* rhs = ((BoundAssignmentExpression *)bound)->right;
-    CHECK(rhs->type->as<IntegralTypeSymbol>().width == 20);
+    CHECK(rhs->type->width() == 20);
     BoundExpression* op1 = ((BoundBinaryExpression *)rhs)->left;
-    CHECK(op1->type->as<IntegralTypeSymbol>().width == 20);
+    CHECK(op1->type->width() == 20);
     BoundExpression* op2 = ((BoundBinaryExpression *)rhs)->right;
-    CHECK(op2->type->as<IntegralTypeSymbol>().width == 20);
+    CHECK(op2->type->width() == 20);
 }
 
 TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     // Tests a number of rules of size propogation
-    auto syntax = SyntaxTree::fromText<ExpressionSyntax>("i = 2'b1 & (((17'b101 >> 1'b1) - 4'b1100) == 21'b1)");
+    auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 4'b1100) == 21'b1)");
     SemanticModel sem { syntax };
 
     // Fabricate a symbol for the `i` variable
@@ -112,17 +112,55 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     BoundExpression* bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
-    CHECK(bound->type->as<IntegralTypeSymbol>().width == 20);
+    CHECK(bound->type->width() == 20);
     BoundExpression* rhs = ((BoundAssignmentExpression *)bound)->right;
-    CHECK(rhs->type->as<IntegralTypeSymbol>().width == 20);
+    CHECK(rhs->type->width() == 20);
     BoundExpression* rrhs = ((BoundAssignmentExpression *)rhs)->right;
-    CHECK(rrhs->type->as<IntegralTypeSymbol>().width == 1);
+    CHECK(rrhs->type->width() == 1);
     BoundExpression* op1 = ((BoundBinaryExpression *)rrhs)->left;
     BoundExpression* shiftExpr = ((BoundBinaryExpression *)op1)->left;
-    CHECK(shiftExpr->type->as<IntegralTypeSymbol>().width == 17);
-    CHECK(op1->type->as<IntegralTypeSymbol>().width == 17);
+    CHECK(shiftExpr->type->width() == 17);
+    CHECK(op1->type->width() == 17);
     BoundExpression* op2 = ((BoundBinaryExpression *)rrhs)->right;
-    CHECK(op2->type->as<IntegralTypeSymbol>().width == 21);
+    CHECK(op2->type->width() == 21);
+}
+
+TEST_CASE("Check type propagation real", "[binding:expressions]") {
+    // Tests a number of rules of size propogation
+    auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 2.0) == 21'b1)");
+    SemanticModel sem { syntax };
+
+    // Fabricate a symbol for the `i` variable
+    auto varToken = syntax.root()->getFirstToken();
+    VariableSymbol local {
+        varToken.valueText(), varToken.location(),
+        sem.getIntegralType(20, false)
+    };
+
+    // Bind the expression tree to the symbol
+    Scope scope;
+    scope.add(&local);
+    ExpressionBinder binder(sem, &scope);
+    BoundExpression* bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
+    REQUIRE(syntax.diagnostics().empty());
+
+    CHECK(bound->type->width() == 20);
+    BoundExpression* rhs = ((BoundAssignmentExpression *)bound)->right;
+    CHECK(rhs->type->width() == 20);
+    BoundExpression* rrhs = ((BoundAssignmentExpression *)rhs)->right;
+    CHECK(rrhs->type->width() == 1);
+    BoundExpression* op1 = ((BoundBinaryExpression *)rrhs)->left;
+    BoundExpression* shiftExpr = ((BoundBinaryExpression *)op1)->left;
+    CHECK(shiftExpr->type->width() == 64);
+    CHECK(shiftExpr->type->isReal());
+    BoundExpression* rshiftOp = ((BoundBinaryExpression *)shiftExpr)->right;
+    CHECK(rshiftOp->type->width() == 1);
+    BoundExpression* lshiftOp = ((BoundBinaryExpression *)shiftExpr)->left;
+    CHECK(lshiftOp->type->width() == 17);
+    CHECK(op1->type->width() == 64);
+    CHECK(op1->type->isReal());
+    BoundExpression* op2 = ((BoundBinaryExpression *)rrhs)->right;
+    CHECK(op2->type->width() == 21);
 }
 
 }
