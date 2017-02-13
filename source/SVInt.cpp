@@ -491,6 +491,8 @@ SVInt SVInt::ashr(const SVInt& rhs) const {
 }
 
 SVInt SVInt::ashr(uint32_t amount) const {
+    if (!signFlag)
+        return lshr(amount);
     if (amount == 0)
         return *this;
     if (amount >= bitWidth)
@@ -503,8 +505,9 @@ SVInt SVInt::ashr(uint32_t amount) const {
 }
 
 SVInt SVInt::ambiguousConditionalCombination(const SVInt& rhs) const {
-    if (exactlyEqual(*this, rhs)) return rhs;
-
+    if (exactlyEqual(*this, rhs)) {
+        return rhs;
+    }
     bool bothSigned = signFlag && rhs.signFlag;
 
     if (bitWidth != rhs.bitWidth) {
@@ -517,12 +520,11 @@ SVInt SVInt::ambiguousConditionalCombination(const SVInt& rhs) const {
     if (isSingleWord()) {
         // If the inputs are single word, as the inputs are unequal, we need to
         // combine into a 2-word output with a word for unknowns
-        SVInt tmp = createFillX(1, bothSigned);
+        SVInt tmp = createFillX(bitWidth, bothSigned);
         tmp.pVal[1] = val ^ rhs.val;
         tmp.pVal[0] = ~tmp.pVal[1] & val & rhs.val;
         return tmp;
     }
-
     SVInt tmp(*this);
     delete[] tmp.pVal;
     uint32_t words = getNumWords(bitWidth, false) * 2;

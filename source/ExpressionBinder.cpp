@@ -36,6 +36,7 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
         case SyntaxKind::WildcardLiteralExpression:
         case SyntaxKind::OneStepLiteralExpression:
         case SyntaxKind::UnbasedUnsizedLiteralExpression:
+            ASSERT("Not yet implemented");
             break;
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
@@ -397,7 +398,6 @@ BoundExpression* ExpressionBinder::bindConditionalExpression(const ConditionalEx
     // TODO: handle non-integral and non-real types properly
     // force four-state return type for ambiguous condition case
     const TypeSymbol* type = binaryOperatorResultType(left->type, right->type, true);
-
     return alloc.emplace<BoundTernaryExpression>(syntax, type, pred, left, right);
 
 }

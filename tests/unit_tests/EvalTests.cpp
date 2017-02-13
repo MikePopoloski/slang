@@ -5,7 +5,7 @@ using namespace slang;
 
 namespace {
 
-TEST_CASE("Simple eval", "[eval") {
+TEST_CASE("Simple eval", "[eval]") {
     ScriptSession session;
     auto value = session.eval("3 * 3");
     CHECK(value.integer() == 9);
@@ -14,6 +14,7 @@ TEST_CASE("Simple eval", "[eval") {
     value = session.eval("i + 9");
     CHECK(value.integer() == 13);
 }
+
 
 TEST_CASE("Eval function calls", "[eval]") {
     ScriptSession session;
@@ -73,5 +74,34 @@ TEST_CASE("Module eval", "[eval") {
     auto value = session.eval("A.P1 * 2");
     CHECK(value.integer() == 6);
 }
+
+// Simple test wrapper, uses ==(uint64_t) to check result
+#define EVAL_TEST(descr1, descr2, expr, result) \
+TEST_CASE(descr1, descr2) { \
+    ScriptSession session; \
+    auto value = session.eval(expr); \
+    CHECK(value.integer() == result); \
+}
+
+// Wrapper uses exactlyEqual and parses a text-specificied SVInt
+#define EVAL_TEST_EX(descr1, descr2, expr, result) \
+TEST_CASE(descr1, descr2) { \
+    ScriptSession session; \
+    auto value = session.eval(expr); \
+    CHECK(exactlyEqual(value.integer(), SVInt(StringRef(result)))); \
+}
+
+EVAL_TEST("lshl", "[eval]", "4 << 2", 16);
+EVAL_TEST("ashl", "[eval]", "4 <<< 2", 16);
+EVAL_TEST("lshr", "[eval]", "4 >> 1", 2);
+EVAL_TEST_EX("ashr", "[eval]", "-4 >>> 1", "-2");
+EVAL_TEST("conditionalT", "[eval]", "2 == 2 ? 5 : 4", 5);
+EVAL_TEST("conditionalF", "[eval]", "(2 * 2) == 3 ? 5 : 4", 4);
+EVAL_TEST_EX("conditionalU", "[eval]", "(1 / 0) ? 5 : 6", "32'sb1xx");
+EVAL_TEST("conditionalUSame", "[eval]", "(1 / 0) ? 5 : 5", 5);
+// TODO: test with larger types when parsing them works
+//EVAL_TEST_EX("conditionalU2", "[eval]", "(1 / 0) ? 128'b101 : 128'b110", "128'b1xx");
+
+
 
 }
