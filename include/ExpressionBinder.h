@@ -47,6 +47,8 @@ private:
 
     BoundStatement* bindReturnStatement(const ReturnStatementSyntax* syntax);
 
+    void bindVariableDecl(const DataDeclarationSyntax* syntax, SmallVector<const BoundStatement*>& results);
+
     // functions to check whether operators are applicable to the given operand types
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand);
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** lhs, BoundExpression** rhs);

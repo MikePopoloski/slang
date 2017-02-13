@@ -17,7 +17,8 @@ enum class BoundNodeKind {
     AssignmentExpression,
     CallExpression,
     StatementList,
-    ReturnStatement
+    ReturnStatement,
+    VariableDeclaration
 };
 
 class BoundNode {
@@ -139,6 +140,14 @@ public:
 
     BoundReturnStatement(const StatementSyntax* syntax, const BoundExpression* expr) :
         BoundStatement(BoundNodeKind::ReturnStatement, syntax), expr(expr) {}
+};
+
+class BoundVariableDecl : public BoundStatement {
+public:
+    const VariableSymbol* symbol;
+
+    BoundVariableDecl(const VariableSymbol* symbol) :
+        BoundStatement(BoundNodeKind::VariableDeclaration, nullptr), symbol(symbol) {}
 };
 
 }

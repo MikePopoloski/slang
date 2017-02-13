@@ -68,6 +68,15 @@ public:
 
     const SyntaxNode* root() const { return rootNode; }
 
+    // This is a shared default source manager for cases where the user doesn't
+    // care about managing the lifetime of loaded source. Note that all of
+    // the source loaded by this thing will live in memory for the lifetime of
+    // the process.
+    static SourceManager& getDefaultSourceManager() {
+        static SourceManager instance;
+        return instance;
+    }
+
 private:
     SyntaxTree(const SyntaxNode* root, SourceManager& sourceManager,
                BumpAllocator&& alloc, Diagnostics&& diagnostics) :
@@ -89,15 +98,6 @@ private:
     SourceManager& sourceMan;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
-
-    // This is a shared default source manager for cases where the user doesn't
-    // care about managing the lifetime of loaded source. Note that all of
-    // the source loaded by this thing will live in memory for the lifetime of
-    // the process.
-    static SourceManager& getDefaultSourceManager() {
-        static SourceManager instance;
-        return instance;
-    }
 };
 
 }

@@ -45,6 +45,7 @@ ConstantValue ConstantEvaluator::evaluate(const BoundNode* tree) {
         case BoundNodeKind::CallExpression: return evaluateCall((BoundCallExpression*)tree);
         case BoundNodeKind::StatementList: return evaluateStatementList((BoundStatementList*)tree);
         case BoundNodeKind::ReturnStatement: return evaluateReturn((BoundReturnStatement*)tree);
+        case BoundNodeKind::VariableDeclaration: return evaluateVariableDecl((BoundVariableDecl*)tree);
 
             DEFAULT_UNREACHABLE;
     }
@@ -106,6 +107,7 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* exp
         case SyntaxKind::GreaterThanExpression: return SVInt(l > r);
         case SyntaxKind::LessThanEqualExpression: return SVInt(l <= r);
         case SyntaxKind::LessThanExpression: return SVInt(l < r);
+        case SyntaxKind::PowerExpression: return l.pow(r);
             DEFAULT_UNREACHABLE;
     }
     return nullptr;
@@ -140,11 +142,15 @@ ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpress
 }
 
 ConstantValue ConstantEvaluator::evaluateCall(const BoundCallExpression* expr) {
+    // If this is a system function we will just evaluate it directly
+    auto subroutine = expr->subroutine;
+    if (subroutine->systemFunction != SystemFunction::Unknown)
+        return evaluateSystemCall(subroutine->systemFunction, expr->arguments);
+
     // Create a new frame that will become the head of the call stack.
     // Don't actually update that pointer until we finish evaluating arguments.
     Frame newFrame { currentFrame };
 
-    auto subroutine = expr->subroutine;
     for (uint32_t i = 0; i < subroutine->arguments.count(); i++)
         newFrame.temporaries[subroutine->arguments[i]] = evaluate(expr->arguments[i]);
 
@@ -157,14 +163,39 @@ ConstantValue ConstantEvaluator::evaluateCall(const BoundCallExpression* expr) {
     return std::move(result);
 }
 
-ConstantValue ConstantEvaluator::evaluateStatementList(const BoundStatementList* stmt) {
-    for (auto item : stmt->list)
-        return evaluate(item);
+ConstantValue ConstantEvaluator::evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments) {
+    SmallVectorSized<ConstantValue, 8> args;
+    for (auto arg : arguments)
+        args.emplace(evaluate(arg));
+
+    switch (func) {
+        case SystemFunction::clog2: return SVInt(clog2(args[0].integer()));
+
+            DEFAULT_UNREACHABLE;
+    }
     return nullptr;
+}
+
+ConstantValue ConstantEvaluator::evaluateStatementList(const BoundStatementList* stmt) {
+    ConstantValue result;
+    for (auto item : stmt->list) {
+        result = evaluate(item);
+        if (item->kind == BoundNodeKind::ReturnStatement)
+            break;
+    }
+    return result;
 }
 
 ConstantValue ConstantEvaluator::evaluateReturn(const BoundReturnStatement* stmt) {
     return evaluate(stmt->expr);
+}
+
+ConstantValue ConstantEvaluator::evaluateVariableDecl(const BoundVariableDecl* decl) {
+    // Create storage for the variable
+    auto& storage = createTemporary(decl->symbol);
+    if (decl->symbol->initializer)
+        storage = evaluate(decl->symbol->initializer);
+    return nullptr;
 }
 
 bool ConstantEvaluator::evaluateLValue(const BoundExpression* expr, LValue& lvalue) {

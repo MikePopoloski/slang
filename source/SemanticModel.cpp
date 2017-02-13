@@ -42,6 +42,7 @@ SemanticModel::SemanticModel(SyntaxTree& tree) :
 SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable) :
     alloc(alloc), diagnostics(diagnostics), declTable(declTable)
 {
+    // Register built-in types
     knownTypes[SyntaxKind::ShortIntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword, 16, true, false);
     knownTypes[SyntaxKind::IntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword, 32, true, false);
     knownTypes[SyntaxKind::LongIntType] = alloc.emplace<IntegralTypeSymbol>(TokenKind::LongIntKeyword, 64, true, false);
@@ -60,7 +61,14 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
     knownTypes[SyntaxKind::EventType] = alloc.emplace<TypeSymbol>(SymbolKind::EventType, "event", SourceLocation());
     knownTypes[SyntaxKind::Unknown] = alloc.emplace<ErrorTypeSymbol>();
 
-    makePackages();
+    // Register built-in system functions
+    auto intType = getKnownType(SyntaxKind::IntType);
+    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+    
+    args.append(alloc.emplace<FormalArgumentSymbol>(intType));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2));
+	
+	makePackages();
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
@@ -276,7 +284,7 @@ const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationS
 
     // For now only support simple function names
     auto name = proto->name->getFirstToken();
-    auto funcScope = alloc.emplace<Scope>();
+    auto funcScope = alloc.emplace<Scope>(scope);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
 
