@@ -304,6 +304,7 @@ enum class SyntaxKind : uint16_t {
     TypeReference,
     StructUnionMember,
     DotMemberClause,
+    Untyped,
 
     // statements
     NamedLabel,
@@ -408,6 +409,9 @@ enum class SyntaxKind : uint16_t {
     FunctionPortList,
     FunctionPrototype,
     FunctionDeclaration,
+    LetPort,
+    LetPortList,
+    LetDeclaration,
     TaskDeclaration,
     ExtendsClause,
     ImplementsClause,
@@ -504,6 +508,7 @@ bool isPossibleFunctionPort(TokenKind kind);
 bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);
 bool isPossibleVectorDigit(TokenKind kind);
+bool isPossibleLetPortItem(TokenKind kind);
 bool isStatement(SyntaxKind kind);
 bool isExpression(SyntaxKind kind);
 

@@ -3156,6 +3156,30 @@ protected:
     }
 };
 
+struct UntypedSyntax : public DataTypeSyntax {
+    Token untyped;
+
+    UntypedSyntax(Token untyped) :
+        DataTypeSyntax(SyntaxKind::Untyped), untyped(untyped)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return untyped;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: untyped = token; break;
+        }
+    }
+};
+
 // ----- ASSERTIONS -----
 
 struct DeferredAssertionSyntax : public SyntaxNode {
@@ -5705,6 +5729,105 @@ protected:
             case 2: ASSERT(false); break;
             case 3: end = token; break;
             case 4: ASSERT(false); break;
+        }
+    }
+};
+
+struct LetPortSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+    DataTypeSyntax* type;
+    VariableDeclaratorSyntax* declarator;
+
+    LetPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
+        SyntaxNode(SyntaxKind::LetPort), attributes(attributes), type(type), declarator(declarator)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return type;
+            case 2: return declarator;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
+struct LetPortListSyntax : public SyntaxNode {
+    Token openParen;
+    SeparatedSyntaxList<LetPortSyntax> ports;
+    Token closeParen;
+
+    LetPortListSyntax(Token openParen, SeparatedSyntaxList<LetPortSyntax> ports, Token closeParen) :
+        SyntaxNode(SyntaxKind::LetPortList), openParen(openParen), ports(ports), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return openParen;
+            case 1: return &ports;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
+        }
+    }
+};
+
+struct LetDeclarationSyntax : public MemberSyntax {
+    Token let;
+    Token identifier;
+    LetPortListSyntax* portList;
+    EqualsValueClauseSyntax* initializer;
+    Token semi;
+
+    LetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token let, Token identifier, LetPortListSyntax* portList, EqualsValueClauseSyntax* initializer, Token semi) :
+        MemberSyntax(SyntaxKind::LetDeclaration, attributes), let(let), identifier(identifier), portList(portList), initializer(initializer), semi(semi)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return let;
+            case 2: return identifier;
+            case 3: return portList;
+            case 4: return initializer;
+            case 5: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: let = token; break;
+            case 2: identifier = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+            case 5: semi = token; break;
         }
     }
 };
