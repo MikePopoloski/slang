@@ -385,7 +385,7 @@ MemberSyntax* Parser::parseMember() {
             return parseContinuousAssign(attributes);
         case TokenKind::InitialKeyword: {
             auto keyword = consume();
-            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement(false));
+            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement());
         }
         case TokenKind::FinalKeyword:
         case TokenKind::AlwaysKeyword:
@@ -393,7 +393,7 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::AlwaysFFKeyword:
         case TokenKind::AlwaysLatchKeyword: {
             auto keyword = consume();
-            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement());
+            return alloc.emplace<ProceduralBlockSyntax>(getProceduralBlockKind(keyword.kind), attributes, keyword, parseStatement(false));
         }
         case TokenKind::ForKeyword:
             return parseLoopGenerateConstruct(attributes);
