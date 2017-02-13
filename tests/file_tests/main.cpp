@@ -27,8 +27,6 @@ int main() {
             printf("Parsing '%s'\n", p.str().c_str());
             printf("%s\n\n", diagWriter.report(tree.diagnostics()).c_str());
         }
-        //printf("%s", ((CompilationUnitSyntax*)tree.root())->
-          //  toString(SyntaxToStringFlags::IncludeTrivia).c_str());
         errors += tree.diagnostics().count();
         files++;
 
@@ -42,18 +40,17 @@ int main() {
     printf("\n");
     printf("Finished parsing %d files; %d errors found\n\n", files, errors);
 
-    //printf("creating model ...\n");
     BumpAllocator alloc {4096};
     SemanticModel model {alloc, diags, table};
 
-    //printf("iterating over top-level modules:\n");
+    model.makePackages();
+
     int modules = 0;
     for (const auto modulep : table.getTopLevelModules()) {
-        //printf("\tinstantiating module %s\n", modulep->header->name.toString().c_str());
         auto inst = model.makeImplicitInstance(modulep);
         modules++;
     }
 
     printf("\n");
-    printf("Finished elaborating %d modules; %d errors found\n\n", modules, errors);
+    printf("Finished elaborating %d top-level modules; %d errors found\n\n", modules, errors);
 }

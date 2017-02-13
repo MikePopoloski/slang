@@ -66,4 +66,12 @@ endfunction
     CHECK(value.integer() == 131072);
 }
 
+TEST_CASE("Module eval", "[eval") {
+    ScriptSession session;
+    auto module = session.eval("module A; localparam P1 = 3; endmodule");
+    CHECK(module);
+    auto value = session.eval("A.P1 * 2");
+    CHECK(value.integer() == 6);
+}
+
 }

@@ -67,8 +67,6 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
     args.append(alloc.emplace<FormalArgumentSymbol>(intType));
     systemScope.add(alloc.emplace<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2));
-
-	makePackages();
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
@@ -77,7 +75,7 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
     makePublicParameters(parameters, syntax, nullptr, scope, SourceLocation(), true);
 
     const ModuleSymbol* module = makeModule(syntax, parameters.copy(alloc), scope);
-    return alloc.emplace<InstanceSymbol>(module, true);
+    return alloc.emplace<InstanceSymbol>(module, module->name, SourceLocation(), true);
 }
 
 void SemanticModel::makePackages() {
@@ -122,10 +120,12 @@ void SemanticModel::makePackages() {
     for (auto pkg : declTable.getPackages()) {
         auto name = pkg->header->name.valueText();
         auto pkgSym = packages.lookup(name)->as<ModuleSymbol>();
-        for (size_t i = 0; auto paramSym = (ParameterSymbol*)pkgSym.scope->getNth(SymbolKind::Parameter, i); i++) {
-            for (auto paramSyntax : paramSym->syntax->declarators)
-                if (paramSyntax->name.valueText() == paramSym->name)
-                    evaluateParameter(paramSym, paramSyntax->initializer->expr, pkgSym.scope);
+        for (auto sym : pkgSym.scope->symbols()) {
+            if (sym->kind != SymbolKind::Parameter) continue;
+            auto paramSym = sym->as<ParameterSymbol>();
+            for (auto paramSyntax : paramSym.syntax->declarators)
+                if (paramSyntax->name.valueText() == paramSym.name)
+                    evaluateParameter(&paramSym, paramSyntax->initializer->expr, pkgSym.scope);
         }
     }
 }
@@ -512,7 +512,7 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
         // Get a symbol for this particular parameterized form of the module
         Scope * scope = alloc.emplace<Scope>();
         const ModuleSymbol* module = makeModule(decl, parameters, scope);
-        results.append(alloc.emplace<InstanceSymbol>(module, false));
+        results.append(alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false));
     }
 }
 

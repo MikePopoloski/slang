@@ -36,6 +36,7 @@ public:
 
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
+    void makePackages();
     InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
     const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, Scope* scope);
     const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax* syntax, Scope* scope);
@@ -93,8 +94,6 @@ private:
     // Process attributes and convert them to a normalized form. No specific handling is done for attribute
     // types, we just pull out their values here.
     void makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes);
-
-    void makePackages();
 
     const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters, Scope *scope);
     void handlePackageImport(const PackageImportDeclarationSyntax* syntax, Scope* scope);
