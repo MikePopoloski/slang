@@ -74,8 +74,13 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
     Scope* scope = alloc.emplace<Scope>();
     makePublicParameters(parameters, syntax, nullptr, scope, SourceLocation(), true);
 
+<<<<<<< 3adcc8d74fb67acb4608df071d7d7bfea2449658
     const ModuleSymbol* module = makeModule(syntax, parameters.copy(alloc), scope);
     return alloc.emplace<InstanceSymbol>(module, true);
+=======
+    const ModuleSymbol* module = makeModule(syntax, parameters.copy(alloc));
+    return alloc.emplace<InstanceSymbol>(module, module->name, SourceLocation(), true);
+>>>>>>> instances have name and location, implicit instances have the same name as module
 }
 
 void SemanticModel::makePackages() {
@@ -512,7 +517,7 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
         // Get a symbol for this particular parameterized form of the module
         Scope * scope = alloc.emplace<Scope>();
         const ModuleSymbol* module = makeModule(decl, parameters, scope);
-        results.append(alloc.emplace<InstanceSymbol>(module, false));
+        results.append(alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false));
     }
 }
 

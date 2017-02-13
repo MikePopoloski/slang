@@ -243,8 +243,8 @@ public:
     const ModuleSymbol* module;
     bool implicit;
 
-    InstanceSymbol(const ModuleSymbol* module, bool implicit) :
-        Symbol(SymbolKind::Instance, module->name, SourceLocation()),
+    InstanceSymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit) :
+        Symbol(SymbolKind::Instance, name, location),
         module(module), implicit(implicit) {}
 
     template<typename T>
