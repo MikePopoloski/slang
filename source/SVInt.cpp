@@ -486,6 +486,25 @@ SVInt SVInt::ashr(const SVInt& rhs) const {
 
     uint16_t contractedWidth = bitWidth - rhs.getAssertUInt64();
     SVInt tmp = lshr(rhs);
+
+    if (contractedWidth <= 64 && getNumWords() > 1) {
+        // signExtend won't be safe as it will assume it is operating on
+        // a single-word input when it isn't
+        // so let's manually take care of that case here.
+
+        uint64_t* newData = new uint64_t[getNumWords()]();
+        // get sign-extended value
+        uint64_t newVal = tmp.pVal[0] << (SVInt::BITS_PER_WORD - contractedWidth);
+        newData[0] = (int64_t)newVal >> (SVInt::BITS_PER_WORD - contractedWidth);
+        for (size_t i = 1; i < getNumWords(); ++i) {
+            // sign extend the rest based on original sign
+            newData[i] = val & (1L << 63) ? 0 : ~0L;
+        }
+        SVInt ret(newData, bitWidth, signFlag, false);
+        ret.clearUnusedBits();
+        return ret;
+    }
+    // Pretend our width is just the width we shifted to, then signExtend
     tmp.bitWidth = contractedWidth;
     return signExtend(tmp, bitWidth);
 }
@@ -525,20 +544,15 @@ SVInt SVInt::ambiguousConditionalCombination(const SVInt& rhs) const {
         tmp.pVal[0] = ~tmp.pVal[1] & val & rhs.val;
         return tmp;
     }
-    SVInt tmp(*this);
-    delete[] tmp.pVal;
-    uint32_t words = getNumWords(bitWidth, false) * 2;
-    tmp.pVal = new uint64_t[words];
+    uint32_t words = getNumWords(bitWidth, false);
+    uint64_t* data = new uint64_t[words * 2]();
 
     // Unkown if either bit is unknown or bits differ
-    for (uint32_t i = 0; i < words; i++)
-        tmp.pVal[i + words] = (unknownFlag ? 0 : pVal[i + words]) | (rhs.unknownFlag ? 0 : rhs.pVal[i + words]) | (pVal[i] ^ rhs.pVal[i]);
-
-    for (uint32_t i = 0; i < words; i++)
-        tmp.pVal[i] = ~tmp.pVal[i + words] & pVal[i] & rhs.pVal[i];
-
-    tmp.clearUnusedBits();
-    return tmp;
+    for (uint32_t i = 0; i < words; i++) {
+        data[i + words] = (unknownFlag ? pVal[i + words] : 0) | (rhs.unknownFlag ? rhs.pVal[i + words] : 0) | (pVal[i] ^ rhs.pVal[i]);
+        data[i] = ~data[i + words] & pVal[i] & rhs.pVal[i];
+    }
+    return SVInt(data, bitWidth, bothSigned, true);
 }
 
 size_t SVInt::hash(size_t seed) const {

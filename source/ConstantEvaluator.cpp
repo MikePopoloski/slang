@@ -68,7 +68,7 @@ ConstantValue ConstantEvaluator::evaluateVariable(const BoundVariable* expr) {
 }
 
 ConstantValue ConstantEvaluator::evaluateUnary(const BoundUnaryExpression* expr) {
-    const auto& v = evaluate(expr->operand).integer();
+    const auto v = evaluate(expr->operand).integer();
 
     switch (expr->syntax->kind) {
         case SyntaxKind::UnaryPlusExpression: return v;
@@ -87,8 +87,8 @@ ConstantValue ConstantEvaluator::evaluateUnary(const BoundUnaryExpression* expr)
 }
 
 ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* expr) {
-    const auto& l = evaluate(expr->left).integer();
-    const auto& r = evaluate(expr->right).integer();
+    const auto l = evaluate(expr->left).integer();
+    const auto r = evaluate(expr->right).integer();
 
     switch (expr->syntax->kind) {
         case SyntaxKind::AddExpression: return l + r;
@@ -119,13 +119,14 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* exp
 }
 
 ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpression* expr) {
-    const auto& pred = (logic_t)evaluate(expr->pred).integer();
+    const auto pred = (logic_t)evaluate(expr->pred).integer();
 
     if (pred.isUnknown()) {
-        // do wacky thing
-        const auto& l = evaluate(expr->left).integer();
-        const auto& r = evaluate(expr->right).integer();
-        return l.ambiguousConditionalCombination(r);
+        // do strange combination operation
+        const auto l = evaluate(expr->left).integer();
+        const auto r = evaluate(expr->right).integer();
+        const auto k = l.ambiguousConditionalCombination(r);
+        return k;
     } else if (bool(pred)) {
         // Only one side gets evaluate if true or false
         return evaluate(expr->left).integer();
@@ -134,7 +135,6 @@ ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpressio
     }
 
     return nullptr;
-
 }
 
 ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpression* expr) {
@@ -143,8 +143,8 @@ ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpress
         return nullptr;
 
     auto rvalue = evaluate(expr->right);
-    const SVInt& l = evaluate(expr->left).integer();
-    const SVInt& r = rvalue.integer();
+    const SVInt l = evaluate(expr->left).integer();
+    const SVInt r = rvalue.integer();
 
     switch (expr->syntax->kind) {
         case SyntaxKind::AssignmentExpression: lvalue.store(std::move(rvalue)); break;

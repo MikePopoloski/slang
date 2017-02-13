@@ -79,28 +79,29 @@ TEST_CASE("Module eval", "[eval") {
 #define EVAL_TEST(descr1, descr2, expr, result) \
 TEST_CASE(descr1, descr2) { \
     ScriptSession session; \
-    auto value = session.eval(expr); \
-    CHECK(value.integer() == result); \
+    auto value = session.eval(expr).integer(); \
+    CHECK(value == result); \
 }
 
 // Wrapper uses exactlyEqual and parses a text-specificied SVInt
 #define EVAL_TEST_EX(descr1, descr2, expr, result) \
 TEST_CASE(descr1, descr2) { \
     ScriptSession session; \
-    auto value = session.eval(expr); \
-    CHECK(exactlyEqual(value.integer(), SVInt(StringRef(result)))); \
+    auto value = session.eval(expr).integer(); \
+    CHECK(exactlyEqual(value, SVInt(StringRef(result)))); \
 }
 
 EVAL_TEST("lshl", "[eval]", "4 << 2", 16);
 EVAL_TEST("ashl", "[eval]", "4 <<< 2", 16);
 EVAL_TEST("lshr", "[eval]", "4 >> 1", 2);
 EVAL_TEST_EX("ashr", "[eval]", "-4 >>> 1", "-2");
+EVAL_TEST_EX("ashr_long", "[eval]", "-65'sd4 >>> 1", "-65'sb10");
+EVAL_TEST_EX("conditionalU2", "[eval]", "(1 / 0) ? 128'b101 : 128'b110", "128'b1xx");
 EVAL_TEST("conditionalT", "[eval]", "2 == 2 ? 5 : 4", 5);
 EVAL_TEST("conditionalF", "[eval]", "(2 * 2) == 3 ? 5 : 4", 4);
 EVAL_TEST_EX("conditionalU", "[eval]", "(1 / 0) ? 5 : 6", "32'sb1xx");
 EVAL_TEST("conditionalUSame", "[eval]", "(1 / 0) ? 5 : 5", 5);
-// TODO: test with larger types when parsing them works
-//EVAL_TEST_EX("conditionalU2", "[eval]", "(1 / 0) ? 128'b101 : 128'b110", "128'b1xx");
+
 
 
 
