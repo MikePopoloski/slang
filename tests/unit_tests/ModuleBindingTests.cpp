@@ -298,6 +298,9 @@ endmodule
     CHECK(someVar.type->as<EnumTypeSymbol>().values[1]->value.integer() == 4);
     CHECK(someVar.type->as<EnumTypeSymbol>().values[2]->value.integer() == 5);
 
+    const auto& b = instance.module->scope->lookup("B")->as<EnumValueSymbol>();
+    CHECK(b.value.integer() == 4);
+
     // TODO: test (and implement) all the restrictions on enum and enum values
 }
 

@@ -195,6 +195,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, Sc
                 }
                 EnumValueSymbol *valSymbol = alloc.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location(), &baseType, nextVal);
                 values.append(valSymbol);
+                scope->add(valSymbol);
                 ++nextVal;
             }
             return alloc.emplace<EnumTypeSymbol>(&baseType, enumSyntax->keyword.location(), values.copy(alloc));
