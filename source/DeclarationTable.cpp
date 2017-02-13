@@ -81,30 +81,43 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() 
     return ArrayRef<const ModuleDeclarationSyntax*>(topLevel.begin(), topLevel.end());
 }
 
+bool DeclarationTable::addRootNode(UnitDecls& unit, const MemberSyntax* member) {
+    switch (member->kind) {
+        case SyntaxKind::PackageDeclaration:
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration: {
+            // ignore empty names
+            auto decl = member->as<ModuleDeclarationSyntax>();
+            auto name = decl->header->name;
+            if (name.valueText())
+                unit.rootNodes.push_back(decl);
+            if (decl->header->moduleKeyword.kind == TokenKind::PackageKeyword)
+                packages.append(decl);
+            nameLookup.emplace(name.valueText(), DeclAndFlag(decl));
+            std::vector<NameSet> scopeStack;
+            visit(decl, unit, scopeStack);
+            return true;
+        }
+        default:
+            break;
+    }
+    return false;
+}
+
+void DeclarationTable::addMember(const MemberSyntax *member) {
+    UnitDecls unit;
+    addRootNode(unit, member);
+    units.emplace(std::move(unit));
+    dirty = true;
+}
+
 void DeclarationTable::addSyntaxTree(const SyntaxTree* tree) {
     // find all root modules in this compilation unit
     // TODO: check that tree has compilation unit
     UnitDecls unit;
     for (const MemberSyntax* member : tree->root()->as<CompilationUnitSyntax>()->members) {
-        switch (member->kind) {
-            case SyntaxKind::PackageDeclaration:
-            case SyntaxKind::ModuleDeclaration:
-            case SyntaxKind::InterfaceDeclaration:
-            case SyntaxKind::ProgramDeclaration: {
-                // ignore empty names
-                auto decl = member->as<ModuleDeclarationSyntax>();
-                auto name = decl->header->name;
-                if (name.valueText())
-                    unit.rootNodes.push_back(decl);
-                if (decl->header->moduleKeyword.kind == TokenKind::PackageKeyword)
-                    packages.append(decl);
-                std::vector<NameSet> scopeStack;
-                visit(decl, unit, scopeStack);
-                break;
-            }
-            default:
-                break;
-        }
+        addRootNode(unit, member);
     }
     units.emplace(std::move(unit));
     dirty = true;
