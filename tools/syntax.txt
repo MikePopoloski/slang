@@ -686,7 +686,9 @@ StatementSyntax statement
 ForeachLoopListSyntax kind=ForeachLoopList
 token openParen
 NameSyntax arrayName
+token openBracket
 separated_list<NameSyntax> loopVariables
+token closeBracket
 token closeParen
 
 ForeachLoopStatementSyntax base=StatementSyntax kind=ForeachLoopStatement
