@@ -66,12 +66,40 @@ endfunction
     CHECK(value.integer() == 131072);
 }
 
-TEST_CASE("Module eval", "[eval") {
+TEST_CASE("Module param", "[eval]") {
     ScriptSession session;
-    auto module = session.eval("module A; localparam P1 = 3; endmodule");
+    auto module = session.eval("module A#(parameter int P); localparam LP = P + 3; endmodule");
     CHECK(module);
-    auto value = session.eval("A.P1 * 2");
+    auto instance = session.eval("A #(.P(2)) a0();");
+    CHECK(instance);
+    auto value = session.eval("a0.LP");
+    CHECK(value.integer() == 5);
+}
+
+TEST_CASE("Interface param", "[eval]") {
+    ScriptSession session;
+    auto interface = session.eval("interface IFACE#(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");
+    CHECK(interface);
+    auto instance = session.eval("IFACE #(6) i0();");
+    CHECK(instance);
+    auto value = session.eval("i0.W");
     CHECK(value.integer() == 6);
 }
+
+/*
+TEST_CASE("Module interface port parametrization", "[eval]") {
+    ScriptSession session;
+    auto interface = session.eval("interface IFACE#(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");
+    CHECK(interface);
+    auto module = session.eval("module M(IFACE iface); localparam int LP = iface.W; endmodule");
+    CHECK(module);
+    auto tb = session.eval("module tb; IFACE #(6) i0(); M m0(i0); endmodule");
+    CHECK(tb);
+    auto instance = session.eval("tb tb();");
+    CHECK(instance);
+    auto value = session.eval("tb.m0.LP");
+    CHECK(value.integer() == 6);
+}
+*/
 
 }
