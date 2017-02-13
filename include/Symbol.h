@@ -179,7 +179,7 @@ public:
 
     ParameterSymbol(StringRef name, SourceLocation location,
                     const ParameterDeclarationSyntax* syntax,
-                    bool isLocal);
+                    bool isLocal, const TypeSymbol *type);
 
     static constexpr SymbolKind mykind = SymbolKind::Parameter;
 };
