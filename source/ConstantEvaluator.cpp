@@ -125,8 +125,7 @@ ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpressio
         // do strange combination operation
         const auto l = evaluate(expr->left).integer();
         const auto r = evaluate(expr->right).integer();
-        const auto k = l.ambiguousConditionalCombination(r);
-        return k;
+        return l.ambiguousConditionalCombination(r);
     } else if (bool(pred)) {
         // Only one side gets evaluate if true or false
         return evaluate(expr->left).integer();

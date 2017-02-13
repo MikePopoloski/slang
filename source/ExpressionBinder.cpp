@@ -389,7 +389,7 @@ BoundExpression* ExpressionBinder::bindSubroutineCall(const InvocationExpression
 }
 
 BoundExpression* ExpressionBinder::bindConditionalExpression(const ConditionalExpressionSyntax* syntax) {
-    // TODO: handle the pattern matching conditioanl predicate case, rather than just assuming that it's a simple
+    // TODO: handle the pattern matching conditional predicate case, rather than just assuming that it's a simple
     // expression
     BoundExpression* pred = bindAndPropagate(syntax->predicate->conditions[0]->expr);
     BoundExpression* left = bindAndPropagate(syntax->left);
