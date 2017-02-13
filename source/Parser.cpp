@@ -23,7 +23,11 @@ CompilationUnitSyntax* Parser::parseCompilationUnit() {
 }
 
 const SyntaxNode* Parser::parseGuess() {
-    // First try to parse as a variable declaration.
+    // First try to parse as an instantiation
+    if (isHierarchyInstantiation())
+        return parseHierarchyInstantiation(parseAttributes());
+
+    // try to parse as a variable declaration.
     if (isVariableDeclaration())
         return parseVariableDeclaration(parseAttributes());
 
