@@ -33,6 +33,7 @@ enum class SymbolKind {
     GenerateBlock,
     ProceduralBlock,
     Variable,
+    Instance,
     FormalArgument,
     Subroutine
 };
@@ -243,12 +244,13 @@ public:
     bool implicit;
 
     InstanceSymbol(const ModuleSymbol* module, bool implicit) :
+        Symbol(SymbolKind::Instance, module->name, SourceLocation()),
         module(module), implicit(implicit) {}
 
     template<typename T>
     const T& getChild(uint32_t index) const { return module->children[index]->as<T>(); }
 
-    static constexpr SymbolKind mykind = SymbolKind::Unknown;
+    static constexpr SymbolKind mykind = SymbolKind::Instance;
 };
 
 class GenvarSymbol : public Symbol {
