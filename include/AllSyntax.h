@@ -5702,14 +5702,12 @@ protected:
 struct LetPortSyntax : public SyntaxNode {
     SyntaxList<AttributeInstanceSyntax> attributes;
     DataTypeSyntax* type;
-    Token identifier;
-    SyntaxList<VariableDimensionSyntax> dimensions;
-    EqualsValueClauseSyntax* initializer;
+    VariableDeclaratorSyntax* declarator;
 
-    LetPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, Token identifier, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer) :
-        SyntaxNode(SyntaxKind::LetPort), attributes(attributes), type(type), identifier(identifier), dimensions(dimensions), initializer(initializer)
+    LetPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
+        SyntaxNode(SyntaxKind::LetPort), attributes(attributes), type(type), declarator(declarator)
     {
-        childCount += 5;
+        childCount += 3;
     }
 
 protected:
@@ -5717,9 +5715,7 @@ protected:
         switch (index) {
             case 0: return &attributes;
             case 1: return type;
-            case 2: return identifier;
-            case 3: return &dimensions;
-            case 4: return initializer;
+            case 2: return declarator;
             default: return nullptr;
         }
     }
@@ -5728,10 +5724,9 @@ protected:
         switch (index) {
             case 0: ASSERT(false); break;
             case 1: ASSERT(false); break;
-            case 2: identifier = token; break;
-            case 3: ASSERT(false); break;
-            case 4: ASSERT(false); break;
+            case 2: ASSERT(false); break;
         }
+        (void)token;
     }
 };
 
@@ -5770,11 +5765,12 @@ struct LetDeclarationSyntax : public MemberSyntax {
     Token identifier;
     LetPortListSyntax* portList;
     EqualsValueClauseSyntax* initializer;
+    Token semi;
 
-    LetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token let, Token identifier, LetPortListSyntax* portList, EqualsValueClauseSyntax* initializer) :
-        MemberSyntax(SyntaxKind::LetDeclaration, attributes), let(let), identifier(identifier), portList(portList), initializer(initializer)
+    LetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token let, Token identifier, LetPortListSyntax* portList, EqualsValueClauseSyntax* initializer, Token semi) :
+        MemberSyntax(SyntaxKind::LetDeclaration, attributes), let(let), identifier(identifier), portList(portList), initializer(initializer), semi(semi)
     {
-        childCount += 4;
+        childCount += 5;
     }
 
 protected:
@@ -5785,6 +5781,7 @@ protected:
             case 2: return identifier;
             case 3: return portList;
             case 4: return initializer;
+            case 5: return semi;
             default: return nullptr;
         }
     }
@@ -5796,6 +5793,7 @@ protected:
             case 2: identifier = token; break;
             case 3: ASSERT(false); break;
             case 4: ASSERT(false); break;
+            case 5: semi = token; break;
         }
     }
 };

@@ -1656,36 +1656,34 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
     if (peek(TokenKind::LetKeyword)) {
         auto let = consume();
         auto identifier = expect(TokenKind::Identifier);
-        auto openParen = expect(TokenKind::OpenParenthesis);
-        SmallVectorSized<TokenOrSyntax, 4> buffer;
-        Token closeParen;
+        LetPortListSyntax* portList = nullptr;
+        if (peek(TokenKind::OpenParenthesis)) {
+            auto openParen = expect(TokenKind::OpenParenthesis);
+            SmallVectorSized<TokenOrSyntax, 4> buffer;
+            Token closeParen;
 
-        parseSeparatedList<isPossibleLetPortItem, isEndOfParenList>(
-            buffer,
-            TokenKind::CloseParenthesis,
-            TokenKind::Comma,
-            closeParen,
-            DiagCode::ExpectedLetPort,
-            [this](bool) {
-                auto attributes = parseAttributes();
-                DataTypeSyntax* type;
-                if (peek(TokenKind::UntypedKeyword)) {
-                    type = alloc.emplace<UntypedSyntax>(consume());
-                } else {
-                    type = parseDataType(true);
+            parseSeparatedList<isPossibleLetPortItem, isEndOfParenList>(
+                buffer,
+                TokenKind::CloseParenthesis,
+                TokenKind::Comma,
+                closeParen,
+                DiagCode::ExpectedLetPort,
+                [this](bool) {
+                    auto attributes = parseAttributes();
+                    DataTypeSyntax* type;
+                    if (peek(TokenKind::UntypedKeyword)) {
+                        type = alloc.emplace<UntypedSyntax>(consume());
+                    } else {
+                        type = parseDataType(true);
+                    }
+                    auto declarator = parseVariableDeclarator(true);
+                    return alloc.emplace<LetPortSyntax>(attributes, type, declarator);
                 }
-                auto identifier = expect(TokenKind::Identifier);
-                auto dimensions = parseDimensionList();
-                EqualsValueClauseSyntax* initializer = nullptr;
-                if (peek(TokenKind::Equals)) {
-                    initializer = alloc.emplace<EqualsValueClauseSyntax>(consume(), parseExpression());
-                }
-                return alloc.emplace<LetPortSyntax>(attributes, type, identifier, dimensions, initializer);
-            }
-        );
-        auto portList = alloc.emplace<LetPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+            );
+            portList = alloc.emplace<LetPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+        }
         auto initializer = alloc.emplace<EqualsValueClauseSyntax>(expect(TokenKind::Equals), parseExpression());
-        return alloc.emplace<LetDeclarationSyntax>(attributes, let, identifier, portList, initializer);
+        return alloc.emplace<LetDeclarationSyntax>(attributes, let, identifier, portList, initializer, expect(TokenKind::Semicolon));
     }
 
     // TODO: other kinds of declarations besides data

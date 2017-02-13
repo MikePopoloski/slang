@@ -988,9 +988,7 @@ NamedBlockClauseSyntax endBlockName
 LetPortSyntax kind=LetPort
 list<AttributeInstanceSyntax> attributes
 DataTypeSyntax type
-token identifier
-list<VariableDimensionSyntax> dimensions
-EqualsValueClauseSyntax initializer
+VariableDeclaratorSyntax declarator
 
 LetPortListSyntax kind=LetPortList
 token openParen
@@ -1002,6 +1000,7 @@ token let
 token identifier
 LetPortListSyntax portList
 EqualsValueClauseSyntax initializer
+token semi
 
 ExtendsClauseSyntax kind=ExtendsClause
 token keyword
