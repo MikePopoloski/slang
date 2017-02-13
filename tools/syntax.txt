@@ -549,6 +549,9 @@ ImplicitTypeSyntax base=DataTypeSyntax kind=ImplicitType
 token signing
 list<VariableDimensionSyntax> dimensions
 
+UntypedSyntax base=DataTypeSyntax kind=Untyped
+token untyped
+
 // ----- ASSERTIONS -----
 
 DeferredAssertionSyntax kind=DeferredAssertion
@@ -981,6 +984,24 @@ FunctionPrototypeSyntax prototype
 list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax endBlockName
+
+LetPortSyntax kind=LetPort
+list<AttributeInstanceSyntax> attributes
+DataTypeSyntax type
+token identifier
+list<VariableDimensionSyntax> dimensions
+EqualsValueClauseSyntax initializer
+
+LetPortListSyntax kind=LetPortList
+token openParen
+separated_list<LetPortSyntax> ports
+token closeParen
+
+LetDeclarationSyntax kind=LetDeclaration base=MemberSyntax
+token let
+token identifier
+LetPortListSyntax portList
+EqualsValueClauseSyntax initializer
 
 ExtendsClauseSyntax kind=ExtendsClause
 token keyword

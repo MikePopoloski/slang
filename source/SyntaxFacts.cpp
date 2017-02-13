@@ -831,6 +831,10 @@ bool isNotInConcatenationExpr(TokenKind kind) {
     }
 }
 
+bool isPossibleLetPortItem(TokenKind kind) {
+    return kind == TokenKind::OpenParenthesisStar || kind == TokenKind::UntypedKeyword || isPossibleDataType(kind);
+}
+
 bool isStatement(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::NamedLabel:
