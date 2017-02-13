@@ -34,6 +34,11 @@ public:
             case SyntaxKind::FunctionDeclaration:
             case SyntaxKind::TaskDeclaration:
                 return evalSubroutineDeclaration(root->as<FunctionDeclarationSyntax>());
+            case SyntaxKind::ModuleDeclaration: {
+                auto module = root->as<ModuleDeclarationSyntax>();
+                auto inst = sem.makeImplicitInstance(module);
+                return scriptScope.add(inst);
+            }
             default:
                 if (isExpression(root->kind))
                     return evalExpression(root->as<ExpressionSyntax>());
