@@ -102,7 +102,4 @@ EVAL_TEST("conditionalF", "[eval]", "(2 * 2) == 3 ? 5 : 4", 4);
 EVAL_TEST_EX("conditionalU", "[eval]", "(1 / 0) ? 5 : 6", "32'sb1xx");
 EVAL_TEST("conditionalUSame", "[eval]", "(1 / 0) ? 5 : 5", 5);
 
-
-
-
 }
