@@ -23,7 +23,7 @@ public:
     // TODO: This should be configurable through the Options system
     static constexpr size_t MaxDepth=100;
 
-    Parser(Preprocessor& preprocessor);
+    explicit Parser(Preprocessor& preprocessor);
 
     /// Parse a whole compilation unit.
     CompilationUnitSyntax* parseCompilationUnit();
@@ -35,10 +35,13 @@ public:
     StatementSyntax* parseStatement(bool allowEmpty = true);
     ModuleDeclarationSyntax* parseModule();
     ClassDeclarationSyntax* parseClass();
+    MemberSyntax* parseMember();
 
-    /// Generalized node parse function. Only certain specializations are available.
-    template<typename T>
-    const T* parse();
+    /// Generalized node parse function that tries to figure out what we're
+    /// looking at and parse that specifically. A normal batch compile won't call
+    /// this, since in a well formed program every file is a compilation unit,
+    /// but for snippets of code this can be convenient.
+    const SyntaxNode* parseGuess();
 
 private:
     ExpressionSyntax* parseMinTypMaxExpression();
@@ -54,8 +57,8 @@ private:
     ExpressionSyntax* parseOpenRangeElement();
     ElementSelectSyntax* parseElementSelect();
     SelectorSyntax* parseElementSelector();
-    NameSyntax* parseName();
-    NameSyntax* parseNamePart();
+    NameSyntax* parseName(bool isForEach = false);
+    NameSyntax* parseNamePart(bool isForEach);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
@@ -102,12 +105,13 @@ private:
     ModuleHeaderSyntax* parseModuleHeader();
     ParameterPortListSyntax* parseParameterPortList();
     ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
+    ModportItemSyntax* parseModportItem();
+    ModportDeclarationSyntax* parseModportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     NonAnsiPortSyntax* parseNonAnsiPort();
     AnsiPortSyntax* parseAnsiPort();
     AnsiPortListSyntax* parseAnsiPortList(Token openParen);
     PortHeaderSyntax* parsePortHeader(Token direction);
     PortDeclarationSyntax* parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
-    MemberSyntax* parseMember();
     TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportDeclarationSyntax* parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
@@ -118,6 +122,7 @@ private:
     HierarchyInstantiationSyntax* parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes);
     HierarchicalInstanceSyntax* parseHierarchicalInstance();
     PortConnectionSyntax* parsePortConnection();
+    FunctionPortSyntax* parseFunctionPort();
     FunctionPrototypeSyntax* parseFunctionPrototype();
     FunctionDeclarationSyntax* parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
     Token parseLifetime();
@@ -214,10 +219,23 @@ private:
     size_t depth = 0;
 };
 
-template<> inline const CompilationUnitSyntax* Parser::parse() { return parseCompilationUnit(); }
-template<> inline const ExpressionSyntax* Parser::parse() { return parseExpression(); }
-template<> inline const StatementSyntax* Parser::parse() { return parseStatement(); }
-template<> inline const ModuleDeclarationSyntax* Parser::parse() { return parseModule(); }
-template<> inline const ClassDeclarationSyntax* Parser::parse() { return parseClass(); }
+template<bool(*IsEnd)(TokenKind)>
+bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
+    int nesting = 1;
+    while (true) {
+        auto kind = peek(index).kind;
+        if (IsEnd(kind))
+            return false;
+
+        index++;
+        if (kind == start)
+            nesting++;
+        else if (kind == end) {
+            nesting--;
+            if (nesting <= 0)
+                return true;
+        }
+    }
+}
 
 }

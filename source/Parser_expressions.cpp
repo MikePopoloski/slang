@@ -571,8 +571,8 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
     }
 }
 
-NameSyntax* Parser::parseName() {
-    NameSyntax* name = parseNamePart();
+NameSyntax* Parser::parseName(bool isForEach) {
+    NameSyntax* name = parseNamePart(isForEach);
 
     bool usedDot = false;
     bool reportedError = false;
@@ -587,17 +587,20 @@ NameSyntax* Parser::parseName() {
             addError(DiagCode::ColonShouldBeDot, separator.location());
         }
 
-        name = alloc.emplace<ScopedNameSyntax>(name, separator, parseNamePart());
+        name = alloc.emplace<ScopedNameSyntax>(name, separator, parseNamePart(isForEach));
         kind = peek().kind;
     }
 
     return name;
 }
 
-NameSyntax* Parser::parseNamePart() {
+NameSyntax* Parser::parseNamePart(bool isForEach) {
     auto kind = getKeywordNameExpression(peek().kind);
     if (kind != SyntaxKind::Unknown)
         return alloc.emplace<KeywordNameSyntax>(kind, consume());
+    TokenKind next = peek().kind;
+    if (isForEach && (next == TokenKind::Comma || next == TokenKind::CloseBracket))
+        return alloc.emplace<EmptyIdentifierNameSyntax>();
 
     auto identifier = expect(TokenKind::Identifier);
     switch (peek().kind) {
@@ -606,12 +609,18 @@ NameSyntax* Parser::parseNamePart() {
             return alloc.emplace<ClassNameSyntax>(identifier, parameterValues);
         }
         case TokenKind::OpenBracket: {
-            SmallVectorSized<ElementSelectSyntax*, 4> buffer;
-            do {
-                buffer.append(parseElementSelect());
-            } while (peek(TokenKind::OpenBracket));
+            int index = 1;
+            scanTypePart<isSemicolon>(index, TokenKind::OpenBracket, TokenKind::CloseBracket);
+            if (!isForEach || peek(index).kind != TokenKind::CloseParenthesis) {
+                SmallVectorSized<ElementSelectSyntax*, 4> buffer;
+                do {
+                    buffer.append(parseElementSelect());
+                } while (peek(TokenKind::OpenBracket));
 
-            return alloc.emplace<IdentifierSelectNameSyntax>(identifier, buffer.copy(alloc));
+                return alloc.emplace<IdentifierSelectNameSyntax>(identifier, buffer.copy(alloc));
+            } else {
+                return alloc.emplace<IdentifierNameSyntax>(identifier);
+            }
         }
         default:
             return alloc.emplace<IdentifierNameSyntax>(identifier);

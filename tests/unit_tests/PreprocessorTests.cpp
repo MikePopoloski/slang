@@ -194,7 +194,7 @@ TEST_CASE("Function macro (keyword as formal argument)", "[preprocessor]") {
 }
 
 TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
-    auto& text = "`define FOO(x,y) x   ``   _blah``y\n`FOO(   bar,    _BAZ)";
+    auto& text = "`define FOO(x,y) x``_blah``y\n`FOO(   bar,    _BAZ)";
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::Identifier);
@@ -216,6 +216,33 @@ TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "bar_foo3242");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro pasting (keyword)", "[preprocessor]") {
+    auto& text = "`define FOO(x) x``gic\n`FOO(lo)";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::LogicKeyword);
+    CHECK(token.valueText() == "logic");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro pasting (mixed)", "[preprocessor]") {
+    auto& text = "`define FOO(x) ;``x\n`FOO(y)";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::Semicolon);
+    CHECK(token.valueText() == ";");
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro pasting (whitespace)", "[preprocessor]") {
+    auto& text = "`define FOO(x) x`` y\n`FOO(a)";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "a");
     CHECK(diagnostics.empty());
 }
 
@@ -498,6 +525,43 @@ TEST_CASE("timescale directive", "[preprocessor]") {
     CHECK(!diagnostics.empty());
 
     lexToken("`timescale 1.2fs / 1fs");
+    CHECK(!diagnostics.empty());
+}
+
+TEST_CASE("macro-defined include file", "[preprocessor]") {
+    auto& text =
+"`define FILE <include.svh>\n"
+"`include `FILE";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "test string");
+    CHECK(diagnostics.empty());
+
+    auto& text2 =
+"`define FILE \"include.svh\"\n"
+"`include `FILE";
+    token = lexToken(text2);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "test string");
+    CHECK(diagnostics.empty());
+
+    auto& text3 =
+"`define FILE(arg) `\"arg`\"\n"
+"`include `FILE(include.svh)";
+    token = lexToken(text3);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "test string");
+    CHECK(diagnostics.empty());
+
+
+    auto& text4 =
+"`define FILE <includesh\n"
+"`include `FILE";
+    token = lexToken(text4);
+
     CHECK(!diagnostics.empty());
 }
 

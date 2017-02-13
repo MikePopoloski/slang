@@ -20,7 +20,7 @@ module module1
         out3 = in3;
     end
 
-    logic [7:0] arr1 [2 * $bits(out2)];
+    logic [7:0] arr1 = 3;
 
     typedef struct {
         logic [$bits(arr1[0]):0] f1;
