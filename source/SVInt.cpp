@@ -484,8 +484,19 @@ SVInt SVInt::ashr(const SVInt& rhs) const {
     if (rhs >= bitWidth)
         return SVInt(bitWidth, *this >= 0 ? 0 : -1, signFlag);
 
-    uint16_t contractedWidth = bitWidth - rhs.getAssertUInt64();
-    SVInt tmp = lshr(rhs);
+    return ashr((uint32_t)rhs.getAssertUInt64());
+}
+
+SVInt SVInt::ashr(uint32_t amount) const {
+    if (!signFlag)
+        return lshr(amount);
+    if (amount == 0)
+        return *this;
+    if (amount >= bitWidth)
+        return SVInt(bitWidth, *this >= 0 ? 0 : -1, signFlag);
+
+    uint32_t contractedWidth = bitWidth - amount;
+    SVInt tmp = lshr(amount);
 
     if (contractedWidth <= 64 && getNumWords() > 1) {
         // signExtend won't be safe as it will assume it is operating on
@@ -505,20 +516,6 @@ SVInt SVInt::ashr(const SVInt& rhs) const {
         return ret;
     }
     // Pretend our width is just the width we shifted to, then signExtend
-    tmp.bitWidth = contractedWidth;
-    return signExtend(tmp, bitWidth);
-}
-
-SVInt SVInt::ashr(uint32_t amount) const {
-    if (!signFlag)
-        return lshr(amount);
-    if (amount == 0)
-        return *this;
-    if (amount >= bitWidth)
-        return SVInt(bitWidth, *this >= 0 ? 0 : -1, signFlag);
-
-    uint16_t contractedWidth = bitWidth - amount;
-    SVInt tmp = lshr(amount);
     tmp.bitWidth = contractedWidth;
     return signExtend(tmp, bitWidth);
 }
