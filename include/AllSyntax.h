@@ -4496,6 +4496,40 @@ protected:
     }
 };
 
+struct EventTriggerStatementSyntax : public StatementSyntax {
+    Token trigger;
+    TimingControlSyntax* timing;
+    NameSyntax* name;
+
+    EventTriggerStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token trigger, TimingControlSyntax* timing, NameSyntax* name) :
+        StatementSyntax(kind, label, attributes), trigger(trigger), timing(timing), name(name)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return label;
+            case 1: return &attributes;
+            case 2: return trigger;
+            case 3: return timing;
+            case 4: return name;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: trigger = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+        }
+    }
+};
+
 // ----- MODULES -----
 
 struct PortListSyntax : public SyntaxNode {

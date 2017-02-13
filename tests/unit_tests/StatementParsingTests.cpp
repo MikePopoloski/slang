@@ -196,4 +196,20 @@ TEST_CASE("Sequential declarations", "[parser:statements]") {
     parseBlockDeclaration("enum { blah = 4 } f, h, i;");
 }
 
+TEST_CASE("Blocking Event Trigger", "[parser:statements]") {
+    auto& text = "-> $root.hierarchy.evt";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::BlockingEventTriggerStatement);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+}
+
+TEST_CASE("Nonblocking Event Trigger", "[parser:statements]") {
+    auto& text = "->> # 3 hierarchy.evt";
+    auto stmt = parse(text);
+
+    REQUIRE(stmt->kind == SyntaxKind::NonblockingEventTriggerStatement);
+    CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+}
+
 }
