@@ -162,14 +162,15 @@ BoundExpression* ExpressionBinder::bindLiteral(const LiteralExpressionSyntax* sy
                 sem.getKnownType(SyntaxKind::RealType),
                 std::get<double>(syntax->literal.numericValue())
             );
-        case SyntaxKind::UnsizedUnbasedLiteralExpression:
+        case SyntaxKind::UnbasedUnsizedLiteralExpression: {
             // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
             // context, but can grow
-            logic_t val = (logic_t)std::get<SVInt>(syntax->literal.numericValue());
+            logic_t val = std::get<logic_t>(syntax->literal.numericValue());
             return alloc.emplace<BoundLiteral>(
                 syntax,
                 sem.getIntegralType(1, false, val.isUnknown()),
-                val);
+                SVInt(val));
+        }
 
         DEFAULT_UNREACHABLE;
     }

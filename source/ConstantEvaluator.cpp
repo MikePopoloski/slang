@@ -54,7 +54,24 @@ ConstantValue ConstantEvaluator::evaluate(const BoundNode* tree) {
 }
 
 ConstantValue ConstantEvaluator::evaluateLiteral(const BoundLiteral* expr) {
-    return expr->value;
+    switch (expr->syntax->kind) {
+        case SyntaxKind::UnbasedUnsizedLiteralExpression: {
+            // In this case, the value depends on the final size, so we evaluate
+            // the right value here
+            logic_t digit = (logic_t)expr->value.integer();
+            uint16_t width = expr->type->width();
+            bool isSigned = expr->type->isSigned();
+            switch (digit.value) {
+                case 0: return SVInt(width, 0, isSigned);
+                case 1: return SVInt(width, (1 << width) - 1, isSigned);
+                case logic_t::X_VALUE: return SVInt::createFillX(width, isSigned);
+                case logic_t::Z_VALUE: return SVInt::createFillZ(width, isSigned);
+                DEFAULT_UNREACHABLE;
+            }
+            return expr->value;
+        }
+        default: return expr->value;
+    }
 }
 
 ConstantValue ConstantEvaluator::evaluateParameter(const BoundParameter* expr) {

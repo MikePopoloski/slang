@@ -15,8 +15,8 @@ namespace slang {
 
 #include "SVIntHelpers.h"
 
-const logic_t logic_t::x = logic_t(1 << 7);
-const logic_t logic_t::z = logic_t(1 << 6);
+const logic_t logic_t::x = logic_t(logic_t::X_VALUE);
+const logic_t logic_t::z = logic_t(logic_t::Z_VALUE);
 
 SVInt::SVInt(StringRef str) {
     ASSERT(str);
@@ -1368,6 +1368,12 @@ void SVInt::checkUnknown() {
 SVInt SVInt::createFillX(uint16_t bitWidth, bool isSigned) {
     SVInt result(new uint64_t[getNumWords(bitWidth, true)], bitWidth, isSigned, true);
     result.setAllX();
+    return result;
+}
+
+SVInt SVInt::createFillZ(uint16_t bitWidth, bool isSigned) {
+    SVInt result(new uint64_t[getNumWords(bitWidth, true)], bitWidth, isSigned, true);
+    result.setAllZ();
     return result;
 }
 
