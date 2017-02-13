@@ -38,7 +38,9 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
         case SyntaxKind::UnbasedUnsizedLiteralExpression:
             break;
         case SyntaxKind::IdentifierName:
-            return bindSimpleName(syntax->as<IdentifierNameSyntax>());
+        case SyntaxKind::IdentifierSelectName:
+        case SyntaxKind::ScopedName:
+            return bindName(syntax->as<NameSyntax>(), scope);
         case SyntaxKind::RealLiteralExpression:
         case SyntaxKind::IntegerLiteralExpression:
             return bindLiteral(syntax->as<LiteralExpressionSyntax>());
@@ -126,7 +128,7 @@ BoundExpression* ExpressionBinder::bindAssignmentLikeContext(const ExpressionSyn
     BoundExpression* expr = bindAndPropagate(syntax);
     if (expr->bad())
         return expr;
-    
+
     const TypeSymbol* type = expr->type;
     if (!assignmentType->isAssignmentCompatible(type)) {
         DiagCode code = assignmentType->isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
@@ -169,13 +171,27 @@ BoundExpression* ExpressionBinder::bindLiteral(const IntegerVectorExpressionSynt
     return alloc.emplace<BoundLiteral>(syntax, type, value);
 }
 
-BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* syntax) {
+BoundExpression* ExpressionBinder::bindName(const NameSyntax* syntax, const Scope* currScope) {
+    const Symbol* symbol = nullptr;
+    switch (syntax->kind) {
+        case SyntaxKind::IdentifierName:
+            return bindSimpleName(syntax->as<IdentifierNameSyntax>(), currScope);
+        case SyntaxKind::IdentifierSelectName:
+            return bindSelectName(syntax->as<IdentifierSelectNameSyntax>(), currScope);
+        case SyntaxKind::ScopedName:
+            return bindScopedName(syntax->as<ScopedNameSyntax>(), currScope);
+        DEFAULT_UNREACHABLE;
+    }
+    return nullptr;
+}
+
+BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* syntax, const Scope* currScope) {
     // if we have an invalid name token just give up now; the error has already been reported
     StringRef identifier = syntax->identifier.valueText();
     if (!identifier)
         return badExpr(nullptr);
 
-    const Symbol* symbol = scope->lookup(identifier);
+    const Symbol* symbol = currScope->lookup(identifier);
     if (!symbol) {
         addError(DiagCode::UndeclaredIdentifier, syntax->identifier.location()) << identifier;
         return badExpr(nullptr);
@@ -188,7 +204,40 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
         case SymbolKind::FormalArgument:
             return alloc.emplace<BoundVariable>(syntax, (const VariableSymbol*)symbol);
 
-            DEFAULT_UNREACHABLE;
+        DEFAULT_UNREACHABLE;
+    }
+    return nullptr;
+}
+
+BoundExpression* ExpressionBinder::bindSelectName(const IdentifierSelectNameSyntax* syntax, const Scope* currScope) {
+    ASSERT(false); // TODO: implement this
+    return nullptr;
+}
+
+BoundExpression* ExpressionBinder::bindScopedName(const ScopedNameSyntax* syntax, const Scope* currScope) {
+    // if we have an invalid name token just give up now; the error has already been reported
+    const Symbol* symbol = nullptr;
+    if (syntax->separator.kind == TokenKind::DoubleColon) {
+        if (syntax->left->kind == SyntaxKind::UnitScope) { // TODO: check if this is correct
+            return bindName(syntax->right->as<NameSyntax>(), sem.getPackages());
+        } else if (syntax->left->kind == SyntaxKind::IdentifierName) {
+            auto package = syntax->left->as<IdentifierNameSyntax>();
+            auto pkgSym = sem.getPackages()->lookup(package->identifier.valueText());
+            ASSERT(pkgSym && pkgSym->kind == SymbolKind::Module);
+            auto nextScope = pkgSym->as<ModuleSymbol>().scope;
+            return bindName(syntax->right->as<NameSyntax>(), nextScope);
+        }
+    }
+    else if (syntax->separator.kind == TokenKind::Dot) {
+        if (syntax->left->kind == SyntaxKind::RootScope) { // TODO: check if this is correct
+            return bindName(syntax->right->as<NameSyntax>(), sem.getPackages());
+        } else if (syntax->left->kind == SyntaxKind::IdentifierName) {
+            auto parent = syntax->left->as<IdentifierNameSyntax>();
+            auto parentSym = currScope->lookup(parent->identifier.valueText());
+            ASSERT(parentSym && parentSym->kind == SymbolKind::Module);
+            auto nextScope = parentSym->as<ModuleSymbol>().scope;
+            return bindName(syntax->right->as<NameSyntax>(), nextScope);
+        }
     }
     return nullptr;
 }

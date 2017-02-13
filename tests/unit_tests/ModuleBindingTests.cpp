@@ -18,13 +18,13 @@ const InstanceSymbol& evalModule(SyntaxTree& syntax) {
         DeclarationTable declTable(diagnostics);
         declTable.addSyntaxTree(&syntax);
 
+        SemanticModel sem(alloc, diagnostics, declTable);
+
         auto topLevelModules = declTable.getTopLevelModules();
         REQUIRE(topLevelModules.count() == 1);
 
-        SemanticModel sem(alloc, diagnostics, declTable);
         instance = sem.makeImplicitInstance(topLevelModules[0]);
     }
-
     if (!syntax.diagnostics().empty())
         WARN(syntax.reportDiagnostics());
 
@@ -199,7 +199,10 @@ interface I2CBus(
 endinterface
 
 module Top;
-    I2CBus bus();
+    logic clk;
+    logic rst;
+
+    I2CBus bus(.*);
 endmodule
 )");
 
