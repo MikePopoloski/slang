@@ -113,6 +113,9 @@ StatementSyntax* Parser::parseStatement(bool allowEmpty) {
             else if (!allowEmpty)
                 addError(DiagCode::ExpectedStatement, peek().location());
             return alloc.emplace<EmptyStatementSyntax>(label, attributes, consume());
+        case TokenKind::MinusArrow:
+        case TokenKind::MinusDoubleArrow:
+            return parseEventTriggerStatement(label, attributes);
         default:
             break;
     }
@@ -673,6 +676,17 @@ RandCaseStatementSyntax* Parser::parseRandCaseStatement(NamedLabelSyntax* label,
         itemBuffer.copy(alloc),
         endcase
     );
+}
+
+EventTriggerStatementSyntax* Parser::parseEventTriggerStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto trigger = consume();
+    SyntaxKind kind = SyntaxKind::BlockingEventTriggerStatement;
+    TimingControlSyntax* timing = nullptr;
+    if (trigger.kind == TokenKind::MinusDoubleArrow) {
+        kind = SyntaxKind::NonblockingEventTriggerStatement;
+        timing = parseTimingControl();
+    }
+    return alloc.emplace<EventTriggerStatementSyntax>(kind, label, attributes, trigger, timing, parseName());
 }
 
 }

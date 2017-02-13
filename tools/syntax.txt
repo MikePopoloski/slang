@@ -762,6 +762,11 @@ token randCase
 list<RandCaseItemSyntax> items
 token endCase
 
+EventTriggerStatementSyntax base=StatementSyntax
+token trigger
+TimingControlSyntax timing
+NameSyntax name
+
 // ----- MODULES -----
 
 PortListSyntax final=false

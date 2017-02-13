@@ -90,6 +90,7 @@ private:
     StatementSyntax* parseWaitStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     WaitOrderStatementSyntax* parseWaitOrderStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     RandCaseStatementSyntax* parseRandCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    EventTriggerStatementSyntax* parseEventTriggerStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
     Token parseSigning();
     VariableDimensionSyntax* parseDimension();
     ArrayRef<VariableDimensionSyntax*> parseDimensionList();
