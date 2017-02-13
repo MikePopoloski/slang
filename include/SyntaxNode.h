@@ -343,6 +343,7 @@ enum class SyntaxKind : uint16_t {
     // assertions
     DeferredAssertion,
     ConcurrentAssertionMember,
+    ImmediateAssertionMember,
     ActionBlock,
     ImmediateAssertStatement,
     ImmediateAssumeStatement,

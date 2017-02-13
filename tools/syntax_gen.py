@@ -118,7 +118,7 @@ def generate(outf, name, tags, members, alltypes):
 	outf.write('        {}({}{}){}\n'.format(base, kindValue, baseInitializers, initializers))
 	outf.write('    {\n')
 
-	if len(members) == 0:
+	if len(members) == 0 and final == '':
 		outf.write('    }\n')
 	else:
 		outf.write('        childCount += {};\n'.format(len(members)))
@@ -151,7 +151,7 @@ def generate(outf, name, tags, members, alltypes):
 			index += 1
 
 		outf.write('        }\n')
-		if not anyTokens:
+		if not anyTokens and len(members) != 0:
 			outf.write('        (void)token;\n')
 		outf.write('    }\n')
 

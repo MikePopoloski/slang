@@ -1230,14 +1230,22 @@ protected:
 struct EmptyIdentifierNameSyntax : public NameSyntax {
 
     EmptyIdentifierNameSyntax() :
-        NameSyntax(SyntaxKind::EmptyIdentifierName) {}
+        NameSyntax(SyntaxKind::EmptyIdentifierName)
+    {
+        childCount += 0;
+    }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
-        return nullptr;
+        switch (index) {
+            default: return nullptr;
+        }
     }
 
-    void replaceChild(uint32_t index, Token token) override final {}
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+        }
+    }
 };
 
 struct KeywordNameSyntax : public NameSyntax {
@@ -3387,6 +3395,33 @@ struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
 
     ConcurrentAssertionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ConcurrentAssertionStatementSyntax* statement) :
         MemberSyntax(SyntaxKind::ConcurrentAssertionMember, attributes), statement(statement)
+    {
+        childCount += 1;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return statement;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
+struct ImmediateAssertionMemberSyntax : public MemberSyntax {
+    ImmediateAssertionStatementSyntax* statement;
+
+    ImmediateAssertionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ImmediateAssertionStatementSyntax* statement) :
+        MemberSyntax(SyntaxKind::ImmediateAssertionMember, attributes), statement(statement)
     {
         childCount += 1;
     }

@@ -132,7 +132,7 @@ token closeBrace
 BadExpressionSyntax base=ExpressionSyntax kind=BadExpression
 ExpressionSyntax expr
 
-PrimaryExpressionSyntax base=ExpressionSyntax
+PrimaryExpressionSyntax base=ExpressionSyntax final=false
 empty
 
 PrefixUnaryExpressionSyntax base=ExpressionSyntax
@@ -214,6 +214,9 @@ token identifier
 IdentifierSelectNameSyntax base=NameSyntax kind=IdentifierSelectName
 token identifier
 list<ElementSelectSyntax> selectors
+
+EmptyIdentifierNameSyntax base=NameSyntax kind=EmptyIdentifierName
+empty
 
 KeywordNameSyntax base=NameSyntax
 token keyword
@@ -589,6 +592,9 @@ ActionBlockSyntax action
 
 ConcurrentAssertionMemberSyntax base=MemberSyntax kind=ConcurrentAssertionMember
 ConcurrentAssertionStatementSyntax statement
+
+ImmediateAssertionMemberSyntax base=MemberSyntax kind=ImmediateAssertionMember
+ImmediateAssertionStatementSyntax statement
 
 AbortPropertyExpressionSyntax base=ExpressionSyntax
 token keyword
