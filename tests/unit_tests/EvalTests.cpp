@@ -87,6 +87,24 @@ TEST_CASE("Interface param", "[eval]") {
     CHECK(value.integer() == 6);
 }
 
+TEST_CASE("Eval if statement", "[eval]") {
+    ScriptSession session;
+    session.eval(R"(
+function logic [15:0] foo(int a);
+    if (a == 3)
+        return 4;
+    else
+        return 5;
+endfunction
+)");
+
+    auto value = session.eval("foo(3)");
+    CHECK(value.integer() == 4);
+
+    auto elseValue = session.eval("foo(2)");
+    CHECK(elseValue.integer() == 5);
+}
+
 // Simple test wrapper, uses ==(uint64_t) to check result
 #define EVAL_TEST(descr1, descr2, expr, result) \
 TEST_CASE(descr1, descr2) { \
