@@ -187,7 +187,7 @@ ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpressio
 ConstantValue ConstantEvaluator::evaluateNary(const BoundNaryExpression* expr) {
     SmallVectorSized<SVInt, 8> operands;
     for (auto operand : expr->exprs)
-        operands.append(evaluate(operand).integer());
+        operands.append(evaluateExpr(operand).integer());
 
     // TODO: add support for other Nary Expressions, like stream concatenation
     switch(expr->syntax->kind) {
