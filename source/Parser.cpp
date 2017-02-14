@@ -34,7 +34,7 @@ const SyntaxNode* Parser::parseGuess() {
     // Now try to parse as a statement. This will also handle plain expressions,
     // though we might get an error about a missing semicolon that we should suppress.
     auto& diagnostics = getDiagnostics();
-auto statement = parseStatement(/* allowEmpty */ true);
+    auto statement = parseStatement(/* allowEmpty */ true);
     if (statement->kind == SyntaxKind::ExpressionStatement) {
         if (!diagnostics.empty() && diagnostics.back().code == DiagCode::ExpectedToken)
             diagnostics.pop();
