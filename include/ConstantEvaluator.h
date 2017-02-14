@@ -80,6 +80,7 @@ private:
     void evaluateStatementList(const BoundStatementList* stmt);
     void evaluateReturn(const BoundReturnStatement* stmt);
     void evaluateVariableDecl(const BoundVariableDecl* decl);
+    void evaluateConditional(const BoundConditionalStatement* stmt);
 
     ConstantValue evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments);
 

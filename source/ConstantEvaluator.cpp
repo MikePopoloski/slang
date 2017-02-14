@@ -65,6 +65,9 @@ void ConstantEvaluator::evaluateStmt(const BoundStatement *tree) {
         case BoundNodeKind::VariableDeclaration:
             evaluateVariableDecl((BoundVariableDecl*)tree);
             break;
+        case BoundNodeKind::ConditionalStatement:
+            evaluateConditional((BoundConditionalStatement*)tree);
+            break;
 
             DEFAULT_UNREACHABLE;
     }
@@ -276,4 +279,15 @@ bool ConstantEvaluator::evaluateLValue(const BoundExpression* expr, LValue& lval
     return true;
 }
 
+void ConstantEvaluator::evaluateConditional(const BoundConditionalStatement *stmt) {
+    ASSERT(stmt->ifTrue);
+    bool cond = evaluateBool(stmt->cond);
+    if (cond) {
+        evaluateStmt(stmt->ifTrue);
+    } else if (stmt->ifFalse) {
+        evaluateStmt(stmt->ifFalse);
+    }
 }
+
+}
+
