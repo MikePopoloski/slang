@@ -103,6 +103,7 @@ public:
 
 class IntegralTypeSymbol : public TypeSymbol {
 public:
+    // a negative lower bound is actually an upper bound specified in the opposite order
     ArrayRef<int> lowerBounds;
     ArrayRef<int> widths;
     int width;

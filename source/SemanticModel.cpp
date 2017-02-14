@@ -207,8 +207,14 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, Sc
                     // TODO: msb < lsb
                     uint16_t msb = dim.msb.getAssertUInt16();
                     uint16_t lsb = dim.lsb.getAssertUInt16();
-                    uint16_t width = msb - lsb + 1;
-                    lowerBounds.append(lsb);
+                    if (msb > lsb) {
+                        uint16_t width = msb - lsb + 1;
+                        lowerBounds.append(lsb);
+                    } else {
+                        // TODO: msb == lsb
+                        width = lsb - msb + 1;
+                        lowerBounds.append(-msb);
+                    }
                     widths.append(width);
 
                     // TODO: overflow
