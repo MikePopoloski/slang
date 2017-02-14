@@ -669,13 +669,6 @@ ConcurrentAssertionStatementSyntax statement
 ImmediateAssertionMemberSyntax base=MemberSyntax kind=ImmediateAssertionMember
 ImmediateAssertionStatementSyntax statement
 
-AbortPropertyExpressionSyntax base=ExpressionSyntax
-token keyword
-token openParen
-ExpressionSyntax condition
-token closeParen
-ExpressionSyntax expr
-
 // ----- STATEMENTS -----
 
 EmptyStatementSyntax base=StatementSyntax kind=EmptyStatement
