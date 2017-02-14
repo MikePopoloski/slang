@@ -57,11 +57,11 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     i = SVInt(1);
 
     // Evaluate the expression tree.
-    ce.evaluate(bound);
+    ce.evaluateExpr(bound);
     CHECK(i.integer() == 4);
 
     // Run it again, results should be as you'd expect
-    ce.evaluate(bound);
+    ce.evaluateExpr(bound);
     CHECK(i.integer() == 7);
 }
 
