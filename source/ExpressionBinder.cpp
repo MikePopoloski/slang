@@ -116,6 +116,8 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
             return bindConcatenationExpression(syntax->as<ConcatenationExpressionSyntax>());
         case SyntaxKind::MultipleConcatenationExpression:
             return bindMultipleConcatenationExpression(syntax->as<MultipleConcatenationExpressionSyntax>());
+        case SyntaxKind::ElementSelectExpression:
+            return bindSelectExpression(syntax->as<ElementSelectExpressionSyntax>());
 
             DEFAULT_UNREACHABLE;
     }
@@ -445,6 +447,24 @@ BoundExpression* ExpressionBinder::bindMultipleConcatenationExpression(const Mul
     ConstantEvaluator evaluator;
     uint16_t replicationTimes = evaluator.evaluateExpr(left).integer().getAssertUInt16();
     return alloc.emplace<BoundBinaryExpression>(syntax, sem.getIntegralType(right->type->width() * replicationTimes, false), left, right);
+}
+
+BoundExpression* ExpressionBinder::bindSelectExpression(const ElementSelectExpressionSyntax* syntax) {
+    BoundExpression* left = bindAndPropagate(syntax->left);
+
+    BoundExpression* msb;
+    int width;
+    SyntaxKind kind = syntax->select->selector->kind;
+    switch (kind) {
+        case SyntaxKind::BitSelect:
+            msb = bindAndPropagate(((BitSelectSyntax*)syntax->select->selector)->expr);
+            width = 1;
+            break;
+        case SyntaxKind::SimpleRangeSelect:
+            msb = bindAndPropagate(())
+        case SyntaxKind::AscendingRangeSelect:
+        case SyntaxKind::DescendingRangeSelect:
+    }
 }
 
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
