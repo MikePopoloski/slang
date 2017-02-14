@@ -105,6 +105,31 @@ endfunction
     CHECK(elseValue.integer() == 5);
 }
 
+TEST_CASE("Eval for loop", "[eval]") {
+    ScriptSession session;
+    session.eval(R"(
+function logic [15:0] foo(int a);
+    logic [15:0] result = 1;
+    for (int i = 0; i < a; ++i) begin
+        result *= 2;
+    end
+    return result;
+endfunction
+)");
+
+    auto value0 = session.eval("foo(0)");
+    CHECK(value0.integer() == 1);
+
+    auto value1 = session.eval("foo(1)");
+    CHECK(value1.integer() == 2);
+
+    auto value2 = session.eval("foo(2)");
+    CHECK(value2.integer() == 4);
+
+    auto value3 = session.eval("foo(3)");
+    CHECK(value3.integer() == 8);
+}
+
 // Simple test wrapper, uses ==(uint64_t) to check result
 #define EVAL_TEST(descr1, descr2, expr, result) \
 TEST_CASE(descr1, descr2) { \
