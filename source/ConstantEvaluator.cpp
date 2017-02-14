@@ -153,8 +153,8 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* exp
         case SyntaxKind::InequalityExpression: return SVInt(l != r);
         case SyntaxKind::CaseEqualityExpression: return SVInt((logic_t)exactlyEqual(l, r));
         case SyntaxKind::CaseInequalityExpression: return SVInt((logic_t)!exactlyEqual(l, r));
-        case SyntaxKind::WildcardEqualityExpression: return SVInt((logic_t)wildcardEqual(l, r));
-        case SyntaxKind::WildcardInequalityExpression: return SVInt((logic_t)!wildcardEqual(l, r));
+        case SyntaxKind::WildcardEqualityExpression: return SVInt(wildcardEqual(l, r));
+        case SyntaxKind::WildcardInequalityExpression: return SVInt(!wildcardEqual(l, r));
         case SyntaxKind::GreaterThanEqualExpression: return SVInt(l >= r);
         case SyntaxKind::GreaterThanExpression: return SVInt(l > r);
         case SyntaxKind::LessThanEqualExpression: return SVInt(l <= r);

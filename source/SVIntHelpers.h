@@ -193,10 +193,10 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
     ASSERT(q, "Must provide quotient");
     ASSERT(u != v && u != q && v != q, "Must use different memory");
     ASSERT(n > 1, "n must be > 1");
-    
+
     // b denotes the base of the number system. In our case b is 2^32.
     const uint64_t b = 1ULL << 32;
-   
+
     // D1. [Normalize.] Set d = b / (v[n-1] + 1) and multiply all the digits of
     // u and v by d. Note that we have taken Knuth's advice here to use a power
     // of 2 value for d such that d * v[n-1] >= b/2 (b is the base). A power of
@@ -221,7 +221,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
         }
     }
     u[m + n] = u_carry;
-    
+
     // D2. [Initialize j.]  Set j to m. This is the loop counter over the places.
     int j = m;
     do {
@@ -242,7 +242,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
             if (rp < b && (qp == b || qp * v[n - 2] > b * rp + u[j + n - 2]))
                 qp--;
         }
-        
+
         // D4. [Multiply and subtract.] Replace (u[j+n]u[j+n-1]...u[j]) with
         // (u[j+n]u[j+n-1]..u[j]) - qp * (v[n-1]...v[1]v[0]). This computation
         // consists of a simple multiplication by a one-place number, combined with
@@ -260,7 +260,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
         }
         bool isNeg = u[j + n] < borrow;
         u[j + n] -= (uint32_t)borrow;
-        
+
         // D5. [Test remainder.] Set q[j] = qp. If the result of step D4 was
         // negative, go to step D6; otherwise go on to step D7.
         q[j] = (uint32_t)qp;
@@ -302,6 +302,44 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
             for (int i = n - 1; i >= 0; i--)
                 r[i] = u[i];
         }
+    }
+}
+
+// Like memcpy, but at the bit level instead of bytes
+// i.e if destBitOffset % 8 == bitLength % 8 == 0, this is
+// equivalent to memcpy(dest + destBitOffset / 8, src, bitLength / 8)
+static void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitLength) {
+    // Get the first byte we want to write to, and the reamaining bits are a bit offset
+    dest += destBitOffset / 8;
+    destBitOffset %= 8;
+
+    // Writing to the first byte is a special case, due to the bit offset
+    uint8_t bitsToWrite = std::min<uint8_t>(bitLength, 8 - destBitOffset);
+
+    *dest = (*dest   & ((1 << destBitOffset) - 1)) + // preserved bits
+            ((*src & ((1 << bitsToWrite) - 1)) << destBitOffset); // new bits
+
+    // all remaining writes to dest are byte-aligned, but the reads from src
+    // may not be
+    uint8_t srcBitOffset = bitsToWrite;
+    bitLength -= bitsToWrite;
+    while (bitLength > 0) {
+        // advance dest one byte, and src the proper number of bits
+        ++dest;
+        src += srcBitOffset / 8;
+        srcBitOffset %= 8;
+
+        // Number of bits we are writing to this byte
+        uint8_t bitsToWrite = std::min<uint8_t>(bitLength, 8);
+        // get the next 8 bits of src, probably not byte aligned
+        // (if bitsToWrite < 8, this could have some extra bits in it
+        uint8_t srcByte = (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset));
+
+        // Write srcByte, filling the upper bits with zereos if we have less than
+        // a byte left to write.
+        *dest = srcByte & ((1 << bitsToWrite) - 1); // new bits
+
+        bitLength -= bitsToWrite;
     }
 }
 

@@ -138,6 +138,6 @@ EVAL_TEST_EX("contextDeterminedUULiteral", "'1 + 65'b0", "65'h1ffffffffffffffff"
 EVAL_TEST_EX("concatenation", "{2'b11, 3'b101}", "5'b11101");
 EVAL_TEST_EX("concatenation2", "{22'b0, 43'b100, 1'b1 / 1'b0}", "66'b100x");
 EVAL_TEST_EX("replicate", "{4 {2'b10}}", "8'b10101010");
-EVAL_TEST("wildcardEq", "{1'b1 / 1'b0, 4'b1001} ==? 5'b11001", 1);
-
+EVAL_TEST("wildcardEq", "5'b11001 ==? {1'b1 / 1'b0, 4'b1001}", 1);
+EVAL_TEST("wildcardEqNotCommute", "({1'b1 / 1'b0, 4'b1001} ==? 5'b11001) === 'x", 1);
 }

@@ -1699,10 +1699,15 @@ bool exactlyEqual(const SVInt& lhs, const SVInt &rhs) {
     return memcmp(lhs.pVal, rhs.pVal, lhs.getNumWords() * SVInt::WORD_SIZE) == 0;
 }
 
-bool wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
+logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     // if no unknown flags, do normal comparison
     if (!lhs.unknownFlag && !rhs.unknownFlag)
-        return (bool)(lhs == rhs);
+        return lhs == rhs;
+
+    // if the lhs has any unknown flags, then return 'x'
+    if (lhs.unknownFlag) {
+        return logic_t::x;
+    }
 
     // handle sign extension if necessary
     if (lhs.bitWidth != rhs.bitWidth) {
@@ -1713,49 +1718,17 @@ bool wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
             return wildcardEqual(lhs, extend(rhs, lhs.bitWidth, bothSigned));
     }
 
-    size_t words = SVInt::getNumWords(lhs.bitWidth, false);
+    size_t words = lhs.getNumWords();
     // Do word-for-word wildcard comparison, being careful that one argument
-    // might nothave unknwon flags
+    // might not
     for (size_t i = 0; i < words; ++i) {
-        // bitmask of bits that actually matter in the comparison
-        uint64_t mask = ~((lhs.unknownFlag ? lhs.pVal[i + words] : 0) |
-                          (rhs.unknownFlag ? rhs.pVal[i + words] : 0));
-        // One operand can be a single word if the bitWidth is small and
-        // only one has unknowns
-        uint64_t lhsWord = lhs.isSingleWord() ? lhs.val : lhs.pVal[i];
-        uint64_t rhsWord = rhs.isSingleWord() ? rhs.val : rhs.pVal[i];
-        if ((lhsWord & mask) != (rhsWord & mask))
-            return false;
+        // bitmask to avoid comparing the bits unknown on the rhs
+        uint64_t mask = ~rhs.pVal[i + words];
+        // getRawData handles the case where lhs is a single word
+        if ((lhs.getRawData()[i] & mask) != (rhs.pVal[i] & mask))
+            return logic_t(false);
     }
-    return true;
-}
-
-
-void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitLength) {
-    // Like memcpy, but at the bit level instead of bytes
-    // i.e if destBitOffset % 8 == bitLength % 8 == 0, this is
-    // equivalent to memcpy(dest + destBitOffset / 8, src, bitLength / 8)
-
-    // Get the first byte we want to write to, and the reamining bits are a bit offset
-    dest += destBitOffset / 8;
-    destBitOffset %= 8;
-    uint16_t srcBitOffset = 0;
-    while (bitLength > 0) {
-        // Number of bits we are writing to this byte
-        uint16_t bitsToWrite = std::min<uint8_t>(bitLength, 8 - destBitOffset);
-        // get the next 8 bits of src, probably not byte aligned
-        uint8_t srcByte = (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset));
-
-        *dest = (*dest   & ((1 << destBitOffset) - 1)) + // preserved bits
-                ((srcByte & ((1 << bitsToWrite) - 1)) << destBitOffset); // new bits
-        // next write will begin at the next byte boundry
-        destBitOffset = 0;
-        bitLength -= bitsToWrite;
-        ++dest;
-        srcBitOffset += bitsToWrite;
-        src += srcBitOffset / 8;
-        srcBitOffset %= 8;
-    }
+    return logic_t(true);
 }
 
 SVInt concatenate(ArrayRef<SVInt> operands) {
@@ -1769,33 +1742,31 @@ SVInt concatenate(ArrayRef<SVInt> operands) {
     }
 
     // words is the count of not unknown words
-    uint16_t words = SVInt::getNumWords(bits, false);
-    if (words == 1 && !unknownFlag) {
+    uint16_t words = SVInt::getNumWords(bits, unknownFlag);
+    if (words == 1) {
         // The concatenation still fits into a single word
         uint16_t offset = 0;
         uint64_t val = 0;
-        // The first operand writs the msb, therefore, we must operate in reverse
+        // The first operand wriets the msb, therefore, we must operate in reverse
         for (const SVInt* op = operands.end() - 1; op >= operands.begin(); --op) {
             copyBits((uint8_t*)&val, offset, (uint8_t*)&op->val, op->bitWidth);
             offset += op->bitWidth;
         }
         return SVInt(val);
     }
-    uint64_t *data = new uint64_t[words * (unknownFlag + 1)]();
+    // data is already zeroed out, which is the proper default, so it doesn't
+    // matter that we may not write to certain unknown words or might not
+    // write all the way to the end
+    uint64_t *data = new uint64_t[words]();
 
+    // offset (in bits) to which we are writing
     uint16_t offset = 0;
-    // zero out the whole thing ahead of time instead of having to be more careful
-    // and having to set zero bits for missing data
-    memset((void*)data, 0, sizeof(uint64_t) * words * (unknownFlag + 1));
     for (const SVInt* op = operands.end() - 1; op >= operands.begin(); --op) {
 
-        copyBits((uint8_t*)data, offset,
-            op->isSingleWord() ? (uint8_t*)&op->val
-                               : (uint8_t*)op->pVal,
-                               op->bitWidth);
+        copyBits((uint8_t*)data, offset, (uint8_t*)op->getRawData(), op->bitWidth);
         if (op->unknownFlag) {
-            copyBits((uint8_t*)(data + words), offset,
-                     (uint8_t*)(op->pVal + SVInt::getNumWords(op->bitWidth, false)), op->bitWidth);
+            copyBits((uint8_t*)(data + words / 2), offset,
+                     (uint8_t*)(op->pVal + op->getNumWords() / 2), op->bitWidth);
         }
         offset += op->bitWidth;
     }
