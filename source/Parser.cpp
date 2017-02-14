@@ -1678,7 +1678,7 @@ MemberSyntax* Parser::parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*
                     auto attributes = parseAttributes();
                     DataTypeSyntax* type;
                     if (peek(TokenKind::UntypedKeyword)) {
-                        type = alloc.emplace<UntypedSyntax>(consume());
+                        type = alloc.emplace<KeywordTypeSyntax>(SyntaxKind::Untyped, consume());
                     } else {
                         type = parseDataType(true);
                     }
@@ -1847,35 +1847,35 @@ PropertyDeclarationSyntax* Parser::parsePropertyDeclaration(ArrayRef<AttributeIn
             DiagCode::ExpectedPropertyPort,
             [this](bool) {
                 auto attributes = parseAttributes();
-                PropertyLocalPortSyntax* local = nullptr;
-                if (peek(TokenKind::LocalKeyword)) {
-                    auto localKeyword = consume();
-                    PropertyLvarPortDirectionSyntax* direction = nullptr;
-                    if (peek(TokenKind::InputKeyword)) {
-                        direction = alloc.emplace<PropertyLvarPortDirectionSyntax>(consume());
-                    }
-                    local = alloc.emplace<PropertyLocalPortSyntax>(localKeyword, direction);
+                Token local = consumeIf(TokenKind::LocalKeyword);
+                Token input;
+                if (local) {
+                    input = consumeIf(TokenKind::InputKeyword);
                 }
                 DataTypeSyntax* type;
                 switch(peek().kind) {
                     case TokenKind::PropertyKeyword:
-                        type = alloc.emplace<PropertyTypeSyntax>(consume());
+                        type = alloc.emplace<KeywordTypeSyntax>(SyntaxKind::PropertyType, consume());
+                        break;
                     case TokenKind::SequenceKeyword:
-                        type = alloc.emplace<SequenceTypeSyntax>(consume());
+                        type = alloc.emplace<KeywordTypeSyntax>(SyntaxKind::SequenceType, consume());
+                        break;
                     case TokenKind::UntypedKeyword:
-                        type = alloc.emplace<UntypedSyntax>(consume());
+                        type = alloc.emplace<KeywordTypeSyntax>(SyntaxKind::Untyped, consume());
+                        break;
                     default:
                         type = parseDataType(true);
+                        break;
                 }
                 auto declarator = parseVariableDeclarator(true);
-                return alloc.emplace<PropertyPortSyntax>(attributes, local, type, declarator);
+                return alloc.emplace<PropertyPortSyntax>(attributes, local, input, type, declarator);
             }
         );
         portList = alloc.emplace<PropertyPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
     }
 
     auto semi = expect(TokenKind::Semicolon);
-    SmallVectorSized<AssertionVariableDeclarationSyntax*, 4> declarations;
+    SmallVectorSized<DataDeclarationSyntax*, 4> declarations;
     while(peek(TokenKind::VarKeyword) || isPossibleDataType(peek().kind)) {
         DataTypeSyntax* type;
         if (peek(TokenKind::VarKeyword)) {
@@ -1886,13 +1886,10 @@ PropertyDeclarationSyntax* Parser::parsePropertyDeclaration(ArrayRef<AttributeIn
 
         Token semi2;
         auto variableDeclarators = parseVariableDeclarators(semi2);
-        declarations.append(alloc.emplace<AssertionVariableDeclarationSyntax>(type, variableDeclarators, semi2));
+        declarations.append(alloc.emplace<DataDeclarationSyntax>(nullptr, nullptr, type, variableDeclarators, semi2));
     }
     auto spec = parsePropertySpec();
-    EmptyStatementSyntax* optSemi = nullptr;
-    if (peek(TokenKind::Semicolon)) {
-        optSemi = alloc.emplace<EmptyStatementSyntax>(nullptr, nullptr, consume());
-    }
+    Token optSemi = consumeIf(TokenKind::Semicolon);
     auto endProperty = expect(TokenKind::EndPropertyKeyword);
     auto* blockName = parseNamedBlockClause();
     return alloc.emplace<PropertyDeclarationSyntax>(attributes, property, name, portList, semi, declarations.copy(alloc), spec, optSemi, endProperty, blockName);

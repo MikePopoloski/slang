@@ -33,8 +33,8 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     int newPrecedence = 0;
 
     auto current = peek();
-    if (current.kind == TokenKind::NewKeyword || isClassScope(TokenKind::NewKeyword))
-        return parseNewExpression();
+    if (current.kind == TokenKind::NewKeyword)
+        return parseNewExpression(nullptr);
     // TODO:
     /*else if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
@@ -576,6 +576,8 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
                     return expr;
                 expr = parseArrayOrRandomizeWithClause();
                 break;
+            case TokenKind::NewKeyword:
+                expr = parseNewExpression(expr);
             default:
                 return expr;
         }
@@ -597,7 +599,10 @@ NameSyntax* Parser::parseName(bool isForEach) {
             reportedError = true;
             addError(DiagCode::ColonShouldBeDot, separator.location());
         }
-
+        if (peek().kind == TokenKind::NewKeyword) {
+            name = alloc.emplace<ClassScopeSyntax>(name, separator);
+            break;
+        }
         name = alloc.emplace<ScopedNameSyntax>(name, separator, parseNamePart(isForEach));
         kind = peek().kind;
     }
@@ -636,51 +641,6 @@ NameSyntax* Parser::parseNamePart(bool isForEach) {
         default:
             return alloc.emplace<IdentifierNameSyntax>(identifier);
     }
-}
-
-bool Parser::isClassScope(TokenKind endKind) {
-    int index = 0;
-    TokenKind kind = peek(index++).kind;
-    bool first = true;
-    while(true) {
-        if (kind != TokenKind::Identifier && (!first || kind != TokenKind::UnitSystemName)) {
-            return !first && (kind == endKind);
-        }
-        first = false;
-        kind = peek(index++).kind;
-        if (kind != TokenKind::DoubleColon) {
-            if (kind != TokenKind::Hash) {
-                return false;
-            }
-            if (peek(index++).kind != TokenKind::OpenParenthesis) {
-                return false;
-            }
-            if (!scanTypePart<isNotInParameterList>(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis)) {
-                return false;
-            }
-            if (peek(index++).kind != TokenKind::DoubleColon) {
-                return false;
-            }
-        }
-    }
-}
-
-ClassScopeSyntax* Parser::parseClassScope() {
-    NameSyntax* name = parseNamePart(false);
-
-    auto kind = peek().kind;
-    Token separator;
-    while (true) {
-        separator = expect(TokenKind::DoubleColon);
-        auto nextName = parseNamePart(false);
-        if (nextName == nullptr) {
-            break;
-        }
-        name = alloc.emplace<ScopedNameSyntax>(name, separator, nextName);
-        kind = peek().kind;
-    }
-
-    return alloc.emplace<ClassScopeSyntax>(name, separator);
 }
 
 ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
@@ -814,10 +774,10 @@ EventExpressionSyntax* Parser::parseEventExpression() {
     return left;
 }
 
-ExpressionSyntax* Parser::parseNewExpression() {
-    ClassScopeSyntax* scope = nullptr;
-    if (!peek(TokenKind::NewKeyword)) {
-        scope = parseClassScope();
+ExpressionSyntax* Parser::parseNewExpression(ExpressionSyntax* scope) {
+    if (scope != nullptr && scope->kind != SyntaxKind::ClassScope) {
+        addError(DiagCode::ExpectedClassScope, scope->getFirstToken().location());
+        return scope;
     }
     auto newKeyword = expect(TokenKind::NewKeyword);
     auto kind = peek().kind;
@@ -845,7 +805,7 @@ ExpressionSyntax* Parser::parseNewExpression() {
         return alloc.emplace<NewExpressionSyntax>(newKeyword, parseExpression());
     }
 
-    return alloc.emplace<NewClassExpressionSyntax>(scope, newKeyword, arguments);
+    return alloc.emplace<NewClassExpressionSyntax>((ClassScopeSyntax*) scope, newKeyword, arguments);
 }
 
 TimingControlSyntax* Parser::parseTimingControl() {

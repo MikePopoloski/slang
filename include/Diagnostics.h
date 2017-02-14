@@ -109,6 +109,7 @@ enum class DiagCode : uint8_t {
     ExpectedAssignmentKey,
     ExpectedDistItem,
     ExpectedIfOrCase,
+    ExpectedClassScope,
     NoLabelOnSemicolon,
     DeferredDelayMustBeZero,
     AttributesNotSupported,

@@ -49,7 +49,7 @@ private:
     ExpressionSyntax* parseIntegerExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
-    ExpressionSyntax* parseNewExpression();
+    ExpressionSyntax* parseNewExpression(ExpressionSyntax* expr);
     ConcatenationExpressionSyntax* parseConcatenation(Token openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token openBrace);
     StreamExpressionSyntax* parseStreamExpression();
@@ -59,8 +59,6 @@ private:
     SelectorSyntax* parseElementSelector();
     NameSyntax* parseName(bool isForEach = false);
     NameSyntax* parseNamePart(bool isForEach);
-    bool isClassScope(TokenKind endKind);
-    ClassScopeSyntax* parseClassScope();
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
