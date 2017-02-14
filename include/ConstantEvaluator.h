@@ -27,11 +27,12 @@ public:
 
     /// Evaluates a bound tree, including all side effects. If this is not a
     /// constant expression diagnostics will issued to help indicate why not.
-    ConstantValue evaluate(const BoundNode* tree);
+    ConstantValue evaluateExpr(const BoundExpression* tree);
+    void evaluateStmt(const BoundStatement *tree);
 
     /// Evaluates a bound tree and then tries to interpret the result in
     /// a boolean context.
-    bool evaluateBool(const BoundNode* tree);
+    bool evaluateBool(const BoundExpression* tree);
 
     /// Creates a temporary on the current stack frame. Call this before calling
     /// `evaluate` to material temporaries that don't have declarations within
@@ -47,6 +48,10 @@ private:
 
         // A pointer to the frame that called into this frame.
         Frame* parent = nullptr;
+
+        // Set to non-null when return has been issued in this frame
+        ConstantValue returnValue;
+        bool hasReturned = false;
 
         Frame() {}
         explicit Frame(Frame* parent) : parent(parent) {}
@@ -71,9 +76,10 @@ private:
     ConstantValue evaluateConditional(const BoundTernaryExpression* expr);
     ConstantValue evaluateAssignment(const BoundAssignmentExpression* expr);
     ConstantValue evaluateCall(const BoundCallExpression* expr);
-    ConstantValue evaluateStatementList(const BoundStatementList* stmt);
-    ConstantValue evaluateReturn(const BoundReturnStatement* stmt);
-    ConstantValue evaluateVariableDecl(const BoundVariableDecl* decl);
+
+    void evaluateStatementList(const BoundStatementList* stmt);
+    void evaluateReturn(const BoundReturnStatement* stmt);
+    void evaluateVariableDecl(const BoundVariableDecl* decl);
 
     ConstantValue evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments);
 

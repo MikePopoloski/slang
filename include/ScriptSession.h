@@ -61,7 +61,7 @@ public:
 
     ConstantValue evalExpression(const ExpressionSyntax* expr) {
         auto bound = binder.bindSelfDeterminedExpression(expr);
-        return evaluator.evaluate(bound);
+        return evaluator.evaluateExpr(bound);
     }
 
     ConstantValue evalStatement(const StatementSyntax* stmt) {
@@ -77,7 +77,7 @@ public:
 
             const auto& var = symbol->as<VariableSymbol>();
             if (var.initializer)
-                storage = evaluator.evaluate(var.initializer);
+                storage = evaluator.evaluateExpr(var.initializer);
             else
                 storage = SVInt(0); // TODO: uninitialized variable
         }

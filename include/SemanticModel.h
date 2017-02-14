@@ -112,7 +112,7 @@ private:
     const BoundExpression* bindInitializer(const VariableDeclaratorSyntax *syntax, const TypeSymbol* type, const Scope* scope);
     const BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope);
     ConstantValue evaluateConstant(const ExpressionSyntax* syntax, const Scope* scope);
-    static ConstantValue evaluateConstant(const BoundNode* tree);
+    static ConstantValue evaluateConstant(const BoundExpression* tree);
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;

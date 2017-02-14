@@ -555,7 +555,7 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVe
     auto& genvar = ce.createTemporary(&local);
 
     // Generate blocks!
-    for (genvar = initial; ce.evaluateBool(stopExpr); ce.evaluate(iterExpr)) {
+    for (genvar = initial; ce.evaluateBool(stopExpr); ce.evaluateExpr(iterExpr)) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         Scope localScope { &iterScope };
@@ -933,10 +933,10 @@ ConstantValue SemanticModel::evaluateConstant(const ExpressionSyntax* syntax, co
     return evaluateConstant(expr);
 }
 
-ConstantValue SemanticModel::evaluateConstant(const BoundNode* tree) {
+ConstantValue SemanticModel::evaluateConstant(const BoundExpression* tree) {
     // TODO: eventually this will need diagnostics and other stuff
     ConstantEvaluator evaluator;
-    return evaluator.evaluate(tree);
+    return evaluator.evaluateExpr(tree);
 }
 
 }
