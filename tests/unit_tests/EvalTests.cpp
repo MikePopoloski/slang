@@ -113,5 +113,6 @@ EVAL_TEST("conditionalF", "[eval]", "(2 * 2) == 3 ? 5 : 4", 4);
 EVAL_TEST_EX("conditionalU", "[eval]", "'z ? 5 : 6", "32'sb1xx");
 EVAL_TEST_EX("conditionalU2", "[eval]", "(1 / 0) ? 128'b101 : 128'b110", "128'b1xx");
 EVAL_TEST("conditionalUSame", "[eval]", "'x ? 5 : 5", 5);
-
+EVAL_TEST("selfDeterminedUULiteral", "[eval]", "1 << '1", 2);
+EVAL_TEST_EX("contextDeterminedUULiteral", "[eval]", "'1 + 65'b0", "65'h1ffffffffffffffff");
 }
