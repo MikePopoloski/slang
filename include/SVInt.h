@@ -376,7 +376,7 @@ public:
     friend bool wildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     /// Concatenation operator
-    friend SVInt concatenate(ArrayRef<const SVInt*> operands);
+    friend SVInt concatenate(ArrayRef<SVInt> operands);
 
     /// Optimized operators that work with direct integer values.
     friend logic_t operator==(const SVInt& lhs, uint64_t rhs) {
