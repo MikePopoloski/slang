@@ -450,21 +450,37 @@ BoundExpression* ExpressionBinder::bindMultipleConcatenationExpression(const Mul
 }
 
 BoundExpression* ExpressionBinder::bindSelectExpression(const ElementSelectExpressionSyntax* syntax) {
-    BoundExpression* left = bindAndPropagate(syntax->left);
-
-    BoundExpression* msb;
+    BoundExpression* expr = bindAndPropagate(syntax->left);
+    // if (down), the indices are declares going down, [15:0], so
+    // msb > lsb
+    bool down = expr->type->as<IntegralTypeSymbol>().lowerBounds[0] > 0;
+    BoundExpression* left;
+    BoundExpression* right;
     int width;
+
+    ConstantEvaluator evaluator;
+    // TODO: errors if things that should be constant expressions aren't actually constant expressions
     SyntaxKind kind = syntax->select->selector->kind;
     switch (kind) {
         case SyntaxKind::BitSelect:
-            msb = bindAndPropagate(((BitSelectSyntax*)syntax->select->selector)->expr);
+            left = bindAndPropagate(((BitSelectSyntax*)syntax->select->selector)->expr);
+            right = left;
             width = 1;
             break;
         case SyntaxKind::SimpleRangeSelect:
-            msb = bindAndPropagate(())
+            left = bindAndPropagate((SimpleRangeSelectSyntax*)syntax->select->selector)->left; // msb
+            right = bindAndPropagate((SimpleRangeSelectSyntax*)syntax->select->selector)->right; // lsb
+            width = (down ? 1 : -1) * (evaluator.evaluateExpr(left).integer().getAssertUInt16() -
+                    evaluator.evaluateExpr(right).integer().getAssertUInt16());
+            break;
         case SyntaxKind::AscendingRangeSelect:
         case SyntaxKind::DescendingRangeSelect:
+            left = bindAndPropagate((AscendingRangeSelectSyntax*)syntax->select->selector)->left; // msb
+            right = bindAndPropagate((AscendingRangeSelectSyntax*)syntax->select->selector)->right; // lsb
+            width = evaluator.evaluateExpr(right).integer().getAssertUInt16();
+            break;
     }
+    return alloc.emplace<BoundSelectExpression>(syntax, sem.getIntegralType(width, expr->type->isSigned(), kind, expr->type->isFourState()), expr, left, right);
 }
 
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
@@ -651,6 +667,7 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
             // all operands are self determined
             expression->type = type;
             break;
+
             DEFAULT_UNREACHABLE;
     }
 }

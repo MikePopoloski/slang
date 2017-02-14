@@ -42,6 +42,7 @@ ConstantValue ConstantEvaluator::evaluateExpr(const BoundExpression* tree) {
         case BoundNodeKind::UnaryExpression: return evaluateUnary((BoundUnaryExpression*)tree);
         case BoundNodeKind::BinaryExpression: return evaluateBinary((BoundBinaryExpression*)tree);
         case BoundNodeKind::TernaryExpression: return evaluateConditional((BoundTernaryExpression*)tree);
+        case BoundNodeKind::SelectExpression: return evaluateSelect((BoundSelectExpression*)tree);
         case BoundNodeKind::NaryExpression: return evaluateNary((BoundNaryExpression*)tree);
         case BoundNodeKind::AssignmentExpression: return evaluateAssignment((BoundAssignmentExpression*)tree);
         case BoundNodeKind::CallExpression: return evaluateCall((BoundCallExpression*)tree);
@@ -185,6 +186,47 @@ ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpressio
         return evaluateExpr(expr->left).integer();
     } else  {
         return evaluateExpr(expr->right).integer();
+    }
+
+    return nullptr;
+}
+
+ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression* expr) {
+    const auto first = evaluateExpr(expr->expr).integer();
+    int lb = expr->type->as<IntegralTypeSymbol>().lowerBounds[0];
+    bool down = expr->type->as<IntegralTypeSymbol>().lowerBounds[0] > 0;
+    const auto msb = evaluateExpr(expr->left).integer();
+    int16_t actualMsb = abs(msb.getAssertUInt16() - lb);
+    // here "actual" bit refers to bits numbered from
+    // lsb 0 to msb <width>, which is what is understood by SVInt::bitSelect
+    switch (expr->syntax->kind) {
+        case SyntaxKind::BitSelect: {
+            return first.bitSelect(actualMsb, actualMsb);
+        }
+        case SyntaxKind::SimpleRangeSelect: {
+            const auto lsb = evaluateExpr(expr->right).integer();
+            uint16_t actualLsb = abs(msb.getAssertUInt16() - lb);
+            return first.bitSelect(actualLsb, actualMsb);
+        }
+        case SyntaxKind::AscendingRangeSelect: {
+            const auto width = evaluateExpr(expr->right).integer().getAssertUInt16();
+            if (down) {
+                return first.bitSelect(actualMsb - width, actualMsb);
+            } else {
+                // here 'actualMsb' is an Lsb
+                return first.bitSelect(actualMsb, actualMsb + width);
+            }
+        }
+        case SyntaxKind::DescendingRangeSelect: {
+            const auto width = evaluateExpr(expr->right).integer().getAssertUInt16();
+            if (!down) {
+                return first.bitSelect(actualMsb - width, actualMsb);
+            } else {
+                // here 'actualMsb' is an Lsb
+                return first.bitSelect(actualMsb, actualMsb + width);
+            }
+        }
+        DEFAULT_UNREACHABLE;
     }
 
     return nullptr;

@@ -561,6 +561,31 @@ SVInt SVInt::replicate(const SVInt& times) const {
     return concatenate(ArrayRef<SVInt>(buffer.begin(), buffer.end()));
 }
 
+SVInt SVInt::bitSelect(uint16_t lsb, uint16_t msb) const {
+    uint16_t selectWidth = msb - lsb + 1;
+    if (isSingleWord()) {
+        uint64_t selection = (val >> lsb) & ((1 << selectWidth) - 1);
+        return SVInt(selection);
+    }
+
+    size_t words = getNumWords(selectWidth, unknownFlag);
+    uint64_t* newData = new uint64_t[words]();
+    copyBits((uint8_t*)newData, 0, (uint8_t*)pVal, selectWidth);
+    bool actualUnknownsInResult = false;
+    if (unknownFlag) {
+        copyBits((uint8_t*)(newData + words / 2), 0, (uint8_t*)(pVal + getNumWords() / 2), selectWidth);
+        for (size_t i = words / 2; i < words; ++i) {
+            if (newData[i] != 0) {
+                actualUnknownsInResult = true;
+                break;
+            }
+        }
+    }
+
+    // TODO: sign?
+    return SVInt(newData, selectWidth, signFlag, actualUnknownsInResult);
+}
+
 size_t SVInt::hash(size_t seed) const {
     return xxhash(getRawData(), getNumWords() * WORD_SIZE, seed);
 }
