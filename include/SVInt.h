@@ -246,6 +246,9 @@ public:
     /// The operation SV applies for 'x ? lhs : rhs
     SVInt ambiguousConditionalCombination(const SVInt& rhs) const;
 
+    /// Multiple concatenation/replication
+    SVInt replicate(const SVInt& times) const;
+
     logic_t reductionOr() const;
     logic_t reductionAnd() const;
     logic_t reductionXor() const;
@@ -370,7 +373,10 @@ public:
     friend SVInt zeroExtend(const SVInt& value, uint16_t bits);
     friend SVInt extend(const SVInt& value, uint16_t bits, bool sign);
     friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
-    friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
+    friend bool wildcardEqual(const SVInt& lhs, const SVInt& rhs);
+
+    /// Concatenation operator
+    friend SVInt concatenate(ArrayRef<const SVInt*> operands);
 
     /// Optimized operators that work with direct integer values.
     friend logic_t operator==(const SVInt& lhs, uint64_t rhs) {

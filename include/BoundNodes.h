@@ -15,6 +15,7 @@ enum class BoundNodeKind {
     UnaryExpression,
     BinaryExpression,
     TernaryExpression,
+    NaryExpression,
     AssignmentExpression,
     CallExpression,
     StatementList,
@@ -93,6 +94,27 @@ public:
         BoundExpression(BoundNodeKind::BinaryExpression, syntax, type), left(left), right(right) {}
 };
 
+/// This is named in the general way as a TernaryExpression, but the only ternary expression is the conditional operator
+class BoundTernaryExpression : public BoundExpression {
+public:
+    BoundExpression* pred;
+    BoundExpression* left;
+    BoundExpression* right;
+
+    BoundTernaryExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, BoundExpression* pred, BoundExpression* left, BoundExpression* right) :
+        BoundExpression(BoundNodeKind::TernaryExpression, syntax, type), pred(pred), left(left), right(right) {}
+
+};
+
+class BoundNaryExpression : public BoundExpression {
+public:
+    ArrayRef<const BoundExpression*> exprs;
+
+    BoundNaryExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, ArrayRef<const BoundExpression*> exprs) :
+        BoundExpression(BoundNodeKind::NaryExpression, syntax, type),
+        exprs(exprs) {}
+};
+
 class BoundAssignmentExpression : public BoundExpression {
 public:
     BoundExpression* left;
@@ -110,17 +132,6 @@ public:
     BoundCallExpression(const ExpressionSyntax* syntax, const SubroutineSymbol* subroutine, ArrayRef<const BoundExpression*> arguments) :
         BoundExpression(BoundNodeKind::CallExpression, syntax, subroutine->returnType),
         subroutine(subroutine), arguments(arguments) {}
-};
-
-class BoundTernaryExpression : public BoundExpression {
-public:
-    BoundExpression* pred;
-    BoundExpression* left;
-    BoundExpression* right;
-
-    BoundTernaryExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, BoundExpression* pred, BoundExpression* left, BoundExpression* right) :
-        BoundExpression(BoundNodeKind::TernaryExpression, syntax, type), pred(pred), left(left), right(right) {}
-
 };
 
 class BoundStatement : public BoundNode {

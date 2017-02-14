@@ -42,6 +42,7 @@ ConstantValue ConstantEvaluator::evaluateExpr(const BoundExpression* tree) {
         case BoundNodeKind::UnaryExpression: return evaluateUnary((BoundUnaryExpression*)tree);
         case BoundNodeKind::BinaryExpression: return evaluateBinary((BoundBinaryExpression*)tree);
         case BoundNodeKind::TernaryExpression: return evaluateConditional((BoundTernaryExpression*)tree);
+        case BoundNodeKind::NaryExpression: return evaluateNary((BoundNaryExpression*)tree);
         case BoundNodeKind::AssignmentExpression: return evaluateAssignment((BoundAssignmentExpression*)tree);
         case BoundNodeKind::CallExpression: return evaluateCall((BoundCallExpression*)tree);
 
@@ -152,11 +153,14 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* exp
         case SyntaxKind::InequalityExpression: return SVInt(l != r);
         case SyntaxKind::CaseEqualityExpression: return SVInt((logic_t)exactlyEqual(l, r));
         case SyntaxKind::CaseInequalityExpression: return SVInt((logic_t)!exactlyEqual(l, r));
+        case SyntaxKind::WildcardEqualityExpression: return SVInt((logic_t)wildcardEqual(l, r));
+        case SyntaxKind::WildcardInequalityExpression: return SVInt((logic_t)!wildcardEqual(l, r));
         case SyntaxKind::GreaterThanEqualExpression: return SVInt(l >= r);
         case SyntaxKind::GreaterThanExpression: return SVInt(l > r);
         case SyntaxKind::LessThanEqualExpression: return SVInt(l <= r);
         case SyntaxKind::LessThanExpression: return SVInt(l < r);
         case SyntaxKind::PowerExpression: return l.pow(r);
+        case SyntaxKind::MultipleConcatenationExpression: return r.replicate(l);
             DEFAULT_UNREACHABLE;
     }
     return nullptr;
@@ -175,6 +179,19 @@ ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpressio
         return evaluateExpr(expr->left).integer();
     } else  {
         return evaluateExpr(expr->right).integer();
+    }
+
+    return nullptr;
+}
+
+ConstantValue ConstantEvaluator::evaluateNary(const BoundNaryExpression* expr) {
+    SmallVectorSized<const SVInt*, 8> operands;
+    for (auto operand : expr->exprs)
+        operands.append(&evaluate(operand).integer());
+    // TODO: add support for other Nary Expressions, like stream concatenation
+    switch(expr->syntax->kind) {
+        case SyntaxKind::ConcatenationExpression: return concatenate(ArrayRef<const SVInt*>(operands.begin(), operands.end()));
+        DEFAULT_UNREACHABLE;
     }
 
     return nullptr;

@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "SemanticModel.h"
+#include "ConstantEvaluator.h"
 
 namespace slang {
 
@@ -79,6 +80,8 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::LessThanEqualExpression:
         case SyntaxKind::LessThanExpression:
+        case SyntaxKind::WildcardEqualityExpression:
+        case SyntaxKind::WildcardInequalityExpression:
             return bindComparisonOperator(syntax->as<BinaryExpressionSyntax>());
         case SyntaxKind::LogicalAndExpression:
         case SyntaxKind::LogicalOrExpression:
@@ -109,6 +112,10 @@ BoundExpression* ExpressionBinder::bindExpression(const ExpressionSyntax* syntax
             return bindSubroutineCall(syntax->as<InvocationExpressionSyntax>());
         case SyntaxKind::ConditionalExpression:
             return bindConditionalExpression(syntax->as<ConditionalExpressionSyntax>());
+        case SyntaxKind::ConcatenationExpression:
+            return bindConcatenationExpression(syntax->as<ConcatenationExpressionSyntax>());
+        case SyntaxKind::MultipleConcatenationExpression:
+            return bindMultipleConcatenationExpression(syntax->as<MultipleConcatenationExpressionSyntax>());
 
             DEFAULT_UNREACHABLE;
     }
@@ -409,7 +416,35 @@ BoundExpression* ExpressionBinder::bindConditionalExpression(const ConditionalEx
     // force four-state return type for ambiguous condition case
     const TypeSymbol* type = binaryOperatorResultType(left->type, right->type, true);
     return alloc.emplace<BoundTernaryExpression>(syntax, type, pred, left, right);
+}
 
+BoundExpression* ExpressionBinder::bindConcatenationExpression(const ConcatenationExpressionSyntax* syntax) {
+    SmallVectorSized<const BoundExpression*, 8> buffer;
+    size_t totalWidth = 0;
+    for (auto argSyntax : syntax->expressions) {
+        const BoundExpression *arg = bindAndPropagate(argSyntax);
+        buffer.append(arg);
+        const TypeSymbol* type = arg->type;
+        if (type->kind != SymbolKind::IntegralType) {
+            return badExpr(alloc.emplace<BoundNaryExpression>(syntax, sem.getErrorType(), nullptr));
+        }
+        totalWidth += type->width();
+    }
+
+    return alloc.emplace<BoundNaryExpression>(syntax, sem.getIntegralType(totalWidth, false), buffer.copy(alloc));
+}
+
+BoundExpression* ExpressionBinder::bindMultipleConcatenationExpression(const MultipleConcatenationExpressionSyntax* syntax) {
+    BoundExpression* left  = bindAndPropagate(syntax->expression);
+    BoundExpression* right = bindAndPropagate(syntax->concatenation);
+    // TODO: check applicability
+    // TODO: left must be compile-time evaluatable, and it must be known in order to
+    // compute the type of a multiple concatenation. Have a nice error when this isn't the case?
+    // TODO: in cases like these, should we bother storing the bound expression? should we at least cache the result
+    // so we don't have to compute it again elsewhere?
+    ConstantEvaluator evaluator;
+    uint16_t replicationTimes = evaluator.evaluate(left).integer().getAssertUInt16();
+    return alloc.emplace<BoundBinaryExpression>(syntax, sem.getIntegralType(right->type->width() * replicationTimes, false), left, right);
 }
 
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
@@ -460,6 +495,10 @@ bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation 
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
+        case SyntaxKind::WildcardEqualityExpression:
+        case SyntaxKind::WildcardInequalityExpression:
+        case SyntaxKind::CaseEqualityExpression:
+        case SyntaxKind::CaseInequalityExpression:
             good = (lt->kind == SymbolKind::IntegralType || lt->kind == SymbolKind::RealType) &&
                    (rt->kind == SymbolKind::IntegralType || rt->kind == SymbolKind::RealType);
             break;
@@ -542,7 +581,9 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::LessThanEqualExpression:
         case SyntaxKind::LessThanExpression:
-            // Equality expressions are essentially self-detetermined, the logic
+        case SyntaxKind::WildcardEqualityExpression:
+        case SyntaxKind::WildcardInequalityExpression:
+            // Relational expressions are essentially self-detetermined, the logic
             // for how the left and right operands effect eachother is handled
             // at bind time
             break;
@@ -584,6 +625,11 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
                 propagate(((BoundTernaryExpression*)expression)->left, type);
                 propagate(((BoundTernaryExpression*)expression)->right, type);
             }
+            break;
+        case SyntaxKind::ConcatenationExpression:
+        case SyntaxKind::MultipleConcatenationExpression:
+            // all operands are self determined
+            expression->type = type;
             break;
             DEFAULT_UNREACHABLE;
     }

@@ -552,6 +552,14 @@ SVInt SVInt::ambiguousConditionalCombination(const SVInt& rhs) const {
     return SVInt(data, bitWidth, bothSigned, true);
 }
 
+SVInt SVInt::replicate(const SVInt& times) const {
+    uint32_t n = times.getAssertUInt32();
+    SmallVectorSized<const SVInt*, 8> buffer;
+    for (size_t i = 0; i < n; ++i)
+        buffer.append(this);
+    return concatenate(ArrayRef<const SVInt*>(buffer.begin(), buffer.end()));
+}
+
 size_t SVInt::hash(size_t seed) const {
     return xxhash(getRawData(), getNumWords() * WORD_SIZE, seed);
 }
@@ -1688,6 +1696,97 @@ bool exactlyEqual(const SVInt& lhs, const SVInt &rhs) {
 
     // ok, equal widths, and they both have unknown values, do a straight memory compare
     return memcmp(lhs.pVal, rhs.pVal, lhs.getNumWords() * SVInt::WORD_SIZE) == 0;
+}
+
+bool wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
+    // if no unknown flags, do normal comparison
+    if (!lhs.unknownFlag && !rhs.unknownFlag)
+        return (bool)(lhs == rhs);
+
+    // handle sign extension if necessary
+    if (lhs.bitWidth != rhs.bitWidth) {
+        bool bothSigned = lhs.signFlag && rhs.signFlag;
+        if (lhs.bitWidth < rhs.bitWidth)
+            return wildcardEqual(extend(lhs, rhs.bitWidth, bothSigned), rhs);
+        else
+            return wildcardEqual(lhs, extend(rhs, lhs.bitWidth, bothSigned));
+    }
+
+    size_t words = SVInt::getNumWords(lhs.bitWidth, false);
+    // Do word-for-word wildcard comparison, being careful that one argument
+    // might nothave unknwon flags
+    for (size_t i = 0; i < words; ++i) {
+        // bitmask of bits that actually matter in the comparison
+        uint64_t mask = ~((lhs.unknownFlag ? lhs.pVal[i + words] : 0) |
+                          (rhs.unknownFlag ? rhs.pVal[i + words] : 0));
+        if ((lhs.pVal[i] & mask) != (rhs.pVal[i] & mask))
+            return false;
+    }
+    return true;
+}
+
+void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitLength) {
+    // Like memcpy, but using bit offsets
+    // used for concatenate
+
+    // Get the first byte we want to write to, and the reamining bits are a bit offset
+    dest += destBitOffset / 8;
+    destBitOffset %= 8;
+    uint16_t srcBitOffset = 0;
+    while (bitLength > 0) {
+        // Number of bits we are writing to this byte
+        uint16_t bitsToWrite = std::min<uint8_t>(bitLength, 8 - destBitOffset);
+        // get the next 8 bits of src, probably not byte aligned
+        uint16_t srcByte = (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset));
+
+        *dest = (*dest   & ((1 << destBitOffset) - 1)) + // preserved bits
+                ((srcByte & ((1 << bitsToWrite))) << destBitOffset); // new bits
+        // next write will begin at the next byte boundry
+        destBitOffset = 0;
+        bitLength -= bitLength;
+        ++dest;
+        srcBitOffset += bitsToWrite;
+        src += srcBitOffset / 8;
+        srcBitOffset %= 8;
+    }
+}
+
+SVInt concatenate(ArrayRef<const SVInt*> operands) {
+    // First, compute how many bits total we are dealing with
+    uint16_t bits = 0;
+    bool unknownFlag = false;
+    for (auto op : operands) {
+        bits += op->bitWidth;
+        unknownFlag |= op->unknownFlag;
+    }
+
+    // words is the count of not unknown words
+    uint16_t words = SVInt::getNumWords(bits, false);
+    if (words == 1 && !unknownFlag) {
+        // The concatenation still fits into a single word
+        uint16_t offset = 0;
+        uint64_t val = 0;
+        for (auto op : operands) {
+            copyBits((uint8_t*)&val, offset, (uint8_t*)&op->val, op->bitWidth);
+            offset += op->bitWidth;
+        }
+        return SVInt(val);
+    }
+    uint64_t *data = new uint64_t[words * (unknownFlag + 1)]();
+
+    uint16_t offset = 0;
+    // zero out the whole thing ahead of time instead of having to be more careful
+    // and having to set zero bytes for missing data
+    memset((void*)data, 0, sizeof(uint64_t) * words * (unknownFlag + 1));
+    for (auto op : operands) {
+        copyBits((uint8_t*)data, offset, (uint8_t*)op->pVal, op->bitWidth);
+        if (op->unknownFlag) {
+            copyBits((uint8_t*)(data + words), offset,
+                     (uint8_t*)(op->pVal + SVInt::getNumWords(op->bitWidth, false)), op->bitWidth);
+        }
+        offset += op->bitWidth;
+    }
+    return SVInt(data, bits, false, unknownFlag);
 }
 
 }
