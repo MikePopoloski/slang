@@ -140,16 +140,52 @@ token operatorToken
 list<AttributeInstanceSyntax> attributes
 ExpressionSyntax operand
 
+kindmap<PrefixUnaryExpressionSyntax>
+UnaryPlusExpression UnaryMinusExpression UnaryBitwiseAndExpression
+UnaryBitwiseNandExpression UnaryBitwiseOrExpression UnaryBitwiseNorExpression
+UnaryBitwiseXorExpression UnaryBitwiseXnorExpression UnaryPreincrementExpression
+UnaryPredecrementExpression UnaryLogicalNotExpression UnaryBitwiseNotExpression
+UnarySequenceDelayExpression UnarySequenceEventExpression UnaryNotPropertyExpression
+AcceptOnPropertyExpression RejectOnPropertyExpression SyncAcceptOnPropertyExpression
+SyncRejectOnPropertyExpression NextTimePropertyExpression SNextTimePropertyExpression
+AlwaysPropertyExpression SAlwaysPropertyExpression EventuallyPropertyExpression
+SEventuallyPropertyExpression
+
 PostfixUnaryExpressionSyntax base=ExpressionSyntax
 ExpressionSyntax operand
 list<AttributeInstanceSyntax> attributes
 token operatorToken
+
+kindmap<PostfixUnaryExpressionSyntax>
+PostincrementExpression PostdecrementExpression
 
 BinaryExpressionSyntax base=ExpressionSyntax
 ExpressionSyntax left
 token operatorToken
 list<AttributeInstanceSyntax> attributes
 ExpressionSyntax right
+
+kindmap<BinaryExpressionSyntax>
+AddExpression SubtractExpression MultiplyExpression DivideExpression PowerExpression
+ModExpression EqualityExpression InequalityExpression CaseEqualityExpression
+CaseInequalityExpression WildcardEqualityExpression WildcardInequalityExpression
+LessThanExpression LessThanEqualExpression GreaterThanExpression GreaterThanEqualExpression
+LogicalAndExpression LogicalOrExpression BinaryAndExpression BinaryOrExpression
+BinaryXorExpression BinaryXnorExpression LogicalImplicationExpression
+LogicalEquivalenceExpression LogicalShiftLeftExpression LogicalShiftRightExpression
+ArithmeticShiftLeftExpression ArithmeticShiftRightExpression BinarySequenceDelayExpression
+OrSequenceExpression AndSequenceExpression IntersectSequenceExpression
+WithinSequenceExpression ThroughoutSequenceExpression IffPropertyExpression
+UntilPropertyExpression SUntilPropertyExpression UntilWithPropertyExpression
+SUntilWithPropertyExpression ImpliesPropertyExpression
+OverlappedImplicationPropertyExpression NonOverlappedImplicationPropertyExpression
+OverlappedFollowedByPropertyExpression NonOverlappedFollowedByPropertyExpression
+AssignmentExpression AddAssignmentExpression SubtractAssignmentExpression
+MultiplyAssignmentExpression DivideAssignmentExpression ModAssignmentExpression
+AndAssignmentExpression OrAssignmentExpression XorAssignmentExpression
+LogicalLeftShiftAssignmentExpression LogicalRightShiftAssignmentExpression
+ArithmeticLeftShiftAssignmentExpression ArithmeticRightShiftAssignmentExpression
+NonblockingAssignmentExpression
 
 MinTypMaxExpressionSyntax base=ExpressionSyntax kind=MinTypMaxExpression
 ExpressionSyntax min
@@ -198,6 +234,9 @@ ExpressionSyntax left
 token range
 ExpressionSyntax right
 
+kindmap<RangeSelectSyntax>
+SimpleRangeSelect AscendingRangeSelect DescendingRangeSelect
+
 ElementSelectSyntax base=ExpressionSyntax kind=ElementSelect
 token openBracket
 SelectorSyntax selector
@@ -221,6 +260,10 @@ empty
 KeywordNameSyntax base=NameSyntax
 token keyword
 
+kindmap<KeywordNameSyntax>
+LocalScope UnitScope RootScope ThisHandle SuperHandle ArrayUniqueMethod
+ArrayAndMethod ArrayOrMethod ArrayXorMethod ConstructorName SystemName
+
 ClassNameSyntax base=NameSyntax kind=ClassName
 token identifier
 ParameterValueAssignmentSyntax parameters
@@ -238,6 +281,12 @@ token separator
 
 LiteralExpressionSyntax base=PrimaryExpressionSyntax
 token literal
+
+kindmap<LiteralExpressionSyntax>
+NullLiteralExpression StringLiteralExpression IntegerLiteralExpression
+UnbasedUnsizedLiteralExpression RealLiteralExpression
+TimeLiteralExpression WildcardLiteralExpression OneStepLiteralExpression
+DefaultPatternKeyExpression
 
 IntegerVectorExpressionSyntax base=PrimaryExpressionSyntax kind=IntegerVectorExpression
 token size
@@ -327,6 +376,9 @@ empty
 DelaySyntax base=TimingControlSyntax
 token hash
 ExpressionSyntax delayValue
+
+kindmap<DelaySyntax>
+DelayControl CycleDelay
 
 EventControlSyntax base=TimingControlSyntax kind=EventControl
 token at
@@ -497,8 +549,16 @@ token keyword
 token signing
 list<VariableDimensionSyntax> dimensions
 
+kindmap<IntegerTypeSyntax>
+BitType LogicType RegType ByteType ShortIntType IntType LongIntType
+IntegerType TimeType
+
 KeywordTypeSyntax base=DataTypeSyntax
 token keyword
+
+kindmap<KeywordTypeSyntax>
+ShortRealType RealType RealTimeType StringType CHandleType EventType
+VoidType TypeType
 
 NamedTypeSyntax base=DataTypeSyntax kind=NamedType
 NameSyntax name
@@ -519,6 +579,9 @@ token openBrace
 list<StructUnionMemberSyntax> members
 token closeBrace
 list<VariableDimensionSyntax> dimensions
+
+kindmap<StructUnionTypeSyntax>
+StructType UnionType
 
 EnumTypeSyntax base=DataTypeSyntax kind=EnumType
 token keyword
@@ -573,6 +636,9 @@ DeferredAssertionSyntax delay
 ParenthesizedExpressionSyntax expr
 ActionBlockSyntax action
 
+kindmap<ImmediateAssertionStatementSyntax>
+ImmediateAssertStatement ImmediateAssumeStatement ImmediateCoverStatement
+
 DisableIffSyntax kind=DisableIff
 token disable
 token iff
@@ -592,6 +658,10 @@ token openParen
 PropertySpecSyntax propertySpec
 token closeParen
 ActionBlockSyntax action
+
+kindmap<ConcurrentAssertionStatementSyntax>
+AssertPropertyStatement AssumePropertyStatement CoverSequenceStatement
+CoverPropertyStatement RestrictPropertyStatement ExpectPropertyStatement
 
 ConcurrentAssertionMemberSyntax base=MemberSyntax kind=ConcurrentAssertionMember
 ConcurrentAssertionStatementSyntax statement
@@ -723,10 +793,16 @@ token equals
 ExpressionSyntax value
 token semi
 
+kindmap<ProceduralAssignStatementSyntax>
+ProceduralAssignStatement ProceduralForceStatement
+
 ProceduralDeassignStatementSyntax base=StatementSyntax
 token keyword
 ExpressionSyntax variable
 token semi
+
+kindmap<ProceduralDeassignStatementSyntax>
+ProceduralDeassignStatement ProceduralReleaseStatement
 
 DisableStatementSyntax base=StatementSyntax kind=DisableStatement
 token disable
@@ -748,6 +824,9 @@ NamedBlockClauseSyntax blockName
 list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax endBlockName
+
+kindmap<BlockStatementSyntax>
+SequentialBlockStatement ParallelBlockStatement
 
 WaitStatementSyntax base=StatementSyntax kind=WaitStatement
 token wait
@@ -782,6 +861,9 @@ EventTriggerStatementSyntax base=StatementSyntax
 token trigger
 TimingControlSyntax timing
 NameSyntax name
+
+kindmap<EventTriggerStatementSyntax>
+BlockingEventTriggerStatement NonblockingEventTriggerStatement
 
 // ----- MODULES -----
 
@@ -865,11 +947,17 @@ ParameterPortListSyntax parameters
 PortListSyntax ports
 token semi
 
+kindmap<ModuleHeaderSyntax>
+ModuleHeader ProgramHeader InterfaceHeader PackageHeader
+
 ModuleDeclarationSyntax base=MemberSyntax
 ModuleHeaderSyntax header
 list<MemberSyntax> members
 token endmodule
 NamedBlockClauseSyntax blockName
+
+kindmap<ModuleDeclarationSyntax>
+ModuleDeclaration InterfaceDeclaration ProgramDeclaration PackageDeclaration
 
 ExternModuleSyntax kind=ExternModule
 token externKeyword
@@ -884,6 +972,9 @@ token semi
 ProceduralBlockSyntax base=MemberSyntax
 token keyword
 StatementSyntax statement
+
+kindmap<ProceduralBlockSyntax>
+InitialBlock FinalBlock AlwaysBlock AlwaysCombBlock AlwaysFFBlock AlwaysLatchBlock
 
 GenerateRegionSyntax base=MemberSyntax kind=GenerateRegion
 token keyword
@@ -991,6 +1082,9 @@ FunctionPrototypeSyntax prototype
 list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax endBlockName
+
+kindmap<FunctionDeclarationSyntax>
+FunctionDeclaration TaskDeclaration
 
 LetPortSyntax kind=LetPort
 list<AttributeInstanceSyntax> attributes
@@ -1259,6 +1353,11 @@ token directive
 SimpleDirectiveSyntax base=DirectiveSyntax
 token endOfDirective
 
+kindmap<SimpleDirectiveSyntax>
+CellDefineDirective PragmaDirective UnconnectedDriveDirective
+NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
+ResetAllDirective UndefineAllDirective
+
 IncludeDirectiveSyntax base=DirectiveSyntax kind=IncludeDirective
 token fileName
 token endOfDirective
@@ -1268,9 +1367,15 @@ token name
 token endOfDirective
 tokenlist disabledTokens
 
+kindmap<ConditionalBranchDirectiveSyntax>
+ElsIfDirective IfDefDirective IfNDefDirective
+
 UnconditionalBranchDirectiveSyntax base=DirectiveSyntax
 token endOfDirective
 tokenlist disabledTokens
+
+kindmap<UnconditionalBranchDirectiveSyntax>
+EndIfDirective ElseDirective
 
 MacroArgumentDefaultSyntax kind=MacroArgumentDefault
 token equals

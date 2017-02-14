@@ -27,6 +27,11 @@ std::string SyntaxNode::toString(uint8_t flags) {
     return std::string(buffer.begin(), buffer.end());
 }
 
+std::string SyntaxNode::toString(uint8_t flags) const {
+    // TODO: the const cast is ugly
+    return const_cast<SyntaxNode*>(this)->toString(flags);
+}
+
 Token SyntaxNode::getFirstToken() {
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);

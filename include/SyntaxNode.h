@@ -136,9 +136,6 @@ enum class SyntaxKind : uint16_t {
     NewArrayExpression,
     AssignmentPatternExpression,
     DefaultPatternKeyExpression,
-    StrongPropertyExpression,
-    WeakPropertyExpression,
-    FirstMatchSequenceExpression,
 
     // selectors
     BitSelect,
@@ -366,9 +363,7 @@ enum class SyntaxKind : uint16_t {
     NonAnsiPortList,
     InterfacePortHeader,
     VariablePortHeader,
-    SimpleNetPortType,
     InterconnectPortHeader,
-    DataNetPortType,
     NetPortHeader,
     ImplicitAnsiPort,
     ExplicitAnsiPort,
@@ -528,9 +523,6 @@ struct TokenOrSyntax {
 /// Base class for all syntax nodes.
 class SyntaxNode {
 public:
-    /// Number of child nodes.
-    uint32_t childCount = 0;
-
     /// The kind of syntax node.
     SyntaxKind kind;
 
@@ -538,6 +530,7 @@ public:
 
     /// Utility method to wrap writeTo and generate an std::string.
     std::string toString(uint8_t flags = 0);
+    std::string toString(uint8_t flags = 0) const;
 
     /// Write the node and all of its children to a string.
     void writeTo(SmallVector<char>& buffer, uint8_t flags);
@@ -568,7 +561,37 @@ public:
         return static_cast<const T*>(this);
     }
 
+    // The following is some template magic to determine whether a type has a
+    // visit() function taking a specific argument.
+    template<typename, typename T>
+    struct has_visit {
+        static_assert(
+            std::integral_constant<T, false>::value,
+            "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct has_visit<C, Ret(Args...)> {
+    private:
+        template<typename T>
+        static constexpr auto check(T*) -> typename
+            std::is_same<
+                decltype(std::declval<T>().visit(std::declval<Args>()...)),
+                Ret
+            >::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+        static constexpr bool value = type::value;
+    };
+
 protected:
+    uint32_t childCount = 0;
+
     virtual TokenOrSyntax getChild(uint32_t) = 0;
     virtual void replaceChild(uint32_t, Token) = 0;
 };

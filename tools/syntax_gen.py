@@ -27,9 +27,11 @@ namespace slang {
 ''')
 
 	currtype = None
+	currkind = None
 	currtype_name = None
 	tags = None
 	alltypes = {}
+	kindmap = {}
 
 	for line in [x.strip('\n') for x in inf]:
 		if line.startswith('//'):
@@ -37,15 +39,23 @@ namespace slang {
 			outf.write('\n\n')
 		elif len(line) == 0 or (currtype is not None and line == 'empty'):
 			if currtype is not None:
-				generate(outf, currtype_name, tags, currtype, alltypes)
+				generate(outf, currtype_name, tags, currtype, alltypes, kindmap)
 			currtype = None
+			currkind = None
 		elif currtype is not None:
 			p = line.split(' ')
 			if len(p) != 2:
 				raise Exception("Two elements per member please.")
 			currtype.append(p)
+		elif currkind is not None:
+			for k in line.split(' '):
+				if k in kindmap:
+					raise Exception("More than one kind map for {}".format(k))
+				kindmap[k] = currkind
 		elif line.startswith('forward '):
 			outf.write('struct {};\n'.format(line[8:]))
+		elif line.startswith('kindmap<'):
+			currkind = line[8:line.index('>')]
 		else:
 			p = line.split(' ')
 			currtype_name = p[0]
@@ -53,10 +63,26 @@ namespace slang {
 			currtype = []
 
 	if currtype:
-		generate(outf, currtype_name, tags, currtype, alltypes)
+		generate(outf, currtype_name, tags, currtype, alltypes, kindmap)
+
+	# Write out a dispatch method to get from SyntaxKind to actual concrete type
+	outf.write('template<typename T>\n')
+	outf.write('void dispatchVisitor(T& v, const SyntaxNode* node) {\n')
+	outf.write('    if (!node) return;\n')
+	outf.write('    switch (node->kind) {\n')
+	outf.write('        case SyntaxKind::Unknown: break;\n')
+	outf.write('        case SyntaxKind::List: break;\n')
+
+	for k,v in kindmap.iteritems():
+		outf.write('        case SyntaxKind::{}: '.format(k))
+		outf.write('SyntaxNode::has_visit<T, void(const {0}&)>::value ? v.visit(*(const {0}*)node) : v.defaultVisit(*node); break;\n'.format(v))
+
+	outf.write('    }\n')
+	outf.write('}\n\n')
+
 	outf.write('}')
 
-def generate(outf, name, tags, members, alltypes):
+def generate(outf, name, tags, members, alltypes, kindmap):
 	tagdict = {}
 	if tags:
 		for t in tags:
@@ -101,6 +127,12 @@ def generate(outf, name, tags, members, alltypes):
 
 	kindArg = 'SyntaxKind kind' if 'kind' not in tagdict else ''
 	kindValue = 'kind' if 'kind' not in tagdict else 'SyntaxKind::' + tagdict['kind']
+
+	if 'kind' in tagdict:
+		k = tagdict['kind']
+		if k in kindmap:
+			raise Exception("More than one kind map for {}".format(k))
+		kindmap[k] = name
 
 	if kindArg and len(processed_members) > 0:
 		kindArg += ', '
