@@ -133,4 +133,6 @@ EVAL_TEST_EX("conditionalU2", "[eval]", "(1 / 0) ? 128'b101 : 128'b110", "128'b1
 EVAL_TEST("conditionalUSame", "[eval]", "'x ? 5 : 5", 5);
 EVAL_TEST("selfDeterminedUULiteral", "[eval]", "1 << '1", 2);
 EVAL_TEST_EX("contextDeterminedUULiteral", "[eval]", "'1 + 65'b0", "65'h1ffffffffffffffff");
+EVAL_TEST_EX("concatenation", "[eval]", "{2'b11, 3'b101}", "5'b11101");
+
 }

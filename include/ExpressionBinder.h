@@ -46,6 +46,8 @@ private:
     BoundExpression* bindAssignmentOperator(const BinaryExpressionSyntax* syntax);
     BoundExpression* bindSubroutineCall(const InvocationExpressionSyntax* syntax);
     BoundExpression* bindConditionalExpression(const ConditionalExpressionSyntax* syntax);
+    BoundExpression* bindConcatenationExpression(const ConcatenationExpressionSyntax* syntax);
+    BoundExpression* bindMultipleConcatenationExpression(const MultipleConcatenationExpressionSyntax* syntax);
 
     BoundStatement* bindReturnStatement(const ReturnStatementSyntax* syntax);
 
