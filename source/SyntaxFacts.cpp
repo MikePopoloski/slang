@@ -930,9 +930,6 @@ bool isExpression(SyntaxKind kind) {
         case SyntaxKind::NewArrayExpression:
         case SyntaxKind::AssignmentPatternExpression:
         case SyntaxKind::DefaultPatternKeyExpression:
-        case SyntaxKind::StrongPropertyExpression:
-        case SyntaxKind::WeakPropertyExpression:
-        case SyntaxKind::FirstMatchSequenceExpression:
         case SyntaxKind::ElementSelectExpression:
         case SyntaxKind::MemberAccessExpression:
         case SyntaxKind::InvocationExpression:
