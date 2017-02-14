@@ -1550,8 +1550,8 @@ DataTypeSyntax* Parser::parseDataType(bool allowImplicit) {
             // identifier is actually the name of something else (like a declaration) and that the
             // type should be implicit. Check if there's another identifier right after us
             // before deciding which one we're looking at.
-            int index = 1;
-            if (scanDimensionList(index) && peek(index).kind == TokenKind::Identifier)
+            int index = 0;
+            if (scanQualifiedName(index) && scanDimensionList(index) && peek(index).kind == TokenKind::Identifier)
                 return alloc.emplace<NamedTypeSyntax>(parseName());
             return nullptr;
         }
