@@ -76,9 +76,10 @@ private:
     ConstantValue evaluateConditional(const BoundTernaryExpression* expr);
     ConstantValue evaluateAssignment(const BoundAssignmentExpression* expr);
     ConstantValue evaluateCall(const BoundCallExpression* expr);
-    ConstantValue evaluateStatementList(const BoundStatementList* stmt);
-    ConstantValue evaluateReturn(const BoundReturnStatement* stmt);
-    ConstantValue evaluateVariableDecl(const BoundVariableDecl* decl);
+
+    void evaluateStatementList(const BoundStatementList* stmt);
+    void evaluateReturn(const BoundReturnStatement* stmt);
+    void evaluateVariableDecl(const BoundVariableDecl* decl);
 
     ConstantValue evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments);
 

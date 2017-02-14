@@ -243,28 +243,25 @@ ConstantValue ConstantEvaluator::evaluateSystemCall(SystemFunction func, ArrayRe
     return nullptr;
 }
 
-ConstantValue ConstantEvaluator::evaluateStatementList(const BoundStatementList* stmt) {
+void ConstantEvaluator::evaluateStatementList(const BoundStatementList* stmt) {
     ConstantValue result;
     for (auto item : stmt->list) {
         evaluateStmt(item);
-        if (item->kind == BoundNodeKind::ReturnStatement)
+        if (currentFrame->hasReturned)
             break;
     }
-    return result;
 }
 
-ConstantValue ConstantEvaluator::evaluateReturn(const BoundReturnStatement* stmt) {
+void ConstantEvaluator::evaluateReturn(const BoundReturnStatement* stmt) {
     currentFrame->returnValue = evaluateExpr(stmt->expr);
     currentFrame->hasReturned = true;
-    return currentFrame->returnValue;
 }
 
-ConstantValue ConstantEvaluator::evaluateVariableDecl(const BoundVariableDecl* decl) {
+void ConstantEvaluator::evaluateVariableDecl(const BoundVariableDecl* decl) {
     // Create storage for the variable
     auto& storage = createTemporary(decl->symbol);
     if (decl->symbol->initializer)
         storage = evaluateExpr(decl->symbol->initializer);
-    return nullptr;
 }
 
 bool ConstantEvaluator::evaluateLValue(const BoundExpression* expr, LValue& lvalue) {
