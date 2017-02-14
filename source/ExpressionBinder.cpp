@@ -443,7 +443,7 @@ BoundExpression* ExpressionBinder::bindMultipleConcatenationExpression(const Mul
     // TODO: in cases like these, should we bother storing the bound expression? should we at least cache the result
     // so we don't have to compute it again elsewhere?
     ConstantEvaluator evaluator;
-    uint16_t replicationTimes = evaluator.evaluate(left).integer().getAssertUInt16();
+    uint16_t replicationTimes = evaluator.evaluateExpr(left).integer().getAssertUInt16();
     return alloc.emplace<BoundBinaryExpression>(syntax, sem.getIntegralType(right->type->width() * replicationTimes, false), left, right);
 }
 
