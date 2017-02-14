@@ -131,6 +131,9 @@ private:
     // An empty declaration table to make it easier to create SemanticModels
     // where we don't care about the full compilation process.
     static DeclarationTable EmptyDeclTable;
+
+    // ScriptSession calls internal parsing handlers on input snippets
+    friend class ScriptSession;
 };
 
 }

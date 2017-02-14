@@ -36,6 +36,7 @@ class DeclarationTable {
 public:
     DeclarationTable(Diagnostics& diagnostics);
 
+    void addMember(const MemberSyntax *member);
     void addSyntaxTree(const SyntaxTree* tree);
 
     ArrayRef<const ModuleDeclarationSyntax*> getPackages();
@@ -63,6 +64,8 @@ private:
     static void visit(const ModuleDeclarationSyntax* module, UnitDecls& unit, std::vector<NameSet>& scopeStack);
     static void visit(const MemberSyntax* node, UnitDecls& unit, std::vector<NameSet>& scopeStack);
     static bool containsName(const std::vector<NameSet>& scopeStack, StringRef name);
+
+    bool addRootNode(UnitDecls& unit, const MemberSyntax* member);
 
     Diagnostics& diagnostics;
     Vector<UnitDecls> units;

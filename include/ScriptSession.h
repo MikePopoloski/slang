@@ -34,10 +34,19 @@ public:
             case SyntaxKind::FunctionDeclaration:
             case SyntaxKind::TaskDeclaration:
                 return evalSubroutineDeclaration(root->as<FunctionDeclarationSyntax>());
+            case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ModuleDeclaration: {
                 auto module = root->as<ModuleDeclarationSyntax>();
-                auto inst = sem.makeImplicitInstance(module);
-                return scriptScope.add(inst);
+                declTable.addMember(module);
+                return true;
+            }
+            case SyntaxKind::HierarchyInstantiation: {
+                SmallVectorSized<const Symbol*, 8> results;
+                sem.handleInstantiation(root->as<HierarchyInstantiationSyntax>(), results, &scriptScope);
+                for (auto sym : results) {
+                    scriptScope.add(sym);
+                }
+                return true;
             }
             default:
                 if (isExpression(root->kind))
@@ -86,7 +95,11 @@ public:
         return DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(diagnostics);
     }
 
-private:
+    std::string dumpScope() {
+        return scriptScope.toString();
+    }
+
+  private:
     std::vector<SyntaxTree> syntaxTrees;
     BumpAllocator alloc;
     Diagnostics diagnostics;
