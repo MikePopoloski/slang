@@ -835,6 +835,22 @@ bool isPossibleLetPortItem(TokenKind kind) {
     return kind == TokenKind::OpenParenthesisStar || kind == TokenKind::UntypedKeyword || isPossibleDataType(kind);
 }
 
+bool isNotInParameterList(TokenKind kind) {
+    return kind == TokenKind::OpenParenthesis || kind == TokenKind::Semicolon || kind == TokenKind::EndOfFile;
+}
+
+bool isPossiblePropertyPortItem(TokenKind kind) {
+    switch(kind) {
+        case TokenKind::OpenParenthesisStar:
+        case TokenKind::LocalKeyword:
+        case TokenKind::PropertyKeyword:
+        case TokenKind::SequenceKeyword:
+            return true;
+        default:
+            return isPossibleDataType(kind);
+    }
+}
+
 bool isStatement(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::NamedLabel:

@@ -342,6 +342,10 @@ ExpressionSyntax sizeExpr
 token closeBracket
 ParenthesizedExpressionSyntax initializer
 
+NewExpressionSyntax base=ExpressionSyntax kind=NewExpression
+token newKeyword
+ExpressionSyntax expr
+
 // ----- POSTFIX EXPRESSIONS -----
 
 ElementSelectExpressionSyntax base=ExpressionSyntax kind=ElementSelectExpression
@@ -614,6 +618,16 @@ list<VariableDimensionSyntax> dimensions
 
 UntypedSyntax base=DataTypeSyntax kind=Untyped
 token untyped
+
+PropertyTypeSyntax base=DataTypeSyntax kind=PropertyType
+token property
+
+SequenceTypeSyntax base=DataTypeSyntax kind=SequenceType
+token sequence
+
+VarDataTypeSyntax base=DataTypeSyntax kind=VarDataType
+token var
+DataTypeSyntax type
 
 // ----- ASSERTIONS -----
 
@@ -1095,6 +1109,40 @@ token identifier
 LetPortListSyntax portList
 EqualsValueClauseSyntax initializer
 token semi
+
+AssertionVariableDeclarationSyntax kind=AssertionVariableDeclaration
+DataTypeSyntax type
+separated_list<VariableDeclaratorSyntax> assignments
+token semi
+
+PropertyLvarPortDirectionSyntax kind=PropertyLvarPortDirection
+token input
+
+PropertyLocalPortSyntax kind=PropertyLocalPort
+token local
+PropertyLvarPortDirectionSyntax direction
+
+PropertyPortSyntax kind=PropertyPort
+list<AttributeInstanceSyntax> attributes
+PropertyLocalPortSyntax local
+DataTypeSyntax type
+VariableDeclaratorSyntax declarator
+
+PropertyPortListSyntax kind=PropertyPortList
+token openParen
+separated_list<PropertyPortSyntax> ports
+token closeParen
+
+PropertyDeclarationSyntax kind=PropertyDeclaration base=MemberSyntax
+token property
+token name
+PropertyPortListSyntax portList
+token semi
+list<AssertionVariableDeclarationSyntax> assertionVariables
+PropertySpecSyntax spec
+EmptyStatementSyntax optionalSemicolon
+token endProperty
+NamedBlockClauseSyntax endBlockName
 
 ExtendsClauseSyntax kind=ExtendsClause
 token keyword

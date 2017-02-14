@@ -33,7 +33,7 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     int newPrecedence = 0;
 
     auto current = peek();
-    if (current.kind == TokenKind::NewKeyword)
+    if (current.kind == TokenKind::NewKeyword || isClassScope())
         return parseNewExpression();
     // TODO:
     /*else if (isPossibleDelayOrEventControl(current.kind)) {
@@ -638,6 +638,48 @@ NameSyntax* Parser::parseNamePart(bool isForEach) {
     }
 }
 
+bool Parser::isClassScope() {
+    int index = 0;
+    TokenKind kind = peek(index++).kind;
+    if (kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName) {
+        return false;
+    }
+    kind = peek(index++).kind;
+    if (kind != TokenKind::DoubleColon) {
+        if (kind != TokenKind::Hash) {
+            return false;
+        }
+        if (peek(index++).kind != TokenKind::OpenParenthesis) {
+            return false;
+        }
+        if (!scanTypePart<isNotInParameterList>(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis)) {
+            return false;
+        }
+        if (peek(index++).kind != TokenKind::DoubleColon) {
+            return false;
+        }
+    }
+    return true;
+}
+
+ClassScopeSyntax* Parser::parseClassScope() {
+    NameSyntax* name = parseNamePart(false);
+
+    auto kind = peek().kind;
+    Token separator;
+    while (true) {
+        separator = expect(TokenKind::DoubleColon);
+        auto nextName = parseNamePart(false);
+        if (nextName == nullptr) {
+            break;
+        }
+        name = alloc.emplace<ScopedNameSyntax>(name, separator, nextName);
+        kind = peek().kind;
+    }
+
+    return alloc.emplace<ClassScopeSyntax>(name, separator);
+}
+
 ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
     if (!peek(TokenKind::Hash))
         return nullptr;
@@ -770,7 +812,11 @@ EventExpressionSyntax* Parser::parseEventExpression() {
 }
 
 ExpressionSyntax* Parser::parseNewExpression() {
-    auto newKeyword = consume();
+    ClassScopeSyntax* scope = nullptr;
+    if (!peek(TokenKind::NewKeyword)) {
+        scope = parseClassScope();
+    }
+    auto newKeyword = expect(TokenKind::NewKeyword);
     auto kind = peek().kind;
 
     if (kind == TokenKind::OpenBracket) {
@@ -792,9 +838,11 @@ ExpressionSyntax* Parser::parseNewExpression() {
     ArgumentListSyntax* arguments = nullptr;
     if (kind == TokenKind::OpenParenthesis)
         arguments = parseArgumentList();
+    else if (scope == nullptr && isPossibleExpression(kind)) {
+        return alloc.emplace<NewExpressionSyntax>(newKeyword, parseExpression());
+    }
 
-    // TODO: handle class scoped new
-    return alloc.emplace<NewClassExpressionSyntax>(nullptr, newKeyword, arguments);
+    return alloc.emplace<NewClassExpressionSyntax>(scope, newKeyword, arguments);
 }
 
 TimingControlSyntax* Parser::parseTimingControl() {

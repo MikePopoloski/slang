@@ -34,7 +34,7 @@ const SyntaxNode* Parser::parseGuess() {
     // Now try to parse as a statement. This will also handle plain expressions,
     // though we might get an error about a missing semicolon that we should suppress.
     auto& diagnostics = getDiagnostics();
-    auto statement = parseStatement(/* allowEmpty */ true);
+auto statement = parseStatement(/* allowEmpty */ true);
     if (statement->kind == SyntaxKind::ExpressionStatement) {
         if (!diagnostics.empty() && diagnostics.back().code == DiagCode::ExpectedToken)
             diagnostics.pop();
@@ -440,6 +440,8 @@ MemberSyntax* Parser::parseMember() {
             return parseImportDeclaration(attributes);
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, consume());
+        case TokenKind::PropertyKeyword:
+            return parsePropertyDeclaration(attributes);
         default:
             break;
     }
@@ -1825,6 +1827,75 @@ PackageImportItemSyntax* Parser::parsePackageImportItem() {
         item = expect(TokenKind::Identifier);
 
     return alloc.emplace<PackageImportItemSyntax>(package, doubleColon, item);
+}
+
+PropertyDeclarationSyntax* Parser::parsePropertyDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto property = expect(TokenKind::PropertyKeyword);
+    auto name = expect(TokenKind::Identifier);
+    PropertyPortListSyntax* portList = nullptr;
+
+    if (peek(TokenKind::OpenParenthesis)) {
+        auto openParen = consume();
+        SmallVectorSized<TokenOrSyntax, 4> buffer;
+        Token closeParen;
+
+        parseSeparatedList<isPossiblePropertyPortItem, isEndOfParenList>(
+            buffer,
+            TokenKind::CloseParenthesis,
+            TokenKind::Comma,
+            closeParen,
+            DiagCode::ExpectedPropertyPort,
+            [this](bool) {
+                auto attributes = parseAttributes();
+                PropertyLocalPortSyntax* local = nullptr;
+                if (peek(TokenKind::LocalKeyword)) {
+                    auto localKeyword = consume();
+                    PropertyLvarPortDirectionSyntax* direction = nullptr;
+                    if (peek(TokenKind::InputKeyword)) {
+                        direction = alloc.emplace<PropertyLvarPortDirectionSyntax>(consume());
+                    }
+                    local = alloc.emplace<PropertyLocalPortSyntax>(localKeyword, direction);
+                }
+                DataTypeSyntax* type;
+                switch(peek().kind) {
+                    case TokenKind::PropertyKeyword:
+                        type = alloc.emplace<PropertyTypeSyntax>(consume());
+                    case TokenKind::SequenceKeyword:
+                        type = alloc.emplace<SequenceTypeSyntax>(consume());
+                    case TokenKind::UntypedKeyword:
+                        type = alloc.emplace<UntypedSyntax>(consume());
+                    default:
+                        type = parseDataType(true);
+                }
+                auto declarator = parseVariableDeclarator(true);
+                return alloc.emplace<PropertyPortSyntax>(attributes, local, type, declarator);
+            }
+        );
+        portList = alloc.emplace<PropertyPortListSyntax>(openParen, buffer.copy(alloc), closeParen);
+    }
+
+    auto semi = expect(TokenKind::Semicolon);
+    SmallVectorSized<AssertionVariableDeclarationSyntax*, 4> declarations;
+    while(peek(TokenKind::VarKeyword) || isPossibleDataType(peek().kind)) {
+        DataTypeSyntax* type;
+        if (peek(TokenKind::VarKeyword)) {
+            type = alloc.emplace<VarDataTypeSyntax>(consume(), parseDataType(true));
+        } else {
+            type = parseDataType(false);
+        }
+
+        Token semi2;
+        auto variableDeclarators = parseVariableDeclarators(semi2);
+        declarations.append(alloc.emplace<AssertionVariableDeclarationSyntax>(type, variableDeclarators, semi2));
+    }
+    auto spec = parsePropertySpec();
+    EmptyStatementSyntax* optSemi = nullptr;
+    if (peek(TokenKind::Semicolon)) {
+        optSemi = alloc.emplace<EmptyStatementSyntax>(nullptr, nullptr, consume());
+    }
+    auto endProperty = expect(TokenKind::EndPropertyKeyword);
+    auto* blockName = parseNamedBlockClause();
+    return alloc.emplace<PropertyDeclarationSyntax>(attributes, property, name, portList, semi, declarations.copy(alloc), spec, optSemi, endProperty, blockName);
 }
 
 ParameterDeclarationSyntax* Parser::parseParameterPort() {

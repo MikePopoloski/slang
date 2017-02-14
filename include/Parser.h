@@ -59,6 +59,8 @@ private:
     SelectorSyntax* parseElementSelector();
     NameSyntax* parseName(bool isForEach = false);
     NameSyntax* parseNamePart(bool isForEach);
+    bool isClassScope();
+    ClassScopeSyntax* parseClassScope();
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax* parseArgumentList();
     ArgumentSyntax* parseArgument();
@@ -117,6 +119,7 @@ private:
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportDeclarationSyntax* parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     PackageImportItemSyntax* parsePackageImportItem();
+    PropertyDeclarationSyntax* parsePropertyDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ParameterDeclarationSyntax* parseParameterPort();
     MemberSyntax* parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);

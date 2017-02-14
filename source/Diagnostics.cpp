@@ -122,6 +122,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ExpectedAnsiPort] = { "expected ansi port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedFunctionPort] = { "expected subroutine port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedLetPort] = { "expected let construct port declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedPropertyPort] = { "expected property construct port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedForInitializer] = { "expected for loop initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedExpression] = { "expected expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedOpenRangeElement] = { "expected open range element", DiagnosticSeverity::Error };
