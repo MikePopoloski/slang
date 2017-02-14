@@ -33,7 +33,7 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     int newPrecedence = 0;
 
     auto current = peek();
-    if (current.kind == TokenKind::NewKeyword || isClassScope())
+    if (current.kind == TokenKind::NewKeyword || isClassScope(TokenKind::NewKeyword))
         return parseNewExpression();
     // TODO:
     /*else if (isPossibleDelayOrEventControl(current.kind)) {
@@ -638,28 +638,31 @@ NameSyntax* Parser::parseNamePart(bool isForEach) {
     }
 }
 
-bool Parser::isClassScope() {
+bool Parser::isClassScope(TokenKind endKind) {
     int index = 0;
     TokenKind kind = peek(index++).kind;
-    if (kind != TokenKind::Identifier && kind != TokenKind::UnitSystemName) {
-        return false;
+    bool first = true;
+    while(true) {
+        if (kind != TokenKind::Identifier && (!first || kind != TokenKind::UnitSystemName)) {
+            return !first && (kind == endKind);
+        }
+        first = false;
+        kind = peek(index++).kind;
+        if (kind != TokenKind::DoubleColon) {
+            if (kind != TokenKind::Hash) {
+                return false;
+            }
+            if (peek(index++).kind != TokenKind::OpenParenthesis) {
+                return false;
+            }
+            if (!scanTypePart<isNotInParameterList>(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis)) {
+                return false;
+            }
+            if (peek(index++).kind != TokenKind::DoubleColon) {
+                return false;
+            }
+        }
     }
-    kind = peek(index++).kind;
-    if (kind != TokenKind::DoubleColon) {
-        if (kind != TokenKind::Hash) {
-            return false;
-        }
-        if (peek(index++).kind != TokenKind::OpenParenthesis) {
-            return false;
-        }
-        if (!scanTypePart<isNotInParameterList>(index, TokenKind::OpenParenthesis, TokenKind::CloseParenthesis)) {
-            return false;
-        }
-        if (peek(index++).kind != TokenKind::DoubleColon) {
-            return false;
-        }
-    }
-    return true;
 }
 
 ClassScopeSyntax* Parser::parseClassScope() {

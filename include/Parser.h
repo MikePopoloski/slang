@@ -59,7 +59,7 @@ private:
     SelectorSyntax* parseElementSelector();
     NameSyntax* parseName(bool isForEach = false);
     NameSyntax* parseNamePart(bool isForEach);
-    bool isClassScope();
+    bool isClassScope(TokenKind endKind);
     ClassScopeSyntax* parseClassScope();
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax* parseArgumentList();
