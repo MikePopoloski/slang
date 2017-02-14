@@ -95,4 +95,11 @@ bool SyntaxNode::replaceFirstToken(Token token) {
     return false;
 }
 
+const SyntaxNode* SyntaxNode::childNode(uint32_t index) const {
+    auto child = const_cast<SyntaxNode*>(this)->getChild(index);
+    if (child.isToken)
+        return nullptr;
+    return child.node;
+}
+
 }

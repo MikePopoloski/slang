@@ -549,6 +549,11 @@ public:
     /// Replace the first token in the subtree with the given token.
     bool replaceFirstToken(Token token);
 
+    /// Gets the child syntax node at the specified index. If the child at
+    /// the given index is not a node (probably a token) then this returns null.
+    const SyntaxNode* childNode(uint32_t index) const;
+    uint32_t getChildCount() const { return childCount; }
+
     template<typename T>
     T* as() {
         // TODO: assert kind
@@ -562,7 +567,8 @@ public:
     }
 
     // The following is some template magic to determine whether a type has a
-    // visit() function taking a specific argument.
+    // visit() function taking a specific argument, and if so call it. Otherwise
+    // it calls visitDefault().
     template<typename, typename T>
     struct has_visit {
         static_assert(
@@ -588,6 +594,16 @@ public:
     public:
         static constexpr bool value = type::value;
     };
+
+    template<typename C, typename... Args>
+    static std::enable_if_t<has_visit<C, void(Args...)>::value> dispatch(C& c, Args&&... args) {
+        c.visit(std::forward<Args>(args)...);
+    }
+
+    template<typename C, typename... Args>
+    static std::enable_if_t<!has_visit<C, void(Args...)>::value> dispatch(C& c, Args&&... args) {
+        c.visitDefault(std::forward<Args>(args)...);
+    }
 
 protected:
     uint32_t childCount = 0;

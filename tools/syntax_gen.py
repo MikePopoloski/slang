@@ -71,16 +71,24 @@ namespace slang {
 	outf.write('    if (!node) return;\n')
 	outf.write('    switch (node->kind) {\n')
 	outf.write('        case SyntaxKind::Unknown: break;\n')
-	outf.write('        case SyntaxKind::List: break;\n')
+	outf.write('        case SyntaxKind::List: v.visitDefault(*node); break;\n')
 
 	for k,v in kindmap.iteritems():
 		outf.write('        case SyntaxKind::{}: '.format(k))
-		outf.write('SyntaxNode::has_visit<T, void(const {0}&)>::value ? v.visit(*(const {0}*)node) : v.defaultVisit(*node); break;\n'.format(v))
+		outf.write('SyntaxNode::dispatch(v, *(const {0}*)node); break;\n'.format(v))
+		alltypes.pop(v, None)
 
 	outf.write('    }\n')
 	outf.write('}\n\n')
 
 	outf.write('}')
+
+	# Do some checking to make sure all types have at least one kind assigned,
+	# or has set final=false. We already removed types from alltypes in the
+	# loop above.
+	for k,v in alltypes.iteritems():
+		if v[3]: # Check for final
+			print "Type '{}' has no kinds assigned to it.".format(k)
 
 def generate(outf, name, tags, members, alltypes, kindmap):
 	tagdict = {}
@@ -123,8 +131,6 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		processed_members.append(l)
 		outf.write('    {};\n'.format(l))
 
-	alltypes[name] = (processed_members, members, pointerMembers)
-
 	kindArg = 'SyntaxKind kind' if 'kind' not in tagdict else ''
 	kindValue = 'kind' if 'kind' not in tagdict else 'SyntaxKind::' + tagdict['kind']
 
@@ -144,6 +150,8 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 	final = ' final'
 	if 'final' in tagdict and tagdict['final'] == 'false':
 		final = ''
+
+	alltypes[name] = (processed_members, members, pointerMembers, final)
 
 	outf.write('\n')
 	outf.write('    {}({}{}) :\n'.format(name, kindArg, ', '.join(processed_members)))
