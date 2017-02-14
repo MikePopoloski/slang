@@ -249,6 +249,9 @@ public:
     /// Multiple concatenation/replication
     SVInt replicate(const SVInt& times) const;
 
+    /// Returns the bit-selected range from lsb to msb, inclusive both ends
+    SVInt bitSelect(uint16_t lsb, uint16_t msb) const;
+
     logic_t reductionOr() const;
     logic_t reductionAnd() const;
     logic_t reductionXor() const;

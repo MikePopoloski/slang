@@ -16,6 +16,7 @@ enum class BoundNodeKind {
     BinaryExpression,
     TernaryExpression,
     NaryExpression,
+    SelectExpression,
     AssignmentExpression,
     CallExpression,
     StatementList,
@@ -96,7 +97,7 @@ public:
         BoundExpression(BoundNodeKind::BinaryExpression, syntax, type), left(left), right(right) {}
 };
 
-/// This is named in the general way as a TernaryExpression, but the only ternary expression is the conditional operator
+/// This is used only for  ?:
 class BoundTernaryExpression : public BoundExpression {
 public:
     BoundExpression* pred;
@@ -105,6 +106,19 @@ public:
 
     BoundTernaryExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, BoundExpression* pred, BoundExpression* left, BoundExpression* right) :
         BoundExpression(BoundNodeKind::TernaryExpression, syntax, type), pred(pred), left(left), right(right) {}
+
+};
+
+/// Also ternary, but needs to store the kind of the selector
+class BoundSelectExpression : public BoundExpression {
+public:
+    SyntaxKind kind;
+    BoundExpression* expr;
+    BoundExpression* left;
+    BoundExpression* right;
+
+    BoundSelectExpression(const ExpressionSyntax* syntax, const TypeSymbol* type, SyntaxKind kind, BoundExpression* expr, BoundExpression* left, BoundExpression* right) :
+        BoundExpression(BoundNodeKind::SelectExpression, syntax, type), kind(kind), expr(expr), left(left), right(right) {}
 
 };
 
