@@ -68,6 +68,7 @@ private:
     ConstantValue evaluateVariable(const BoundVariable* expr);
     ConstantValue evaluateUnary(const BoundUnaryExpression* expr);
     ConstantValue evaluateBinary(const BoundBinaryExpression* expr);
+    ConstantValue evaluateConditional(const BoundTernaryExpression* expr);
     ConstantValue evaluateAssignment(const BoundAssignmentExpression* expr);
     ConstantValue evaluateCall(const BoundCallExpression* expr);
     ConstantValue evaluateStatementList(const BoundStatementList* stmt);

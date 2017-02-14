@@ -41,6 +41,7 @@ ConstantValue ConstantEvaluator::evaluate(const BoundNode* tree) {
         case BoundNodeKind::Variable: return evaluateVariable((BoundVariable*)tree);
         case BoundNodeKind::UnaryExpression: return evaluateUnary((BoundUnaryExpression*)tree);
         case BoundNodeKind::BinaryExpression: return evaluateBinary((BoundBinaryExpression*)tree);
+        case BoundNodeKind::TernaryExpression: return evaluateConditional((BoundTernaryExpression*)tree);
         case BoundNodeKind::AssignmentExpression: return evaluateAssignment((BoundAssignmentExpression*)tree);
         case BoundNodeKind::CallExpression: return evaluateCall((BoundCallExpression*)tree);
         case BoundNodeKind::StatementList: return evaluateStatementList((BoundStatementList*)tree);
@@ -67,7 +68,7 @@ ConstantValue ConstantEvaluator::evaluateVariable(const BoundVariable* expr) {
 }
 
 ConstantValue ConstantEvaluator::evaluateUnary(const BoundUnaryExpression* expr) {
-    const auto& v = evaluate(expr->operand).integer();
+    const auto v = evaluate(expr->operand).integer();
 
     switch (expr->syntax->kind) {
         case SyntaxKind::UnaryPlusExpression: return v;
@@ -86,8 +87,8 @@ ConstantValue ConstantEvaluator::evaluateUnary(const BoundUnaryExpression* expr)
 }
 
 ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* expr) {
-    const auto& l = evaluate(expr->left).integer();
-    const auto& r = evaluate(expr->right).integer();
+    const auto l = evaluate(expr->left).integer();
+    const auto r = evaluate(expr->right).integer();
 
     switch (expr->syntax->kind) {
         case SyntaxKind::AddExpression: return l + r;
@@ -98,6 +99,10 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* exp
         case SyntaxKind::BinaryAndExpression: return l & r;
         case SyntaxKind::BinaryOrExpression: return l | r;
         case SyntaxKind::BinaryXorExpression: return l ^ r;
+        case SyntaxKind::LogicalShiftLeftExpression: return l.shl(r);
+        case SyntaxKind::LogicalShiftRightExpression: return l.lshr(r);
+        case SyntaxKind::ArithmeticShiftLeftExpression: return l.shl(r);
+        case SyntaxKind::ArithmeticShiftRightExpression: return l.ashr(r);
         case SyntaxKind::BinaryXnorExpression: return l.xnor(r);
         case SyntaxKind::EqualityExpression: return SVInt(l == r);
         case SyntaxKind::InequalityExpression: return SVInt(l != r);
@@ -113,14 +118,32 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* exp
     return nullptr;
 }
 
+ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpression* expr) {
+    const auto pred = (logic_t)evaluate(expr->pred).integer();
+
+    if (pred.isUnknown()) {
+        // do strange combination operation
+        const auto l = evaluate(expr->left).integer();
+        const auto r = evaluate(expr->right).integer();
+        return l.ambiguousConditionalCombination(r);
+    } else if (bool(pred)) {
+        // Only one side gets evaluate if true or false
+        return evaluate(expr->left).integer();
+    } else  {
+        return evaluate(expr->right).integer();
+    }
+
+    return nullptr;
+}
+
 ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpression* expr) {
     LValue lvalue;
     if (!evaluateLValue(expr->left, lvalue))
         return nullptr;
 
     auto rvalue = evaluate(expr->right);
-    const SVInt& l = evaluate(expr->left).integer();
-    const SVInt& r = rvalue.integer();
+    const SVInt l = evaluate(expr->left).integer();
+    const SVInt r = rvalue.integer();
 
     switch (expr->syntax->kind) {
         case SyntaxKind::AssignmentExpression: lvalue.store(std::move(rvalue)); break;
@@ -132,10 +155,10 @@ ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpress
         case SyntaxKind::AndAssignmentExpression: lvalue.store(l & r); break;
         case SyntaxKind::OrAssignmentExpression: lvalue.store(l | r); break;
         case SyntaxKind::XorAssignmentExpression: lvalue.store(l ^ r); break;
-        // case SyntaxKind::LogicalLeftShiftAssignmentExpression:
-        // case SyntaxKind::LogicalRightShiftAssignmentExpression:
-        // case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
-        // case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression: lvalue.store(l.shl(r)); break;
+        case SyntaxKind::LogicalRightShiftAssignmentExpression: lvalue.store(l.lshr(r)); break;
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression: lvalue.store(l.shl(r)); break;
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression: lvalue.store(l.ashr(r)); break;
             DEFAULT_UNREACHABLE;
     }
     return lvalue.load();
