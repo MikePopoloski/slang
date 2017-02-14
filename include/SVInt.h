@@ -373,7 +373,7 @@ public:
     friend SVInt zeroExtend(const SVInt& value, uint16_t bits);
     friend SVInt extend(const SVInt& value, uint16_t bits, bool sign);
     friend bool exactlyEqual(const SVInt& lhs, const SVInt& rhs);
-    friend bool wildcardEqual(const SVInt& lhs, const SVInt& rhs);
+    friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     /// Concatenation operator
     friend SVInt concatenate(ArrayRef<SVInt> operands);
