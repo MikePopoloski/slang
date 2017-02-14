@@ -553,11 +553,12 @@ SVInt SVInt::ambiguousConditionalCombination(const SVInt& rhs) const {
 }
 
 SVInt SVInt::replicate(const SVInt& times) const {
+    // TODO: optimize to avoid all the copies?
     uint32_t n = times.getAssertUInt32();
-    SmallVectorSized<const SVInt*, 8> buffer;
+    SmallVectorSized<SVInt, 8> buffer;
     for (size_t i = 0; i < n; ++i)
-        buffer.append(this);
-    return concatenate(ArrayRef<const SVInt*>(buffer.begin(), buffer.end()));
+        buffer.append(*this);
+    return concatenate(ArrayRef<SVInt>(buffer.begin(), buffer.end()));
 }
 
 size_t SVInt::hash(size_t seed) const {
@@ -1719,15 +1720,21 @@ bool wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
         // bitmask of bits that actually matter in the comparison
         uint64_t mask = ~((lhs.unknownFlag ? lhs.pVal[i + words] : 0) |
                           (rhs.unknownFlag ? rhs.pVal[i + words] : 0));
-        if ((lhs.pVal[i] & mask) != (rhs.pVal[i] & mask))
+        // One operand can be a single word if the bitWidth is small and
+        // only one has unknowns
+        uint64_t lhsWord = lhs.isSingleWord() ? lhs.val : lhs.pVal[i];
+        uint64_t rhsWord = rhs.isSingleWord() ? rhs.val : rhs.pVal[i];
+        if ((lhsWord & mask) != (rhsWord & mask))
             return false;
     }
     return true;
 }
 
+
 void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitLength) {
-    // Like memcpy, but using bit offsets
-    // used for concatenate
+    // Like memcpy, but at the bit level instead of bytes
+    // i.e if destBitOffset % 8 == bitLength % 8 == 0, this is
+    // equivalent to memcpy(dest + destBitOffset / 8, src, bitLength / 8)
 
     // Get the first byte we want to write to, and the reamining bits are a bit offset
     dest += destBitOffset / 8;
@@ -1737,13 +1744,13 @@ void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitL
         // Number of bits we are writing to this byte
         uint16_t bitsToWrite = std::min<uint8_t>(bitLength, 8 - destBitOffset);
         // get the next 8 bits of src, probably not byte aligned
-        uint16_t srcByte = (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset));
+        uint8_t srcByte = (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset));
 
         *dest = (*dest   & ((1 << destBitOffset) - 1)) + // preserved bits
-                ((srcByte & ((1 << bitsToWrite))) << destBitOffset); // new bits
+                ((srcByte & ((1 << bitsToWrite) - 1)) << destBitOffset); // new bits
         // next write will begin at the next byte boundry
         destBitOffset = 0;
-        bitLength -= bitLength;
+        bitLength -= bitsToWrite;
         ++dest;
         srcBitOffset += bitsToWrite;
         src += srcBitOffset / 8;
@@ -1751,13 +1758,14 @@ void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitL
     }
 }
 
-SVInt concatenate(ArrayRef<const SVInt*> operands) {
+SVInt concatenate(ArrayRef<SVInt> operands) {
     // First, compute how many bits total we are dealing with
     uint16_t bits = 0;
     bool unknownFlag = false;
-    for (auto op : operands) {
-        bits += op->bitWidth;
-        unknownFlag |= op->unknownFlag;
+
+    for (const auto& op : operands) {
+        bits += op.bitWidth;
+        unknownFlag |= op.unknownFlag;
     }
 
     // words is the count of not unknown words
@@ -1766,7 +1774,8 @@ SVInt concatenate(ArrayRef<const SVInt*> operands) {
         // The concatenation still fits into a single word
         uint16_t offset = 0;
         uint64_t val = 0;
-        for (auto op : operands) {
+        // The first operand writs the msb, therefore, we must operate in reverse
+        for (const SVInt* op = operands.end() - 1; op >= operands.begin(); --op) {
             copyBits((uint8_t*)&val, offset, (uint8_t*)&op->val, op->bitWidth);
             offset += op->bitWidth;
         }
@@ -1776,10 +1785,14 @@ SVInt concatenate(ArrayRef<const SVInt*> operands) {
 
     uint16_t offset = 0;
     // zero out the whole thing ahead of time instead of having to be more careful
-    // and having to set zero bytes for missing data
+    // and having to set zero bits for missing data
     memset((void*)data, 0, sizeof(uint64_t) * words * (unknownFlag + 1));
-    for (auto op : operands) {
-        copyBits((uint8_t*)data, offset, (uint8_t*)op->pVal, op->bitWidth);
+    for (const SVInt* op = operands.end() - 1; op >= operands.begin(); --op) {
+
+        copyBits((uint8_t*)data, offset,
+            op->isSingleWord() ? (uint8_t*)&op->val
+                               : (uint8_t*)op->pVal,
+                               op->bitWidth);
         if (op->unknownFlag) {
             copyBits((uint8_t*)(data + words), offset,
                      (uint8_t*)(op->pVal + SVInt::getNumWords(op->bitWidth, false)), op->bitWidth);

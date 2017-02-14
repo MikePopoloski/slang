@@ -106,33 +106,38 @@ endfunction
 }
 
 // Simple test wrapper, uses ==(uint64_t) to check result
-#define EVAL_TEST(descr1, descr2, expr, result) \
-TEST_CASE(descr1, descr2) { \
+#define EVAL_TEST(descr, expr, result) \
+TEST_CASE(descr, "[eval]") { \
     ScriptSession session; \
     auto value = session.eval(expr).integer(); \
     CHECK(value == result); \
 }
 
 // Wrapper uses exactlyEqual and parses a text-specificied SVInt
-#define EVAL_TEST_EX(descr1, descr2, expr, result) \
-TEST_CASE(descr1, descr2) { \
+#define EVAL_TEST_EX(descr, expr, result) \
+TEST_CASE(descr, "[eval]") { \
     ScriptSession session; \
     auto value = session.eval(expr).integer(); \
     CHECK(exactlyEqual(value, SVInt(StringRef(result)))); \
 }
 
-EVAL_TEST("lshl", "[eval]", "4 << 2", 16);
-EVAL_TEST("ashl", "[eval]", "4 <<< 2", 16);
-EVAL_TEST("lshr", "[eval]", "4 >> 1", 2);
-EVAL_TEST_EX("ashr", "[eval]", "-4 >>> 1", "-2");
-EVAL_TEST_EX("ashr_long", "[eval]", "-65'sd4 >>> 1", "-65'sb10");
-EVAL_TEST("conditionalT", "[eval]", "2 == 2 ? 5 : 4", 5);
-EVAL_TEST("conditionalF", "[eval]", "(2 * 2) == 3 ? 5 : 4", 4);
-EVAL_TEST_EX("conditionalU", "[eval]", "'z ? 5 : 6", "32'sb1xx");
-EVAL_TEST_EX("conditionalU2", "[eval]", "(1 / 0) ? 128'b101 : 128'b110", "128'b1xx");
-EVAL_TEST("conditionalUSame", "[eval]", "'x ? 5 : 5", 5);
-EVAL_TEST("selfDeterminedUULiteral", "[eval]", "1 << '1", 2);
-EVAL_TEST_EX("contextDeterminedUULiteral", "[eval]", "'1 + 65'b0", "65'h1ffffffffffffffff");
-EVAL_TEST_EX("concatenation", "[eval]", "{2'b11, 3'b101}", "5'b11101");
+EVAL_TEST("lshl", "4 << 2", 16);
+EVAL_TEST("ashl", "4 <<< 2", 16);
+EVAL_TEST("lshr", "4 >> 1", 2);
+EVAL_TEST_EX("ashr", "-4 >>> 1", "-2");
+EVAL_TEST_EX("ashr_long", "-65'sd4 >>> 1", "-65'sb10");
+EVAL_TEST("conditionalT", "2 == 2 ? 5 : 4", 5);
+EVAL_TEST("conditionalF", "(2 * 2) == 3 ? 5 : 4", 4);
+EVAL_TEST_EX("conditionalU", "'z ? 5 : 6", "32'sb1xx");
+EVAL_TEST_EX("conditionalU2", "(1 / 0) ? 128'b101 : 128'b110", "128'b1xx");
+EVAL_TEST("conditionalUSame", "'x ? 5 : 5", 5);
+EVAL_TEST("selfDeterminedUULiteral", "1 << '1", 2);
+//TODO: Figure out why a test like this fails, seems like something wrong with literals with x's?
+//EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
+EVAL_TEST_EX("contextDeterminedUULiteral", "'1 + 65'b0", "65'h1ffffffffffffffff");
+EVAL_TEST_EX("concatenation", "{2'b11, 3'b101}", "5'b11101");
+EVAL_TEST_EX("concatenation2", "{22'b0, 43'b100, 1'b1 / 1'b0}", "66'b100x");
+EVAL_TEST_EX("replicate", "{4 {2'b10}}", "8'b10101010");
+EVAL_TEST("wildcardEq", "{1'b1 / 1'b0, 4'b1001} ==? 5'b11001", 1);
 
 }
