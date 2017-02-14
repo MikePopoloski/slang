@@ -62,10 +62,17 @@ ConstantValue ConstantEvaluator::evaluateLiteral(const BoundLiteral* expr) {
             uint16_t width = expr->type->width();
             bool isSigned = expr->type->isSigned();
             switch (digit.value) {
-                case 0: return SVInt(width, 0, isSigned);
-                case 1: return SVInt(width, (1 << width) - 1, isSigned);
-                case logic_t::X_VALUE: return SVInt::createFillX(width, isSigned);
-                case logic_t::Z_VALUE: return SVInt::createFillZ(width, isSigned);
+                case 0:
+                    return SVInt(width, 0, isSigned);
+                case 1: {
+                    SVInt tmp(width, 0, isSigned);
+                    tmp.setAllOnes();
+                    return tmp;
+                }
+                case logic_t::X_VALUE:
+                     return SVInt::createFillX(width, isSigned);
+                case logic_t::Z_VALUE:
+                    return SVInt::createFillZ(width, isSigned);
                 DEFAULT_UNREACHABLE;
             }
             return expr->value;
