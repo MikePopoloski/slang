@@ -156,7 +156,8 @@ TEST_CASE(descr, "[eval]") { \
 TEST_CASE(descr, "[eval]") { \
     ScriptSession session; \
     auto value = session.eval(expr).integer(); \
-    CHECK(exactlyEqual(value, SVInt(StringRef(result)))); \
+    auto res = SVInt(StringRef(result)); \
+    CHECK(exactlyEqual(value, res)); \
 }
 
 EVAL_TEST("lshl", "4 << 2", 16);
@@ -170,12 +171,54 @@ EVAL_TEST_EX("conditionalU", "'z ? 5 : 6", "32'sb1xx");
 EVAL_TEST_EX("conditionalU2", "(1 / 0) ? 128'b101 : 128'b110", "128'b1xx");
 EVAL_TEST("conditionalUSame", "'x ? 5 : 5", 5);
 EVAL_TEST("selfDeterminedUULiteral", "1 << '1", 2);
-//TODO: Figure out why a test like this fails, seems like something wrong with literals with x's?
-//EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
 EVAL_TEST_EX("contextDeterminedUULiteral", "'1 + 65'b0", "65'h1ffffffffffffffff");
+EVAL_TEST_EX("concatenationLeadingZeroes", "{2'b11, 4'b0010, 3'b101}", "9'b110010101");
 EVAL_TEST_EX("concatenation", "{2'b11, 3'b101}", "5'b11101");
 EVAL_TEST_EX("concatenation2", "{22'b0, 43'b100, 1'b1 / 1'b0}", "66'b100x");
 EVAL_TEST_EX("replicate", "{4 {2'b10}}", "8'b10101010");
+EVAL_TEST_EX("nontrivialReplicate", "{((2 + 2) - 4 + 4) {2'b01}}", "8'b01010101");
+EVAL_TEST_EX("concatenation with zero-width replicate", "{2'b10, {0 {4'b1001}}, 2'b01}", "4'b1001");
 EVAL_TEST("wildcardEq", "5'b11001 ==? {1'b1 / 1'b0, 4'b1001}", 1);
 EVAL_TEST("wildcardEqNotCommute", "({1'b1 / 1'b0, 4'b1001} ==? 5'b11001) === 'x", 1);
+EVAL_TEST("bitSelect", "3'd7[2]", 1);
+EVAL_TEST("bitSelectSimpleRange", "5'd25[3:0]", 9);
+EVAL_TEST("bitSelectSimpleRangeNonzerobased", "5'd25[3:1]", 4);
+EVAL_TEST_EX("bitSelectSimpleRangeLarge", "65'h1ffffffffffffffff[64:62]", "3'b111");
+EVAL_TEST("bitSelectAscendingRange", "5'd25[0 +: 3]", 9);
+EVAL_TEST("bitSelectDescendingRange", "5'd25[3 -: 3]", 9);
+EVAL_TEST_EX("bitselect with unknown address", "4'b1001[(1 / 0)]", "1'bx");
+EVAL_TEST_EX("rangeselect with unknown address", "4'b1001[(1/ 0) +: 2]", "2'bxx");
+EVAL_TEST_EX("partially oob rangeselect", "4'b1001[3 : -1]", "5'b1001x");
+EVAL_TEST_EX("partially oob rangeselect2", "4'b1001[4 : 1]", "4'bx100");
+EVAL_TEST_EX("partially oob rangeselect3", "4'b1001[4 : -1]", "6'bx1001x");
+//TODO: Figure out why a test like this fails, seems like something wrong with literals with x's?
+//EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
+
+TEST_CASE("bit select weird indexes", "[eval]") {
+    // The above bit select cases test the "normal" case where vectors are specified
+    // with [N : 0]. Here we test "up-vectors" and non-zero lower bounds.
+    ScriptSession session;
+    session.eval("logic [0 : 15] up_vect = 5'b10111;");
+
+    auto value = session.eval("up_vect[12:14]").integer();
+    CHECK(exactlyEqual(value, SVInt(StringRef("3'b011"))));
+
+    value = session.eval("up_vect[12 -: 2]").integer();
+    CHECK(exactlyEqual(value, SVInt(StringRef("3'b011"))));
+
+    value = session.eval("up_vect[14 +: 2]").integer();
+    CHECK(exactlyEqual(value, SVInt(StringRef("3'b011"))));
+
+    session.eval("logic [20 : 5] down_vect = 5'd25");
+
+    value = session.eval("down_vect[8:5]").integer();
+
+    CHECK(exactlyEqual(value, SVInt(StringRef("4'd9"))));
+
+    value = session.eval("down_vect[5 +: 3]").integer();
+    CHECK(value == 9);
+
+    value = session.eval("down_vect[8 -: 3]").integer();
+    CHECK(value == 9);
+}
 }

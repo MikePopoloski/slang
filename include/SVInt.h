@@ -153,7 +153,10 @@ public:
     SVInt(uint16_t bits, uint64_t value, bool isSigned) :
         bitWidth(bits), signFlag(isSigned), unknownFlag(false)
     {
-        ASSERT(bitWidth);
+        // 0-bit SVInts are valid only as the result of a zero-width concatenation, which is only
+        // valid within another concatenation. For nwo we drop this check altogehter, but it
+        // might be a good check to have in general
+        //ASSERT(bitWidth);
         if (isSingleWord())
             val = value;
         else
@@ -198,6 +201,7 @@ public:
     uint32_t getAssertUInt32() const;
     uint64_t getAssertUInt64() const;
 
+    int64_t getAssertInt64() const;
     /// Check whether the number is negative. Note that this doesn't care about
     /// the sign flag; it simply looks at the highest bit to determine whether it is set.
     bool isNegative() const { return (bool)(*this)[bitWidth - 1]; }
@@ -250,7 +254,7 @@ public:
     SVInt replicate(const SVInt& times) const;
 
     /// Returns the bit-selected range from lsb to msb, inclusive both ends
-    SVInt bitSelect(uint16_t lsb, uint16_t msb) const;
+    SVInt bitSelect(int16_t lsb, int16_t msb) const;
 
     logic_t reductionOr() const;
     logic_t reductionAnd() const;
@@ -420,7 +424,7 @@ public:
     };
 
 private:
-    // fast internal constructor to just set fields on new values
+    // fast internal constructors to just set fields on new values
     SVInt(uint64_t* data, uint16_t bits, bool signFlag, bool unknownFlag) :
         pVal(data), bitWidth(bits), signFlag(signFlag), unknownFlag(unknownFlag)
     {

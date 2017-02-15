@@ -234,8 +234,16 @@ BoundExpression* ExpressionBinder::bindSimpleName(const IdentifierNameSyntax* sy
 }
 
 BoundExpression* ExpressionBinder::bindSelectName(const IdentifierSelectNameSyntax* syntax, const Scope* currScope) {
-    ASSERT(false); // TODO: implement this
-    return nullptr;
+    // TODO: once we fully support more complex non-integral types and actual support
+    // part selects, we need to be able to handle multiple accesses like
+    // foo[2 : 4][3 : 1][7 : 8] where each access depends on the type of foo, not just the type of the preceding
+    // expression. For now though, we implement the most simple case:
+    // foo[SELECT] where foo is an integral type.
+
+    ASSERT(syntax->selectors.count() == 1);
+    // spoof this being just a simple ElementSelectExpression
+    return bindSelectExpression(syntax,
+        bindName(alloc.emplace<IdentifierNameSyntax>(syntax->identifier), currScope), syntax->selectors[0]->selector);
 }
 
 BoundExpression* ExpressionBinder::bindScopedName(const ScopedNameSyntax* syntax, const Scope* currScope) {
@@ -410,6 +418,7 @@ BoundExpression* ExpressionBinder::bindSubroutineCall(const InvocationExpression
 BoundExpression* ExpressionBinder::bindConditionalExpression(const ConditionalExpressionSyntax* syntax) {
     // TODO: handle the pattern matching conditional predicate case, rather than just assuming that it's a simple
     // expression
+    ASSERT(syntax->predicate->conditions.count() == 1);
     BoundExpression* pred = bindAndPropagate(syntax->predicate->conditions[0]->expr);
     BoundExpression* left = bindAndPropagate(syntax->left);
     BoundExpression* right = bindAndPropagate(syntax->right);
@@ -451,36 +460,43 @@ BoundExpression* ExpressionBinder::bindMultipleConcatenationExpression(const Mul
 
 BoundExpression* ExpressionBinder::bindSelectExpression(const ElementSelectExpressionSyntax* syntax) {
     BoundExpression* expr = bindAndPropagate(syntax->left);
+    return bindSelectExpression(syntax, expr, syntax->select->selector);
+}
+
+BoundExpression* ExpressionBinder::bindSelectExpression(const ExpressionSyntax* syntax, BoundExpression* expr, const SelectorSyntax* selector) {
+
     // if (down), the indices are declares going down, [15:0], so
     // msb > lsb
-    bool down = expr->type->as<IntegralTypeSymbol>().lowerBounds[0] > 0;
+    bool down = expr->type->as<IntegralTypeSymbol>().lowerBounds[0] >= 0;
     BoundExpression* left;
     BoundExpression* right;
     int width;
 
     ConstantEvaluator evaluator;
     // TODO: errors if things that should be constant expressions aren't actually constant expressions
-    SyntaxKind kind = syntax->select->selector->kind;
+    SyntaxKind kind = selector->kind;
     switch (kind) {
         case SyntaxKind::BitSelect:
-            left = bindAndPropagate(((BitSelectSyntax*)syntax->select->selector)->expr);
+            left = bindAndPropagate(((BitSelectSyntax*)selector)->expr);
             right = left;
             width = 1;
             break;
         case SyntaxKind::SimpleRangeSelect:
-            left = bindAndPropagate((SimpleRangeSelectSyntax*)syntax->select->selector)->left; // msb
-            right = bindAndPropagate((SimpleRangeSelectSyntax*)syntax->select->selector)->right; // lsb
-            width = (down ? 1 : -1) * (evaluator.evaluateExpr(left).integer().getAssertUInt16() -
-                    evaluator.evaluateExpr(right).integer().getAssertUInt16());
+            left = bindAndPropagate(((RangeSelectSyntax*)selector)->left); // msb
+            right = bindAndPropagate(((RangeSelectSyntax*)selector)->right); // lsb
+            width = (down ? 1 : -1) * (evaluator.evaluateExpr(left).integer().getAssertInt64() -
+                    evaluator.evaluateExpr(right).integer().getAssertInt64());
             break;
         case SyntaxKind::AscendingRangeSelect:
         case SyntaxKind::DescendingRangeSelect:
-            left = bindAndPropagate((AscendingRangeSelectSyntax*)syntax->select->selector)->left; // msb
-            right = bindAndPropagate((AscendingRangeSelectSyntax*)syntax->select->selector)->right; // lsb
-            width = evaluator.evaluateExpr(right).integer().getAssertUInt16();
+            left = bindAndPropagate(((RangeSelectSyntax*)selector)->left); // msb/lsb
+            right = bindAndPropagate(((RangeSelectSyntax*)selector)->right); // width
+            width = evaluator.evaluateExpr(right).integer().getAssertInt64();
             break;
+
+        DEFAULT_UNREACHABLE;
     }
-    return alloc.emplace<BoundSelectExpression>(syntax, sem.getIntegralType(width, expr->type->isSigned(), kind, expr->type->isFourState()), expr, left, right);
+    return alloc.emplace<BoundSelectExpression>(syntax, sem.getIntegralType(width, expr->type->isSigned(), expr->type->isFourState()), kind, expr, left, right);
 }
 
 bool ExpressionBinder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
@@ -664,11 +680,13 @@ void ExpressionBinder::propagate(BoundExpression* expression, const TypeSymbol* 
             break;
         case SyntaxKind::ConcatenationExpression:
         case SyntaxKind::MultipleConcatenationExpression:
+        case SyntaxKind::ElementSelectExpression:
+        case SyntaxKind::IdentifierSelectName:
             // all operands are self determined
             expression->type = type;
             break;
 
-            DEFAULT_UNREACHABLE;
+        DEFAULT_UNREACHABLE;
     }
 }
 

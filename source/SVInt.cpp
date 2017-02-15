@@ -166,11 +166,20 @@ SVInt::SVInt(StringRef str) {
                 break;
         }
 
-        // shift if we can, multiply if we must
+        // shift if we can, multiply if we must, making sure we don't
+        // lose the unknownFlag
+        bool myUnknownFlag = unknownFlag;
         if (shift)
             *this = shl(shift, false);
         else
             *this *= radixSv;
+        if (unknownFlag != myUnknownFlag) {
+            // this means that we just did the first shift or multiply, which
+            // made us lose our unknown flag, and also means that we now think
+            // we are a single word. Let's rectify that
+            unknownFlag = myUnknownFlag;
+            pVal = new uint64_t[getNumWords()]();
+        }
 
         if (unknownFlag) {
             // In base ten we can't have individual bits be X or Z, it's all or nothing
@@ -561,19 +570,40 @@ SVInt SVInt::replicate(const SVInt& times) const {
     return concatenate(ArrayRef<SVInt>(buffer.begin(), buffer.end()));
 }
 
-SVInt SVInt::bitSelect(uint16_t lsb, uint16_t msb) const {
-    uint16_t selectWidth = msb - lsb + 1;
-    if (isSingleWord()) {
-        uint64_t selection = (val >> lsb) & ((1 << selectWidth) - 1);
-        return SVInt(selection);
+SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
+    if (msb < lsb) {
+        // This is bad, and we don't really know what size the output should be
+        return createFillX(1, false);
     }
 
-    size_t words = getNumWords(selectWidth, unknownFlag);
+    uint16_t selectWidth = msb - lsb + 1;
+    // handle indexing out of bounds
+    if (msb < 0 || lsb >= bitWidth) {
+        // request is completely out of range, return all xs
+        return createFillX(selectWidth, false);
+    }
+
+    // variables to keep track of out-of-bounds accesses
+    size_t frontOOB = lsb < 0 ? -lsb : 0;
+    size_t backOOB = msb >= bitWidth ? msb - bitWidth + 1 : 0;
+    bool anyOOB = frontOOB || backOOB;
+    size_t validSelectWidth = selectWidth - frontOOB - backOOB;
+
+    if (isSingleWord() && !anyOOB) {
+        // simplest case; 1 word input, 1 word output, no out of bounds
+        uint64_t selection = (val >> lsb) & ((1 << selectWidth) - 1);
+        return SVInt(selectWidth, selection, false);
+    }
+
+    // core part of the method: copy over the proper number of bits
+    size_t words = getNumWords(selectWidth, unknownFlag || anyOOB);
     uint64_t* newData = new uint64_t[words]();
-    copyBits((uint8_t*)newData, 0, (uint8_t*)pVal, selectWidth);
-    bool actualUnknownsInResult = false;
+
+    copyBits((uint8_t*)newData, frontOOB, (uint8_t*)getRawData(), validSelectWidth, frontOOB ? 0 : lsb);
+    bool actualUnknownsInResult = anyOOB;
     if (unknownFlag) {
-        copyBits((uint8_t*)(newData + words / 2), 0, (uint8_t*)(pVal + getNumWords() / 2), selectWidth);
+        // copy over preexisting unknown data
+        copyBits((uint8_t*)(newData + words / 2), frontOOB, (uint8_t*)(pVal + getNumWords() / 2), validSelectWidth);
         for (size_t i = words / 2; i < words; ++i) {
             if (newData[i] != 0) {
                 actualUnknownsInResult = true;
@@ -581,8 +611,24 @@ SVInt SVInt::bitSelect(uint16_t lsb, uint16_t msb) const {
             }
         }
     }
+    // back to special case handling
 
-    // TODO: sign?
+    if (anyOOB) {
+        // We have to fill in some x's for out of bounds data
+        // a buffer of just xs for us to use copyBits() from
+        size_t bufLen = std::max<size_t>(frontOOB, backOOB) / 8 + 1;
+        uint8_t* xs = new uint8_t[bufLen];
+        memset(xs, 0xFF, bufLen);
+        copyBits((uint8_t*)(newData + words / 2), 0, xs, frontOOB);
+        copyBits((uint8_t*)(newData + words / 2), validSelectWidth + frontOOB, xs, backOOB);
+        free(xs);
+    } else if (words == 1) {
+        // If the output is a single word and everything is valid, we need to return a single-word output
+        uint64_t val = *newData;
+        free(newData);
+        return SVInt(selectWidth, val, false);
+    }
+
     return SVInt(newData, selectWidth, signFlag, actualUnknownsInResult);
 }
 
@@ -1299,6 +1345,14 @@ uint64_t SVInt::getAssertUInt64() const {
     return pVal[0];
 }
 
+int64_t SVInt::getAssertInt64() const {
+    // assert that this value fits within a int64
+    if (isSingleWord())
+        return val;
+    ASSERT(getActiveBits() <= 64);
+    return pVal[0];
+}
+
 uint32_t SVInt::countLeadingZerosSlowCase() const {
     // Most significant word might have extra bits that shouldn't count
     uint64_t mask;
@@ -1757,6 +1811,11 @@ logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
 }
 
 SVInt concatenate(ArrayRef<SVInt> operands) {
+    // 0 operand concatenations can be valid inside of larger concatenations
+    if (operands.count() == 0) {
+        return SVInt(0, 0, false);
+    }
+
     // First, compute how many bits total we are dealing with
     uint16_t bits = 0;
     bool unknownFlag = false;
@@ -1777,7 +1836,7 @@ SVInt concatenate(ArrayRef<SVInt> operands) {
             copyBits((uint8_t*)&val, offset, (uint8_t*)&op->val, op->bitWidth);
             offset += op->bitWidth;
         }
-        return SVInt(val);
+        return SVInt(bits, val, false);
     }
     // data is already zeroed out, which is the proper default, so it doesn't
     // matter that we may not write to certain unknown words or might not
