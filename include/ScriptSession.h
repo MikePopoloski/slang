@@ -38,6 +38,11 @@ public:
             case SyntaxKind::ModuleDeclaration: {
                 auto module = root->as<ModuleDeclarationSyntax>();
                 declTable.addMember(module);
+                // construct a blank module with empty scope linking to this scope
+                auto scope = alloc.emplace<Scope>();
+                scope->addParentScope(&scriptScope);
+                auto moduleSym = alloc.emplace<ModuleSymbol>(module, scope, ArrayRef<const Symbol*>());
+                scriptScope.add(moduleSym);
                 return true;
             }
             case SyntaxKind::HierarchyInstantiation: {
