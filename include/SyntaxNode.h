@@ -274,10 +274,6 @@ enum class SyntaxKind : uint16_t {
     NetDeclaration,
     PortDeclaration,
     GenvarDeclaration,
-    ClockingSkew,
-    ClockingDirection,
-    ClockingItem,
-    ClockingDeclaration,
 
     // types
     BitType,
@@ -430,6 +426,10 @@ enum class SyntaxKind : uint16_t {
     DefParam,
     ModportItem,
     ModportDeclaration,
+    ClockingSkew,
+    ClockingDirection,
+    ClockingItem,
+    ClockingDeclaration,
 
     // constraints
     DistWeight,

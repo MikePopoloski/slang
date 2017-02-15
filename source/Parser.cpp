@@ -444,9 +444,10 @@ MemberSyntax* Parser::parseMember() {
             return parsePropertyDeclaration(attributes);
         case TokenKind::GlobalKeyword:
         case TokenKind::DefaultKeyword:
-            if (peek(1).kind != TokenKind::ClockingKeyword) {
-                break;
+            if (peek(1).kind == TokenKind::ClockingKeyword) {
+                return parseClockingDeclaration(attributes);
             }
+            break;
         case TokenKind::ClockingKeyword:
             return parseClockingDeclaration(attributes);
         default:
@@ -1917,14 +1918,13 @@ ParameterDeclarationSyntax* Parser::parseParameterPort() {
 ClockingSkewSyntax* Parser::parseClockingSkew() {
     Token edge, hash;
     ExpressionSyntax* value = nullptr;
-    if (peek().kind == TokenKind::EdgeKeyword || peek().kind == TokenKind::PosEdgeKeyword || peek().kind == TokenKind::NegEdgeKeyword) {
+    if (peek(TokenKind::EdgeKeyword)|| peek(TokenKind::PosEdgeKeyword) || peek(TokenKind::NegEdgeKeyword)) {
         edge = consume();
     }
-    if (peek().kind == TokenKind::Hash) {
+    if (peek(TokenKind::Hash)) {
         hash = consume();
         switch(peek().kind) {
-            case TokenKind::OpenParenthesis:
-            {
+            case TokenKind::OpenParenthesis: {
                 auto openParen = consume();
                 auto innerExpr = parseMinTypMaxExpression();
                 auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -1934,8 +1934,7 @@ ClockingSkewSyntax* Parser::parseClockingSkew() {
             case TokenKind::IntegerLiteral:
             case TokenKind::RealLiteral:
             case TokenKind::TimeLiteral:
-            case TokenKind::OneStep:
-            {
+            case TokenKind::OneStep: {
                 auto literal = consume();
                 value = alloc.emplace<LiteralExpressionSyntax>(getLiteralExpression(literal.kind), literal);
                 break;
@@ -1953,16 +1952,16 @@ ClockingSkewSyntax* Parser::parseClockingSkew() {
 
 ClockingDeclarationSyntax* Parser::parseClockingDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes) {
     Token globalOrDefault;
-    if (peek().kind != TokenKind::ClockingKeyword) {
+    if (!peek(TokenKind::ClockingKeyword)) {
         globalOrDefault = consume();
     }
     Token clocking = expect(TokenKind::ClockingKeyword);
     Token blockName = expect(TokenKind::Identifier);
     Token at, eventIdentifier;
     ParenthesizedEventExpressionSyntax* event = nullptr;
-    if (peek().kind == TokenKind::At) {
+    if (peek(TokenKind::At)) {
         at = consume();
-        if (peek().kind == TokenKind::OpenParenthesis) {
+        if (peek(TokenKind::OpenParenthesis)) {
             auto openParen = consume();
             auto innerExpr = parseEventExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
@@ -1973,37 +1972,45 @@ ClockingDeclarationSyntax* Parser::parseClockingDeclaration(ArrayRef<AttributeIn
     }
     Token semi = expect(TokenKind::Semicolon);
     SmallVectorSized<ClockingItemSyntax*, 4> buffer;
+    SmallVectorSized<Token, 4> skipped;
+    bool error = false;
     if (globalOrDefault.kind != TokenKind::GlobalKeyword) {
-        while(peek().kind != TokenKind::EndClockingKeyword && peek().kind != TokenKind::EndOfFile) {
+        while(!isEndKeyword(peek().kind) && !peek(TokenKind::EndOfFile)) {
             Token defaultKeyword, inputKeyword, outputKeyword;
             ClockingDirectionSyntax* direction;
             ClockingSkewSyntax* inputSkew = nullptr, *outputSkew = nullptr;
             MemberSyntax* declaration;
             switch(peek().kind) {
                 case TokenKind::DefaultKeyword:
-                    defaultKeyword = consume();
                 case TokenKind::InputKeyword:
-                {
-                    if (peek().kind == TokenKind::InputKeyword) {
+                case TokenKind::OutputKeyword:
+                    defaultKeyword = consumeIf(TokenKind::DefaultKeyword);
+                    if (peek(TokenKind::InputKeyword)) {
                         inputKeyword = consume();
                         inputSkew = parseClockingSkew();
                     }
-                }
-                case TokenKind::OutputKeyword:
-                {
-                    if (peek().kind == TokenKind::OutputKeyword) {
+                    if (peek(TokenKind::OutputKeyword)) {
                         outputKeyword = consume();
                         outputSkew = parseClockingSkew();
                     }
                     direction = alloc.emplace<ClockingDirectionSyntax>(inputKeyword, inputSkew, outputKeyword, outputSkew, Token());
                     break;
-                }
                 case TokenKind::InOutKeyword:
                     direction = alloc.emplace<ClockingDirectionSyntax>(Token(), nullptr, Token(), nullptr, consume());
                     break;
                 default:
                     declaration = parseMember();
                     break;
+            }
+
+            if (!declaration && !defaultKeyword && !direction) {
+                auto token = consume();
+                skipped.append(token);
+                if (!error) {
+                    addError(DiagCode::ExpectedClockingSkew, peek().location());
+                    error = true;
+                }
+                continue;
             }
 
             Token semi;
@@ -2020,17 +2027,14 @@ ClockingDeclarationSyntax* Parser::parseClockingDeclaration(ArrayRef<AttributeIn
             } else if (!declaration) {
                 semi = expect(TokenKind::Semicolon);
             }
-            buffer.append(alloc.emplace<ClockingItemSyntax>(defaultKeyword, direction, assignments.copy(alloc), semi, declaration));
+
+            error = false;
+            buffer.append((ClockingItemSyntax*) prependSkippedTokens(alloc.emplace<ClockingItemSyntax>(defaultKeyword, direction, assignments.copy(alloc), semi, declaration), skipped));
         }
     }
     Token endClocking = expect(TokenKind::EndClockingKeyword);
-    Token colon;
-    Token identifier;
-    if (peek().kind == TokenKind::Colon) {
-        colon = consume();
-        identifier = expect(TokenKind::Identifier);
-    }
-    return alloc.emplace<ClockingDeclarationSyntax>(attributes, globalOrDefault, clocking, blockName, at, event, eventIdentifier, semi, buffer.copy(alloc), endClocking, colon, identifier);
+    NamedBlockClauseSyntax* endBlockName = parseNamedBlockClause();
+    return alloc.emplace<ClockingDeclarationSyntax>(attributes, globalOrDefault, clocking, blockName, at, event, eventIdentifier, semi, buffer.copy(alloc), endClocking, endBlockName);
 }
 
 HierarchyInstantiationSyntax* Parser::parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes) {

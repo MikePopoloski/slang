@@ -2859,164 +2859,6 @@ protected:
     }
 };
 
-struct ClockingSkewSyntax : public SyntaxNode {
-    Token edge;
-    Token hash;
-    ExpressionSyntax* value;
-
-    ClockingSkewSyntax(Token edge, Token hash, ExpressionSyntax* value) :
-        SyntaxNode(SyntaxKind::ClockingSkew), edge(edge), hash(hash), value(value)
-    {
-        childCount += 3;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch (index) {
-            case 0: return edge;
-            case 1: return hash;
-            case 2: return value;
-            default: return nullptr;
-        }
-    }
-
-    void replaceChild(uint32_t index, Token token) override final {
-        switch (index) {
-            case 0: edge = token; break;
-            case 1: hash = token; break;
-            case 2: ASSERT(false); break;
-        }
-    }
-};
-
-struct ClockingDirectionSyntax : public SyntaxNode {
-    Token input;
-    ClockingSkewSyntax* inputSkew;
-    Token output;
-    ClockingSkewSyntax* ouputSkew;
-    Token inout;
-
-    ClockingDirectionSyntax(Token input, ClockingSkewSyntax* inputSkew, Token output, ClockingSkewSyntax* ouputSkew, Token inout) :
-        SyntaxNode(SyntaxKind::ClockingDirection), input(input), inputSkew(inputSkew), output(output), ouputSkew(ouputSkew), inout(inout)
-    {
-        childCount += 5;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch (index) {
-            case 0: return input;
-            case 1: return inputSkew;
-            case 2: return output;
-            case 3: return ouputSkew;
-            case 4: return inout;
-            default: return nullptr;
-        }
-    }
-
-    void replaceChild(uint32_t index, Token token) override final {
-        switch (index) {
-            case 0: input = token; break;
-            case 1: ASSERT(false); break;
-            case 2: output = token; break;
-            case 3: ASSERT(false); break;
-            case 4: inout = token; break;
-        }
-    }
-};
-
-struct ClockingItemSyntax : public SyntaxNode {
-    Token defaultKeyword;
-    ClockingDirectionSyntax* direction;
-    SeparatedSyntaxList<AttributeSpecSyntax> assignments;
-    Token semi;
-    MemberSyntax* declaration;
-
-    ClockingItemSyntax(Token defaultKeyword, ClockingDirectionSyntax* direction, SeparatedSyntaxList<AttributeSpecSyntax> assignments, Token semi, MemberSyntax* declaration) :
-        SyntaxNode(SyntaxKind::ClockingItem), defaultKeyword(defaultKeyword), direction(direction), assignments(assignments), semi(semi), declaration(declaration)
-    {
-        childCount += 5;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch (index) {
-            case 0: return defaultKeyword;
-            case 1: return direction;
-            case 2: return &assignments;
-            case 3: return semi;
-            case 4: return declaration;
-            default: return nullptr;
-        }
-    }
-
-    void replaceChild(uint32_t index, Token token) override final {
-        switch (index) {
-            case 0: defaultKeyword = token; break;
-            case 1: ASSERT(false); break;
-            case 2: ASSERT(false); break;
-            case 3: semi = token; break;
-            case 4: ASSERT(false); break;
-        }
-    }
-};
-
-struct ClockingDeclarationSyntax : public MemberSyntax {
-    Token globalOrDefault;
-    Token clocking;
-    Token blockName;
-    Token at;
-    ParenthesizedEventExpressionSyntax* event;
-    Token eventIdentifier;
-    Token semi;
-    SyntaxList<ClockingItemSyntax> items;
-    Token endClocking;
-    Token colon;
-    Token identifier;
-
-    ClockingDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token globalOrDefault, Token clocking, Token blockName, Token at, ParenthesizedEventExpressionSyntax* event, Token eventIdentifier, Token semi, SyntaxList<ClockingItemSyntax> items, Token endClocking, Token colon, Token identifier) :
-        MemberSyntax(SyntaxKind::ClockingDeclaration, attributes), globalOrDefault(globalOrDefault), clocking(clocking), blockName(blockName), at(at), event(event), eventIdentifier(eventIdentifier), semi(semi), items(items), endClocking(endClocking), colon(colon), identifier(identifier)
-    {
-        childCount += 11;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return globalOrDefault;
-            case 2: return clocking;
-            case 3: return blockName;
-            case 4: return at;
-            case 5: return event;
-            case 6: return eventIdentifier;
-            case 7: return semi;
-            case 8: return &items;
-            case 9: return endClocking;
-            case 10: return colon;
-            case 11: return identifier;
-            default: return nullptr;
-        }
-    }
-
-    void replaceChild(uint32_t index, Token token) override final {
-        switch (index) {
-            case 0: ASSERT(false); break;
-            case 1: globalOrDefault = token; break;
-            case 2: clocking = token; break;
-            case 3: blockName = token; break;
-            case 4: at = token; break;
-            case 5: ASSERT(false); break;
-            case 6: eventIdentifier = token; break;
-            case 7: semi = token; break;
-            case 8: ASSERT(false); break;
-            case 9: endClocking = token; break;
-            case 10: colon = token; break;
-            case 11: identifier = token; break;
-        }
-    }
-};
-
 // ----- TYPES -----
 
 struct IntegerTypeSyntax : public DataTypeSyntax {
@@ -6450,6 +6292,161 @@ protected:
             case 1: keyword = token; break;
             case 2: ASSERT(false); break;
             case 3: semi = token; break;
+        }
+    }
+};
+
+struct ClockingSkewSyntax : public SyntaxNode {
+    Token edge;
+    Token hash;
+    ExpressionSyntax* value;
+
+    ClockingSkewSyntax(Token edge, Token hash, ExpressionSyntax* value) :
+        SyntaxNode(SyntaxKind::ClockingSkew), edge(edge), hash(hash), value(value)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return edge;
+            case 1: return hash;
+            case 2: return value;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: edge = token; break;
+            case 1: hash = token; break;
+            case 2: ASSERT(false); break;
+        }
+    }
+};
+
+struct ClockingDirectionSyntax : public SyntaxNode {
+    Token input;
+    ClockingSkewSyntax* inputSkew;
+    Token output;
+    ClockingSkewSyntax* ouputSkew;
+    Token inout;
+
+    ClockingDirectionSyntax(Token input, ClockingSkewSyntax* inputSkew, Token output, ClockingSkewSyntax* ouputSkew, Token inout) :
+        SyntaxNode(SyntaxKind::ClockingDirection), input(input), inputSkew(inputSkew), output(output), ouputSkew(ouputSkew), inout(inout)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return input;
+            case 1: return inputSkew;
+            case 2: return output;
+            case 3: return ouputSkew;
+            case 4: return inout;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: input = token; break;
+            case 1: ASSERT(false); break;
+            case 2: output = token; break;
+            case 3: ASSERT(false); break;
+            case 4: inout = token; break;
+        }
+    }
+};
+
+struct ClockingItemSyntax : public SyntaxNode {
+    Token defaultKeyword;
+    ClockingDirectionSyntax* direction;
+    SeparatedSyntaxList<AttributeSpecSyntax> assignments;
+    Token semi;
+    MemberSyntax* declaration;
+
+    ClockingItemSyntax(Token defaultKeyword, ClockingDirectionSyntax* direction, SeparatedSyntaxList<AttributeSpecSyntax> assignments, Token semi, MemberSyntax* declaration) :
+        SyntaxNode(SyntaxKind::ClockingItem), defaultKeyword(defaultKeyword), direction(direction), assignments(assignments), semi(semi), declaration(declaration)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return defaultKeyword;
+            case 1: return direction;
+            case 2: return &assignments;
+            case 3: return semi;
+            case 4: return declaration;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: defaultKeyword = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
+            case 4: ASSERT(false); break;
+        }
+    }
+};
+
+struct ClockingDeclarationSyntax : public MemberSyntax {
+    Token globalOrDefault;
+    Token clocking;
+    Token blockName;
+    Token at;
+    ParenthesizedEventExpressionSyntax* event;
+    Token eventIdentifier;
+    Token semi;
+    SyntaxList<ClockingItemSyntax> items;
+    Token endClocking;
+    NamedBlockClauseSyntax* endBlockName;
+
+    ClockingDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token globalOrDefault, Token clocking, Token blockName, Token at, ParenthesizedEventExpressionSyntax* event, Token eventIdentifier, Token semi, SyntaxList<ClockingItemSyntax> items, Token endClocking, NamedBlockClauseSyntax* endBlockName) :
+        MemberSyntax(SyntaxKind::ClockingDeclaration, attributes), globalOrDefault(globalOrDefault), clocking(clocking), blockName(blockName), at(at), event(event), eventIdentifier(eventIdentifier), semi(semi), items(items), endClocking(endClocking), endBlockName(endBlockName)
+    {
+        childCount += 10;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return globalOrDefault;
+            case 2: return clocking;
+            case 3: return blockName;
+            case 4: return at;
+            case 5: return event;
+            case 6: return eventIdentifier;
+            case 7: return semi;
+            case 8: return &items;
+            case 9: return endClocking;
+            case 10: return endBlockName;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: globalOrDefault = token; break;
+            case 2: clocking = token; break;
+            case 3: blockName = token; break;
+            case 4: at = token; break;
+            case 5: ASSERT(false); break;
+            case 6: eventIdentifier = token; break;
+            case 7: semi = token; break;
+            case 8: ASSERT(false); break;
+            case 9: endClocking = token; break;
+            case 10: ASSERT(false); break;
         }
     }
 };
