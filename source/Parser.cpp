@@ -1945,7 +1945,7 @@ ClockingSkewSyntax* Parser::parseClockingSkew() {
         }
     }
     if (!edge && !hash) {
-        addError(DiagCode::ExpectedClockingSkew, peek().location());
+        return nullptr;
     }
     return alloc.emplace<ClockingSkewSyntax>(edge, hash, value);
 }
@@ -1979,7 +1979,7 @@ ClockingDeclarationSyntax* Parser::parseClockingDeclaration(ArrayRef<AttributeIn
             Token defaultKeyword, inputKeyword, outputKeyword;
             ClockingDirectionSyntax* direction;
             ClockingSkewSyntax* inputSkew = nullptr, *outputSkew = nullptr;
-            MemberSyntax* declaration;
+            MemberSyntax* declaration = nullptr;
             switch(peek().kind) {
                 case TokenKind::DefaultKeyword:
                 case TokenKind::InputKeyword:
