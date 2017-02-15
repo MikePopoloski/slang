@@ -38,7 +38,7 @@ module module3B
 
 endmodule
 
-module module3
+module module3;
 
     logic [Baz_pkg::ONE-1:0] x;
 
