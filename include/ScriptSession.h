@@ -48,9 +48,6 @@ public:
             case SyntaxKind::HierarchyInstantiation: {
                 SmallVectorSized<const Symbol*, 8> results;
                 sem.handleInstantiation(root->as<HierarchyInstantiationSyntax>(), results, &scriptScope);
-                for (auto sym : results) {
-                    scriptScope.add(sym);
-                }
                 return true;
             }
             default:
