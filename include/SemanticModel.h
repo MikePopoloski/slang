@@ -87,7 +87,7 @@ private:
     // Uses a module declaration and an optional set of parameter assignments to create all of the
     // evaluated parameter symbols for a particular module instance. Note that these parameter symbols
     // can potentially be shared by instances if they are in the same declaration.
-    void makePublicParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
+    void makePublicParameters(Scope* declScope, const ModuleDeclarationSyntax* decl,
                               const ParameterValueAssignmentSyntax* parameterAssignments,
                               Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel);
 
@@ -95,7 +95,13 @@ private:
     // types, we just pull out their values here.
     void makeAttributes(SmallVector<const AttributeSymbol*>& results, const SyntaxList<AttributeInstanceSyntax>& attributes);
 
-    const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters, Scope *scope);
+    // Uses a instance declaration and instantiation scope
+    // to create all interface objects for a particular module instance
+    void makeInterfacePorts(Scope* scope, const ModuleDeclarationSyntax* instanceModuleSyntax, const HierarchicalInstanceSyntax* syntax, const Scope* instantiationScope, SourceLocation instanceLocation);
+
+    // construct module symbol parametrized with per-instance scope with parameters and port-interfaces symbols
+    const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, Scope *scope);
+
     void handlePackageImport(const PackageImportDeclarationSyntax* syntax, Scope* scope);
     void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* instantiationScope);
     void handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope);
