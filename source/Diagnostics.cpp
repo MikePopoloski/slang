@@ -236,7 +236,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
 std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
     // first sort diagnostics by file so that we can cut down
     // on the amount of include information we print out
-    std::stable_sort(diagnostics.begin(), diagnostics.end(), [this](auto& x, auto& y) { return sortDiagnostics(x, y); });
+    std::stable_sort(diagnostics.begin(), diagnostics.end(), [this](auto& x, auto& y) { return this->sortDiagnostics(x, y); });
 
     std::deque<SourceLocation> includeStack;
     BufferID lastBuffer;
