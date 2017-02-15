@@ -255,6 +255,15 @@ TEST_CASE("Macro stringify", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("Macro stringify whitespace", "[preprocessor]") {
+    auto& text = "`define FOO(x,y) `\" x ( y)\t  x   x`\"\n`FOO(bar,)";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == " bar ( )\t  bar   bar");
+    CHECK(diagnostics.empty());
+}
+
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);
