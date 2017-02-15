@@ -927,7 +927,7 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
                     // the macro argument contained no tokens.
                     // we still need to supply an empty token here to ensure
                     // that the trivia of the formal paremter is passed on
-                    dest.append(*alloc.emplace<Token>(TokenKind::EmptyMacroArgument, token.getInfo()));
+                    dest.append(Token(TokenKind::EmptyMacroArgument, token.getInfo()));
                 }
             }
         }

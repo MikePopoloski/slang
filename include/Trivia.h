@@ -49,7 +49,9 @@ public:
     /// If this trivia is tracking a skipped syntax node, return that now.
     SyntaxNode* syntax() const;
 
-    StringRef getRawText() const {
+    /// Get the raw whitespace of some trivia
+    StringRef getRawWhitespace() const {
+        ASSERT(kind == TriviaKind::Whitespace);
         return rawText;
     }
 private:
