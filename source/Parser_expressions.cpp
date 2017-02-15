@@ -259,7 +259,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
 ExpressionSyntax* Parser::parseIntegerExpression() {
     Token sizeToken;
     Token baseToken;
-    uint16_t sizeBits = 32;
+    uint16_t sizeBits = 64;
 
     auto token = consume();
     if (token.kind == TokenKind::IntegerBase)
