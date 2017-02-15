@@ -78,7 +78,7 @@ void VectorBuilder::append(Token token) {
             }
             break;
         case LiteralBase::Decimal:
-            // in decimal literals you can only use x or z if it's the only digit 
+            // in decimal literals you can only use x or z if it's the only digit
             if (first && text.length() == 1 && isLogicDigit(text[0])) {
                 addDigit(getLogicCharValue(text[0]), 10);
                 break;
@@ -166,11 +166,15 @@ SVInt VectorBuilder::finish() {
             bits += clog2(digits[0].value + 1);
 
         if (bits > sizeBits) {
-            diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
-            return SVInt(0);
+            if (sizeBits || bits > SVInt::MAX_BITS) {
+                diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
+                return SVInt(0);
+            }
+            return SVInt(std::max(32, bits), literalBase, signFlag, hasUnknown, ArrayRef<logic_t>(digits.begin(), digits.count()));
         }
     }
-    return SVInt(sizeBits, literalBase, signFlag, hasUnknown, ArrayRef<logic_t>(digits.begin(), digits.count()));
+
+    return SVInt(sizeBits ? sizeBits : 32, literalBase, signFlag, hasUnknown, ArrayRef<logic_t>(digits.begin(), digits.count()));
 }
 
 void VectorBuilder::addDigit(logic_t digit, int maxValue) {

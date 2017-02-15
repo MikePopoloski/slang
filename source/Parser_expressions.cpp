@@ -259,7 +259,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
 ExpressionSyntax* Parser::parseIntegerExpression() {
     Token sizeToken;
     Token baseToken;
-    uint16_t sizeBits = 32;
+    uint16_t sizeBits = 0;
 
     auto token = consume();
     if (token.kind == TokenKind::IntegerBase)
@@ -277,7 +277,6 @@ ExpressionSyntax* Parser::parseIntegerExpression() {
         baseToken = consume();
 
         if (tokenValue == 0) {
-            sizeBits = 32; // just pick something so we can keep going
             addError(DiagCode::LiteralSizeIsZero, token.location());
         }
         else if (tokenValue > SVInt::MAX_BITS) {
