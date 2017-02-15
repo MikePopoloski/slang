@@ -1,7 +1,7 @@
 TOP:=../..
 
 CXX?=clang++-3.9
-CXXFLAGS?=-std=c++1z -MMD -MP -g
+CXXFLAGS?=-std=c++1z -MMD -MP -ggdb -O0 -fno-omit-frame-pointer -fsanitize=address
 INCLUDES:=-I$(TOP)/external -I$(TOP)/include -I./
 AR?=llvm-ar-3.9
 ARFLAGS?=rs
