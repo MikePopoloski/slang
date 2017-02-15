@@ -143,6 +143,7 @@ TEST_CASE(descr, "[eval]") { \
     ScriptSession session; \
     auto value = session.eval(expr).integer(); \
     auto res = SVInt(StringRef(result)); \
+    /* uncomment for diagonstics: printf("%s = %s\n", value.toString(LiteralBase::Binary).c_str(), res.toString(LiteralBase::Binary).c_str());*/ \
     CHECK(exactlyEqual(value, res)); \
 }
 
@@ -177,6 +178,7 @@ EVAL_TEST_EX("rangeselect with unknown address", "4'b1001[(1/ 0) +: 2]", "2'bxx"
 EVAL_TEST_EX("partially oob rangeselect (right)", "4'b1001[3 : -1]", "5'b1001x");
 EVAL_TEST_EX("partially oob rangeselect (left)", "4'b1001[4 : 1]", "4'bx100");
 EVAL_TEST_EX("partially oob rangeselect (both)", "4'b1001[4 : -1]", "6'bx1001x");
+EVAL_TEST_EX("totally oob rangeselect", "4'b1001[105 : 101]", "5'bxxxxx");
 //TODO: Figure out why a test like this fails, seems like something wrong with literals with x's?
 //EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
 

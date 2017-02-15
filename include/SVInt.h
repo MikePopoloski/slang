@@ -254,6 +254,7 @@ public:
     SVInt replicate(const SVInt& times) const;
 
     /// Returns the bit-selected range from lsb to msb, inclusive both ends
+    /// indexes based on SVInts having lsb = 0. Must have msb >= lsb.
     SVInt bitSelect(int16_t lsb, int16_t msb) const;
 
     logic_t reductionOr() const;
