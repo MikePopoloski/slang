@@ -166,7 +166,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
         if (!noWhitespace && cur.hasTrivia(TriviaKind::Whitespace)) {
             for (const Trivia& trivia : cur.trivia()) {
                 if (trivia.kind == TriviaKind::Whitespace) {
-                    text.appendRange(trivia.getRawText());
+                    text.appendRange(trivia.getRawWhitespace());
                 }
             }
         }
