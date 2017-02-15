@@ -6296,6 +6296,161 @@ protected:
     }
 };
 
+struct ClockingSkewSyntax : public SyntaxNode {
+    Token edge;
+    Token hash;
+    ExpressionSyntax* value;
+
+    ClockingSkewSyntax(Token edge, Token hash, ExpressionSyntax* value) :
+        SyntaxNode(SyntaxKind::ClockingSkew), edge(edge), hash(hash), value(value)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return edge;
+            case 1: return hash;
+            case 2: return value;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: edge = token; break;
+            case 1: hash = token; break;
+            case 2: ASSERT(false); break;
+        }
+    }
+};
+
+struct ClockingDirectionSyntax : public SyntaxNode {
+    Token input;
+    ClockingSkewSyntax* inputSkew;
+    Token output;
+    ClockingSkewSyntax* ouputSkew;
+    Token inout;
+
+    ClockingDirectionSyntax(Token input, ClockingSkewSyntax* inputSkew, Token output, ClockingSkewSyntax* ouputSkew, Token inout) :
+        SyntaxNode(SyntaxKind::ClockingDirection), input(input), inputSkew(inputSkew), output(output), ouputSkew(ouputSkew), inout(inout)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return input;
+            case 1: return inputSkew;
+            case 2: return output;
+            case 3: return ouputSkew;
+            case 4: return inout;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: input = token; break;
+            case 1: ASSERT(false); break;
+            case 2: output = token; break;
+            case 3: ASSERT(false); break;
+            case 4: inout = token; break;
+        }
+    }
+};
+
+struct ClockingItemSyntax : public SyntaxNode {
+    Token defaultKeyword;
+    ClockingDirectionSyntax* direction;
+    SeparatedSyntaxList<AttributeSpecSyntax> assignments;
+    Token semi;
+    MemberSyntax* declaration;
+
+    ClockingItemSyntax(Token defaultKeyword, ClockingDirectionSyntax* direction, SeparatedSyntaxList<AttributeSpecSyntax> assignments, Token semi, MemberSyntax* declaration) :
+        SyntaxNode(SyntaxKind::ClockingItem), defaultKeyword(defaultKeyword), direction(direction), assignments(assignments), semi(semi), declaration(declaration)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return defaultKeyword;
+            case 1: return direction;
+            case 2: return &assignments;
+            case 3: return semi;
+            case 4: return declaration;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: defaultKeyword = token; break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+            case 3: semi = token; break;
+            case 4: ASSERT(false); break;
+        }
+    }
+};
+
+struct ClockingDeclarationSyntax : public MemberSyntax {
+    Token globalOrDefault;
+    Token clocking;
+    Token blockName;
+    Token at;
+    ParenthesizedEventExpressionSyntax* event;
+    Token eventIdentifier;
+    Token semi;
+    SyntaxList<ClockingItemSyntax> items;
+    Token endClocking;
+    NamedBlockClauseSyntax* endBlockName;
+
+    ClockingDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token globalOrDefault, Token clocking, Token blockName, Token at, ParenthesizedEventExpressionSyntax* event, Token eventIdentifier, Token semi, SyntaxList<ClockingItemSyntax> items, Token endClocking, NamedBlockClauseSyntax* endBlockName) :
+        MemberSyntax(SyntaxKind::ClockingDeclaration, attributes), globalOrDefault(globalOrDefault), clocking(clocking), blockName(blockName), at(at), event(event), eventIdentifier(eventIdentifier), semi(semi), items(items), endClocking(endClocking), endBlockName(endBlockName)
+    {
+        childCount += 10;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return globalOrDefault;
+            case 2: return clocking;
+            case 3: return blockName;
+            case 4: return at;
+            case 5: return event;
+            case 6: return eventIdentifier;
+            case 7: return semi;
+            case 8: return &items;
+            case 9: return endClocking;
+            case 10: return endBlockName;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: globalOrDefault = token; break;
+            case 2: clocking = token; break;
+            case 3: blockName = token; break;
+            case 4: at = token; break;
+            case 5: ASSERT(false); break;
+            case 6: eventIdentifier = token; break;
+            case 7: semi = token; break;
+            case 8: ASSERT(false); break;
+            case 9: endClocking = token; break;
+            case 10: ASSERT(false); break;
+        }
+    }
+};
+
 // ----- CONSTRAINTS -----
 
 struct ConstraintItemSyntax : public SyntaxNode {
@@ -7848,7 +8003,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::DelayControl: SyntaxNode::dispatch(v, *(const DelaySyntax*)node); break;
         case SyntaxKind::TaskDeclaration: SyntaxNode::dispatch(v, *(const FunctionDeclarationSyntax*)node); break;
         case SyntaxKind::AttributeSpec: SyntaxNode::dispatch(v, *(const AttributeSpecSyntax*)node); break;
-        case SyntaxKind::ShortcutCycleDelayRange: SyntaxNode::dispatch(v, *(const ShortcutCycleDelayRangeSyntax*)node); break;
+        case SyntaxKind::ClockingItem: SyntaxNode::dispatch(v, *(const ClockingItemSyntax*)node); break;
         case SyntaxKind::ExpressionPattern: SyntaxNode::dispatch(v, *(const ExpressionPatternSyntax*)node); break;
         case SyntaxKind::EmptyMember: SyntaxNode::dispatch(v, *(const EmptyMemberSyntax*)node); break;
         case SyntaxKind::NullLiteralExpression: SyntaxNode::dispatch(v, *(const LiteralExpressionSyntax*)node); break;
@@ -7905,7 +8060,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::TaggedUnionExpression: SyntaxNode::dispatch(v, *(const TaggedUnionExpressionSyntax*)node); break;
         case SyntaxKind::TimingControlExpression: SyntaxNode::dispatch(v, *(const TimingControlExpressionSyntax*)node); break;
         case SyntaxKind::BlockingEventTriggerStatement: SyntaxNode::dispatch(v, *(const EventTriggerStatementSyntax*)node); break;
-        case SyntaxKind::ParenthesizedEventExpression: SyntaxNode::dispatch(v, *(const ParenthesizedEventExpressionSyntax*)node); break;
+        case SyntaxKind::ClockingSkew: SyntaxNode::dispatch(v, *(const ClockingSkewSyntax*)node); break;
         case SyntaxKind::ResetAllDirective: SyntaxNode::dispatch(v, *(const SimpleDirectiveSyntax*)node); break;
         case SyntaxKind::RealType: SyntaxNode::dispatch(v, *(const KeywordTypeSyntax*)node); break;
         case SyntaxKind::EqualsValueClause: SyntaxNode::dispatch(v, *(const EqualsValueClauseSyntax*)node); break;
@@ -7931,6 +8086,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::PrimaryBlockEventExpression: SyntaxNode::dispatch(v, *(const PrimaryBlockEventExpressionSyntax*)node); break;
         case SyntaxKind::ConcatenationExpression: SyntaxNode::dispatch(v, *(const ConcatenationExpressionSyntax*)node); break;
         case SyntaxKind::AnsiPortList: SyntaxNode::dispatch(v, *(const AnsiPortListSyntax*)node); break;
+        case SyntaxKind::UniquenessConstraint: SyntaxNode::dispatch(v, *(const UniquenessConstraintSyntax*)node); break;
         case SyntaxKind::EmptyStatement: SyntaxNode::dispatch(v, *(const EmptyStatementSyntax*)node); break;
         case SyntaxKind::RegType: SyntaxNode::dispatch(v, *(const IntegerTypeSyntax*)node); break;
         case SyntaxKind::VariableDeclarator: SyntaxNode::dispatch(v, *(const VariableDeclaratorSyntax*)node); break;
@@ -7956,6 +8112,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::ParameterDeclaration: SyntaxNode::dispatch(v, *(const ParameterDeclarationSyntax*)node); break;
         case SyntaxKind::LoopStatement: SyntaxNode::dispatch(v, *(const LoopStatementSyntax*)node); break;
         case SyntaxKind::ModportDeclaration: SyntaxNode::dispatch(v, *(const ModportDeclarationSyntax*)node); break;
+        case SyntaxKind::ParenthesizedEventExpression: SyntaxNode::dispatch(v, *(const ParenthesizedEventExpressionSyntax*)node); break;
         case SyntaxKind::IncludeDirective: SyntaxNode::dispatch(v, *(const IncludeDirectiveSyntax*)node); break;
         case SyntaxKind::ClassPropertyDeclaration: SyntaxNode::dispatch(v, *(const ClassPropertyDeclarationSyntax*)node); break;
         case SyntaxKind::JumpStatement: SyntaxNode::dispatch(v, *(const JumpStatementSyntax*)node); break;
@@ -7988,7 +8145,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::SyncAcceptOnPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::ThisHandle: SyntaxNode::dispatch(v, *(const KeywordNameSyntax*)node); break;
         case SyntaxKind::ModuleDeclaration: SyntaxNode::dispatch(v, *(const ModuleDeclarationSyntax*)node); break;
-        case SyntaxKind::ElementSelectExpression: SyntaxNode::dispatch(v, *(const ElementSelectExpressionSyntax*)node); break;
+        case SyntaxKind::DistConstraintList: SyntaxNode::dispatch(v, *(const DistConstraintListSyntax*)node); break;
         case SyntaxKind::PostdecrementExpression: SyntaxNode::dispatch(v, *(const PostfixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::UnarySequenceDelayExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::ConditionalStatement: SyntaxNode::dispatch(v, *(const ConditionalStatementSyntax*)node); break;
@@ -8014,6 +8171,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::RangeCoverageBinInitializer: SyntaxNode::dispatch(v, *(const RangeCoverageBinInitializerSyntax*)node); break;
         case SyntaxKind::SEventuallyPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::TypeReference: SyntaxNode::dispatch(v, *(const TypeReferenceSyntax*)node); break;
+        case SyntaxKind::ShortcutCycleDelayRange: SyntaxNode::dispatch(v, *(const ShortcutCycleDelayRangeSyntax*)node); break;
         case SyntaxKind::MacroFormalArgument: SyntaxNode::dispatch(v, *(const MacroFormalArgumentSyntax*)node); break;
         case SyntaxKind::PowerExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::AssumePropertyStatement: SyntaxNode::dispatch(v, *(const ConcurrentAssertionStatementSyntax*)node); break;
@@ -8035,6 +8193,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::EqualityExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::StringType: SyntaxNode::dispatch(v, *(const KeywordTypeSyntax*)node); break;
         case SyntaxKind::CovergroupDeclaration: SyntaxNode::dispatch(v, *(const CovergroupDeclarationSyntax*)node); break;
+        case SyntaxKind::ClockingDeclaration: SyntaxNode::dispatch(v, *(const ClockingDeclarationSyntax*)node); break;
         case SyntaxKind::ImplicationConstraint: SyntaxNode::dispatch(v, *(const ImplicationConstraintSyntax*)node); break;
         case SyntaxKind::ParameterValueAssignment: SyntaxNode::dispatch(v, *(const ParameterValueAssignmentSyntax*)node); break;
         case SyntaxKind::SignedCastExpression: SyntaxNode::dispatch(v, *(const SignedCastExpressionSyntax*)node); break;
@@ -8101,8 +8260,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::CompilationUnit: SyntaxNode::dispatch(v, *(const CompilationUnitSyntax*)node); break;
         case SyntaxKind::CoverPropertyStatement: SyntaxNode::dispatch(v, *(const ConcurrentAssertionStatementSyntax*)node); break;
         case SyntaxKind::StreamExpression: SyntaxNode::dispatch(v, *(const StreamExpressionSyntax*)node); break;
-        case SyntaxKind::DistConstraintList: SyntaxNode::dispatch(v, *(const DistConstraintListSyntax*)node); break;
-        case SyntaxKind::UniquenessConstraint: SyntaxNode::dispatch(v, *(const UniquenessConstraintSyntax*)node); break;
+        case SyntaxKind::ElementSelectExpression: SyntaxNode::dispatch(v, *(const ElementSelectExpressionSyntax*)node); break;
         case SyntaxKind::WildcardPortConnection: SyntaxNode::dispatch(v, *(const WildcardPortConnectionSyntax*)node); break;
         case SyntaxKind::MacroFormalArgumentList: SyntaxNode::dispatch(v, *(const MacroFormalArgumentListSyntax*)node); break;
         case SyntaxKind::SyncRejectOnPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
@@ -8138,6 +8296,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::ColonExpressionClause: SyntaxNode::dispatch(v, *(const ColonExpressionClauseSyntax*)node); break;
         case SyntaxKind::ElseClause: SyntaxNode::dispatch(v, *(const ElseClauseSyntax*)node); break;
         case SyntaxKind::TypedefDeclaration: SyntaxNode::dispatch(v, *(const TypedefDeclarationSyntax*)node); break;
+        case SyntaxKind::ClockingDirection: SyntaxNode::dispatch(v, *(const ClockingDirectionSyntax*)node); break;
         case SyntaxKind::ThroughoutSequenceExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::OrderedPortConnection: SyntaxNode::dispatch(v, *(const OrderedPortConnectionSyntax*)node); break;
         case SyntaxKind::ConcurrentAssertionMember: SyntaxNode::dispatch(v, *(const ConcurrentAssertionMemberSyntax*)node); break;

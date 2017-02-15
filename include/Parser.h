@@ -119,6 +119,8 @@ private:
     PackageImportItemSyntax* parsePackageImportItem();
     PropertyDeclarationSyntax* parsePropertyDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ParameterDeclarationSyntax* parseParameterPort();
+    ClockingSkewSyntax* parseClockingSkew();
+    ClockingDeclarationSyntax* parseClockingDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     HierarchyInstantiationSyntax* parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes);

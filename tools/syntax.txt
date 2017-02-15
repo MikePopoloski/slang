@@ -1181,6 +1181,38 @@ token keyword
 separated_list<ModportItemSyntax> items
 token semi
 
+ClockingSkewSyntax kind=ClockingSkew
+token edge
+token hash
+ExpressionSyntax value
+
+ClockingDirectionSyntax kind=ClockingDirection
+token input
+ClockingSkewSyntax inputSkew
+token output
+ClockingSkewSyntax ouputSkew
+token inout
+
+ClockingItemSyntax kind=ClockingItem
+token defaultKeyword
+ClockingDirectionSyntax direction
+separated_list<AttributeSpecSyntax> assignments
+token semi
+MemberSyntax declaration
+
+ClockingDeclarationSyntax base=MemberSyntax kind=ClockingDeclaration
+token globalOrDefault
+token clocking
+token blockName
+token at
+ParenthesizedEventExpressionSyntax event
+token eventIdentifier
+token semi
+list<ClockingItemSyntax> items
+token endClocking
+NamedBlockClauseSyntax endBlockName
+
+
 // ----- CONSTRAINTS -----
 
 ConstraintItemSyntax final=false

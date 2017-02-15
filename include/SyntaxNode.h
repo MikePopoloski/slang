@@ -426,6 +426,10 @@ enum class SyntaxKind : uint16_t {
     DefParam,
     ModportItem,
     ModportDeclaration,
+    ClockingSkew,
+    ClockingDirection,
+    ClockingItem,
+    ClockingDeclaration,
 
     // constraints
     DistWeight,
