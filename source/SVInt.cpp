@@ -571,10 +571,8 @@ SVInt SVInt::replicate(const SVInt& times) const {
 }
 
 SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
-    if (msb < lsb) {
-        // This is bad, and we don't really know what size the output should be
-        return createFillX(1, false);
-    }
+    // This would be bad, and there would be no proper size for the output
+    ASSERT(msb >= lsb);
 
     uint16_t selectWidth = msb - lsb + 1;
     // handle indexing out of bounds
