@@ -26,7 +26,6 @@ public:
 
     BoundStatement* bindStatement(const StatementSyntax* syntax);
     BoundStatementList* bindStatementList(const SyntaxList<SyntaxNode>& items);
-    BoundStatement* bindConditionalStatement(const ConditionalStatementSyntax *syntax);
 
 private:
     BoundExpression* bindAndPropagate(const ExpressionSyntax* syntax);
@@ -50,6 +49,9 @@ private:
     BoundExpression* bindMultipleConcatenationExpression(const MultipleConcatenationExpressionSyntax* syntax);
 
     BoundStatement* bindReturnStatement(const ReturnStatementSyntax* syntax);
+    BoundStatement* bindConditionalStatement(const ConditionalStatementSyntax *syntax);
+    BoundStatement* bindForLoopStatement(const ForLoopStatementSyntax *syntax);
+    BoundStatement* bindExpressionStatement(const ExpressionStatementSyntax *syntax);
 
     void bindVariableDecl(const DataDeclarationSyntax* syntax, SmallVector<const BoundStatement*>& results);
 

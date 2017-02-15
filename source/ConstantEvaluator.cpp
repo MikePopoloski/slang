@@ -69,6 +69,12 @@ void ConstantEvaluator::evaluateStmt(const BoundStatement *tree) {
         case BoundNodeKind::ConditionalStatement:
             evaluateConditional((BoundConditionalStatement*)tree);
             break;
+        case BoundNodeKind::ExpressionStatement:
+            evaluateExpr(((BoundExpressionStatement*)tree)->expr);
+            break;
+        case BoundNodeKind::ForLoopStatement:
+            evaluateForLoop((BoundForLoopStatement*)tree);
+            break;
 
             DEFAULT_UNREACHABLE;
     }
@@ -304,6 +310,18 @@ void ConstantEvaluator::evaluateConditional(const BoundConditionalStatement *stm
         evaluateStmt(stmt->ifTrue);
     } else if (stmt->ifFalse) {
         evaluateStmt(stmt->ifFalse);
+    }
+}
+
+void ConstantEvaluator::evaluateForLoop(const BoundForLoopStatement *loop) {
+    for (auto initializer : loop->initializers) {
+        evaluateVariableDecl(initializer);
+    }
+    while (evaluateBool(loop->stopExpr)) {
+        evaluateStmt(loop->statement);
+        for (auto step : loop->steps) {
+            evaluateExpr(step);
+        }
     }
 }
 
