@@ -814,10 +814,13 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         }
 
         if (newToken) {
-            // if we're stringifying, save this in a temporary buffer
+            // if we're stringifying, save this in a temporary buffer,
+            // included saving any empty macro arguments that may have
+            // important trivia. Don't pass those tokens on in a non-strinficiation
+            // context though
             if (stringify)
                 buffer.append(newToken);
-            else
+            else if (newToken.kind != TokenKind::EmptyMacroArgument)
                 expandedTokens.append(newToken);
         }
     }
@@ -920,6 +923,11 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
                 if (begin != end) {
                     dest.append(begin->withTrivia(alloc, token.trivia()));
                     dest.appendRange(++begin, end);
+                } else {
+                    // the macro argument contained no tokens.
+                    // we still need to supply an empty token here to ensure
+                    // that the trivia of the formal paremter is passed on
+                    dest.append(*alloc.emplace<Token>(TokenKind::EmptyMacroArgument, token.getInfo()));
                 }
             }
         }

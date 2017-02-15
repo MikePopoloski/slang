@@ -49,6 +49,9 @@ public:
     /// If this trivia is tracking a skipped syntax node, return that now.
     SyntaxNode* syntax() const;
 
+    StringRef getRawText() const {
+        return rawText;
+    }
 private:
     union {
         StringRef rawText;

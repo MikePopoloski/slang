@@ -160,17 +160,22 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
     SmallVectorSized<char, 64> text;
     text.append('"');
 
-    // TODO: need to think a lot more about where and how much we insert spacing
     while (begin != end) {
         Token cur = *begin;
-        if (!noWhitespace && cur.hasTrivia(TriviaKind::Whitespace))
-            text.append(' ');
+        // make sure to use all the whitespace
+        if (!noWhitespace && cur.hasTrivia(TriviaKind::Whitespace)) {
+            for (const Trivia& trivia : cur.trivia()) {
+                if (trivia.kind == TriviaKind::Whitespace) {
+                    text.appendRange(trivia.getRawText());
+                }
+            }
+        }
 
         if (cur.kind == TokenKind::MacroEscapedQuote) {
             text.append('\\');
             text.append('"');
         }
-        else {
+        else if (cur.kind != TokenKind::EmptyMacroArgument) {
             text.appendRange(cur.rawText());
         }
         begin++;
@@ -181,7 +186,6 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
     Diagnostics unused;
     Lexer lexer { BufferID(), StringRef(text), alloc, unused };
 
-    // TODO: handle more error cases
     auto token = lexer.lex();
     if (token.kind != TokenKind::StringLiteral)
         return Token();
