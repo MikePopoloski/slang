@@ -61,6 +61,14 @@ std::string TypeSymbol::toString() const {
         case SymbolKind::RealType:
             result = name.toString();
             break;
+        case SymbolKind::Instance:
+            result = name.toString();
+            break;
+        case SymbolKind::InstanceArray: {
+            auto ia = as<InstanceArraySymbol>();
+            result = name.toString() + "[" + std::to_string(ia.left) + ":" + std::to_string(ia.right) + "]";
+            break;
+        }
         default:
             break;
     }
