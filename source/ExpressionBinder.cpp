@@ -594,6 +594,8 @@ BoundStatement* ExpressionBinder::bindStatement(const StatementSyntax* syntax) {
     switch (syntax->kind) {
         case SyntaxKind::ReturnStatement: return bindReturnStatement((const ReturnStatementSyntax*)syntax);
         case SyntaxKind::ConditionalStatement: return bindConditionalStatement((const ConditionalStatementSyntax *)syntax);
+        case SyntaxKind::ForLoopStatement: return bindForLoopStatement((const ForLoopStatementSyntax *)syntax);
+        case SyntaxKind::ExpressionStatement: return bindExpressionStatement((const ExpressionStatementSyntax *)syntax);
 
         DEFAULT_UNREACHABLE;
     }
@@ -638,6 +640,31 @@ BoundStatement* ExpressionBinder::bindConditionalStatement(const ConditionalStat
     return alloc.emplace<BoundConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
+BoundStatement* ExpressionBinder::bindForLoopStatement(const ForLoopStatementSyntax *syntax) {
+    SmallVectorSized<const Symbol*, 2> initializers;
+    SmallVectorSized<const BoundVariableDecl*, 2> boundVars;
+    Scope *forScope = alloc.emplace<Scope>(scope);
+
+    for (auto initializer : syntax->initializers) {
+        auto forVarDecl = (const ForVariableDeclarationSyntax *)initializer;
+        const TypeSymbol *type = sem.makeTypeSymbol(forVarDecl->type, forScope);
+        sem.handleVariableDeclarator(forVarDecl->declarator, initializers, forScope, {}, type);
+    }
+    ArrayRef<const Symbol*> initializersRef = initializers.copy(alloc);
+    for (auto initializerSym : initializersRef) {
+        boundVars.append(alloc.emplace<BoundVariableDecl>((const VariableSymbol*)initializerSym));
+    }
+    ExpressionBinder binder(sem, forScope);
+    auto stopExpr = binder.bindExpression(syntax->stopExpr);
+    SmallVectorSized<const BoundExpression*, 2> steps;
+    for (auto step : syntax->steps) {
+        steps.append(binder.bindExpression(step));
+    }
+    auto statement = binder.bindStatement(syntax->statement);
+
+    return alloc.emplace<BoundForLoopStatement>(syntax, boundVars.copy(alloc), stopExpr, steps.copy(alloc), statement);
+}
+
 void ExpressionBinder::bindVariableDecl(const DataDeclarationSyntax* syntax, SmallVector<const BoundStatement*>& results) {
     // TODO: figure out const-ness of the scope here; shouldn't const cast obviously
     SmallVectorSized<const Symbol*, 8> buffer;
@@ -645,6 +672,11 @@ void ExpressionBinder::bindVariableDecl(const DataDeclarationSyntax* syntax, Sma
 
     for (auto symbol : buffer)
         results.append(alloc.emplace<BoundVariableDecl>((const VariableSymbol*)symbol));
+}
+
+BoundStatement* ExpressionBinder::bindExpressionStatement(const ExpressionStatementSyntax *syntax) {
+    auto expr = bindExpression(syntax->expr);
+    return alloc.emplace<BoundExpressionStatement>(syntax, expr);
 }
 
 bool ExpressionBinder::propagateAssignmentLike(BoundExpression* rhs, const TypeSymbol* lhsType) {

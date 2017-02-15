@@ -81,6 +81,7 @@ private:
     void evaluateReturn(const BoundReturnStatement* stmt);
     void evaluateVariableDecl(const BoundVariableDecl* decl);
     void evaluateConditional(const BoundConditionalStatement* stmt);
+    void evaluateForLoop(const BoundForLoopStatement *loop);
 
     ConstantValue evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments);
 

@@ -110,9 +110,8 @@ TEST_CASE("Eval for loop", "[eval]") {
     session.eval(R"(
 function logic [15:0] foo(int a);
     logic [15:0] result = 1;
-    for (int i = 0; i < a; ++i) begin
+    for (int i = 0; i < a; i+=1)
         result *= 2;
-    end
     return result;
 endfunction
 )");

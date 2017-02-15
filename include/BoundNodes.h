@@ -20,7 +20,9 @@ enum class BoundNodeKind {
     StatementList,
     ReturnStatement,
     VariableDeclaration,
-    ConditionalStatement
+    ConditionalStatement,
+    ForLoopStatement,
+    ExpressionStatement
 };
 
 class BoundNode {
@@ -173,6 +175,28 @@ public:
                               const BoundStatement* ifTrue, const BoundStatement* ifFalse) :
         BoundStatement(BoundNodeKind::ConditionalStatement, syntax),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
+};
+
+class BoundForLoopStatement : public BoundStatement {
+public:
+    ArrayRef<const BoundVariableDecl*> initializers;
+    const BoundExpression* stopExpr;
+    ArrayRef<const BoundExpression*> steps;
+    const BoundStatement* statement;
+
+    BoundForLoopStatement(const StatementSyntax *syntax, ArrayRef<const BoundVariableDecl*> initializers,
+                          const BoundExpression* stopExpr, ArrayRef<const BoundExpression*> steps,
+                          const BoundStatement* statement) :
+        BoundStatement(BoundNodeKind::ForLoopStatement, syntax),
+        initializers(initializers), stopExpr(stopExpr), steps(steps), statement(statement) {}
+};
+
+class BoundExpressionStatement : public BoundStatement {
+public:
+    const BoundExpression *expr;
+
+    BoundExpressionStatement(const ExpressionStatementSyntax *syntax, const BoundExpression *expr) :
+        BoundStatement(BoundNodeKind::ExpressionStatement, syntax), expr(expr) {}
 };
 
 }
