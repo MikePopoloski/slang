@@ -170,7 +170,7 @@ SVInt VectorBuilder::finish() {
                 diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
                 return SVInt(0);
             }
-            return SVInt(bits <= 32 ? 32 : bits, literalBase, signFlag, hasUnknown, ArrayRef<logic_t>(digits.begin(), digits.count()));
+            return SVInt(std::max(32, bits), literalBase, signFlag, hasUnknown, ArrayRef<logic_t>(digits.begin(), digits.count()));
         }
     }
 
