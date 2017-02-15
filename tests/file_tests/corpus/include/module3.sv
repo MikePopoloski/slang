@@ -37,3 +37,12 @@ module module3B
     localparam LP1 = TWO;
 
 endmodule
+
+module module3;
+
+    logic [Baz_pkg::ONE-1:0] x;
+
+    module3A a();
+    module3B b(x);
+
+endmodule

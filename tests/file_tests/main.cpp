@@ -18,6 +18,10 @@ int main() {
     std::vector<SyntaxTree> trees;
     Diagnostics diags;
     DeclarationTable table {diags};
+    BumpAllocator alloc {4096};
+    SemanticModel model {alloc, diags, table};
+    Scope definitions;
+    definitions.addParentScope(model.getSystemScope());
 
     int errors = 0;
     int files = 0;
@@ -40,14 +44,21 @@ int main() {
     printf("\n");
     printf("Finished parsing %d files; %d errors found\n\n", files, errors);
 
-    BumpAllocator alloc {4096};
-    SemanticModel model {alloc, diags, table};
-
     model.makePackages();
+
+    // construct a blank interface with empty scope linking to this scope
+    // required by SemanticModel::makeInterfacePorts
+    // TODO: make un-elaborated InterfaceSymbol/ModuleSymbol as a TypeSymbol and add to definitions scope
+    for (const auto interfacep : table.getInterfaces()) {
+        auto scope = alloc.emplace<Scope>();
+        scope->addParentScope(&definitions);
+        auto interfaceSym = alloc.emplace<ModuleSymbol>(interfacep, scope, ArrayRef<const Symbol*>());
+        definitions.add(interfaceSym);
+    }
 
     int modules = 0;
     for (const auto modulep : table.getTopLevelModules()) {
-        auto inst = model.makeImplicitInstance(modulep);
+        auto inst = model.makeImplicitInstance(modulep, &definitions);
         modules++;
     }
 

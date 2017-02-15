@@ -69,12 +69,11 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
     systemScope.add(alloc.emplace<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2));
 }
 
-InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
-    SmallVectorSized<const ParameterSymbol*, 8> parameters;
+InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax, Scope *definitions) {
     Scope* scope = alloc.emplace<Scope>();
-    makePublicParameters(parameters, syntax, nullptr, scope, SourceLocation(), true);
-
-    const ModuleSymbol* module = makeModule(syntax, parameters.copy(alloc), scope);
+    if (definitions) scope->addParentScope(definitions);
+    makePublicParameters(scope, syntax, nullptr, definitions, SourceLocation(), true);
+    const ModuleSymbol* module = makeModule(syntax, scope);
     return alloc.emplace<InstanceSymbol>(module, module->name, SourceLocation(), true);
 }
 
@@ -130,9 +129,7 @@ void SemanticModel::makePackages() {
     }
 }
 
-const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, ArrayRef<const ParameterSymbol*> parameters, Scope *scope) {
-    scope->addRange(parameters);
-
+const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syntax, Scope *scope) {
     SmallVectorSized<const Symbol*, 8> children;
     for (const MemberSyntax* member : syntax->members) {
         switch (member->kind) {
@@ -164,11 +161,18 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
             case SyntaxKind::TaskDeclaration:
                 handleGenerateItem(member, children, scope);
                 break;
+            case SyntaxKind::ModuleDeclaration:
+                // TODO: inner module
+                break;
+            case SyntaxKind::InterfaceDeclaration:
+                // TODO: inner interface
+                break;
+
             default:
                 break;
         }
     }
-    // TODO: cache this shit
+    // TODO: cache pair<syntax,scope.toString()>
     return alloc.emplace<ModuleSymbol>(syntax, scope, children.copy(alloc));
 }
 
@@ -504,15 +508,20 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
         return;
 
     // Evaluate public parameter assignments
-    SmallVectorSized<const ParameterSymbol*, 8> parameterBuilder;
-    makePublicParameters(parameterBuilder, decl, syntax->parameters, instantiationScope, syntax->getFirstToken().location(), false);
-
-    ArrayRef<const ParameterSymbol*> parameters = parameterBuilder.copy(alloc);
     for (const HierarchicalInstanceSyntax* instance : syntax->instances) {
-        // Get a symbol for this particular parameterized form of the module
         Scope * scope = alloc.emplace<Scope>();
-        const ModuleSymbol* module = makeModule(decl, parameters, scope);
-        results.append(alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false));
+        scope->addParentScope(instantiationScope);
+        // get interface objects for this instance
+        // TODO: add support for instances arrays
+        // TODO: this would mean sizing the array types and slicing
+        ASSERT(instance->dimensions.count() == 0);
+        makeInterfacePorts(scope, decl, instance, instantiationScope, syntax->getFirstToken().location());
+        // Get a symbol for this particular parameterized form of the module
+        makePublicParameters(scope, decl, syntax->parameters, instantiationScope, syntax->getFirstToken().location(), false);
+        const ModuleSymbol* module = makeModule(decl, scope);
+        auto sym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false);
+        results.append(sym);
+        instantiationScope->add(sym);
     }
 }
 
@@ -678,7 +687,7 @@ void SemanticModel::handleGenvarDecl(const GenvarDeclarationSyntax* syntax, Smal
     }
 }
 
-void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& results, const ModuleDeclarationSyntax* decl,
+void SemanticModel::makePublicParameters(Scope* declScope, const ModuleDeclarationSyntax* decl,
                                          const ParameterValueAssignmentSyntax* parameterAssignments,
                                          Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel) {
     // If we were given a set of parameter assignments, build up some data structures to
@@ -686,6 +695,7 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
     // named assignment (though a specific instance can only use one method or the other).
     bool hasParamAssignments = false;
     bool orderedAssignments = true;
+    SmallVectorSized<const ParameterSymbol*, 8> results;
     SmallVectorSized<OrderedArgumentSyntax*, 8> orderedParams;
     SmallHashMap<StringRef, std::pair<NamedArgumentSyntax*, bool>, 8> namedParams;
     StringRef moduleName = decl->header->name.valueText();
@@ -716,15 +726,14 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
     }
 
     // Pre-create parameter symbol entries so that we can give better errors about use before decl.
-    Scope declScope;
     for (auto import : decl->header->imports) {
-        handlePackageImport(import, &declScope);
+        handlePackageImport(import, declScope);
     }
     // also find direct body imports
     // TODO: check location of import vs usage
     for (const MemberSyntax* member : decl->members) {
         if (member->kind == SyntaxKind::PackageImportDeclaration) {
-            handlePackageImport(member->as<PackageImportDeclarationSyntax>(), &declScope);
+            handlePackageImport(member->as<PackageImportDeclarationSyntax>(), declScope);
         }
     }
 
@@ -732,7 +741,7 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
     for (const auto& info : moduleParamInfo) {
         ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local);
         results.append(symbol);
-        declScope.add(symbol);
+        declScope->add(symbol);
     }
 
     // Obtain the set of parameters actually declared in the module. This is a shared
@@ -750,7 +759,7 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
             Scope* scope;
             if (info.local || orderedIndex >= orderedParams.count()) {
                 initializer = info.initializer;
-                scope = &declScope;
+                scope = declScope;
             }
             else {
                 initializer = orderedParams[orderedIndex++]->expr;
@@ -813,7 +822,7 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
             // If no initializer provided, use the default
             if (!initializer) {
                 initializer = info.initializer;
-                scope = &declScope;
+                scope = declScope;
             }
 
             // See above for note about const_cast.
@@ -836,6 +845,145 @@ void SemanticModel::makePublicParameters(SmallVector<const ParameterSymbol*>& re
                 auto& diag = diagnostics.add(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
                 diag << pair.second.first->name.valueText();
                 diag << moduleName;
+            }
+        }
+    }
+}
+
+// create all interface objects for a particular module instance and load them into scope
+void SemanticModel::makeInterfacePorts(Scope* scope,
+                                       const ModuleDeclarationSyntax* instanceModuleSyntax,
+                                       const HierarchicalInstanceSyntax* syntax,
+                                       const Scope* instantiationScope,
+                                       SourceLocation instanceLocation)
+{
+    std::vector<StringRef> portNames;
+    std::unordered_set<StringRef> ifPortNames;
+    // port declarations in header
+    auto debugStr = ((ModuleDeclarationSyntax*)instanceModuleSyntax)->toString();
+    ASSERT(instanceModuleSyntax->header);
+    if (!instanceModuleSyntax->header->ports) return;
+    if (instanceModuleSyntax->header->ports->kind == SyntaxKind::AnsiPortList) {
+        ExpressionBinder binder { *this, scope };
+        auto ports = instanceModuleSyntax->header->ports->as<AnsiPortListSyntax>()->ports;
+        for (auto port : ports) {
+            ASSERT(port->kind == SyntaxKind::ImplicitAnsiPort); // everything else is invalid
+            auto type = port->as<ImplicitAnsiPortSyntax>();
+            auto delc = port->as<ImplicitAnsiPortSyntax>()->declarator;
+            portNames.emplace_back(delc->name.valueText());
+            switch (type->header->kind) {
+                case SyntaxKind::InterfacePortHeader: {
+                    auto ifType = type->header->as<InterfacePortHeaderSyntax>();
+                    ASSERT(ifType->nameOrKeyword.kind != TokenKind::InterfaceKeyword); // TODO: add support for generic interface ports
+                    // TODO: technically the interface should be looked up in the scope of the instance module,
+                    // TODO: but since we are connecting it, it should also be visible in the instance
+                    auto typeSym = instantiationScope->lookup(ifType->nameOrKeyword.valueText());
+                    ASSERT(typeSym && typeSym->kind == SymbolKind::Module); // TODO: emit diag about unknown interface
+                    //auto modportSym = typeSym->as<ModuleSymbol>().scope->lookup(ifType->modport->member.valueText());
+                    //ASSERT(modportSym && modportSym->kind == SymbolKind::Modport); // TODO: emit diag about unknown modport
+                    ifPortNames.emplace(delc->name.valueText());
+                    break;
+                }
+                case SyntaxKind::VariablePortHeader: {
+                    auto ifType = type->header->as<VariablePortHeaderSyntax>();
+                    if (ifType->direction) continue; // not an interface
+                    if (ifType->varKeyword) continue; // TODO: check for interface keyword
+                    if (ifType->type->kind != SyntaxKind::NamedType) continue;
+                    auto name = ifType->type->as<NamedTypeSyntax>()->name;
+                    const Symbol *typeSym = nullptr;
+                    switch (name->kind) {
+                        case SyntaxKind::IdentifierName: {
+                            // TODO: need to lookup the name of the interface in the scope of the module which is empty
+                            typeSym = instantiationScope->lookup(name->as<IdentifierNameSyntax>()->identifier.valueText());
+                            break;
+                        }
+                        case SyntaxKind::ScopedName: {
+                            auto boundExpr = binder.bindSelfDeterminedExpression(name->as<ScopedNameSyntax>());
+                            typeSym = boundExpr->type;
+                            break;
+                        }
+                        default:
+                            continue;
+                    }
+                    ASSERT(typeSym && typeSym->kind == SymbolKind::Module); // TODO: emit diag about unknown interface
+                    ifPortNames.emplace(delc->name.valueText());
+                    break;
+                }
+            }
+        }
+    }
+    // port names in header
+    // port declarations in body
+    else if (instanceModuleSyntax->header->ports->kind == SyntaxKind::NonAnsiPortList) {
+        auto ports = instanceModuleSyntax->header->ports->as<NonAnsiPortListSyntax>()->ports;
+        for (auto port : ports) {
+            ASSERT(port->kind == SyntaxKind::ImplicitNonAnsiPort); // TODO: add support for port expressions
+            auto expr = port->as<ImplicitNonAnsiPortSyntax>()->expr;
+            ASSERT(expr->kind == SyntaxKind::IdentifierName); // everything else is invalid
+            portNames.emplace_back(expr->as<IdentifierNameSyntax>()->identifier.valueText());
+        }
+        for (auto member : instanceModuleSyntax->members) {
+            if (member->kind == SyntaxKind::PortDeclaration) {
+                auto type = member->as<PortDeclarationSyntax>();
+                for (auto decl : member->as<PortDeclarationSyntax>()->declarators) {
+                    // TODO: emit diag about a port decl for name not listed in non-ansi header
+                    ASSERT(std::find(portNames.begin(), portNames.end(), decl->name.valueText()) != portNames.end());
+                }
+            }
+        }
+    }
+
+    // gather port mappings
+    size_t portIndex = 0;
+    bool hasOrdered = false;
+    bool hasNamed = false;
+    bool hasWild = false;
+    std::unordered_map<StringRef, const ExpressionSyntax*> ifPortMap;
+    for (auto conn : syntax->connections) {
+        switch (conn->kind) {
+            case SyntaxKind::OrderedPortConnection: {
+                auto ordered = conn->as<OrderedPortConnectionSyntax>();
+                ASSERT(!hasNamed); // TODO: emit diag about mixing
+                ASSERT(portIndex < portNames.size()); // TODO: emit diag about too many ordered port connections
+                auto name = portNames[portIndex++];
+                if (!ifPortNames.count(name)) continue;
+                ifPortMap.emplace(name, ordered->expr);
+                hasOrdered = true;
+                break;
+            }
+            case SyntaxKind::NamedPortConnection: {
+                auto named = conn->as<NamedPortConnectionSyntax>();
+                auto name = named->name.valueText();
+                if (!ifPortNames.count(name)) continue;
+                ASSERT(!hasOrdered); // TODO: emit diag about mixing
+                ifPortMap.emplace(name, named->connection->expression);
+                hasNamed = true;
+                break;
+            }
+            case SyntaxKind::WildcardPortConnection:
+                hasWild = true;
+                break;
+
+            default:
+                ASSERT(false); // impossible
+        }
+    }
+
+    // process interface port mapping to Interface or InterfaceArray symbols
+    for (auto conn : ifPortMap) {
+        ASSERT(conn.second->kind == SyntaxKind::IdentifierName); // TODO: handle more complex expressions like array select
+        auto sym = instantiationScope->lookup(conn.second->as<IdentifierNameSyntax>()->identifier.valueText());
+        ASSERT(sym && sym->kind == SymbolKind::Instance);
+        auto instSym = sym->as<InstanceSymbol>();
+        scope->add(alloc.emplace<InstanceSymbol>(instSym.module, conn.first, conn.second->as<IdentifierNameSyntax>()->identifier.location(), false));
+    }
+    if (hasWild) {
+        for (auto name : ifPortNames) {
+            if (!ifPortMap.count(name)) {
+                auto sym = instantiationScope->lookup(name);
+                ASSERT(sym && sym->kind == SymbolKind::Instance);
+                auto instSym = sym->as<InstanceSymbol>();
+                scope->add(alloc.emplace<InstanceSymbol>(instSym.module, instSym.name, SourceLocation(), false)); // TODO: add location of the port name
             }
         }
     }

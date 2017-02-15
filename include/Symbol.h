@@ -26,7 +26,8 @@ enum class SymbolKind {
     Parameter,
     EnumValue,
     Module,
-    Interface,
+    Interface, // TODO: decouple interfaces from modules
+    Modport,   // TODO: decouple interfaces from modules
     Program,
     Attribute,
     Genvar,
@@ -34,6 +35,7 @@ enum class SymbolKind {
     ProceduralBlock,
     Variable,
     Instance,
+    InstanceArray,
     FormalArgument,
     Subroutine
 };
@@ -238,19 +240,38 @@ public:
     static constexpr SymbolKind mykind = SymbolKind::Module;
 };
 
-class InstanceSymbol : public Symbol {
+class InstanceSymbol : public TypeSymbol {
 public:
     const ModuleSymbol* module;
     bool implicit;
 
     InstanceSymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit) :
-        Symbol(SymbolKind::Instance, name, location),
+        TypeSymbol(SymbolKind::Instance, name, location),
         module(module), implicit(implicit) {}
 
     template<typename T>
     const T& getChild(uint32_t index) const { return module->children[index]->as<T>(); }
 
     static constexpr SymbolKind mykind = SymbolKind::Instance;
+};
+
+class InstanceArraySymbol : public InstanceSymbol {
+  public:
+    // TODO: more than one dimension?
+    int left;
+    int right;
+
+    InstanceArraySymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit, int size = 1) :
+        InstanceSymbol(module, name, location, false),
+        left(size-1), right(0) { ASSERT(size > 0); }
+
+    InstanceArraySymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit, int left, int right) :
+        InstanceSymbol(module, name, location, false),
+        left(left), right(right) { ASSERT(width() > 0); }
+
+    int width() { return abs(left - right) + 1; }
+
+    static constexpr SymbolKind mykind = SymbolKind::InstanceArray;
 };
 
 class GenvarSymbol : public Symbol {
