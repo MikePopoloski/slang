@@ -122,6 +122,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ExpectedAnsiPort] = { "expected ansi port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedFunctionPort] = { "expected subroutine port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedLetPort] = { "expected let construct port declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedPropertyPort] = { "expected property construct port declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedForInitializer] = { "expected for loop initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedExpression] = { "expected expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedOpenRangeElement] = { "expected open range element", DiagnosticSeverity::Error };
@@ -139,6 +140,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ExpectedAssignmentKey] = { "expected assignment key", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedDistItem] = { "expected dist item", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedIfOrCase] = { "expected 'if' or 'case' after '{}' keyword", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedClassScope] = { "expected class scope before new keyword", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoLabelOnSemicolon] = { "labels are not allowed on empty semicolon", DiagnosticSeverity::Error };
     descriptors[DiagCode::DeferredDelayMustBeZero] = { "deferred assertion delay must be zero", DiagnosticSeverity::Error };
     descriptors[DiagCode::AttributesNotSupported] = { "attributes are not allowed to be attached to {}", DiagnosticSeverity::Error };

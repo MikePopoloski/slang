@@ -49,7 +49,7 @@ private:
     ExpressionSyntax* parseIntegerExpression();
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
-    ExpressionSyntax* parseNewExpression();
+    ExpressionSyntax* parseNewExpression(ExpressionSyntax* expr);
     ConcatenationExpressionSyntax* parseConcatenation(Token openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token openBrace);
     StreamExpressionSyntax* parseStreamExpression();
@@ -117,6 +117,7 @@ private:
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportDeclarationSyntax* parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     PackageImportItemSyntax* parsePackageImportItem();
+    PropertyDeclarationSyntax* parsePropertyDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ParameterDeclarationSyntax* parseParameterPort();
     MemberSyntax* parseVariableDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseNetDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);

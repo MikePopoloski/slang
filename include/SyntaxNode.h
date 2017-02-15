@@ -136,6 +136,7 @@ enum class SyntaxKind : uint16_t {
     NewArrayExpression,
     AssignmentPatternExpression,
     DefaultPatternKeyExpression,
+    NewExpression,
 
     // selectors
     BitSelect,
@@ -302,6 +303,9 @@ enum class SyntaxKind : uint16_t {
     StructUnionMember,
     DotMemberClause,
     Untyped,
+    PropertyType,
+    SequenceType,
+    VarDataType,
 
     // statements
     NamedLabel,
@@ -407,6 +411,9 @@ enum class SyntaxKind : uint16_t {
     LetPort,
     LetPortList,
     LetDeclaration,
+    PropertyPort,
+    PropertyPortList,
+    PropertyDeclaration,
     TaskDeclaration,
     ExtendsClause,
     ImplementsClause,
@@ -497,6 +504,8 @@ bool isEndOfParameterList(TokenKind kind);
 bool isNotInType(TokenKind kind);
 bool isNotInPortReference(TokenKind kind);
 bool isNotInConcatenationExpr(TokenKind kind);
+bool isNotInParameterList(TokenKind kind);
+bool isPossiblePropertyPortItem(TokenKind kind);
 bool isPossibleAnsiPort(TokenKind kind);
 bool isPossibleNonAnsiPort(TokenKind kind);
 bool isPossibleFunctionPort(TokenKind kind);

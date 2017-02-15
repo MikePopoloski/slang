@@ -34,7 +34,7 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
 
     auto current = peek();
     if (current.kind == TokenKind::NewKeyword)
-        return parseNewExpression();
+        return parseNewExpression(nullptr);
     // TODO:
     /*else if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
@@ -576,6 +576,8 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
                     return expr;
                 expr = parseArrayOrRandomizeWithClause();
                 break;
+            case TokenKind::NewKeyword:
+                expr = parseNewExpression(expr);
             default:
                 return expr;
         }
@@ -597,7 +599,10 @@ NameSyntax* Parser::parseName(bool isForEach) {
             reportedError = true;
             addError(DiagCode::ColonShouldBeDot, separator.location());
         }
-
+        if (peek().kind == TokenKind::NewKeyword) {
+            name = alloc.emplace<ClassScopeSyntax>(name, separator);
+            break;
+        }
         name = alloc.emplace<ScopedNameSyntax>(name, separator, parseNamePart(isForEach));
         kind = peek().kind;
     }
@@ -769,8 +774,12 @@ EventExpressionSyntax* Parser::parseEventExpression() {
     return left;
 }
 
-ExpressionSyntax* Parser::parseNewExpression() {
-    auto newKeyword = consume();
+ExpressionSyntax* Parser::parseNewExpression(ExpressionSyntax* scope) {
+    if (scope != nullptr && scope->kind != SyntaxKind::ClassScope) {
+        addError(DiagCode::ExpectedClassScope, scope->getFirstToken().location());
+        return scope;
+    }
+    auto newKeyword = expect(TokenKind::NewKeyword);
     auto kind = peek().kind;
 
     if (kind == TokenKind::OpenBracket) {
@@ -792,9 +801,11 @@ ExpressionSyntax* Parser::parseNewExpression() {
     ArgumentListSyntax* arguments = nullptr;
     if (kind == TokenKind::OpenParenthesis)
         arguments = parseArgumentList();
+    else if (scope == nullptr && isPossibleExpression(kind)) {
+        return alloc.emplace<NewExpressionSyntax>(newKeyword, parseExpression());
+    }
 
-    // TODO: handle class scoped new
-    return alloc.emplace<NewClassExpressionSyntax>(nullptr, newKeyword, arguments);
+    return alloc.emplace<NewClassExpressionSyntax>((ClassScopeSyntax*) scope, newKeyword, arguments);
 }
 
 TimingControlSyntax* Parser::parseTimingControl() {

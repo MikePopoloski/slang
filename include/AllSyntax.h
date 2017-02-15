@@ -1329,12 +1329,12 @@ protected:
     }
 };
 
-struct ClassScopeSyntax : public SyntaxNode {
+struct ClassScopeSyntax : public NameSyntax {
     NameSyntax* left;
     Token separator;
 
     ClassScopeSyntax(NameSyntax* left, Token separator) :
-        SyntaxNode(SyntaxKind::ClassScope), left(left), separator(separator)
+        NameSyntax(SyntaxKind::ClassScope), left(left), separator(separator)
     {
         childCount += 2;
     }
@@ -1691,6 +1691,33 @@ protected:
             case 2: ASSERT(false); break;
             case 3: closeBracket = token; break;
             case 4: ASSERT(false); break;
+        }
+    }
+};
+
+struct NewExpressionSyntax : public ExpressionSyntax {
+    Token newKeyword;
+    ExpressionSyntax* expr;
+
+    NewExpressionSyntax(Token newKeyword, ExpressionSyntax* expr) :
+        ExpressionSyntax(SyntaxKind::NewExpression), newKeyword(newKeyword), expr(expr)
+    {
+        childCount += 2;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return newKeyword;
+            case 1: return expr;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: newKeyword = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -3156,26 +3183,29 @@ protected:
     }
 };
 
-struct UntypedSyntax : public DataTypeSyntax {
-    Token untyped;
+struct VarDataTypeSyntax : public DataTypeSyntax {
+    Token var;
+    DataTypeSyntax* type;
 
-    UntypedSyntax(Token untyped) :
-        DataTypeSyntax(SyntaxKind::Untyped), untyped(untyped)
+    VarDataTypeSyntax(Token var, DataTypeSyntax* type) :
+        DataTypeSyntax(SyntaxKind::VarDataType), var(var), type(type)
     {
-        childCount += 1;
+        childCount += 2;
     }
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final {
         switch (index) {
-            case 0: return untyped;
+            case 0: return var;
+            case 1: return type;
             default: return nullptr;
         }
     }
 
     void replaceChild(uint32_t index, Token token) override final {
         switch (index) {
-            case 0: untyped = token; break;
+            case 0: var = token; break;
+            case 1: ASSERT(false); break;
         }
     }
 };
@@ -5796,6 +5826,122 @@ protected:
     }
 };
 
+struct PropertyPortSyntax : public SyntaxNode {
+    SyntaxList<AttributeInstanceSyntax> attributes;
+    Token local;
+    Token input;
+    DataTypeSyntax* type;
+    VariableDeclaratorSyntax* declarator;
+
+    PropertyPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token local, Token input, DataTypeSyntax* type, VariableDeclaratorSyntax* declarator) :
+        SyntaxNode(SyntaxKind::PropertyPort), attributes(attributes), local(local), input(input), type(type), declarator(declarator)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return local;
+            case 2: return input;
+            case 3: return type;
+            case 4: return declarator;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: local = token; break;
+            case 2: input = token; break;
+            case 3: ASSERT(false); break;
+            case 4: ASSERT(false); break;
+        }
+    }
+};
+
+struct PropertyPortListSyntax : public SyntaxNode {
+    Token openParen;
+    SeparatedSyntaxList<PropertyPortSyntax> ports;
+    Token closeParen;
+
+    PropertyPortListSyntax(Token openParen, SeparatedSyntaxList<PropertyPortSyntax> ports, Token closeParen) :
+        SyntaxNode(SyntaxKind::PropertyPortList), openParen(openParen), ports(ports), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return openParen;
+            case 1: return &ports;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: openParen = token; break;
+            case 1: ASSERT(false); break;
+            case 2: closeParen = token; break;
+        }
+    }
+};
+
+struct PropertyDeclarationSyntax : public MemberSyntax {
+    Token property;
+    Token name;
+    PropertyPortListSyntax* portList;
+    Token semi;
+    SyntaxList<DataDeclarationSyntax> assertionVariables;
+    PropertySpecSyntax* spec;
+    Token optionalSemi;
+    Token endProperty;
+    NamedBlockClauseSyntax* endBlockName;
+
+    PropertyDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token property, Token name, PropertyPortListSyntax* portList, Token semi, SyntaxList<DataDeclarationSyntax> assertionVariables, PropertySpecSyntax* spec, Token optionalSemi, Token endProperty, NamedBlockClauseSyntax* endBlockName) :
+        MemberSyntax(SyntaxKind::PropertyDeclaration, attributes), property(property), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), spec(spec), optionalSemi(optionalSemi), endProperty(endProperty), endBlockName(endBlockName)
+    {
+        childCount += 9;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return &attributes;
+            case 1: return property;
+            case 2: return name;
+            case 3: return portList;
+            case 4: return semi;
+            case 5: return &assertionVariables;
+            case 6: return spec;
+            case 7: return optionalSemi;
+            case 8: return endProperty;
+            case 9: return endBlockName;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: property = token; break;
+            case 2: name = token; break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
+            case 5: ASSERT(false); break;
+            case 6: ASSERT(false); break;
+            case 7: optionalSemi = token; break;
+            case 8: endProperty = token; break;
+            case 9: ASSERT(false); break;
+        }
+    }
+};
+
 struct ExtendsClauseSyntax : public SyntaxNode {
     Token keyword;
     NameSyntax* baseName;
@@ -7732,7 +7878,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::AttributeInstance: SyntaxNode::dispatch(v, *(const AttributeInstanceSyntax*)node); break;
         case SyntaxKind::InterfaceHeader: SyntaxNode::dispatch(v, *(const ModuleHeaderSyntax*)node); break;
         case SyntaxKind::QueueDimensionSpecifier: SyntaxNode::dispatch(v, *(const QueueDimensionSpecifierSyntax*)node); break;
-        case SyntaxKind::DivideAssignmentExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
+        case SyntaxKind::DisableConstraint: SyntaxNode::dispatch(v, *(const DisableConstraintSyntax*)node); break;
         case SyntaxKind::DividerClause: SyntaxNode::dispatch(v, *(const DividerClauseSyntax*)node); break;
         case SyntaxKind::ArrayOrMethod: SyntaxNode::dispatch(v, *(const KeywordNameSyntax*)node); break;
         case SyntaxKind::MatchesClause: SyntaxNode::dispatch(v, *(const MatchesClauseSyntax*)node); break;
@@ -7740,10 +7886,11 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::LetPort: SyntaxNode::dispatch(v, *(const LetPortSyntax*)node); break;
         case SyntaxKind::NewArrayExpression: SyntaxNode::dispatch(v, *(const NewArrayExpressionSyntax*)node); break;
         case SyntaxKind::XorAssignmentExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
+        case SyntaxKind::PropertyPortList: SyntaxNode::dispatch(v, *(const PropertyPortListSyntax*)node); break;
         case SyntaxKind::TimescaleDirective: SyntaxNode::dispatch(v, *(const TimescaleDirectiveSyntax*)node); break;
         case SyntaxKind::AndSequenceExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::AndAssignmentExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
-        case SyntaxKind::DisableConstraint: SyntaxNode::dispatch(v, *(const DisableConstraintSyntax*)node); break;
+        case SyntaxKind::DivideAssignmentExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::WildcardEqualityExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::RandomizeMethodWithClause: SyntaxNode::dispatch(v, *(const RandomizeMethodWithClauseSyntax*)node); break;
         case SyntaxKind::UnaryMinusExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
@@ -7752,7 +7899,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::UnaryLogicalNotExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::PragmaDirective: SyntaxNode::dispatch(v, *(const SimpleDirectiveSyntax*)node); break;
         case SyntaxKind::ConditionalPattern: SyntaxNode::dispatch(v, *(const ConditionalPatternSyntax*)node); break;
-        case SyntaxKind::TypeReference: SyntaxNode::dispatch(v, *(const TypeReferenceSyntax*)node); break;
+        case SyntaxKind::ConstructorName: SyntaxNode::dispatch(v, *(const KeywordNameSyntax*)node); break;
         case SyntaxKind::ImplicitType: SyntaxNode::dispatch(v, *(const ImplicitTypeSyntax*)node); break;
         case SyntaxKind::LineDirective: SyntaxNode::dispatch(v, *(const LineDirectiveSyntax*)node); break;
         case SyntaxKind::TaggedUnionExpression: SyntaxNode::dispatch(v, *(const TaggedUnionExpressionSyntax*)node); break;
@@ -7827,7 +7974,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::UnbasedUnsizedLiteralExpression: SyntaxNode::dispatch(v, *(const LiteralExpressionSyntax*)node); break;
         case SyntaxKind::ArrayUniqueMethod: SyntaxNode::dispatch(v, *(const KeywordNameSyntax*)node); break;
         case SyntaxKind::NamedStructurePatternMember: SyntaxNode::dispatch(v, *(const NamedStructurePatternMemberSyntax*)node); break;
-        case SyntaxKind::WaitStatement: SyntaxNode::dispatch(v, *(const WaitStatementSyntax*)node); break;
+        case SyntaxKind::SequenceType: SyntaxNode::dispatch(v, *(const KeywordTypeSyntax*)node); break;
         case SyntaxKind::FunctionDeclaration: SyntaxNode::dispatch(v, *(const FunctionDeclarationSyntax*)node); break;
         case SyntaxKind::LogicalShiftLeftExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::ClassDeclaration: SyntaxNode::dispatch(v, *(const ClassDeclarationSyntax*)node); break;
@@ -7855,16 +8002,18 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::NoUnconnectedDriveDirective: SyntaxNode::dispatch(v, *(const SimpleDirectiveSyntax*)node); break;
         case SyntaxKind::ElseDirective: SyntaxNode::dispatch(v, *(const UnconditionalBranchDirectiveSyntax*)node); break;
         case SyntaxKind::LogicalImplicationExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
-        case SyntaxKind::LessThanEqualExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
+        case SyntaxKind::PropertyType: SyntaxNode::dispatch(v, *(const KeywordTypeSyntax*)node); break;
         case SyntaxKind::DefaultCoverageBinInitializer: SyntaxNode::dispatch(v, *(const DefaultCoverageBinInitializerSyntax*)node); break;
         case SyntaxKind::TimingControlStatement: SyntaxNode::dispatch(v, *(const TimingControlStatementSyntax*)node); break;
         case SyntaxKind::ForLoopStatement: SyntaxNode::dispatch(v, *(const ForLoopStatementSyntax*)node); break;
         case SyntaxKind::StructurePattern: SyntaxNode::dispatch(v, *(const StructurePatternSyntax*)node); break;
         case SyntaxKind::AscendingRangeSelect: SyntaxNode::dispatch(v, *(const RangeSelectSyntax*)node); break;
+        case SyntaxKind::WaitStatement: SyntaxNode::dispatch(v, *(const WaitStatementSyntax*)node); break;
+        case SyntaxKind::WithClause: SyntaxNode::dispatch(v, *(const WithClauseSyntax*)node); break;
         case SyntaxKind::EventuallyPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::RangeCoverageBinInitializer: SyntaxNode::dispatch(v, *(const RangeCoverageBinInitializerSyntax*)node); break;
         case SyntaxKind::SEventuallyPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
-        case SyntaxKind::ConstructorName: SyntaxNode::dispatch(v, *(const KeywordNameSyntax*)node); break;
+        case SyntaxKind::TypeReference: SyntaxNode::dispatch(v, *(const TypeReferenceSyntax*)node); break;
         case SyntaxKind::MacroFormalArgument: SyntaxNode::dispatch(v, *(const MacroFormalArgumentSyntax*)node); break;
         case SyntaxKind::PowerExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::AssumePropertyStatement: SyntaxNode::dispatch(v, *(const ConcurrentAssertionStatementSyntax*)node); break;
@@ -7918,11 +8067,13 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::StandardCaseItem: SyntaxNode::dispatch(v, *(const StandardCaseItemSyntax*)node); break;
         case SyntaxKind::LocalScope: SyntaxNode::dispatch(v, *(const KeywordNameSyntax*)node); break;
         case SyntaxKind::OverlappedFollowedByPropertyExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
+        case SyntaxKind::VarDataType: SyntaxNode::dispatch(v, *(const VarDataTypeSyntax*)node); break;
         case SyntaxKind::StreamExpressionWithRange: SyntaxNode::dispatch(v, *(const StreamExpressionWithRange*)node); break;
         case SyntaxKind::IntegerType: SyntaxNode::dispatch(v, *(const IntegerTypeSyntax*)node); break;
         case SyntaxKind::ConditionalPredicate: SyntaxNode::dispatch(v, *(const ConditionalPredicateSyntax*)node); break;
         case SyntaxKind::ConditionalExpression: SyntaxNode::dispatch(v, *(const ConditionalExpressionSyntax*)node); break;
         case SyntaxKind::VoidType: SyntaxNode::dispatch(v, *(const KeywordTypeSyntax*)node); break;
+        case SyntaxKind::NewExpression: SyntaxNode::dispatch(v, *(const NewExpressionSyntax*)node); break;
         case SyntaxKind::ScopedName: SyntaxNode::dispatch(v, *(const ScopedNameSyntax*)node); break;
         case SyntaxKind::ProceduralDeassignStatement: SyntaxNode::dispatch(v, *(const ProceduralDeassignStatementSyntax*)node); break;
         case SyntaxKind::UnaryBitwiseNandExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
@@ -7963,18 +8114,19 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::ConstraintBlock: SyntaxNode::dispatch(v, *(const ConstraintBlockSyntax*)node); break;
         case SyntaxKind::InterfacePortHeader: SyntaxNode::dispatch(v, *(const InterfacePortHeaderSyntax*)node); break;
         case SyntaxKind::ArgumentList: SyntaxNode::dispatch(v, *(const ArgumentListSyntax*)node); break;
+        case SyntaxKind::PropertyDeclaration: SyntaxNode::dispatch(v, *(const PropertyDeclarationSyntax*)node); break;
         case SyntaxKind::GreaterThanExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::ImpliesPropertyExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
-        case SyntaxKind::UnaryPredecrementExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::UnaryBitwiseAndExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::PackageImportDeclaration: SyntaxNode::dispatch(v, *(const PackageImportDeclarationSyntax*)node); break;
-        case SyntaxKind::Untyped: SyntaxNode::dispatch(v, *(const UntypedSyntax*)node); break;
+        case SyntaxKind::Untyped: SyntaxNode::dispatch(v, *(const KeywordTypeSyntax*)node); break;
         case SyntaxKind::IntegerVectorExpression: SyntaxNode::dispatch(v, *(const IntegerVectorExpressionSyntax*)node); break;
         case SyntaxKind::AssignmentPatternItem: SyntaxNode::dispatch(v, *(const AssignmentPatternItemSyntax*)node); break;
         case SyntaxKind::WildcardLiteralExpression: SyntaxNode::dispatch(v, *(const LiteralExpressionSyntax*)node); break;
         case SyntaxKind::IffPropertyExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::DriveStrength: SyntaxNode::dispatch(v, *(const DriveStrengthSyntax*)node); break;
         case SyntaxKind::StringLiteralExpression: SyntaxNode::dispatch(v, *(const LiteralExpressionSyntax*)node); break;
+        case SyntaxKind::PropertyPort: SyntaxNode::dispatch(v, *(const PropertyPortSyntax*)node); break;
         case SyntaxKind::TimeType: SyntaxNode::dispatch(v, *(const IntegerTypeSyntax*)node); break;
         case SyntaxKind::AlwaysFFBlock: SyntaxNode::dispatch(v, *(const ProceduralBlockSyntax*)node); break;
         case SyntaxKind::UndefineAllDirective: SyntaxNode::dispatch(v, *(const SimpleDirectiveSyntax*)node); break;
@@ -8018,7 +8170,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::BlockCoverageEvent: SyntaxNode::dispatch(v, *(const BlockCoverageEventSyntax*)node); break;
         case SyntaxKind::UnaryPreincrementExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::LoopGenerate: SyntaxNode::dispatch(v, *(const LoopGenerateSyntax*)node); break;
-        case SyntaxKind::WithClause: SyntaxNode::dispatch(v, *(const WithClauseSyntax*)node); break;
+        case SyntaxKind::EventType: SyntaxNode::dispatch(v, *(const KeywordTypeSyntax*)node); break;
         case SyntaxKind::GenerateRegion: SyntaxNode::dispatch(v, *(const GenerateRegionSyntax*)node); break;
         case SyntaxKind::CaseStatement: SyntaxNode::dispatch(v, *(const CaseStatementSyntax*)node); break;
         case SyntaxKind::UnaryBitwiseXorExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
@@ -8029,11 +8181,12 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::EndCellDefineDirective: SyntaxNode::dispatch(v, *(const SimpleDirectiveSyntax*)node); break;
         case SyntaxKind::RangeDimensionSpecifier: SyntaxNode::dispatch(v, *(const RangeDimensionSpecifierSyntax*)node); break;
         case SyntaxKind::SAlwaysPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
-        case SyntaxKind::EventType: SyntaxNode::dispatch(v, *(const KeywordTypeSyntax*)node); break;
+        case SyntaxKind::UnaryPredecrementExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::ArithmeticShiftLeftExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::ElementSelect: SyntaxNode::dispatch(v, *(const ElementSelectSyntax*)node); break;
         case SyntaxKind::EventControlWithExpression: SyntaxNode::dispatch(v, *(const EventControlWithExpressionSyntax*)node); break;
         case SyntaxKind::LoopConstraint: SyntaxNode::dispatch(v, *(const LoopConstraintSyntax*)node); break;
+        case SyntaxKind::LessThanEqualExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::BinarySequenceDelayExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::GenerateBlock: SyntaxNode::dispatch(v, *(const GenerateBlockSyntax*)node); break;
         case SyntaxKind::AcceptOnPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;

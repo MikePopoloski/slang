@@ -273,7 +273,7 @@ NameSyntax left
 token separator
 NameSyntax right
 
-ClassScopeSyntax kind=ClassScope
+ClassScopeSyntax base=NameSyntax kind=ClassScope
 NameSyntax left
 token separator
 
@@ -341,6 +341,10 @@ token openBracket
 ExpressionSyntax sizeExpr
 token closeBracket
 ParenthesizedExpressionSyntax initializer
+
+NewExpressionSyntax base=ExpressionSyntax kind=NewExpression
+token newKeyword
+ExpressionSyntax expr
 
 // ----- POSTFIX EXPRESSIONS -----
 
@@ -558,7 +562,7 @@ token keyword
 
 kindmap<KeywordTypeSyntax>
 ShortRealType RealType RealTimeType StringType CHandleType EventType
-VoidType TypeType
+VoidType TypeType Untyped PropertyType SequenceType
 
 NamedTypeSyntax base=DataTypeSyntax kind=NamedType
 NameSyntax name
@@ -612,8 +616,9 @@ ImplicitTypeSyntax base=DataTypeSyntax kind=ImplicitType
 token signing
 list<VariableDimensionSyntax> dimensions
 
-UntypedSyntax base=DataTypeSyntax kind=Untyped
-token untyped
+VarDataTypeSyntax base=DataTypeSyntax kind=VarDataType
+token var
+DataTypeSyntax type
 
 // ----- ASSERTIONS -----
 
@@ -1095,6 +1100,29 @@ token identifier
 LetPortListSyntax portList
 EqualsValueClauseSyntax initializer
 token semi
+
+PropertyPortSyntax kind=PropertyPort
+list<AttributeInstanceSyntax> attributes
+token local
+token input
+DataTypeSyntax type
+VariableDeclaratorSyntax declarator
+
+PropertyPortListSyntax kind=PropertyPortList
+token openParen
+separated_list<PropertyPortSyntax> ports
+token closeParen
+
+PropertyDeclarationSyntax kind=PropertyDeclaration base=MemberSyntax
+token property
+token name
+PropertyPortListSyntax portList
+token semi
+list<DataDeclarationSyntax> assertionVariables
+PropertySpecSyntax spec
+token optionalSemi
+token endProperty
+NamedBlockClauseSyntax endBlockName
 
 ExtendsClauseSyntax kind=ExtendsClause
 token keyword
