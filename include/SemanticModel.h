@@ -37,7 +37,7 @@ public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     void makePackages();
-    InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax);
+    InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax, Scope *definitions = nullptr);
     const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, Scope* scope);
     const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax* syntax, Scope* scope);
 

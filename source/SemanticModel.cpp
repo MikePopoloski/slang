@@ -69,9 +69,10 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
     systemScope.add(alloc.emplace<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2));
 }
 
-InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax) {
+InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax, Scope *definitions) {
     Scope* scope = alloc.emplace<Scope>();
-    makePublicParameters(scope, syntax, nullptr, scope, SourceLocation(), true);
+    if (definitions) scope->addParentScope(definitions);
+    makePublicParameters(scope, syntax, nullptr, definitions, SourceLocation(), true);
     const ModuleSymbol* module = makeModule(syntax, scope);
     return alloc.emplace<InstanceSymbol>(module, module->name, SourceLocation(), true);
 }
@@ -160,6 +161,13 @@ const ModuleSymbol* SemanticModel::makeModule(const ModuleDeclarationSyntax* syn
             case SyntaxKind::TaskDeclaration:
                 handleGenerateItem(member, children, scope);
                 break;
+            case SyntaxKind::ModuleDeclaration:
+                // TODO: inner module
+                break;
+            case SyntaxKind::InterfaceDeclaration:
+                // TODO: inner interface
+                break;
+
             default:
                 break;
         }
@@ -511,7 +519,9 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
         // Get a symbol for this particular parameterized form of the module
         makePublicParameters(scope, decl, syntax->parameters, instantiationScope, syntax->getFirstToken().location(), false);
         const ModuleSymbol* module = makeModule(decl, scope);
-        results.append(alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false));
+        auto sym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false);
+        results.append(sym);
+        instantiationScope->add(sym);
     }
 }
 
