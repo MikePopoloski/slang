@@ -48,6 +48,7 @@ private:
     BoundExpression* bindConcatenationExpression(const ConcatenationExpressionSyntax* syntax);
     BoundExpression* bindMultipleConcatenationExpression(const MultipleConcatenationExpressionSyntax* syntax);
     BoundExpression* bindSelectExpression(const ElementSelectExpressionSyntax* syntax);
+    BoundExpression* bindSelectExpression(const ExpressionSyntax* syntax, BoundExpression* expr, const SelectorSyntax* selector);
 
     BoundStatement* bindReturnStatement(const ReturnStatementSyntax* syntax);
     BoundStatement* bindConditionalStatement(const ConditionalStatementSyntax *syntax);

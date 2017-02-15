@@ -193,38 +193,38 @@ ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpressio
 
 ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression* expr) {
     const auto first = evaluateExpr(expr->expr).integer();
-    int lb = expr->type->as<IntegralTypeSymbol>().lowerBounds[0];
-    bool down = expr->type->as<IntegralTypeSymbol>().lowerBounds[0] > 0;
+    int lb = expr->expr->type->as<IntegralTypeSymbol>().lowerBounds[0];
+    bool down = expr->expr->type->as<IntegralTypeSymbol>().lowerBounds[0] >= 0;
     const auto msb = evaluateExpr(expr->left).integer();
-    int16_t actualMsb = abs(msb.getAssertUInt16() - lb);
+    const auto lsbOrWidth = evaluateExpr(expr->right).integer();
+
+
+    if (msb.hasUnknown() || lsbOrWidth.hasUnknown()) {
+        // If any part of an address is unknown, then the whole thing returns
+        // 'x; let's handle this here so everywhere else we can assume the inputs
+        // are normal numbers
+        auto foo = SVInt::createFillX(expr->type->width(), false);
+        ASSERT(foo.hasUnknown());
+        return foo;
+    }
+    int16_t actualMsb = (lb < 0 ? -1 : 1) * msb.getAssertInt64() - lb;
     // here "actual" bit refers to bits numbered from
     // lsb 0 to msb <width>, which is what is understood by SVInt::bitSelect
-    switch (expr->syntax->kind) {
+    switch (expr->kind) {
         case SyntaxKind::BitSelect: {
             return first.bitSelect(actualMsb, actualMsb);
         }
         case SyntaxKind::SimpleRangeSelect: {
-            const auto lsb = evaluateExpr(expr->right).integer();
-            uint16_t actualLsb = abs(msb.getAssertUInt16() - lb);
+            int16_t actualLsb = (lb < 0 ? -1 : 1) * lsbOrWidth.getAssertInt64() - lb;
             return first.bitSelect(actualLsb, actualMsb);
         }
         case SyntaxKind::AscendingRangeSelect: {
-            const auto width = evaluateExpr(expr->right).integer().getAssertUInt16();
-            if (down) {
-                return first.bitSelect(actualMsb - width, actualMsb);
-            } else {
-                // here 'actualMsb' is an Lsb
-                return first.bitSelect(actualMsb, actualMsb + width);
-            }
+            int16_t width = lsbOrWidth.getAssertInt64();
+            return first.bitSelect(actualMsb, actualMsb + width);
         }
         case SyntaxKind::DescendingRangeSelect: {
-            const auto width = evaluateExpr(expr->right).integer().getAssertUInt16();
-            if (!down) {
-                return first.bitSelect(actualMsb - width, actualMsb);
-            } else {
-                // here 'actualMsb' is an Lsb
-                return first.bitSelect(actualMsb, actualMsb + width);
-            }
+            int16_t width = lsbOrWidth.getAssertInt64();
+            return first.bitSelect(actualMsb - width, actualMsb);
         }
         DEFAULT_UNREACHABLE;
     }

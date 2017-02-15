@@ -308,20 +308,24 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
 // Like memcpy, but at the bit level instead of bytes
 // i.e if destBitOffset % 8 == bitLength % 8 == 0, this is
 // equivalent to memcpy(dest + destBitOffset / 8, src, bitLength / 8)
-static void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitLength) {
+static void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitLength, uint16_t srcBitOffset = 0) {
+    if (bitLength == 0) return;
     // Get the first byte we want to write to, and the reamaining bits are a bit offset
     dest += destBitOffset / 8;
     destBitOffset %= 8;
+    src += srcBitOffset / 8;
+    srcBitOffset %= 8;
 
     // Writing to the first byte is a special case, due to the bit offset
     uint8_t bitsToWrite = std::min<uint8_t>(bitLength, 8 - destBitOffset);
 
+    uint8_t srcByte = srcBitOffset ? (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset)) : *src;
     *dest = (*dest   & ((1 << destBitOffset) - 1)) + // preserved bits
-            ((*src & ((1 << bitsToWrite) - 1)) << destBitOffset); // new bits
+            ((srcByte & ((1 << bitsToWrite) - 1)) << destBitOffset); // new bits
 
     // all remaining writes to dest are byte-aligned, but the reads from src
     // may not be
-    uint8_t srcBitOffset = bitsToWrite;
+    srcBitOffset += bitsToWrite;
     bitLength -= bitsToWrite;
     while (bitLength > 0) {
         // advance dest one byte, and src the proper number of bits
@@ -333,13 +337,14 @@ static void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16
         uint8_t bitsToWrite = std::min<uint8_t>(bitLength, 8);
         // get the next 8 bits of src, probably not byte aligned
         // (if bitsToWrite < 8, this could have some extra bits in it
-        uint8_t srcByte = (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset));
+        srcByte = srcBitOffset ? (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset)) : *src;
 
         // Write srcByte, filling the upper bits with zereos if we have less than
         // a byte left to write.
         *dest = srcByte & ((1 << bitsToWrite) - 1); // new bits
 
         bitLength -= bitsToWrite;
+        srcBitOffset += bitsToWrite;
     }
 }
 

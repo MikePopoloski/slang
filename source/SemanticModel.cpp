@@ -204,16 +204,16 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, Sc
                 SmallVectorSized<int, 4> widths;
                 uint16_t totalWidth = 0;
                 for (auto& dim : dims) {
-                    // TODO: msb < lsb
                     uint16_t msb = dim.msb.getAssertUInt16();
                     uint16_t lsb = dim.lsb.getAssertUInt16();
+                    uint16_t width;
                     if (msb > lsb) {
-                        uint16_t width = msb - lsb + 1;
+                        width = msb - lsb + 1;
                         lowerBounds.append(lsb);
                     } else {
                         // TODO: msb == lsb
                         width = lsb - msb + 1;
-                        lowerBounds.append(-msb);
+                        lowerBounds.append(-lsb);
                     }
                     widths.append(width);
 
