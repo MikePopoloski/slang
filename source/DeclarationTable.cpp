@@ -28,6 +28,14 @@ ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getPackages() {
     return ArrayRef<const ModuleDeclarationSyntax*>(packages.begin(), packages.end());
 }
 
+ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getInterfaces(){
+    return ArrayRef<const ModuleDeclarationSyntax*>(interfaces.begin(), interfaces.end());
+}
+
+ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getModules(){
+    return ArrayRef<const ModuleDeclarationSyntax*>(modules.begin(), modules.end());
+}
+
 ArrayRef<const ModuleDeclarationSyntax*> DeclarationTable::getTopLevelModules() {
     if (!dirty)
         return ArrayRef<const ModuleDeclarationSyntax*>(topLevel.begin(), topLevel.end());
@@ -85,8 +93,7 @@ bool DeclarationTable::addRootNode(UnitDecls& unit, const MemberSyntax* member) 
     switch (member->kind) {
         case SyntaxKind::PackageDeclaration:
         case SyntaxKind::ModuleDeclaration:
-        case SyntaxKind::InterfaceDeclaration:
-        case SyntaxKind::ProgramDeclaration: {
+        case SyntaxKind::InterfaceDeclaration: {
             // ignore empty names
             auto decl = member->as<ModuleDeclarationSyntax>();
             auto name = decl->header->name;
@@ -94,6 +101,12 @@ bool DeclarationTable::addRootNode(UnitDecls& unit, const MemberSyntax* member) 
                 unit.rootNodes.push_back(decl);
             if (decl->header->moduleKeyword.kind == TokenKind::PackageKeyword)
                 packages.append(decl);
+            if (decl->header->moduleKeyword.kind == TokenKind::InterfaceKeyword) {
+                interfaces.append(decl);
+            }
+            if (decl->header->moduleKeyword.kind == TokenKind::ModuleKeyword ||
+                decl->header->moduleKeyword.kind == TokenKind::MacromoduleKeyword)
+                modules.append(decl);
             nameLookup.emplace(name.valueText(), DeclAndFlag(decl));
             std::vector<NameSet> scopeStack;
             visit(decl, unit, scopeStack);
