@@ -274,6 +274,10 @@ enum class SyntaxKind : uint16_t {
     NetDeclaration,
     PortDeclaration,
     GenvarDeclaration,
+    ClockingSkew,
+    ClockingDirection,
+    ClockingItem,
+    ClockingDeclaration,
 
     // types
     BitType,

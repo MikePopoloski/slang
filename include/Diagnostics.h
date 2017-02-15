@@ -116,6 +116,7 @@ enum class DiagCode : uint8_t {
     InvalidGenvarIterExpression,
     ExpectedGenvarIterVar,
     ConstFunctionPortRequiresRef,
+    ExpectedClockingSkew,
 
     // declarations
     DuplicateDefinition,
