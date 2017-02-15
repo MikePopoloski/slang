@@ -174,9 +174,9 @@ EVAL_TEST("bitSelectAscendingRange", "5'd25[0 +: 3]", 9);
 EVAL_TEST("bitSelectDescendingRange", "5'd25[3 -: 3]", 9);
 EVAL_TEST_EX("bitselect with unknown address", "4'b1001[(1 / 0)]", "1'bx");
 EVAL_TEST_EX("rangeselect with unknown address", "4'b1001[(1/ 0) +: 2]", "2'bxx");
-EVAL_TEST_EX("partially oob rangeselect", "4'b1001[3 : -1]", "5'b1001x");
-EVAL_TEST_EX("partially oob rangeselect2", "4'b1001[4 : 1]", "4'bx100");
-EVAL_TEST_EX("partially oob rangeselect3", "4'b1001[4 : -1]", "6'bx1001x");
+EVAL_TEST_EX("partially oob rangeselect (right)", "4'b1001[3 : -1]", "5'b1001x");
+EVAL_TEST_EX("partially oob rangeselect (left)", "4'b1001[4 : 1]", "4'bx100");
+EVAL_TEST_EX("partially oob rangeselect (both)", "4'b1001[4 : -1]", "6'bx1001x");
 //TODO: Figure out why a test like this fails, seems like something wrong with literals with x's?
 //EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
 
