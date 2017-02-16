@@ -60,6 +60,7 @@ private:
     // Small collection of info extracted from a parameter definition
     struct ParameterInfo {
         const ParameterDeclarationSyntax* paramDecl;
+        const VariableDeclaratorSyntax* declarator;
         StringRef name;
         SourceLocation location;
         ExpressionSyntax* initializer;

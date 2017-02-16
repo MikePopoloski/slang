@@ -235,13 +235,16 @@ public:
 class ParameterSymbol : public ConstValueSymbol {
 public:
     const ParameterDeclarationSyntax* syntax;
+    const VariableDeclaratorSyntax* declarator;
     bool isLocal;
 
     ParameterSymbol(StringRef name, SourceLocation location,
                     const ParameterDeclarationSyntax* syntax,
+                    const VariableDeclaratorSyntax* declarator,
                     bool isLocal) :
         ConstValueSymbol(SymbolKind::Parameter, name, location),
         syntax(syntax),
+        declarator(declarator),
         isLocal(isLocal) {}
 
     static constexpr SymbolKind mykind = SymbolKind::Parameter;
