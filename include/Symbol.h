@@ -6,12 +6,26 @@
 #include "SourceLocation.h"
 #include "StringRef.h"
 #include "Scope.h"
+#include "SVInt.h"
 
 namespace slang {
 
 class BoundExpression;
 class BoundStatement;
 class BoundStatementList;
+
+// Represents a simple constant range.
+struct ConstantRange {
+    SVInt left;
+    SVInt right;
+
+    SVInt width() {
+        auto diff = left - right;
+        return (diff.isNegative() ? -diff : diff) + SVInt(1);
+    }
+};
+
+using Dimensions = ArrayRef<ConstantRange>;
 
 enum class SymbolKind {
     Unknown,
@@ -35,7 +49,6 @@ enum class SymbolKind {
     ProceduralBlock,
     Variable,
     Instance,
-    InstanceArray,
     FormalArgument,
     Subroutine
 };
@@ -245,34 +258,18 @@ class InstanceSymbol : public TypeSymbol {
 public:
     const ModuleSymbol* module;
     bool implicit;
-
-    InstanceSymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit) :
+    Dimensions dimensions;
+// TODO: array of instances has all the same parameters
+// TODO: this works for port since interface port connections are themselves arrays of instances
+// TODO: defparams on instance array elements will break this (if allowed)
+    InstanceSymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit, Dimensions dimensions = Dimensions()) :
         TypeSymbol(SymbolKind::Instance, name, location),
-        module(module), implicit(implicit) {}
+        module(module), implicit(implicit), dimensions(dimensions) {}
 
     template<typename T>
     const T& getChild(uint32_t index) const { return module->children[index]->as<T>(); }
 
     static constexpr SymbolKind mykind = SymbolKind::Instance;
-};
-
-class InstanceArraySymbol : public InstanceSymbol {
-  public:
-    // TODO: more than one dimension?
-    int left;
-    int right;
-
-    InstanceArraySymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit, int size = 1) :
-        InstanceSymbol(module, name, location, false),
-        left(size-1), right(0) { ASSERT(size > 0); }
-
-    InstanceArraySymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit, int left, int right) :
-        InstanceSymbol(module, name, location, false),
-        left(left), right(right) { ASSERT(width() > 0); }
-
-    int width() { return abs(left - right) + 1; }
-
-    static constexpr SymbolKind mykind = SymbolKind::InstanceArray;
 };
 
 class GenvarSymbol : public Symbol {
