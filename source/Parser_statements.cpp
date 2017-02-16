@@ -527,6 +527,7 @@ PropertySpecSyntax* Parser::parsePropertySpec() {
         auto expr = parseExpressionOrDist();
         disable = alloc.emplace<DisableIffSyntax>(keyword, iff, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
+    // TODO: Parse all property expressions
     return alloc.emplace<PropertySpecSyntax>(timing, disable, parseExpression());
 }
 

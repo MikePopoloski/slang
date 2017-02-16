@@ -1084,44 +1084,35 @@ NamedBlockClauseSyntax endBlockName
 kindmap<FunctionDeclarationSyntax>
 FunctionDeclaration TaskDeclaration
 
-LetPortSyntax kind=LetPort
+AssertionItemPortSyntax kind=AssertionItemPort
 list<AttributeInstanceSyntax> attributes
+token local
+token direction
 DataTypeSyntax type
 VariableDeclaratorSyntax declarator
 
-LetPortListSyntax kind=LetPortList
+AssertionItemPortListSyntax kind=AssertionItemPortList
 token openParen
-separated_list<LetPortSyntax> ports
+separated_list<AssertionItemPortSyntax> ports
 token closeParen
 
 LetDeclarationSyntax kind=LetDeclaration base=MemberSyntax
 token let
 token identifier
-LetPortListSyntax portList
+AssertionItemPortListSyntax portList
 EqualsValueClauseSyntax initializer
 token semi
 
-PropertyPortSyntax kind=PropertyPort
-list<AttributeInstanceSyntax> attributes
-token local
-token input
-DataTypeSyntax type
-VariableDeclaratorSyntax declarator
-
-PropertyPortListSyntax kind=PropertyPortList
-token openParen
-separated_list<PropertyPortSyntax> ports
-token closeParen
-
-PropertyDeclarationSyntax kind=PropertyDeclaration base=MemberSyntax
-token property
+PropertySequenceDeclarationSyntax kind=PropertySequenceDeclaration base=MemberSyntax
+token start
 token name
-PropertyPortListSyntax portList
+AssertionItemPortListSyntax portList
 token semi
 list<DataDeclarationSyntax> assertionVariables
-PropertySpecSyntax spec
+PropertySpecSyntax propertySpec
+ExpressionSyntax seqExpr
 token optionalSemi
-token endProperty
+token end
 NamedBlockClauseSyntax endBlockName
 
 ExtendsClauseSyntax kind=ExtendsClause
