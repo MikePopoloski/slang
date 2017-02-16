@@ -32,6 +32,10 @@ public:
     {
     }
 
+    template<size_t N>
+    ArrayRef(T (&array)[N]) :
+        ptr(array), len(uint32_t(N)) {}
+
     const T* begin() const { return ptr; }
     const T* end() const { return ptr + len; }
     const T* cbegin() const { return ptr; }

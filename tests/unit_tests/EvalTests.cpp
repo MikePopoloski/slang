@@ -101,6 +101,22 @@ TEST_CASE("Interface port param", "[eval]") {
     CHECK(value.integer() == 6);
 }
 
+TEST_CASE("Interface array", "[eval]") {
+    ScriptSession session;
+    auto interface = session.eval("interface IFACE3 #(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");
+    CHECK(interface);
+    auto module = session.eval("module M(IFACE3 i); localparam int LP = i.W; endmodule");
+    CHECK(module);
+    auto param = session.eval("parameter int N = 1;");
+    auto port = session.eval("IFACE3 #(6) i0 [N] ();");
+    CHECK(port);
+    auto instance = session.eval("M m [] (i0);");
+    CHECK(instance);
+    auto value = session.eval("m[N-1].LP");
+    CHECK(value.integer() == 6);
+}
+
+
 TEST_CASE("Eval if statement", "[eval]") {
     ScriptSession session;
     session.eval(R"(

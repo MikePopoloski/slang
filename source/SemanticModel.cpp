@@ -204,10 +204,10 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, Sc
             if (dims.empty())
                 // TODO: signing
                 return getKnownType(syntax->kind);
-            else if (dims.count() == 1 && dims[0].lsb == 0) {
+            else if (dims.count() == 1 && dims[0].right == 0) {
                 // if we have the common case of only one dimension and lsb == 0
                 // then we can use the shared representation
-                uint16_t width = dims[0].msb.getAssertUInt16() + 1;
+                uint16_t width = dims[0].left.getAssertUInt16() + 1;
                 return getIntegralType(width, isSigned, isFourState, isReg);
             }
             else {
@@ -215,8 +215,8 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax* syntax, Sc
                 SmallVectorSized<int, 4> widths;
                 uint16_t totalWidth = 0;
                 for (auto& dim : dims) {
-                    uint16_t msb = dim.msb.getAssertUInt16();
-                    uint16_t lsb = dim.lsb.getAssertUInt16();
+                    uint16_t msb = dim.left.getAssertUInt16();
+                    uint16_t lsb = dim.right.getAssertUInt16();
                     uint16_t width;
                     if (msb > lsb) {
                         width = msb - lsb + 1;
@@ -522,19 +522,84 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
 
     // Evaluate public parameter assignments
     for (const HierarchicalInstanceSyntax* instance : syntax->instances) {
-        Scope * scope = alloc.emplace<Scope>();
+        Scope* scope = alloc.emplace<Scope>();
         scope->addParentScope(instantiationScope);
         // get interface objects for this instance
-        // TODO: add support for instances arrays
-        // TODO: this would mean sizing the array types and slicing
-        ASSERT(instance->dimensions.count() == 0);
         makeInterfacePorts(scope, decl, instance, instantiationScope, syntax->getFirstToken().location());
-        // Get a symbol for this particular parameterized form of the module
         makePublicParameters(scope, decl, syntax->parameters, instantiationScope, syntax->getFirstToken().location(), false);
         const ModuleSymbol* module = makeModule(decl, scope);
-        auto sym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false);
-        results.append(sym);
-        instantiationScope->add(sym);
+        const InstanceSymbol *instSym = nullptr;
+        if (instance->dimensions.count() == 0) {
+            instSym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false);
+        }
+        else {
+            // figure out dimensions of the instance array
+            SmallVectorSized<ConstantRange, 2> dims;
+            ExpressionBinder binder { *this, scope };
+            for (const VariableDimensionSyntax* dim : instance->dimensions) {
+                if (!dim->specifier) {
+                    dims.emplace(ConstantRange{SVInt{0}, SVInt{0}});
+                    break;
+                }
+                if (dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier) {
+                    auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequired, dim->specifier->getFirstToken().location());
+                    diag << dim->specifier->sourceRange();
+                    return;
+                }
+                auto selector = dim->specifier->as<RangeDimensionSpecifierSyntax>()->selector;
+                ASSERT(selector);
+                switch (selector->kind) {
+                    case SyntaxKind::SimpleRangeSelect: {
+                        auto left = selector->as<RangeSelectSyntax>()->left;
+                        ASSERT(left);
+                        auto leftBound = binder.bindConstantExpression(left);
+                        auto leftValue = evaluateConstant(leftBound);
+                        if (!left || leftBound->bad() || leftValue.bad()) {
+                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, left->getFirstToken().location());
+                            diag << left->sourceRange();
+                            return;
+
+                        }
+                        auto right = selector->as<RangeSelectSyntax>()->right;
+                        ASSERT(right);
+                        auto rightBound = binder.bindConstantExpression(right);
+                        auto rightValue = evaluateConstant(rightBound);
+                        if (!right || rightBound->bad() || rightValue.bad()) {
+                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, right->getFirstToken().location());
+                            diag << right->sourceRange();
+                            return;
+
+                        }
+                        dims.emplace(ConstantRange{std::get<SVInt>(leftValue), std::get<SVInt>(rightValue)});
+                        break;
+                    }
+                    case SyntaxKind::BitSelect: {
+                        auto expr = selector->as<BitSelectSyntax>()->expr;
+                        ASSERT(expr);
+                        auto exprBound = binder.bindConstantExpression(expr);
+                        auto exprValue = evaluateConstant(exprBound);
+                        if (!expr || exprBound->bad() || exprValue.bad()) {
+                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, expr->getFirstToken().location());
+                            diag << expr->sourceRange();
+                            return;
+
+                        }
+                        dims.emplace(ConstantRange{std::get<SVInt>(exprValue), std::get<SVInt>(exprValue)});
+                        break;
+                    }
+                    default: {
+                        auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequired, selector->getFirstToken().location());
+                        diag << selector->sourceRange();
+                        return;
+                    }
+                }
+            }
+            // load all interface ports into scope
+            // TODO: arrayed interface expressions must match
+            instSym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false, dims.copy(alloc));
+        };
+        results.append(instSym);
+        instantiationScope->add(instSym);
     }
 }
 

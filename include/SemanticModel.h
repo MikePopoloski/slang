@@ -57,12 +57,6 @@ public:
     void handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::Modifiers &modifiers, const TypeSymbol *typeSymbol);
 
 private:
-    // Represents a simple constant range.
-    struct ConstantRange {
-        SVInt msb;
-        SVInt lsb;
-    };
-
     // Small collection of info extracted from a parameter definition
     struct ParameterInfo {
         const ParameterDeclarationSyntax* paramDecl;
