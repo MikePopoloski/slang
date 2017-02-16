@@ -70,6 +70,7 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
     // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
     // assignment like context
+    // TODO: add support for $bits(data_type)
     auto trivialIntType = getIntegralType(1, false, true);
     args.clear();
     args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType));
