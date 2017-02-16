@@ -72,7 +72,13 @@ enum class FormalArgumentDirection {
 enum class SystemFunction {
     Unknown,
     clog2,
-    bits
+    bits,
+    left,
+    right,
+    low,
+    high,
+    size,
+    increment
 };
 
 class Symbol {

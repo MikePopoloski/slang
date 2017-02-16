@@ -70,11 +70,18 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
     // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
     // assignment like context
-    // TODO: add support for $bits(data_type)
+    // TODO: add support for all these operands on data_types, not just expressions,
+    // and add support for things like unpacked arrays
     auto trivialIntType = getIntegralType(1, false, true);
     args.clear();
     args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType));
     systemScope.add(alloc.emplace<SubroutineSymbol>("$bits", intType, args.copy(alloc), SystemFunction::bits));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$left", intType, args.copy(alloc), SystemFunction::left));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$right", intType, args.copy(alloc), SystemFunction::right));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$low", intType, args.copy(alloc), SystemFunction::low));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$high", intType, args.copy(alloc), SystemFunction::high));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$size", intType, args.copy(alloc), SystemFunction::size));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment));
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax, Scope *definitions) {
