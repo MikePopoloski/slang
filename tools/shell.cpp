@@ -5,9 +5,12 @@
 using namespace std;
 using namespace slang;
 
-
 const char *prompt(EditLine *e) {
     return " > ";
+}
+
+const char *promptMultiline(EditLine *e) {
+    return ".. ";
 }
 
 int main(int argc, char *argv[]) {
@@ -28,25 +31,26 @@ int main(int argc, char *argv[]) {
     int charsRead;
     const char *line;
 
-    /*
-    BumpAllocator alloc;
-    Diagnostics diagnostics;
-    SourceManager& srcMgr = SyntaxTree::getDefaultSourceManager();
-    Preprocessor preprocessor(srcMgr, alloc, diagnostics);
-    */
-
     DiagnosticWriter diagWriter(SyntaxTree::getDefaultSourceManager());
     while (true) {
-        line = el_gets(el, &charsRead);
-        if (charsRead) {
-            history(cmdHistory, &ev, H_ENTER, line);
+        string snippet;
+        while (true) {
+            line = el_gets(el, &charsRead);
+            if (charsRead) {
+                history(cmdHistory, &ev, H_ENTER, line);
+            }
+            snippet += line;
+            el_set(el, EL_PROMPT, &promptMultiline);
+            if (snippet.size() > 2 && snippet[snippet.size()-2] == '\\') {
+                snippet.erase(snippet.size()-2, 1);
+            } else {
+                break;
+            }
         }
-        /*
-        preprocessor.pushSource(srcMgr.assignText(line));
-        Parser parser(preprocessor);
-        */
+        el_set(el, EL_PROMPT, &prompt);
+
         try {
-            auto value = session.evalWithKind(line);
+            auto value = session.evalWithKind(snippet);
             printf("Detected kind: %s\n", get<1>(value).c_str());
             const SVInt *integer = get_if<SVInt>(&get<0>(value));
             if (integer) {
