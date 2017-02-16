@@ -845,6 +845,7 @@ bool isPossiblePropertyPortItem(TokenKind kind) {
         case TokenKind::LocalKeyword:
         case TokenKind::PropertyKeyword:
         case TokenKind::SequenceKeyword:
+        case TokenKind::Comma:
             return true;
         default:
             return isPossibleDataType(kind);

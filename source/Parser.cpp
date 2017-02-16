@@ -1826,7 +1826,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
         TokenKind::CloseParenthesis,
         TokenKind::Comma,
         closeParen,
-        DiagCode::ExpectedPropertyPort,
+        DiagCode::ExpectedAssertionItemPort,
         [this, declarationKind](bool) {
             auto attributes = parseAttributes();
             Token local;
