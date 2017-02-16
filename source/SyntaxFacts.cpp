@@ -851,6 +851,10 @@ bool isPossiblePropertyPortItem(TokenKind kind) {
     }
 }
 
+bool isBeforeOrSemicolon(TokenKind kind) {
+    return kind == TokenKind::Semicolon || kind == TokenKind::BeforeKeyword;
+}
+
 bool isStatement(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::NamedLabel:

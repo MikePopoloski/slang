@@ -1265,6 +1265,13 @@ token soft
 NameSyntax name
 token semi
 
+SolveBeforeConstraintSyntax base=ConstraintItemSyntax kind=SolveBeforeConstraint
+token solve
+separated_list<ExpressionSyntax> beforeExpr
+token before
+separated_list<ExpressionSyntax> afterExpr
+token semi
+
 ConstraintBlockSyntax base=ConstraintItemSyntax kind=ConstraintBlock
 token openBrace
 list<ConstraintItemSyntax> items
