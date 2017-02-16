@@ -89,7 +89,7 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
     if (definitions) scope->addParentScope(definitions);
     makePublicParameters(scope, syntax, nullptr, definitions, SourceLocation(), true);
     const ModuleSymbol* module = makeModule(syntax, scope);
-    return alloc.emplace<InstanceSymbol>(module, module->name, SourceLocation(), true);
+    return alloc.emplace<InstanceSymbol>(module, nullptr, module->name, SourceLocation(), true);
 }
 
 void SemanticModel::makePackages() {
@@ -537,7 +537,7 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
         const ModuleSymbol* module = makeModule(decl, scope);
         const InstanceSymbol *instSym = nullptr;
         if (instance->dimensions.count() == 0) {
-            instSym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false);
+            instSym = alloc.emplace<InstanceSymbol>(module, syntax, instance->name.valueText(), syntax->type.location(), false);
         }
         else {
             // figure out dimensions of the instance array
@@ -1059,7 +1059,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
         auto sym = instantiationScope->lookup(conn.second->as<IdentifierNameSyntax>()->identifier.valueText());
         ASSERT(sym && sym->kind == SymbolKind::Instance);
         auto instSym = sym->as<InstanceSymbol>();
-        scope->add(alloc.emplace<InstanceSymbol>(instSym.module, conn.first, conn.second->as<IdentifierNameSyntax>()->identifier.location(), false));
+        scope->add(alloc.emplace<InstanceSymbol>(instSym.module, nullptr, conn.first, conn.second->as<IdentifierNameSyntax>()->identifier.location(), false));
     }
     if (hasWild) {
         for (auto name : ifPortNames) {
@@ -1067,7 +1067,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
                 auto sym = instantiationScope->lookup(name);
                 ASSERT(sym && sym->kind == SymbolKind::Instance);
                 auto instSym = sym->as<InstanceSymbol>();
-                scope->add(alloc.emplace<InstanceSymbol>(instSym.module, instSym.name, SourceLocation(), false)); // TODO: add location of the port name
+                scope->add(alloc.emplace<InstanceSymbol>(instSym.module, nullptr, instSym.name, SourceLocation(), false)); // TODO: add location of the port name
             }
         }
     }

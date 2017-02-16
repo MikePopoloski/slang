@@ -1,0 +1,9 @@
+module Foo();
+
+endmodule
+
+module Bar();
+
+    Foo1 f();
+
+endmodule

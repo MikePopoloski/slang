@@ -176,12 +176,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    static_assert(a != b, "Foo");
-
-    int const c = COUNTER_READ(my_cnt);
-
-    printf("%d %d %d\n", a, b, c);
-
     // Parse each file and find declarations
     Diagnostics diagnostics;
     DeclarationTable declTable(diagnostics);
