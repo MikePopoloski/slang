@@ -11,7 +11,7 @@ const char *prompt(EditLine *e) {
 }
 
 int main(int argc, char *argv[]) {
-    ScriptSession session;
+    ScriptSession session(true);
     EditLine *el;
     History *cmdHistory;
     HistEvent ev;

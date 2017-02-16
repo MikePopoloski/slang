@@ -92,10 +92,10 @@ private:
         Parser parser(preprocessor);
         const SyntaxNode *node = guess ? parser.parseGuess() : parser.parseCompilationUnit();
 
-        if (diagnostics.empty()) {
-            return SyntaxTree(node, sourceManager, std::move(alloc), std::move(diagnostics));
-        } else {
+        if (throwDiagnostics && !diagnostics.empty()) {
             throw std::move(diagnostics);
+        } else {
+            return SyntaxTree(node, sourceManager, std::move(alloc), std::move(diagnostics));
         }
     }
 

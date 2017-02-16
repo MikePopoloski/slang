@@ -18,16 +18,17 @@ namespace slang {
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
-    ScriptSession() :
+    ScriptSession(bool throwDiagnostics = false) :
         declTable(diagnostics),
         sem(alloc, diagnostics, declTable),
         scriptScope(sem.getSystemScope()),
-        binder(sem, &scriptScope)
+        binder(sem, &scriptScope),
+        throwDiagnostics(throwDiagnostics)
     {
     }
 
     ConstantValue eval(const std::string& text) {
-        syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text)));
+        syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text), throwDiagnostics));
 
         auto root = syntaxTrees.back().root();
         switch (root->kind) {
@@ -151,6 +152,7 @@ public:
     Scope scriptScope;
     ExpressionBinder binder;
     ConstantEvaluator evaluator;
+    bool throwDiagnostics = false;
 };
 
 }
