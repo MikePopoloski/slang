@@ -259,11 +259,13 @@ BoundExpression* ExpressionBinder::bindScopedName(const ScopedNameSyntax* syntax
             auto nextScope = pkgSym->as<ModuleSymbol>().scope;
             return bindName(syntax->right->as<NameSyntax>(), nextScope);
         }
+        ASSERT(false);
     }
     else if (syntax->separator.kind == TokenKind::Dot) {
         if (syntax->left->kind == SyntaxKind::RootScope) { // TODO: check if this is correct
             return bindName(syntax->right->as<NameSyntax>(), sem.getPackages());
-        } else if (syntax->left->kind == SyntaxKind::IdentifierName) {
+        } else if (syntax->left->kind == SyntaxKind::IdentifierName ||
+                   syntax->left->kind == SyntaxKind::IdentifierSelectName) { // TODO: check index for demimensions/bounds
             auto parent = syntax->left->as<IdentifierNameSyntax>();
             auto parentSym = currScope->lookup(parent->identifier.valueText());
             ASSERT(parentSym);
@@ -275,6 +277,7 @@ BoundExpression* ExpressionBinder::bindScopedName(const ScopedNameSyntax* syntax
             ASSERT(nextScope);
             return bindName(syntax->right->as<NameSyntax>(), nextScope);
         }
+        ASSERT(false);
     }
     return nullptr;
 }
