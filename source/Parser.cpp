@@ -1282,6 +1282,30 @@ ExpressionSyntax* Parser::parseExpressionOrDist() {
 
 ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock) {
     switch (peek().kind) {
+        case TokenKind::SolveKeyword: {
+            auto solve = consume();
+            Token before;
+            SmallVectorSized<TokenOrSyntax, 4> beforeBuffer;
+            parseSeparatedList<isPossibleExpression, isBeforeOrSemicolon>(
+                beforeBuffer,
+                TokenKind::BeforeKeyword,
+                TokenKind::Comma,
+                before,
+                DiagCode::ExpectedExpression,
+                [this](bool) { return parsePrimaryExpression(); }
+            );
+            Token semi;
+            SmallVectorSized<TokenOrSyntax, 4> afterBuffer;
+            parseSeparatedList<isPossibleExpression, isSemicolon>(
+                afterBuffer,
+                TokenKind::Semicolon,
+                TokenKind::Comma,
+                semi,
+                DiagCode::ExpectedExpression,
+                [this](bool) { return parsePrimaryExpression(); }
+            );
+            return alloc.emplace<SolveBeforeConstraintSyntax>(solve, beforeBuffer.copy(alloc), before, afterBuffer.copy(alloc), semi);
+        }
         case TokenKind::DisableKeyword: {
             auto disable = consume();
             auto soft = expect(TokenKind::SoftKeyword);

@@ -6796,6 +6796,42 @@ protected:
     }
 };
 
+struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
+    Token solve;
+    SeparatedSyntaxList<ExpressionSyntax> beforeExpr;
+    Token before;
+    SeparatedSyntaxList<ExpressionSyntax> afterExpr;
+    Token semi;
+
+    SolveBeforeConstraintSyntax(Token solve, SeparatedSyntaxList<ExpressionSyntax> beforeExpr, Token before, SeparatedSyntaxList<ExpressionSyntax> afterExpr, Token semi) :
+        ConstraintItemSyntax(SyntaxKind::SolveBeforeConstraint), solve(solve), beforeExpr(beforeExpr), before(before), afterExpr(afterExpr), semi(semi)
+    {
+        childCount += 5;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return solve;
+            case 1: return &beforeExpr;
+            case 2: return before;
+            case 3: return &afterExpr;
+            case 4: return semi;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: solve = token; break;
+            case 1: ASSERT(false); break;
+            case 2: before = token; break;
+            case 3: ASSERT(false); break;
+            case 4: semi = token; break;
+        }
+    }
+};
+
 struct ConstraintBlockSyntax : public ConstraintItemSyntax {
     Token openBrace;
     SyntaxList<ConstraintItemSyntax> items;
@@ -8036,6 +8072,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::DisableConstraint: SyntaxNode::dispatch(v, *(const DisableConstraintSyntax*)node); break;
         case SyntaxKind::DividerClause: SyntaxNode::dispatch(v, *(const DividerClauseSyntax*)node); break;
         case SyntaxKind::ArrayOrMethod: SyntaxNode::dispatch(v, *(const KeywordNameSyntax*)node); break;
+        case SyntaxKind::SolveBeforeConstraint: SyntaxNode::dispatch(v, *(const SolveBeforeConstraintSyntax*)node); break;
         case SyntaxKind::MatchesClause: SyntaxNode::dispatch(v, *(const MatchesClauseSyntax*)node); break;
         case SyntaxKind::AlwaysPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::LetPort: SyntaxNode::dispatch(v, *(const LetPortSyntax*)node); break;

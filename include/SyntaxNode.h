@@ -442,6 +442,7 @@ enum class SyntaxKind : uint16_t {
     ConditionalConstraint,
     LoopConstraint,
     DisableConstraint,
+    SolveBeforeConstraint,
     ConstraintBlock,
     ConstraintPrototype,
     ConstraintDeclaration,
@@ -517,6 +518,7 @@ bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);
 bool isPossibleVectorDigit(TokenKind kind);
 bool isPossibleLetPortItem(TokenKind kind);
+bool isBeforeOrSemicolon(TokenKind kind);
 bool isStatement(SyntaxKind kind);
 bool isExpression(SyntaxKind kind);
 
