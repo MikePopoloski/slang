@@ -195,6 +195,8 @@ EVAL_TEST_EX("partially oob rangeselect (both)", "4'b1001[4 : -1]", "6'bx1001x")
 EVAL_TEST_EX("totally oob rangeselect", "4'b1001[105 : 101]", "5'bxxxxx");
 //TODO: Figure out why a test like this fails, seems like something wrong with literals with x's?
 //EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
+EVAL_TEST("bits system call", "$bits(3'b101)", 3);
+EVAL_TEST("bits system call 2", "$bits(23)", 32);
 
 TEST_CASE("bit select weird indexes", "[eval]") {
     // The above bit select cases test the "normal" case where vectors are specified

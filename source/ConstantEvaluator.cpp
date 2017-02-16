@@ -306,6 +306,7 @@ ConstantValue ConstantEvaluator::evaluateSystemCall(SystemFunction func, ArrayRe
 
     switch (func) {
         case SystemFunction::clog2: return SVInt(clog2(args[0].integer()));
+        case SystemFunction::bits: return SVInt(arguments[0]->type->width());
 
             DEFAULT_UNREACHABLE;
     }

@@ -58,7 +58,8 @@ enum class FormalArgumentDirection {
 /// Indicates which built-in system function is represented by a symbol.
 enum class SystemFunction {
     Unknown,
-    clog2
+    clog2,
+    bits
 };
 
 class Symbol {

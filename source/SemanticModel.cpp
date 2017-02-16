@@ -67,6 +67,13 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
     args.append(alloc.emplace<FormalArgumentSymbol>(intType));
     systemScope.add(alloc.emplace<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2));
+
+    // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
+    // assignment like context
+    auto trivialIntType = getIntegralType(1, false, true);
+    args.clear();
+    args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$bits", intType, args.copy(alloc), SystemFunction::bits));
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax, Scope *definitions) {
