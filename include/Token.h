@@ -53,7 +53,7 @@ enum class TimeUnit : uint8_t {
     Femtoseconds
 };
 
-TimeUnit suffixToTimeUnit(StringRef timeSuffix, bool &success);
+bool suffixToTimeUnit(StringRef timeSuffix, TimeUnit& unit);
 
 StringRef timeUnitToSuffix(TimeUnit unit);
 

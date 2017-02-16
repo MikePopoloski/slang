@@ -187,25 +187,19 @@ ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpressio
     } else  {
         return evaluateExpr(expr->right).integer();
     }
-
-    return nullptr;
 }
 
 ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression* expr) {
     const auto first = evaluateExpr(expr->expr).integer();
     int lb = expr->expr->type->as<IntegralTypeSymbol>().lowerBounds[0];
-    bool down = expr->expr->type->as<IntegralTypeSymbol>().lowerBounds[0] >= 0;
     const auto msb = evaluateExpr(expr->left).integer();
     const auto lsbOrWidth = evaluateExpr(expr->right).integer();
-
 
     if (msb.hasUnknown() || lsbOrWidth.hasUnknown()) {
         // If any part of an address is unknown, then the whole thing returns
         // 'x; let's handle this here so everywhere else we can assume the inputs
         // are normal numbers
-        auto foo = SVInt::createFillX(expr->type->width(), false);
-        ASSERT(foo.hasUnknown());
-        return foo;
+        return SVInt::createFillX(expr->type->width(), false);
     }
     int16_t actualMsb = (lb < 0 ? -1 : 1) * msb.getAssertInt64() - lb;
     // here "actual" bit refers to bits numbered from
@@ -306,6 +300,7 @@ ConstantValue ConstantEvaluator::evaluateSystemCall(SystemFunction func, ArrayRe
 
     switch (func) {
         case SystemFunction::clog2: return SVInt(clog2(args[0].integer()));
+        case SystemFunction::bits: return SVInt(arguments[0]->type->width());
 
             DEFAULT_UNREACHABLE;
     }

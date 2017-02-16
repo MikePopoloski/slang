@@ -73,7 +73,7 @@ namespace slang {
 	outf.write('        case SyntaxKind::Unknown: break;\n')
 	outf.write('        case SyntaxKind::List: v.visitDefault(*node); break;\n')
 
-	for k,v in kindmap.iteritems():
+	for k,v in kindmap.items():
 		outf.write('        case SyntaxKind::{}: '.format(k))
 		outf.write('SyntaxNode::dispatch(v, *(const {0}*)node); break;\n'.format(v))
 		alltypes.pop(v, None)
@@ -86,9 +86,9 @@ namespace slang {
 	# Do some checking to make sure all types have at least one kind assigned,
 	# or has set final=false. We already removed types from alltypes in the
 	# loop above.
-	for k,v in alltypes.iteritems():
+	for k,v in alltypes.items():
 		if v[3]: # Check for final
-			print "Type '{}' has no kinds assigned to it.".format(k)
+			print("Type '{}' has no kinds assigned to it.".format(k))
 
 def generate(outf, name, tags, members, alltypes, kindmap):
 	tagdict = {}
@@ -165,33 +165,42 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		outf.write('    }\n')
 		outf.write('\nprotected:\n')
 		outf.write('    TokenOrSyntax getChild(uint32_t index) override{} {{\n'.format(final))
-		outf.write('        switch (index) {\n')
 
-		index = 0
-		for m in combined:
-			addr = '&' if m[1] in pointerMembers else ''
-			outf.write('            case {}: return {}{};\n'.format(index, addr, m[1]))
-			index += 1
+		if len(combined) > 0:
+			outf.write('        switch (index) {\n')
 
-		outf.write('            default: return nullptr;\n')
-		outf.write('        }\n')
+			index = 0
+			for m in combined:
+				addr = '&' if m[1] in pointerMembers else ''
+				outf.write('            case {}: return {}{};\n'.format(index, addr, m[1]))
+				index += 1
+
+			outf.write('            default: return nullptr;\n')
+			outf.write('        }\n')
+		else:
+			outf.write('        (void)index;\n')
+			outf.write('        return nullptr;\n')
+
 		outf.write('    }\n\n')
 
 		outf.write('    void replaceChild(uint32_t index, Token token) override{} {{\n'.format(final))
-		outf.write('        switch (index) {\n')
-
 		anyTokens = False
-		index = 0
-		for m in combined:
-			isToken = m[0] == "token"
-			if isToken:
-				anyTokens = True
-			statement = "ASSERT(false)" if not isToken else "{} = token".format(m[1])
-			outf.write('            case {}: {}; break;\n'.format(index, statement))
-			index += 1
+		if len(combined) > 0:
+			outf.write('        switch (index) {\n')
+			index = 0
+			for m in combined:
+				isToken = m[0] == "token"
+				if isToken:
+					anyTokens = True
+				statement = "ASSERT(false)" if not isToken else "{} = token".format(m[1])
+				outf.write('            case {}: {}; break;\n'.format(index, statement))
+				index += 1
 
-		outf.write('        }\n')
-		if not anyTokens and len(members) != 0:
+			outf.write('        }\n')
+		else:
+			outf.write('        (void)index;\n')
+
+		if not anyTokens:
 			outf.write('        (void)token;\n')
 		outf.write('    }\n')
 

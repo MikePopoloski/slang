@@ -196,7 +196,6 @@ BoundExpression* ExpressionBinder::bindLiteral(const IntegerVectorExpressionSynt
 }
 
 BoundExpression* ExpressionBinder::bindName(const NameSyntax* syntax, const Scope* currScope) {
-    const Symbol* symbol = nullptr;
     switch (syntax->kind) {
         case SyntaxKind::IdentifierName:
             return bindSimpleName(syntax->as<IdentifierNameSyntax>(), currScope);
@@ -248,7 +247,6 @@ BoundExpression* ExpressionBinder::bindSelectName(const IdentifierSelectNameSynt
 
 BoundExpression* ExpressionBinder::bindScopedName(const ScopedNameSyntax* syntax, const Scope* currScope) {
     // if we have an invalid name token just give up now; the error has already been reported
-    const Symbol* symbol = nullptr;
     if (syntax->separator.kind == TokenKind::DoubleColon) {
         if (syntax->left->kind == SyntaxKind::UnitScope) { // TODO: check if this is correct
             return bindName(syntax->right->as<NameSyntax>(), sem.getPackages());
@@ -360,7 +358,7 @@ BoundExpression* ExpressionBinder::bindAssignmentOperator(const BinaryExpression
 
     // Basic assignment (=) is always applicable, but operators like += are applicable iff
     // the associated binary operator is applicable
-    SyntaxKind binopKind;
+    SyntaxKind binopKind = SyntaxKind::Unknown;
     switch (syntax->kind) {
         case SyntaxKind::AssignmentExpression: binopKind = SyntaxKind::Unknown; break;
         case SyntaxKind::AddAssignmentExpression: binopKind = SyntaxKind::AddExpression; break;
@@ -473,7 +471,7 @@ BoundExpression* ExpressionBinder::bindSelectExpression(const ExpressionSyntax* 
     bool down = expr->type->as<IntegralTypeSymbol>().lowerBounds[0] >= 0;
     BoundExpression* left;
     BoundExpression* right;
-    int width;
+    int width = 0;
 
     ConstantEvaluator evaluator;
     // TODO: errors if things that should be constant expressions aren't actually constant expressions

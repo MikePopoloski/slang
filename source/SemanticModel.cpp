@@ -67,6 +67,14 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 
     args.append(alloc.emplace<FormalArgumentSymbol>(intType));
     systemScope.add(alloc.emplace<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2));
+
+    // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
+    // assignment like context
+    // TODO: add support for $bits(data_type)
+    auto trivialIntType = getIntegralType(1, false, true);
+    args.clear();
+    args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType));
+    systemScope.add(alloc.emplace<SubroutineSymbol>("$bits", intType, args.copy(alloc), SystemFunction::bits));
 }
 
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax* syntax, Scope *definitions) {
@@ -78,7 +86,6 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 }
 
 void SemanticModel::makePackages() {
-    HashMap<StringRef, SourceLocation> nameDupMap;
     for (auto pkg : declTable.getPackages()) {
         auto name = pkg->header->name.valueText();
         Scope *scope = alloc.emplace<Scope>();
@@ -97,19 +104,19 @@ void SemanticModel::makePackages() {
                 case SyntaxKind::ParameterDeclarationStatement:
                     auto paramDecl = member->as<ParameterDeclarationStatementSyntax>()->parameter;
                     for (const VariableDeclaratorSyntax *declarator : paramDecl->declarators) {
-                        auto name = declarator->name.valueText();
-                            ASSERT(name);
+                        auto declName = declarator->name.valueText();
+                        ASSERT(declName);
                         auto location = declarator->name.location();
-                        auto pair = nameDupMap.emplace(name, location);
+                        auto pair = nameDupMap.emplace(declName, location);
                         if (!pair.second) {
                             diagnostics.add(DiagCode::DuplicateDefinition, location)
-                                << StringRef("parameter") << name;
+                                << StringRef("parameter") << declName;
                             diagnostics.add(DiagCode::NotePreviousDefinition, pair.first->second);
                         } else if (!declarator->initializer) {
                             diagnostics.add(DiagCode::ParamHasNoValue, location)
-                                << StringRef("parameter") << name;
+                                << StringRef("parameter") << declName;
                         } else {
-                            pkgSym.scope->add(alloc.emplace<ParameterSymbol>(name, location, paramDecl, false));
+                            pkgSym.scope->add(alloc.emplace<ParameterSymbol>(declName, location, paramDecl, false));
                         }
                     }
                     break;
@@ -995,7 +1002,6 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
         }
         for (auto member : instanceModuleSyntax->members) {
             if (member->kind == SyntaxKind::PortDeclaration) {
-                auto type = member->as<PortDeclarationSyntax>();
                 for (auto decl : member->as<PortDeclarationSyntax>()->declarators) {
                     // TODO: emit diag about a port decl for name not listed in non-ansi header
                     ASSERT(std::find(portNames.begin(), portNames.end(), decl->name.valueText()) != portNames.end());
