@@ -124,6 +124,8 @@ enum class DiagCode : uint8_t {
     UnknownModule,
     LocalParamNoInitializer,
     BodyParamNoInitializer,
+    UnpackedDimensionRequired,
+    UnpackedDimensionRequiresConstRange,
     PackedDimRequiresConstantRange,
     PackedDimsOnPredefinedType,
     MixingOrderedAndNamedParams,
