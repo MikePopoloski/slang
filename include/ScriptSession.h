@@ -10,6 +10,8 @@
 #include "SemanticModel.h"
 #include "SyntaxTree.h"
 
+#include <tuple>
+
 namespace slang {
 
 /// A helper class that allows evaluating arbitrary snippets of SystemVerilog
@@ -67,6 +69,26 @@ public:
                     ASSERT(false, "Not supported yet");
         }
         return nullptr;
+    }
+
+    std::string syntaxKindToString(SyntaxKind kind) {
+        switch (kind) {
+            case SyntaxKind::DataDeclaration: return "Variable declaration";
+            case SyntaxKind::FunctionDeclaration: return "Function";
+            case SyntaxKind::TaskDeclaration: return "Task";
+            case SyntaxKind::InterfaceDeclaration: return "Interface";
+            case SyntaxKind::ModuleDeclaration: return "Module";
+            case SyntaxKind::HierarchyInstantiation: return "Hierarchy instantiation";
+            default:
+                if (isExpression(kind)) return "Expression";
+                else if (isStatement(kind)) return "Statement";
+                else return "Unknown, possibly a duck";
+        }
+    }
+
+    std::tuple<ConstantValue, std::string> evalWithKind(const std::string& text) {
+        ConstantValue val = eval(text);
+        return std::make_tuple(val, syntaxKindToString(syntaxTrees.back().root()->kind));
     }
 
     ConstantValue evalExpression(const ExpressionSyntax* expr) {

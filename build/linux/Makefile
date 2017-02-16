@@ -61,7 +61,7 @@ $(OUTDIR)/param_rewriter: $(REWRITER_OBJECTS) $(OUTDIR)/libslang.a
 	$(CXX) $(CXXFLAGS) $^ $(INCLUDES) -o $@
 
 $(TOP)/bin/linux/shell: $(SHELL_OBJECTS) $(TOP)/bin/linux/libslang.a
-	$(CXX) $(CXXFLAGS) $^ $(INCLUDES) -o $@
+	$(CXX) $(CXXFLAGS) $^ $(INCLUDES) -o $@ -lncurses -ledit
 
 clean:
 	rm -f $(ALL_OBJECTS)
