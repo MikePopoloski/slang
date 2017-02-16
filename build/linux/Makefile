@@ -1,4 +1,5 @@
 TOP:=../..
+OUTDIR:=$(TOP)/bin/linux
 
 CXX?=clang++-3.9
 CXXFLAGS?=-std=c++1z -MMD -MP -g
@@ -10,13 +11,16 @@ FMTLIB_SOURCES:=$(wildcard $(TOP)/external/fmt/*.cc)
 SLANG_SOURCES:=$(wildcard $(TOP)/source/*.cpp) $(wildcard $(TOP)/external/ppk_assert/*.cpp)
 UNITTEST_SOURCES:=$(wildcard $(TOP)/tests/unit_tests/*.cpp)
 FILETEST_SOURCES:=$(wildcard $(TOP)/tests/file_tests/*.cpp)
+REWRITER_SOURCES:=$(wildcard $(TOP)/tools/param_rewriter/*.cpp)
 
 FMTLIB_OBJECTS:=$(patsubst $(TOP)/%.cc,obj/%.o,$(FMTLIB_SOURCES))
 SLANG_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(SLANG_SOURCES))
 UNITTEST_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(UNITTEST_SOURCES))
 FILETEST_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(FILETEST_SOURCES))
+REWRITER_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(REWRITER_SOURCES))
 
-ALL_OBJECTS:=$(FMTLIB_OBJECTS) $(SLANG_OBJECTS) $(UNITTEST_OBJECTS) $(FILETEST_OBJECTS)
+ALL_CPP_OBJS:=$(SLANG_OBJECTS) $(UNITTEST_OBJECTS) $(FILETEST_OBJECTS) $(REWRITER_OBJECTS)
+ALL_OBJECTS:=$(FMTLIB_OBJECTS) $(ALL_CPP_OBJS)
 DEPS:=$(ALL_OBJECTS:.o=.d)
 
 -include $(DEPS)
@@ -24,21 +28,13 @@ DEPS:=$(ALL_OBJECTS:.o=.d)
 .PHONY: clean test all
 .DEFAULT_GOAL := all
 
-all: $(TOP)/bin/linux/unittests $(TOP)/bin/linux/filetests
+all: $(OUTDIR)/unittests $(OUTDIR)/filetests $(OUTDIR)/param_rewriter
 
 test: all
 	cd $(TOP); ./bin/linux/unittests
 	cd $(TOP); ./bin/linux/filetests
 
-$(SLANG_OBJECTS): obj/%.o: $(TOP)/%.cpp
-	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
-
-$(UNITTEST_OBJECTS): obj/%.o: $(TOP)/%.cpp
-	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
-
-$(FILETEST_OBJECTS): obj/%.o: $(TOP)/%.cpp
+$(ALL_CPP_OBJS): obj/%.o: $(TOP)/%.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
 
@@ -46,19 +42,22 @@ $(FMTLIB_OBJECTS): obj/%.o: $(TOP)/%.cc
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
 
-$(TOP)/bin/linux/libslang.a: $(FMTLIB_OBJECTS) $(SLANG_OBJECTS)
+$(OUTDIR)/libslang.a: $(FMTLIB_OBJECTS) $(SLANG_OBJECTS)
 	mkdir -p $(dir $@)
 	$(AR) $(ARFLAGS) $@ $^
 
-$(TOP)/bin/linux/unittests: $(UNITTEST_OBJECTS) $(TOP)/bin/linux/libslang.a
+$(OUTDIR)/unittests: $(UNITTEST_OBJECTS) $(OUTDIR)/libslang.a
 	$(CXX) $(CXXFLAGS) $^ $(INCLUDES) -o $@
 
-$(TOP)/bin/linux/filetests: $(FILETEST_OBJECTS) $(TOP)/bin/linux/libslang.a
+$(OUTDIR)/filetests: $(FILETEST_OBJECTS) $(OUTDIR)/libslang.a
+	$(CXX) $(CXXFLAGS) $^ $(INCLUDES) -o $@
+
+$(OUTDIR)/param_rewriter: $(REWRITER_OBJECTS) $(OUTDIR)/libslang.a
 	$(CXX) $(CXXFLAGS) $^ $(INCLUDES) -o $@
 
 clean:
 	rm -f $(ALL_OBJECTS)
-	rm -f $(TOP)/bin/linux/unittests $(TOP)/bin/linux/filetests
+	rm -f $(OUTDIR)/unittests $(OUTDIR)/filetests $(OUTDIR)/param_rewriter
 
 
 
