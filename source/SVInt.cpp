@@ -18,6 +18,29 @@ namespace slang {
 const logic_t logic_t::x = logic_t(logic_t::X_VALUE);
 const logic_t logic_t::z = logic_t(logic_t::Z_VALUE);
 
+bool literalBaseFromChar(char base, LiteralBase& result) {
+    switch (base) {
+        case 'd':
+        case 'D':
+            result = LiteralBase::Decimal;
+            return true;
+        case 'b':
+        case 'B':
+            result = LiteralBase::Binary;
+            return true;
+        case 'o':
+        case 'O':
+            result = LiteralBase::Octal;
+            return true;
+        case 'h':
+        case 'H':
+            result = LiteralBase::Hex;
+            return true;
+        default:
+            return false;
+    }
+}
+
 SVInt::SVInt(StringRef str) {
     ASSERT(str);
 
@@ -26,6 +49,14 @@ SVInt::SVInt(StringRef str) {
     if (*c == '-' || *c == '+') {
         c++;    // heh
         ASSERT(c != str.end(), "String only has a sign?");
+    }
+
+    unknownFlag = false;
+    for (const char* tmp = c; tmp != str.end(); tmp++) {
+        if (isLogicDigit(*tmp)) {
+            unknownFlag = true;
+            break;
+        }
     }
 
     // look for a base specifier (optional)
@@ -61,15 +92,6 @@ SVInt::SVInt(StringRef str) {
     bitWidth = 32;
     LiteralBase base = LiteralBase::Decimal;
 
-    // for base 10, we use the radix to multiply each time we have a new digit
-    // for the other bases, we can shift instead of multiplying
-    int radix = 10;
-    int shift = 0;
-
-    // this keeps track of an "all 1s" value for cases where we need to
-    // shift in a high impedance or unknown value
-    int ones = 0x0;
-
     if (apostrophe) {
         ASSERT(!sizeBad, "Size is invalid (bad chars or overflow 16 bits)");
         bitWidth = (uint16_t)possibleSize;
@@ -86,98 +108,144 @@ SVInt::SVInt(StringRef str) {
             signFlag = false;
         }
 
-        switch (*c) {
-            case 'b':
-            case 'B':
-                radix = 2;
-                shift = 1;
-                ones = 0x1;
-                base = LiteralBase::Binary;
-                break;
-            case 'o':
-            case 'O':
-                radix = 8;
-                shift = 3;
-                ones = 0x7;
-                base = LiteralBase::Octal;
-                break;
-            case 'd':
-            case 'D':
-                radix = 10;
-                shift = 0;
-                ones = 0x0;
-                base = LiteralBase::Decimal;
-                break;
-            case 'h':
-            case 'H':
-                radix = 16;
-                shift = 4;
-                ones = 0xf;
-                base = LiteralBase::Hex;
-                break;
-            default:
-                ASSERT(false, "Unknown base specifier '%c'", *c);
-                break;
-        }
+        bool validBase = literalBaseFromChar(*c, base);
+        ASSERT(validBase, "Unknown base specifier '%c'", *c);
+
         c++;
         ASSERT(c != str.end(), "Nothing after base specifier");
     }
 
-    // check if we have any unknown digits now, so that we can allocate space for them
-    unknownFlag = false;
-    for (const char* tmp = c; tmp != str.end(); tmp++) {
-        if (isLogicDigit(*tmp)) {
-            unknownFlag = true;
-            break;
-        }
-    }
-
-    if (isSingleWord())
-        val = 0;
-    else
-        pVal = new uint64_t[getNumWords()]();
-
-    SVInt digit(bitWidth, 0, false);
-    SVInt radixSv(bitWidth, radix, false);
-
-    for (; c != str.end(); c++) {
+    // convert the remaining chars to an array of digits to pass to the other
+    // constructor
+    SmallVectorSized<logic_t, 16> digits;
+    for (; c != str.end(); ++c) {
         char d = *c;
         if (d == '_')
             continue;
 
-        int value;
-        int unknown;
+        logic_t value;
         switch (d) {
             case 'X':
             case 'x':
-                value = 0;
-                unknown = ones;
+                value = logic_t::x;
                 break;
             case 'Z':
             case 'z':
             case '?':
-                value = ones;
-                unknown = ones;
+                value = logic_t::z;
                 break;
             default:
-                value = getHexDigitValue(d);
-                unknown = 0;
-                ASSERT(value < radix, "Invalid character");
+                value = logic_t(getHexDigitValue(d));
                 break;
         }
+        digits.append(value);
+    }
 
-        // shift if we can, multiply if we must, making sure we don't
-        // lose the unknownFlag
-        bool myUnknownFlag = unknownFlag;
+    if (!isSingleWord()) {
+        // We use the assignment operator to return the result of the other constructor,
+        // but the assignment operator will try to delete our pVal, so let's make sure
+        // there is something there
+        pVal = new uint64_t[0]();
+    }
+    std::string s= "";
+    for (auto& digit : digits) {
+        s += std::to_string(digit.value) + " ";
+    }
+
+    *this = SVInt(bitWidth, base, signFlag, unknownFlag, ArrayRef<logic_t>(digits.begin(), digits.end()));
+
+    // if it's supposed to be negative, flip it around
+    if (negative)
+        *this = -(*this);
+}
+
+SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, ArrayRef<logic_t> digits) {
+    bitWidth = bits;
+    signFlag = isSigned;
+    unknownFlag = anyUnknown;
+
+    int radix, shift;
+
+    switch (base) {
+        case LiteralBase::Binary:
+            radix = 2;
+            shift = 1;
+            break;
+        case LiteralBase::Octal:
+            radix = 8;
+            shift = 3;
+            break;
+        case LiteralBase::Decimal:
+            radix = 10;
+            shift = 0; // can't actually shift for Decimal numbers
+            break;
+        case LiteralBase::Hex:
+            radix = 16;
+            shift = 4;
+            break;
+
+        DEFAULT_UNREACHABLE;
+    }
+
+    if (isSingleWord()) {
+        // Fast path for values that fit in one word:
+        // let's do the computation entirely in a normal uin64_t instead
+        // of having to do SVInt operations
+        val = 0;
+        for (const logic_t& d : digits) {
+            if (shift)
+                val <<= shift;
+            else
+                val *= radix;
+            val += d.value;
+            ASSERT(d.value < radix, "Digit %d too large for radix %d", d.value, radix);
+        }
+        clearUnusedBits();
+        return;
+    }
+
+    pVal = new uint64_t[getNumWords()]();
+
+    int ones = (1 << shift) - 1;
+
+    SVInt digit(bitWidth, 0, false);
+    SVInt radixSv(bitWidth, radix, false);
+
+    // If the user specified a number too large to fit in the number of bits specified,
+    // the spec says to truncate from the left, which this method will successfully do.
+    // TODO: we should almost certainly also issue a warning, people shouldn't do this
+    // TODO: have a reasonable way of having warnings / diagnostics triggered from SVInt,
+    // basically all assertions in this file should actually be diagnostic messages
+    for (const logic_t& d : digits) {
+        int unknown = 0;
+        int value = d.value;
+
+        if (exactlyEqual(d, logic_t::x)) {
+            value = 0;
+            unknown = ones;
+        }
+        else if (exactlyEqual(d, logic_t::z)) {
+            value = ones;
+            unknown = ones;
+        } else {
+            ASSERT(value < radix, "Digit %d too large for radix %d", value, radix);
+        }
+
+        // shift if we can, multiply if we must
+        // this operation can result in us losing our unknown flag, so let's
+        // make sure that doesn't happen
+        bool unknownFlagStore = unknownFlag;
+        int bitWidthStore = bitWidth;
         if (shift)
             *this = shl(shift, false);
         else
             *this *= radixSv;
-        if (unknownFlag != myUnknownFlag) {
-            // this means that we just did the first shift or multiply, which
-            // made us lose our unknown flag, and also means that we now think
-            // we are a single word. Let's rectify that
-            unknownFlag = myUnknownFlag;
+
+        if (unknownFlagStore != unknownFlag) {
+            if (!isSingleWord()) {
+                delete[] pVal;
+            }
+            unknownFlag = unknownFlagStore;
             pVal = new uint64_t[getNumWords()]();
         }
 
@@ -208,92 +276,31 @@ SVInt::SVInt(StringRef str) {
         }
     }
 
-    // if it's supposed to be negative, flip it around
-    if (negative)
-        *this = -(*this);
-}
-
-SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, ArrayRef<logic_t> digits) {
-    // TODO: fast path this function for single word sized values
-    // Also can probably share some impl with the function that converts from string
-    bitWidth = bits;
-    signFlag = isSigned;
-    unknownFlag = anyUnknown;
-    if (isSingleWord())
-        val = 0;
-    else
-        pVal = new uint64_t[getNumWords()]();
-
-    int radix = 0;
-    int shift = 0;
-    switch (base) {
-        case LiteralBase::Binary:
-            radix = 2;
-            shift = 1;
-            break;
-        case LiteralBase::Octal:
-            radix = 8;
-            shift = 3;
-            break;
-        case LiteralBase::Decimal:
-            radix = 10;
-            break;
-        case LiteralBase::Hex:
-            radix = 16;
-            shift = 4;
-            break;
-        default:
-            ASSERT(false, "Unreachable");
-            break;
-    }
-
-    int ones = (1 << shift) - 1;
-
-    SVInt digit(bitWidth, 0, false);
-    SVInt radixSv(bitWidth, radix, false);
-
-    for (const logic_t& d : digits) {
-        int unknown = 0;
-        int value = d.value;
-        if (d == logic_t::x) {
-            value = 0;
-            unknown = ones;
-        }
-        else if (d == logic_t::z) {
-            value = ones;
-            unknown = ones;
-        }
-
-        // shift if we can, multiply if we must
-        if (shift)
-            *this = shl(shift, false);
-        else
-            *this *= radixSv;
-
-        if (unknownFlag) {
-            // In base ten we can't have individual bits be X or Z, it's all or nothing
-            if (radix == 10) {
-                if (value)
-                    setAllZ();
-                else
-                    setAllX();
-                break;
+    if (base != LiteralBase::Decimal && digits.count() * shift < bits && unknownFlag) {
+        uint16_t specifiedBits = digits.count() * shift;
+        uint8_t numBitsSetInTopWord = specifiedBits % 64;
+        uint16_t topWord = getNumWords(bitWidth, false) + specifiedBits / 64;
+        if (pVal[topWord] >> (numBitsSetInTopWord - 1)) {
+            // The highest bit was an x or a z, now we have to extend that unknown bit the rest of the way up
+            uint64_t mask = bits - specifiedBits >= 64 ?
+                            std::numeric_limits<uint64_t>::max() :
+                            (1LL << (bits - specifiedBits)) - 1;
+            pVal[topWord] |=  mask << numBitsSetInTopWord;
+            uint16_t topLowerWord = specifiedBits / 64;
+            if (pVal[topLowerWord] >> (numBitsSetInTopWord - 1)) {
+                // it's a z, so we also have to set the lower bits
+                pVal[topLowerWord] |= mask << numBitsSetInTopWord;
             }
 
-            // otherwise, make sure the unknown flag is set for this group of bits
-            // because we're shifting bits for the radix involved (2, 8, or 16) we
-            // know that the bits we're setting are fresh and all zero, so adding
-            // won't cause any kind of carry
-            pVal[0] += value;
-            pVal[getNumWords(bitWidth, false)] += unknown;
-        }
-        else {
-            // add in the new digit
-            if (digit.isSingleWord())
-                digit.val = value;
-            else
-                digit.pVal[0] = value;
-            *this += digit;
+            if (topWord < getNumWords() - 1) {
+                // The top word with any bits set wasn't the top word, so we have to
+                // set the rest of the words
+                size_t len = (getNumWords() - 1 - topWord) * sizeof(uint64_t);
+                memset(pVal + topWord + 1, 0xFF, len);
+                if (pVal[topLowerWord] >> (numBitsSetInTopWord - 1))
+                    memset(pVal + topLowerWord + 1, 0xFF, len);
+                clearUnusedBits();
+            }
         }
     }
 }

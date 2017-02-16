@@ -157,7 +157,8 @@ TEST_CASE(descr, "[eval]") { \
     ScriptSession session; \
     auto value = session.eval(expr).integer(); \
     auto res = SVInt(StringRef(result)); \
-    /* uncomment for diagonstics: printf("%s = %s\n", value.toString(LiteralBase::Binary).c_str(), res.toString(LiteralBase::Binary).c_str());*/ \
+    /* uncomment for diagonstics: */ \
+    /* printf("%s = %s\n", value.toString(LiteralBase::Binary).c_str(), res.toString(LiteralBase::Binary).c_str()); */ \
     CHECK(exactlyEqual(value, res)); \
 }
 
@@ -193,10 +194,18 @@ EVAL_TEST_EX("partially oob rangeselect (right)", "4'b1001[3 : -1]", "5'b1001x")
 EVAL_TEST_EX("partially oob rangeselect (left)", "4'b1001[4 : 1]", "4'bx100");
 EVAL_TEST_EX("partially oob rangeselect (both)", "4'b1001[4 : -1]", "6'bx1001x");
 EVAL_TEST_EX("totally oob rangeselect", "4'b1001[105 : 101]", "5'bxxxxx");
-//TODO: Figure out why a test like this fails, seems like something wrong with literals with x's?
-//EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
 EVAL_TEST("bits system call", "$bits(3'b101)", 3);
 EVAL_TEST("bits system call 2", "$bits(23)", 32);
+// Some basic tests that literals evaluate to the right values
+EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
+EVAL_TEST_EX("lit2", "22'b101x", "22'b101x");
+EVAL_TEST_EX("bigliteral with a high x", "72'hxxffffffffffffffff",
+                                         "72'hxxffffffffffffffff");
+EVAL_TEST_EX("literal truncation", "2'b101", "2'b01");
+// If the highest bit is a z or x, that is extended to the full size
+EVAL_TEST_EX("xpadding", "5'bx01", "5'bxxx01");
+EVAL_TEST_EX("zpadding", "5'bz01", "5'bzzz01");
+EVAL_TEST_EX("really long zpadding", "68'bz0000", "68'hzzzzzzzzzzzzzzzzz0");
 
 TEST_CASE("bit select weird indexes", "[eval]") {
     // The above bit select cases test the "normal" case where vectors are specified

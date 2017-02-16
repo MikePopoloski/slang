@@ -858,32 +858,17 @@ TokenKind Lexer::lexApostrophe(Token::Info* info) {
 }
 
 bool Lexer::lexIntegerBase(Token::Info* info, bool isSigned) {
-    switch (peek()) {
-        case 'd':
-        case 'D':
-            advance();
-            info->setNumFlags(LiteralBase::Decimal, isSigned);
-            return true;
-        case 'b':
-        case 'B':
-            advance();
-            info->setNumFlags(LiteralBase::Binary, isSigned);
-            return true;
-        case 'o':
-        case 'O':
-            advance();
-            info->setNumFlags(LiteralBase::Octal, isSigned);
-            return true;
-        case 'h':
-        case 'H':
-            advance();
-            info->setNumFlags(LiteralBase::Hex, isSigned);
-            return true;
+    LiteralBase base;
+    if (literalBaseFromChar(peek(), base)) {
+        advance();
+        info->setNumFlags(base, isSigned);
+        return true;
     }
     return false;
 }
 
 bool Lexer::lexTimeLiteral(Token::Info* info) {
+    // XXX: see if this can be cheated on with like, mX
 #define CASE(c, flag) \
     case c: if (peek(1) == 's') { \
         advance(2); \
