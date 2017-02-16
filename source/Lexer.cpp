@@ -868,7 +868,6 @@ bool Lexer::lexIntegerBase(Token::Info* info, bool isSigned) {
 }
 
 bool Lexer::lexTimeLiteral(Token::Info* info) {
-    // XXX: see if this can be cheated on with like, mX
 #define CASE(c, flag) \
     case c: if (peek(1) == 's') { \
         advance(2); \
