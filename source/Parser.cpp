@@ -2005,7 +2005,7 @@ ClockingDeclarationSyntax* Parser::parseClockingDeclaration(ArrayRef<AttributeIn
     if (globalOrDefault.kind != TokenKind::GlobalKeyword) {
         while(!isEndKeyword(peek().kind) && !peek(TokenKind::EndOfFile)) {
             Token defaultKeyword, inputKeyword, outputKeyword;
-            ClockingDirectionSyntax* direction;
+            ClockingDirectionSyntax* direction = nullptr;
             ClockingSkewSyntax* inputSkew = nullptr, *outputSkew = nullptr;
             MemberSyntax* declaration = nullptr;
             switch(peek().kind) {

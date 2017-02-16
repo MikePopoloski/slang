@@ -187,17 +187,13 @@ ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpressio
     } else  {
         return evaluateExpr(expr->right).integer();
     }
-
-    return nullptr;
 }
 
 ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression* expr) {
     const auto first = evaluateExpr(expr->expr).integer();
     int lb = expr->expr->type->as<IntegralTypeSymbol>().lowerBounds[0];
-    bool down = expr->expr->type->as<IntegralTypeSymbol>().lowerBounds[0] >= 0;
     const auto msb = evaluateExpr(expr->left).integer();
     const auto lsbOrWidth = evaluateExpr(expr->right).integer();
-
 
     if (msb.hasUnknown() || lsbOrWidth.hasUnknown()) {
         // If any part of an address is unknown, then the whole thing returns
