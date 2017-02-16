@@ -501,6 +501,9 @@ ElementSelectSyntax* Parser::parseElementSelect() {
 }
 
 SelectorSyntax* Parser::parseElementSelector() {
+    if (peek().kind == TokenKind::CloseBracket) {
+        return nullptr;
+    }
     auto expr = parseExpression();
     switch (peek().kind) {
         case TokenKind::Colon: {
