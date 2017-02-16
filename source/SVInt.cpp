@@ -51,14 +51,6 @@ SVInt::SVInt(StringRef str) {
         ASSERT(c != str.end(), "String only has a sign?");
     }
 
-    unknownFlag = false;
-    for (const char* tmp = c; tmp != str.end(); tmp++) {
-        if (isLogicDigit(*tmp)) {
-            unknownFlag = true;
-            break;
-        }
-    }
-
     // look for a base specifier (optional)
     // along the way we'll keep track of the current decimal value, so that
     // if we find that it's actually a size we'll already be done
@@ -117,6 +109,7 @@ SVInt::SVInt(StringRef str) {
 
     // convert the remaining chars to an array of digits to pass to the other
     // constructor
+    unknownFlag = false;
     SmallVectorSized<logic_t, 16> digits;
     for (; c != str.end(); ++c) {
         char d = *c;
@@ -128,11 +121,13 @@ SVInt::SVInt(StringRef str) {
             case 'X':
             case 'x':
                 value = logic_t::x;
+                unknownFlag = true;
                 break;
             case 'Z':
             case 'z':
             case '?':
                 value = logic_t::z;
+                unknownFlag = true;
                 break;
             default:
                 value = logic_t(getHexDigitValue(d));
@@ -141,16 +136,10 @@ SVInt::SVInt(StringRef str) {
         digits.append(value);
     }
 
-    if (!isSingleWord()) {
-        // We use the assignment operator to return the result of the other constructor,
-        // but the assignment operator will try to delete our pVal, so let's make sure
-        // there is something there
-        pVal = new uint64_t[0]();
-    }
-    std::string s= "";
-    for (auto& digit : digits) {
-        s += std::to_string(digit.value) + " ";
-    }
+    // We use the assignment operator to return the result of the other constructor,
+    // but the assignment operator will try to delete our pVal, which is
+    // currently uninitialized
+    pVal = nullptr;
 
     *this = SVInt(bitWidth, base, signFlag, unknownFlag, ArrayRef<logic_t>(digits.begin(), digits.end()));
 
@@ -189,7 +178,7 @@ SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, Ar
 
     if (isSingleWord()) {
         // Fast path for values that fit in one word:
-        // let's do the computation entirely in a normal uin64_t instead
+        // let's do the computation entirely in a normal uint64_t instead
         // of having to do SVInt operations
         val = 0;
         for (const logic_t& d : digits) {
@@ -232,8 +221,9 @@ SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, Ar
         // shift if we can, multiply if we must
         // this operation can result in us losing our unknown flag, so let's
         // make sure that doesn't happen
+        // TODO: put this logic into the operators, i.e a special mul() method,
+        // instead of this management here
         bool unknownFlagStore = unknownFlag;
-        int bitWidthStore = bitWidth;
         if (shift)
             *this = shl(shift, false);
         else
