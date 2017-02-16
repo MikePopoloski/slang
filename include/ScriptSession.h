@@ -29,6 +29,8 @@ public:
 
         auto root = syntaxTrees.back().root();
         switch (root->kind) {
+            case SyntaxKind::ParameterDeclarationStatement:
+                return evalParameterDeclaration(root->as<ParameterDeclarationStatementSyntax>());
             case SyntaxKind::DataDeclaration:
                 return evalVariableDeclaration(root->as<DataDeclarationSyntax>());
             case SyntaxKind::FunctionDeclaration:
@@ -49,6 +51,12 @@ public:
                 SmallVectorSized<const Symbol*, 8> results;
                 sem.handleInstantiation(root->as<HierarchyInstantiationSyntax>(), results, &scriptScope);
                 return true;
+            }
+            case SyntaxKind::IdentifierName:
+            case SyntaxKind::ScopedName: {
+                auto expr = binder.bindConstantExpression(root->as<NameSyntax>());
+                ASSERT(!expr->bad());
+                return sem.evaluateConstant(expr);
             }
             default:
                 if (isExpression(root->kind))
@@ -83,7 +91,18 @@ public:
             else
                 storage = SVInt(0); // TODO: uninitialized variable
         }
+        // TODO: add to scope?
+        return nullptr;
+    }
 
+    ConstantValue evalParameterDeclaration(const ParameterDeclarationStatementSyntax* decl) {
+        for (auto paramDecl : decl->parameter->declarators) {
+            auto paramSym = alloc.emplace<ParameterSymbol>(
+                paramDecl->name.valueText(), paramDecl->name.location(), decl->parameter,
+                decl->parameter->keyword.kind == TokenKind::LocalParamKeyword);
+            sem.evaluateParameter(paramSym, paramDecl->initializer->expr, &scriptScope);
+            scriptScope.add(paramSym);
+        }
         return nullptr;
     }
 
