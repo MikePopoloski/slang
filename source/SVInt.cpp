@@ -200,6 +200,7 @@ SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, Ar
             val += d.value;
             ASSERT(d.value < radix, "Digit %d too large for radix %d", d.value, radix);
         }
+        // handles overflow
         clearUnusedBits();
         return;
     }
@@ -213,9 +214,6 @@ SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, Ar
 
     // If the user specified a number too large to fit in the number of bits specified,
     // the spec says to truncate from the left, which this method will successfully do.
-    // TODO: we should almost certainly also issue a warning, people shouldn't do this
-    // TODO: have a reasonable way of having warnings / diagnostics triggered from SVInt,
-    // basically all assertions in this file should actually be diagnostic messages
     for (const logic_t& d : digits) {
         int unknown = 0;
         int value = d.value;
