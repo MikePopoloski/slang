@@ -250,4 +250,32 @@ TEST_CASE("bit select weird indexes", "[eval]") {
     value = session.eval("down_vect[8 -: 3]").integer();
     CHECK(value == 9);
 }
+
+TEST_CASE("dimension based system functions", "[eval]") {
+    ScriptSession session;
+    session.eval("logic [0 : 15] up_vect = 5'b10111;");
+    session.eval("logic [15 : 0] down_vect = 5'd25");
+    SVInt value;
+#define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
+
+    EVAL("$left(up_vect)", 0);
+    EVAL("$right(up_vect)", 15);
+    EVAL("$left(down_vect)", 15);
+    EVAL("$right(down_vect)", 0);
+
+    EVAL("$low(up_vect)", 15);
+    EVAL("$high(up_vect)", 0);
+    EVAL("$low(down_vect)", 15);
+    EVAL("$high(down_vect)", 0);
+
+    EVAL("$size(up_vect)", 16);
+    EVAL("$size(down_vect)", 16);
+
+    EVAL("$bits(up_vect)", 16);
+    EVAL("$bits(down_vect)", 16);
+
+    EVAL("$increment(up_vect)", 1);
+    EVAL("$increment(down_vect)", SVInt(-1, true));
+#undef EVAL
+}
 }

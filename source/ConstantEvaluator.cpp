@@ -298,11 +298,32 @@ ConstantValue ConstantEvaluator::evaluateSystemCall(SystemFunction func, ArrayRe
     for (auto arg : arguments)
         args.emplace(evaluateExpr(arg));
 
+    // TODO: support for arguments with non-integral types
     switch (func) {
         case SystemFunction::clog2: return SVInt(clog2(args[0].integer()));
-        case SystemFunction::bits: return SVInt(arguments[0]->type->width());
+        case SystemFunction::bits:
+        case SystemFunction::low:
+        case SystemFunction::high:
+        case SystemFunction::left:
+        case SystemFunction::right:
+        case SystemFunction::size:
+        case SystemFunction::increment: {
+            //TODO: add support for things other than integral types
+            const auto& type = arguments[0]->type->as<IntegralTypeSymbol>();
+            bool down = type.lowerBounds[0] >= 0;
+            switch (func) {
+                case SystemFunction::bits:  return SVInt(type.width);
+                case SystemFunction::low:   return SVInt(down ? type.lowerBounds[0] + type.width - 1 : -type.lowerBounds[0]);
+                case SystemFunction::high:  return SVInt(down ? type.lowerBounds[0] : -type.lowerBounds[0] - type.width + 1);
+                case SystemFunction::left:  return SVInt(down ? type.lowerBounds[0] + type.width - 1 : -type.lowerBounds[0] - type.width + 1);
+                case SystemFunction::right: return SVInt(down ? type.lowerBounds[0] : -type.lowerBounds[0]);
+                case SystemFunction::size: return SVInt(type.width);
+                case SystemFunction::increment: return SVInt(down ? -1 : 1, true);
+                DEFAULT_UNREACHABLE;
+            }
 
-            DEFAULT_UNREACHABLE;
+        }
+        DEFAULT_UNREACHABLE;
     }
     return nullptr;
 }
