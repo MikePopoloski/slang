@@ -206,7 +206,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                 }
             }
         } else if (fileName.kind == TokenKind::StringLiteral) {
-            size_t len = fileName.valueText().length();
+            uint32_t len = fileName.valueText().length();
             uint8_t* stringBuffer = alloc.allocate(len + 3);
             stringBuffer[0] = '"';
             memcpy(stringBuffer + 1, fileName.valueText().begin(), len);

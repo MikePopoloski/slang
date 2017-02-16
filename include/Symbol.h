@@ -264,11 +264,11 @@ class InstanceArraySymbol : public InstanceSymbol {
     int right;
 
     InstanceArraySymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit, int size = 1) :
-        InstanceSymbol(module, name, location, false),
+        InstanceSymbol(module, name, location, implicit),
         left(size-1), right(0) { ASSERT(size > 0); }
 
     InstanceArraySymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit, int left, int right) :
-        InstanceSymbol(module, name, location, false),
+        InstanceSymbol(module, name, location, implicit),
         left(left), right(right) { ASSERT(width() > 0); }
 
     int width() { return abs(left - right) + 1; }

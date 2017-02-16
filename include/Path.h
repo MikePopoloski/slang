@@ -19,6 +19,7 @@
 # undef DEFAULT_UNREACHABLE
 # define NOMINMAX
 # include <windows.h>
+# undef interface
 # undef DEFAULT_UNREACHABLE
 #else
 # include <unistd.h>
