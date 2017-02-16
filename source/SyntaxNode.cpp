@@ -102,4 +102,11 @@ const SyntaxNode* SyntaxNode::childNode(uint32_t index) const {
     return child.node;
 }
 
+Token SyntaxNode::childToken(uint32_t index) const {
+    auto child = const_cast<SyntaxNode*>(this)->getChild(index);
+    if (!child.isToken)
+        return Token();
+    return child.token;
+}
+
 }

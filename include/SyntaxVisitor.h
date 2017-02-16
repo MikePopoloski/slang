@@ -21,9 +21,21 @@ public:
     }
 
     void visitDefault(const SyntaxNode& node) {
-        for (uint32_t i = 0; i < node.getChildCount(); i++)
-            visitNode(node.childNode(i));
+        for (uint32_t i = 0; i < node.getChildCount(); i++) {
+            auto child = node.childNode(i);
+            if (child)
+                visitNode(node.childNode(i));
+            else {
+                auto token = node.childToken(i);
+                if (token)
+                    static_cast<TDerived*>(this)->visitToken(token);
+            }
+        }
     }
+
+private:
+    // This is to make things compile if the derived class doesn't provide an implementation.
+    void visitToken(Token t) {}
 };
 
 }

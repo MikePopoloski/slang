@@ -22,6 +22,8 @@ struct BufferID {
     bool operator!=(const BufferID& rhs) const { return !(*this == rhs); }
     bool operator<(const BufferID& rhs) const { return id < rhs.id; }
 
+    uint32_t getId() const { return id; }
+
     explicit operator bool() const { return valid(); }
 
 private:
@@ -93,6 +95,17 @@ public:
 private:
     SourceLocation startLoc;
     SourceLocation endLoc;
+};
+
+}
+
+namespace std {
+
+template<>
+struct hash<slang::BufferID> {
+    size_t operator()(const slang::BufferID& obj) const {
+        return obj.getId();
+    }
 };
 
 }
