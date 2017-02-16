@@ -24,6 +24,8 @@ enum class LiteralBase : uint8_t {
     Hex
 };
 
+bool literalBaseFromChar(char base, LiteralBase& result);
+
 /// Represents a single 4-state bit. The usual bit values of 0 and 1 are
 /// augmented with X (unknown) and Z (high impedance). Both X and Z are
 /// considered "unknown" for most computation purposes.

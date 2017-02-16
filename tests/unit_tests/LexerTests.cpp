@@ -529,6 +529,11 @@ TEST_CASE("Time literals", "[lexer]") {
     checkTimeLiteral("42fs", TimeUnit::Femtoseconds, 42);
 }
 
+TEST_CASE("Bad time literal", "[lexer]") {
+    Token token = lexToken("10mX");
+    CHECK(token.kind != TokenKind::TimeLiteral);
+}
+
 TEST_CASE("Misplaced directive char", "[lexer]") {
     auto& text = "`";
     Token token = lexToken(text);

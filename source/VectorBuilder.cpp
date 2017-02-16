@@ -166,11 +166,17 @@ SVInt VectorBuilder::finish() {
             bits += clog2(digits[0].value + 1);
 
         if (bits > sizeBits) {
-            if (sizeBits || bits > SVInt::MAX_BITS) {
+            if (bits > SVInt::MAX_BITS) {
                 diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
-                return SVInt(0);
+                bits = SVInt::MAX_BITS;
             }
-            return SVInt(std::max(32, bits), literalBase, signFlag, hasUnknown, ArrayRef<logic_t>(digits.begin(), digits.count()));
+            if (sizeBits == 0) {
+                return SVInt(std::max(32, bits), literalBase, signFlag, hasUnknown, ArrayRef<logic_t>(digits.begin(), digits.count()));
+            } else {
+                // we should warn about overflow here, but the spec says it is valid and
+                // the literal gets truncated. Definitely a warning though.
+                diagnostics.add(DiagCode::VectorLiteralOverflow, firstLocation);
+            }
         }
     }
 

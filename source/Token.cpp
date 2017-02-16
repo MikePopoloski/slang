@@ -243,24 +243,23 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     return Token::createMissing(alloc, expected, location);
 }
 
-TimeUnit suffixToTimeUnit(StringRef timeSuffix, bool &success) {
-    success = true;
+bool suffixToTimeUnit(StringRef timeSuffix, TimeUnit& unit) {
     if (timeSuffix == "s") {
-        return TimeUnit::Seconds;
+        unit = TimeUnit::Seconds;
     } else if (timeSuffix == "ms") {
-        return TimeUnit::Milliseconds;
+        unit = TimeUnit::Milliseconds;
     } else if (timeSuffix == "us") {
-        return TimeUnit::Microseconds;
+        unit = TimeUnit::Microseconds;
     } else if (timeSuffix == "ns") {
-        return TimeUnit::Nanoseconds;
+        unit = TimeUnit::Nanoseconds;
     } else if (timeSuffix == "ps") {
-        return TimeUnit::Picoseconds;
+        unit = TimeUnit::Picoseconds;
     } else if (timeSuffix == "fs") {
-        return TimeUnit::Femtoseconds;
+        unit = TimeUnit::Femtoseconds;
     } else {
-        success = false;
-        return TimeUnit::Seconds;
+        return false;
     }
+    return true;
 }
 
 StringRef timeUnitToSuffix(TimeUnit unit) {

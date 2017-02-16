@@ -203,9 +203,7 @@ ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression* exp
         // If any part of an address is unknown, then the whole thing returns
         // 'x; let's handle this here so everywhere else we can assume the inputs
         // are normal numbers
-        auto foo = SVInt::createFillX(expr->type->width(), false);
-        ASSERT(foo.hasUnknown());
-        return foo;
+        return SVInt::createFillX(expr->type->width(), false);
     }
     int16_t actualMsb = (lb < 0 ? -1 : 1) * msb.getAssertInt64() - lb;
     // here "actual" bit refers to bits numbered from

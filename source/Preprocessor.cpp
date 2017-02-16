@@ -517,9 +517,9 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
     auto eod = parseEndOfDirective();
 
     if (foundSpecifiers) {
-        bool success1, success2;
-        TimeUnit unitValue = suffixToTimeUnit(valueUnit.valueText(), success1);
-        TimeUnit unitPrecision = suffixToTimeUnit(precisionUnit.valueText(), success2);
+        TimeUnit unitValue, unitPrecision;
+        bool success1 = suffixToTimeUnit(valueUnit.valueText(), unitValue);
+        bool success2 = suffixToTimeUnit(precisionUnit.valueText(), unitPrecision);
         // both unit and precision must have valid units, and
         // the precision must be at least as precise as the value.
         // larger values of TimeUnit are more precise than smaller values
