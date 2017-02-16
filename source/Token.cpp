@@ -118,6 +118,7 @@ StringRef Token::rawText() const {
             case TokenKind::TimeLiteral:
             case TokenKind::Directive:
             case TokenKind::MacroUsage:
+            case TokenKind::EmptyMacroArgument:
                 return info->rawText;
             case TokenKind::EndOfDirective:
             case TokenKind::EndOfFile:
