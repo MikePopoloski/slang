@@ -466,6 +466,22 @@ AssignmentPatternExpressionSyntax* Parser::parseAssignmentPatternExpression(Data
                 );
             break;
         }
+        case TokenKind::Comma:
+            buffer.append(firstExpr);
+            buffer.append(consume());
+            parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
+                buffer,
+                TokenKind::CloseBrace,
+                TokenKind::Comma,
+                closeBrace,
+                DiagCode::ExpectedExpression,
+                [this](bool) { return parseExpression(); }
+            );
+            pattern = alloc.emplace<SimpleAssignmentPatternSyntax>(
+                openBrace,
+                buffer.copy(alloc),
+                closeBrace);
+            break;
         default:
             buffer.append(firstExpr);
             parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
