@@ -5,17 +5,24 @@
 using namespace std;
 using namespace slang;
 
+EditLine *el;
+History *cmdHistory;
+
 const char *prompt(EditLine *e)          { return " > "; }
 const char *promptMultiline(EditLine *e) { return ".. "; }
 
+void cleanup() {
+    history_end(cmdHistory);
+    el_end(el);
+}
+
 void onSignal(int sig) {
+    cleanup();
     _Exit(sig);
 }
 
 int main(int argc, char *argv[]) {
     ScriptSession session(true);
-    EditLine *el;
-    History *cmdHistory;
     HistEvent ev;
 
     signal(SIGINT, onSignal);
@@ -71,7 +78,5 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    history_end(cmdHistory);
-    el_end(el);
     return 0;
 }
