@@ -35,11 +35,10 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     auto current = peek();
     if (current.kind == TokenKind::NewKeyword)
         return parseNewExpression(nullptr);
-    // TODO:
-    /*else if (isPossibleDelayOrEventControl(current.kind)) {
+    else if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
         return alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
-    }*/
+    }
     else if (current.kind == TokenKind::TaggedKeyword) {
         // TODO: check for trailing expression
         auto tagged = consume();
