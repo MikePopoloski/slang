@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
             }
         }
         el_set(el, EL_PROMPT, &prompt);
-        if (!snippet.empty()) {
+        if (snippet == "\n") {
             continue;
         }
 
