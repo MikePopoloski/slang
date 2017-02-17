@@ -603,7 +603,7 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
             }
             // load all interface ports into scope
             // TODO: arrayed interface expressions must match
-            instSym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false, dims.copy(alloc));
+            instSym = alloc.emplace<InstanceSymbol>(module, syntax, instance->name.valueText(), syntax->type.location(), false, dims.copy(alloc));
         };
         results.append(instSym);
         instantiationScope->add(instSym);
