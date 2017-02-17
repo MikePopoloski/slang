@@ -689,6 +689,10 @@ ArgumentListSyntax* Parser::parseArgumentList() {
 }
 
 ArgumentSyntax* Parser::parseArgument() {
+    // check for empty arguments
+    if (peek(TokenKind::Comma)) {
+        return nullptr;
+    }
     // check for named arguments
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
