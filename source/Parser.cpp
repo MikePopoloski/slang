@@ -437,7 +437,12 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::DefParamKeyword:
             return parseDefParam(attributes);
         case TokenKind::ImportKeyword:
+            if (peek(1).kind == TokenKind::StringLiteral) {
+                return parseDPIImportExport(attributes);
+            }
             return parseImportDeclaration(attributes);
+        case TokenKind::ExportKeyword:
+            return parseDPIImportExport(attributes);
         case TokenKind::Semicolon:
             return alloc.emplace<EmptyMemberSyntax>(attributes, nullptr, consume());
         case TokenKind::PropertyKeyword:
@@ -1835,6 +1840,27 @@ PackageImportItemSyntax* Parser::parsePackageImportItem() {
         item = expect(TokenKind::Identifier);
 
     return alloc.emplace<PackageImportItemSyntax>(package, doubleColon, item);
+}
+
+DPIImportExportSyntax* Parser::parseDPIImportExport(ArrayRef<AttributeInstanceSyntax*> attributes) {
+    auto keyword = consume();
+    auto stringLiteral = expect(TokenKind::StringLiteral);
+    if (stringLiteral.valueText() != "DPI-C" && stringLiteral.valueText() != "DPI") {
+        addError(DiagCode::ExpectedDPISpecString, stringLiteral.location());
+    }
+    Token property, name, equals;
+    if (keyword.kind == TokenKind::ImportKeyword && (peek(TokenKind::ContextKeyword) || peek(TokenKind::PureKeyword))) {
+        property = consume();
+    }
+    if (peek(TokenKind::Identifier)) {
+        name = consume();
+        equals = expect(TokenKind::Equals);
+    }
+    if (property.kind == TokenKind::PureKeyword && !peek(TokenKind::FunctionKeyword)) {
+        addError(DiagCode::ExpectedFunctionKeyword, peek().location());
+    }
+    auto method = parseFunctionPrototype();
+    return alloc.emplace<DPIImportExportSyntax>(attributes, keyword, stringLiteral, property, name, equals, method);
 }
 
 AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declarationKind) {

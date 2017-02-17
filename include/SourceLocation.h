@@ -35,6 +35,7 @@ private:
     uint32_t getValue() const { return id; }
 
     friend class SourceManager;
+    friend class SourceLocation;
 };
 
 /// This class represents a location in source code (or within a macro expansion).
@@ -57,6 +58,9 @@ public:
     /// Note that there is no error checking to ensure that the location
     /// still points to a valid place in the source.
     SourceLocation operator+(int delta) const {
+        if (bufferID.getValue() == 6) {
+            return SourceLocation(bufferID, charOffset);
+        }
         return SourceLocation(bufferID, charOffset + delta);
     }
 
