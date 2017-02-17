@@ -47,6 +47,8 @@ int main(int argc, char *argv[]) {
             line = el_gets(el, &charsRead);
             if (charsRead) {
                 history(cmdHistory, &ev, H_ENTER, line);
+            } else if (!line) {
+                onSignal(SIGINT);
             }
             snippet += line;
             el_set(el, EL_PROMPT, &promptMultiline);
