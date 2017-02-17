@@ -129,7 +129,7 @@ private:
     HierarchicalInstanceSyntax* parseHierarchicalInstance();
     PortConnectionSyntax* parsePortConnection();
     FunctionPortSyntax* parseFunctionPort();
-    FunctionPrototypeSyntax* parseFunctionPrototype();
+    FunctionPrototypeSyntax* parseFunctionPrototype(bool allowTasks = true);
     FunctionDeclarationSyntax* parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
     Token parseLifetime();
     ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end);

@@ -578,8 +578,13 @@ FunctionPortSyntax* Parser::parseFunctionPort() {
     );
 }
 
-FunctionPrototypeSyntax* Parser::parseFunctionPrototype() {
-    auto keyword = consume();
+FunctionPrototypeSyntax* Parser::parseFunctionPrototype(bool allowTasks) {
+    Token keyword;
+    if (allowTasks && peek(TokenKind::TaskKeyword)) {
+        keyword = consume();
+    } else {
+        keyword = expect(TokenKind::FunctionKeyword);
+    }
     auto lifetime = parseLifetime();
 
     // check for a return type here
@@ -1856,10 +1861,7 @@ DPIImportExportSyntax* Parser::parseDPIImportExport(ArrayRef<AttributeInstanceSy
         name = consume();
         equals = expect(TokenKind::Equals);
     }
-    if (property.kind == TokenKind::PureKeyword && !peek(TokenKind::FunctionKeyword)) {
-        addError(DiagCode::ExpectedFunctionKeyword, peek().location());
-    }
-    auto method = parseFunctionPrototype();
+    auto method = parseFunctionPrototype(property.kind != TokenKind::PureKeyword);
     return alloc.emplace<DPIImportExportSyntax>(attributes, keyword, stringLiteral, property, name, equals, method);
 }
 
