@@ -8,12 +8,18 @@ using namespace slang;
 const char *prompt(EditLine *e)          { return " > "; }
 const char *promptMultiline(EditLine *e) { return ".. "; }
 
+void onSignal(int sig) {
+    _Exit(sig);
+}
+
 int main(int argc, char *argv[]) {
     ScriptSession session(true);
     EditLine *el;
     History *cmdHistory;
     HistEvent ev;
 
+    signal(SIGINT, onSignal);
+    signal(SIGTSTP, onSignal);
     el = el_init(argv[0], stdin, stdout, stderr);
     ASSERT(el);
     el_set(el, EL_PROMPT, &prompt);
@@ -44,6 +50,9 @@ int main(int argc, char *argv[]) {
             }
         }
         el_set(el, EL_PROMPT, &prompt);
+        if (!snippet.empty()) {
+            continue;
+        }
 
         try {
             auto value = session.evalWithKind(snippet);
