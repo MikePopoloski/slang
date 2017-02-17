@@ -61,5 +61,8 @@ int main(int argc, char *argv[]) {
             printf("%s\n", diagWriter.report(diags).c_str());
         }
     }
+
+    history_end(cmdHistory);
+    el_end(el);
     return 0;
 }
