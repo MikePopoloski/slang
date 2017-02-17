@@ -250,6 +250,7 @@ enum class SyntaxKind : uint16_t {
     EventControlWithExpression,
     RepeatedEventControl,
     TimingControlExpression,
+    TimingControlExpressionConcatenation,
     ShortcutCycleDelayRange,
 
     // declarations
