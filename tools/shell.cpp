@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
     el = el_init(argv[0], stdin, stdout, stderr);
     ASSERT(el);
     el_set(el, EL_PROMPT, &prompt);
+    el_set(el, EL_EDITOR, "emacs");
 
     cmdHistory = history_init();
     ASSERT(cmdHistory);
