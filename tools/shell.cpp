@@ -45,9 +45,7 @@ int main(int argc, char *argv[]) {
         string snippet;
         while (true) {
             line = el_gets(el, &charsRead);
-            if (charsRead) {
-                history(cmdHistory, &ev, H_ENTER, line);
-            } else if (!line) {
+            if (!line) {
                 onSignal(SIGINT);
             }
             snippet += line;
@@ -61,6 +59,8 @@ int main(int argc, char *argv[]) {
         el_set(el, EL_PROMPT, &prompt);
         if (snippet == "\n") {
             continue;
+        } else {
+            history(cmdHistory, &ev, H_ENTER, snippet.c_str());
         }
 
         try {
