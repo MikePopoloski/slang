@@ -37,7 +37,8 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
         return parseNewExpression(nullptr);
     else if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
-        return alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
+        auto expr = alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
+        return parsePostfixExpression(expr);
     }
     else if (current.kind == TokenKind::TaggedKeyword) {
         // TODO: check for trailing expression
@@ -595,6 +596,10 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
                 break;
             case TokenKind::NewKeyword:
                 expr = parseNewExpression(expr);
+            case TokenKind::DoubleHash: {
+                auto timing = parseTimingControl();
+                expr = alloc.emplace<TimingControlExpressionConcatenationSyntax>(expr, timing, parseExpression());
+            }
             default:
                 return expr;
         }
