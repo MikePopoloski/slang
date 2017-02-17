@@ -198,6 +198,9 @@ public:
     bool hasUnknown() const { return unknownFlag; }
     uint16_t getBitWidth() const { return bitWidth; }
 
+    // Check if we can fit the integer into a single word.
+    bool isSingleWord() const { return bitWidth <= BITS_PER_WORD && !unknownFlag; }
+
     /// Assert that the integer value can fit into a single integer and return it.
     uint16_t getAssertUInt16() const;
     uint32_t getAssertUInt32() const;
@@ -446,9 +449,6 @@ private:
 
     // Specialized shift left routine that doesn't remove the unknown flag.
     SVInt shl(uint32_t amount, bool doCheckUnknown) const;
-
-    // Check if we can fit the integer into a single word.
-    bool isSingleWord() const { return bitWidth <= BITS_PER_WORD && !unknownFlag; }
 
     // Get the number of words required to hold the integer, including the unknown bits.
     uint32_t getNumWords() const { return getNumWords(bitWidth, unknownFlag); }

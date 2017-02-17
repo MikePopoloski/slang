@@ -94,9 +94,8 @@ private:
 
         if (throwDiagnostics && !diagnostics.empty()) {
             throw std::move(diagnostics);
-        } else {
-            return SyntaxTree(node, sourceManager, std::move(alloc), std::move(diagnostics));
         }
+        return SyntaxTree(node, sourceManager, std::move(alloc), std::move(diagnostics));
     }
 
     const SyntaxNode* rootNode;

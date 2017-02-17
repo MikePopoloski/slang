@@ -5,13 +5,8 @@
 using namespace std;
 using namespace slang;
 
-const char *prompt(EditLine *e) {
-    return " > ";
-}
-
-const char *promptMultiline(EditLine *e) {
-    return ".. ";
-}
+const char *prompt(EditLine *e)          { return " > "; }
+const char *promptMultiline(EditLine *e) { return ".. "; }
 
 int main(int argc, char *argv[]) {
     ScriptSession session(true);
@@ -54,7 +49,11 @@ int main(int argc, char *argv[]) {
             printf("Detected kind: %s\n", get<1>(value).c_str());
             const SVInt *integer = get_if<SVInt>(&get<0>(value));
             if (integer) {
-                printf("Integer value: %d\n", integer->getAssertUInt16());
+                if (!integer->isSingleWord()) {
+                    printf("Value (binary): %s\n", integer->toString(LiteralBase::Binary).c_str());
+                } else {
+                    printf("Value: %lld\n", integer->getAssertInt64());
+                }
             }
         } catch (Diagnostics &diags) {
             printf("Errors when parsing:\n");
