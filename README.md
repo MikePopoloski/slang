@@ -15,3 +15,25 @@ Still under heavy construction!
 * The parse tree should round trip back to the original source, making it easy to write refactoring and code generation tools.
 * Provide great error messages, ala clang.
 * Be fast and robust in the face of production-scale projects.
+
+### Build Instructions
+
+You need a compiler for your platform that supports C++17. The tests run under Visual Studio 2017, GCC-6, and Clang-3.9.
+
+#### Windows
+```
+tools/bin/windows/genie vs2017
+msbuild build/projects/vs2017/slang.sln
+```
+
+#### Linux - GCC
+```
+tools/bin/linux/genie --gcc=linux-gcc-6 gmake
+make -C build/projects/gmake-linux -j 8
+```
+
+#### Linux - Clang
+```
+tools/bin/linux/genie --gcc=linux-clang gmake
+make -C build/projects/gmake-linux-clang -j 8
+```
