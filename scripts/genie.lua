@@ -35,7 +35,7 @@ project "slang"
 		path.join(ROOT_DIR, "external/**.cc"),
 	}
 
-function testProject(_name, _dir)
+function testProject(_name)
 	project (_name)
 		kind "ConsoleApp"
 		includedirs {
@@ -43,8 +43,8 @@ function testProject(_name, _dir)
 			path.join(ROOT_DIR, "external"),
 		}
 		files {
-			path.join(ROOT_DIR, "tests", _dir, "**.cpp"),
-			path.join(ROOT_DIR, "tests", _dir, "**.h"),
+			path.join(ROOT_DIR, "tests", _name, "**.cpp"),
+			path.join(ROOT_DIR, "tests", _name, "**.h"),
 		}
 		links {
 			"slang"
@@ -59,6 +59,6 @@ function testProject(_name, _dir)
 end
 
 group "tests"
-testProject('unittests', 'unit_tests')
-testProject('filetests', 'file_tests')
-testProject('paramrewriter', 'paramrewriter')
+testProject('unittests')
+testProject('filetests')
+testProject('paramrewriter')

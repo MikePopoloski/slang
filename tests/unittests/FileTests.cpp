@@ -12,7 +12,7 @@ std::string findTestDir() {
         ASSERT(!path.empty(), "Failed to find root project directory");
     }
 
-    return (path + "tests/unit_tests/data/").str();
+    return (path + "tests/unittests/data/").str();
 }
 
 std::string getTestInclude() {

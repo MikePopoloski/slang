@@ -17,7 +17,7 @@ SourceManager& getSourceManager() {
             ASSERT(!path.empty(), "Failed to find root project directory");
         }
         
-        auto pathStr = (path + "tests/unit_tests/data/").str();
+        auto pathStr = (path + "tests/unittests/data/").str();
         sourceManager = new SourceManager();
         sourceManager->addUserDirectory(StringRef(pathStr));
     }
