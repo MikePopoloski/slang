@@ -22,12 +22,11 @@ project "slang"
 	kind "StaticLib"
 
 	includedirs {
-		path.join(ROOT_DIR, "include"),
+		path.join(ROOT_DIR, "source"),
 		path.join(ROOT_DIR, "external"),
 	}
 
 	files {
-		path.join(ROOT_DIR, "include/**.h"),
 		path.join(ROOT_DIR, "source/**.h"),
 		path.join(ROOT_DIR, "source/**.cpp"),
 		path.join(ROOT_DIR, "external/**.h"),
@@ -39,7 +38,7 @@ function testProject(_name)
 	project (_name)
 		kind "ConsoleApp"
 		includedirs {
-			path.join(ROOT_DIR, "include"),
+			path.join(ROOT_DIR, "source"),
 			path.join(ROOT_DIR, "external"),
 		}
 		files {

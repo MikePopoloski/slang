@@ -4,9 +4,11 @@
 #include <unordered_set>
 #include <vector>
 
-#include "slang.h"
-#include "Symbol.h"
-#include "SyntaxVisitor.h"
+#include "analysis/DeclarationTable.h"
+#include "analysis/SemanticModel.h"
+#include "analysis/Symbol.h"
+#include "parsing/SyntaxTree.h"
+#include "parsing/SyntaxVisitor.h"
 
 using namespace slang;
 using namespace std;

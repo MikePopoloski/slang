@@ -2,7 +2,11 @@
 #include <string>
 #include <vector>
 
-#include "slang.h"
+#include "analysis/DeclarationTable.h"
+#include "analysis/SemanticModel.h"
+#include "diagnostics/Diagnostics.h"
+#include "parsing/SyntaxTree.h"
+#include "text/SourceManager.h"
 
 using namespace slang;
 using namespace std::literals;
