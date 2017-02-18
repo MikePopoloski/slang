@@ -35,44 +35,30 @@ project "slang"
 		path.join(ROOT_DIR, "external/**.cc"),
 	}
 
+function testProject(_name, _dir)
+	project (_name)
+		kind "ConsoleApp"
+		includedirs {
+			path.join(ROOT_DIR, "include"),
+			path.join(ROOT_DIR, "external"),
+		}
+		files {
+			path.join(ROOT_DIR, "tests", _dir, "**.cpp"),
+			path.join(ROOT_DIR, "tests", _dir, "**.h"),
+		}
+		links {
+			"slang"
+		}
+
+		configuration { "vs*" }
+			buildoptions {
+				"/Fd" .. _name .. "_compiler.pdb"
+			}
+
+		configuration {}
+end
+
 group "tests"
-
-project "unittests"
-	kind "ConsoleApp"
-	includedirs {
-		path.join(ROOT_DIR, "include"),
-		path.join(ROOT_DIR, "external"),
-	}
-	files {
-		path.join(ROOT_DIR, "tests/unit_tests/**.cpp")
-	}
-	links {
-		"slang"
-	}
-
-	configuration { "vs*" }
-		buildoptions {
-			"/Fdunittests_compiler.pdb"
-		}
-
-	configuration {}
-
-project "filetests"
-	kind "ConsoleApp"
-	includedirs {
-		path.join(ROOT_DIR, "include"),
-		path.join(ROOT_DIR, "external"),
-	}
-	files {
-		path.join(ROOT_DIR, "tests/file_tests/**.cpp")
-	}
-	links {
-		"slang"
-	}
-
-	configuration { "vs*" }
-		buildoptions {
-			"/Fdfiletests_compiler.pdb"
-		}
-
-	configuration {}
+testProject('unittests', 'unit_tests')
+testProject('filetests', 'file_tests')
+testProject('paramrewriter', 'paramrewriter')
