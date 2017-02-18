@@ -162,11 +162,6 @@ function toolchain(_buildDir, _libDir)
 			path.join(_libDir, "lib/win64_" .. _ACTION),
 		}
 
-	configuration { "*-gcc* or osx" }
-		buildoptions {
-			"-Wshadow",
-		}
-
 	configuration { "linux-clang" }
 
 	configuration { "linux-gcc" }
@@ -178,10 +173,9 @@ function toolchain(_buildDir, _libDir)
 		buildoptions {
 			"-msse2",
 			"-Wunused-value",
-			"-Wundef",
 		}
 		buildoptions_cpp {
-			"-std=c++11",
+			"-std=c++1z",
 		}
 		links {
 			"rt",
@@ -190,6 +184,9 @@ function toolchain(_buildDir, _libDir)
 		linkoptions {
 			"-Wl,--gc-sections",
 			"-Wl,--as-needed",
+		}
+		includedirs {
+			path.join(_buildDir, "../compat")
 		}
 
 	configuration { "linux-gcc*", "x64" }

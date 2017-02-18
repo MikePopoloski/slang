@@ -1,6 +1,9 @@
 language: cpp
-compiler:
-  - clang++-3.9
+
+matrix:
+  include:
+    - env: BUILD_TARGET=linux-gcc-6
+    - env: BUILD_TARGET=linux-clang
 
 addons:
   apt:
@@ -12,10 +15,16 @@ addons:
       - g++-6
       - clang-3.9
 
+install:
+  - mkdir -p latest-symlinks
+  - ln -s /usr/bin/clang++-3.9 latest-symlinks/clang++
+  - ln -s /usr/bin/clang-3.9 latest-symlinks/clang
+  - export PATH=$PWD/latest-symlinks:$PATH
+  - tools/bin/linux/genie --gcc=$BUILD_TARGET gmake
+
 script:
-  - cd build/linux && make -j 8 CXX=clang++-3.9
-  - cd ../..
-  - bin/linux/unittests
+  - if [ "$BUILD_TARGET" == "linux-clang" ]; then make -C build/projects/gmake-linux-clang -j 8; build/linux64_clang/bin/unittestsDebug; fi
+  - if [ "$BUILD_TARGET" == "linux-gcc-6" ]; then make -C build/projects/gmake-linux -j 8; build/linux64_gcc/bin/unittestsDebug; fi
 
 branches:
   only:
