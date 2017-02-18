@@ -1208,6 +1208,13 @@ list<ClockingItemSyntax> items
 token endClocking
 NamedBlockClauseSyntax endBlockName
 
+DPIImportExportSyntax base=MemberSyntax kind=DPIImportExport
+token keyword
+token stringLiteral
+token property
+token name
+token equals
+FunctionPrototypeSyntax method
 
 // ----- CONSTRAINTS -----
 

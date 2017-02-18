@@ -147,6 +147,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ExpectedGenvarIterVar] = { "expected genvar iteration variable", DiagnosticSeverity::Error };
     descriptors[DiagCode::ConstFunctionPortRequiresRef] = { "'const' in subroutine formal port requires 'ref' direction specifier", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedClockingSkew] = { "expected clocking skew", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedDPISpecString] = { "expected DPI spec string", DiagnosticSeverity::Error };
 
     // declarations
     descriptors[DiagCode::DuplicateDefinition] = { "duplicate {} definition '{}'", DiagnosticSeverity::Error };

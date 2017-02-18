@@ -116,6 +116,7 @@ enum class DiagCode : uint8_t {
     ExpectedGenvarIterVar,
     ConstFunctionPortRequiresRef,
     ExpectedClockingSkew,
+    ExpectedDPISpecString,
 
     // declarations
     DuplicateDefinition,

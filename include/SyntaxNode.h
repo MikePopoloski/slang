@@ -429,6 +429,7 @@ enum class SyntaxKind : uint16_t {
     ClockingDirection,
     ClockingItem,
     ClockingDeclaration,
+    DPIImportExport,
 
     // constraints
     DistWeight,

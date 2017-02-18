@@ -117,6 +117,7 @@ private:
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportDeclarationSyntax* parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     PackageImportItemSyntax* parsePackageImportItem();
+    DPIImportExportSyntax* parseDPIImportExport(ArrayRef<AttributeInstanceSyntax*> attributes);
     AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
     PropertySequenceDeclarationSyntax* parsePropertySequenceDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ParameterDeclarationSyntax* parseParameterPort();
@@ -128,7 +129,7 @@ private:
     HierarchicalInstanceSyntax* parseHierarchicalInstance();
     PortConnectionSyntax* parsePortConnection();
     FunctionPortSyntax* parseFunctionPort();
-    FunctionPrototypeSyntax* parseFunctionPrototype();
+    FunctionPrototypeSyntax* parseFunctionPrototype(bool allowTasks = true);
     FunctionDeclarationSyntax* parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
     Token parseLifetime();
     ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end);
