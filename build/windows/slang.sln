@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.26206.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "slang", "slang.vcxproj", "{ED4CEA60-96A0-4B04-9036-B8D5869ED8E3}"
 EndProject
@@ -16,6 +16,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "file_tests", "file_tests\fi
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{33FA8F93-1C32-4948-B286-7360668D1124}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "param_rewriter", "param_rewriter\param_rewriter.vcxproj", "{E22BD283-B3C5-4267-87B7-616112A73485}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,6 +51,14 @@ Global
 		{CDF7D51D-8686-4218-8434-FCB075198CC5}.Release|x64.Build.0 = Release|x64
 		{CDF7D51D-8686-4218-8434-FCB075198CC5}.Release|x86.ActiveCfg = Release|Win32
 		{CDF7D51D-8686-4218-8434-FCB075198CC5}.Release|x86.Build.0 = Release|Win32
+		{E22BD283-B3C5-4267-87B7-616112A73485}.Debug|x64.ActiveCfg = Debug|x64
+		{E22BD283-B3C5-4267-87B7-616112A73485}.Debug|x64.Build.0 = Debug|x64
+		{E22BD283-B3C5-4267-87B7-616112A73485}.Debug|x86.ActiveCfg = Debug|Win32
+		{E22BD283-B3C5-4267-87B7-616112A73485}.Debug|x86.Build.0 = Debug|Win32
+		{E22BD283-B3C5-4267-87B7-616112A73485}.Release|x64.ActiveCfg = Release|x64
+		{E22BD283-B3C5-4267-87B7-616112A73485}.Release|x64.Build.0 = Release|x64
+		{E22BD283-B3C5-4267-87B7-616112A73485}.Release|x86.ActiveCfg = Release|Win32
+		{E22BD283-B3C5-4267-87B7-616112A73485}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -56,5 +66,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{32EA3BBF-5E07-4307-9C66-D1F0F9566EA9} = {33FA8F93-1C32-4948-B286-7360668D1124}
 		{CDF7D51D-8686-4218-8434-FCB075198CC5} = {33FA8F93-1C32-4948-B286-7360668D1124}
+		{E22BD283-B3C5-4267-87B7-616112A73485} = {33FA8F93-1C32-4948-B286-7360668D1124}
 	EndGlobalSection
 EndGlobal

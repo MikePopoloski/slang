@@ -2173,6 +2173,37 @@ protected:
     }
 };
 
+struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
+    ExpressionSyntax* left;
+    TimingControlSyntax* timing;
+    ExpressionSyntax* right;
+
+    TimingControlExpressionConcatenationSyntax(ExpressionSyntax* left, TimingControlSyntax* timing, ExpressionSyntax* right) :
+        ExpressionSyntax(SyntaxKind::TimingControlExpressionConcatenation), left(left), timing(timing), right(right)
+    {
+        childCount += 3;
+    }
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) override final {
+        switch (index) {
+            case 0: return left;
+            case 1: return timing;
+            case 2: return right;
+            default: return nullptr;
+        }
+    }
+
+    void replaceChild(uint32_t index, Token token) override final {
+        switch (index) {
+            case 0: ASSERT(false); break;
+            case 1: ASSERT(false); break;
+            case 2: ASSERT(false); break;
+        }
+        (void)token;
+    }
+};
+
 struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
     Token doubleHash;
     Token openBracket;
@@ -6392,47 +6423,6 @@ protected:
     }
 };
 
-struct DPIImportExportSyntax : public MemberSyntax {
-    Token keyword;
-    Token stringLiteral;
-    Token property;
-    Token name;
-    Token equals;
-    FunctionPrototypeSyntax* method;
-
-    DPIImportExportSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token stringLiteral, Token property, Token name, Token equals, FunctionPrototypeSyntax* method) :
-        MemberSyntax(SyntaxKind::DPIImportExport, attributes), keyword(keyword), stringLiteral(stringLiteral), property(property), name(name), equals(equals), method(method)
-    {
-        childCount += 6;
-    }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return stringLiteral;
-            case 3: return property;
-            case 4: return name;
-            case 5: return equals;
-            case 6: return method;
-            default: return nullptr;
-        }
-    }
-
-    void replaceChild(uint32_t index, Token token) override final {
-        switch (index) {
-            case 0: ASSERT(false); break;
-            case 1: keyword = token; break;
-            case 2: stringLiteral = token; break;
-            case 3: property = token; break;
-            case 4: name = token; break;
-            case 5: equals = token; break;
-            case 6: ASSERT(false); break;
-        }
-    }
-};
-
 // ----- CONSTRAINTS -----
 
 struct ConstraintItemSyntax : public SyntaxNode {
@@ -8017,6 +8007,7 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::ContinuousAssign: SyntaxNode::dispatch(v, *(const ContinuousAssignSyntax*)node); break;
         case SyntaxKind::UnaryBitwiseNorExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::AssertionItemPort: SyntaxNode::dispatch(v, *(const AssertionItemPortSyntax*)node); break;
+        case SyntaxKind::TimingControlExpressionConcatenation: SyntaxNode::dispatch(v, *(const TimingControlExpressionConcatenationSyntax*)node); break;
         case SyntaxKind::ParenImplicitEventControl: SyntaxNode::dispatch(v, *(const ParenImplicitEventControlSyntax*)node); break;
         case SyntaxKind::NamedType: SyntaxNode::dispatch(v, *(const NamedTypeSyntax*)node); break;
         case SyntaxKind::DelayControl: SyntaxNode::dispatch(v, *(const DelaySyntax*)node); break;
@@ -8285,7 +8276,6 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::SyncRejectOnPropertyExpression: SyntaxNode::dispatch(v, *(const PrefixUnaryExpressionSyntax*)node); break;
         case SyntaxKind::PropertySequenceDeclaration: SyntaxNode::dispatch(v, *(const PropertySequenceDeclarationSyntax*)node); break;
         case SyntaxKind::ExpressionStatement: SyntaxNode::dispatch(v, *(const ExpressionStatementSyntax*)node); break;
-        case SyntaxKind::DPIImportExport: SyntaxNode::dispatch(v, *(const DPIImportExportSyntax*)node); break;
         case SyntaxKind::UntilWithPropertyExpression: SyntaxNode::dispatch(v, *(const BinaryExpressionSyntax*)node); break;
         case SyntaxKind::DataDeclaration: SyntaxNode::dispatch(v, *(const DataDeclarationSyntax*)node); break;
         case SyntaxKind::BinaryBlockEventExpression: SyntaxNode::dispatch(v, *(const BinaryBlockEventExpressionSyntax*)node); break;

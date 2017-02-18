@@ -427,6 +427,11 @@ TimingControlExpressionSyntax base=ExpressionSyntax kind=TimingControlExpression
 TimingControlSyntax timing
 ExpressionSyntax expr
 
+TimingControlExpressionConcatenationSyntax base=ExpressionSyntax kind=TimingControlExpressionConcatenation
+ExpressionSyntax left
+TimingControlSyntax timing
+ExpressionSyntax right
+
 ShortcutCycleDelayRangeSyntax base=TimingControlSyntax kind=ShortcutCycleDelayRange
 token doubleHash
 token openBracket

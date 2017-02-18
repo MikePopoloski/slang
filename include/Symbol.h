@@ -235,13 +235,16 @@ public:
 class ParameterSymbol : public ConstValueSymbol {
 public:
     const ParameterDeclarationSyntax* syntax;
+    const VariableDeclaratorSyntax* declarator;
     bool isLocal;
 
     ParameterSymbol(StringRef name, SourceLocation location,
                     const ParameterDeclarationSyntax* syntax,
+                    const VariableDeclaratorSyntax* declarator,
                     bool isLocal) :
         ConstValueSymbol(SymbolKind::Parameter, name, location),
         syntax(syntax),
+        declarator(declarator),
         isLocal(isLocal) {}
 
     static constexpr SymbolKind mykind = SymbolKind::Parameter;
@@ -264,14 +267,15 @@ public:
 class InstanceSymbol : public TypeSymbol {
 public:
     const ModuleSymbol* module;
+    const HierarchyInstantiationSyntax* syntax;
     bool implicit;
     Dimensions dimensions;
 // TODO: array of instances has all the same parameters
 // TODO: this works for port since interface port connections are themselves arrays of instances
 // TODO: defparams on instance array elements will break this (if allowed)
-    InstanceSymbol(const ModuleSymbol* module, StringRef name, SourceLocation location, bool implicit, Dimensions dimensions = Dimensions()) :
+    InstanceSymbol(const ModuleSymbol* module, const HierarchyInstantiationSyntax* syntax, StringRef name, SourceLocation location, bool implicit, Dimensions dimensions = Dimensions()) :
         TypeSymbol(SymbolKind::Instance, name, location),
-        module(module), implicit(implicit), dimensions(dimensions) {}
+        module(module), syntax(syntax), implicit(implicit), dimensions(dimensions) {}
 
     template<typename T>
     const T& getChild(uint32_t index) const { return module->children[index]->as<T>(); }

@@ -89,7 +89,7 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
     if (definitions) scope->addParentScope(definitions);
     makePublicParameters(scope, syntax, nullptr, definitions, SourceLocation(), true);
     const ModuleSymbol* module = makeModule(syntax, scope);
-    return alloc.emplace<InstanceSymbol>(module, module->name, SourceLocation(), true);
+    return alloc.emplace<InstanceSymbol>(module, nullptr, module->name, SourceLocation(), true);
 }
 
 void SemanticModel::makePackages() {
@@ -123,7 +123,7 @@ void SemanticModel::makePackages() {
                             diagnostics.add(DiagCode::ParamHasNoValue, location)
                                 << StringRef("parameter") << declName;
                         } else {
-                            pkgSym.scope->add(alloc.emplace<ParameterSymbol>(declName, location, paramDecl, false));
+                            pkgSym.scope->add(alloc.emplace<ParameterSymbol>(declName, location, paramDecl, declarator, false));
                         }
                     }
                     break;
@@ -475,7 +475,7 @@ bool SemanticModel::getParamDecls(const ParameterDeclarationSyntax* syntax, std:
                 diagnostics.add(DiagCode::LocalParamNoInitializer, location);
             else if (bodyParam)
                 diagnostics.add(DiagCode::BodyParamNoInitializer, location);
-            buffer.push_back({ syntax, name, location, init, local, bodyParam });
+            buffer.push_back({ syntax, declarator, name, location, init, local, bodyParam });
         }
     }
     return local;
@@ -537,7 +537,7 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
         const ModuleSymbol* module = makeModule(decl, scope);
         const InstanceSymbol *instSym = nullptr;
         if (instance->dimensions.count() == 0) {
-            instSym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false);
+            instSym = alloc.emplace<InstanceSymbol>(module, syntax, instance->name.valueText(), syntax->type.location(), false);
         }
         else {
             // figure out dimensions of the instance array
@@ -603,7 +603,7 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax* synt
             }
             // load all interface ports into scope
             // TODO: arrayed interface expressions must match
-            instSym = alloc.emplace<InstanceSymbol>(module, instance->name.valueText(), syntax->type.location(), false, dims.copy(alloc));
+            instSym = alloc.emplace<InstanceSymbol>(module, syntax, instance->name.valueText(), syntax->type.location(), false, dims.copy(alloc));
         };
         results.append(instSym);
         instantiationScope->add(instSym);
@@ -655,7 +655,7 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVe
         Scope localScope { &iterScope };
         ParameterSymbol iterParam {
             syntax->identifier.valueText(),
-            syntax->identifier.location(), nullptr, true
+            syntax->identifier.location(), nullptr, nullptr, true
         };
         iterParam.value = genvar;
         localScope.add(&iterParam);
@@ -824,7 +824,7 @@ void SemanticModel::makePublicParameters(Scope* declScope, const ModuleDeclarati
 
     const auto& moduleParamInfo = getModuleParams(decl);
     for (const auto& info : moduleParamInfo) {
-        ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.local);
+        ParameterSymbol* symbol = alloc.emplace<ParameterSymbol>(info.name, info.location, info.paramDecl, info.declarator, info.local);
         results.append(symbol);
         declScope->add(symbol);
     }
@@ -973,6 +973,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
                     auto ifType = type->header->as<VariablePortHeaderSyntax>();
                     if (ifType->direction) continue; // not an interface
                     if (ifType->varKeyword) continue; // TODO: check for interface keyword
+                    if (!ifType->type) continue;
                     if (ifType->type->kind != SyntaxKind::NamedType) continue;
                     auto name = ifType->type->as<NamedTypeSyntax>()->name;
                     const Symbol *typeSym = nullptr;
@@ -1059,7 +1060,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
         auto sym = instantiationScope->lookup(conn.second->as<IdentifierNameSyntax>()->identifier.valueText());
         ASSERT(sym && sym->kind == SymbolKind::Instance);
         auto instSym = sym->as<InstanceSymbol>();
-        scope->add(alloc.emplace<InstanceSymbol>(instSym.module, conn.first, conn.second->as<IdentifierNameSyntax>()->identifier.location(), false));
+        scope->add(alloc.emplace<InstanceSymbol>(instSym.module, nullptr, conn.first, conn.second->as<IdentifierNameSyntax>()->identifier.location(), false));
     }
     if (hasWild) {
         for (auto name : ifPortNames) {
@@ -1067,7 +1068,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
                 auto sym = instantiationScope->lookup(name);
                 ASSERT(sym && sym->kind == SymbolKind::Instance);
                 auto instSym = sym->as<InstanceSymbol>();
-                scope->add(alloc.emplace<InstanceSymbol>(instSym.module, instSym.name, SourceLocation(), false)); // TODO: add location of the port name
+                scope->add(alloc.emplace<InstanceSymbol>(instSym.module, nullptr, instSym.name, SourceLocation(), false)); // TODO: add location of the port name
             }
         }
     }

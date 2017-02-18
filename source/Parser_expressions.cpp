@@ -35,11 +35,11 @@ ExpressionSyntax* Parser::parseSubExpression(ExpressionOptions::Enum options, in
     auto current = peek();
     if (current.kind == TokenKind::NewKeyword)
         return parseNewExpression(nullptr);
-    // TODO:
-    /*else if (isPossibleDelayOrEventControl(current.kind)) {
+    else if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
-        return alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
-    }*/
+        auto expr = alloc.emplace<TimingControlExpressionSyntax>(timingControl, parseExpression());
+        return parsePostfixExpression(expr);
+    }
     else if (current.kind == TokenKind::TaggedKeyword) {
         // TODO: check for trailing expression
         auto tagged = consume();
@@ -596,6 +596,10 @@ ExpressionSyntax* Parser::parsePostfixExpression(ExpressionSyntax* expr) {
                 break;
             case TokenKind::NewKeyword:
                 expr = parseNewExpression(expr);
+            case TokenKind::DoubleHash: {
+                auto timing = parseTimingControl();
+                expr = alloc.emplace<TimingControlExpressionConcatenationSyntax>(expr, timing, parseExpression());
+            }
             default:
                 return expr;
         }
@@ -689,6 +693,10 @@ ArgumentListSyntax* Parser::parseArgumentList() {
 }
 
 ArgumentSyntax* Parser::parseArgument() {
+    // check for empty arguments
+    if (peek(TokenKind::Comma)) {
+        return nullptr;
+    }
     // check for named arguments
     if (peek(TokenKind::Dot)) {
         auto dot = consume();

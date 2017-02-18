@@ -1,0 +1,14 @@
+module Foo1 #(parameter int foo = 4, bar = 5, baz = 20)();
+
+endmodule
+
+module Foo2 #(parameter int foo = 2, bar = 3, baz = 12)();
+
+endmodule
+
+module Bar1();
+
+    Foo1 f();
+    Foo2 g();
+
+endmodule

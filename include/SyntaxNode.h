@@ -250,6 +250,7 @@ enum class SyntaxKind : uint16_t {
     EventControlWithExpression,
     RepeatedEventControl,
     TimingControlExpression,
+    TimingControlExpressionConcatenation,
     ShortcutCycleDelayRange,
 
     // declarations
@@ -566,6 +567,7 @@ public:
     /// Gets the child syntax node at the specified index. If the child at
     /// the given index is not a node (probably a token) then this returns null.
     const SyntaxNode* childNode(uint32_t index) const;
+    Token childToken(uint32_t index) const;
     uint32_t getChildCount() const { return childCount; }
 
     template<typename T>
