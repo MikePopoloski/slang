@@ -7,7 +7,7 @@ configuration: Release
 platform: x64
 
 install:
-  - tools\bin\windows\genie vs2017
+  - .\tools\bin\windows\genie.exe vs2017
 
 build:
   parallel: true
