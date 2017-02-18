@@ -1,5 +1,6 @@
 #include "Catch/catch.hpp"
-#include "slang.h"
+
+#include "text/SourceManager.h"
 
 using namespace slang;
 

@@ -6,9 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "parsing/SyntaxTree.h"
 #include "ConstantEvaluator.h"
 #include "SemanticModel.h"
-#include "SyntaxTree.h"
 
 namespace slang {
 

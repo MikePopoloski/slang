@@ -1,5 +1,8 @@
 #include "Catch/catch.hpp"
-#include "slang.h"
+
+#include "lexing/Lexer.h"
+#include "parsing/SyntaxNode.h"
+#include "text/SourceManager.h"
 
 using namespace slang;
 

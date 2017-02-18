@@ -1,5 +1,8 @@
 #include "Catch/catch.hpp"
-#include "slang.h"
+
+#include "analysis/ConstantEvaluator.h"
+#include "analysis/SemanticModel.h"
+#include "parsing/SyntaxTree.h"
 
 using namespace slang;
 

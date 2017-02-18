@@ -1,5 +1,6 @@
 #include "Catch/catch.hpp"
-#include "slang.h"
+
+#include "analysis/ScriptSession.h"
 
 using namespace slang;
 

@@ -1,6 +1,6 @@
 #include "Catch/catch.hpp"
-#include "slang.h"
-#include "SVInt.h"
+
+#include "numeric/SVInt.h"
 
 using namespace slang;
 
