@@ -10,22 +10,25 @@
 #include "SemanticModel.h"
 #include "SyntaxTree.h"
 
+#include <tuple>
+
 namespace slang {
 
 /// A helper class that allows evaluating arbitrary snippets of SystemVerilog
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
-    ScriptSession() :
+    ScriptSession(bool throwDiagnostics = false) :
         declTable(diagnostics),
         sem(alloc, diagnostics, declTable),
         scriptScope(sem.getSystemScope()),
-        binder(sem, &scriptScope)
+        binder(sem, &scriptScope),
+        throwDiagnostics(throwDiagnostics)
     {
     }
 
     ConstantValue eval(const std::string& text) {
-        syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text)));
+        syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text), throwDiagnostics));
 
         auto root = syntaxTrees.back().root();
         switch (root->kind) {
@@ -67,6 +70,26 @@ public:
                     ASSERT(false, "Not supported yet");
         }
         return nullptr;
+    }
+
+    std::string syntaxKindToString(SyntaxKind kind) {
+        switch (kind) {
+            case SyntaxKind::DataDeclaration: return "Variable declaration";
+            case SyntaxKind::FunctionDeclaration: return "Function";
+            case SyntaxKind::TaskDeclaration: return "Task";
+            case SyntaxKind::InterfaceDeclaration: return "Interface";
+            case SyntaxKind::ModuleDeclaration: return "Module";
+            case SyntaxKind::HierarchyInstantiation: return "Hierarchy instantiation";
+            default:
+                if (isExpression(kind)) return "Expression";
+                else if (isStatement(kind)) return "Statement";
+                else return "Unknown, possibly a duck";
+        }
+    }
+
+    std::tuple<ConstantValue, std::string> evalWithKind(const std::string& text) {
+        ConstantValue val = eval(text);
+        return std::make_tuple(val, syntaxKindToString(syntaxTrees.back().root()->kind));
     }
 
     ConstantValue evalExpression(const ExpressionSyntax* expr) {
@@ -129,6 +152,7 @@ public:
     Scope scriptScope;
     ExpressionBinder binder;
     ConstantEvaluator evaluator;
+    bool throwDiagnostics = false;
 };
 
 }

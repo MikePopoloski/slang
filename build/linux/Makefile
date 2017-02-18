@@ -12,15 +12,16 @@ SLANG_SOURCES:=$(wildcard $(TOP)/source/*.cpp) $(wildcard $(TOP)/external/ppk_as
 UNITTEST_SOURCES:=$(wildcard $(TOP)/tests/unit_tests/*.cpp)
 FILETEST_SOURCES:=$(wildcard $(TOP)/tests/file_tests/*.cpp)
 REWRITER_SOURCES:=$(wildcard $(TOP)/tools/param_rewriter/*.cpp)
+SHELL_SOURCES:=$(wildcard $(TOP)/tools/shell.cpp)
 
 FMTLIB_OBJECTS:=$(patsubst $(TOP)/%.cc,obj/%.o,$(FMTLIB_SOURCES))
 SLANG_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(SLANG_SOURCES))
 UNITTEST_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(UNITTEST_SOURCES))
 FILETEST_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(FILETEST_SOURCES))
 REWRITER_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(REWRITER_SOURCES))
+SHELL_OBJECTS:=$(patsubst $(TOP)/%.cpp,obj/%.o,$(SHELL_SOURCES))
 
-ALL_CPP_OBJS:=$(SLANG_OBJECTS) $(UNITTEST_OBJECTS) $(FILETEST_OBJECTS) $(REWRITER_OBJECTS)
-ALL_OBJECTS:=$(FMTLIB_OBJECTS) $(ALL_CPP_OBJS)
+ALL_CPP_OBJS:=$(SLANG_OBJECTS) $(UNITTEST_OBJECTS) $(FILETEST_OBJECTS) $(REWRITER_OBJECTS) $(SHELL_OBJECTS)
 DEPS:=$(ALL_OBJECTS:.o=.d)
 
 -include $(DEPS)
@@ -28,13 +29,17 @@ DEPS:=$(ALL_OBJECTS:.o=.d)
 .PHONY: clean test all
 .DEFAULT_GOAL := all
 
-all: $(OUTDIR)/unittests $(OUTDIR)/filetests $(OUTDIR)/param_rewriter
+all: $(OUTDIR)/unittests $(OUTDIR)/filetests $(OUTDIR)/param_rewriter $(TOP)/bin/linux/shell
 
 test: all
 	cd $(TOP); ./bin/linux/unittests
 	cd $(TOP); ./bin/linux/filetests
 
 $(ALL_CPP_OBJS): obj/%.o: $(TOP)/%.cpp
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
+
+$(SHELL_OBJECTS): obj/%.o: $(TOP)/%.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
 
@@ -55,9 +60,9 @@ $(OUTDIR)/filetests: $(FILETEST_OBJECTS) $(OUTDIR)/libslang.a
 $(OUTDIR)/param_rewriter: $(REWRITER_OBJECTS) $(OUTDIR)/libslang.a
 	$(CXX) $(CXXFLAGS) $^ $(INCLUDES) -o $@
 
+$(TOP)/bin/linux/shell: $(SHELL_OBJECTS) $(TOP)/bin/linux/libslang.a
+	$(CXX) $(CXXFLAGS) $^ $(INCLUDES) -o $@ -lncurses -ledit
+
 clean:
 	rm -f $(ALL_OBJECTS)
-	rm -f $(OUTDIR)/unittests $(OUTDIR)/filetests $(OUTDIR)/param_rewriter
-
-
-
+	rm -f $(OUTDIR)/unittests $(OUTDIR)/filetests $(OUTDIR)/param_rewriter $(TOP)/bin/linux/shell
