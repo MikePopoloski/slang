@@ -6,9 +6,12 @@ shallow_clone: true
 configuration: Release
 platform: x64
 
+install:
+  - tools\bin\windows\genie vs2017
+
 build:
   parallel: true
-  project: build/windows/slang.sln
+  project: build/projects/vs2017/slang.sln
 
 test_script:
-  - cmd: bin\x64\Release\unit_tests.exe
+  - cmd: build\win64_vs2017\bin\unittestsRelease.exe

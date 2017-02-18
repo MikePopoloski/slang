@@ -16,3 +16,4 @@ obj/
 .idea/
 CMakeLists.txt
 cmake-build-debug/
+build/

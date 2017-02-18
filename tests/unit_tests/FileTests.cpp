@@ -5,11 +5,23 @@ using namespace slang;
 
 namespace {
 
-static const char RelativeTestPath[] = "tests/unit_tests/data/include.svh";
+std::string findTestDir() {
+    auto path = Path::getCurrentDirectory();
+    while (!(path + "tests").exists()) {
+        path = path.parentPath();
+        ASSERT(!path.empty(), "Failed to find root project directory");
+    }
+
+    return (path + "tests/unit_tests/data/").str();
+}
+
+std::string getTestInclude() {
+    return findTestDir() + "/include.svh";
+}
 
 TEST_CASE("Read source", "[files]") {
     SourceManager manager;
-    std::string testPath = manager.makeAbsolutePath(RelativeTestPath);
+    std::string testPath = manager.makeAbsolutePath(StringRef(getTestInclude()));
 
     CHECK(!manager.readSource("X:\\nonsense.txt"));
 
@@ -20,16 +32,16 @@ TEST_CASE("Read source", "[files]") {
 
 TEST_CASE("Read header (absolute)", "[files]") {
     SourceManager manager;
-    std::string testPath = manager.makeAbsolutePath(RelativeTestPath);
-
+    std::string testPath = manager.makeAbsolutePath(StringRef(getTestInclude()));
+    
     // check load failure
     CHECK(!manager.readHeader("X:\\nonsense.txt", SourceLocation(), false));
-
+    
     // successful load
     SourceBuffer buffer = manager.readHeader(StringRef(testPath), SourceLocation(), false);
     REQUIRE(buffer);
     CHECK(!buffer.data.empty());
-
+    
     // next load should be cached
     BufferID id1 = buffer.id;
     buffer = manager.readHeader(StringRef(testPath), SourceLocation(), false);
@@ -43,7 +55,7 @@ TEST_CASE("Read header (relative)", "[files]") {
     CHECK(!manager.readHeader("relative", SourceLocation(), false));
 
     // get a file ID to load relative to
-    SourceBuffer buffer1 = manager.readHeader(StringRef(manager.makeAbsolutePath(RelativeTestPath)), SourceLocation(), false);
+    SourceBuffer buffer1 = manager.readHeader(StringRef(manager.makeAbsolutePath(StringRef(getTestInclude()))), SourceLocation(), false);
     REQUIRE(buffer1);
 
     // reading the same header by name should return the same ID
@@ -60,12 +72,12 @@ TEST_CASE("Read header (relative)", "[files]") {
 
 TEST_CASE("Read header (include dirs)", "[files]") {
     SourceManager manager;
-    manager.addSystemDirectory(StringRef(manager.makeAbsolutePath("tests/unit_tests/data/")));
+    manager.addSystemDirectory(StringRef(manager.makeAbsolutePath(StringRef(findTestDir()))));
 
     SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), true);
     REQUIRE(buffer);
 
-    manager.addUserDirectory(StringRef(manager.makeAbsolutePath("tests/unit_tests/data/nested")));
+    manager.addUserDirectory(StringRef(manager.makeAbsolutePath(StringRef(findTestDir() + "/nested"))));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
 }

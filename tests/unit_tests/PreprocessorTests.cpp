@@ -11,8 +11,15 @@ Diagnostics diagnostics;
 SourceManager& getSourceManager() {
     static SourceManager* sourceManager = nullptr;
     if (!sourceManager) {
+        auto path = Path::getCurrentDirectory();
+        while (!(path + "tests").exists()) {
+            path = path.parentPath();
+            ASSERT(!path.empty(), "Failed to find root project directory");
+        }
+        
+        auto pathStr = (path + "tests/unit_tests/data/").str();
         sourceManager = new SourceManager();
-        sourceManager->addUserDirectory("tests/unit_tests/data/");
+        sourceManager->addUserDirectory(StringRef(pathStr));
     }
     return *sourceManager;
 }
