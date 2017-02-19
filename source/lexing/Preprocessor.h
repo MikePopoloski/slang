@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "diagnostics/Diagnostics.h"
+#include "parsing/AllSyntax.h"
 #include "parsing/SyntaxNode.h"
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"
@@ -19,12 +20,6 @@
 #include "Token.h"
 
 namespace slang {
-
-struct DefineDirectiveSyntax;
-struct MacroActualArgumentListSyntax;
-struct MacroFormalArgumentListSyntax;
-struct MacroActualArgumentSyntax;
-struct MacroFormalArgumentSyntax;
 
 StringRef getDirectiveText(SyntaxKind kind);
 
@@ -85,8 +80,8 @@ private:
 
     // Macro handling methods
     DefineDirectiveSyntax* findMacro(Token directive);
-    MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
-    bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest);
+    optional<MacroActualArgumentListSyntax> handleTopLevelMacro(Token directive);
+    bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, const optional<MacroActualArgumentListSyntax>& actualArgs, SmallVector<Token>& dest);
     bool expandReplacementList(ArrayRef<Token>& tokens);
 
     // functions to advance the underlying token stream
@@ -130,8 +125,8 @@ private:
         // a macro replacement list.
         Token next();
 
-        MacroActualArgumentListSyntax* parseActualArgumentList();
-        MacroFormalArgumentListSyntax* parseFormalArgumentList();
+        optional<MacroActualArgumentListSyntax> parseActualArgumentList();
+        MacroFormalArgumentListSyntax parseFormalArgumentList();
 
     private:
         template<typename TFunc>

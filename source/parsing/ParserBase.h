@@ -41,6 +41,9 @@ protected:
     Diagnostics& getDiagnostics();
     Diagnostic& addError(DiagCode code, SourceLocation location);
 
+    template<typename T>
+    T* heapCopy(const T& source) { return alloc.emplace<T>(source); }
+
     // Helper methods to manipulate the underlying token stream.
     Token peek(int offset);
     Token peek();
@@ -92,6 +95,11 @@ protected:
         Continue,
         Abort
     };
+
+    template<typename T, typename... Args>
+    T& allocate(Args&&... args) {
+        return *alloc.emplace<T>(std::forward<Args>(args)...);
+    }
 
     /// This is a generalized method for parsing a delimiter separated list of things
     /// with bookend tokens in a way that robustly handles bad tokens.

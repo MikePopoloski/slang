@@ -298,7 +298,7 @@ TEST_CASE("Streaming concatenation", "[parser:expressions]") {
     auto expr = parse(text);
 
     REQUIRE(expr->kind == SyntaxKind::StreamingConcatenationExpression);
-    CHECK(((StreamingConcatenationExpressionSyntax*)expr)->expressions[1]->withRange->range->selector->kind == SyntaxKind::AscendingRangeSelect);
+    CHECK(((StreamingConcatenationExpressionSyntax*)expr)->expressions[1]->withRange.range.selector->kind == SyntaxKind::AscendingRangeSelect);
     CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 }
@@ -315,7 +315,7 @@ TEST_CASE("Element Access", "[parser:expressions]") {
 void testElementRange(StringRef text, SyntaxKind kind) {
     auto expr = parse(text.toString());
     REQUIRE(expr->kind == SyntaxKind::ElementSelectExpression);
-    CHECK(((ElementSelectExpressionSyntax*)expr)->select->selector->kind == kind);
+    CHECK(((ElementSelectExpressionSyntax*)expr)->select.selector->kind == kind);
     CHECK(expr->toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());
     CHECK(diagnostics.empty());
 }
@@ -381,8 +381,8 @@ TEST_CASE("Conditional expression", "[parser:expressions]") {
     REQUIRE(expr->kind == SyntaxKind::ConditionalExpression);
 
     auto cond = (ConditionalExpressionSyntax*)expr;
-    REQUIRE(cond->predicate->conditions.count() == 1);
-    CHECK(cond->predicate->conditions[0]->expr->kind == SyntaxKind::LogicalOrExpression);
+    REQUIRE(cond->predicate.conditions.count() == 1);
+    CHECK(cond->predicate.conditions[0]->expr->kind == SyntaxKind::LogicalOrExpression);
 }
 
 TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
@@ -395,9 +395,9 @@ TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
     REQUIRE(expr->kind == SyntaxKind::ConditionalExpression);
 
     auto cond = (ConditionalExpressionSyntax*)expr;
-    REQUIRE(cond->predicate->conditions.count() == 2);
-    CHECK(cond->predicate->conditions[0]->expr->kind == SyntaxKind::IdentifierName);
-    CHECK(cond->predicate->conditions[0]->matchesClause->pattern->kind == SyntaxKind::ExpressionPattern);
+    REQUIRE(cond->predicate.conditions.count() == 2);
+    CHECK(cond->predicate.conditions[0]->expr->kind == SyntaxKind::IdentifierName);
+    CHECK(cond->predicate.conditions[0]->matchesClause->pattern->kind == SyntaxKind::ExpressionPattern);
 }
 
 TEST_CASE("Big expression", "[parser:expressions]") {

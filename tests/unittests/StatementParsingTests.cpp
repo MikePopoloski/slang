@@ -35,7 +35,7 @@ TEST_CASE("If statement", "[parser:statements]") {
 
     REQUIRE(stmt->kind == SyntaxKind::ConditionalStatement);
     CHECK(stmt->toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(((ConditionalStatementSyntax*)stmt)->predicate->conditions[0]->expr->kind == SyntaxKind::LogicalAndExpression);
+    CHECK(((ConditionalStatementSyntax*)stmt)->predicate.conditions[0]->expr->kind == SyntaxKind::LogicalAndExpression);
 }
 
 TEST_CASE("Case statement (empty)", "[parser:statements]") {

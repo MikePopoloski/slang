@@ -12,7 +12,7 @@ ExpressionSyntax expr
 
 AttributeSpecSyntax kind=AttributeSpec
 token name
-EqualsValueClauseSyntax value
+EqualsValueClauseSyntax? value
 
 AttributeInstanceSyntax kind=AttributeInstance
 token openParen
@@ -24,7 +24,7 @@ token name
 token colon
 
 StatementSyntax final=false
-NamedLabelSyntax label
+NamedLabelSyntax? label
 list<AttributeInstanceSyntax> attributes
 
 MemberSyntax final=false
@@ -96,7 +96,7 @@ PatternSyntax pattern
 
 ConditionalPatternSyntax kind=ConditionalPattern
 ExpressionSyntax expr
-MatchesClauseSyntax matchesClause
+MatchesClauseSyntax? matchesClause
 
 ConditionalPredicateSyntax kind=ConditionalPredicate
 separated_list<ConditionalPatternSyntax> conditions
@@ -462,13 +462,13 @@ ColonExpressionClauseSyntax maxSizeClause
 
 VariableDimensionSyntax kind=VariableDimension
 token openBracket
-DimensionSpecifierSyntax specifier
+DimensionSpecifierSyntax? specifier
 token closeBracket
 
 VariableDeclaratorSyntax kind=VariableDeclarator
 token name
 list<VariableDimensionSyntax> dimensions
-EqualsValueClauseSyntax initializer
+EqualsValueClauseSyntax? initializer
 
 DataDeclarationSyntax base=MemberSyntax kind=DataDeclaration
 tokenlist modifiers
@@ -638,11 +638,11 @@ SyntaxNode clause
 
 ActionBlockSyntax kind=ActionBlock
 StatementSyntax statement
-ElseClauseSyntax elseClause
+ElseClauseSyntax? elseClause
 
 ImmediateAssertionStatementSyntax base=StatementSyntax
 token keyword
-DeferredAssertionSyntax delay
+DeferredAssertionSyntax? delay
 ParenthesizedExpressionSyntax expr
 ActionBlockSyntax action
 
@@ -658,7 +658,7 @@ token closeParen
 
 PropertySpecSyntax kind=PropertySpec
 TimingControlSyntax clocking
-DisableIffSyntax disable
+DisableIffSyntax? disable
 ExpressionSyntax expr
 
 ConcurrentAssertionStatementSyntax base=StatementSyntax
@@ -691,7 +691,7 @@ token openParen
 ConditionalPredicateSyntax predicate
 token closeParen
 StatementSyntax statement
-ElseClauseSyntax elseClause
+ElseClauseSyntax? elseClause
 
 CaseItemSyntax final=false
 empty
@@ -823,10 +823,10 @@ token name
 
 BlockStatementSyntax base=StatementSyntax
 token begin
-NamedBlockClauseSyntax blockName
+NamedBlockClauseSyntax? blockName
 list<SyntaxNode> items
 token end
-NamedBlockClauseSyntax endBlockName
+NamedBlockClauseSyntax? endBlockName
 
 kindmap<BlockStatementSyntax>
 SequentialBlockStatement ParallelBlockStatement
@@ -946,7 +946,7 @@ token moduleKeyword
 token lifetime
 token name
 list<PackageImportDeclarationSyntax> imports
-ParameterPortListSyntax parameters
+ParameterPortListSyntax? parameters
 PortListSyntax ports
 token semi
 
@@ -957,7 +957,7 @@ ModuleDeclarationSyntax base=MemberSyntax
 ModuleHeaderSyntax header
 list<MemberSyntax> members
 token endmodule
-NamedBlockClauseSyntax blockName
+NamedBlockClauseSyntax? blockName
 
 kindmap<ModuleDeclarationSyntax>
 ModuleDeclaration InterfaceDeclaration ProgramDeclaration PackageDeclaration
@@ -1004,7 +1004,7 @@ token openParen
 ExpressionSyntax condition
 token closeParen
 MemberSyntax block
-ElseClauseSyntax elseClause
+ElseClauseSyntax? elseClause
 
 CaseGenerateSyntax base=MemberSyntax kind=CaseGenerate
 token keyword
@@ -1055,7 +1055,7 @@ token closeParen
 
 HierarchyInstantiationSyntax base=MemberSyntax kind=HierarchyInstantiation
 token type
-ParameterValueAssignmentSyntax parameters
+ParameterValueAssignmentSyntax? parameters
 separated_list<HierarchicalInstanceSyntax> instances
 token semi
 
@@ -1077,14 +1077,14 @@ token keyword
 token lifetime
 DataTypeSyntax returnType
 NameSyntax name
-FunctionPortListSyntax portList
+FunctionPortListSyntax? portList
 token semi
 
 FunctionDeclarationSyntax base=MemberSyntax
 FunctionPrototypeSyntax prototype
 list<SyntaxNode> items
 token end
-NamedBlockClauseSyntax endBlockName
+NamedBlockClauseSyntax? endBlockName
 
 kindmap<FunctionDeclarationSyntax>
 FunctionDeclaration TaskDeclaration
@@ -1118,7 +1118,7 @@ PropertySpecSyntax propertySpec
 ExpressionSyntax seqExpr
 token optionalSemi
 token end
-NamedBlockClauseSyntax endBlockName
+NamedBlockClauseSyntax? endBlockName
 
 ExtendsClauseSyntax kind=ExtendsClause
 token keyword
@@ -1140,7 +1140,7 @@ ImplementsClauseSyntax implementsClause
 token semi
 list<MemberSyntax> items
 token endClass
-NamedBlockClauseSyntax endBlockName
+NamedBlockClauseSyntax? endBlockName
 
 ClassPropertyDeclarationSyntax base=MemberSyntax kind=ClassPropertyDeclaration
 tokenlist qualifiers
@@ -1161,7 +1161,7 @@ token semi
 
 DefParamAssignmentSyntax kind=DefParamAssignment
 NameSyntax name
-EqualsValueClauseSyntax setter
+EqualsValueClauseSyntax? setter
 
 DefParamSyntax base=MemberSyntax kind=DefParam
 token defparam
@@ -1206,7 +1206,7 @@ token eventIdentifier
 token semi
 list<ClockingItemSyntax> items
 token endClocking
-NamedBlockClauseSyntax endBlockName
+NamedBlockClauseSyntax? endBlockName
 
 DPIImportExportSyntax base=MemberSyntax kind=DPIImportExport
 token keyword
@@ -1227,7 +1227,7 @@ ExpressionSyntax expr
 
 DistItemSyntax kind=DistItem
 ExpressionSyntax range
-DistWeightSyntax weight
+DistWeightSyntax? weight
 
 DistConstraintListSyntax kind=DistConstraintList
 token dist
@@ -1351,7 +1351,7 @@ SyntaxNode event
 token semi
 list<MemberSyntax> members
 token endgroup
-NamedBlockClauseSyntax endBlockName
+NamedBlockClauseSyntax? endBlockName
 
 CoverageOptionSyntax base=MemberSyntax kind=CoverageOption
 token option
@@ -1396,7 +1396,7 @@ CoverageBinsSyntax base=MemberSyntax kind=CoverageBins
 token wildcard
 token keyword
 token name
-ElementSelectSyntax selector
+ElementSelectSyntax? selector
 token equals
 CoverageBinInitializerSyntax initializer
 IffClauseSyntax iff
@@ -1446,7 +1446,7 @@ tokenlist tokens
 
 MacroFormalArgumentSyntax kind=MacroFormalArgument
 token name
-MacroArgumentDefaultSyntax defaultValue
+MacroArgumentDefaultSyntax? defaultValue
 
 MacroFormalArgumentListSyntax kind=MacroFormalArgumentList
 token openParen
@@ -1455,7 +1455,7 @@ token closeParen
 
 DefineDirectiveSyntax base=DirectiveSyntax kind=DefineDirective
 token name
-MacroFormalArgumentListSyntax formalArguments
+MacroFormalArgumentListSyntax? formalArguments
 tokenlist body
 token endOfDirective
 
@@ -1468,7 +1468,7 @@ separated_list<MacroActualArgumentSyntax> args
 token closeParen
 
 MacroUsageSyntax base=DirectiveSyntax kind=MacroUsage
-MacroActualArgumentListSyntax args
+MacroActualArgumentListSyntax? args
 
 TimescaleDirectiveSyntax base=DirectiveSyntax kind=TimescaleDirective
 token timeUnit

@@ -82,7 +82,7 @@ void ConstantEvaluator::evaluateStmt(const BoundStatement *tree) {
 }
 
 ConstantValue ConstantEvaluator::evaluateLiteral(const BoundLiteral* expr) {
-    switch (expr->syntax->kind) {
+    switch (expr->syntax.kind) {
         case SyntaxKind::UnbasedUnsizedLiteralExpression: {
             // In this case, the value depends on the final size, so we evaluate
             // the right value here
@@ -122,7 +122,7 @@ ConstantValue ConstantEvaluator::evaluateVariable(const BoundVariable* expr) {
 ConstantValue ConstantEvaluator::evaluateUnary(const BoundUnaryExpression* expr) {
     const auto v = evaluateExpr(expr->operand).integer();
 
-    switch (expr->syntax->kind) {
+    switch (expr->syntax.kind) {
         case SyntaxKind::UnaryPlusExpression: return v;
         case SyntaxKind::UnaryMinusExpression: return -v;
         case SyntaxKind::UnaryBitwiseNotExpression: return ~v;
@@ -142,7 +142,7 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression* exp
     const auto l = evaluateExpr(expr->left).integer();
     const auto r = evaluateExpr(expr->right).integer();
 
-    switch (expr->syntax->kind) {
+    switch (expr->syntax.kind) {
         case SyntaxKind::AddExpression: return l + r;
         case SyntaxKind::SubtractExpression: return l - r;
         case SyntaxKind::MultiplyExpression: return l * r;
@@ -232,7 +232,7 @@ ConstantValue ConstantEvaluator::evaluateNary(const BoundNaryExpression* expr) {
         operands.append(evaluateExpr(operand).integer());
 
     // TODO: add support for other Nary Expressions, like stream concatenation
-    switch(expr->syntax->kind) {
+    switch(expr->syntax.kind) {
         case SyntaxKind::ConcatenationExpression: return concatenate(ArrayRef<SVInt>(operands.begin(), operands.end()));
         DEFAULT_UNREACHABLE;
     }
@@ -249,7 +249,7 @@ ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpress
     const SVInt l = evaluateExpr(expr->left).integer();
     const SVInt r = rvalue.integer();
 
-    switch (expr->syntax->kind) {
+    switch (expr->syntax.kind) {
         case SyntaxKind::AssignmentExpression: lvalue.store(std::move(rvalue)); break;
         case SyntaxKind::AddAssignmentExpression: lvalue.store(l + r); break;
         case SyntaxKind::SubtractAssignmentExpression: lvalue.store(l - r); break;

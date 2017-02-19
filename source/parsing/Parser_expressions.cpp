@@ -202,7 +202,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
                 default: {
                     auto first = parseExpression();
                     if (!peek(TokenKind::OpenBrace))
-                        expr = parseConcatenation(openBrace, first);
+                        expr = alloc.emplace<ConcatenationExpressionSyntax>(parseConcatenation(openBrace, first));
                     else {
                         auto openBraceInner = consume();
                         auto concat = parseConcatenation(openBraceInner, nullptr);
@@ -221,7 +221,7 @@ ExpressionSyntax* Parser::parsePrimaryExpression() {
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto innerExpr = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            auto parenExpr = alloc.emplace<ParenthesizedExpressionSyntax>(openParen, innerExpr, closeParen);
+            auto parenExpr = ParenthesizedExpressionSyntax { openParen, innerExpr, closeParen };
             expr = alloc.emplace<SignedCastExpressionSyntax>(signing, apostrophe, parenExpr);
             break;
         }
@@ -323,7 +323,7 @@ ExpressionSyntax* Parser::parseInsideExpression(ExpressionSyntax* expr) {
     return alloc.emplace<InsideExpressionSyntax>(expr, inside, list);
 }
 
-OpenRangeListSyntax* Parser::parseOpenRangeList() {
+OpenRangeListSyntax Parser::parseOpenRangeList() {
     Token openBrace;
     Token closeBrace;
     ArrayRef<TokenOrSyntax> list;
@@ -339,22 +339,22 @@ OpenRangeListSyntax* Parser::parseOpenRangeList() {
         [this](bool) { return parseOpenRangeElement(); }
     );
 
-    return alloc.emplace<OpenRangeListSyntax>(openBrace, list, closeBrace);
+    return OpenRangeListSyntax { openBrace, list, closeBrace };
 }
 
 ExpressionSyntax* Parser::parseOpenRangeElement() {
     if (!peek(TokenKind::OpenBracket))
         return parseExpression();
-    return parseElementSelect();
+    return heapCopy(parseElementSelect());
 }
 
-ConcatenationExpressionSyntax* Parser::parseConcatenation(Token openBrace, ExpressionSyntax* first) {
+ConcatenationExpressionSyntax Parser::parseConcatenation(Token openBrace, ExpressionSyntax* first) {
     SmallVectorSized<TokenOrSyntax, 8> buffer;
     if (first) {
         // it's possible to have just one element in the concatenation list, so check for a close brace
         buffer.append(first);
         if (peek(TokenKind::CloseBrace))
-            return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), consume());
+            return ConcatenationExpressionSyntax { openBrace, buffer.copy(alloc), consume() };
 
         buffer.append(expect(TokenKind::Comma));
     }
@@ -368,7 +368,7 @@ ConcatenationExpressionSyntax* Parser::parseConcatenation(Token openBrace, Expre
         DiagCode::ExpectedExpression,
         [this](bool) { return parseExpression(); }
     );
-    return alloc.emplace<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
+    return ConcatenationExpressionSyntax { openBrace, buffer.copy(alloc), closeBrace };
 }
 
 StreamingConcatenationExpressionSyntax* Parser::parseStreamConcatenation(Token openBrace) {
@@ -509,11 +509,11 @@ AssignmentPatternItemSyntax* Parser::parseAssignmentPatternItem(ExpressionSyntax
     return alloc.emplace<AssignmentPatternItemSyntax>(key, colon, parseExpression());
 }
 
-ElementSelectSyntax* Parser::parseElementSelect() {
+ElementSelectSyntax Parser::parseElementSelect() {
     auto openBracket = expect(TokenKind::OpenBracket);
     auto selector = parseElementSelector();
     auto closeBracket = expect(TokenKind::CloseBracket);
-    return alloc.emplace<ElementSelectSyntax>(openBracket, selector, closeBracket);
+    return ElementSelectSyntax { openBracket, selector, closeBracket };
 }
 
 SelectorSyntax* Parser::parseElementSelector() {
@@ -737,7 +737,7 @@ PatternSyntax* Parser::parsePattern() {
     return alloc.emplace<ExpressionPatternSyntax>(parseSubExpression(ExpressionOptions::None, 0));
 }
 
-ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token& end) {
+ConditionalPredicateSyntax Parser::parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token& end) {
     SmallVectorSized<TokenOrSyntax, 4> buffer;
 
     MatchesClauseSyntax* matchesClause = nullptr;
@@ -759,7 +759,7 @@ ConditionalPredicateSyntax* Parser::parseConditionalPredicate(ExpressionSyntax* 
         [this](bool) { return parseConditionalPattern(); }
     );
 
-    return alloc.emplace<ConditionalPredicateSyntax>(buffer.copy(alloc));
+    return ConditionalPredicateSyntax { buffer.copy(alloc) };
 }
 
 ConditionalPatternSyntax* Parser::parseConditionalPattern() {
@@ -847,7 +847,7 @@ TimingControlSyntax* Parser::parseTimingControl() {
                     return alloc.emplace<ShortcutCycleDelayRangeSyntax>(hash, openBracket, op, expect(TokenKind::CloseBracket));
                 }
                 else {
-                    delay = parseElementSelect();
+                    delay = heapCopy(parseElementSelect());
                 }
             }
             else {

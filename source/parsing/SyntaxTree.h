@@ -16,7 +16,6 @@
 
 namespace slang {
 
-
 /// The SyntaxTree is the easiest way to interface with the lexer / preprocessor /
 /// parser stack. Give it some source text and it produces a parse tree.
 ///
@@ -67,7 +66,7 @@ public:
     /// Gets the source manager used to build the syntax tree.
     SourceManager& sourceManager() { return sourceMan; }
 
-    const SyntaxNode* root() const { return rootNode; }
+    const SyntaxNode& root() const { return *rootNode; }
 
     // This is a shared default source manager for cases where the user doesn't
     // care about managing the lifetime of loaded source. Note that all of
@@ -91,7 +90,7 @@ private:
         preprocessor.pushSource(source);
 
         Parser parser(preprocessor);
-        return SyntaxTree(guess ? parser.parseGuess() : parser.parseCompilationUnit(),
+        return SyntaxTree(guess ? &parser.parseGuess() : &parser.parseCompilationUnit(),
                           sourceManager, std::move(alloc), std::move(diagnostics));
     }
 

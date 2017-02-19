@@ -27,22 +27,22 @@ public:
     explicit Parser(Preprocessor& preprocessor);
 
     /// Parse a whole compilation unit.
-    CompilationUnitSyntax* parseCompilationUnit();
+    const CompilationUnitSyntax& parseCompilationUnit();
 
     /// Parse an expression / statement / module / class.
     /// These are mostly for testing; only use if you know that the
     /// source stream is currently looking at one of these.
     ExpressionSyntax* parseExpression();
     StatementSyntax* parseStatement(bool allowEmpty = true);
-    ModuleDeclarationSyntax* parseModule();
-    ClassDeclarationSyntax* parseClass();
+    const ModuleDeclarationSyntax& parseModule();
+    const ClassDeclarationSyntax& parseClass();
     MemberSyntax* parseMember();
 
     /// Generalized node parse function that tries to figure out what we're
     /// looking at and parse that specifically. A normal batch compile won't call
     /// this, since in a well formed program every file is a compilation unit,
     /// but for snippets of code this can be convenient.
-    const SyntaxNode* parseGuess();
+    const SyntaxNode& parseGuess();
 
 private:
     ExpressionSyntax* parseMinTypMaxExpression();
@@ -51,12 +51,12 @@ private:
     ExpressionSyntax* parseInsideExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parsePostfixExpression(ExpressionSyntax* expr);
     ExpressionSyntax* parseNewExpression(ExpressionSyntax* expr);
-    ConcatenationExpressionSyntax* parseConcatenation(Token openBrace, ExpressionSyntax* first);
+    ConcatenationExpressionSyntax parseConcatenation(Token openBrace, ExpressionSyntax* first);
     StreamingConcatenationExpressionSyntax* parseStreamConcatenation(Token openBrace);
     StreamExpressionSyntax* parseStreamExpression();
-    OpenRangeListSyntax* parseOpenRangeList();
+    OpenRangeListSyntax parseOpenRangeList();
     ExpressionSyntax* parseOpenRangeElement();
-    ElementSelectSyntax* parseElementSelect();
+    ElementSelectSyntax parseElementSelect();
     SelectorSyntax* parseElementSelector();
     NameSyntax* parseName(bool isForEach = false);
     NameSyntax* parseNamePart(bool isForEach);
@@ -67,34 +67,34 @@ private:
     AssignmentPatternExpressionSyntax* parseAssignmentPatternExpression(DataTypeSyntax* type);
     AssignmentPatternItemSyntax* parseAssignmentPatternItem(ExpressionSyntax* key);
     EventExpressionSyntax* parseEventExpression();
-    NamedBlockClauseSyntax* parseNamedBlockClause();
+    optional<NamedBlockClauseSyntax> parseNamedBlockClause();
     TimingControlSyntax* parseTimingControl();
-    ConditionalPredicateSyntax* parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token& end);
+    ConditionalPredicateSyntax parseConditionalPredicate(ExpressionSyntax* first, TokenKind endKind, Token& end);
     ConditionalPatternSyntax* parseConditionalPattern();
-    ConditionalStatementSyntax* parseConditionalStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority);
-    ElseClauseSyntax* parseElseClause();
-    CaseStatementSyntax* parseCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority, Token caseKeyword);
+    ConditionalStatementSyntax* parseConditionalStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority);
+    optional<ElseClauseSyntax> parseElseClause();
+    CaseStatementSyntax* parseCaseStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes, Token uniqueOrPriority, Token caseKeyword);
     DefaultCaseItemSyntax* parseDefaultCaseItem();
-    LoopStatementSyntax* parseLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    DoWhileStatementSyntax* parseDoWhileStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    ForLoopStatementSyntax* parseForLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    LoopStatementSyntax* parseLoopStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    DoWhileStatementSyntax* parseDoWhileStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    ForLoopStatementSyntax* parseForLoopStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
     SyntaxNode* parseForInitializer();
-    ForeachLoopListSyntax* parseForeachLoopVariables();
-    ForeachLoopStatementSyntax* parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    ReturnStatementSyntax* parseReturnStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    JumpStatementSyntax* parseJumpStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    ProceduralAssignStatementSyntax* parseProceduralAssignStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind);
-    ProceduralDeassignStatementSyntax* parseProceduralDeassignStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind);
-    StatementSyntax* parseDisableStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    StatementSyntax* parseAssertionStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    ConcurrentAssertionStatementSyntax* parseConcurrentAssertion(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    PropertySpecSyntax* parsePropertySpec();
+    ForeachLoopListSyntax parseForeachLoopVariables();
+    ForeachLoopStatementSyntax* parseForeachLoopStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    ReturnStatementSyntax* parseReturnStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    JumpStatementSyntax* parseJumpStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    ProceduralAssignStatementSyntax* parseProceduralAssignStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind);
+    ProceduralDeassignStatementSyntax* parseProceduralDeassignStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind kind);
+    StatementSyntax* parseDisableStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    StatementSyntax* parseAssertionStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    ConcurrentAssertionStatementSyntax* parseConcurrentAssertion(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    PropertySpecSyntax parsePropertySpec();
     ActionBlockSyntax* parseActionBlock();
-    BlockStatementSyntax* parseBlock(SyntaxKind blockKind, TokenKind endKind, NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    StatementSyntax* parseWaitStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    WaitOrderStatementSyntax* parseWaitOrderStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    RandCaseStatementSyntax* parseRandCaseStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
-    EventTriggerStatementSyntax* parseEventTriggerStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    BlockStatementSyntax* parseBlock(SyntaxKind blockKind, TokenKind endKind, const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    StatementSyntax* parseWaitStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    WaitOrderStatementSyntax* parseWaitOrderStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    RandCaseStatementSyntax* parseRandCaseStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
+    EventTriggerStatementSyntax* parseEventTriggerStatement(const optional<NamedLabelSyntax>& label, ArrayRef<AttributeInstanceSyntax*> attributes);
     Token parseSigning();
     VariableDimensionSyntax* parseDimension();
     ArrayRef<VariableDimensionSyntax*> parseDimensionList();
@@ -103,21 +103,21 @@ private:
     DataTypeSyntax* parseDataType(bool allowImplicit);
     DotMemberClauseSyntax* parseDotMemberClause();
     ArrayRef<AttributeInstanceSyntax*> parseAttributes();
-    AttributeSpecSyntax* parseAttributeSpec();
-    ModuleHeaderSyntax* parseModuleHeader();
-    ParameterPortListSyntax* parseParameterPortList();
-    ModuleDeclarationSyntax* parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
-    ModportItemSyntax* parseModportItem();
-    ModportDeclarationSyntax* parseModportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    AttributeSpecSyntax parseAttributeSpec();
+    ModuleHeaderSyntax parseModuleHeader();
+    optional<ParameterPortListSyntax> parseParameterPortList();
+    ModuleDeclarationSyntax& parseModule(ArrayRef<AttributeInstanceSyntax*> attributes);
+    ModportItemSyntax parseModportItem();
+    ModportDeclarationSyntax& parseModportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     NonAnsiPortSyntax* parseNonAnsiPort();
     AnsiPortSyntax* parseAnsiPort();
-    AnsiPortListSyntax* parseAnsiPortList(Token openParen);
+    AnsiPortListSyntax parseAnsiPortList(Token openParen);
     PortHeaderSyntax* parsePortHeader(Token direction);
-    PortDeclarationSyntax* parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
-    TimeUnitsDeclarationSyntax* parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    PortDeclarationSyntax& parsePortDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    TimeUnitsDeclarationSyntax& parseTimeUnitsDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ArrayRef<PackageImportDeclarationSyntax*> parsePackageImports();
     PackageImportDeclarationSyntax* parseImportDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
-    PackageImportItemSyntax* parsePackageImportItem();
+    PackageImportItemSyntax parsePackageImportItem();
     DPIImportExportSyntax* parseDPIImportExport(ArrayRef<AttributeInstanceSyntax*> attributes);
     AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
     PropertySequenceDeclarationSyntax* parsePropertySequenceDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
@@ -129,38 +129,40 @@ private:
     HierarchyInstantiationSyntax* parseHierarchyInstantiation(ArrayRef<AttributeInstanceSyntax*> attributes);
     HierarchicalInstanceSyntax* parseHierarchicalInstance();
     PortConnectionSyntax* parsePortConnection();
-    FunctionPortSyntax* parseFunctionPort();
-    FunctionPrototypeSyntax* parseFunctionPrototype(bool allowTasks = true);
-    FunctionDeclarationSyntax* parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
+    FunctionPortSyntax parseFunctionPort();
+    FunctionPrototypeSyntax parseFunctionPrototype(bool allowTasks = true);
+    FunctionDeclarationSyntax& parseFunctionDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, SyntaxKind functionKind, TokenKind endKind);
     Token parseLifetime();
     ArrayRef<SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end);
-    GenvarDeclarationSyntax* parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
-    LoopGenerateSyntax* parseLoopGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
-    IfGenerateSyntax* parseIfGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
-    CaseGenerateSyntax* parseCaseGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
+    GenvarDeclarationSyntax& parseGenvarDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    LoopGenerateSyntax& parseLoopGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
+    IfGenerateSyntax& parseIfGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
+    CaseGenerateSyntax& parseCaseGenerateConstruct(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseGenerateBlock();
     ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token& semi);
     ClassDeclarationSyntax* parseClassDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes, Token virtualOrInterface);
     MemberSyntax* parseClassMember();
-    ContinuousAssignSyntax* parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes);
-    VariableDeclaratorSyntax* parseVariableDeclarator(bool isFirst);
+    ContinuousAssignSyntax& parseContinuousAssign(ArrayRef<AttributeInstanceSyntax*> attributes);
+    VariableDeclaratorSyntax parseVariableDeclarator(bool isFirst);
     ArrayRef<TokenOrSyntax> parseOneVariableDeclarator();
     MemberSyntax* parseCoverageMember();
     BlockEventExpressionSyntax* parseBlockEventExpression();
     WithClauseSyntax* parseWithClause();
     CovergroupDeclarationSyntax* parseCovergroupDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
-    CoverpointSyntax* parseCoverpoint(ArrayRef<AttributeInstanceSyntax*> attributes, DataTypeSyntax* type, NamedLabelSyntax* label);
+    CoverpointSyntax* parseCoverpoint(ArrayRef<AttributeInstanceSyntax*> attributes, DataTypeSyntax* type, const optional<NamedLabelSyntax>& label);
     CoverageOptionSyntax* parseCoverageOption(ArrayRef<AttributeInstanceSyntax*> attributes);
     MemberSyntax* parseCoverpointMember();
     MemberSyntax* parseConstraint(ArrayRef<AttributeInstanceSyntax*> attributes, ArrayRef<Token> qualifiers);
     ConstraintBlockSyntax* parseConstraintBlock();
     ConstraintItemSyntax* parseConstraintItem(bool allowBlock);
-    DistConstraintListSyntax* parseDistConstraintList();
-    DistItemSyntax* parseDistItem();
+    DistConstraintListSyntax parseDistConstraintList();
+    DistItemSyntax parseDistItem();
     ExpressionSyntax* parseArrayOrRandomizeWithClause();
-    DefParamAssignmentSyntax* parseDefParamAssignment();
-    DefParamSyntax* parseDefParam(ArrayRef<AttributeInstanceSyntax*> attributes);
+    DefParamAssignmentSyntax parseDefParamAssignment();
+    DefParamSyntax& parseDefParam(ArrayRef<AttributeInstanceSyntax*> attributes);
     ExpressionSyntax* parseExpressionOrDist();
+
+    optional<EqualsValueClauseSyntax> parseEqualsValue(bool allowMinTypMax);
 
     bool isPortDeclaration();
     bool isNetDeclaration();

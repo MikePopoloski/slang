@@ -107,8 +107,8 @@ int TypeSymbol::width() const {
     }
 }
 
-AttributeSymbol::AttributeSymbol(const AttributeSpecSyntax* syntax, const TypeSymbol* type, ConstantValue value) :
-    Symbol(SymbolKind::Attribute, syntax->name.valueText(), syntax->name.location()),
+AttributeSymbol::AttributeSymbol(const AttributeSpecSyntax& syntax, const TypeSymbol* type, ConstantValue value) :
+    Symbol(SymbolKind::Attribute, syntax.name.valueText(), syntax.name.location()),
     syntax(syntax), type(type), value(value)
 {
 }

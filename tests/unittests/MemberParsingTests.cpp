@@ -12,83 +12,79 @@ BumpAllocator alloc;
 Diagnostics diagnostics;
 SourceManager sourceManager;
 
-ModuleDeclarationSyntax* parseModule(const std::string& text) {
+const ModuleDeclarationSyntax& parseModule(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
     preprocessor.pushSource(StringRef(text));
 
     Parser parser(preprocessor);
-    auto node = parser.parseModule();
-    REQUIRE(node);
-    return node;
+    return parser.parseModule();
 }
 
-ClassDeclarationSyntax* parseClass(const std::string& text) {
+const ClassDeclarationSyntax& parseClass(const std::string& text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(sourceManager, alloc, diagnostics);
     preprocessor.pushSource(StringRef(text));
 
     Parser parser(preprocessor);
-    auto node = parser.parseClass();
-    REQUIRE(node);
-    return node;
+    return parser.parseClass();
 }
 
 TEST_CASE("Simple module", "[parser:modules]") {
     auto& text = "module foo(); endmodule";
-    auto module = parseModule(text);
+    const auto& module = parseModule(text);
 
-    REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
+    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    CHECK(module->header->name.valueText() == "foo");
+    CHECK(module.header.name.valueText() == "foo");
 }
 
 TEST_CASE("Simple interface", "[parser:modules]") {
     auto& text = "interface foo(); endinterface";
-    auto module = parseModule(text);
+    const auto& module = parseModule(text);
 
-    REQUIRE(module->kind == SyntaxKind::InterfaceDeclaration);
-    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    REQUIRE(module.kind == SyntaxKind::InterfaceDeclaration);
+    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    CHECK(module->header->name.valueText() == "foo");
+    CHECK(module.header.name.valueText() == "foo");
 }
 
 TEST_CASE("Simple program", "[parser:modules]") {
     auto& text = "program foo(); endprogram";
-    auto module = parseModule(text);
+    const auto& module = parseModule(text);
 
-    REQUIRE(module->kind == SyntaxKind::ProgramDeclaration);
-    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    REQUIRE(module.kind == SyntaxKind::ProgramDeclaration);
+    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    CHECK(module->header->name.valueText() == "foo");
+    CHECK(module.header.name.valueText() == "foo");
 }
 
 TEST_CASE("Complex header", "[parser:modules]") {
     auto& text = "(* foo = 4 *) macromodule automatic foo import blah::*, foo::bar; #(foo = bar, parameter blah, stuff) (input wire i = 3); endmodule";
-    auto module = parseModule(text);
+    const auto& module = parseModule(text);
 
-    REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
+    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    CHECK(module->header->name.valueText() == "foo");
-    CHECK(module->attributes.count() == 1);
-    CHECK(module->header->imports[0]->items.count() == 2);
-    CHECK(module->header->parameters->declarations.count() == 3);
-    CHECK(module->header->ports->kind == SyntaxKind::AnsiPortList);
+    CHECK(module.header.name.valueText() == "foo");
+    CHECK(module.attributes.count() == 1);
+    CHECK(module.header.imports[0]->items.count() == 2);
+    CHECK(module.header.parameters->declarations.count() == 3);
+    CHECK(module.header.ports->kind == SyntaxKind::AnsiPortList);
 }
 
 TEST_CASE("Parameter ports", "[parser:modules]") {
     auto& text = "module foo #(foo, foo [3:1][9:0] = 4:3:9, parameter blah = blah, localparam type blah = shortint); endmodule";
-    auto module = parseModule(text);
+    const auto& module = parseModule(text);
 
-    REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
+    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
 
-    auto parameters = module->header->parameters->declarations;
+    auto parameters = module.header.parameters->declarations;
     CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(parameters[2]->kind == SyntaxKind::ParameterDeclaration);
@@ -100,15 +96,15 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
 
 const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) {
     auto fullText = "module foo; " + text + " endmodule";
-    auto module = parseModule(fullText);
+    const auto& module = parseModule(fullText);
 
-    REQUIRE(module->kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module->toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
+    REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
+    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
     CHECK(diagnostics.empty());
 
-    REQUIRE(module->members.count() == 1);
-    REQUIRE(module->members[0]->kind == kind);
-    return module->members[0];
+    REQUIRE(module.members.count() == 1);
+    REQUIRE(module.members[0]->kind == kind);
+    return module.members[0];
 }
 
 TEST_CASE("Module members", "[parser:modules]") {
@@ -131,15 +127,15 @@ TEST_CASE("Module members", "[parser:modules]") {
 
 const MemberSyntax* parseClassMember(const std::string& text, SyntaxKind kind) {
     auto fullText = "class foo; " + text + " endclass";
-    auto classDecl = parseClass(fullText);
+    const auto& classDecl = parseClass(fullText);
 
-    REQUIRE(classDecl->kind == SyntaxKind::ClassDeclaration);
-    CHECK(classDecl->toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
+    REQUIRE(classDecl.kind == SyntaxKind::ClassDeclaration);
+    CHECK(classDecl.toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
     CHECK(diagnostics.empty());
 
-    REQUIRE(classDecl->items.count() == 1);
-    REQUIRE(classDecl->items[0]->kind == kind);
-    return classDecl->items[0];
+    REQUIRE(classDecl.items.count() == 1);
+    REQUIRE(classDecl.items[0]->kind == kind);
+    return classDecl.items[0];
 }
 
 TEST_CASE("Class members", "[parser:class]") {

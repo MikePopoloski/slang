@@ -103,13 +103,13 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     REQUIRE(token.trivia().count() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
 
-    auto def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
-    CHECK(def->name.valueText() == "FOO");
-    CHECK(def->endOfDirective);
-    CHECK(def->directive);
-    CHECK(!def->formalArguments);
-    REQUIRE(def->body.count() == 3);
-    CHECK(def->body[1].kind == TokenKind::IntegerLiteral);
+    const auto& def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
+    CHECK(def.name.valueText() == "FOO");
+    CHECK(def.endOfDirective);
+    CHECK(def.directive);
+    CHECK(!def.formalArguments);
+    REQUIRE(def.body.count() == 3);
+    CHECK(def.body[1].kind == TokenKind::IntegerLiteral);
 }
 
 TEST_CASE("Macro define (function-like)", "[preprocessor]") {
@@ -122,15 +122,15 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     REQUIRE(token.trivia().count() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
 
-    auto def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
-    CHECK(def->name.valueText() == "FOO");
-    CHECK(def->endOfDirective);
-    CHECK(def->directive);
-    CHECK(def->formalArguments);
-    CHECK(def->formalArguments->args.count() == 1);
-    CHECK(def->formalArguments->args[0]->name.valueText() == "a");
-    REQUIRE(def->body.count() == 3);
-    CHECK(def->body[2].kind == TokenKind::IntegerLiteral);
+    const auto& def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
+    CHECK(def.name.valueText() == "FOO");
+    CHECK(def.endOfDirective);
+    CHECK(def.directive);
+    CHECK(def.formalArguments);
+    CHECK(def.formalArguments->args.count() == 1);
+    CHECK(def.formalArguments->args[0]->name.valueText() == "a");
+    REQUIRE(def.body.count() == 3);
+    CHECK(def.body[2].kind == TokenKind::IntegerLiteral);
 }
 
 TEST_CASE("Macro usage (undefined)", "[preprocessor]") {

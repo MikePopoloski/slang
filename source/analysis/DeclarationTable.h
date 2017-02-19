@@ -36,8 +36,8 @@ class DeclarationTable {
 public:
     DeclarationTable(Diagnostics& diagnostics);
 
-    void addMember(const MemberSyntax *member);
-    void addSyntaxTree(const SyntaxTree* tree);
+    void addMember(const MemberSyntax& member);
+    void addSyntaxTree(const SyntaxTree& tree);
 
     ArrayRef<const ModuleDeclarationSyntax*> getPackages();
     ArrayRef<const ModuleDeclarationSyntax*> getInterfaces();
@@ -56,18 +56,18 @@ private:
     };
 
     struct DeclAndFlag {
-        const ModuleDeclarationSyntax* decl;
+        const ModuleDeclarationSyntax& decl;
         bool instantiated = false;
 
-        DeclAndFlag(const ModuleDeclarationSyntax* decl) : decl(decl) {}
+        DeclAndFlag(const ModuleDeclarationSyntax& decl) : decl(decl) {}
     };
 
     using NameSet = std::unordered_set<StringRef>;
-    static void visit(const ModuleDeclarationSyntax* module, UnitDecls& unit, std::vector<NameSet>& scopeStack);
-    static void visit(const MemberSyntax* node, UnitDecls& unit, std::vector<NameSet>& scopeStack);
+    static void visit(const ModuleDeclarationSyntax& module, UnitDecls& unit, std::vector<NameSet>& scopeStack);
+    static void visit(const MemberSyntax& node, UnitDecls& unit, std::vector<NameSet>& scopeStack);
     static bool containsName(const std::vector<NameSet>& scopeStack, StringRef name);
 
-    bool addRootNode(UnitDecls& unit, const MemberSyntax* member);
+    bool addRootNode(UnitDecls& unit, const MemberSyntax& member);
 
     Diagnostics& diagnostics;
     Vector<UnitDecls> units;
