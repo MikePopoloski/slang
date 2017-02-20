@@ -22,7 +22,7 @@ void onSignal(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-    ScriptSession session(true);
+    ScriptSession session;
     HistEvent ev;
 
     signal(SIGINT, onSignal);
@@ -63,10 +63,14 @@ int main(int argc, char *argv[]) {
             history(cmdHistory, &ev, H_ENTER, snippet.c_str());
         }
 
-        try {
-            auto value = session.evalWithKind(snippet);
-            printf("Detected kind: %s\n", get<1>(value).c_str());
-            const SVInt *integer = get_if<SVInt>(&get<0>(value));
+        session.addToSyntaxTrees(snippet);
+        if (!session.lastSyntaxTree().diagnostics().empty()) {
+            printf("Parsing errors:\n%s",
+                   session.lastSyntaxTree().reportDiagnostics().c_str());
+        } else {
+            auto value = session.evalLastSyntaxTree();
+            printf("Detected kind: %s\n", session.lastSyntaxTreeKind());
+            const SVInt *integer = get_if<SVInt>(&value);
             if (integer) {
                 if (!integer->isSingleWord()) {
                     printf("Value (binary): %s\n", integer->toString(LiteralBase::Binary).c_str());
@@ -74,9 +78,6 @@ int main(int argc, char *argv[]) {
                     printf("Value: %lld\n", integer->getAssertInt64());
                 }
             }
-        } catch (Diagnostics &diags) {
-            printf("Errors when parsing:\n");
-            printf("%s\n", diagWriter.report(diags).c_str());
         }
     }
 

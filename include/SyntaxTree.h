@@ -40,16 +40,16 @@ public:
     }
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
-    static SyntaxTree fromText(StringRef text, bool throwDiagnostics = false) {
-        return fromText(text, getDefaultSourceManager(), throwDiagnostics);
+    static SyntaxTree fromText(StringRef text) {
+        return fromText(text, getDefaultSourceManager());
     }
 
     static SyntaxTree fromFile(StringRef path, SourceManager& sourceManager) {
         return create(sourceManager, sourceManager.readSource(path), false);
     }
 
-    static SyntaxTree fromText(StringRef text, SourceManager& sourceManager, bool throwDiagnostics = false) {
-        return create(sourceManager, sourceManager.assignText(text), true, throwDiagnostics);
+    static SyntaxTree fromText(StringRef text, SourceManager& sourceManager) {
+        return create(sourceManager, sourceManager.assignText(text), true);
     }
 
     /// Gets any diagnostics generated while parsing.
@@ -83,7 +83,7 @@ private:
         rootNode(root), sourceMan(sourceManager),
         alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)) {}
 
-    static SyntaxTree create(SourceManager& sourceManager, SourceBuffer source, bool guess, bool throwDiagnostics = false) {
+    static SyntaxTree create(SourceManager& sourceManager, SourceBuffer source, bool guess) {
         BumpAllocator alloc;
         Diagnostics diagnostics;
         Preprocessor preprocessor(sourceManager, alloc, diagnostics);
@@ -92,9 +92,6 @@ private:
         Parser parser(preprocessor);
         const SyntaxNode *node = guess ? parser.parseGuess() : parser.parseCompilationUnit();
 
-        if (throwDiagnostics && !diagnostics.empty()) {
-            throw std::move(diagnostics);
-        }
         return SyntaxTree(node, sourceManager, std::move(alloc), std::move(diagnostics));
     }
 

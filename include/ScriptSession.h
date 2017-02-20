@@ -18,19 +18,24 @@ namespace slang {
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
-    ScriptSession(bool throwDiagnostics = false) :
+    ScriptSession() :
         declTable(diagnostics),
         sem(alloc, diagnostics, declTable),
         scriptScope(sem.getSystemScope()),
-        binder(sem, &scriptScope),
-        throwDiagnostics(throwDiagnostics)
+        binder(sem, &scriptScope)
     {
     }
 
-    ConstantValue eval(const std::string& text) {
-        syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text), throwDiagnostics));
+    void addToSyntaxTrees(const std::string &text) {
+        syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text)));
+    }
 
-        auto root = syntaxTrees.back().root();
+    SyntaxTree &lastSyntaxTree() {
+        return syntaxTrees.back();
+    }
+
+    ConstantValue evalLastSyntaxTree() {
+        auto root = lastSyntaxTree().root();
         switch (root->kind) {
             case SyntaxKind::ParameterDeclarationStatement:
                 return evalParameterDeclaration(root->as<ParameterDeclarationStatementSyntax>());
@@ -72,7 +77,13 @@ public:
         return nullptr;
     }
 
-    std::string syntaxKindToString(SyntaxKind kind) {
+    ConstantValue eval(const std::string& text) {
+        addToSyntaxTrees(text);
+        return evalLastSyntaxTree();
+    }
+
+    const char* lastSyntaxTreeKind() {
+        SyntaxKind kind = lastSyntaxTree().root()->kind;
         switch (kind) {
             case SyntaxKind::DataDeclaration: return "Variable declaration";
             case SyntaxKind::FunctionDeclaration: return "Function";
@@ -85,11 +96,6 @@ public:
                 else if (isStatement(kind)) return "Statement";
                 else return "Unknown, possibly a duck";
         }
-    }
-
-    std::tuple<ConstantValue, std::string> evalWithKind(const std::string& text) {
-        ConstantValue val = eval(text);
-        return std::make_tuple(val, syntaxKindToString(syntaxTrees.back().root()->kind));
     }
 
     ConstantValue evalExpression(const ExpressionSyntax* expr) {
@@ -135,6 +141,8 @@ public:
         return nullptr;
     }
 
+    Diagnostics &getDiagnostics() { return diagnostics; }
+
     std::string reportDiagnostics() {
         return DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(diagnostics);
     }
@@ -152,7 +160,6 @@ public:
     Scope scriptScope;
     ExpressionBinder binder;
     ConstantEvaluator evaluator;
-    bool throwDiagnostics = false;
 };
 
 }

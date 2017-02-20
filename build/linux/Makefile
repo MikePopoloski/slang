@@ -40,10 +40,6 @@ $(ALL_CPP_OBJS): obj/%.o: $(TOP)/%.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
 
-$(SHELL_OBJECTS): obj/%.o: $(TOP)/%.cpp
-	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
-
 $(FMTLIB_OBJECTS): obj/%.o: $(TOP)/%.cc
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< $(INCLUDES) -o $@
