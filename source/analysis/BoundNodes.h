@@ -163,7 +163,7 @@ public:
     BoundStatement* child;
 
     BadBoundStatement(BoundStatement* child) :
-        BoundStatement(BoundNodeKind::Unknown, EmptyStatementSyntax{nullopt, nullptr, Token()}), child(child) {}
+        BoundStatement(BoundNodeKind::Unknown, EmptyStatementSyntax{ nullptr, nullptr, Token()}), child(child) {}
 };
 
 class BoundStatementList : public BoundStatement {
@@ -171,7 +171,7 @@ public:
     ArrayRef<const BoundStatement*> list;
 
     BoundStatementList(ArrayRef<const BoundStatement*> list) :
-        BoundStatement(BoundNodeKind::StatementList, EmptyStatementSyntax{ nullopt, nullptr, Token() }), list(list) {}
+        BoundStatement(BoundNodeKind::StatementList, EmptyStatementSyntax{ nullptr, nullptr, Token() }), list(list) {}
 };
 
 class BoundReturnStatement : public BoundStatement {
@@ -187,7 +187,7 @@ public:
     const VariableSymbol* symbol;
 
     BoundVariableDecl(const VariableSymbol* symbol) :
-        BoundStatement(BoundNodeKind::VariableDeclaration, EmptyStatementSyntax{ nullopt, nullptr, Token() }), symbol(symbol) {}
+        BoundStatement(BoundNodeKind::VariableDeclaration, EmptyStatementSyntax{ nullptr, nullptr, Token() }), symbol(symbol) {}
 };
 
 class BoundConditionalStatement : public BoundStatement {

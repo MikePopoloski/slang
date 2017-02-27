@@ -26,9 +26,6 @@ def main():
 
 namespace slang {
 
-using std::optional;
-using std::nullopt;
-
 ''')
 
 	currtype = None
@@ -108,14 +105,12 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 	outf.write('struct {} : public {} {{\n'.format(name, base))
 
 	pointerMembers = set()
-	optMembers = set()
 	processed_members = []
 	baseInitializers = ''
 	combined = members
 	if base != 'SyntaxNode':
 		processed_members.extend(alltypes[base][0])
 		pointerMembers = pointerMembers.union(alltypes[base][2])
-		optMembers = optMembers.union(alltypes[base][4])
 		baseInitializers = ', '.join([x[1] for x in alltypes[base][1]])
 		if baseInitializers:
 			baseInitializers = ', ' + baseInitializers
@@ -142,19 +137,11 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 			if m[0] not in alltypes:
 				raise Exception("Unknown type '{}'".format(m[0]))
 
-			final = alltypes[m[0]][3]
 			if optional:
-				if final:
-					typename = 'optional<' + m[0] + '>'
-					optMembers.add(m[1])
-				else:
-					typename = m[0] + '*'
+				typename = m[0] + '*'
 			else:
-				if alltypes[m[0]][3]:
-					typename = m[0]
-					pointerMembers.add(m[1])
-				else:
-					typename = m[0] + '*'
+				pointerMembers.add(m[1])
+				typename = m[0] + '&'
 
 		l = '{} {}'.format(typename, m[1])
 		processed_members.append(l)
@@ -180,7 +167,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 	if 'final' in tagdict and tagdict['final'] == 'false':
 		final = ''
 
-	alltypes[name] = (processed_members, members, pointerMembers, final, optMembers)
+	alltypes[name] = (processed_members, members, pointerMembers, final)
 
 	outf.write('\n')
 	outf.write('    {}({}{}) :\n'.format(name, kindArg, ', '.join(processed_members)))
@@ -200,11 +187,8 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
 			index = 0
 			for m in combined:
-				if m[1] in optMembers:
-					outf.write('            case {0}: return bool({1}) ? &*{1} : nullptr;\n'.format(index, m[1]))
-				else:
-					addr = '&' if m[1] in pointerMembers else ''
-					outf.write('            case {}: return {}{};\n'.format(index, addr, m[1]))
+				addr = '&' if m[1] in pointerMembers else ''
+				outf.write('            case {}: return {}{};\n'.format(index, addr, m[1]))
 				index += 1
 
 			outf.write('            default: return nullptr;\n')

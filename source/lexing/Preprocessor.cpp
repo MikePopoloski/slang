@@ -18,8 +18,8 @@ namespace slang {
 static Token::Info unusedTokenInfo;
 static Token intrinsicFileToken = Token(TokenKind::IntrinsicFileMacro, &unusedTokenInfo);
 static Token intrinsicLineToken = Token(TokenKind::IntrinsicLineMacro, &unusedTokenInfo);
-static DefineDirectiveSyntax fileDirective { Token(), Token(), nullopt, ArrayRef<Token>(&intrinsicFileToken, 1), Token() };
-static DefineDirectiveSyntax lineDirective { Token(), Token(), nullopt, ArrayRef<Token>(&intrinsicLineToken, 1), Token() };
+static DefineDirectiveSyntax fileDirective { Token(), Token(), nullptr, ArrayRef<Token>(&intrinsicFileToken, 1), Token() };
+static DefineDirectiveSyntax lineDirective { Token(), Token(), nullptr, ArrayRef<Token>(&intrinsicLineToken, 1), Token() };
 
 SyntaxKind getDirectiveKind(StringRef directive);
 
@@ -250,7 +250,7 @@ Trivia Preprocessor::handleResetAllDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleDefineDirective(Token directive) {
-    optional<MacroFormalArgumentListSyntax> formalArguments;
+    MacroFormalArgumentListSyntax* formalArguments = nullptr;
     bool noErrors = false;
 
     // next token should be the macro name
@@ -691,7 +691,7 @@ DefineDirectiveSyntax* Preprocessor::findMacro(Token directive) {
     return it->second;
 }
 
-optional<MacroActualArgumentListSyntax> Preprocessor::handleTopLevelMacro(Token directive) {
+MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive) {
     // if this assert fires, we failed to fully expand nested macros at a previous point
     ASSERT(expandedTokens.empty());
 
@@ -699,10 +699,10 @@ optional<MacroActualArgumentListSyntax> Preprocessor::handleTopLevelMacro(Token 
     // the directive is not found
     auto definition = findMacro(directive);
     if (!definition)
-        return nullopt;
+        return nullptr;
 
     // parse arguments if necessary
-    optional<MacroActualArgumentListSyntax> actualArgs;
+    MacroActualArgumentListSyntax* actualArgs = nullptr;
     if (definition->formalArguments) {
         MacroParser parser(*this);
         actualArgs = parser.parseActualArgumentList();
@@ -833,7 +833,7 @@ optional<MacroActualArgumentListSyntax> Preprocessor::handleTopLevelMacro(Token 
     return actualArgs;
 }
 
-bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, const optional<MacroActualArgumentListSyntax>& actualArgs, SmallVector<Token>& dest) {
+bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest) {
     // ignore empty macro
     if (macro->body.count() == 0)
         return true;
@@ -963,7 +963,7 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
                     return false;
 
                 // parse arguments if necessary
-                optional<MacroActualArgumentListSyntax> actualArgs;
+                MacroActualArgumentListSyntax* actualArgs = nullptr;
                 if (definition->formalArguments) {
                     actualArgs = parser.parseActualArgumentList();
                     if (!actualArgs)
@@ -1015,26 +1015,26 @@ Diagnostic& Preprocessor::addError(DiagCode code, SourceLocation location) {
     return diagnostics.add(code, location);
 }
 
-MacroFormalArgumentListSyntax Preprocessor::MacroParser::parseFormalArgumentList() {
+MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentList() {
     // parse all formal arguments
     currentMode = LexerMode::Directive;
     auto openParen = consume();
     SmallVectorSized<TokenOrSyntax, 16> arguments;
     parseArgumentList(arguments, [this]() { return parseFormalArgument(); });
 
-    return MacroFormalArgumentListSyntax {
+    return pp.alloc.emplace<MacroFormalArgumentListSyntax>(
         openParen,
         arguments.copy(pp.alloc),
         expect(TokenKind::CloseParenthesis)
-    };
+    );
 }
 
-optional<MacroActualArgumentListSyntax> Preprocessor::MacroParser::parseActualArgumentList() {
+MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentList() {
     // macro has arguments, so we expect to see them here
     currentMode = LexerMode::Normal;
     if (!peek(TokenKind::OpenParenthesis)) {
         pp.addError(DiagCode::ExpectedMacroArgs, peek().location());
-        return nullopt;
+        return nullptr;
     }
 
     auto openParen = consume();
@@ -1042,7 +1042,7 @@ optional<MacroActualArgumentListSyntax> Preprocessor::MacroParser::parseActualAr
     parseArgumentList(arguments, [this]() { return parseActualArgument(); });
 
     auto closeParen = expect(TokenKind::CloseParenthesis);
-    return MacroActualArgumentListSyntax { openParen, arguments.copy(pp.alloc), closeParen };
+    return pp.alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(pp.alloc), closeParen);
 }
 
 template<typename TFunc>
@@ -1074,10 +1074,10 @@ MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
         arg = expect(TokenKind::Identifier);
     }
 
-    optional<MacroArgumentDefaultSyntax> argDef;
+    MacroArgumentDefaultSyntax* argDef = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        argDef = MacroArgumentDefaultSyntax { equals, parseTokenList() };
+        argDef = pp.alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseTokenList());
     }
 
     return pp.alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef);

@@ -86,7 +86,7 @@ private:
     // evaluated parameter symbols for a particular module instance. Note that these parameter symbols
     // can potentially be shared by instances if they are in the same declaration.
     void makePublicParameters(Scope* declScope, const ModuleDeclarationSyntax& decl,
-                              const optional<ParameterValueAssignmentSyntax>& parameterAssignments,
+                              ParameterValueAssignmentSyntax* parameterAssignments,
                               Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel);
 
     // Process attributes and convert them to a normalized form. No specific handling is done for attribute

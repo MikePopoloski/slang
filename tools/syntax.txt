@@ -35,6 +35,9 @@ list<AttributeInstanceSyntax> attributes
 ArgumentSyntax final=false
 empty
 
+EmptyArgumentSyntax base=ArgumentSyntax kind=EmptyArgument
+empty
+
 OrderedArgumentSyntax base=ArgumentSyntax kind=OrderedArgument
 ExpressionSyntax expr
 
@@ -42,7 +45,7 @@ NamedArgumentSyntax base=ArgumentSyntax kind=NamedArgument
 token dot
 token name
 token openParen
-ExpressionSyntax expr
+ExpressionSyntax? expr
 token closeParen
 
 ArgumentListSyntax kind=ArgumentList
@@ -72,7 +75,7 @@ ExpressionSyntax expr
 TaggedPatternSyntax base=PatternSyntax kind=TaggedPattern
 token tagged
 token memberName
-PatternSyntax pattern
+PatternSyntax? pattern
 
 StructurePatternMemberSyntax final=false
 empty
@@ -197,7 +200,7 @@ ExpressionSyntax max
 TaggedUnionExpressionSyntax base=ExpressionSyntax kind=TaggedUnionExpression
 token tagged
 token member
-ExpressionSyntax expr
+ExpressionSyntax? expr
 
 OpenRangeListSyntax kind=OpenRangeList
 token openBrace
@@ -218,7 +221,7 @@ token colon
 ExpressionSyntax right
 
 AssignmentPatternExpressionSyntax base=PrimaryExpressionSyntax kind=AssignmentPatternExpression
-DataTypeSyntax type
+DataTypeSyntax? type
 AssignmentPatternSyntax pattern
 
 // ----- SELECTORS -----
@@ -239,7 +242,7 @@ SimpleRangeSelect AscendingRangeSelect DescendingRangeSelect
 
 ElementSelectSyntax base=ExpressionSyntax kind=ElementSelect
 token openBracket
-SelectorSyntax selector
+SelectorSyntax? selector
 token closeBracket
 
 // ----- NAMES -----
@@ -314,12 +317,12 @@ ElementSelectSyntax range
 
 StreamExpressionSyntax kind=StreamExpression
 ExpressionSyntax expression
-StreamExpressionWithRange withRange
+StreamExpressionWithRange? withRange
 
 StreamingConcatenationExpressionSyntax base=PrimaryExpressionSyntax kind=StreamingConcatenationExpression
 token openBrace
 token operatorToken
-ExpressionSyntax sliceSize
+ExpressionSyntax? sliceSize
 token innerOpenBrace
 separated_list<StreamExpressionSyntax> expressions
 token innerCloseBrace
@@ -333,14 +336,14 @@ token closeParen
 NewClassExpressionSyntax base=ExpressionSyntax kind=NewClassExpression
 ClassScopeSyntax classScope
 token newKeyword
-ArgumentListSyntax arguments
+ArgumentListSyntax? arguments
 
 NewArrayExpressionSyntax base=ExpressionSyntax kind=NewArrayExpression
 token newKeyword
 token openBracket
 ExpressionSyntax sizeExpr
 token closeBracket
-ParenthesizedExpressionSyntax initializer
+ParenthesizedExpressionSyntax? initializer
 
 NewExpressionSyntax base=ExpressionSyntax kind=NewExpression
 token newKeyword
@@ -360,7 +363,7 @@ token name
 InvocationExpressionSyntax base=ExpressionSyntax kind=InvocationExpression
 ExpressionSyntax left
 list<AttributeInstanceSyntax> attributes
-ArgumentListSyntax arguments
+ArgumentListSyntax? arguments
 
 CastExpressionSyntax base=ExpressionSyntax kind=CastExpression
 ExpressionSyntax left
@@ -421,7 +424,7 @@ token repeat
 token openParen
 ExpressionSyntax expr
 token closeParen
-TimingControlSyntax eventControl
+TimingControlSyntax? eventControl
 
 TimingControlExpressionSyntax base=ExpressionSyntax kind=TimingControlExpression
 TimingControlSyntax timing
@@ -458,7 +461,7 @@ ExpressionSyntax expr
 
 QueueDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=QueueDimensionSpecifier
 token dollar
-ColonExpressionClauseSyntax maxSizeClause
+ColonExpressionClauseSyntax? maxSizeClause
 
 VariableDimensionSyntax kind=VariableDimension
 token openBracket
@@ -513,7 +516,7 @@ token closeParen
 
 NetDeclarationSyntax base=MemberSyntax kind=NetDeclaration
 token netType
-NetStrengthSyntax strength
+NetStrengthSyntax? strength
 token expansionHint
 DataTypeSyntax type
 separated_list<VariableDeclaratorSyntax> declarators
@@ -594,7 +597,7 @@ StructType UnionType
 
 EnumTypeSyntax base=DataTypeSyntax kind=EnumType
 token keyword
-DataTypeSyntax baseType
+DataTypeSyntax? baseType
 token openBrace
 separated_list<VariableDeclaratorSyntax> members
 token closeBrace
@@ -614,8 +617,8 @@ VirtualInterfaceTypeSyntax base=DataTypeSyntax kind=VirtualInterfaceType
 token virtualKeyword
 token interfaceKeyword
 token name
-ParameterValueAssignmentSyntax parameters
-DotMemberClauseSyntax modport
+ParameterValueAssignmentSyntax? parameters
+DotMemberClauseSyntax? modport
 
 ImplicitTypeSyntax base=DataTypeSyntax kind=ImplicitType
 token signing
@@ -637,7 +640,7 @@ token elseKeyword
 SyntaxNode clause
 
 ActionBlockSyntax kind=ActionBlock
-StatementSyntax statement
+StatementSyntax? statement
 ElseClauseSyntax? elseClause
 
 ImmediateAssertionStatementSyntax base=StatementSyntax
@@ -657,7 +660,7 @@ ExpressionSyntax expr
 token closeParen
 
 PropertySpecSyntax kind=PropertySpec
-TimingControlSyntax clocking
+TimingControlSyntax? clocking
 DisableIffSyntax? disable
 ExpressionSyntax expr
 
@@ -704,7 +707,7 @@ SyntaxNode clause
 PatternCaseItemSyntax base=CaseItemSyntax kind=PatternCaseItem
 PatternSyntax pattern
 token tripleAnd
-ExpressionSyntax expr
+ExpressionSyntax? expr
 token colon
 StatementSyntax statement
 
@@ -774,7 +777,7 @@ StatementSyntax statement
 
 ReturnStatementSyntax base=StatementSyntax kind=ReturnStatement
 token returnKeyword
-ExpressionSyntax returnValue
+ExpressionSyntax? returnValue
 token semi
 
 JumpStatementSyntax base=StatementSyntax kind=JumpStatement
@@ -862,7 +865,7 @@ token endCase
 
 EventTriggerStatementSyntax base=StatementSyntax
 token trigger
-TimingControlSyntax timing
+TimingControlSyntax? timing
 NameSyntax name
 
 kindmap<EventTriggerStatementSyntax>
@@ -883,7 +886,7 @@ ExplicitNonAnsiPortSyntax base=NonAnsiPortSyntax kind=ExplicitNonAnsiPort
 token dot
 token name
 token openParen
-ExpressionSyntax expr
+ExpressionSyntax? expr
 token closeParen
 
 NonAnsiPortListSyntax base=PortListSyntax kind=NonAnsiPortList
@@ -896,17 +899,17 @@ list<AttributeInstanceSyntax> attributes
 
 InterfacePortHeaderSyntax base=PortHeaderSyntax kind=InterfacePortHeader
 token nameOrKeyword
-DotMemberClauseSyntax modport
+DotMemberClauseSyntax? modport
 
 VariablePortHeaderSyntax base=PortHeaderSyntax kind=VariablePortHeader
 token direction
 token varKeyword
-DataTypeSyntax type
+DataTypeSyntax? type
 
 InterconnectPortHeaderSyntax base=PortHeaderSyntax kind=InterconnectPortHeader
 token direction
 token interconnect
-DataTypeSyntax type
+DataTypeSyntax? type
 
 NetPortHeaderSyntax base=PortHeaderSyntax kind=NetPortHeader
 token direction
@@ -922,7 +925,7 @@ token direction
 token dot
 token name
 token openParen
-ExpressionSyntax expr
+ExpressionSyntax? expr
 token closeParen
 
 AnsiPortListSyntax base=PortListSyntax kind=AnsiPortList
@@ -947,7 +950,7 @@ token lifetime
 token name
 list<PackageImportDeclarationSyntax> imports
 ParameterPortListSyntax? parameters
-PortListSyntax ports
+PortListSyntax? ports
 token semi
 
 kindmap<ModuleHeaderSyntax>
@@ -1015,12 +1018,12 @@ list<CaseItemSyntax> items
 token endCase
 
 GenerateBlockSyntax base=MemberSyntax kind=GenerateBlock
-NamedLabelSyntax label
+NamedLabelSyntax? label
 token begin
-NamedBlockClauseSyntax beginName
+NamedBlockClauseSyntax? beginName
 list<MemberSyntax> members
 token end
-NamedBlockClauseSyntax endName
+NamedBlockClauseSyntax? endName
 
 DividerClauseSyntax kind=DividerClause
 token divide
@@ -1029,7 +1032,7 @@ token value
 TimeUnitsDeclarationSyntax base=MemberSyntax kind=TimeUnitsDeclaration
 token keyword
 token time
-DividerClauseSyntax divider
+DividerClauseSyntax? divider
 token semi
 
 PortConnectionSyntax final=false
@@ -1041,7 +1044,9 @@ ExpressionSyntax expr
 NamedPortConnectionSyntax base=PortConnectionSyntax kind=NamedPortConnection
 token dot
 token name
-ParenthesizedExpressionSyntax connection
+token openParen
+ExpressionSyntax? expr
+token closeParen
 
 WildcardPortConnectionSyntax base=PortConnectionSyntax kind=WildcardPortConnection
 token dotStar
@@ -1064,7 +1069,7 @@ list<AttributeInstanceSyntax> attributes
 token constKeyword
 token direction
 token varKeyword
-DataTypeSyntax dataType
+DataTypeSyntax? dataType
 VariableDeclaratorSyntax declarator
 
 FunctionPortListSyntax kind=FunctionPortList
@@ -1075,7 +1080,7 @@ token closeParen
 FunctionPrototypeSyntax kind=FunctionPrototype
 token keyword
 token lifetime
-DataTypeSyntax returnType
+DataTypeSyntax? returnType
 NameSyntax name
 FunctionPortListSyntax? portList
 token semi
@@ -1104,18 +1109,18 @@ token closeParen
 LetDeclarationSyntax kind=LetDeclaration base=MemberSyntax
 token let
 token identifier
-AssertionItemPortListSyntax portList
+AssertionItemPortListSyntax? portList
 EqualsValueClauseSyntax initializer
 token semi
 
 PropertySequenceDeclarationSyntax kind=PropertySequenceDeclaration base=MemberSyntax
 token start
 token name
-AssertionItemPortListSyntax portList
+AssertionItemPortListSyntax? portList
 token semi
 list<DataDeclarationSyntax> assertionVariables
-PropertySpecSyntax propertySpec
-ExpressionSyntax seqExpr
+PropertySpecSyntax? propertySpec
+ExpressionSyntax? seqExpr
 token optionalSemi
 token end
 NamedBlockClauseSyntax? endBlockName
@@ -1123,7 +1128,7 @@ NamedBlockClauseSyntax? endBlockName
 ExtendsClauseSyntax kind=ExtendsClause
 token keyword
 NameSyntax baseName
-ArgumentListSyntax arguments
+ArgumentListSyntax? arguments
 
 ImplementsClauseSyntax kind=ImplementsClause
 token keyword
@@ -1134,9 +1139,9 @@ token virtualOrInterface
 token classKeyword
 token lifetime
 token name
-ParameterPortListSyntax parameters
-ExtendsClauseSyntax extendsClause
-ImplementsClauseSyntax implementsClause
+ParameterPortListSyntax? parameters
+ExtendsClauseSyntax? extendsClause
+ImplementsClauseSyntax? implementsClause
 token semi
 list<MemberSyntax> items
 token endClass
@@ -1180,28 +1185,28 @@ token semi
 ClockingSkewSyntax kind=ClockingSkew
 token edge
 token hash
-ExpressionSyntax value
+ExpressionSyntax? value
 
 ClockingDirectionSyntax kind=ClockingDirection
 token input
-ClockingSkewSyntax inputSkew
+ClockingSkewSyntax? inputSkew
 token output
-ClockingSkewSyntax ouputSkew
+ClockingSkewSyntax? ouputSkew
 token inout
 
 ClockingItemSyntax kind=ClockingItem
 token defaultKeyword
-ClockingDirectionSyntax direction
+ClockingDirectionSyntax? direction
 separated_list<AttributeSpecSyntax> assignments
 token semi
-MemberSyntax declaration
+MemberSyntax? declaration
 
 ClockingDeclarationSyntax base=MemberSyntax kind=ClockingDeclaration
 token globalOrDefault
 token clocking
 token blockName
 token at
-ParenthesizedEventExpressionSyntax event
+ParenthesizedEventExpressionSyntax? event
 token eventIdentifier
 token semi
 list<ClockingItemSyntax> items
@@ -1264,7 +1269,7 @@ token openParen
 ExpressionSyntax condition
 token closeParen
 ConstraintItemSyntax constraints
-ElseConstraintClauseSyntax elseClause
+ElseConstraintClauseSyntax? elseClause
 
 LoopConstraintSyntax base=ConstraintItemSyntax kind=LoopConstraint
 token foreachKeyword
@@ -1314,7 +1319,7 @@ token closeParen
 
 RandomizeMethodWithClauseSyntax base=ExpressionSyntax kind=RandomizeMethodWithClause
 token with
-IdentifierListSyntax names
+IdentifierListSyntax? names
 ConstraintBlockSyntax constraints
 
 // ----- COVER GROUPS -----
@@ -1346,8 +1351,8 @@ token closeParen
 CovergroupDeclarationSyntax base=MemberSyntax kind=CovergroupDeclaration
 token covergroup
 token name
-AnsiPortListSyntax portList
-SyntaxNode event
+AnsiPortListSyntax? portList
+SyntaxNode? event
 token semi
 list<MemberSyntax> members
 token endgroup
@@ -1362,8 +1367,8 @@ ExpressionSyntax expr
 token semi
 
 CoverpointSyntax base=MemberSyntax kind=Coverpoint
-DataTypeSyntax type
-NamedLabelSyntax label
+DataTypeSyntax? type
+NamedLabelSyntax? label
 token coverpoint
 ExpressionSyntax expr
 token openBrace
@@ -1380,11 +1385,11 @@ token sequenceKeyword
 
 ExpressionCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=ExpressionCoverageBinInitializer
 ExpressionSyntax expr
-WithClauseSyntax withClause
+WithClauseSyntax? withClause
 
 RangeCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=RangeCoverageBinInitializer
 OpenRangeListSyntax ranges
-WithClauseSyntax withClause
+WithClauseSyntax? withClause
 
 IffClauseSyntax kind=IffClause
 token iff
@@ -1399,7 +1404,7 @@ token name
 ElementSelectSyntax? selector
 token equals
 CoverageBinInitializerSyntax initializer
-IffClauseSyntax iff
+IffClauseSyntax? iff
 token semi
 
 // ----- TOP LEVEL -----

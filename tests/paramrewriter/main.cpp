@@ -95,7 +95,7 @@ public:
         }
 
         VariableDeclaratorSyntax newDecl = declarator;
-        newDecl.initializer = nullopt;
+        newDecl.initializer = nullptr;
         visitDefault(newDecl);
 
         buffer.appendRange(StringRef(" = "));
@@ -113,7 +113,7 @@ public:
                 index = permutations.size();
 
             HierarchyInstantiationSyntax newSyntax = instantiation;
-            newSyntax.parameters = nullopt;
+            newSyntax.parameters = nullptr;
             newSyntax.type = identifier(module->name.toString() + to_string(index),
                 instantiation.type.trivia());
             visitDefault(newSyntax);

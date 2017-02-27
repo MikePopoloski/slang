@@ -88,9 +88,9 @@ SemanticModel::SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, Dec
 InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSyntax& syntax, Scope *definitions) {
     Scope* scope = alloc.emplace<Scope>();
     if (definitions) scope->addParentScope(definitions);
-    makePublicParameters(scope, syntax, nullopt, definitions, SourceLocation(), true);
+    makePublicParameters(scope, syntax, nullptr, definitions, SourceLocation(), true);
     const ModuleSymbol* module = makeModule(syntax, scope);
-    return alloc.emplace<InstanceSymbol>(module, HierarchyInstantiationSyntax{nullptr, Token(), nullopt, nullptr, Token()}, module->name, SourceLocation(), true);
+    return alloc.emplace<InstanceSymbol>(module, HierarchyInstantiationSyntax{nullptr, Token(), nullptr, nullptr, Token()}, module->name, SourceLocation(), true);
 }
 
 void SemanticModel::makePackages() {
@@ -139,7 +139,7 @@ void SemanticModel::makePackages() {
             auto paramSym = sym->as<ParameterSymbol>();
             for (auto paramSyntax : paramSym.syntax.declarators)
                 if (paramSyntax->name.valueText() == paramSym.name)
-                    evaluateParameter(&paramSym, *paramSyntax->initializer->expr, pkgSym.scope);
+                    evaluateParameter(&paramSym, paramSyntax->initializer->expr, pkgSym.scope);
         }
     }
 }
@@ -275,8 +275,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax& syntax, Sc
             for (auto member : enumSyntax.members) {
                 //TODO: add each member to the scope
                 if (member->initializer) {
-                    ASSERT(member->initializer->expr);
-                    auto bound = binder.bindConstantExpression(*member->initializer->expr);
+                    auto bound = binder.bindConstantExpression(member->initializer->expr);
                     nextVal = std::get<SVInt>(evaluateConstant(bound));
                 }
                 EnumValueSymbol *valSymbol = alloc.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location(), &baseType, nextVal);
@@ -288,7 +287,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax& syntax, Sc
         }
         case SyntaxKind::TypedefDeclaration: {
             const auto& tds = syntax.as<TypedefDeclarationSyntax>();
-            auto type = makeTypeSymbol(*tds.type, scope);
+            auto type = makeTypeSymbol(tds.type, scope);
             return alloc.emplace<TypeAliasSymbol>(syntax, tds.name.location(), type, tds.name.valueText());
         }
         default:
@@ -307,7 +306,7 @@ const SubroutineSymbol* SemanticModel::makeSubroutine(const FunctionDeclarationS
     bool isTask = syntax.kind == SyntaxKind::TaskDeclaration;
 
     // For now only support simple function names
-    auto name = proto.name->getFirstToken();
+    auto name = proto.name.getFirstToken();
     auto funcScope = alloc.emplace<Scope>(scope);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
@@ -387,7 +386,7 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
     for (const VariableDimensionSyntax* dim : dimensions) {
         const SelectorSyntax* selector;
         if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
-            (selector = dim->specifier->as<RangeDimensionSpecifierSyntax>().selector)->kind != SyntaxKind::SimpleRangeSelect) {
+            (selector = &dim->specifier->as<RangeDimensionSpecifierSyntax>().selector)->kind != SyntaxKind::SimpleRangeSelect) {
 
             auto& diag = diagnostics.add(DiagCode::PackedDimRequiresConstantRange, dim->specifier->getFirstToken().location());
             diag << dim->specifier->sourceRange();
@@ -395,8 +394,8 @@ bool SemanticModel::evaluateConstantDims(const SyntaxList<VariableDimensionSynta
         }
 
         const RangeSelectSyntax& range = selector->as<RangeSelectSyntax>();
-        auto msbExpr = binder.bindConstantExpression(*range.left);
-        auto lsbExpr = binder.bindConstantExpression(*range.right);
+        auto msbExpr = binder.bindConstantExpression(range.left);
+        auto lsbExpr = binder.bindConstantExpression(range.right);
         if (msbExpr->bad() || lsbExpr->bad())
             return false;
 
@@ -469,7 +468,7 @@ bool SemanticModel::getParamDecls(const ParameterDeclarationSyntax& syntax, std:
         else {
             ExpressionSyntax* init = nullptr;
             if (declarator->initializer)
-                init = declarator->initializer->expr;
+                init = &declarator->initializer->expr;
             else if (local)
                 diagnostics.add(DiagCode::LocalParamNoInitializer, location);
             else if (bodyParam)
@@ -483,14 +482,14 @@ bool SemanticModel::getParamDecls(const ParameterDeclarationSyntax& syntax, std:
 void SemanticModel::evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax& initializer, Scope* scope) {
     // If no type is given, infer the type from the initializer
     ExpressionBinder binder { *this, scope };
-    DataTypeSyntax* typeSyntax = symbol->syntax.type;
-    if (!typeSyntax) {
+    DataTypeSyntax& typeSyntax = symbol->syntax.type;
+    if (typeSyntax.kind == SyntaxKind::ImplicitType) {
         BoundExpression* expr = binder.bindSelfDeterminedExpression(initializer);
         symbol->type = expr->type;
         symbol->value = evaluateConstant(expr);
     }
     else {
-        const TypeSymbol* type = makeTypeSymbol(*typeSyntax, scope);
+        const TypeSymbol* type = makeTypeSymbol(typeSyntax, scope);
         BoundExpression* expr = binder.bindAssignmentLikeContext(initializer, symbol->location, type);
         symbol->type = type;
         symbol->value = evaluateConstant(expr);
@@ -552,27 +551,24 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax& synt
                     diag << dim->specifier->sourceRange();
                     return;
                 }
-                auto selector = dim->specifier->as<RangeDimensionSpecifierSyntax>().selector;
-                ASSERT(selector);
-                switch (selector->kind) {
+                const auto& selector = dim->specifier->as<RangeDimensionSpecifierSyntax>().selector;
+                switch (selector.kind) {
                     case SyntaxKind::SimpleRangeSelect: {
-                        const auto& left = selector->as<RangeSelectSyntax>().left;
-                        ASSERT(left);
-                        auto leftBound = binder.bindConstantExpression(*left);
+                        const auto& left = selector.as<RangeSelectSyntax>().left;
+                        auto leftBound = binder.bindConstantExpression(left);
                         auto leftValue = evaluateConstant(leftBound);
-                        if (!left || leftBound->bad() || leftValue.bad()) {
-                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, left->getFirstToken().location());
-                            diag << left->sourceRange();
+                        if (leftBound->bad() || leftValue.bad()) {
+                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, left.getFirstToken().location());
+                            diag << left.sourceRange();
                             return;
 
                         }
-                        const auto& right = selector->as<RangeSelectSyntax>().right;
-                        ASSERT(right);
-                        auto rightBound = binder.bindConstantExpression(*right);
+                        const auto& right = selector.as<RangeSelectSyntax>().right;
+                        auto rightBound = binder.bindConstantExpression(right);
                         auto rightValue = evaluateConstant(rightBound);
-                        if (!right || rightBound->bad() || rightValue.bad()) {
-                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, right->getFirstToken().location());
-                            diag << right->sourceRange();
+                        if (rightBound->bad() || rightValue.bad()) {
+                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, right.getFirstToken().location());
+                            diag << right.sourceRange();
                             return;
 
                         }
@@ -580,13 +576,12 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax& synt
                         break;
                     }
                     case SyntaxKind::BitSelect: {
-                        auto expr = selector->as<BitSelectSyntax>().expr;
-                        ASSERT(expr);
-                        auto exprBound = binder.bindConstantExpression(*expr);
+                        const auto& expr = selector.as<BitSelectSyntax>().expr;
+                        auto exprBound = binder.bindConstantExpression(expr);
                         auto exprValue = evaluateConstant(exprBound);
-                        if (!expr || exprBound->bad() || exprValue.bad()) {
-                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, expr->getFirstToken().location());
-                            diag << expr->sourceRange();
+                        if (exprBound->bad() || exprValue.bad()) {
+                            auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequiresConstRange, expr.getFirstToken().location());
+                            diag << expr.sourceRange();
                             return;
 
                         }
@@ -594,8 +589,8 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax& synt
                         break;
                     }
                     default: {
-                        auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequired, selector->getFirstToken().location());
-                        diag << selector->sourceRange();
+                        auto& diag = diagnostics.add(DiagCode::UnpackedDimensionRequired, selector.getFirstToken().location());
+                        diag << selector.sourceRange();
                         return;
                     }
                 }
@@ -612,16 +607,16 @@ void SemanticModel::handleInstantiation(const HierarchyInstantiationSyntax& synt
 void SemanticModel::handleIfGenerate(const IfGenerateSyntax& syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
     // Evaluate the condition to decide if we should take the branch.
     ExpressionBinder binder { *this, scope };
-    auto expr = binder.bindConstantExpression(*syntax.condition);
+    auto expr = binder.bindConstantExpression(syntax.condition);
     if (expr->bad())
         return;
 
     // TODO: don't assume the expression type here
     const SVInt& value = std::get<SVInt>(evaluateConstant(expr));
     if ((logic_t)value)
-        handleGenerateBlock(*syntax.block, results, scope);
+        handleGenerateBlock(syntax.block, results, scope);
     else if (syntax.elseClause)
-        handleGenerateBlock(syntax.elseClause->clause->as<MemberSyntax>(), results, scope);
+        handleGenerateBlock(syntax.elseClause->clause.as<MemberSyntax>(), results, scope);
 }
 
 void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax& syntax, SmallVector<const Symbol*>& results, const Scope* scope) {
@@ -630,7 +625,7 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax& syntax, SmallVe
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    auto initial = evaluateConstant(*syntax.initialExpr, scope);
+    auto initial = evaluateConstant(syntax.initialExpr, scope);
     if (!initial)
         return;
 
@@ -640,8 +635,8 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax& syntax, SmallVe
     iterScope.add(&local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    auto stopExpr = bindConstantExpression(*syntax.stopExpr, &iterScope);
-    auto iterExpr = bindConstantExpression(*syntax.iterationExpr, &iterScope);
+    auto stopExpr = bindConstantExpression(syntax.stopExpr, &iterScope);
+    auto iterExpr = bindConstantExpression(syntax.iterationExpr, &iterScope);
 
     // Create storage for the iteration variable.
     ConstantEvaluator ce;
@@ -654,12 +649,12 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax& syntax, SmallVe
         Scope localScope { &iterScope };
         ParameterSymbol iterParam {
             syntax.identifier.valueText(),
-            syntax.identifier.location(), ParameterDeclarationSyntax{Token(), nullptr, nullptr}, VariableDeclaratorSyntax{Token(), nullptr, nullopt}, true
+            syntax.identifier.location(), ParameterDeclarationSyntax{Token(), ImplicitTypeSyntax{Token(), nullptr}, nullptr}, VariableDeclaratorSyntax{Token(), nullptr, nullptr }, true
         };
         iterParam.value = genvar;
         localScope.add(&iterParam);
 
-        handleGenerateBlock(*syntax.block, results, &localScope);
+        handleGenerateBlock(syntax.block, results, &localScope);
     }
 }
 
@@ -721,7 +716,7 @@ void SemanticModel::handleDataDeclaration(const DataDeclarationSyntax& syntax, S
                 break;
         }
     }
-    const TypeSymbol *typeSymbol = makeTypeSymbol(*syntax.type, scope);
+    const TypeSymbol *typeSymbol = makeTypeSymbol(syntax.type, scope);
 
     for (auto varDeclarator : syntax.declarators) {
         handleVariableDeclarator(*varDeclarator, results, scope, modifiers, typeSymbol);
@@ -772,7 +767,7 @@ void SemanticModel::handleGenvarDecl(const GenvarDeclarationSyntax& syntax, Smal
 }
 
 void SemanticModel::makePublicParameters(Scope* declScope, const ModuleDeclarationSyntax& decl,
-                                         const optional<ParameterValueAssignmentSyntax>& parameterAssignments,
+                                         ParameterValueAssignmentSyntax* parameterAssignments,
                                          Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel) {
     // If we were given a set of parameter assignments, build up some data structures to
     // allow us to easily index them. We need to handle both ordered assignment as well as
@@ -846,7 +841,7 @@ void SemanticModel::makePublicParameters(Scope* declScope, const ModuleDeclarati
                 scope = declScope;
             }
             else {
-                initializer = orderedParams[orderedIndex++]->expr;
+                initializer = &orderedParams[orderedIndex++]->expr;
                 scope = instantiationScope;
             }
 
@@ -953,9 +948,9 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
             const auto& type = port->as<ImplicitAnsiPortSyntax>();
             const auto& decl = type.declarator;
             portNames.emplace_back(decl.name.valueText());
-            switch (type.header->kind) {
+            switch (type.header.kind) {
                 case SyntaxKind::InterfacePortHeader: {
-                    const auto& ifType = type.header->as<InterfacePortHeaderSyntax>();
+                    const auto& ifType = type.header.as<InterfacePortHeaderSyntax>();
                     ASSERT(ifType.nameOrKeyword.kind != TokenKind::InterfaceKeyword); // TODO: add support for generic interface ports
                     // TODO: technically the interface should be looked up in the scope of the instance module,
                     // TODO: but since we are connecting it, it should also be visible in the instance
@@ -967,21 +962,21 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
                     break;
                 }
                 case SyntaxKind::VariablePortHeader: {
-                    const auto& ifType = type.header->as<VariablePortHeaderSyntax>();
+                    const auto& ifType = type.header.as<VariablePortHeaderSyntax>();
                     if (ifType.direction) continue; // not an interface
                     if (ifType.varKeyword) continue; // TODO: check for interface keyword
                     if (!ifType.type) continue;
                     if (ifType.type->kind != SyntaxKind::NamedType) continue;
-                    auto name = ifType.type->as<NamedTypeSyntax>().name;
+                    const auto& name = ifType.type->as<NamedTypeSyntax>().name;
                     const Symbol *typeSym = nullptr;
-                    switch (name->kind) {
+                    switch (name.kind) {
                         case SyntaxKind::IdentifierName: {
                             // TODO: need to lookup the name of the interface in the scope of the module which is empty
-                            typeSym = instantiationScope->lookup(name->as<IdentifierNameSyntax>().identifier.valueText());
+                            typeSym = instantiationScope->lookup(name.as<IdentifierNameSyntax>().identifier.valueText());
                             break;
                         }
                         case SyntaxKind::ScopedName: {
-                            auto boundExpr = binder.bindSelfDeterminedExpression(name->as<ScopedNameSyntax>());
+                            auto boundExpr = binder.bindSelfDeterminedExpression(name.as<ScopedNameSyntax>());
                             typeSym = boundExpr->type;
                             break;
                         }
@@ -1001,9 +996,9 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
         const auto& ports = instanceModuleSyntax.header.ports->as<NonAnsiPortListSyntax>().ports;
         for (auto port : ports) {
             ASSERT(port->kind == SyntaxKind::ImplicitNonAnsiPort); // TODO: add support for port expressions
-            auto expr = port->as<ImplicitNonAnsiPortSyntax>().expr;
-            ASSERT(expr->kind == SyntaxKind::IdentifierName); // everything else is invalid
-            portNames.emplace_back(expr->as<IdentifierNameSyntax>().identifier.valueText());
+            const auto& expr = port->as<ImplicitNonAnsiPortSyntax>().expr;
+            ASSERT(expr.kind == SyntaxKind::IdentifierName); // everything else is invalid
+            portNames.emplace_back(expr.as<IdentifierNameSyntax>().identifier.valueText());
         }
         for (auto member : instanceModuleSyntax.members) {
             if (member->kind == SyntaxKind::PortDeclaration) {
@@ -1029,7 +1024,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
                 ASSERT(portIndex < portNames.size()); // TODO: emit diag about too many ordered port connections
                 auto name = portNames[portIndex++];
                 if (!ifPortNames.count(name)) continue;
-                ifPortMap.emplace(name, ordered.expr);
+                ifPortMap.emplace(name, &ordered.expr);
                 hasOrdered = true;
                 break;
             }
@@ -1038,7 +1033,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
                 auto name = named.name.valueText();
                 if (!ifPortNames.count(name)) continue;
                 ASSERT(!hasOrdered); // TODO: emit diag about mixing
-                ifPortMap.emplace(name, named.connection.expression);
+                ifPortMap.emplace(name, named.expr);
                 hasNamed = true;
                 break;
             }
@@ -1057,7 +1052,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
         auto sym = instantiationScope->lookup(conn.second->as<IdentifierNameSyntax>().identifier.valueText());
         ASSERT(sym && sym->kind == SymbolKind::Instance);
         auto instSym = sym->as<InstanceSymbol>();
-        scope->add(alloc.emplace<InstanceSymbol>(instSym.module, HierarchyInstantiationSyntax{ nullptr, Token(), nullopt, nullptr, Token() }, conn.first, conn.second->as<IdentifierNameSyntax>().identifier.location(), false));
+        scope->add(alloc.emplace<InstanceSymbol>(instSym.module, HierarchyInstantiationSyntax{ nullptr, Token(), nullptr, nullptr, Token() }, conn.first, conn.second->as<IdentifierNameSyntax>().identifier.location(), false));
     }
     if (hasWild) {
         for (auto name : ifPortNames) {
@@ -1065,7 +1060,7 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
                 auto sym = instantiationScope->lookup(name);
                 ASSERT(sym && sym->kind == SymbolKind::Instance);
                 auto instSym = sym->as<InstanceSymbol>();
-                scope->add(alloc.emplace<InstanceSymbol>(instSym.module, HierarchyInstantiationSyntax{ nullptr, Token(), nullopt, nullptr, Token() }, instSym.name, SourceLocation(), false)); // TODO: add location of the port name
+                scope->add(alloc.emplace<InstanceSymbol>(instSym.module, HierarchyInstantiationSyntax{ nullptr, Token(), nullptr, nullptr, Token() }, instSym.name, SourceLocation(), false)); // TODO: add location of the port name
             }
         }
     }
@@ -1111,7 +1106,7 @@ void SemanticModel::makeAttributes(SmallVector<const AttributeSymbol*>& results,
         }
         else {
             ExpressionBinder binder { *this, Scope::Empty };
-            auto expr = binder.bindConstantExpression(*attr->value->expr);
+            auto expr = binder.bindConstantExpression(attr->value->expr);
             type = expr->type;
             value = evaluateConstant(expr);
         }
@@ -1147,7 +1142,7 @@ const BoundExpression* SemanticModel::bindInitializer(const VariableDeclaratorSy
         return nullptr;
 
     ExpressionBinder binder { *this, scope };
-    return binder.bindAssignmentLikeContext(*syntax.initializer->expr, syntax.name.location(), type);
+    return binder.bindAssignmentLikeContext(syntax.initializer->expr, syntax.name.location(), type);
 }
 
 const BoundExpression* SemanticModel::bindConstantExpression(const ExpressionSyntax& syntax, const Scope* scope) {

@@ -194,16 +194,16 @@ void DeclarationTable::visit(const MemberSyntax& node, UnitDecls& unit, std::vec
                 visit(*child, unit, scopeStack);
             break;
         case SyntaxKind::LoopGenerate:
-            visit(*node.as<LoopGenerateSyntax>().block, unit, scopeStack);
+            visit(node.as<LoopGenerateSyntax>().block, unit, scopeStack);
             break;
         case SyntaxKind::CaseGenerate:
             for (auto& item : node.as<CaseGenerateSyntax>().items) {
                 switch (item->kind) {
                     case SyntaxKind::DefaultCaseItem:
-                        visit(item->as<DefaultCaseItemSyntax>().clause->as<MemberSyntax>(), unit, scopeStack);
+                        visit(item->as<DefaultCaseItemSyntax>().clause.as<MemberSyntax>(), unit, scopeStack);
                         break;
                     case SyntaxKind::StandardCaseItem:
-                        visit(item->as<StandardCaseItemSyntax>().clause->as<MemberSyntax>(), unit, scopeStack);
+                        visit(item->as<StandardCaseItemSyntax>().clause.as<MemberSyntax>(), unit, scopeStack);
                         break;
                     default:
                         break;
@@ -212,9 +212,9 @@ void DeclarationTable::visit(const MemberSyntax& node, UnitDecls& unit, std::vec
             break;
         case SyntaxKind::IfGenerate: {
             const auto& ifGen = node.as<IfGenerateSyntax>();
-            visit(*ifGen.block, unit, scopeStack);
+            visit(ifGen.block, unit, scopeStack);
             if (ifGen.elseClause)
-                visit(ifGen.elseClause->clause->as<MemberSyntax>(), unit, scopeStack);
+                visit(ifGen.elseClause->clause.as<MemberSyntax>(), unit, scopeStack);
             break;
         }
         case SyntaxKind::DefParam:

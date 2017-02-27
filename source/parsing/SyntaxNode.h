@@ -58,6 +58,7 @@ enum class SyntaxKind : uint16_t {
     AttributeInstance,
 
     // arguments
+    EmptyArgument,
     OrderedArgument,
     NamedArgument,
     ArgumentList,

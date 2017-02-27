@@ -91,7 +91,7 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     CHECK(((ParameterDeclarationSyntax*)parameters[2])->declarators[0]->name.valueText() == "blah");
     CHECK(parameters[3]->kind == SyntaxKind::ParameterDeclaration);
     CHECK(((ParameterDeclarationSyntax*)parameters[3])->declarators[0]->name.valueText() == "blah");
-    CHECK(((ParameterDeclarationSyntax*)parameters[3])->declarators[0]->initializer->expr->kind == SyntaxKind::ShortIntType);
+    CHECK(((ParameterDeclarationSyntax*)parameters[3])->declarators[0]->initializer->expr.kind == SyntaxKind::ShortIntType);
 }
 
 const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) {

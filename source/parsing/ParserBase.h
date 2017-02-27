@@ -41,9 +41,6 @@ protected:
     Diagnostics& getDiagnostics();
     Diagnostic& addError(DiagCode code, SourceLocation location);
 
-    template<typename T>
-    T* heapCopy(const T& source) { return alloc.emplace<T>(source); }
-
     // Helper methods to manipulate the underlying token stream.
     Token peek(int offset);
     Token peek();
@@ -134,7 +131,7 @@ protected:
         if (!IsEnd(current.kind)) {
             while (true) {
                 if (IsExpected(current.kind)) {
-                    buffer.append(prependTrivia(parseItem(true), &skippedTokens));
+                    buffer.append(prependTrivia(&parseItem(true), &skippedTokens));
                     while (true) {
                         current = peek();
                         if (IsEnd(current.kind))
@@ -142,7 +139,7 @@ protected:
 
                         if (IsExpected(current.kind)) {
                             buffer.append(prependTrivia(expect(separatorKind), &skippedTokens));
-                            buffer.append(prependTrivia(parseItem(false), &skippedTokens));
+                            buffer.append(prependTrivia(&parseItem(false), &skippedTokens));
                             continue;
                         }
 

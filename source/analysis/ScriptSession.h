@@ -100,7 +100,7 @@ public:
             auto paramSym = alloc.emplace<ParameterSymbol>(
                 paramDecl->name.valueText(), paramDecl->name.location(), decl.parameter, *paramDecl,
                 decl.parameter.keyword.kind == TokenKind::LocalParamKeyword);
-            sem.evaluateParameter(paramSym, *paramDecl->initializer->expr, &scriptScope);
+            sem.evaluateParameter(paramSym, paramDecl->initializer->expr, &scriptScope);
             scriptScope.add(paramSym);
         }
         return nullptr;
