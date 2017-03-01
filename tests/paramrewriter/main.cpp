@@ -25,8 +25,8 @@ Token identifier(const std::string& name, ArrayRef<Trivia> trivia) {
 class ModuleRewriter : public SyntaxVisitor<ModuleRewriter> {
 public:
     void registerInstance(const InstanceSymbol* instance) {
-        instanceToModule[instance->syntax] = instance->module;
-        syntaxToModules[instance->module->syntax].push_back(instance->module);
+        instanceToModule[&instance->syntax] = instance->module;
+        syntaxToModules[&instance->module->syntax].push_back(instance->module);
         for (auto child : instance->module->children) {
             if (child->kind == SymbolKind::Instance)
                 registerInstance((const InstanceSymbol*)child);
@@ -34,8 +34,8 @@ public:
     }
 
     void run(SyntaxTree& tree) {
-        auto syntax = tree.root();
-        auto location = syntax->getFirstToken().location();
+        const auto& syntax = tree.root();
+        auto location = syntax.getFirstToken().location();
         bool visited = !visitedFiles.insert(location.buffer()).second;
 
         StringRef fileName = tree.sourceManager().getFileName(location);
@@ -43,7 +43,7 @@ public:
         ASSERT(fp);
 
         buffer.clear();
-        visitNode(syntax);
+        visitNode(&syntax);
 
         fwrite(buffer.begin(), buffer.count(), 1, fp);
         fclose(fp);
@@ -61,29 +61,29 @@ public:
             for (auto child : module->scope->symbols()) {
                 if (child->kind == SymbolKind::Parameter) {
                     const auto& param = child->as<ParameterSymbol>();
-                    declToParam[param.declarator] = &param;
+                    declToParam[&param.declarator] = &param;
                 }
             }
 
-            auto& permutations = moduleMap[module->syntax];
+            auto& permutations = moduleMap[&module->syntax];
             auto& index = permutations[getParamString(module)];
             if (index == 0)
                 index = permutations.size();
 
             // Otherwise create a new module instance that has a tweaked tree
-            ModuleHeaderSyntax header = *syntax.header;
+           /* ModuleHeaderSyntax header = syntax.header;
             string newName = header.name.valueText().toString();
             newName += to_string(index);
             header.name = identifier(newName, header.name.trivia());
 
             ModuleDeclarationSyntax m = syntax;
-            m.header = &header;
+            m.header = header;
             visitDefault(m);
 
             if (module != list.back()) {
                 buffer.append('\n');
                 buffer.append('\n');
-            }
+            }*/
         }
     }
 
@@ -94,9 +94,9 @@ public:
             return;
         }
 
-        VariableDeclaratorSyntax newDecl = declarator;
+        /*VariableDeclaratorSyntax newDecl = declarator;
         newDecl.initializer = nullptr;
-        visitDefault(newDecl);
+        visitDefault(newDecl);*/
 
         buffer.appendRange(StringRef(" = "));
         buffer.appendRange(param->value.integer().toString(LiteralBase::Decimal));
@@ -107,16 +107,16 @@ public:
         if (!module)
             visitDefault(instantiation);
         else {
-            auto& permutations = moduleMap[module->syntax];
+            auto& permutations = moduleMap[&module->syntax];
             auto& index = permutations[getParamString(module)];
             if (index == 0)
                 index = permutations.size();
 
-            HierarchyInstantiationSyntax newSyntax = instantiation;
+            /*HierarchyInstantiationSyntax newSyntax = instantiation;
             newSyntax.parameters = nullptr;
             newSyntax.type = identifier(module->name.toString() + to_string(index),
                 instantiation.type.trivia());
-            visitDefault(newSyntax);
+            visitDefault(newSyntax);*/
         }
     }
 
@@ -162,14 +162,14 @@ int main(int argc, char* argv[]) {
         if (!tree.diagnostics().empty())
             fprintf(stderr, "%s\n", tree.reportDiagnostics().c_str());
 
-        declTable.addSyntaxTree(&tree);
+        declTable.addSyntaxTree(tree);
     }
 
     // Do semantic analysis on each module to figure out parameter values
     ModuleRewriter rewriter;
     SemanticModel sem{ alloc, diagnostics, declTable };
     for (auto module : declTable.getTopLevelModules()) {
-        auto instance = sem.makeImplicitInstance(module);
+        auto instance = sem.makeImplicitInstance(*module);
         rewriter.registerInstance(instance);
     }
 

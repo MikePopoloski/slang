@@ -23,21 +23,6 @@ class ParserBase {
 protected:
     ParserBase(Preprocessor& preprocessor);
 
-    /// Preprend trivia to the given syntax node / token.
-    SyntaxNode* prependTrivia(SyntaxNode* node, Trivia* trivia);
-    Token prependTrivia(Token token, Trivia* trivia);
-
-    /// Prepend a set of trivia to the given syntax node / token.
-    void prependTrivia(SyntaxNode* node, SmallVector<Trivia>& trivia);
-    Token prependTrivia(Token token, SmallVector<Trivia>& trivia);
-
-    /// Prepend a set of skipped tokens to the given syntax node / token.
-    SyntaxNode* prependSkippedTokens(SyntaxNode* node, SmallVector<Token>& tokens);
-    Token prependSkippedTokens(Token node, SmallVector<Token>& tokens);
-
-    /// Reduce the given skipped tokens into trivia in the given buffer.
-    void reduceSkippedTokens(SmallVector<Token>& skipped, SmallVector<Trivia>& trivia);
-
     Diagnostics& getDiagnostics();
     Diagnostic& addError(DiagCode code, SourceLocation location);
 
@@ -48,6 +33,7 @@ protected:
     Token consume();
     Token consumeIf(TokenKind kind);
     Token expect(TokenKind kind);
+    SourceLocation skipToken();
 
     /// Helper class that maintains a sliding window of tokens, with lookahead.
     class Window {
@@ -93,6 +79,11 @@ protected:
         Abort
     };
 
+    template<typename T, typename... Args>
+    T& allocate(Args&&... args) {
+        return *alloc.emplace<T>(std::forward<Args>(args)...);
+    }
+
     /// This is a generalized method for parsing a delimiter separated list of things
     /// with bookend tokens in a way that robustly handles bad tokens.
     template<bool(*IsExpected)(TokenKind), bool(*IsEnd)(TokenKind), typename TParserFunc>
@@ -121,41 +112,39 @@ protected:
         DiagCode code,
         TParserFunc&& parseItem
     ) {
-        Trivia skippedTokens;
         auto current = peek();
         if (!IsEnd(current.kind)) {
             while (true) {
                 if (IsExpected(current.kind)) {
-                    buffer.append(prependTrivia(parseItem(true), &skippedTokens));
+                    buffer.append(&parseItem(true));
                     while (true) {
                         current = peek();
                         if (IsEnd(current.kind))
                             break;
 
                         if (IsExpected(current.kind)) {
-                            buffer.append(prependTrivia(expect(separatorKind), &skippedTokens));
-                            buffer.append(prependTrivia(parseItem(false), &skippedTokens));
+                            buffer.append(expect(separatorKind));
+                            buffer.append(&parseItem(false));
                             continue;
                         }
 
-                        if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens, code) == SkipAction::Abort)
+                        if (skipBadTokens<IsExpected, IsEnd>(code) == SkipAction::Abort)
                             break;
                     }
                     // found the end
                     break;
                 }
-                else if (skipBadTokens<IsExpected, IsEnd>(&skippedTokens, code) == SkipAction::Abort)
+                else if (skipBadTokens<IsExpected, IsEnd>(code) == SkipAction::Abort)
                     break;
                 else
                     current = peek();
             }
         }
-        closeToken = prependTrivia(expect(closeKind), &skippedTokens);
+        closeToken = expect(closeKind);
     }
 
     template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
-    SkipAction skipBadTokens(Trivia* skippedTokens, DiagCode code) {
-        SmallVectorSized<Token, 8> tokens;
+    SkipAction skipBadTokens(DiagCode code) {
         auto result = SkipAction::Continue;
         auto current = peek();
         bool error = false;
@@ -170,26 +159,17 @@ protected:
                 result = SkipAction::Abort;
                 break;
             }
-            tokens.append(consume());
+            skipToken();
             current = peek();
         }
-
-        if (tokens.empty())
-            *skippedTokens = Trivia();
-        else
-            *skippedTokens = Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc));
-
         return result;
     }
 
-    template<typename T>
-    void prependTrivia(ArrayRef<T*> list, Trivia* trivia) {
-        if (trivia->kind != TriviaKind::Unknown && !list.empty())
-            prependTrivia(*list.begin(), trivia);
-    }
-
 private:
+    void prependSkippedTokens(Token& node);
+
     Window window;
+    Vector<Token> skippedTokens;
 };
 
 }

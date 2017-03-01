@@ -12,8 +12,8 @@ SVInt testParameter(const std::string& text, int index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(StringRef(fullText));
 
-    auto instance = SemanticModel(tree).makeImplicitInstance(
-        tree.root()->as<ModuleDeclarationSyntax>());
+    const auto& instance = SemanticModel(tree).makeImplicitInstance(
+        tree.root().as<ModuleDeclarationSyntax>());
 
     auto module = instance->module;
     REQUIRE(module);
@@ -41,7 +41,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     SemanticModel sem { syntax };
 
     // Fabricate a symbol for the `i` variable
-    auto varToken = syntax.root()->getFirstToken();
+    auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
         sem.getKnownType(SyntaxKind::LogicType)
@@ -51,7 +51,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     Scope scope;
     scope.add(&local);
     ExpressionBinder binder(sem, &scope);
-    auto bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
+    auto bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     // Initialize `i` to 1.
@@ -74,7 +74,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     SemanticModel sem { syntax };
 
     // Fabricate a symbol for the `i` variable
-    auto varToken = syntax.root()->getFirstToken();
+    auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
         sem.getIntegralType(20, false)
@@ -84,7 +84,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     Scope scope;
     scope.add(&local);
     ExpressionBinder binder(sem, &scope);
-    BoundExpression* bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
+    BoundExpression* bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound->type->width() == 20);
@@ -102,7 +102,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     SemanticModel sem { syntax };
 
     // Fabricate a symbol for the `i` variable
-    auto varToken = syntax.root()->getFirstToken();
+    auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
         sem.getIntegralType(20, false)
@@ -112,7 +112,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     Scope scope;
     scope.add(&local);
     ExpressionBinder binder(sem, &scope);
-    BoundExpression* bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
+    BoundExpression* bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound->type->width() == 20);
@@ -134,7 +134,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     SemanticModel sem { syntax };
 
     // Fabricate a symbol for the `i` variable
-    auto varToken = syntax.root()->getFirstToken();
+    auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
         sem.getIntegralType(20, false)
@@ -144,7 +144,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     Scope scope;
     scope.add(&local);
     ExpressionBinder binder(sem, &scope);
-    BoundExpression* bound = binder.bindConstantExpression(syntax.root()->as<ExpressionSyntax>());
+    BoundExpression* bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound->type->width() == 20);

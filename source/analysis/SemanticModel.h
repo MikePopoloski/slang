@@ -38,11 +38,11 @@ public:
     SemanticModel(BumpAllocator& alloc, Diagnostics& diagnostics, DeclarationTable& declTable);
 
     void makePackages();
-    InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax* syntax, Scope *definitions = nullptr);
-    const TypeSymbol* makeTypeSymbol(const DataTypeSyntax* syntax, Scope* scope);
-    const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax* syntax, Scope* scope);
+    InstanceSymbol* makeImplicitInstance(const ModuleDeclarationSyntax& syntax, Scope *definitions = nullptr);
+    const TypeSymbol* makeTypeSymbol(const DataTypeSyntax& syntax, Scope* scope);
+    const SubroutineSymbol* makeSubroutine(const FunctionDeclarationSyntax& syntax, Scope* scope);
 
-    void makeVariables(const DataDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope);
+    void makeVariables(const DataDeclarationSyntax& syntax, SmallVector<const Symbol*>& results, Scope* scope);
 
     /// Utilities for getting various common type symbols.
     const TypeSymbol* getErrorType() const { return getKnownType(SyntaxKind::Unknown); }
@@ -55,13 +55,13 @@ public:
 
     const Scope* getSystemScope() { return &systemScope; }
 
-    void handleVariableDeclarator(const VariableDeclaratorSyntax *syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::Modifiers &modifiers, const TypeSymbol *typeSymbol);
+    void handleVariableDeclarator(const VariableDeclaratorSyntax& syntax, SmallVector<const Symbol *>& results, Scope *scope, const VariableSymbol::Modifiers &modifiers, const TypeSymbol *typeSymbol);
 
 private:
     // Small collection of info extracted from a parameter definition
     struct ParameterInfo {
-        const ParameterDeclarationSyntax* paramDecl;
-        const VariableDeclaratorSyntax* declarator;
+        const ParameterDeclarationSyntax& paramDecl;
+        const VariableDeclaratorSyntax& declarator;
         StringRef name;
         SourceLocation location;
         ExpressionSyntax* initializer;
@@ -71,22 +71,22 @@ private:
 
     // Gets the parameters declared in the module, with additional information about whether
     // they're public or not. These results are cached in `parameterCache`.
-    const std::vector<ParameterInfo>& getModuleParams(const ModuleDeclarationSyntax* syntax);
+    const std::vector<ParameterInfo>& getModuleParams(const ModuleDeclarationSyntax& syntax);
 
     // Helper function used by getModuleParams to convert a single parameter declaration into
     // one or more ParameterInfo instances.
-    bool getParamDecls(const ParameterDeclarationSyntax* syntax, std::vector<ParameterInfo>& buffer,
+    bool getParamDecls(const ParameterDeclarationSyntax& syntax, std::vector<ParameterInfo>& buffer,
                        HashMapBase<StringRef, SourceLocation>& nameDupMap,
                        bool lastLocal, bool overrideLocal, bool bodyParam);
 
     // Evaluates an individual parameter using its initializer. This also finalizes its type.
-    void evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax* initializer, Scope* scope);
+    void evaluateParameter(ParameterSymbol* symbol, const ExpressionSyntax& initializer, Scope* scope);
 
     // Uses a module declaration and an optional set of parameter assignments to create all of the
     // evaluated parameter symbols for a particular module instance. Note that these parameter symbols
     // can potentially be shared by instances if they are in the same declaration.
-    void makePublicParameters(Scope* declScope, const ModuleDeclarationSyntax* decl,
-                              const ParameterValueAssignmentSyntax* parameterAssignments,
+    void makePublicParameters(Scope* declScope, const ModuleDeclarationSyntax& decl,
+                              ParameterValueAssignmentSyntax* parameterAssignments,
                               Scope* instantiationScope, SourceLocation instanceLocation, bool isTopLevel);
 
     // Process attributes and convert them to a normalized form. No specific handling is done for attribute
@@ -95,26 +95,26 @@ private:
 
     // Uses a instance declaration and instantiation scope
     // to create all interface objects for a particular module instance
-    void makeInterfacePorts(Scope* scope, const ModuleDeclarationSyntax* instanceModuleSyntax, const HierarchicalInstanceSyntax* syntax, const Scope* instantiationScope, SourceLocation instanceLocation);
+    void makeInterfacePorts(Scope* scope, const ModuleDeclarationSyntax& instanceModuleSyntax, const HierarchicalInstanceSyntax& syntax, const Scope* instantiationScope, SourceLocation instanceLocation);
 
     // construct module symbol parametrized with per-instance scope with parameters and port-interfaces symbols
-    const ModuleSymbol* makeModule(const ModuleDeclarationSyntax* syntax, Scope *scope);
+    const ModuleSymbol* makeModule(const ModuleDeclarationSyntax& syntax, Scope *scope);
 
-    void handlePackageImport(const PackageImportDeclarationSyntax* syntax, Scope* scope);
-    void handleInstantiation(const HierarchyInstantiationSyntax* syntax, SmallVector<const Symbol*>& results, Scope* instantiationScope);
-    void handleDataDeclaration(const DataDeclarationSyntax *syntax, SmallVector<const Symbol *>& results, Scope* scope);
-    void handleProceduralBlock(const ProceduralBlockSyntax *syntax, SmallVector<const Symbol *>& results, const Scope* scope);
-    void handleIfGenerate(const IfGenerateSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
-    void handleLoopGenerate(const LoopGenerateSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
-    void handleGenerateBlock(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
-    void handleGenvarDecl(const GenvarDeclarationSyntax* syntax, SmallVector<const Symbol*>& results, const Scope* scope);
-    void handleGenerateItem(const MemberSyntax* syntax, SmallVector<const Symbol*>& results, Scope* scope);
+    void handlePackageImport(const PackageImportDeclarationSyntax& syntax, Scope* scope);
+    void handleInstantiation(const HierarchyInstantiationSyntax& syntax, SmallVector<const Symbol*>& results, Scope* instantiationScope);
+    void handleDataDeclaration(const DataDeclarationSyntax& syntax, SmallVector<const Symbol *>& results, Scope* scope);
+    void handleProceduralBlock(const ProceduralBlockSyntax& syntax, SmallVector<const Symbol *>& results, const Scope* scope);
+    void handleIfGenerate(const IfGenerateSyntax& syntax, SmallVector<const Symbol*>& results, const Scope* scope);
+    void handleLoopGenerate(const LoopGenerateSyntax& syntax, SmallVector<const Symbol*>& results, const Scope* scope);
+    void handleGenerateBlock(const MemberSyntax& syntax, SmallVector<const Symbol*>& results, const Scope* scope);
+    void handleGenvarDecl(const GenvarDeclarationSyntax& syntax, SmallVector<const Symbol*>& results, const Scope* scope);
+    void handleGenerateItem(const MemberSyntax& syntax, SmallVector<const Symbol*>& results, Scope* scope);
 
     bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope* scope);
 
-    const BoundExpression* bindInitializer(const VariableDeclaratorSyntax *syntax, const TypeSymbol* type, const Scope* scope);
-    const BoundExpression* bindConstantExpression(const ExpressionSyntax* syntax, const Scope* scope);
-    ConstantValue evaluateConstant(const ExpressionSyntax* syntax, const Scope* scope);
+    const BoundExpression* bindInitializer(const VariableDeclaratorSyntax& syntax, const TypeSymbol* type, const Scope* scope);
+    const BoundExpression* bindConstantExpression(const ExpressionSyntax& syntax, const Scope* scope);
+    ConstantValue evaluateConstant(const ExpressionSyntax& syntax, const Scope* scope);
     static ConstantValue evaluateConstant(const BoundExpression* tree);
 
     BumpAllocator& alloc;

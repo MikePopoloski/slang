@@ -58,6 +58,7 @@ enum class SyntaxKind : uint16_t {
     AttributeInstance,
 
     // arguments
+    EmptyArgument,
     OrderedArgument,
     NamedArgument,
     ArgumentList,
@@ -571,15 +572,15 @@ public:
     uint32_t getChildCount() const { return childCount; }
 
     template<typename T>
-    T* as() {
+    T& as() {
         // TODO: assert kind
-        return static_cast<T*>(this);
+        return *static_cast<T*>(this);
     }
 
     template<typename T>
-    const T* as() const {
+    const T& as() const {
         // TODO: assert kind
-        return static_cast<const T*>(this);
+        return *static_cast<const T*>(this);
     }
 
     // The following is some template magic to determine whether a type has a

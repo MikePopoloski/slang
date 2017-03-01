@@ -11,21 +11,21 @@ BumpAllocator alloc;
 
 const InstanceSymbol& evalModule(SyntaxTree& syntax) {
     const InstanceSymbol* instance;
-    if (syntax.root()->kind == SyntaxKind::ModuleDeclaration) {
+    if (syntax.root().kind == SyntaxKind::ModuleDeclaration) {
         SemanticModel sem { syntax };
-        instance = sem.makeImplicitInstance(syntax.root()->as<ModuleDeclarationSyntax>());
+        instance = sem.makeImplicitInstance(syntax.root().as<ModuleDeclarationSyntax>());
     }
     else {
         Diagnostics& diagnostics = syntax.diagnostics();
         DeclarationTable declTable(diagnostics);
-        declTable.addSyntaxTree(&syntax);
+        declTable.addSyntaxTree(syntax);
 
         SemanticModel sem(alloc, diagnostics, declTable);
 
         auto topLevelModules = declTable.getTopLevelModules();
         REQUIRE(topLevelModules.count() == 1);
 
-        instance = sem.makeImplicitInstance(topLevelModules[0]);
+        instance = sem.makeImplicitInstance(*topLevelModules[0]);
     }
     if (!syntax.diagnostics().empty())
         WARN(syntax.reportDiagnostics());
@@ -40,15 +40,15 @@ TEST_CASE("Finding top level", "[binding:decls]") {
 
     Diagnostics diagnostics;
     DeclarationTable declTable(diagnostics);
-    declTable.addSyntaxTree(&file1);
-    declTable.addSyntaxTree(&file2);
+    declTable.addSyntaxTree(file1);
+    declTable.addSyntaxTree(file2);
 
     auto topLevelModules = declTable.getTopLevelModules();
 
     CHECK(diagnostics.empty());
     REQUIRE(topLevelModules.count() == 2);
-    CHECK(topLevelModules[0]->header->name.valueText() == "C");
-    CHECK(topLevelModules[1]->header->name.valueText() == "D");
+    CHECK(topLevelModules[0]->header.name.valueText() == "C");
+    CHECK(topLevelModules[1]->header.name.valueText() == "D");
 }
 
 TEST_CASE("Bind module implicit", "[binding:modules]") {
@@ -64,7 +64,7 @@ endmodule
 
     Diagnostics diagnostics;
     DeclarationTable declTable(diagnostics);
-    declTable.addSyntaxTree(&tree);
+    declTable.addSyntaxTree(tree);
 
     auto topLevelModules = declTable.getTopLevelModules();
     REQUIRE(topLevelModules.count() == 1);
@@ -99,13 +99,13 @@ endmodule
 
     Diagnostics diagnostics;
     DeclarationTable declTable(diagnostics);
-    declTable.addSyntaxTree(&tree);
+    declTable.addSyntaxTree(tree);
 
     auto topLevelModules = declTable.getTopLevelModules();
     REQUIRE(topLevelModules.count() == 1);
 
     SemanticModel sem(alloc, diagnostics, declTable);
-    auto instance = sem.makeImplicitInstance(topLevelModules[0]);
+    auto instance = sem.makeImplicitInstance(*topLevelModules[0]);
 
     CHECK(diagnostics.count() == 15);
 }

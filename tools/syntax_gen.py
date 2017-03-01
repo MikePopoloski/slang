@@ -17,6 +17,7 @@ def main():
 #pragma once
 
 #include "lexing/Token.h"
+#include "util/BumpAllocator.h"
 #include "SyntaxNode.h"
 
 // This file contains all parse tree syntax nodes.
@@ -32,6 +33,8 @@ namespace slang {
 	tags = None
 	alltypes = {}
 	kindmap = {}
+
+	alltypes['SyntaxNode'] = (None, None, None, '')
 
 	for line in [x.strip('\n') for x in inf]:
 		if line.startswith('//'):
@@ -125,7 +128,19 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 			typename = 'SeparatedSyntaxList<' + m[0][15:]
 			pointerMembers.add(m[1])
 		else:
-			typename = m[0] + '*'
+			optional = False
+			if m[0].endswith('?'):
+				optional = True
+				m[0] = m[0][:-1]
+
+			if m[0] not in alltypes:
+				raise Exception("Unknown type '{}'".format(m[0]))
+
+			if optional:
+				typename = m[0] + '*'
+			else:
+				pointerMembers.add(m[1])
+				typename = m[0] + '&'
 
 		l = '{} {}'.format(typename, m[1])
 		processed_members.append(l)
@@ -162,8 +177,12 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		outf.write('    }\n')
 	else:
 		outf.write('        childCount += {};\n'.format(len(members)))
-		outf.write('    }\n')
-		outf.write('\nprotected:\n')
+		outf.write('    }\n\n')
+
+		outf.write('    {}(const {}&) = delete;\n'.format(name, name))
+		outf.write('    {}& operator=(const {}&) = delete;\n\n'.format(name, name))
+
+		outf.write('protected:\n')
 		outf.write('    TokenOrSyntax getChild(uint32_t index) override{} {{\n'.format(final))
 
 		if len(combined) > 0:

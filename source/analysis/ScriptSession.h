@@ -27,18 +27,18 @@ public:
     ConstantValue eval(const std::string& text) {
         syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text)));
 
-        auto root = syntaxTrees.back().root();
-        switch (root->kind) {
+        const auto& root = syntaxTrees.back().root();
+        switch (root.kind) {
             case SyntaxKind::ParameterDeclarationStatement:
-                return evalParameterDeclaration(root->as<ParameterDeclarationStatementSyntax>());
+                return evalParameterDeclaration(root.as<ParameterDeclarationStatementSyntax>());
             case SyntaxKind::DataDeclaration:
-                return evalVariableDeclaration(root->as<DataDeclarationSyntax>());
+                return evalVariableDeclaration(root.as<DataDeclarationSyntax>());
             case SyntaxKind::FunctionDeclaration:
             case SyntaxKind::TaskDeclaration:
-                return evalSubroutineDeclaration(root->as<FunctionDeclarationSyntax>());
+                return evalSubroutineDeclaration(root.as<FunctionDeclarationSyntax>());
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ModuleDeclaration: {
-                auto module = root->as<ModuleDeclarationSyntax>();
+                auto& module = root.as<ModuleDeclarationSyntax>();
                 declTable.addMember(module);
                 // construct a blank module with empty scope linking to this scope
                 auto scope = alloc.emplace<Scope>();
@@ -49,36 +49,36 @@ public:
             }
             case SyntaxKind::HierarchyInstantiation: {
                 SmallVectorSized<const Symbol*, 8> results;
-                sem.handleInstantiation(root->as<HierarchyInstantiationSyntax>(), results, &scriptScope);
+                sem.handleInstantiation(root.as<HierarchyInstantiationSyntax>(), results, &scriptScope);
                 return true;
             }
             case SyntaxKind::IdentifierName:
             case SyntaxKind::ScopedName: {
-                auto expr = binder.bindConstantExpression(root->as<NameSyntax>());
+                auto expr = binder.bindConstantExpression(root.as<NameSyntax>());
                 ASSERT(!expr->bad());
                 return sem.evaluateConstant(expr);
             }
             default:
-                if (isExpression(root->kind))
-                    return evalExpression(root->as<ExpressionSyntax>());
-                else if (isStatement(root->kind))
-                    return evalStatement(root->as<StatementSyntax>());
+                if (isExpression(root.kind))
+                    return evalExpression(root.as<ExpressionSyntax>());
+                else if (isStatement(root.kind))
+                    return evalStatement(root.as<StatementSyntax>());
                 else
                     ASSERT(false, "Not supported yet");
         }
         return nullptr;
     }
 
-    ConstantValue evalExpression(const ExpressionSyntax* expr) {
+    ConstantValue evalExpression(const ExpressionSyntax& expr) {
         auto bound = binder.bindSelfDeterminedExpression(expr);
         return evaluator.evaluateExpr(bound);
     }
 
-    ConstantValue evalStatement(const StatementSyntax* stmt) {
+    ConstantValue evalStatement(const StatementSyntax& stmt) {
         return nullptr;
     }
 
-    ConstantValue evalVariableDeclaration(const DataDeclarationSyntax* decl) {
+    ConstantValue evalVariableDeclaration(const DataDeclarationSyntax& decl) {
         SmallVectorSized<const Symbol*, 8> results;
         sem.makeVariables(decl, results, &scriptScope);
 
@@ -95,18 +95,18 @@ public:
         return nullptr;
     }
 
-    ConstantValue evalParameterDeclaration(const ParameterDeclarationStatementSyntax* decl) {
-        for (auto paramDecl : decl->parameter->declarators) {
+    ConstantValue evalParameterDeclaration(const ParameterDeclarationStatementSyntax& decl) {
+        for (auto paramDecl : decl.parameter.declarators) {
             auto paramSym = alloc.emplace<ParameterSymbol>(
-                paramDecl->name.valueText(), paramDecl->name.location(), decl->parameter, paramDecl,
-                decl->parameter->keyword.kind == TokenKind::LocalParamKeyword);
+                paramDecl->name.valueText(), paramDecl->name.location(), decl.parameter, *paramDecl,
+                decl.parameter.keyword.kind == TokenKind::LocalParamKeyword);
             sem.evaluateParameter(paramSym, paramDecl->initializer->expr, &scriptScope);
             scriptScope.add(paramSym);
         }
         return nullptr;
     }
 
-    ConstantValue evalSubroutineDeclaration(const FunctionDeclarationSyntax* decl) {
+    ConstantValue evalSubroutineDeclaration(const FunctionDeclarationSyntax& decl) {
         auto symbol = sem.makeSubroutine(decl, &scriptScope);
         scriptScope.add(symbol);
         return nullptr;
