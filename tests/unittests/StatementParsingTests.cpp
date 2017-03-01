@@ -30,7 +30,7 @@ StatementSyntax& parse(const std::string& text) {
 
 TEST_CASE("If statement", "[parser:statements]") {
     auto& text = "if (foo && bar &&& baz) ; else ;";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ConditionalStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -39,7 +39,7 @@ TEST_CASE("If statement", "[parser:statements]") {
 
 TEST_CASE("Case statement (empty)", "[parser:statements]") {
     auto& text = "unique casez (foo) endcase";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -47,7 +47,7 @@ TEST_CASE("Case statement (empty)", "[parser:statements]") {
 
 TEST_CASE("Case statement (normal)", "[parser:statements]") {
     auto& text = "unique case (foo) 3'd01: ; 3+9, foo: ; default; endcase";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -55,7 +55,7 @@ TEST_CASE("Case statement (normal)", "[parser:statements]") {
 
 TEST_CASE("Case statement (pattern)", "[parser:statements]") {
     auto& text = "priority casez (foo) matches .foo &&& bar: ; default; endcase";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -63,7 +63,7 @@ TEST_CASE("Case statement (pattern)", "[parser:statements]") {
 
 TEST_CASE("Case statement (range)", "[parser:statements]") {
     auto& text = "casex (foo) inside 3, [4:2], [99]: ; default; endcase";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -71,7 +71,7 @@ TEST_CASE("Case statement (range)", "[parser:statements]") {
 
 TEST_CASE("Loop statements", "[parser:statements]") {
     auto& text = "while (foo) ;";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::LoopStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -79,7 +79,7 @@ TEST_CASE("Loop statements", "[parser:statements]") {
 
 TEST_CASE("Do while statement", "[parser:statements]") {
     auto& text = "do ; while (foo) ;";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::DoWhileStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -87,14 +87,14 @@ TEST_CASE("Do while statement", "[parser:statements]") {
 
 TEST_CASE("Foreach statement", "[parser:statements]") {
     auto& text = "foreach (a::b[,i,,j,]) begin end";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ForeachLoopStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
 }
 TEST_CASE("Forever statement", "[parser:statements]") {
     auto& text = "forever ;";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ForeverStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -102,7 +102,7 @@ TEST_CASE("Forever statement", "[parser:statements]") {
 
 TEST_CASE("Return statement", "[parser:statements]") {
     auto& text = "return foobar;";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ReturnStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -110,7 +110,7 @@ TEST_CASE("Return statement", "[parser:statements]") {
 
 TEST_CASE("Jump statements", "[parser:statements]") {
     auto& text = "break;";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::JumpStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -118,7 +118,7 @@ TEST_CASE("Jump statements", "[parser:statements]") {
 
 TEST_CASE("Disable statement", "[parser:statements]") {
     auto& text = "disable blah::foobar;";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::DisableStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -126,14 +126,14 @@ TEST_CASE("Disable statement", "[parser:statements]") {
 
 TEST_CASE("Disable fork statement", "[parser:statements]") {
     auto& text = "disable fork;";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::DisableForkStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
 }
 
 void testTimingControl(StringRef text, SyntaxKind kind) {
-    auto stmt = parse(text.toString());
+    auto& stmt = parse(text.toString());
 
     REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
     CHECK(stmt.as<TimingControlStatementSyntax>().timingControl.kind == kind);
@@ -154,7 +154,7 @@ TEST_CASE("Timing control statements", "[parser:statements]") {
 }
 
 void testStatement(StringRef text, SyntaxKind kind) {
-    auto stmt = parse(text.toString());
+    auto& stmt = parse(text.toString());
 
     REQUIRE(stmt.kind == kind);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());
@@ -175,12 +175,12 @@ TEST_CASE("Function calls", "[parser:statements]") {
 
 DataDeclarationSyntax* parseBlockDeclaration(const std::string& text) {
     auto fullText = "begin " + text + " end";
-    auto stmt = parse(fullText);
+    auto& stmt = parse(fullText);
 
     REQUIRE(stmt.kind == SyntaxKind::SequentialBlockStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
 
-    auto block = (BlockStatementSyntax&)stmt;
+    auto& block = stmt.as<BlockStatementSyntax>();
     REQUIRE(block.items.count() == 1);
     REQUIRE(block.items[0]->kind == SyntaxKind::DataDeclaration);
 
@@ -200,7 +200,7 @@ TEST_CASE("Sequential declarations", "[parser:statements]") {
 
 TEST_CASE("Blocking Event Trigger", "[parser:statements]") {
     auto& text = "-> $root.hierarchy.evt";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::BlockingEventTriggerStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -208,7 +208,7 @@ TEST_CASE("Blocking Event Trigger", "[parser:statements]") {
 
 TEST_CASE("Nonblocking Event Trigger", "[parser:statements]") {
     auto& text = "->> # 3 hierarchy.evt";
-    auto stmt = parse(text);
+    auto& stmt = parse(text);
 
     REQUIRE(stmt.kind == SyntaxKind::NonblockingEventTriggerStatement);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);

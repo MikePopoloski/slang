@@ -321,7 +321,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
 
 ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
     auto inside = expect(TokenKind::InsideKeyword);
-    auto list = parseOpenRangeList();
+    auto& list = parseOpenRangeList();
     return allocate<InsideExpressionSyntax>(expr, inside, list);
 }
 
@@ -338,7 +338,7 @@ OpenRangeListSyntax& Parser::parseOpenRangeList() {
         list,
         closeBrace,
         DiagCode::ExpectedOpenRangeElement,
-        [this](bool) { return parseOpenRangeElement(); }
+        [this](bool) -> decltype(auto) { return parseOpenRangeElement(); }
     );
 
     return allocate<OpenRangeListSyntax>(openBrace, list, closeBrace);
@@ -368,7 +368,7 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace, Expre
         TokenKind::Comma,
         closeBrace,
         DiagCode::ExpectedExpression,
-        [this](bool) { return parseExpression(); }
+        [this](bool) -> decltype(auto) { return parseExpression(); }
     );
     return allocate<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
 }
@@ -391,7 +391,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
         list,
         closeBraceInner,
         DiagCode::ExpectedStreamExpression,
-        [this](bool) { return parseStreamExpression(); }
+        [this](bool) -> decltype(auto) { return parseStreamExpression(); }
     );
 
     auto closeBrace = expect(TokenKind::CloseBrace);
@@ -441,7 +441,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 TokenKind::Comma,
                 closeBrace,
                 DiagCode::ExpectedAssignmentKey,
-                [this](bool) { return parseAssignmentPatternItem(nullptr); }
+                [this](bool) -> decltype(auto) { return parseAssignmentPatternItem(nullptr); }
             );
             pattern = &allocate<StructuredAssignmentPatternSyntax>(
                 openBrace,
@@ -456,7 +456,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 TokenKind::Comma,
                 closeBrace,
                 DiagCode::ExpectedExpression,
-                [this](bool) { return parseExpression(); }
+                [this](bool) -> decltype(auto) { return parseExpression(); }
             );
             pattern = &allocate<ReplicatedAssignmentPatternSyntax>(
                 openBrace,
@@ -477,7 +477,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 TokenKind::Comma,
                 closeBrace,
                 DiagCode::ExpectedExpression,
-                [this](bool) { return parseExpression(); }
+                [this](bool) -> decltype(auto) { return parseExpression(); }
             );
             pattern = &allocate<SimpleAssignmentPatternSyntax>(
                 openBrace,
@@ -492,7 +492,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 TokenKind::Comma,
                 closeBrace,
                 DiagCode::ExpectedExpression,
-                [this](bool) { return parseExpression(); }
+                [this](bool) -> decltype(auto) { return parseExpression(); }
             );
             pattern = &allocate<SimpleAssignmentPatternSyntax>(
                 openBrace,
@@ -692,7 +692,7 @@ ArgumentListSyntax& Parser::parseArgumentList() {
         list,
         closeParen,
         DiagCode::ExpectedArgument,
-        [this](bool) { return parseArgument(); }
+        [this](bool) -> decltype(auto) { return parseArgument(); }
     );
 
     return allocate<ArgumentListSyntax>(openParen, list, closeParen);
@@ -762,7 +762,7 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
         TokenKind::TripleAnd,
         end,
         DiagCode::ExpectedConditionalPattern,
-        [this](bool) { return parseConditionalPattern(); }
+        [this](bool) -> decltype(auto) { return parseConditionalPattern(); }
     );
 
     return allocate<ConditionalPredicateSyntax>(buffer.copy(alloc));
@@ -915,7 +915,7 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeWithClause() {
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedIdentifier,
-        [this](bool) { return allocate<IdentifierNameSyntax>(consume()); }
+        [this](bool) -> decltype(auto) { return allocate<IdentifierNameSyntax>(consume()); }
     );
 
     auto& idList = allocate<IdentifierListSyntax>(openParen, buffer.copy(alloc), closeParen);

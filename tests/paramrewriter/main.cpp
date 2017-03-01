@@ -71,7 +71,7 @@ public:
                 index = permutations.size();
 
             // Otherwise create a new module instance that has a tweaked tree
-            ModuleHeaderSyntax header = syntax.header;
+           /* ModuleHeaderSyntax header = syntax.header;
             string newName = header.name.valueText().toString();
             newName += to_string(index);
             header.name = identifier(newName, header.name.trivia());
@@ -83,7 +83,7 @@ public:
             if (module != list.back()) {
                 buffer.append('\n');
                 buffer.append('\n');
-            }
+            }*/
         }
     }
 
@@ -94,9 +94,9 @@ public:
             return;
         }
 
-        VariableDeclaratorSyntax newDecl = declarator;
+        /*VariableDeclaratorSyntax newDecl = declarator;
         newDecl.initializer = nullptr;
-        visitDefault(newDecl);
+        visitDefault(newDecl);*/
 
         buffer.appendRange(StringRef(" = "));
         buffer.appendRange(param->value.integer().toString(LiteralBase::Decimal));
@@ -112,11 +112,11 @@ public:
             if (index == 0)
                 index = permutations.size();
 
-            HierarchyInstantiationSyntax newSyntax = instantiation;
+            /*HierarchyInstantiationSyntax newSyntax = instantiation;
             newSyntax.parameters = nullptr;
             newSyntax.type = identifier(module->name.toString() + to_string(index),
                 instantiation.type.trivia());
-            visitDefault(newSyntax);
+            visitDefault(newSyntax);*/
         }
     }
 

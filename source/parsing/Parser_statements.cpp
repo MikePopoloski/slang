@@ -31,18 +31,8 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
                 case TokenKind::CaseZKeyword:
                     return parseCaseStatement(label, attributes, modifier, consume());
                 default: {
-                    addError(DiagCode::ExpectedIfOrCase, peek().location()) << getTokenKindText(modifier.kind);
-
-                    // Construct an empty syntax construct to hold this misplaced token
-                    SmallVectorSized<Token, 4> tokens;
-                    tokens.append(modifier);
-
-                    SmallVectorSized<Trivia, 8> trivia;
-                    trivia.append(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
-
-                    Token semi = Token::createMissing(alloc, TokenKind::Semicolon, modifier.location());
-                    semi = semi.withTrivia(alloc, trivia.copy(alloc));
-                    return allocate<EmptyStatementSyntax>(label, attributes, semi);
+                    addError(DiagCode::ExpectedIfOrCase, skipToken()) << getTokenKindText(modifier.kind);
+                    return allocate<EmptyStatementSyntax>(label, attributes, Token());
                 }
             }
             break;
@@ -143,8 +133,8 @@ ConditionalStatementSyntax& Parser::parseConditionalStatement(NamedLabelSyntax* 
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     Token closeParen;
-    auto predicate = parseConditionalPredicate(parseSubExpression(ExpressionOptions::None, 0), TokenKind::CloseParenthesis, closeParen);
-    auto statement = parseStatement();
+    auto& predicate = parseConditionalPredicate(parseSubExpression(ExpressionOptions::None, 0), TokenKind::CloseParenthesis, closeParen);
+    auto& statement = parseStatement();
     auto elseClause = parseElseClause();
 
     return allocate<ConditionalStatementSyntax>(
@@ -213,7 +203,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                         TokenKind::Comma,
                         colon,
                         DiagCode::ExpectedOpenRangeElement,
-                        [this](bool) { return parseOpenRangeElement(); }
+                        [this](bool) -> decltype(auto) { return parseOpenRangeElement(); }
                     );
                     itemBuffer.append(&allocate<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -240,7 +230,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, ArrayRe
                         TokenKind::Comma,
                         colon,
                         DiagCode::ExpectedExpression,
-                        [this](bool) { return parseExpression(); }
+                        [this](bool) -> decltype(auto) { return parseExpression(); }
                     );
                     itemBuffer.append(&allocate<StandardCaseItemSyntax>(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -317,7 +307,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label, A
         TokenKind::Comma,
         semi1,
         DiagCode::ExpectedForInitializer,
-        [this](bool) { return parseForInitializer(); }
+        [this](bool) -> decltype(auto) { return parseForInitializer(); }
     );
 
     auto& stopExpr = parseExpression();
@@ -331,7 +321,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label, A
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedExpression,
-        [this](bool) { return parseExpression(); }
+        [this](bool) -> decltype(auto) { return parseExpression(); }
     );
 
     return allocate<ForLoopStatementSyntax>(
@@ -363,7 +353,7 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
         list,
         closeBracket,
         DiagCode::ExpectedIdentifier,
-        [this](bool) { return parseName(true); }
+        [this](bool) -> decltype(auto) { return parseName(true); }
     );
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
@@ -372,7 +362,7 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
 
 ForeachLoopStatementSyntax& Parser::parseForeachLoopStatement(NamedLabelSyntax* label, ArrayRef<AttributeInstanceSyntax*> attributes) {
     auto keyword = consume();
-    auto vars = parseForeachLoopVariables();
+    auto& vars = parseForeachLoopVariables();
     return allocate<ForeachLoopStatementSyntax>(
         label,
         attributes,
@@ -507,9 +497,9 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
     }
 
     auto openParen = expect(TokenKind::OpenParenthesis);
-    auto spec = parsePropertySpec();
+    auto& spec = parsePropertySpec();
     auto closeParen = expect(TokenKind::CloseParenthesis);
-    auto action = parseActionBlock();
+    auto& action = parseActionBlock();
 
     return allocate<ConcurrentAssertionStatementSyntax>(kind, label, attributes, keyword, propertyOrSequence, openParen, spec, closeParen, action);
 }
@@ -563,7 +553,6 @@ NamedBlockClauseSyntax* Parser::parseNamedBlockClause() {
 
 ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
     SmallVectorSized<SyntaxNode*, 16> buffer;
-    SmallVectorSized<Token, 8> skipped;
     auto kind = peek().kind;
     bool error = false;
 
@@ -577,16 +566,15 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         else if (isPossibleStatement(kind))
             newNode = &parseStatement();
         else {
-            auto token = consume();
-            skipped.append(token);
+            auto location = skipToken();
             if (!error) {
-                addError(DiagCode::InvalidTokenInSequentialBlock, token.location());
+                addError(DiagCode::InvalidTokenInSequentialBlock, location);
                 error = true;
             }
         }
 
         if (newNode) {
-            buffer.append(prependSkippedTokens(newNode, skipped));
+            buffer.append(newNode);
             error = false;
         }
         kind = peek().kind;
@@ -609,7 +597,6 @@ ArrayRef<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         end = expect(endKind);
     }
 
-    end = prependSkippedTokens(end, skipped);
     return buffer.copy(alloc);
 }
 
@@ -648,7 +635,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedIdentifier,
-        [this](bool) { return parseName(); }
+        [this](bool) -> decltype(auto) { return parseName(); }
     );
 
     return allocate<WaitOrderStatementSyntax>(

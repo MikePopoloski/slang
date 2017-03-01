@@ -38,7 +38,7 @@ public:
                 return evalSubroutineDeclaration(root.as<FunctionDeclarationSyntax>());
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ModuleDeclaration: {
-                auto module = root.as<ModuleDeclarationSyntax>();
+                auto& module = root.as<ModuleDeclarationSyntax>();
                 declTable.addMember(module);
                 // construct a blank module with empty scope linking to this scope
                 auto scope = alloc.emplace<Scope>();

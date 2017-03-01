@@ -134,7 +134,7 @@ void testPrefixUnary(TokenKind kind) {
     REQUIRE(expr.kind == getUnaryPrefixExpression(kind));
     CHECK(expr.toString() == text);
     CHECK(diagnostics.empty());
-    auto us = (PrefixUnaryExpressionSyntax&)expr;
+    auto& us = expr.as<PrefixUnaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
     CHECK(us.operand.kind == SyntaxKind::IdentifierName);
 }
@@ -162,7 +162,7 @@ void testPostfixUnary(TokenKind kind) {
     REQUIRE(expr.kind == getUnaryPostfixExpression(kind));
     CHECK(expr.toString() == text);
     CHECK(diagnostics.empty());
-    auto us = (PostfixUnaryExpressionSyntax&)expr;
+    auto& us = expr.as<PostfixUnaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
     CHECK(us.operand.kind == SyntaxKind::IdentifierName);
 }
@@ -179,7 +179,7 @@ void testBinaryOperator(TokenKind kind) {
     REQUIRE(expr.kind == getBinaryExpression(kind));
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(diagnostics.empty());
-    auto us = (BinaryExpressionSyntax&)expr;
+    auto& us = expr.as<BinaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
     CHECK(us.left.kind == SyntaxKind::IdentifierName);
     CHECK(us.right.kind == SyntaxKind::IntegerLiteralExpression);
@@ -378,7 +378,7 @@ TEST_CASE("Conditional expression", "[parser:expressions]") {
     CHECK(diagnostics.empty());
     REQUIRE(expr.kind == SyntaxKind::ConditionalExpression);
 
-    auto cond = (ConditionalExpressionSyntax&)expr;
+    auto& cond = expr.as<ConditionalExpressionSyntax>();
     REQUIRE(cond.predicate.conditions.count() == 1);
     CHECK(cond.predicate.conditions[0]->expr.kind == SyntaxKind::LogicalOrExpression);
 }
@@ -392,7 +392,7 @@ TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
     CHECK(diagnostics.empty());
     REQUIRE(expr.kind == SyntaxKind::ConditionalExpression);
 
-    auto cond = (ConditionalExpressionSyntax&)expr;
+    auto& cond = expr.as<ConditionalExpressionSyntax>();
     REQUIRE(cond.predicate.conditions.count() == 2);
     CHECK(cond.predicate.conditions[0]->expr.kind == SyntaxKind::IdentifierName);
     CHECK(cond.predicate.conditions[0]->matchesClause->pattern.kind == SyntaxKind::ExpressionPattern);

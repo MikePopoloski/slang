@@ -250,7 +250,7 @@ const TypeSymbol* SemanticModel::makeTypeSymbol(const DataTypeSyntax& syntax, Sc
         case SyntaxKind::IntegerType:
         case SyntaxKind::TimeType: {
             // TODO: signing
-            auto its = syntax.as<IntegerTypeSyntax>();
+            auto& its = syntax.as<IntegerTypeSyntax>();
             if (its.dimensions.count() > 0) {
                 // Error but don't fail out; just remove the dims and keep trucking
                 auto& diag = diagnostics.add(DiagCode::PackedDimsOnPredefinedType, its.dimensions[0]->openBracket.location());

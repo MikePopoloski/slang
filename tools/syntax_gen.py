@@ -16,9 +16,8 @@ def main():
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <optional>
-
 #include "lexing/Token.h"
+#include "util/BumpAllocator.h"
 #include "SyntaxNode.h"
 
 // This file contains all parse tree syntax nodes.
@@ -178,8 +177,12 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		outf.write('    }\n')
 	else:
 		outf.write('        childCount += {};\n'.format(len(members)))
-		outf.write('    }\n')
-		outf.write('\nprotected:\n')
+		outf.write('    }\n\n')
+
+		outf.write('    {}(const {}&) = delete;\n'.format(name, name))
+		outf.write('    {}& operator=(const {}&) = delete;\n\n'.format(name, name))
+
+		outf.write('protected:\n')
 		outf.write('    TokenOrSyntax getChild(uint32_t index) override{} {{\n'.format(final))
 
 		if len(combined) > 0:
