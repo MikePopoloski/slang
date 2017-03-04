@@ -141,6 +141,7 @@ function toolchain(_buildDir, _libDir)
 		buildoptions {
 			"/wd4324", -- warning C4324: '': structure was padded due to alignment specifier
 			"/std:c++latest",
+			"/permissive-"
 		}
 		linkoptions {
 			"/ignore:4221", -- LNK4221: This object file does not define any previously undefined public symbols, so it will not be used by any link operation that consumes this library

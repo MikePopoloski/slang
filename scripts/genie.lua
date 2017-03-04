@@ -48,13 +48,6 @@ function testProject(_name)
 		links {
 			"slang"
 		}
-
-		configuration { "vs*" }
-			buildoptions {
-				"/Fd" .. _name .. "_compiler.pdb"
-			}
-
-		configuration {}
 end
 
 group "tests"
