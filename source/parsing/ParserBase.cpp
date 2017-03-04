@@ -12,8 +12,8 @@
 namespace slang {
 
 ParserBase::ParserBase(Preprocessor& preprocessor) :
-    window(preprocessor),
-    alloc(preprocessor.getAllocator())
+    alloc(preprocessor.getAllocator()),
+    window(preprocessor)
 {
 }
 

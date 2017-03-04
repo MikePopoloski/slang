@@ -108,7 +108,7 @@ void SemanticModel::makePackages() {
                 case SyntaxKind::PackageImportDeclaration:
                     handlePackageImport(member->as<PackageImportDeclarationSyntax>(), pkgSym.scope);
                     break;
-                case SyntaxKind::ParameterDeclarationStatement:
+                case SyntaxKind::ParameterDeclarationStatement: {
                     const auto& paramDecl = member->as<ParameterDeclarationStatementSyntax>().parameter;
                     for (const VariableDeclaratorSyntax *declarator : paramDecl.declarators) {
                         auto declName = declarator->name.valueText();
@@ -126,6 +126,9 @@ void SemanticModel::makePackages() {
                             pkgSym.scope->add(alloc.emplace<ParameterSymbol>(declName, location, paramDecl, *declarator, false));
                         }
                     }
+                    break;
+                }
+                default:
                     break;
             }
         }
@@ -987,6 +990,8 @@ void SemanticModel::makeInterfacePorts(Scope* scope,
                     ifPortNames.emplace(decl.name.valueText());
                     break;
                 }
+                default:
+                    break;
             }
         }
     }

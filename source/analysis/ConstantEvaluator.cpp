@@ -201,7 +201,7 @@ ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression* exp
         // are normal numbers
         return SVInt::createFillX(expr->type->width(), false);
     }
-    int16_t actualMsb = (lb < 0 ? -1 : 1) *(int16_t)(msb.getAssertInt64() - lb);
+    int16_t actualMsb = (lb < 0 ? -1 : 1) * (int16_t)msb.getAssertInt64() - lb;
     // here "actual" bit refers to bits numbered from
     // lsb 0 to msb <width>, which is what is understood by SVInt::bitSelect
     switch (expr->kind) {
@@ -209,7 +209,7 @@ ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression* exp
             return first.bitSelect(actualMsb, actualMsb);
         }
         case SyntaxKind::SimpleRangeSelect: {
-            int16_t actualLsb = (lb < 0 ? -1 : 1) * (int16_t)(lsbOrWidth.getAssertInt64() - lb);
+            int16_t actualLsb = (lb < 0 ? -1 : 1) * (int16_t)lsbOrWidth.getAssertInt64() - lb;
             return first.bitSelect(actualLsb, actualMsb);
         }
         case SyntaxKind::AscendingRangeSelect: {

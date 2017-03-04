@@ -11,8 +11,8 @@
 
 namespace slang {
 
-VectorBuilder::VectorBuilder(BumpAllocator& alloc, Diagnostics& diagnostics) :
-    alloc(alloc), diagnostics(diagnostics)
+VectorBuilder::VectorBuilder(Diagnostics& diagnostics) :
+    diagnostics(diagnostics)
 {
 }
 

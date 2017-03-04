@@ -726,7 +726,7 @@ Token Lexer::lexIncludeFileName() {
 TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
     // have to check for the "1step" magic keyword
     static const char OneStepText[] = "1step";
-    for (int i = 0; i < sizeof(OneStepText) - 1; i++) {
+    for (int i = 0; i < (int)sizeof(OneStepText) - 1; i++) {
         if (peek(i) != OneStepText[i])
             break;
         if (i == sizeof(OneStepText) - 2) {

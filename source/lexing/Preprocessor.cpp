@@ -182,7 +182,6 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             // so let us now concatenate all of the tokens from the macro expansion
             // up to the '>'' in order to get the file name
             SourceLocation rootExpansionLoc = sourceManager.getExpansionLoc(fileName.location());
-            Token concatenatedFileName = fileName;
             SmallVectorSized<Token, 8> tokens;
             tokens.append(fileName);
             Token nextToken = peek();

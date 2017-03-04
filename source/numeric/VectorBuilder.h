@@ -21,7 +21,7 @@ class Diagnostics;
 /// arbitrary precision integer literals.
 class VectorBuilder {
 public:
-    VectorBuilder(BumpAllocator& alloc, Diagnostics& diagnostics);
+    VectorBuilder(Diagnostics& diagnostics);
 
     /// Start a new integer literal.
     void start(LiteralBase base, uint16_t size, bool isSigned, SourceLocation location);
@@ -35,7 +35,6 @@ public:
 private:
     void addDigit(logic_t digit, int maxValue);
 
-    BumpAllocator& alloc;
     Diagnostics& diagnostics;
     SmallVectorSized<logic_t, 16> digits;
     SourceLocation firstLocation;

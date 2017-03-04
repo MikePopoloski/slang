@@ -12,7 +12,7 @@ namespace slang {
 
 Parser::Parser(Preprocessor& preprocessor) :
     ParserBase::ParserBase(preprocessor),
-    vectorBuilder(preprocessor.getAllocator(), getDiagnostics())
+    vectorBuilder(getDiagnostics())
 {
 }
 
