@@ -117,6 +117,7 @@ private:
         Vector<char> mem;                   // file contents
         std::string name;                   // name of the file
         std::vector<uint32_t> lineOffsets;  // char offset for each line
+
         struct LineDirectiveInfo {
             uint32_t lineInFile; // Actual file line where directive occurred
             uint32_t lineOfDirective; // Line number set by directive
@@ -130,7 +131,7 @@ private:
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none
-        FileData::LineDirectiveInfo* getPreviousLineDirective(uint32_t rawLineNumber);
+        LineDirectiveInfo* getPreviousLineDirective(uint32_t rawLineNumber);
 
         struct LineDirectiveComparator {
             bool operator()(const LineDirectiveInfo& info1, const LineDirectiveInfo& info2) {
@@ -142,9 +143,9 @@ private:
         const Path* directory;              // directory that the file exists in
 
         FileData(const Path* directory, const std::string& name, SmallVector<char>&& data) :
-            directory(directory),
+            mem(std::move(data)),
             name(name),
-            mem(std::move(data))
+            directory(directory)
         {
         }
     };

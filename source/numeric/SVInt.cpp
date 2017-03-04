@@ -513,7 +513,7 @@ SVInt SVInt::ashr(uint32_t amount) const {
         newData[0] = (int64_t)newVal >> (SVInt::BITS_PER_WORD - contractedWidth);
         for (size_t i = 1; i < getNumWords(); ++i) {
             // sign extend the rest based on original sign
-            newData[i] = val & (1L << 63) ? 0 : ~0L;
+            newData[i] = val & (1ULL << 63) ? 0 : ~0L;
         }
         SVInt ret(newData, bitWidth, signFlag, false);
         ret.clearUnusedBits();
@@ -577,10 +577,10 @@ SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
     }
 
     // variables to keep track of out-of-bounds accesses
-    size_t frontOOB = lsb < 0 ? -lsb : 0;
-    size_t backOOB = msb >= bitWidth ? msb - bitWidth + 1 : 0;
+    uint16_t frontOOB = lsb < 0 ? -lsb : 0;
+    uint16_t backOOB = msb >= bitWidth ? msb - bitWidth + 1 : 0;
     bool anyOOB = frontOOB || backOOB;
-    size_t validSelectWidth = selectWidth - frontOOB - backOOB;
+    uint16_t validSelectWidth = selectWidth - frontOOB - backOOB;
 
     if (isSingleWord() && !anyOOB) {
         // simplest case; 1 word input, 1 word output, no out of bounds
@@ -589,7 +589,7 @@ SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
     }
 
     // core part of the method: copy over the proper number of bits
-    size_t words = getNumWords(selectWidth, unknownFlag || anyOOB);
+    int words = getNumWords(selectWidth, unknownFlag || anyOOB);
     uint64_t* newData = new uint64_t[words]();
 
     copyBits((uint8_t*)newData, frontOOB, (uint8_t*)getRawData(), validSelectWidth, frontOOB ? 0 : lsb);
@@ -597,15 +597,15 @@ SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
     if (unknownFlag) {
         // copy over preexisting unknown data
         copyBits((uint8_t*)(newData + words / 2), frontOOB, (uint8_t*)(pVal + getNumWords() / 2), validSelectWidth);
-        for (size_t i = words / 2; i < words; ++i) {
+        for (int i = words / 2; i < words; ++i) {
             if (newData[i] != 0) {
                 actualUnknownsInResult = true;
                 break;
             }
         }
     }
+    
     // back to special case handling
-
     if (anyOOB) {
         // We have to fill in some x's for out of bounds data
         // a buffer of just xs for us to use copyBits() from
@@ -615,7 +615,8 @@ SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
         copyBits((uint8_t*)(newData + words / 2), 0, xs, frontOOB);
         copyBits((uint8_t*)(newData + words / 2), validSelectWidth + frontOOB, xs, backOOB);
         free(xs);
-    } else if (words == 1) {
+    }
+    else if (words == 1) {
         // If the output is a single word and everything is valid, we need to return a single-word output
         uint64_t val = *newData;
         free(newData);

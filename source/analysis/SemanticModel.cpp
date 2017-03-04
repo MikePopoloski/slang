@@ -95,7 +95,6 @@ InstanceSymbol* SemanticModel::makeImplicitInstance(const ModuleDeclarationSynta
 
 void SemanticModel::makePackages() {
     for (auto pkg : declTable.getPackages()) {
-        auto name = pkg->header.name.valueText();
         Scope *scope = alloc.emplace<Scope>();
         bool ok = packages.add(alloc.emplace<ModuleSymbol>(*pkg, scope, ArrayRef<const Symbol *>()));
         ASSERT(ok);
@@ -647,9 +646,10 @@ void SemanticModel::handleLoopGenerate(const LoopGenerateSyntax& syntax, SmallVe
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         Scope localScope { &iterScope };
+        ImplicitTypeSyntax type { Token(), nullptr };
         ParameterSymbol iterParam {
             syntax.identifier.valueText(),
-            syntax.identifier.location(), ParameterDeclarationSyntax{Token(), ImplicitTypeSyntax{Token(), nullptr}, nullptr}, VariableDeclaratorSyntax{Token(), nullptr, nullptr }, true
+            syntax.identifier.location(), ParameterDeclarationSyntax{Token(), type, nullptr}, VariableDeclaratorSyntax{Token(), nullptr, nullptr }, true
         };
         iterParam.value = genvar;
         localScope.add(&iterParam);

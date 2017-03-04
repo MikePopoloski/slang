@@ -430,7 +430,7 @@ BoundExpression* ExpressionBinder::bindConditionalExpression(const ConditionalEx
 
 BoundExpression* ExpressionBinder::bindConcatenationExpression(const ConcatenationExpressionSyntax& syntax) {
     SmallVectorSized<const BoundExpression*, 8> buffer;
-    size_t totalWidth = 0;
+    int totalWidth = 0;
     for (auto argSyntax : syntax.expressions) {
         const BoundExpression *arg = bindAndPropagate(*argSyntax);
         buffer.append(arg);
@@ -483,14 +483,14 @@ BoundExpression* ExpressionBinder::bindSelectExpression(const ExpressionSyntax& 
         case SyntaxKind::SimpleRangeSelect:
             left = bindAndPropagate(((RangeSelectSyntax*)selector)->left); // msb
             right = bindAndPropagate(((RangeSelectSyntax*)selector)->right); // lsb
-            width = (down ? 1 : -1) * (evaluator.evaluateExpr(left).integer().getAssertInt64() -
+            width = (down ? 1 : -1) * (int)(evaluator.evaluateExpr(left).integer().getAssertInt64() -
                     evaluator.evaluateExpr(right).integer().getAssertInt64());
             break;
         case SyntaxKind::AscendingRangeSelect:
         case SyntaxKind::DescendingRangeSelect:
             left = bindAndPropagate(((RangeSelectSyntax*)selector)->left); // msb/lsb
             right = bindAndPropagate(((RangeSelectSyntax*)selector)->right); // width
-            width = evaluator.evaluateExpr(right).integer().getAssertInt64();
+            width = int(evaluator.evaluateExpr(right).integer().getAssertInt64());
             break;
 
         DEFAULT_UNREACHABLE;

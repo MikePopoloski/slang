@@ -211,9 +211,7 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
 
     // Lex any leading trivia; if we're in directive mode this might require
     // us to return an EndOfDirective token right away.
-    bool eod = lexTrivia(triviaBuffer, directiveMode);
-
-    if (eod) {
+    if (lexTrivia(triviaBuffer, directiveMode)) {
         info->trivia = triviaBuffer.copy(alloc);
         return Token(TokenKind::EndOfDirective, info);
     }
@@ -221,16 +219,16 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
     // lex the next token
     mark();
     TokenKind kind = lexToken(info, directiveMode, keywordVersion);
-
     onNewLine = false;
     info->rawText = lexeme();
+
     if (kind != TokenKind::EndOfFile && diagnostics.count() >= MAX_LEXER_ERRORS) {
-        // Stop any further lexing by claiming to at the end of the buffeer;
+        // Stop any further lexing by claiming to at the end of the buffer
         addError(DiagCode::TooManyLexerErrors, currentOffset());
+
         // consume the rest of the file and turn it into trivia
-        triviaBuffer.append(Trivia(TriviaKind::DisabledText, StringRef(marker, sourceEnd - marker)));
+        triviaBuffer.append(Trivia(TriviaKind::DisabledText, StringRef(marker, (uint32_t)(sourceEnd - marker))));
         sourceBuffer = sourceEnd - 1;
-        mark();
         kind = TokenKind::EndOfFile;
     }
     info->trivia = triviaBuffer.copy(alloc);

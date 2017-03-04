@@ -15,9 +15,9 @@ namespace slang {
 
 size_t xxhash(const void* input, size_t len, size_t seed) {
 #ifdef PLATFORM_X64
-    return xxhash64(input, len, seed);
+    return xxhash64(input, len, (uint64_t)seed);
 #else
-    return xxhash32(input, len, seed);
+    return xxhash32(input, len, (uint32_t)seed);
 #endif
 }
 

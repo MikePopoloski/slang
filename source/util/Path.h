@@ -54,12 +54,12 @@ public:
     Path() {}
 
     Path(const Path& path) :
-        pathType(path.pathType), elements(path.elements), absolute(path.absolute)
+        elements(path.elements), pathType(path.pathType), absolute(path.absolute)
     {
     }
 
     Path(Path&& path) noexcept :
-        pathType(path.pathType), elements(std::move(path.elements)), absolute(path.absolute)
+        elements(std::move(path.elements)), pathType(path.pathType), absolute(path.absolute)
     {
     }
 

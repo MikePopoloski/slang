@@ -373,8 +373,10 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
         std::string buffer(line.length(), ' ');
 
         // handle tabs to get proper alignment on a terminal
-        for (size_t i = 0; i < buffer.length(); ++i)
-            if (line[i] == '\t') buffer[i] = '\t';
+        for (uint32_t i = 0; i < buffer.length(); ++i) {
+            if (line[i] == '\t')
+                buffer[i] = '\t';
+        }
 
         for (SourceRange range : ranges)
             highlightRange(range, loc, col, line, buffer);

@@ -139,8 +139,8 @@ public:
 
     IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, ArrayRef<int> lowerBounds, ArrayRef<int> widths) :
         TypeSymbol(SymbolKind::IntegralType, getTokenKindText(keywordType), SourceLocation()),
-        width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState),
-        lowerBounds(lowerBounds), widths(widths) {}
+        lowerBounds(lowerBounds), widths(widths),
+        width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
 
     static constexpr SymbolKind mykind = SymbolKind::IntegralType;
 
@@ -380,8 +380,8 @@ public:
     SubroutineSymbol(Token name, const TypeSymbol* returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
                      VariableLifetime defaultLifetime, bool isTask, const Scope* scope) :
         Symbol(SymbolKind::Subroutine, name.valueText(), name.location()),
-        returnType(returnType), arguments(arguments), defaultLifetime(defaultLifetime),
-        isTask(isTask), scope(scope) {}
+        scope(scope), returnType(returnType), arguments(arguments),
+        defaultLifetime(defaultLifetime), isTask(isTask) {}
 
     SubroutineSymbol(StringRef name, const TypeSymbol* returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
                      SystemFunction systemFunction) :
