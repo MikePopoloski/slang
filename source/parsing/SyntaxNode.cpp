@@ -80,21 +80,6 @@ SourceRange SyntaxNode::sourceRange() const {
     return SourceRange(firstToken.location(), lastToken.location() + lastToken.rawText().length());
 }
 
-bool SyntaxNode::replaceFirstToken(Token token) {
-    for (uint32_t i = 0; i < childCount; i++) {
-        auto child = getChild(i);
-        if (child.isToken) {
-            replaceChild(i, token);
-            return true;
-        }
-        else if (child.node) {
-            if (child.node->replaceFirstToken(token))
-                return true;
-        }
-    }
-    return false;
-}
-
 const SyntaxNode* SyntaxNode::childNode(uint32_t index) const {
     auto child = const_cast<SyntaxNode*>(this)->getChild(index);
     if (child.isToken)

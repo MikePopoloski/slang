@@ -200,27 +200,6 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 			outf.write('        (void)index;\n')
 			outf.write('        return nullptr;\n')
 
-		outf.write('    }\n\n')
-
-		outf.write('    void replaceChild(uint32_t index, Token token) override{} {{\n'.format(final))
-		anyTokens = False
-		if len(combined) > 0:
-			outf.write('        switch (index) {\n')
-			index = 0
-			for m in combined:
-				isToken = m[0] == "token"
-				if isToken:
-					anyTokens = True
-				statement = "ASSERT(false)" if not isToken else "{} = token".format(m[1])
-				outf.write('            case {}: {}; break;\n'.format(index, statement))
-				index += 1
-
-			outf.write('        }\n')
-		else:
-			outf.write('        (void)index;\n')
-
-		if not anyTokens:
-			outf.write('        (void)token;\n')
 		outf.write('    }\n')
 
 	outf.write('};\n\n')

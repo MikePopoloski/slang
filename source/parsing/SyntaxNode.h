@@ -562,9 +562,6 @@ public:
     /// Get the source range of the node.
     SourceRange sourceRange() const;
 
-    /// Replace the first token in the subtree with the given token.
-    bool replaceFirstToken(Token token);
-
     /// Gets the child syntax node at the specified index. If the child at
     /// the given index is not a node (probably a token) then this returns null.
     const SyntaxNode* childNode(uint32_t index) const;
@@ -626,7 +623,6 @@ protected:
     uint32_t childCount = 0;
 
     virtual TokenOrSyntax getChild(uint32_t) = 0;
-    virtual void replaceChild(uint32_t, Token) = 0;
 };
 
 template<typename T>
@@ -650,7 +646,6 @@ public:
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
-    virtual void replaceChild(uint32_t, Token) override final { ASSERT(false, "No tokens in SyntaxList!"); };
 
 private:
     ArrayRef<T*> elements;
@@ -676,7 +671,6 @@ public:
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
-    virtual void replaceChild(uint32_t index, Token child) override final { elements[index] = child; };
 
 private:
     ArrayRef<Token> elements;
@@ -751,10 +745,6 @@ public:
 
 protected:
     TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
-    virtual void replaceChild(uint32_t index, Token child) override final {
-        ASSERT(elements[index].isToken);
-        elements[index].token = child;
-    };
 
 private:
     ArrayRef<TokenOrSyntax> elements;
