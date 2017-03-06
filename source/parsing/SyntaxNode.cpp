@@ -8,7 +8,7 @@
 
 namespace slang {
 
-void SyntaxNode::writeTo(SmallVector<char>& buffer, uint8_t flags) {
+void SyntaxNode::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
         if (child.isToken) {
@@ -21,18 +21,13 @@ void SyntaxNode::writeTo(SmallVector<char>& buffer, uint8_t flags) {
     }
 }
 
-std::string SyntaxNode::toString(uint8_t flags) {
+std::string SyntaxNode::toString(uint8_t flags) const {
     SmallVectorSized<char, 256> buffer;
     writeTo(buffer, flags);
     return std::string(buffer.begin(), buffer.end());
 }
 
-std::string SyntaxNode::toString(uint8_t flags) const {
-    // TODO: the const cast is ugly
-    return const_cast<SyntaxNode*>(this)->toString(flags);
-}
-
-Token SyntaxNode::getFirstToken() {
+Token SyntaxNode::getFirstToken() const {
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
         if (child.isToken) {
@@ -48,12 +43,7 @@ Token SyntaxNode::getFirstToken() {
     return Token();
 }
 
-Token SyntaxNode::getFirstToken() const {
-    // TODO: the const cast is ugly
-    return const_cast<SyntaxNode*>(this)->getFirstToken();
-}
-
-Token SyntaxNode::getLastToken() {
+Token SyntaxNode::getLastToken() const {
     for (int i = childCount - 1; i >= 0; i--) {
         auto child = getChild(i);
         if (child.isToken) {
@@ -67,11 +57,6 @@ Token SyntaxNode::getLastToken() {
         }
     }
     return Token();
-}
-
-Token SyntaxNode::getLastToken() const {
-    // TODO: the const cast is ugly
-    return const_cast<SyntaxNode*>(this)->getLastToken();
 }
 
 SourceRange SyntaxNode::sourceRange() const {

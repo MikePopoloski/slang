@@ -183,7 +183,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		outf.write('    {}& operator=(const {}&) = delete;\n\n'.format(name, name))
 
 		outf.write('protected:\n')
-		outf.write('    TokenOrSyntax getChild(uint32_t index) override{} {{\n'.format(final))
+		outf.write('    TokenOrSyntax getChild(uint32_t index) const override{} {{\n'.format(final))
 
 		if len(combined) > 0:
 			outf.write('        switch (index) {\n')

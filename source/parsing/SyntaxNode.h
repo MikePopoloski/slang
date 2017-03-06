@@ -527,12 +527,12 @@ bool isExpression(SyntaxKind kind);
 struct TokenOrSyntax {
     union {
         Token token;
-        SyntaxNode* node;
+        const SyntaxNode* node;
     };
     bool isToken;
 
     TokenOrSyntax(Token token) : token(token), isToken(true) {}
-    TokenOrSyntax(SyntaxNode* node) : node(node), isToken(false) {}
+    TokenOrSyntax(const SyntaxNode* node) : node(node), isToken(false) {}
     TokenOrSyntax(std::nullptr_t) : token(), isToken(true) {}
 };
 
@@ -545,18 +545,15 @@ public:
     SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
     /// Utility method to wrap writeTo and generate an std::string.
-    std::string toString(uint8_t flags = 0);
     std::string toString(uint8_t flags = 0) const;
 
     /// Write the node and all of its children to a string.
-    void writeTo(SmallVector<char>& buffer, uint8_t flags);
+    void writeTo(SmallVector<char>& buffer, uint8_t flags) const;
 
     /// Get the first leaf token in this subtree.
-    Token getFirstToken();
     Token getFirstToken() const;
 
     /// Get the last leaf token in this subtree.
-    Token getLastToken();
     Token getLastToken() const;
 
     /// Get the source range of the node.
@@ -622,7 +619,7 @@ public:
 protected:
     uint32_t childCount = 0;
 
-    virtual TokenOrSyntax getChild(uint32_t) = 0;
+    virtual TokenOrSyntax getChild(uint32_t) const = 0;
 };
 
 template<typename T>
@@ -642,12 +639,10 @@ public:
     const T* const* end() const { return elements.end(); }
 
     const T* operator[](uint32_t index) const { return elements[index]; }
-    T* operator[](uint32_t index) { return elements[index]; }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
 
 private:
+    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+
     ArrayRef<T*> elements;
 };
 
@@ -666,36 +661,33 @@ public:
     const Token* begin() const { return elements.begin(); }
     const Token* end() const { return elements.end(); }
 
-    const Token operator[](uint32_t index) const { return elements[index]; }
-    Token operator[](uint32_t index) { return elements[index]; }
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
+    Token operator[](uint32_t index) const { return elements[index]; }
 
 private:
+    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+
     ArrayRef<Token> elements;
 };
 
 template<typename T>
 class SeparatedSyntaxList : public SyntaxNode {
 public:
-    template<typename TOwner, typename TValue>
-    class iterator_templ {
+    class const_iterator {
     public:
         using difference_type = ptrdiff_t;
-        using value_type = TValue*;
-        using pointer = TValue**;
-        using reference = TValue*;
+        using value_type = const T*;
+        using pointer = const T**;
+        using reference = const T*;
         using iterator_category = std::forward_iterator_tag;
 
-        iterator_templ(TOwner& list, int index) :
+        const_iterator(const SeparatedSyntaxList& list, int index) :
             list(list), index(index)
         {
         }
 
-        iterator_templ& operator++() { ++index; return *this; }
-        iterator_templ operator++(int) {
-            iterator_templ result = *this;
+        const_iterator& operator++() { ++index; return *this; }
+        const_iterator operator++(int) {
+            const_iterator result = *this;
             ++(*this);
             return result;
         }
@@ -703,16 +695,13 @@ public:
         reference operator*() const { return list[index]; }
         pointer operator->() const { return &list[index]; }
 
-        bool operator==(const iterator_templ& other) const { return &list == &other.list && index == other.index; }
-        bool operator!=(const iterator_templ& other) const { return !(*this == other); }
+        bool operator==(const const_iterator& other) const { return &list == &other.list && index == other.index; }
+        bool operator!=(const const_iterator& other) const { return !(*this == other); }
 
     private:
-        TOwner& list;
+        const SeparatedSyntaxList& list;
         int index;
     };
-
-    using iterator = iterator_templ<SeparatedSyntaxList, T>;
-    using const_iterator = iterator_templ<const SeparatedSyntaxList, const T>;
 
     SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(ArrayRef<TokenOrSyntax>(nullptr)) {}
     SeparatedSyntaxList(ArrayRef<TokenOrSyntax> elements) :
@@ -726,27 +715,19 @@ public:
     uint32_t count() const { return (uint32_t)std::ceil(elements.count() / 2.0); }
 
     const T* operator[](uint32_t index) const {
-        return const_cast<SeparatedSyntaxList*>(this)->operator[](index);
-    }
-
-    T* operator[](uint32_t index) {
         index <<= 1;
         ASSERT(!elements[index].isToken);
-        return static_cast<T*>(elements[index].node);
+        return static_cast<const T*>(elements[index].node);
     }
-
-    iterator begin() { return iterator(*this, 0); }
-    iterator end() { return iterator(*this, count()); }
 
     const_iterator begin() const { return cbegin(); }
     const_iterator end() const { return cend(); }
     const_iterator cbegin() const { return const_iterator(*this, 0); }
     const_iterator cend() const { return const_iterator(*this, count()); }
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) override final { return elements[index]; }
-
 private:
+    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+
     ArrayRef<TokenOrSyntax> elements;
 };
 
