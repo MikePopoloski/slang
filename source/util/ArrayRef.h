@@ -22,12 +22,12 @@ public:
     ArrayRef() {}
     ArrayRef(std::nullptr_t) {}
 
-    ArrayRef(T* ptr, uint32_t length) :
+    ArrayRef(const T* ptr, uint32_t length) :
         ptr(ptr), len(length)
     {
     }
 
-    ArrayRef(T* begin, T* end) :
+    ArrayRef(const T* begin, const T* end) :
         ptr(begin), len((uint32_t)(end - begin))
     {
     }
@@ -54,18 +54,13 @@ public:
     uint32_t count() const { return len; }
     bool empty() const { return len == 0; }
 
-    T& operator[](uint32_t index) {
-        ASSERT(index < len);
-        return ptr[index];
-    }
-
     const T& operator[](uint32_t index) const {
         ASSERT(index < len);
         return ptr[index];
     }
 
 private:
-    T* ptr = nullptr;
+    const T* ptr = nullptr;
     uint32_t len = 0;
 };
 
