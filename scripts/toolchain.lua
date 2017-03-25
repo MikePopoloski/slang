@@ -46,7 +46,7 @@ function toolchain(_buildDir, _libDir)
 		os.exit(1)
 	end
 
-	local windowsPlatform = "10.0.10240.0"
+	local windowsPlatform = "10.0.14393.0"
 	local compiler32bit = false
 	if _OPTIONS["with-32bit-compiler"] then
 		compiler32bit = true
@@ -58,10 +58,6 @@ function toolchain(_buildDir, _libDir)
 			print("GCC flavor must be specified!")
 			os.exit(1)
 		end
-
-		flags {
-			"ExtraWarnings",
-		}
 
 		if "linux-gcc" == _OPTIONS["gcc"] then
 			location (path.join(_buildDir, "projects", _ACTION .. "-linux"))
@@ -86,6 +82,13 @@ function toolchain(_buildDir, _libDir)
 			premake.xcode.toolset = "macosx"
 			location (path.join(_buildDir, "projects", _ACTION .. "-osx"))
 		end
+
+	elseif _ACTION == "vs2017" then
+
+		local action = premake.action.current()
+		action.vstudio.windowsTargetPlatformVersion = windowsPlatform
+		action.vstudio.windowsTargetPlatformMinVersion = windowsPlatform
+
 	end
 
 	if not _OPTIONS["with-dynamic-runtime"] then
@@ -102,6 +105,7 @@ function toolchain(_buildDir, _libDir)
 		"NoEditAndContinue",
 		"NoFramePointer",
 		"Symbols",
+		"ExtraWarnings"
 	}
 
 	defines {
