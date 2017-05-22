@@ -12,34 +12,42 @@
 
 namespace slang {
 
-using ConstantValueBase = std::variant<std::monostate, SVInt, double>;
+/// Represents a constant (compile-time evaluated) value, of one of a few possible types.
+/// By default the value is indeterminate, or "bad". Expressions involving bad
+/// values result in bad values, as you might expect.
+class ConstantValue {
+public:
+	ConstantValue() {}
+	ConstantValue(std::nullptr_t) {}
 
-struct ConstantValue : ConstantValueBase {
-    ConstantValue() : ConstantValueBase() {}
-    ConstantValue(std::nullptr_t) : ConstantValueBase() {}
+	ConstantValue(const SVInt& integer) : value(integer) {}
+    ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
+    ConstantValue(double real) : value(real) {}
 
-    ConstantValue(const SVInt& integer) : ConstantValueBase(integer) {}
-    ConstantValue(SVInt&& integer) : ConstantValueBase(std::move(integer)) {}
-    ConstantValue(double real) : ConstantValueBase(real) {}
+	ConstantValue(const ConstantValue& other) = default;
+	ConstantValue(ConstantValue&& other) noexcept = default;
+	ConstantValue& operator=(const ConstantValue& other) = default;
+	ConstantValue& operator=(ConstantValue&& other) noexcept = default;
 
-    ConstantValue(const ConstantValue& other) : ConstantValueBase(other) {}
-    ConstantValue(ConstantValue&& other) noexcept : ConstantValueBase(std::move(other)) {}
-
-    ConstantValue& operator=(const ConstantValue& other) {
-        ConstantValueBase::operator=(other);
-        return *this;
-    }
-
-    ConstantValue& operator=(ConstantValue&& other) noexcept {
-        ConstantValueBase::operator=(std::move(other));
-        return *this;
-    }
-
-    bool bad() const { return index() == 0; }
+	bool bad() const;
     explicit operator bool() const { return !bad(); }
 
-    const SVInt& integer() const { return std::get<1>(*this); }
-    double real() const { return std::get<2>(*this); }
+    const SVInt& integer() const { return std::get<1>(value); }
+    double real() const { return std::get<2>(value); }
+
+private:
+	std::variant<std::monostate, SVInt, double> value;
+};
+
+/// Represents a simple constant range.
+struct ConstantRange {
+	SVInt left;
+	SVInt right;
+
+	SVInt width() {
+		auto diff = left - right;
+		return (diff.isNegative() ? -diff : diff) + SVInt(1);
+	}
 };
 
 }

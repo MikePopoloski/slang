@@ -427,6 +427,9 @@ public:
         WORD_SIZE = sizeof(uint64_t)
     };
 
+	static SVInt Zero;
+	static SVInt One;
+
 private:
     // fast internal constructors to just set fields on new values
     SVInt(uint64_t* data, uint16_t bits, bool signFlag, bool unknownFlag) :

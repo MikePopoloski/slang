@@ -32,6 +32,8 @@ public:
     {
     }
 
+	ArrayRef(std::initializer_list<T> init);
+
     template<size_t N>
     ArrayRef(T (&array)[N]) :
         ptr(array), len(uint32_t(N)) {}
