@@ -24,13 +24,13 @@ Token identifier(const std::string& name, ArrayRef<Trivia> trivia) {
 
 class ModuleRewriter : public SyntaxVisitor<ModuleRewriter> {
 public:
-    void registerInstance(const InstanceSymbol* instance) {
-        instanceToModule[&instance->syntax] = instance->module;
-        syntaxToModules[&instance->module->syntax].push_back(instance->module);
-        for (auto child : instance->module->children) {
+    void registerInstance(const ModuleInstanceSymbol& instance) {
+        /*instanceToModule[&instance.syntax] = instance.module;
+        syntaxToModules[&instance.module.syntax].push_back(instance.module);
+        for (auto child : instance.module.members()) {
             if (child->kind == SymbolKind::Instance)
-                registerInstance((const InstanceSymbol*)child);
-        }
+                registerInstance((const ModuleInstanceSymbol*)child);
+        }*/
     }
 
     void run(SyntaxTree& tree) {
@@ -56,9 +56,9 @@ public:
             return;
         }
 
-        for (auto module : list) {
+        /*for (auto module : list) {
             SmallVectorSized<const ParameterSymbol*, 8> params;
-            for (auto child : module->scope->symbols()) {
+            for (auto child : module->members()) {
                 if (child->kind == SymbolKind::Parameter) {
                     const auto& param = child->as<ParameterSymbol>();
                     declToParam[&param.declarator] = &param;
@@ -68,7 +68,7 @@ public:
             auto& permutations = moduleMap[&module->syntax];
             auto& index = permutations[getParamString(module)];
             if (index == 0)
-                index = permutations.size();
+                index = permutations.size();*/
 
             // Otherwise create a new module instance that has a tweaked tree
            /* ModuleHeaderSyntax header = syntax.header;
@@ -84,7 +84,7 @@ public:
                 buffer.append('\n');
                 buffer.append('\n');
             }*/
-        }
+        //}
     }
 
     void visit(const VariableDeclaratorSyntax& declarator) {
@@ -107,10 +107,10 @@ public:
         if (!module)
             visitDefault(instantiation);
         else {
-            auto& permutations = moduleMap[&module->syntax];
+            /*auto& permutations = moduleMap[&module->syntax];
             auto& index = permutations[getParamString(module)];
             if (index == 0)
-                index = permutations.size();
+                index = permutations.size();*/
 
             /*HierarchyInstantiationSyntax newSyntax = instantiation;
             newSyntax.parameters = nullptr;
@@ -125,9 +125,9 @@ public:
     }
 
 private:
-    static string getParamString(const ModuleSymbol* module) {
+    static string getParamString(const ParameterizedModuleSymbol* module) {
         string result;
-        for (auto child : module->scope->symbols()) {
+        for (auto child : module->members()) {
             if (child->kind == SymbolKind::Parameter)
                 result += child->as<ParameterSymbol>().value.integer().toString(LiteralBase::Decimal);
         }
@@ -167,11 +167,11 @@ int main(int argc, char* argv[]) {
 
     // Do semantic analysis on each module to figure out parameter values
     ModuleRewriter rewriter;
-    SemanticModel sem{ alloc, diagnostics, declTable };
-    for (auto module : declTable.getTopLevelModules()) {
+    //SemanticModel sem{ alloc, diagnostics, declTable };
+    /*for (auto module : declTable.getTopLevelModules()) {
         auto instance = sem.makeImplicitInstance(*module);
         rewriter.registerInstance(instance);
-    }
+    }*/
 
     // Now go through each syntax tree that we parsed and rewrite them to new files
     for (auto& tree : syntaxTrees)

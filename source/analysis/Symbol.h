@@ -274,6 +274,7 @@ public:
 
 	/// Adds a syntax tree to the design.
 	void addTree(const SyntaxTree& tree);
+	void addSymbol(const Symbol& symbol);
 
 	/// Gets all of the compilation units in the design.
 	ArrayRef<const CompilationUnitSymbol*> units() const;
@@ -295,6 +296,7 @@ public:
 
 	/// Performs a look up for a symbol in the root scope.
 	const Symbol* lookup(StringRef name) const final;
+	using ScopeSymbol::lookup;
 
 	/// Report an error at the specified location.
 	Diagnostic& addError(DiagCode code, SourceLocation location) const {
@@ -324,6 +326,7 @@ public:
 	SymbolList members() const;
 
 	const Symbol* lookup(StringRef name) const final;
+	using ScopeSymbol::lookup;
 };
 
 /// A SystemVerilog package construct.
@@ -334,6 +337,7 @@ public:
 	SymbolList members() const;
 
 	const Symbol* lookup(StringRef name) const final;
+	using ScopeSymbol::lookup;
 };
 
 /// Represents a module declaration, with its parameters still unresolved.
@@ -381,6 +385,7 @@ public:
 	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
 
 	const Symbol* lookup(StringRef name) const final;
+	using ScopeSymbol::lookup;
 
 private:
 	const ModuleSymbol& module;
@@ -392,7 +397,7 @@ public:
 
 	/// A helper method to access a specific member of the module (of which this is an instance).
 	template<typename T>
-	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
+	const T& member(uint32_t index) const { return module.members()[index]->as<T>(); }
 };
 
 class GenvarSymbol : public Symbol {
@@ -433,6 +438,35 @@ protected:
     VariableSymbol(SymbolKind childKind, StringRef name, SourceLocation location,
                    const TypeSymbol* type, const BoundExpression* initializer) :
         Symbol(childKind, name, location), type(type), initializer(initializer) {}
+};
+
+class ParameterSymbol : public Symbol {
+public:
+	ConstantValue value;
+};
+
+class GenerateBlockSymbol : public ScopeSymbol {
+public:
+
+	SymbolList members() const;
+
+	template<typename T>
+	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
+
+	const Symbol* lookup(StringRef name) const final;
+	using ScopeSymbol::lookup;
+};
+
+class ProceduralBlockSymbol : public ScopeSymbol {
+public:
+
+	SymbolList members() const;
+
+	template<typename T>
+	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
+
+	const Symbol* lookup(StringRef name) const final;
+	using ScopeSymbol::lookup;
 };
 
 //class GenerateBlock : public Symbol {
