@@ -29,7 +29,7 @@ public:
 	ConstantValue& operator=(const ConstantValue& other) = default;
 	ConstantValue& operator=(ConstantValue&& other) noexcept = default;
 
-	bool bad() const;
+	bool bad() const { return value.index() == 0; }
     explicit operator bool() const { return !bad(); }
 
     const SVInt& integer() const { return std::get<1>(value); }
