@@ -55,6 +55,8 @@ public:
     uint32_t offset() const { return charOffset; }
     bool isValid() const { return charOffset != 0; }
 
+	explicit operator bool() const { return isValid(); }
+
     /// Computes a source location that is offset from the current one.
     /// Note that there is no error checking to ensure that the location
     /// still points to a valid place in the source.

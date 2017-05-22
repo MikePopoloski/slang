@@ -37,6 +37,7 @@ using Dimensions = ArrayRef<ConstantRange>;
 
 enum class SymbolKind {
     Unknown,
+	Root,
     IntegralType,
     RealType,
     StringType,
@@ -111,7 +112,7 @@ public:
 
 	/// Finds the first ancestor symbol of the given kind. If this symbol is already of
 	/// the given kind, returns this symbol.
-	const Symbol* findAncestor(SymbolKind kind) const;
+	const Symbol* findAncestor(SymbolKind searchKind) const;
 
 	/// Get the symbol for the root of the design.
 	const DesignRootSymbol& getRoot() const;
@@ -158,7 +159,7 @@ public:
 	/// A helper method to evaluate a constant in the current scope and then
 	/// convert it to the given destination type. If the conversion fails, the
 	/// returned value will be marked bad.
-	ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType) const;
+	ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType, SourceLocation errorLocation) const;
 
 	/// A helper method to get a type symbol, using the current scope as context.
 	const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
@@ -290,7 +291,7 @@ public:
 	const Symbol* findDefinition(StringRef name) const;
 
 	/// Methods for getting various type symbols.
-	const TypeSymbol& getType(const DataTypeSyntax& syntax, const ScopeSymbol& scope);
+	const TypeSymbol& getType(const DataTypeSyntax& syntax, const ScopeSymbol& scope) const;
 	const TypeSymbol& getKnownType(SyntaxKind kind) const;
 	const TypeSymbol& getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false) const;
 
@@ -362,7 +363,7 @@ private:
 	};
 
 	const std::vector<ParameterInfo>& getDeclaredParams() const;
-	ConstantValue evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope, const ExpressionSyntax& expr) const;
+	ConstantValue evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope, const ExpressionSyntax& expr, SourceLocation declLocation) const;
 
 	// Helper function used by getModuleParams to convert a single parameter declaration into
 	// one or more ParameterInfo instances.

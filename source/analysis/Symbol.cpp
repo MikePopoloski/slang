@@ -1,6 +1,7 @@
 #include "Symbol.h"
 
-#include "analysis/SemanticModel.h"
+#include "analysis/Binder.h"
+#include "analysis/ConstantEvaluator.h"
 #include "diagnostics/Diagnostics.h"
 
 namespace slang {
@@ -10,6 +11,23 @@ ArrayRef<int> IntegralTypeSymbol::EmptyLowerBound { &zero, 1 };
 
 bool isDefaultSigned(TokenKind kind) {
     return false;
+}
+
+const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
+	const Symbol* current = this;
+	while (current && current->kind != searchKind)
+		current = current->containingSymbol;
+	return current;
+}
+
+const DesignRootSymbol& Symbol::getRoot() const {
+	const Symbol* symbol = findAncestor(SymbolKind::Root);
+	ASSERT(symbol);
+	return symbol->as<DesignRootSymbol>();
+}
+
+Diagnostic& Symbol::addError(DiagCode code, SourceLocation location) const {
+	return getRoot().addError(code, location);
 }
 
 bool TypeSymbol::isMatching(const TypeSymbol& rhs) const {
@@ -96,6 +114,30 @@ int TypeSymbol::width() const {
     }
 }
 
+ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
+	auto bound = Binder(*this).bindConstantExpression(expr);
+	if (bound.bad())
+		return nullptr;
+	return ConstantEvaluator().evaluateExpr(bound);
+}
+
+ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType, SourceLocation errorLocation) const {
+	auto bound = Binder(*this).bindAssignmentLikeContext(expr, location ? location : expr.getFirstToken().location(), targetType);
+	if (bound.bad())
+		return nullptr;
+	return ConstantEvaluator().evaluateExpr(bound);
+}
+
+const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
+	return getRoot().getType(syntax, *this);
+}
+
+DesignRootSymbol& DesignRootSymbol::create(const SyntaxTree& tree) {
+	return tree.allocator().emplace<DesignRootSymbol>(tree.allocator(), tree.diagnostics(), { &tree });
+}
+DesignRootSymbol& DesignRootSymbol::create(BumpAllocator& alloc, Diagnostics& diagnostics, ArrayRef<const SyntaxTree*> syntaxTrees = nullptr);
+
+
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
 	Symbol(SymbolKind::Module, decl.header.name, &parent), decl(decl)
 {
@@ -150,7 +192,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
 			if (info.local)
 				continue;
 
-			paramMap[info.name] = evaluate(info.paramDecl, *instanceScope, orderedParams[orderedIndex++]->expr);
+			paramMap[info.name] = evaluate(info.paramDecl, *instanceScope, orderedParams[orderedIndex++]->expr, info.location);
 		}
 
 		// Make sure there aren't extra param assignments for non-existent params.
@@ -181,7 +223,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
 			if (!arg->expr)
 				continue;
 
-			paramMap[info.name] = evaluate(info.paramDecl, *instanceScope, *arg->expr);
+			paramMap[info.name] = evaluate(info.paramDecl, *instanceScope, *arg->expr, info.location);
 		}
 
 		for (const auto& pair : namedParams) {
@@ -198,13 +240,14 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
 	return allocate<ParameterizedModuleSymbol>(*this, paramMap);
 }
 
-ConstantValue ModuleSymbol::evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope, const ExpressionSyntax& expr) const {
+ConstantValue ModuleSymbol::evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope,
+									 const ExpressionSyntax& expr, SourceLocation declLocation) const {
 	// If no type is given, infer the type from the initializer
 	if (paramDecl.type.kind == SyntaxKind::ImplicitType)
 		return scope.evaluateConstant(expr);
 	else {
 		const TypeSymbol& type = scope.getType(paramDecl.type);
-		return scope.evaluateConstantAndConvert(expr, type);
+		return scope.evaluateConstantAndConvert(expr, type, declLocation);
 	}
 }
 
