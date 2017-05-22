@@ -1,30 +1,37 @@
+//------------------------------------------------------------------------------
+// Symbol.h
+// Symbols for semantic analysis.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
 #pragma once
 
+#include <optional>
+#include <vector>
+
+#include "diagnostics/Diagnostics.h"
 #include "numeric/SVInt.h"
 #include "parsing/AllSyntax.h"
 #include "text/SourceLocation.h"
 #include "util/ArrayRef.h"
+#include "util/HashMap.h"
 #include "util/StringRef.h"
 
 #include "ConstantValue.h"
-#include "Scope.h"
 
 namespace slang {
 
+struct DataTypeSyntax;
+struct ExpressionSyntax;
 class BoundExpression;
 class BoundStatement;
 class BoundStatementList;
+class Symbol;
+class SyntaxTree;
+class DesignRootSymbol;
+class TypeSymbol;
 
-// Represents a simple constant range.
-struct ConstantRange {
-    SVInt left;
-    SVInt right;
-
-    SVInt width() {
-        auto diff = left - right;
-        return (diff.isNegative() ? -diff : diff) + SVInt(1);
-    }
-};
+using SymbolList = ArrayRef<const Symbol*>;
 
 using Dimensions = ArrayRef<ConstantRange>;
 
@@ -82,36 +89,93 @@ enum class SystemFunction {
     increment
 };
 
+/// Base class for all symbols (logical code constructs) such as modules, types,
+/// functions, variables, etc.
 class Symbol {
 public:
+	/// The type of symbol.
     SymbolKind kind;
+
+	/// The name of the symbol; if the symbol does not have a name,
+	/// this will be an empty string.
     StringRef name;
+
+	/// The declared location of the symbol in the source code, or an empty location
+	/// if it was not explicitly declared in the source text. This is mainly used
+	/// for reporting errors.
     SourceLocation location;
 
-    Symbol() {}
-    Symbol(SymbolKind kind, StringRef name, SourceLocation location) :
-        kind(kind), name(name), location(location) {}
+	/// The symbol that contains this symbol in the source text, or null if
+	/// it is not contained by anything.
+	const Symbol* containingSymbol;
 
-    template<typename T>
-    const T& as() const {
-        // TODO: if (T::mykind != this->kind) return nullptr;
-        return *static_cast<const T*>(this);
-    }
-    static constexpr SymbolKind mykind = SymbolKind::Unknown;
+	/// Finds the first ancestor symbol of the given kind. If this symbol is already of
+	/// the given kind, returns this symbol.
+	const Symbol* findAncestor(SymbolKind kind) const;
+
+	/// Get the symbol for the root of the design.
+	const DesignRootSymbol& getRoot() const;
+
+	template<typename T>
+	const T& as() const { return *static_cast<const T*>(this); }
+
+protected:
+    explicit Symbol(SymbolKind kind, StringRef name = nullptr, SourceLocation location = SourceLocation(), const Symbol* containingSymbol = nullptr) :
+        kind(kind), name(name), location(location),
+		containingSymbol(containingSymbol) {}
+
+	Symbol(SymbolKind kind, Token token, const Symbol* containingSymbol = nullptr) :
+		kind(kind), name(token.valueText()), location(token.location()),
+		containingSymbol(containingSymbol) {}
+
+	Diagnostic& addError(DiagCode code, SourceLocation location) const;
+
+	template<typename T, typename... Args>
+	T& allocate(Args&&... args) const {
+		return getRoot().allocate<T>(std::forward<Args>(args)...);
+	}
 };
 
-/// Base class for all data types
+/// Base class for symbols that also act as scopes, which means they contain
+/// child symbols that can be looked up by name.
+class ScopeSymbol : public Symbol {
+public:
+	/// Look up a symbol in the current scope. Returns null if no symbol is found.
+	virtual const Symbol* lookup(StringRef name) const = 0;
+
+	/// Look up a symbol in the current scope, expecting it to exist and be of the
+	/// given type. If those conditions do not hold, this will assert.
+	template<typename T>
+	const T& lookup(StringRef name) const {
+		const Symbol* sym = lookup(name);
+		ASSERT(sym);
+		return sym->as<T>();
+	}
+
+	/// A helper method to evaluate a constant in the current scope.
+	ConstantValue evaluateConstant(const ExpressionSyntax& expr) const;
+
+	/// A helper method to evaluate a constant in the current scope and then
+	/// convert it to the given destination type. If the conversion fails, the
+	/// returned value will be marked bad.
+	ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType) const;
+
+	/// A helper method to get a type symbol, using the current scope as context.
+	const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
+
+protected:
+	using Symbol::Symbol;
+};
+
+/// Base class for all data types.
 class TypeSymbol : public Symbol {
 public:
-    TypeSymbol(SymbolKind kind, StringRef name, SourceLocation location) :
-        Symbol(kind, name, location) {}
-
-    // SystemVerilog defines various level of type compatibility, which are used
-    // in various scenarios. See the spec, section 6.22.
-    bool isMatching(const TypeSymbol* rhs) const;
-    bool isEquivalent(const TypeSymbol* rhs) const;
-    bool isAssignmentCompatible(const TypeSymbol* rhs) const;
-    bool isCastCompatible(const TypeSymbol* rhs) const;
+    // SystemVerilog defines various levels of type compatibility, which are used
+    // in different scenarios. See the spec, section 6.22.
+    bool isMatching(const TypeSymbol& rhs) const;
+    bool isEquivalent(const TypeSymbol& rhs) const;
+    bool isAssignmentCompatible(const TypeSymbol& rhs) const;
+    bool isCastCompatible(const TypeSymbol& rhs) const;
 
     // Helpers to get the following pieces of information for any type symbol,
     // though the information is stored differently for different types
@@ -121,7 +185,9 @@ public:
     int width() const;
 
     std::string toString() const;
-    static constexpr SymbolKind mykind = SymbolKind::Unknown;
+
+protected:
+	using Symbol::Symbol;
 };
 
 class IntegralTypeSymbol : public TypeSymbol {
@@ -142,8 +208,6 @@ public:
         lowerBounds(lowerBounds), widths(widths),
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
 
-    static constexpr SymbolKind mykind = SymbolKind::IntegralType;
-
   private:
     static ArrayRef<int> EmptyLowerBound;
 };
@@ -156,58 +220,35 @@ public:
     RealTypeSymbol(TokenKind keywordType, int width) :
         TypeSymbol(SymbolKind::RealType, getTokenKindText(keywordType), SourceLocation()),
         width(width), keywordType(keywordType) {}
-
-    static constexpr SymbolKind mykind = SymbolKind::RealType;
 };
 
-class ConstValueSymbol : public Symbol {
-public:
-    const TypeSymbol* type;
-    ConstantValue value;
-
-    ConstValueSymbol(SymbolKind kind, StringRef name, SourceLocation location) :
-        Symbol(kind, name, location),
-        // FIXME: fill this in with something meaningful
-        // this is to prevent it from being uninitialized memory
-        type(new TypeSymbol(SymbolKind::Unknown,"Unknown",location)) {}
-
-    ConstValueSymbol(SymbolKind kind, StringRef name, SourceLocation location,
-            const TypeSymbol * type, ConstantValue val) :
-        Symbol(kind, name, location), type(type), value(val) {}
-};
-
-class EnumValueSymbol : public ConstValueSymbol {
-public:
-    EnumValueSymbol(StringRef name, SourceLocation location, const TypeSymbol *type, ConstantValue val) :
-        ConstValueSymbol(SymbolKind::EnumValue, name, location, type, val) {}
-
-    static constexpr SymbolKind mykind = SymbolKind::EnumValue;
-};
-
-class EnumTypeSymbol : public TypeSymbol {
-public:
-    const IntegralTypeSymbol* baseType;
-    ArrayRef<EnumValueSymbol *> values;
-
-    EnumTypeSymbol(const IntegralTypeSymbol *baseType, SourceLocation location, ArrayRef<EnumValueSymbol *> values) :
-        TypeSymbol(SymbolKind::EnumType, "", location),
-        baseType(baseType), values(values) {}
-    static constexpr SymbolKind mykind = SymbolKind::EnumType;
-};
+//class EnumValueSymbol : public ConstValueSymbol {
+//public:
+//    EnumValueSymbol(StringRef name, SourceLocation location, const TypeSymbol *type, ConstantValue val) :
+//        ConstValueSymbol(SymbolKind::EnumValue, name, location, type, val) {}
+//};
+//
+//class EnumTypeSymbol : public TypeSymbol {
+//public:
+//    const IntegralTypeSymbol* baseType;
+//    ArrayRef<EnumValueSymbol *> values;
+//
+//    EnumTypeSymbol(const IntegralTypeSymbol *baseType, SourceLocation location, ArrayRef<EnumValueSymbol *> values) :
+//        TypeSymbol(SymbolKind::EnumType, "", location),
+//        baseType(baseType), values(values) {}
+//};
 
 class StructTypeSymbol : public TypeSymbol {
 public:
     bool isPacked;
     bool isSigned;
-    static constexpr SymbolKind mykind = SymbolKind::Unknown;
 };
 
 class ErrorTypeSymbol : public TypeSymbol {
 public:
-    ErrorTypeSymbol() :
-        TypeSymbol(SymbolKind::Unknown, nullptr, SourceLocation()) {}
+    ErrorTypeSymbol() : TypeSymbol(SymbolKind::Unknown, nullptr, SourceLocation()) {}
 
-    static constexpr SymbolKind mykind = SymbolKind::Unknown;
+	static const ErrorTypeSymbol Default;
 };
 
 class TypeAliasSymbol : public TypeSymbol {
@@ -218,70 +259,140 @@ public:
     TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, StringRef alias) :
         TypeSymbol(SymbolKind::TypeAlias, alias, location),
         syntax(syntax), underlying(underlying) {}
-
-    static constexpr SymbolKind mykind = SymbolKind::TypeAlias;
 };
 
-class AttributeSymbol : public Symbol {
+class CompilationUnitSymbol;
+class PackageSymbol;
+class ParameterizedModuleSymbol;
+class ModuleInstanceSymbol;
+
+/// Represents the entirety of a design, along with all contained compilation units.
+class DesignRootSymbol : public ScopeSymbol {
 public:
-    const AttributeSpecSyntax& syntax;
-    const TypeSymbol* type;
-    ConstantValue value;
+	static DesignRootSymbol& create(const SyntaxTree& tree);
+	static DesignRootSymbol& create(BumpAllocator& alloc, Diagnostics& diagnostics, ArrayRef<const SyntaxTree*> syntaxTrees = nullptr);
 
-    AttributeSymbol(const AttributeSpecSyntax& syntax, const TypeSymbol* type, ConstantValue value);
+	/// Adds a syntax tree to the design.
+	void addTree(const SyntaxTree& tree);
 
-    static constexpr SymbolKind mykind = SymbolKind::Attribute;
+	/// Gets all of the compilation units in the design.
+	ArrayRef<const CompilationUnitSymbol*> units() const;
+
+	/// Gets all of the top-level module instances in the design.
+	/// These form the roots of the actual design hierarchy.
+	ArrayRef<const ModuleInstanceSymbol*> tops() const;
+
+	/// Finds a package in the design with the given name, or returns null if none is found.
+	const PackageSymbol* findPackage(StringRef name) const;
+
+	/// Finds a module, interface, or program with the given name, or returns null if none is found.
+	const Symbol* findDefinition(StringRef name) const;
+
+	/// Methods for getting various type symbols.
+	const TypeSymbol& getType(const DataTypeSyntax& syntax, const ScopeSymbol& scope);
+	const TypeSymbol& getKnownType(SyntaxKind kind) const;
+	const TypeSymbol& getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false) const;
+
+	/// Performs a look up for a symbol in the root scope.
+	const Symbol* lookup(StringRef name) const final;
+
+	/// Report an error at the specified location.
+	Diagnostic& addError(DiagCode code, SourceLocation location) const {
+		return diagnostics.add(code, location);
+	}
+
+	/// Allocate an object using the design's shared bump allocator.
+	template<typename T, typename... Args>
+	T& allocate(Args&&... args) const {
+		return *alloc.emplace<T>(std::forward<Args>(args)...);
+	}
+
+	BumpAllocator& allocator() const { return alloc; }
+
+private:
+	DesignRootSymbol(BumpAllocator& alloc, Diagnostics& diagnostics, ArrayRef<const SyntaxTree*> syntaxTrees);
+
+	BumpAllocator& alloc;
+	Diagnostics& diagnostics;
 };
 
-class ParameterSymbol : public ConstValueSymbol {
+/// The root of a single compilation unit. 
+class CompilationUnitSymbol : public ScopeSymbol {
 public:
-    const ParameterDeclarationSyntax& syntax;
-    const VariableDeclaratorSyntax& declarator;
-    bool isLocal;
+	CompilationUnitSymbol(const CompilationUnitSyntax& syntax);
 
-    ParameterSymbol(StringRef name, SourceLocation location,
-                    const ParameterDeclarationSyntax& syntax,
-                    const VariableDeclaratorSyntax& declarator,
-                    bool isLocal) :
-        ConstValueSymbol(SymbolKind::Parameter, name, location),
-        syntax(syntax),
-        declarator(declarator),
-        isLocal(isLocal) {}
+	SymbolList members() const;
 
-    static constexpr SymbolKind mykind = SymbolKind::Parameter;
+	const Symbol* lookup(StringRef name) const final;
 };
 
+/// A SystemVerilog package construct.
+class PackageSymbol : public ScopeSymbol {
+public:
+	PackageSymbol(const ModuleDeclarationSyntax& package, const Symbol& parent);
+
+	SymbolList members() const;
+
+	const Symbol* lookup(StringRef name) const final;
+};
+
+/// Represents a module declaration, with its parameters still unresolved.
 class ModuleSymbol : public Symbol {
 public:
-    const ModuleDeclarationSyntax& syntax;
-    Scope* scope;
-    ArrayRef<const Symbol*> children;
+	ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& container);
 
-    ModuleSymbol(const ModuleDeclarationSyntax& syntax, Scope* scope,
-                 ArrayRef<const Symbol*> children) :
-        Symbol(SymbolKind::Module, syntax.header.name.valueText(), syntax.header.name.location()),
-        syntax(syntax), scope(scope), children(children) {}
+	/// Parameterizes the module with the given set of parameter assignments.
+	const ParameterizedModuleSymbol& parameterize(const ParameterValueAssignmentSyntax* assignments = nullptr,
+												  const ScopeSymbol* instanceScope = nullptr) const;
 
-    static constexpr SymbolKind mykind = SymbolKind::Module;
+private:
+	// Small collection of info extracted from a parameter definition
+	struct ParameterInfo {
+		const ParameterDeclarationSyntax& paramDecl;
+		const VariableDeclaratorSyntax& declarator;
+		StringRef name;
+		SourceLocation location;
+		ExpressionSyntax* initializer;
+		bool local;
+		bool bodyParam;
+	};
+
+	const std::vector<ParameterInfo>& getDeclaredParams() const;
+	ConstantValue evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope, const ExpressionSyntax& expr) const;
+
+	// Helper function used by getModuleParams to convert a single parameter declaration into
+	// one or more ParameterInfo instances.
+	bool getParamDecls(const ParameterDeclarationSyntax& syntax, std::vector<ParameterInfo>& buffer,
+	                   HashMapBase<StringRef, SourceLocation>& nameDupMap,
+	                   bool lastLocal, bool overrideLocal, bool bodyParam) const;
+
+	const ModuleDeclarationSyntax& decl;
+	mutable std::optional<std::vector<ParameterInfo>> paramInfoCache;
 };
 
-class InstanceSymbol : public TypeSymbol {
+/// Represents a module that has had its parameters resolved to a specific set of values.
+class ParameterizedModuleSymbol : public ScopeSymbol {
 public:
-    const ModuleSymbol* module;
-    const HierarchyInstantiationSyntax& syntax;
-    bool implicit;
-    Dimensions dimensions;
-// TODO: array of instances has all the same parameters
-// TODO: this works for port since interface port connections are themselves arrays of instances
-// TODO: defparams on instance array elements will break this (if allowed)
-    InstanceSymbol(const ModuleSymbol* module, const HierarchyInstantiationSyntax& syntax, StringRef name, SourceLocation location, bool implicit, Dimensions dimensions = Dimensions()) :
-        TypeSymbol(SymbolKind::Instance, name, location),
-        module(module), syntax(syntax), implicit(implicit), dimensions(dimensions) {}
+	ParameterizedModuleSymbol(const ModuleSymbol& module, const HashMapBase<StringRef, ConstantValue>& parameterAssignments);
 
-    template<typename T>
-    const T& getChild(uint32_t index) const { return module->children[index]->as<T>(); }
+	SymbolList members() const;
+	
+	template<typename T>
+	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
 
-    static constexpr SymbolKind mykind = SymbolKind::Instance;
+	const Symbol* lookup(StringRef name) const final;
+
+private:
+	const ModuleSymbol& module;
+};
+
+class ModuleInstanceSymbol : public Symbol {
+public:
+	ParameterizedModuleSymbol& module;
+
+	/// A helper method to access a specific member of the module (of which this is an instance).
+	template<typename T>
+	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
 };
 
 class GenvarSymbol : public Symbol {
@@ -324,36 +435,36 @@ protected:
         Symbol(childKind, name, location), type(type), initializer(initializer) {}
 };
 
-class GenerateBlock : public Symbol {
-public:
-    ArrayRef<const Symbol*> children;
-    const Scope *scope;
+//class GenerateBlock : public Symbol {
+//public:
+//    ArrayRef<const Symbol*> children;
+//    const Scope *scope;
+//
+//    GenerateBlock(ArrayRef<const Symbol*> children, const Scope *scope) :
+//        children(children), scope(scope) {}
+//
+//    template<typename T>
+//    const T& getChild(uint32_t index) const { return children[index]->as<T>(); }
+//
+//    static constexpr SymbolKind mykind = SymbolKind::GenerateBlock;
+//};
 
-    GenerateBlock(ArrayRef<const Symbol*> children, const Scope *scope) :
-        children(children), scope(scope) {}
-
-    template<typename T>
-    const T& getChild(uint32_t index) const { return children[index]->as<T>(); }
-
-    static constexpr SymbolKind mykind = SymbolKind::GenerateBlock;
-};
-
-class ProceduralBlock : public Symbol {
-public:
-    ArrayRef<const Symbol *> children;
-    enum Kind {
-        Initial,
-        Final,
-        Always,
-        AlwaysComb,
-        AlwaysFF,
-        AlwaysLatch
-    } kind;
-    const Scope *scope;
-
-    ProceduralBlock(ArrayRef<const Symbol*> children, Kind kind, const Scope *scope)
-        : children(children), kind(kind), scope(scope) {}
-};
+//class ProceduralBlock : public Symbol {
+//public:
+//    ArrayRef<const Symbol *> children;
+//    enum Kind {
+//        Initial,
+//        Final,
+//        Always,
+//        AlwaysComb,
+//        AlwaysFF,
+//        AlwaysLatch
+//    } kind;
+//    const Scope *scope;
+//
+//    ProceduralBlock(ArrayRef<const Symbol*> children, Kind kind, const Scope *scope)
+//        : children(children), kind(kind), scope(scope) {}
+//};
 
 class FormalArgumentSymbol : public VariableSymbol {
 public:
@@ -369,7 +480,6 @@ public:
 
 class SubroutineSymbol : public Symbol {
 public:
-    const Scope* scope = nullptr;
     const TypeSymbol* returnType;
     const BoundStatementList* body;
     ArrayRef<const FormalArgumentSymbol*> arguments;
@@ -378,9 +488,9 @@ public:
     bool isTask = false;
 
     SubroutineSymbol(Token name, const TypeSymbol* returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
-                     VariableLifetime defaultLifetime, bool isTask, const Scope* scope) :
+                     VariableLifetime defaultLifetime, bool isTask) :
         Symbol(SymbolKind::Subroutine, name.valueText(), name.location()),
-        scope(scope), returnType(returnType), arguments(arguments),
+        returnType(returnType), arguments(arguments),
         defaultLifetime(defaultLifetime), isTask(isTask) {}
 
     SubroutineSymbol(StringRef name, const TypeSymbol* returnType, ArrayRef<const FormalArgumentSymbol*> arguments,

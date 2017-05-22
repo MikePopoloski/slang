@@ -1,6 +1,6 @@
 #include "Catch/catch.hpp"
 
-#include "analysis/SemanticModel.h"
+#include "analysis/Symbol.h"
 #include "parsing/SyntaxTree.h"
 
 using namespace slang;
@@ -9,29 +9,14 @@ namespace {
 
 BumpAllocator alloc;
 
-const InstanceSymbol& evalModule(SyntaxTree& syntax) {
-    const InstanceSymbol* instance;
-    if (syntax.root().kind == SyntaxKind::ModuleDeclaration) {
-        SemanticModel sem { syntax };
-        instance = sem.makeImplicitInstance(syntax.root().as<ModuleDeclarationSyntax>());
-    }
-    else {
-        Diagnostics& diagnostics = syntax.diagnostics();
-        DeclarationTable declTable(diagnostics);
-        declTable.addSyntaxTree(syntax);
+const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax) {
+	DesignRootSymbol& root = DesignRootSymbol::create(syntax);
 
-        SemanticModel sem(alloc, diagnostics, declTable);
+	REQUIRE(root.tops().count() > 0);
+	if (!syntax.diagnostics().empty())
+		WARN(syntax.reportDiagnostics());
 
-        auto topLevelModules = declTable.getTopLevelModules();
-        REQUIRE(topLevelModules.count() == 1);
-
-        instance = sem.makeImplicitInstance(*topLevelModules[0]);
-    }
-    if (!syntax.diagnostics().empty())
-        WARN(syntax.reportDiagnostics());
-
-    REQUIRE(instance);
-    return *instance;
+	return *root.tops()[0];
 }
 
 TEST_CASE("Finding top level", "[binding:decls]") {
@@ -39,16 +24,12 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
     Diagnostics diagnostics;
-    DeclarationTable declTable(diagnostics);
-    declTable.addSyntaxTree(file1);
-    declTable.addSyntaxTree(file2);
-
-    auto topLevelModules = declTable.getTopLevelModules();
+	DesignRootSymbol& root = DesignRootSymbol::create(alloc, diagnostics, { &file1, &file2 });
 
     CHECK(diagnostics.empty());
-    REQUIRE(topLevelModules.count() == 2);
-    CHECK(topLevelModules[0]->header.name.valueText() == "C");
-    CHECK(topLevelModules[1]->header.name.valueText() == "D");
+    REQUIRE(root.tops().count() == 2);
+    CHECK(root.tops()[0]->name == "C");
+    CHECK(root.tops()[1]->name == "D");
 }
 
 TEST_CASE("Bind module implicit", "[binding:modules]") {
@@ -62,12 +43,7 @@ module Leaf();
 endmodule
 )");
 
-    Diagnostics diagnostics;
-    DeclarationTable declTable(diagnostics);
-    declTable.addSyntaxTree(tree);
-
-    auto topLevelModules = declTable.getTopLevelModules();
-    REQUIRE(topLevelModules.count() == 1);
+	evalModule(tree);
 }
 
 TEST_CASE("Module parameterization errors", "[binding:modules]") {
@@ -97,17 +73,8 @@ module Leaf #(
 endmodule
 )");
 
-    Diagnostics diagnostics;
-    DeclarationTable declTable(diagnostics);
-    declTable.addSyntaxTree(tree);
-
-    auto topLevelModules = declTable.getTopLevelModules();
-    REQUIRE(topLevelModules.count() == 1);
-
-    SemanticModel sem(alloc, diagnostics, declTable);
-    auto instance = sem.makeImplicitInstance(*topLevelModules[0]);
-
-    CHECK(diagnostics.count() == 15);
+	DesignRootSymbol& root = DesignRootSymbol::create(tree);
+    CHECK(tree.diagnostics().count() == 15);
 }
 
 TEST_CASE("Module children (simple)", "[binding:modules]") {
@@ -126,8 +93,8 @@ endmodule
 )");
 
     const auto& instance = evalModule(tree);
-    const auto& leaf = instance.getChild<InstanceSymbol>(0).getChild<InstanceSymbol>(0);
-    const auto& foo = leaf.module->scope->lookup("foo")->as<ParameterSymbol>();
+    const auto& leaf = instance.member<ModuleInstanceSymbol>(0).member<ModuleInstanceSymbol>(0);
+    const auto& foo = leaf.module.lookup<ParameterSymbol>("foo");
     CHECK(foo.value.integer() == 4);
 }
 
@@ -153,11 +120,11 @@ endmodule
 
     const auto& instance = evalModule(tree);
     const auto& leaf = instance
-        .getChild<InstanceSymbol>(0)
-        .getChild<GenerateBlock>(0)
-        .getChild<InstanceSymbol>(0);
+        .member<ModuleInstanceSymbol>(0)
+        .member<GenerateBlockSymbol>(0)
+        .member<ModuleInstanceSymbol>(0);
 
-    const auto& foo = leaf.module->scope->lookup("foo")->as<ParameterSymbol>();
+    const auto& foo = leaf.module.lookup<ParameterSymbol>("foo");
     CHECK(foo.value.integer() == 1);
 }
 
@@ -174,12 +141,11 @@ endmodule
 )");
 
     const auto& instance = evalModule(tree);
+    REQUIRE(instance.module.members().count() == 10);
 
-    REQUIRE(instance.module->children.count() == 10);
-
-    for (int i = 0; i < 10; i++) {
-        const auto& leaf = instance.getChild<GenerateBlock>(i).getChild<InstanceSymbol>(0);
-        const auto& foo = leaf.module->scope->lookup("foo")->as<ParameterSymbol>();
+    for (uint32_t i = 0; i < 10; i++) {
+        const auto& leaf = instance.member<GenerateBlock>(i).member<ModuleInstanceSymbol>(0);
+        const auto& foo = leaf.module.lookup<ParameterSymbol>("foo");
         CHECK(foo.value.integer() == i);
     }
 }

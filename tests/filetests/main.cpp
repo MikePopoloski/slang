@@ -48,8 +48,6 @@ int main() {
     printf("\n");
     printf("Finished parsing %d files; %d errors found\n\n", files, errors);
 
-    model.makePackages();
-
     // construct a blank interface with empty scope linking to this scope
     // required by SemanticModel::makeInterfacePorts
     // TODO: make un-elaborated InterfaceSymbol/ModuleSymbol as a TypeSymbol and add to definitions scope

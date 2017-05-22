@@ -19,12 +19,8 @@ namespace slang {
 /// The SyntaxTree is the easiest way to interface with the lexer / preprocessor /
 /// parser stack. Give it some source text and it produces a parse tree.
 ///
-/// The template argument specifies the kind of syntax node you're expecting to parse.
-/// The only types you can use here are the ones that have a corresponding template
-/// specialization in the Parser class.
-///
 /// The SyntaxTree object owns all of the memory for the parse tree, so it must
-/// live for as long as you need to access that.
+/// live for as long as you need to access its syntax nodes.
 class SyntaxTree {
 public:
     SyntaxTree(SyntaxTree&& other) = default;
@@ -66,16 +62,8 @@ public:
     /// Gets the source manager used to build the syntax tree.
     SourceManager& sourceManager() { return sourceMan; }
 
+	/// Gets the root of the syntax tree.
     const SyntaxNode& root() const { return *rootNode; }
-
-    // This is a shared default source manager for cases where the user doesn't
-    // care about managing the lifetime of loaded source. Note that all of
-    // the source loaded by this thing will live in memory for the lifetime of
-    // the process.
-    static SourceManager& getDefaultSourceManager() {
-        static SourceManager instance;
-        return instance;
-    }
 
 private:
     SyntaxTree(const SyntaxNode* root, SourceManager& sourceManager,
@@ -93,6 +81,15 @@ private:
         return SyntaxTree(guess ? &parser.parseGuess() : &parser.parseCompilationUnit(),
                           sourceManager, std::move(alloc), std::move(diagnostics));
     }
+
+	// This is a shared default source manager for cases where the user doesn't
+	// care about managing the lifetime of loaded source. Note that all of
+	// the source loaded by this thing will live in memory for the lifetime of
+	// the process.
+	static SourceManager& getDefaultSourceManager() {
+		static SourceManager instance;
+		return instance;
+	}
 
     const SyntaxNode* rootNode;
     SourceManager& sourceMan;

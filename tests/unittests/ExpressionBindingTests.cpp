@@ -12,11 +12,10 @@ SVInt testParameter(const std::string& text, int index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(StringRef(fullText));
 
-    const auto& instance = SemanticModel(tree).makeImplicitInstance(
-        tree.root().as<ModuleDeclarationSyntax>());
+	DesignRootSymbol root(tree);
+	const auto& instance = *root.tops()[0];
 
-    auto module = instance->module;
-    REQUIRE(module);
+    const auto& module = instance.module;
     const auto* param = reinterpret_cast<const ParameterSymbol*>(
         module->scope->getNth(SymbolKind::Parameter, index));
     REQUIRE(param);
@@ -38,13 +37,13 @@ TEST_CASE("Bind parameter", "[binding:expressions]") {
 TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     // Evaluate an assignment expression (has an LValue we can observe)
     auto syntax = SyntaxTree::fromText("i = i + 3");
-    SemanticModel sem { syntax };
+    DesignRootSymbol root { syntax };
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-        sem.getKnownType(SyntaxKind::LogicType)
+		root.getKnownType(SyntaxKind::LogicType)
     };
 
     // Bind the expression tree to the symbol

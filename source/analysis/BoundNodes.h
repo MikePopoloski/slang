@@ -10,7 +10,6 @@ class TypeSymbol;
 enum class BoundNodeKind {
     Unknown,
     Literal,
-    Parameter,
     Variable,
     UnaryExpression,
     BinaryExpression,
@@ -41,70 +40,62 @@ public:
     const ExpressionSyntax& syntax;
     const TypeSymbol* type;
 
-    BoundExpression(BoundNodeKind kind, const ExpressionSyntax& syntax, const TypeSymbol* type) :
-        BoundNode(kind), syntax(syntax), type(type) {}
+    BoundExpression(BoundNodeKind kind, const ExpressionSyntax& syntax, const TypeSymbol& type) :
+        BoundNode(kind), syntax(syntax), type(&type) {}
 };
 
 class BadBoundExpression : public BoundExpression {
 public:
-    BoundExpression* child;
+    const BoundExpression* child;
 
-    BadBoundExpression(BoundExpression* child) :
-        BoundExpression(BoundNodeKind::Unknown, LiteralExpressionSyntax{SyntaxKind::Unknown, Token()}, nullptr), child(child) {}
+    BadBoundExpression(const BoundExpression* child) :
+        BoundExpression(BoundNodeKind::Unknown, LiteralExpressionSyntax::Empty, ErrorTypeSymbol::Default), child(child) {}
 };
 
 class BoundLiteral : public BoundExpression {
 public:
     ConstantValue value;
 
-    BoundLiteral(const ExpressionSyntax& syntax, const TypeSymbol* type, const ConstantValue& value) :
+    BoundLiteral(const ExpressionSyntax& syntax, const TypeSymbol& type, const ConstantValue& value) :
         BoundExpression(BoundNodeKind::Literal, syntax, type), value(value) {}
 
-    BoundLiteral(const ExpressionSyntax& syntax, const TypeSymbol* type, ConstantValue&& value) :
+    BoundLiteral(const ExpressionSyntax& syntax, const TypeSymbol& type, ConstantValue&& value) :
         BoundExpression(BoundNodeKind::Literal, syntax, type), value(std::move(value)) {}
-};
-
-class BoundParameter : public BoundExpression {
-public:
-    const ParameterSymbol& symbol;
-
-    BoundParameter(const ExpressionSyntax& syntax, const ParameterSymbol& symbol) :
-        BoundExpression(BoundNodeKind::Parameter, syntax, symbol.type), symbol(symbol) {}
 };
 
 class BoundVariable : public BoundExpression {
 public:
-    const VariableSymbol* symbol;
+    const VariableSymbol& symbol;
 
-    BoundVariable(const ExpressionSyntax& syntax, const VariableSymbol* symbol) :
-        BoundExpression(BoundNodeKind::Variable, syntax, symbol->type), symbol(symbol) {}
+    BoundVariable(const ExpressionSyntax& syntax, const VariableSymbol& symbol) :
+        BoundExpression(BoundNodeKind::Variable, syntax, *symbol.type), symbol(symbol) {}
 };
 
 class BoundUnaryExpression : public BoundExpression {
 public:
-    BoundExpression* operand;
+    BoundExpression& operand;
 
-    BoundUnaryExpression(const ExpressionSyntax& syntax, const TypeSymbol* type, BoundExpression* operand) :
+    BoundUnaryExpression(const ExpressionSyntax& syntax, const TypeSymbol& type, BoundExpression& operand) :
         BoundExpression(BoundNodeKind::UnaryExpression, syntax, type), operand(operand) {}
 };
 
 class BoundBinaryExpression : public BoundExpression {
 public:
-    BoundExpression* left;
-    BoundExpression* right;
+    BoundExpression& left;
+    BoundExpression& right;
 
-    BoundBinaryExpression(const ExpressionSyntax& syntax, const TypeSymbol* type, BoundExpression* left, BoundExpression* right) :
+    BoundBinaryExpression(const ExpressionSyntax& syntax, const TypeSymbol& type, BoundExpression& left, BoundExpression& right) :
         BoundExpression(BoundNodeKind::BinaryExpression, syntax, type), left(left), right(right) {}
 };
 
-/// This is used only for  ?:
+/// This is used only for ?:
 class BoundTernaryExpression : public BoundExpression {
 public:
-    BoundExpression* pred;
-    BoundExpression* left;
-    BoundExpression* right;
+    BoundExpression& pred;
+    BoundExpression& left;
+    BoundExpression& right;
 
-    BoundTernaryExpression(const ExpressionSyntax& syntax, const TypeSymbol* type, BoundExpression* pred, BoundExpression* left, BoundExpression* right) :
+    BoundTernaryExpression(const ExpressionSyntax& syntax, const TypeSymbol& type, BoundExpression& pred, BoundExpression& left, BoundExpression& right) :
         BoundExpression(BoundNodeKind::TernaryExpression, syntax, type), pred(pred), left(left), right(right) {}
 
 };
@@ -113,11 +104,11 @@ public:
 class BoundSelectExpression : public BoundExpression {
 public:
     SyntaxKind kind;
-    BoundExpression* expr;
-    BoundExpression* left;
-    BoundExpression* right;
+    const BoundExpression& expr;
+    BoundExpression& left;
+    BoundExpression& right;
 
-    BoundSelectExpression(const ExpressionSyntax& syntax, const TypeSymbol* type, SyntaxKind kind, BoundExpression* expr, BoundExpression* left, BoundExpression* right) :
+    BoundSelectExpression(const ExpressionSyntax& syntax, const TypeSymbol& type, SyntaxKind kind, const BoundExpression& expr, BoundExpression& left, BoundExpression& right) :
         BoundExpression(BoundNodeKind::SelectExpression, syntax, type), kind(kind), expr(expr), left(left), right(right) {}
 
 };
@@ -126,27 +117,27 @@ class BoundNaryExpression : public BoundExpression {
 public:
     ArrayRef<const BoundExpression*> exprs;
 
-    BoundNaryExpression(const ExpressionSyntax& syntax, const TypeSymbol* type, ArrayRef<const BoundExpression*> exprs) :
+    BoundNaryExpression(const ExpressionSyntax& syntax, const TypeSymbol& type, ArrayRef<const BoundExpression*> exprs) :
         BoundExpression(BoundNodeKind::NaryExpression, syntax, type),
         exprs(exprs) {}
 };
 
 class BoundAssignmentExpression : public BoundExpression {
 public:
-    BoundExpression* left;
-    BoundExpression* right;
+    BoundExpression& left;
+    BoundExpression& right;
 
-    BoundAssignmentExpression(const ExpressionSyntax& syntax, const TypeSymbol* type, BoundExpression* left, BoundExpression* right) :
+    BoundAssignmentExpression(const ExpressionSyntax& syntax, const TypeSymbol& type, BoundExpression& left, BoundExpression& right) :
         BoundExpression(BoundNodeKind::AssignmentExpression, syntax, type), left(left), right(right) {}
 };
 
 class BoundCallExpression : public BoundExpression {
 public:
-    const SubroutineSymbol* subroutine;
+    const SubroutineSymbol& subroutine;
     ArrayRef<const BoundExpression*> arguments;
 
-    BoundCallExpression(const ExpressionSyntax& syntax, const SubroutineSymbol* subroutine, ArrayRef<const BoundExpression*> arguments) :
-        BoundExpression(BoundNodeKind::CallExpression, syntax, subroutine->returnType),
+    BoundCallExpression(const ExpressionSyntax& syntax, const SubroutineSymbol& subroutine, ArrayRef<const BoundExpression*> arguments) :
+        BoundExpression(BoundNodeKind::CallExpression, syntax, *subroutine.returnType),
         subroutine(subroutine), arguments(arguments) {}
 };
 
@@ -160,10 +151,10 @@ public:
 
 class BadBoundStatement : public BoundStatement {
 public:
-    BoundStatement* child;
+    const BoundStatement* child;
 
-    BadBoundStatement(BoundStatement* child) :
-        BoundStatement(BoundNodeKind::Unknown, EmptyStatementSyntax{ nullptr, nullptr, Token()}), child(child) {}
+    BadBoundStatement(const BoundStatement* child) :
+        BoundStatement(BoundNodeKind::Unknown, EmptyStatementSyntax::Empty), child(child) {}
 };
 
 class BoundStatementList : public BoundStatement {
@@ -171,7 +162,7 @@ public:
     ArrayRef<const BoundStatement*> list;
 
     BoundStatementList(ArrayRef<const BoundStatement*> list) :
-        BoundStatement(BoundNodeKind::StatementList, EmptyStatementSyntax{ nullptr, nullptr, Token() }), list(list) {}
+        BoundStatement(BoundNodeKind::StatementList, EmptyStatementSyntax::Empty), list(list) {}
 };
 
 class BoundReturnStatement : public BoundStatement {
@@ -184,20 +175,20 @@ public:
 
 class BoundVariableDecl : public BoundStatement {
 public:
-    const VariableSymbol* symbol;
+    const VariableSymbol& symbol;
 
-    BoundVariableDecl(const VariableSymbol* symbol) :
-        BoundStatement(BoundNodeKind::VariableDeclaration, EmptyStatementSyntax{ nullptr, nullptr, Token() }), symbol(symbol) {}
+    BoundVariableDecl(const VariableSymbol& symbol) :
+        BoundStatement(BoundNodeKind::VariableDeclaration, EmptyStatementSyntax::Empty), symbol(symbol) {}
 };
 
 class BoundConditionalStatement : public BoundStatement {
 public:
-    const BoundExpression* cond;
-    const BoundStatement* ifTrue;
+    const BoundExpression& cond;
+    const BoundStatement& ifTrue;
     const BoundStatement* ifFalse;
 
-    BoundConditionalStatement(const StatementSyntax& syntax, const BoundExpression* cond,
-                              const BoundStatement* ifTrue, const BoundStatement* ifFalse) :
+    BoundConditionalStatement(const StatementSyntax& syntax, const BoundExpression& cond,
+                              const BoundStatement& ifTrue, const BoundStatement* ifFalse) :
         BoundStatement(BoundNodeKind::ConditionalStatement, syntax),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 };
@@ -205,22 +196,22 @@ public:
 class BoundForLoopStatement : public BoundStatement {
 public:
     ArrayRef<const BoundVariableDecl*> initializers;
-    const BoundExpression* stopExpr;
+    const BoundExpression& stopExpr;
     ArrayRef<const BoundExpression*> steps;
-    const BoundStatement* statement;
+    const BoundStatement& statement;
 
     BoundForLoopStatement(const StatementSyntax& syntax, ArrayRef<const BoundVariableDecl*> initializers,
-                          const BoundExpression* stopExpr, ArrayRef<const BoundExpression*> steps,
-                          const BoundStatement* statement) :
+                          const BoundExpression& stopExpr, ArrayRef<const BoundExpression*> steps,
+                          const BoundStatement& statement) :
         BoundStatement(BoundNodeKind::ForLoopStatement, syntax),
         initializers(initializers), stopExpr(stopExpr), steps(steps), statement(statement) {}
 };
 
 class BoundExpressionStatement : public BoundStatement {
 public:
-    const BoundExpression *expr;
+    const BoundExpression& expr;
 
-    BoundExpressionStatement(const ExpressionStatementSyntax& syntax, const BoundExpression *expr) :
+    BoundExpressionStatement(const ExpressionStatementSyntax& syntax, const BoundExpression& expr) :
         BoundStatement(BoundNodeKind::ExpressionStatement, syntax), expr(expr) {}
 };
 
