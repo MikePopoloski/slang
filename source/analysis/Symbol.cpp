@@ -135,8 +135,10 @@ const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
 DesignRootSymbol& DesignRootSymbol::create(const SyntaxTree& tree) {
 	return tree.allocator().emplace<DesignRootSymbol>(tree.allocator(), tree.diagnostics(), { &tree });
 }
-DesignRootSymbol& DesignRootSymbol::create(BumpAllocator& alloc, Diagnostics& diagnostics, ArrayRef<const SyntaxTree*> syntaxTrees = nullptr);
 
+DesignRootSymbol& DesignRootSymbol::create(BumpAllocator& alloc, Diagnostics& diagnostics, ArrayRef<const SyntaxTree*> syntaxTrees) {
+
+}
 
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
 	Symbol(SymbolKind::Module, decl.header.name, &parent), decl(decl)
