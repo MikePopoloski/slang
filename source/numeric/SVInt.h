@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <optional>
 #include <ostream>
 #include <string>
 
@@ -205,6 +206,17 @@ public:
     uint64_t getAssertUInt64() const;
 
     int64_t getAssertInt64() const;
+
+	/// Checks whether it's possible to convert the value to a simple built-in
+	/// integer type and if so returns it.
+	template<typename T>
+	std::optional<T> asBuiltIn() const {
+		// TODO: check active bits, not just specified bits
+		if (unknownFlag || bitWidth > std::numeric_limits<T>::digits)
+			return std::nullopt;
+		return static_cast<T>(getRawData()[0]);
+	}
+
     /// Check whether the number is negative. Note that this doesn't care about
     /// the sign flag; it simply looks at the highest bit to determine whether it is set.
     bool isNegative() const { return (bool)(*this)[bitWidth - 1]; }

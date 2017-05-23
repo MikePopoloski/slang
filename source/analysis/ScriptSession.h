@@ -16,11 +16,6 @@ namespace slang {
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
-    ScriptSession() :
-		root(DesignRootSymbol::create(alloc, diagnostics))
-    {
-    }
-
     ConstantValue eval(const std::string& text) {
         syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text)));
 

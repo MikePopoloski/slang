@@ -2,7 +2,7 @@
 // ConstantValue.h
 // Compile-time constant representation.
 //
-// File is under the MIT license:
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 
@@ -15,6 +15,7 @@ namespace slang {
 /// Represents a constant (compile-time evaluated) value, of one of a few possible types.
 /// By default the value is indeterminate, or "bad". Expressions involving bad
 /// values result in bad values, as you might expect.
+///
 class ConstantValue {
 public:
 	ConstantValue() {}
@@ -32,6 +33,9 @@ public:
 	bool bad() const { return value.index() == 0; }
     explicit operator bool() const { return !bad(); }
 
+	bool isInteger() const { return value.index() == 1; }
+	bool isReal() const { return value.index() == 2; }
+
     const SVInt& integer() const { return std::get<1>(value); }
     double real() const { return std::get<2>(value); }
 
@@ -39,15 +43,28 @@ private:
 	std::variant<std::monostate, SVInt, double> value;
 };
 
-/// Represents a simple constant range.
+/// Represents a simple constant range, fully inclusive. SystemVerilog allows negative
+/// indices, and for the left side to be less, equal, or greater than the right.
+///
+/// Note that this class makes no attempt to handle overflow of the underlying integer;
+/// SystemVerilog places tighter bounds on possible ranges anyway so it shouldn't be an issue.
+///
 struct ConstantRange {
-	SVInt left;
-	SVInt right;
+	int left;
+	int right;
 
-	SVInt width() {
-		auto diff = left - right;
-		return (diff.isNegative() ? -diff : diff) + SVInt(1);
+	/// Gets the width of the range, regardless of the order in which
+	/// the bounds are specified.
+	int width() const {
+		int diff = left - right;
+		return (diff < 0 ? -diff : diff) + 1;
 	}
+
+	/// "Little endian" bit order is when the msb is >= the lsb.
+	bool isLittleEndian() const { return left >= right; }
+
+	/// Normalizes the range so that it's of the form [msb-lsb, 0] and in little endian bit order.
+	ConstantRange normalize() const { return { std::max(left, right) - std::min(left, right), 0 }; }
 };
 
 }
