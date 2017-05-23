@@ -7,6 +7,7 @@
 #pragma once
 
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include "diagnostics/Diagnostics.h"
@@ -268,13 +269,17 @@ class ParameterizedModuleSymbol;
 class ModuleInstanceSymbol;
 
 /// Represents the entirety of a design, along with all contained compilation units.
+/// It also contains most of the machinery for creating and retrieving type symbols.
 class DesignRootSymbol : public ScopeSymbol {
 public:
-	static DesignRootSymbol& create(const SyntaxTree& tree);
-	static DesignRootSymbol& create(BumpAllocator& alloc, Diagnostics& diagnostics, ArrayRef<const SyntaxTree*> syntaxTrees = nullptr);
+	DesignRootSymbol(const SyntaxTree& tree);
+	DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees = nullptr);
 
 	/// Adds a syntax tree to the design.
 	void addTree(const SyntaxTree& tree);
+	void addTrees(ArrayRef<const SyntaxTree*> syntaxTrees);
+
+	/// Adds a precreated symbol to the root scope.
 	void addSymbol(const Symbol& symbol);
 
 	/// Gets all of the compilation units in the design.
@@ -291,17 +296,21 @@ public:
 	const Symbol* findDefinition(StringRef name) const;
 
 	/// Methods for getting various type symbols.
+	const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
 	const TypeSymbol& getType(const DataTypeSyntax& syntax, const ScopeSymbol& scope) const;
 	const TypeSymbol& getKnownType(SyntaxKind kind) const;
 	const TypeSymbol& getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false) const;
 
-	/// Performs a look up for a symbol in the root scope.
+	/// Performs a generalized look up for any symbol in the root scope. In a typical
+	/// well-formed SystemVerilog design, there won't be any symbols here that are not
+	/// definitions (modules, interfaces, programs), instances, or packages, but tools
+	/// and tests can add arbitrary symbols into the root scope and we support that no problem.
 	const Symbol* lookup(StringRef name) const final;
 	using ScopeSymbol::lookup;
 
 	/// Report an error at the specified location.
 	Diagnostic& addError(DiagCode code, SourceLocation location) const {
-		return diagnostics.add(code, location);
+		return diags.add(code, location);
 	}
 
 	/// Allocate an object using the design's shared bump allocator.
@@ -311,12 +320,23 @@ public:
 	}
 
 	BumpAllocator& allocator() const { return alloc; }
+	Diagnostics& diagnostics() const { return diags; }
 
 private:
-	DesignRootSymbol(BumpAllocator& alloc, Diagnostics& diagnostics, ArrayRef<const SyntaxTree*> syntaxTrees);
+	const TypeSymbol& getIntegralType(const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) const;
+	bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const;
+	int coerceInteger(const ConstantValue& cv, int maxRangeBits, bool& bad) const;
 
-	BumpAllocator& alloc;
-	Diagnostics& diagnostics;
+	// preallocated type symbols for known types
+	std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
+
+	// These are mutable so that the design root can be logically const, observing
+	// members lazily but allocating them on demand and reporting errors when asked.
+	mutable BumpAllocator alloc;
+	mutable Diagnostics diags;
+
+	// cache of simple integral types keyed by {width, signedness, 4-state, isReg}
+	mutable std::unordered_map<uint64_t, const TypeSymbol*> integralTypeCache;
 };
 
 /// The root of a single compilation unit. 

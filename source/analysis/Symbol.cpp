@@ -3,6 +3,17 @@
 #include "analysis/Binder.h"
 #include "analysis/ConstantEvaluator.h"
 #include "diagnostics/Diagnostics.h"
+#include "parsing/SyntaxTree.h"
+
+namespace {
+
+using namespace slang;
+
+TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
+    return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
+}
+
+}
 
 namespace slang {
 
@@ -132,12 +143,197 @@ const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
 	return getRoot().getType(syntax, *this);
 }
 
-DesignRootSymbol& DesignRootSymbol::create(const SyntaxTree& tree) {
-	return tree.allocator().emplace<DesignRootSymbol>(tree.allocator(), tree.diagnostics(), { &tree });
+DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) : DesignRootSymbol({ &tree }) {}
+
+DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees) :
+	ScopeSymbol(SymbolKind::Root)
+{
+	addTrees(syntaxTrees);
 }
 
-DesignRootSymbol& DesignRootSymbol::create(BumpAllocator& alloc, Diagnostics& diagnostics, ArrayRef<const SyntaxTree*> syntaxTrees) {
+void DesignRootSymbol::addTree(const SyntaxTree& tree) {
+	addTrees({ &tree });
+}
 
+const TypeSymbol& DesignRootSymbol::getType(const DataTypeSyntax& syntax) const {
+	return getType(syntax, *this);
+}
+
+const TypeSymbol& DesignRootSymbol::getType(const DataTypeSyntax& syntax, const ScopeSymbol& scope) const {
+	switch (syntax.kind) {
+	    case SyntaxKind::BitType:
+	    case SyntaxKind::LogicType:
+	    case SyntaxKind::RegType:
+			return getIntegralType(syntax.as<IntegerTypeSyntax>(), scope);
+	    case SyntaxKind::ByteType:
+	    case SyntaxKind::ShortIntType:
+	    case SyntaxKind::IntType:
+	    case SyntaxKind::LongIntType:
+	    case SyntaxKind::IntegerType:
+	    case SyntaxKind::TimeType: {
+	        // TODO: signing
+	        auto& its = syntax.as<IntegerTypeSyntax>();
+	        if (its.dimensions.count() > 0) {
+	            // Error but don't fail out; just remove the dims and keep trucking
+	            auto& diag = addError(DiagCode::PackedDimsOnPredefinedType, its.dimensions[0]->openBracket.location());
+	            diag << getTokenKindText(its.keyword.kind);
+	        }
+	        return getKnownType(syntax.kind);
+	    }
+	    case SyntaxKind::RealType:
+	    case SyntaxKind::RealTimeType:
+	    case SyntaxKind::ShortRealType:
+	    case SyntaxKind::StringType:
+	    case SyntaxKind::CHandleType:
+	    case SyntaxKind::EventType:
+	        return getKnownType(syntax.kind);
+	    //case SyntaxKind::EnumType: {
+	    //    ExpressionBinder binder {*this, scope};
+	    //    const EnumTypeSyntax& enumSyntax = syntax.as<EnumTypeSyntax>();
+	    //    const IntegralTypeSymbol& baseType = (enumSyntax.baseType ? getTypeSymbol(*enumSyntax.baseType, scope) : getKnownType(SyntaxKind::IntType))->as<IntegralTypeSymbol>();
+	
+	    //    SmallVectorSized<EnumValueSymbol *, 8> values;
+	    //    SVInt nextVal;
+	    //    for (auto member : enumSyntax.members) {
+	    //        //TODO: add each member to the scope
+	    //        if (member->initializer) {
+	    //            auto bound = binder.bindConstantExpression(member->initializer->expr);
+	    //            nextVal = std::get<SVInt>(evaluateConstant(bound));
+	    //        }
+	    //        EnumValueSymbol *valSymbol = alloc.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location(), &baseType, nextVal);
+	    //        values.append(valSymbol);
+	    //        scope->add(valSymbol);
+	    //        ++nextVal;
+	    //    }
+	    //    return alloc.emplace<EnumTypeSymbol>(&baseType, enumSyntax.keyword.location(), values.copy(alloc));
+	    //}
+	    //case SyntaxKind::TypedefDeclaration: {
+	    //    const auto& tds = syntax.as<TypedefDeclarationSyntax>();
+	    //    auto type = getTypeSymbol(tds.type, scope);
+	    //    return alloc.emplace<TypeAliasSymbol>(syntax, tds.name.location(), type, tds.name.valueText());
+	    //}
+	    default:
+	        break;
+	}
+	
+	// TODO: consider Void Type
+	
+	return ErrorTypeSymbol::Default;
+}
+
+const TypeSymbol& DesignRootSymbol::getKnownType(SyntaxKind kind) const {
+    auto it = knownTypes.find(kind);
+	ASSERT(it != knownTypes.end());
+    return *it->second;
+}
+
+const TypeSymbol& DesignRootSymbol::getIntegralType(int width, bool isSigned, bool isFourState, bool isReg) const {
+    uint64_t key = width;
+    key |= uint64_t(isSigned) << 32;
+    key |= uint64_t(isFourState) << 33;
+    key |= uint64_t(isReg) << 34;
+
+    auto it = integralTypeCache.find(key);
+    if (it != integralTypeCache.end())
+        return *it->second;
+
+    TokenKind type = getIntegralKeywordKind(isFourState, isReg);
+    auto symbol = alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
+    integralTypeCache.emplace_hint(it, key, symbol);
+    return *symbol;
+}
+
+const TypeSymbol& DesignRootSymbol::getIntegralType(const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) const {
+	// This is a simple integral vector (possibly of just one element).
+	bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
+	bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
+	bool isFourState = syntax.kind != SyntaxKind::BitType;
+
+	SmallVectorSized<ConstantRange, 4> dims;
+	if (!evaluateConstantDims(syntax.dimensions, dims, scope))
+		return ErrorTypeSymbol::Default;
+
+	// TODO: review this whole mess
+
+	if (dims.empty())
+		// TODO: signing
+		return getKnownType(syntax.kind);
+	else if (dims.count() == 1 && dims[0].right == 0) {
+		// if we have the common case of only one dimension and lsb == 0
+		// then we can use the shared representation
+		uint16_t width = dims[0].left + 1;
+		return getIntegralType(width, isSigned, isFourState, isReg);
+	}
+	else {
+		SmallVectorSized<int, 4> lowerBounds;
+		SmallVectorSized<int, 4> widths;
+		uint16_t totalWidth = 0;
+		for (auto& dim : dims) {
+			uint16_t msb = dim.left;
+			uint16_t lsb = dim.right;
+			uint16_t width;
+			if (msb > lsb) {
+				width = msb - lsb + 1;
+				lowerBounds.append(lsb);
+			}
+			else {
+				// TODO: msb == lsb
+				width = lsb - msb + 1;
+				lowerBounds.append(-lsb);
+			}
+			widths.append(width);
+
+			// TODO: overflow
+			totalWidth += width;
+		}
+		return allocate<IntegralTypeSymbol>(
+			getIntegralKeywordKind(isFourState, isReg),
+			totalWidth, isSigned, isFourState,
+			lowerBounds.copy(alloc), widths.copy(alloc));
+	}
+}
+
+bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const {
+    for (const VariableDimensionSyntax* dim : dimensions) {
+        const SelectorSyntax* selector;
+        if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
+            (selector = &dim->specifier->as<RangeDimensionSpecifierSyntax>().selector)->kind != SyntaxKind::SimpleRangeSelect) {
+
+            auto& diag = addError(DiagCode::PackedDimRequiresConstantRange, dim->specifier->getFirstToken().location());
+            diag << dim->specifier->sourceRange();
+            return false;
+        }
+
+        const RangeSelectSyntax& range = selector->as<RangeSelectSyntax>();
+
+		// §6.9.1 - Implementations may set a limit on the maximum length of a vector, but the limit shall be at least 65536 (2^16) bits.
+		const int MaxRangeBits = 16;
+
+		bool bad = false;
+        results.emplace(ConstantRange {
+            coerceInteger(evaluateConstant(range.left), MaxRangeBits, bad),
+            coerceInteger(evaluateConstant(range.right), MaxRangeBits, bad)
+        });
+
+		if (bad)
+			return false;
+    }
+    return true;
+}
+
+int DesignRootSymbol::coerceInteger(const ConstantValue& cv, int maxRangeBits, bool& bad) const {
+	// TODO: report errors
+	if (cv.isInteger()) {
+		const SVInt& value = cv.integer();
+		if (!value.hasUnknown() && value.getActiveBits() <= maxRangeBits) {
+			auto result = value.asBuiltIn<int>();
+			if (result)
+				return *result;
+		}
+	}
+
+	bad = true;
+	return 0;
 }
 
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
