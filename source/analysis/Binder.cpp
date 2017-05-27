@@ -683,7 +683,7 @@ BoundStatement& Binder::bindReturnStatement(const ReturnStatementSyntax& syntax)
         return badStmt(nullptr);
     }
 
-    auto expr = bindAssignmentLikeContext(*syntax.returnValue, location, *subroutine->as<SubroutineSymbol>().returnType);
+    const auto& expr = bindAssignmentLikeContext(*syntax.returnValue, location, *subroutine->as<SubroutineSymbol>().returnType);
     return root.allocate<BoundReturnStatement>(syntax, &expr);
 }
 
@@ -739,7 +739,7 @@ void Binder::bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<c
 }
 
 BoundStatement& Binder::bindExpressionStatement(const ExpressionStatementSyntax& syntax) {
-    auto expr = bindExpression(syntax.expr);
+    const auto& expr = bindExpression(syntax.expr);
     return root.allocate<BoundExpressionStatement>(syntax, expr);
 }
 
