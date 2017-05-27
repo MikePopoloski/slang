@@ -49,7 +49,10 @@ public:
     const BoundExpression* child;
 
     BadBoundExpression(const BoundExpression* child) :
-        BoundExpression(BoundNodeKind::Unknown, LiteralExpressionSyntax::Empty, ErrorTypeSymbol::Default), child(child) {}
+        BoundExpression(BoundNodeKind::Unknown, EmptyLiteral, ErrorTypeSymbol::Default), child(child) {}
+
+private:
+	static const LiteralExpressionSyntax EmptyLiteral;
 };
 
 class BoundLiteral : public BoundExpression {
@@ -145,8 +148,14 @@ class BoundStatement : public BoundNode {
 public:
     const StatementSyntax& syntax;
 
+	explicit BoundStatement(BoundNodeKind kind) :
+		BoundNode(kind), syntax(EmptyStatement) {}
+
     BoundStatement(BoundNodeKind kind, const StatementSyntax& syntax) :
         BoundNode(kind), syntax(syntax) {}
+
+private:
+	static const EmptyStatementSyntax EmptyStatement;
 };
 
 class BadBoundStatement : public BoundStatement {
@@ -154,7 +163,7 @@ public:
     const BoundStatement* child;
 
     BadBoundStatement(const BoundStatement* child) :
-        BoundStatement(BoundNodeKind::Unknown, EmptyStatementSyntax::Empty), child(child) {}
+        BoundStatement(BoundNodeKind::Unknown), child(child) {}
 };
 
 class BoundStatementList : public BoundStatement {
@@ -162,7 +171,7 @@ public:
     ArrayRef<const BoundStatement*> list;
 
     BoundStatementList(ArrayRef<const BoundStatement*> list) :
-        BoundStatement(BoundNodeKind::StatementList, EmptyStatementSyntax::Empty), list(list) {}
+        BoundStatement(BoundNodeKind::StatementList), list(list) {}
 };
 
 class BoundReturnStatement : public BoundStatement {
@@ -178,7 +187,7 @@ public:
     const VariableSymbol& symbol;
 
     BoundVariableDecl(const VariableSymbol& symbol) :
-        BoundStatement(BoundNodeKind::VariableDeclaration, EmptyStatementSyntax::Empty), symbol(symbol) {}
+        BoundStatement(BoundNodeKind::VariableDeclaration), symbol(symbol) {}
 };
 
 class BoundConditionalStatement : public BoundStatement {

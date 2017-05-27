@@ -57,11 +57,11 @@ public:
         return DiagnosticWriter(syntaxTrees[0].sourceManager()).report(diagnostics);
     }
 
-  private:
+private:
     std::vector<SyntaxTree> syntaxTrees;
     BumpAllocator alloc;
     Diagnostics diagnostics;
-	DesignRootSymbol& root;
+	DesignRootSymbol root;
 };
 
 }
