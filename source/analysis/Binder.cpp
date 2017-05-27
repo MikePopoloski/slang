@@ -13,6 +13,9 @@
 
 namespace slang {
 
+const LiteralExpressionSyntax BadBoundExpression::EmptyLiteral(SyntaxKind::Unknown, Token());
+const EmptyStatementSyntax BoundStatement::EmptyStatement(nullptr, nullptr, Token());
+
 Binder::Binder(const ScopeSymbol& scope) :
     scope(scope), root(scope.getRoot())
 {
@@ -699,39 +702,41 @@ BoundStatement& Binder::bindConditionalStatement(const ConditionalStatementSynta
     return root.allocate<BoundConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
-//BoundStatement* Binder::bindForLoopStatement(const ForLoopStatementSyntax& syntax) {
-//    SmallVectorSized<const Symbol*, 2> initializers;
-//    SmallVectorSized<const BoundVariableDecl*, 2> boundVars;
-//    Scope *forScope = root.allocate<Scope>(scope);
-//
-//    for (auto initializer : syntax.initializers) {
-//        auto forVarDecl = (const ForVariableDeclarationSyntax *)initializer;
-//        const TypeSymbol *type = sem.getType(forVarDecl->type, forScope);
-//        sem.handleVariableDeclarator(forVarDecl->declarator, initializers, forScope, {}, type);
-//    }
-//    ArrayRef<const Symbol*> initializersRef = initializers.copy(alloc);
-//    for (auto initializerSym : initializersRef) {
-//        boundVars.append(root.allocate<BoundVariableDecl>((const VariableSymbol*)initializerSym));
-//    }
-//    Binder binder(sem, forScope);
-//    auto stopExpr = binder.bindExpression(syntax.stopExpr);
-//    SmallVectorSized<const BoundExpression*, 2> steps;
-//    for (auto step : syntax.steps) {
-//        steps.append(binder.bindExpression(*step));
-//    }
-//    auto statement = binder.bindStatement(syntax.statement);
-//
-//    return root.allocate<BoundForLoopStatement>(syntax, boundVars.copy(alloc), stopExpr, steps.copy(alloc), statement);
-//}
+BoundStatement& Binder::bindForLoopStatement(const ForLoopStatementSyntax& syntax) {
+    /*SmallVectorSized<const Symbol*, 2> initializers;
+    SmallVectorSized<const BoundVariableDecl*, 2> boundVars;
+    Scope *forScope = root.allocate<Scope>(scope);
 
-//void Binder::bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const BoundStatement*>& results) {
-//    // TODO: figure out const-ness of the scope here; shouldn't const cast obviously
-//    SmallVectorSized<const Symbol*, 8> buffer;
-//    sem.makeVariables(syntax, buffer, const_cast<Scope*>(scope));
-//
-//    for (auto symbol : buffer)
-//        results.append(root.allocate<BoundVariableDecl>((const VariableSymbol*)symbol));
-//}
+    for (auto initializer : syntax.initializers) {
+        auto forVarDecl = (const ForVariableDeclarationSyntax *)initializer;
+        const TypeSymbol *type = sem.getType(forVarDecl->type, forScope);
+        sem.handleVariableDeclarator(forVarDecl->declarator, initializers, forScope, {}, type);
+    }
+    ArrayRef<const Symbol*> initializersRef = initializers.copy(alloc);
+    for (auto initializerSym : initializersRef) {
+        boundVars.append(root.allocate<BoundVariableDecl>((const VariableSymbol*)initializerSym));
+    }
+    Binder binder(sem, forScope);
+    auto stopExpr = binder.bindExpression(syntax.stopExpr);
+    SmallVectorSized<const BoundExpression*, 2> steps;
+    for (auto step : syntax.steps) {
+        steps.append(binder.bindExpression(*step));
+    }
+    auto statement = binder.bindStatement(syntax.statement);
+
+    return root.allocate<BoundForLoopStatement>(syntax, boundVars.copy(alloc), stopExpr, steps.copy(alloc), statement);*/
+
+	return badStmt(nullptr);
+}
+
+void Binder::bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const BoundStatement*>& results) {
+    // TODO: figure out const-ness of the scope here; shouldn't const cast obviously
+    /*SmallVectorSized<const Symbol*, 8> buffer;
+    sem.makeVariables(syntax, buffer, const_cast<Scope*>(scope));
+
+    for (auto symbol : buffer)
+        results.append(root.allocate<BoundVariableDecl>((const VariableSymbol*)symbol));*/
+}
 
 BoundStatement& Binder::bindExpressionStatement(const ExpressionStatementSyntax& syntax) {
     auto expr = bindExpression(syntax.expr);

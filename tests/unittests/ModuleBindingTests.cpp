@@ -11,7 +11,7 @@ namespace {
 BumpAllocator alloc;
 
 const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax) {
-	DesignRootSymbol& root = DesignRootSymbol::create(syntax);
+	DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(syntax);
 
 	REQUIRE(root.tops().count() > 0);
 	if (!syntax.diagnostics().empty())
@@ -25,7 +25,7 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
     Diagnostics diagnostics;
-	DesignRootSymbol& root = DesignRootSymbol::create(alloc, diagnostics, { &file1, &file2 });
+	DesignRootSymbol root({ &file1, &file2 });
 
     CHECK(diagnostics.empty());
     REQUIRE(root.tops().count() == 2);
@@ -74,7 +74,7 @@ module Leaf #(
 endmodule
 )");
 
-	DesignRootSymbol& root = DesignRootSymbol::create(tree);
+	DesignRootSymbol root(tree);
     CHECK(tree.diagnostics().count() == 15);
 }
 
