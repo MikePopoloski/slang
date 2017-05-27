@@ -32,6 +32,10 @@ public:
 
     BoundNode(BoundNodeKind kind) : kind(kind) {}
 
+	// Not copyable
+	BoundNode(const BoundNode&) = delete;
+	BoundNode& operator=(const BoundNode&) = delete;
+
     bool bad() const { return kind == BoundNodeKind::Unknown; }
 };
 

@@ -20,6 +20,8 @@ namespace slang {
 static int zero = 0;
 ArrayRef<int> IntegralTypeSymbol::EmptyLowerBound { &zero, 1 };
 
+const ErrorTypeSymbol ErrorTypeSymbol::Default;
+
 bool isDefaultSigned(TokenKind kind) {
     return false;
 }
@@ -126,14 +128,14 @@ int TypeSymbol::width() const {
 }
 
 ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
-	auto bound = Binder(*this).bindConstantExpression(expr);
+	const auto& bound = Binder(*this).bindConstantExpression(expr);
 	if (bound.bad())
 		return nullptr;
 	return ConstantEvaluator().evaluateExpr(bound);
 }
 
 ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType, SourceLocation errorLocation) const {
-	auto bound = Binder(*this).bindAssignmentLikeContext(expr, location ? location : expr.getFirstToken().location(), targetType);
+	const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, location ? location : expr.getFirstToken().location(), targetType);
 	if (bound.bad())
 		return nullptr;
 	return ConstantEvaluator().evaluateExpr(bound);
@@ -148,11 +150,64 @@ DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) : DesignRootSymbol({ 
 DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees) :
 	ScopeSymbol(SymbolKind::Root)
 {
+	// Register built-in types
+	knownTypes[SyntaxKind::ShortIntType]  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword,	16, true, false);
+	knownTypes[SyntaxKind::IntType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword,		32, true, false);
+	knownTypes[SyntaxKind::LongIntType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::LongIntKeyword,	64, true, false);
+	knownTypes[SyntaxKind::ByteType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ByteKeyword,		8, true, false);
+	knownTypes[SyntaxKind::BitType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::BitKeyword,		1, false, false);
+	knownTypes[SyntaxKind::LogicType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::LogicKeyword,		1, false, true);
+	knownTypes[SyntaxKind::RegType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::RegKeyword,		1, false, true);
+	knownTypes[SyntaxKind::IntegerType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntegerKeyword,	32, true, true);
+	knownTypes[SyntaxKind::TimeType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::TimeKeyword,		64, false, true);
+	knownTypes[SyntaxKind::RealType]	  = alloc.emplace<RealTypeSymbol>(TokenKind::RealKeyword,		64);
+	knownTypes[SyntaxKind::RealTimeType]  = alloc.emplace<RealTypeSymbol>(TokenKind::RealTimeKeyword,	64);
+	knownTypes[SyntaxKind::ShortRealType] = alloc.emplace<RealTypeSymbol>(TokenKind::ShortRealKeyword,	32);
+	knownTypes[SyntaxKind::StringType]	  = alloc.emplace<TypeSymbol>(SymbolKind::StringType,	"string");
+	knownTypes[SyntaxKind::CHandleType]	  = alloc.emplace<TypeSymbol>(SymbolKind::CHandleType,	"chandle");
+	knownTypes[SyntaxKind::VoidType]	  = alloc.emplace<TypeSymbol>(SymbolKind::VoidType,		"void");
+	knownTypes[SyntaxKind::EventType]	  = alloc.emplace<TypeSymbol>(SymbolKind::EventType,	"event");
+	knownTypes[SyntaxKind::Unknown]		  = &ErrorTypeSymbol::Default;
+
 	addTrees(syntaxTrees);
 }
 
 void DesignRootSymbol::addTree(const SyntaxTree& tree) {
 	addTrees({ &tree });
+}
+
+void DesignRootSymbol::addTrees(ArrayRef<const SyntaxTree*> trees) {
+	// TODO
+}
+
+void DesignRootSymbol::addSymbol(const Symbol& symbol) {
+	// TODO: name collision?
+	scopeMap.try_emplace(symbol.name, &symbol);
+}
+
+ArrayRef<const CompilationUnitSymbol*> DesignRootSymbol::units() const {
+	// TODO
+	return nullptr;
+}
+
+ArrayRef<const ModuleInstanceSymbol*> DesignRootSymbol::tops() const {
+	// TODO
+	return nullptr;
+}
+
+const PackageSymbol* DesignRootSymbol::findPackage(StringRef name) const {
+	// TODO
+	return nullptr;
+}
+
+const Symbol* DesignRootSymbol::findDefinition(StringRef name) const {
+	// TODO
+	return nullptr;
+}
+
+const Symbol* DesignRootSymbol::lookup(StringRef name) const {
+	// TODO
+	return nullptr;
 }
 
 const TypeSymbol& DesignRootSymbol::getType(const DataTypeSyntax& syntax) const {
@@ -339,6 +394,12 @@ int DesignRootSymbol::coerceInteger(const ConstantValue& cv, int maxRangeBits, b
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
 	Symbol(SymbolKind::Module, decl.header.name, &parent), decl(decl)
 {
+}
+
+ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
+	ScopeSymbol(SymbolKind::Module, module.name, module.location), module(module)
+{
+	// TODO: call base class constructor correctly
 }
 
 const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValueAssignmentSyntax* assignments, const ScopeSymbol* instanceScope) const {

@@ -33,6 +33,7 @@ class DesignRootSymbol;
 class TypeSymbol;
 
 using SymbolList = ArrayRef<const Symbol*>;
+using SymbolMap = std::unordered_map<StringRef, const Symbol*>;
 
 using Dimensions = ArrayRef<ConstantRange>;
 
@@ -172,6 +173,8 @@ protected:
 /// Base class for all data types.
 class TypeSymbol : public Symbol {
 public:
+	TypeSymbol(SymbolKind kind, StringRef name) : Symbol(kind, name) {}
+
     // SystemVerilog defines various levels of type compatibility, which are used
     // in different scenarios. See the spec, section 6.22.
     bool isMatching(const TypeSymbol& rhs) const;
@@ -327,6 +330,9 @@ private:
 	bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const;
 	int coerceInteger(const ConstantValue& cv, int maxRangeBits, bool& bad) const;
 
+	// top level scope map
+	SymbolMap scopeMap;
+
 	// preallocated type symbols for known types
 	std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
 
@@ -405,7 +411,7 @@ public:
 	template<typename T>
 	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
 
-	const Symbol* lookup(StringRef name) const final;
+	const Symbol* lookup(StringRef name) const final { return nullptr; }
 	using ScopeSymbol::lookup;
 
 private:
@@ -469,24 +475,24 @@ public:
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
 
-	SymbolList members() const;
+	SymbolList members() const { return nullptr; }
 
 	template<typename T>
 	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
 
-	const Symbol* lookup(StringRef name) const final;
+	const Symbol* lookup(StringRef name) const final { return nullptr; }
 	using ScopeSymbol::lookup;
 };
 
 class ProceduralBlockSymbol : public ScopeSymbol {
 public:
 
-	SymbolList members() const;
+	SymbolList members() const { return nullptr; }
 
 	template<typename T>
 	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
 
-	const Symbol* lookup(StringRef name) const final;
+	const Symbol* lookup(StringRef name) const final { return nullptr; }
 	using ScopeSymbol::lookup;
 };
 
