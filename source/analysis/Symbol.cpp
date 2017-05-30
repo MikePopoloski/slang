@@ -13,6 +13,14 @@ TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
     return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
 }
 
+VariableLifetime getLifetime(Token token, VariableLifetime defaultIfUnset) {
+    switch (token.kind) {
+        case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
+        case TokenKind::StaticKeyword: return VariableLifetime::Static;
+        default: return defaultIfUnset;
+    }
+}
+
 }
 
 namespace slang {
@@ -31,6 +39,10 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
 	while (current && current->kind != searchKind)
 		current = current->containingSymbol;
 	return current;
+}
+
+const Symbol& Symbol::containingScope() const {
+
 }
 
 const DesignRootSymbol& Symbol::getRoot() const {
@@ -145,7 +157,8 @@ const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
 	return getRoot().getType(syntax, *this);
 }
 
-DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) : DesignRootSymbol({ &tree }) {}
+DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) :
+	DesignRootSymbol(ArrayRef<const SyntaxTree*> { &tree }) {}
 
 DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees) :
 	ScopeSymbol(SymbolKind::Root)
@@ -177,22 +190,20 @@ void DesignRootSymbol::addTree(const SyntaxTree& tree) {
 }
 
 void DesignRootSymbol::addTrees(ArrayRef<const SyntaxTree*> trees) {
-	// TODO
+	for (auto tree : trees) {
+		if (tree->root().kind == SyntaxKind::CompilationUnit)
+			unitList.push_back(&allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>()));
+		else {
+			SmallVectorSized<const Symbol*, 2> symbols;
+			createSymbols(tree->root(), symbols);
+			for (auto symbol : symbols)
+				addSymbol(*symbol);
+		}
+	}
 }
 
 void DesignRootSymbol::addSymbol(const Symbol& symbol) {
-	// TODO: name collision?
-	scopeMap.try_emplace(symbol.name, &symbol);
-}
-
-ArrayRef<const CompilationUnitSymbol*> DesignRootSymbol::units() const {
-	// TODO
-	return nullptr;
-}
-
-ArrayRef<const ModuleInstanceSymbol*> DesignRootSymbol::tops() const {
-	// TODO
-	return nullptr;
+    ScopeSymbol::addSymbol(symbol);
 }
 
 const PackageSymbol* DesignRootSymbol::findPackage(StringRef name) const {
@@ -201,11 +212,6 @@ const PackageSymbol* DesignRootSymbol::findPackage(StringRef name) const {
 }
 
 const Symbol* DesignRootSymbol::findDefinition(StringRef name) const {
-	// TODO
-	return nullptr;
-}
-
-const Symbol* DesignRootSymbol::lookup(StringRef name) const {
 	// TODO
 	return nullptr;
 }
@@ -391,13 +397,31 @@ int DesignRootSymbol::coerceInteger(const ConstantValue& cv, int maxRangeBits, b
 	return 0;
 }
 
+void DesignRootSymbol::createSymbols(const SyntaxNode& node, SmallVector<const Symbol*>& results) {
+	switch (node.kind) {
+		case SyntaxKind::FunctionDeclaration:
+		case SyntaxKind::TaskDeclaration:
+			results.append(alloc.emplace<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), *this));
+			break;
+
+		default: { int i = 0;
+			i++;
+		}
+	}
+}
+
+CompilationUnitSymbol::CompilationUnitSymbol(const CompilationUnitSyntax& syntax) :
+	ScopeSymbol(SymbolKind::Unknown)
+{
+}
+
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
 	Symbol(SymbolKind::Module, decl.header.name, &parent), decl(decl)
 {
 }
 
 ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
-	ScopeSymbol(SymbolKind::Module, module.name, module.location), module(module)
+	ScopeSymbol(SymbolKind::Module, nullptr, module.name, module.location), module(module)
 {
 	// TODO: call base class constructor correctly
 }
@@ -581,6 +605,149 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& syntax, std::
 
 SymbolList ParameterizedModuleSymbol::members() const {
 	return nullptr;
+}
+
+VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const Symbol& parent, VariableLifetime lifetime,
+							   bool isConst, const ExpressionSyntax* initializer) :
+	Symbol(SymbolKind::Variable, name, &parent),
+	lifetime(lifetime), isConst(isConst), typeSyntax(&type), initializerSyntax(initializer)
+{
+}
+
+VariableSymbol::VariableSymbol(StringRef name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+							   VariableLifetime lifetime, bool isConst, const BoundExpression* initializer) :
+	Symbol(SymbolKind::Variable, &parent, name, location),
+	lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer)
+{
+}
+
+VariableSymbol::VariableSymbol(SymbolKind kind, StringRef name, SourceLocation location, const TypeSymbol& type,
+							   const Symbol& parent, VariableLifetime lifetime, bool isConst, const BoundExpression* initializer) :
+	Symbol(kind, &parent, name, location),
+	lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer)
+{
+}
+
+const TypeSymbol& VariableSymbol::type() const {
+    if (typeSymbol)
+        return *typeSymbol;
+
+    ASSERT(typeSyntax);
+    typeSymbol = &containingScope().getType(*typeSyntax);
+    return *typeSymbol;
+}
+
+const BoundExpression* VariableSymbol::initializer() const {
+    if (initializerBound)
+        return initializerBound;
+
+    if (initializerSyntax)
+        initializerBound = &Binder(containingScope()).bindAssignmentLikeContext(*initializerSyntax, location, type());
+
+    return initializerBound;
+}
+
+FormalArgumentSymbol::FormalArgumentSymbol(const TypeSymbol& type, const Symbol& parent) :
+	VariableSymbol(SymbolKind::FormalArgument, nullptr, SourceLocation(), type, parent)
+{
+}
+
+FormalArgumentSymbol::FormalArgumentSymbol(StringRef name, SourceLocation location, const TypeSymbol& type,
+										   const Symbol& parent, const BoundExpression* initializer,
+										   FormalArgumentDirection direction) :
+	VariableSymbol(SymbolKind::FormalArgument, name, location, type, parent, VariableLifetime::Automatic,
+				   direction == FormalArgumentDirection::ConstRef, initializer),
+	direction(direction)
+{
+}
+
+// TODO: handle functions that don't have simple name tokens
+SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const Symbol& parent) :
+	ScopeSymbol(SymbolKind::Subroutine, syntax.prototype.name.getFirstToken(), &parent),
+	syntax(&syntax)
+{
+	defaultLifetime = getLifetime(syntax.prototype.lifetime, VariableLifetime::Automatic);
+	isTask = syntax.kind == SyntaxKind::TaskDeclaration;
+}
+
+SubroutineSymbol::SubroutineSymbol(StringRef name, const TypeSymbol& returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
+								   SystemFunction systemFunction, const Symbol& parent) :
+	ScopeSymbol(SymbolKind::Subroutine, &parent, name),
+	systemFunctionKind(systemFunction),
+	returnType_(&returnType), arguments_(arguments)
+{
+}
+
+void SubroutineSymbol::init() const {
+	if (initialized)
+		return;
+	initialized = true;
+
+	const ScopeSymbol& parentScope = containingScope();
+	const DesignRootSymbol& root = getRoot();
+	const auto& proto = syntax->prototype;
+	auto returnType = parentScope.getType(*proto.returnType);
+	
+	SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
+	
+	if (proto.portList) {
+	    const TypeSymbol* lastType = &root.getKnownType(SyntaxKind::LogicType);
+	    auto lastDirection = FormalArgumentDirection::In;
+	
+	    for (const FunctionPortSyntax* portSyntax : proto.portList->ports) {
+	        FormalArgumentDirection direction;
+	        bool directionSpecified = true;
+	        switch (portSyntax->direction.kind) {
+	            case TokenKind::InputKeyword: direction = FormalArgumentDirection::In; break;
+	            case TokenKind::OutputKeyword: direction = FormalArgumentDirection::Out; break;
+	            case TokenKind::InOutKeyword: direction = FormalArgumentDirection::InOut; break;
+	            case TokenKind::RefKeyword:
+	                if (portSyntax->constKeyword)
+	                    direction = FormalArgumentDirection::ConstRef;
+	                else
+	                    direction = FormalArgumentDirection::Ref;
+	                break;
+	            default:
+	                // Otherwise, we "inherit" the previous argument
+	                direction = lastDirection;
+	                directionSpecified = false;
+	                break;
+	        }
+	
+	        // If we're given a type, use that. Otherwise, if we were given a
+	        // direction, default to logic. Otherwise, use the last type.
+	        const TypeSymbol* type;
+	        if (portSyntax->dataType)
+	            type = &parentScope.getType(*portSyntax->dataType);
+	        else if (directionSpecified)
+	            type = &root.getKnownType(SyntaxKind::LogicType);
+	        else
+	            type = lastType;
+	
+	        const auto& declarator = portSyntax->declarator;
+			const BoundExpression* initializer = nullptr;
+			if (declarator.initializer) {
+				initializer = &Binder(parentScope).bindAssignmentLikeContext(declarator.initializer->expr,
+                                                                             declarator.name.location(), *type);
+			}
+	
+	        arguments.append(&root.allocate<FormalArgumentSymbol>(
+	            declarator.name.valueText(),
+				declarator.name.location(),
+	            *type,
+				*this,
+                initializer,
+	            direction
+	        ));
+	
+	        addSymbol(*arguments.back());
+	
+	        lastDirection = direction;
+	        lastType = type;
+	    }
+	}
+	
+	body_ = &Binder(*this).bindStatementList(syntax->items);
 }
 
 }

@@ -75,7 +75,7 @@ public:
     const VariableSymbol& symbol;
 
     BoundVariable(const ExpressionSyntax& syntax, const VariableSymbol& symbol) :
-        BoundExpression(BoundNodeKind::Variable, syntax, *symbol.type), symbol(symbol) {}
+        BoundExpression(BoundNodeKind::Variable, syntax, symbol.type()), symbol(symbol) {}
 };
 
 class BoundUnaryExpression : public BoundExpression {
@@ -144,7 +144,7 @@ public:
     ArrayRef<const BoundExpression*> arguments;
 
     BoundCallExpression(const ExpressionSyntax& syntax, const SubroutineSymbol& subroutine, ArrayRef<const BoundExpression*> arguments) :
-        BoundExpression(BoundNodeKind::CallExpression, syntax, *subroutine.returnType),
+        BoundExpression(BoundNodeKind::CallExpression, syntax, subroutine.returnType()),
         subroutine(subroutine), arguments(arguments) {}
 };
 

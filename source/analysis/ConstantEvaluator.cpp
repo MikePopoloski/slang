@@ -264,22 +264,23 @@ ConstantValue ConstantEvaluator::evaluateAssignment(const BoundAssignmentExpress
 ConstantValue ConstantEvaluator::evaluateCall(const BoundCallExpression& expr) {
     // If this is a system function we will just evaluate it directly
     const auto& subroutine = expr.subroutine;
-    if (subroutine.systemFunction != SystemFunction::Unknown)
-        return evaluateSystemCall(subroutine.systemFunction, expr.arguments);
+    if (subroutine.systemFunctionKind != SystemFunction::Unknown)
+        return evaluateSystemCall(subroutine.systemFunctionKind, expr.arguments);
 
     // Create a new frame that will become the head of the call stack.
     // Don't actually update that pointer until we finish evaluating arguments.
     Frame newFrame { currentFrame };
 
-    for (uint32_t i = 0; i < subroutine.arguments.count(); i++)
-        newFrame.temporaries[subroutine.arguments[i]] = evaluateExpr(*expr.arguments[i]);
+	ArrayRef<const FormalArgumentSymbol*> args = subroutine.arguments();
+    for (uint32_t i = 0; i < args.count(); i++)
+        newFrame.temporaries[args[i]] = evaluateExpr(*expr.arguments[i]);
 
-    VariableSymbol callValue(subroutine.name, subroutine.location, subroutine.returnType);
+    VariableSymbol callValue(subroutine.name, subroutine.location, subroutine.returnType(), subroutine);
     newFrame.temporaries[&callValue];
 
     // Now update the call stack and evaluate the function body
     currentFrame = &newFrame;
-    evaluateStmt(*subroutine.body);
+    evaluateStmt(subroutine.body());
 
     // Pop the frame and return the value
     currentFrame = newFrame.parent;
@@ -339,8 +340,8 @@ void ConstantEvaluator::evaluateReturn(const BoundReturnStatement& stmt) {
 void ConstantEvaluator::evaluateVariableDecl(const BoundVariableDecl& decl) {
     // Create storage for the variable
     auto& storage = createTemporary(decl.symbol);
-    if (decl.symbol.initializer)
-        storage = evaluateExpr(*decl.symbol.initializer);
+    if (decl.symbol.initializer())
+        storage = evaluateExpr(*decl.symbol.initializer());
 }
 
 bool ConstantEvaluator::evaluateLValue(const BoundExpression& expr, LValue& lvalue) {

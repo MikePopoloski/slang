@@ -29,6 +29,9 @@ public:
 
 	ArrayRef(std::initializer_list<T> init) : ptr(init.begin()), len(init.size()) {}
 
+	template<typename Container>
+	ArrayRef(const Container& container) : ptr(container.data()), len(container.size()) {}
+
     template<size_t N>
     ArrayRef(T (&array)[N]) : ptr(array), len(uint32_t(N)) {}
 

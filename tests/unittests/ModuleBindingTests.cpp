@@ -214,7 +214,7 @@ endmodule
     //CHECK(alwaysComb.kind == ProceduralBlock::AlwaysComb);
 
     const auto& variable = instance.member<VariableSymbol>(2);
-    CHECK(variable.type->kind == SymbolKind::IntegralType);
+    CHECK(variable.type().kind == SymbolKind::IntegralType);
     CHECK(variable.name == "arr1");
 }
 
@@ -231,21 +231,21 @@ endmodule
     const auto& foo = instance.member<SubroutineSymbol>(0);
     CHECK(!foo.isTask);
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
-    CHECK(foo.returnType->as<IntegralTypeSymbol>().width == 16);
+    CHECK(foo.returnType().as<IntegralTypeSymbol>().width == 16);
     CHECK(foo.name == "foo");
-    REQUIRE(foo.arguments.count() == 5);
-    CHECK(foo.arguments[0]->type->as<IntegralTypeSymbol>().width == 1);
-    CHECK(foo.arguments[0]->direction == FormalArgumentDirection::In);
-    CHECK(foo.arguments[1]->type->as<IntegralTypeSymbol>().width == 32);
-    CHECK(foo.arguments[1]->direction == FormalArgumentDirection::In);
-    CHECK(foo.arguments[2]->type->as<IntegralTypeSymbol>().width == 16);
-    CHECK(foo.arguments[2]->direction == FormalArgumentDirection::Out);
-    CHECK(foo.arguments[3]->type->as<IntegralTypeSymbol>().width == 16);
-    CHECK(foo.arguments[3]->direction == FormalArgumentDirection::Out);
-    CHECK(foo.arguments[4]->type->as<IntegralTypeSymbol>().width == 1);
-    CHECK(foo.arguments[4]->direction == FormalArgumentDirection::InOut);
+    REQUIRE(foo.arguments().count() == 5);
+    CHECK(foo.arguments()[0]->type().as<IntegralTypeSymbol>().width == 1);
+    CHECK(foo.arguments()[0]->direction == FormalArgumentDirection::In);
+    CHECK(foo.arguments()[1]->type().as<IntegralTypeSymbol>().width == 32);
+    CHECK(foo.arguments()[1]->direction == FormalArgumentDirection::In);
+    CHECK(foo.arguments()[2]->type().as<IntegralTypeSymbol>().width == 16);
+    CHECK(foo.arguments()[2]->direction == FormalArgumentDirection::Out);
+    CHECK(foo.arguments()[3]->type().as<IntegralTypeSymbol>().width == 16);
+    CHECK(foo.arguments()[3]->direction == FormalArgumentDirection::Out);
+    CHECK(foo.arguments()[4]->type().as<IntegralTypeSymbol>().width == 1);
+    CHECK(foo.arguments()[4]->direction == FormalArgumentDirection::InOut);
 
-    const auto& returnStmt = *(const BoundReturnStatement*)foo.body->list[0];
+    const auto& returnStmt = *(const BoundReturnStatement*)foo.body().list[0];
     REQUIRE(returnStmt.kind == BoundNodeKind::ReturnStatement);
     CHECK(!returnStmt.expr->bad());
     CHECK(returnStmt.expr->type->as<IntegralTypeSymbol>().width == 32);
@@ -264,7 +264,7 @@ endmodule
 
     const auto& instance = evalModule(tree);
     const auto& someVar = instance.member<VariableSymbol>(0);
-    REQUIRE(someVar.type->kind == SymbolKind::EnumType);
+    REQUIRE(someVar.type().kind == SymbolKind::EnumType);
    /* REQUIRE(someVar.type->as<EnumTypeSymbol>().values.count() == 3);
     CHECK(someVar.type->as<EnumTypeSymbol>().values[0]->value.integer() == 0);
     CHECK(someVar.type->as<EnumTypeSymbol>().values[1]->value.integer() == 4);

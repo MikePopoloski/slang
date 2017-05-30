@@ -40,7 +40,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-		&root.getKnownType(SyntaxKind::LogicType)
+		root.getKnownType(SyntaxKind::LogicType), root
     };
 
     // Bind the expression tree to the symbol
@@ -72,7 +72,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-        &root.getIntegralType(20, false)
+        root.getIntegralType(20, false), root
     };
 
     // Bind the expression tree to the symbol
@@ -99,7 +99,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-        &root.getIntegralType(20, false)
+        root.getIntegralType(20, false), root
     };
 
     // Bind the expression tree to the symbol
@@ -130,7 +130,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-        &root.getIntegralType(20, false)
+        root.getIntegralType(20, false), root
     };
 
     // Bind the expression tree to the symbol
