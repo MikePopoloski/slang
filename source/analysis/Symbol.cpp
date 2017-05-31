@@ -28,21 +28,36 @@ namespace slang {
 static int zero = 0;
 ArrayRef<int> IntegralTypeSymbol::EmptyLowerBound { &zero, 1 };
 
-const ErrorTypeSymbol ErrorTypeSymbol::Default;
-
 bool isDefaultSigned(TokenKind kind) {
     return false;
 }
 
 const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
 	const Symbol* current = this;
-	while (current && current->kind != searchKind)
-		current = current->containingSymbol;
+    while (current->kind != searchKind) {
+        if (current->kind == SymbolKind::Root)
+            return nullptr;
+
+        current = &current->containingSymbol;
+    }
 	return current;
 }
 
-const Symbol& Symbol::containingScope() const {
+const ScopeSymbol& Symbol::containingScope() const {
+    const Symbol* current = this;
+    while (true) {
+        current = &current->containingSymbol;
+        switch (current->kind) {
+            case SymbolKind::Root:
+            /*case SymbolKind::CompilationUnit:
+            case SymbolKind::Package:
+            case SymbolKind::ParameterizedModule:*/
+            case SymbolKind::Subroutine:
+                return *static_cast<const ScopeSymbol*>(current);
 
+            default: break;
+        }
+    }
 }
 
 const DesignRootSymbol& Symbol::getRoot() const {
@@ -139,6 +154,11 @@ int TypeSymbol::width() const {
     }
 }
 
+const Symbol* ScopeSymbol::lookup(StringRef name, LookupNamespace ns) const {
+    // TODO:
+    return nullptr;
+}
+
 ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
 	const auto& bound = Binder(*this).bindConstantExpression(expr);
 	if (bound.bad())
@@ -157,30 +177,36 @@ const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
 	return getRoot().getType(syntax, *this);
 }
 
+void ScopeSymbol::addSymbol(const Symbol& symbol) const {
+    // TODO: check for duplicate names
+    // TODO: packages and definition namespaces
+    memberMap.try_emplace(symbol.name, &symbol);
+}
+
 DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) :
 	DesignRootSymbol(ArrayRef<const SyntaxTree*> { &tree }) {}
 
 DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees) :
-	ScopeSymbol(SymbolKind::Root)
+	ScopeSymbol(SymbolKind::Root, *this)
 {
 	// Register built-in types
-	knownTypes[SyntaxKind::ShortIntType]  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword,	16, true, false);
-	knownTypes[SyntaxKind::IntType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword,		32, true, false);
-	knownTypes[SyntaxKind::LongIntType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::LongIntKeyword,	64, true, false);
-	knownTypes[SyntaxKind::ByteType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ByteKeyword,		8, true, false);
-	knownTypes[SyntaxKind::BitType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::BitKeyword,		1, false, false);
-	knownTypes[SyntaxKind::LogicType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::LogicKeyword,		1, false, true);
-	knownTypes[SyntaxKind::RegType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::RegKeyword,		1, false, true);
-	knownTypes[SyntaxKind::IntegerType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntegerKeyword,	32, true, true);
-	knownTypes[SyntaxKind::TimeType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::TimeKeyword,		64, false, true);
-	knownTypes[SyntaxKind::RealType]	  = alloc.emplace<RealTypeSymbol>(TokenKind::RealKeyword,		64);
-	knownTypes[SyntaxKind::RealTimeType]  = alloc.emplace<RealTypeSymbol>(TokenKind::RealTimeKeyword,	64);
-	knownTypes[SyntaxKind::ShortRealType] = alloc.emplace<RealTypeSymbol>(TokenKind::ShortRealKeyword,	32);
-	knownTypes[SyntaxKind::StringType]	  = alloc.emplace<TypeSymbol>(SymbolKind::StringType,	"string");
-	knownTypes[SyntaxKind::CHandleType]	  = alloc.emplace<TypeSymbol>(SymbolKind::CHandleType,	"chandle");
-	knownTypes[SyntaxKind::VoidType]	  = alloc.emplace<TypeSymbol>(SymbolKind::VoidType,		"void");
-	knownTypes[SyntaxKind::EventType]	  = alloc.emplace<TypeSymbol>(SymbolKind::EventType,	"event");
-	knownTypes[SyntaxKind::Unknown]		  = &ErrorTypeSymbol::Default;
+	knownTypes[SyntaxKind::ShortIntType]  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword,	16, true, false, *this);
+	knownTypes[SyntaxKind::IntType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword,		32, true, false, *this);
+	knownTypes[SyntaxKind::LongIntType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::LongIntKeyword,	64, true, false, *this);
+	knownTypes[SyntaxKind::ByteType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ByteKeyword,		8, true, false, *this);
+	knownTypes[SyntaxKind::BitType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::BitKeyword,		1, false, false, *this);
+	knownTypes[SyntaxKind::LogicType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::LogicKeyword,		1, false, true, *this);
+	knownTypes[SyntaxKind::RegType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::RegKeyword,		1, false, true, *this);
+	knownTypes[SyntaxKind::IntegerType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntegerKeyword,	32, true, true, *this);
+	knownTypes[SyntaxKind::TimeType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::TimeKeyword,		64, false, true, *this);
+	knownTypes[SyntaxKind::RealType]	  = alloc.emplace<RealTypeSymbol>(TokenKind::RealKeyword,		64, *this);
+	knownTypes[SyntaxKind::RealTimeType]  = alloc.emplace<RealTypeSymbol>(TokenKind::RealTimeKeyword,	64, *this);
+	knownTypes[SyntaxKind::ShortRealType] = alloc.emplace<RealTypeSymbol>(TokenKind::ShortRealKeyword,	32, *this);
+	knownTypes[SyntaxKind::StringType]	  = alloc.emplace<TypeSymbol>(SymbolKind::StringType,	"string", *this);
+	knownTypes[SyntaxKind::CHandleType]	  = alloc.emplace<TypeSymbol>(SymbolKind::CHandleType,	"chandle", *this);
+	knownTypes[SyntaxKind::VoidType]	  = alloc.emplace<TypeSymbol>(SymbolKind::VoidType,		"void", *this);
+	knownTypes[SyntaxKind::EventType]	  = alloc.emplace<TypeSymbol>(SymbolKind::EventType,	"event", *this);
+    knownTypes[SyntaxKind::Unknown]       = alloc.emplace<ErrorTypeSymbol>(*this);
 
 	addTrees(syntaxTrees);
 }
@@ -192,7 +218,7 @@ void DesignRootSymbol::addTree(const SyntaxTree& tree) {
 void DesignRootSymbol::addTrees(ArrayRef<const SyntaxTree*> trees) {
 	for (auto tree : trees) {
 		if (tree->root().kind == SyntaxKind::CompilationUnit)
-			unitList.push_back(&allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>()));
+			unitList.push_back(&allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>(), *this));
 		else {
 			SmallVectorSized<const Symbol*, 2> symbols;
 			createSymbols(tree->root(), symbols);
@@ -279,7 +305,7 @@ const TypeSymbol& DesignRootSymbol::getType(const DataTypeSyntax& syntax, const 
 	
 	// TODO: consider Void Type
 	
-	return ErrorTypeSymbol::Default;
+	return getErrorType();
 }
 
 const TypeSymbol& DesignRootSymbol::getKnownType(SyntaxKind kind) const {
@@ -299,7 +325,7 @@ const TypeSymbol& DesignRootSymbol::getIntegralType(int width, bool isSigned, bo
         return *it->second;
 
     TokenKind type = getIntegralKeywordKind(isFourState, isReg);
-    auto symbol = alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
+    auto symbol = alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState, *this);
     integralTypeCache.emplace_hint(it, key, symbol);
     return *symbol;
 }
@@ -312,7 +338,7 @@ const TypeSymbol& DesignRootSymbol::getIntegralType(const IntegerTypeSyntax& syn
 
 	SmallVectorSized<ConstantRange, 4> dims;
 	if (!evaluateConstantDims(syntax.dimensions, dims, scope))
-		return ErrorTypeSymbol::Default;
+		return getErrorType();
 
 	// TODO: review this whole mess
 
@@ -350,8 +376,12 @@ const TypeSymbol& DesignRootSymbol::getIntegralType(const IntegerTypeSyntax& syn
 		return allocate<IntegralTypeSymbol>(
 			getIntegralKeywordKind(isFourState, isReg),
 			totalWidth, isSigned, isFourState,
-			lowerBounds.copy(alloc), widths.copy(alloc));
+			lowerBounds.copy(alloc), widths.copy(alloc), *this);
 	}
+}
+
+const TypeSymbol& DesignRootSymbol::getErrorType() const {
+    return getKnownType(SyntaxKind::Unknown);
 }
 
 bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const {
@@ -410,20 +440,19 @@ void DesignRootSymbol::createSymbols(const SyntaxNode& node, SmallVector<const S
 	}
 }
 
-CompilationUnitSymbol::CompilationUnitSymbol(const CompilationUnitSyntax& syntax) :
-	ScopeSymbol(SymbolKind::Unknown)
+CompilationUnitSymbol::CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent) :
+	ScopeSymbol(SymbolKind::Unknown, parent)
 {
 }
 
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
-	Symbol(SymbolKind::Module, decl.header.name, &parent), decl(decl)
+	Symbol(SymbolKind::Module, decl.header.name, parent), decl(decl)
 {
 }
 
-ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
-	ScopeSymbol(SymbolKind::Module, nullptr, module.name, module.location), module(module)
+ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent, const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
+	ScopeSymbol(SymbolKind::Module, parent, module.name, module.location), module(module)
 {
-	// TODO: call base class constructor correctly
 }
 
 const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValueAssignmentSyntax* assignments, const ScopeSymbol* instanceScope) const {
@@ -520,7 +549,8 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
 		}
 	}
 
-	return allocate<ParameterizedModuleSymbol>(*this, paramMap);
+    // TODO: containing symbol is wrong
+	return allocate<ParameterizedModuleSymbol>(*this, *this, paramMap);
 }
 
 ConstantValue ModuleSymbol::evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope,
@@ -609,21 +639,21 @@ SymbolList ParameterizedModuleSymbol::members() const {
 
 VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const Symbol& parent, VariableLifetime lifetime,
 							   bool isConst, const ExpressionSyntax* initializer) :
-	Symbol(SymbolKind::Variable, name, &parent),
+	Symbol(SymbolKind::Variable, name, parent),
 	lifetime(lifetime), isConst(isConst), typeSyntax(&type), initializerSyntax(initializer)
 {
 }
 
 VariableSymbol::VariableSymbol(StringRef name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
 							   VariableLifetime lifetime, bool isConst, const BoundExpression* initializer) :
-	Symbol(SymbolKind::Variable, &parent, name, location),
+	Symbol(SymbolKind::Variable, parent, name, location),
 	lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer)
 {
 }
 
 VariableSymbol::VariableSymbol(SymbolKind kind, StringRef name, SourceLocation location, const TypeSymbol& type,
 							   const Symbol& parent, VariableLifetime lifetime, bool isConst, const BoundExpression* initializer) :
-	Symbol(kind, &parent, name, location),
+	Symbol(kind, parent, name, location),
 	lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer)
 {
 }
@@ -663,7 +693,7 @@ FormalArgumentSymbol::FormalArgumentSymbol(StringRef name, SourceLocation locati
 
 // TODO: handle functions that don't have simple name tokens
 SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const Symbol& parent) :
-	ScopeSymbol(SymbolKind::Subroutine, syntax.prototype.name.getFirstToken(), &parent),
+	ScopeSymbol(SymbolKind::Subroutine, syntax.prototype.name.getFirstToken(), parent),
 	syntax(&syntax)
 {
 	defaultLifetime = getLifetime(syntax.prototype.lifetime, VariableLifetime::Automatic);
@@ -672,7 +702,7 @@ SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, cons
 
 SubroutineSymbol::SubroutineSymbol(StringRef name, const TypeSymbol& returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
 								   SystemFunction systemFunction, const Symbol& parent) :
-	ScopeSymbol(SymbolKind::Subroutine, &parent, name),
+	ScopeSymbol(SymbolKind::Subroutine, parent, name),
 	systemFunctionKind(systemFunction),
 	returnType_(&returnType), arguments_(arguments)
 {

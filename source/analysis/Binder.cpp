@@ -180,7 +180,7 @@ BoundExpression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
 
 BoundExpression& Binder::bindLiteral(const IntegerVectorExpressionSyntax& syntax) {
     if (syntax.value.isMissing())
-        return badExpr(&root.allocate<BoundLiteral>(syntax, ErrorTypeSymbol::Default, nullptr));
+        return badExpr(&root.allocate<BoundLiteral>(syntax, root.getErrorType(), nullptr));
 
     const SVInt& value = std::get<SVInt>(syntax.value.numericValue());
     const TypeSymbol& type = root.getIntegralType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
@@ -238,7 +238,7 @@ BoundExpression& Binder::bindUnaryArithmeticOperator(const PrefixUnaryExpression
     // Supported for both integral and real types. Can be overloaded for others.
     BoundExpression* operand = &bindAndPropagate(syntax.operand);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &operand))
-        return badExpr(&root.allocate<BoundUnaryExpression>(syntax, ErrorTypeSymbol::Default, *operand));
+        return badExpr(&root.allocate<BoundUnaryExpression>(syntax, root.getErrorType(), *operand));
 
     return root.allocate<BoundUnaryExpression>(syntax, *operand->type, *operand);
 }
@@ -247,7 +247,7 @@ BoundExpression& Binder::bindUnaryReductionOperator(const PrefixUnaryExpressionS
     // Result type is always a single bit. Supported on integral types.
     BoundExpression* operand = &bindAndPropagate(syntax.operand);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &operand))
-        return badExpr(&root.allocate<BoundUnaryExpression>(syntax, ErrorTypeSymbol::Default, *operand));
+        return badExpr(&root.allocate<BoundUnaryExpression>(syntax, root.getErrorType(), *operand));
 
     return root.allocate<BoundUnaryExpression>(syntax, root.getKnownType(SyntaxKind::LogicType), *operand);
 }
@@ -256,7 +256,7 @@ BoundExpression& Binder::bindArithmeticOperator(const BinaryExpressionSyntax& sy
     BoundExpression* lhs = &bindAndPropagate(syntax.left);
     BoundExpression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, ErrorTypeSymbol::Default, *lhs, *rhs));
+        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, root.getErrorType(), *lhs, *rhs));
 
     // Get the result type; force the type to be four-state if it's a division, which can make a 4-state output
     // out of 2-state inputs
@@ -268,7 +268,7 @@ BoundExpression& Binder::bindComparisonOperator(const BinaryExpressionSyntax& sy
     BoundExpression* lhs = &bindAndPropagate(syntax.left);
     BoundExpression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, ErrorTypeSymbol::Default, *lhs, *rhs));
+        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, root.getErrorType(), *lhs, *rhs));
 
     // result type is always a single bit
     return root.allocate<BoundBinaryExpression>(syntax, root.getKnownType(SyntaxKind::LogicType), *lhs, *rhs);
@@ -278,7 +278,7 @@ BoundExpression& Binder::bindRelationalOperator(const BinaryExpressionSyntax& sy
     BoundExpression* lhs = &bindAndPropagate(syntax.left);
     BoundExpression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, ErrorTypeSymbol::Default, *lhs, *rhs));
+        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, root.getErrorType(), *lhs, *rhs));
 
     // operands are sized to max(l,r) and the result of the operation is always 1 bit
     // no propagations from above have an actual have an effect on the subexpressions
@@ -297,7 +297,7 @@ BoundExpression& Binder::bindShiftOrPowerOperator(const BinaryExpressionSyntax& 
     BoundExpression* lhs = &bindAndPropagate(syntax.left);
     BoundExpression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, ErrorTypeSymbol::Default, *lhs, *rhs));
+        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, root.getErrorType(), *lhs, *rhs));
 
     // Power operator can result in division by zero 'x
     const TypeSymbol& type = binaryOperatorResultType(lhs->type, rhs->type, syntax.kind == SyntaxKind::PowerExpression);
@@ -330,7 +330,7 @@ BoundExpression& Binder::bindAssignmentOperator(const BinaryExpressionSyntax& sy
     }
     // TODO: the LHS has to be assignable (i.e not a general expression)
     if (!checkOperatorApplicability(binopKind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, ErrorTypeSymbol::Default, *lhs, *rhs));
+        return badExpr(&root.allocate<BoundBinaryExpression>(syntax, root.getErrorType(), *lhs, *rhs));
 
     // The operands of an assignment are themselves self determined,
     // but we must increase the size of the RHS to the size of the LHS if it is larger, and then
@@ -393,7 +393,7 @@ BoundExpression& Binder::bindConcatenationExpression(const ConcatenationExpressi
 
         const TypeSymbol& type = *arg.type;
         if (type.kind != SymbolKind::IntegralType)
-            return badExpr(&root.allocate<BoundNaryExpression>(syntax, ErrorTypeSymbol::Default, nullptr));
+            return badExpr(&root.allocate<BoundNaryExpression>(syntax, root.getErrorType(), nullptr));
 
         totalWidth += type.width();
     }
@@ -784,7 +784,7 @@ const TypeSymbol& Binder::binaryOperatorResultType(const TypeSymbol* lhsType, co
 }
 
 BadBoundExpression& Binder::badExpr(const BoundExpression* expr) {
-    return root.allocate<BadBoundExpression>(expr);
+    return root.allocate<BadBoundExpression>(expr, root.getErrorType());
 }
 
 BadBoundStatement& Binder::badStmt(const BoundStatement* stmt) {
