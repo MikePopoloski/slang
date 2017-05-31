@@ -52,8 +52,8 @@ class BadBoundExpression : public BoundExpression {
 public:
     const BoundExpression* child;
 
-    BadBoundExpression(const BoundExpression* child) :
-        BoundExpression(BoundNodeKind::Unknown, EmptyLiteral, ErrorTypeSymbol::Default), child(child) {}
+    BadBoundExpression(const BoundExpression* child, const TypeSymbol& type) :
+        BoundExpression(BoundNodeKind::Unknown, EmptyLiteral, type), child(child) {}
 
 private:
 	static const LiteralExpressionSyntax EmptyLiteral;

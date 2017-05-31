@@ -121,15 +121,17 @@ public:
 	/// for reporting errors.
     SourceLocation location;
 
-	/// The symbol that contains this symbol in the source text, or null if
-	/// it is not contained by anything.
-	const Symbol* containingSymbol;
+	/// The symbol that contains this symbol in the source text. All symbols have a containing
+    /// symbol except for the design root, which has itself as the containing symbol. Keep that
+    /// in mind when traversing the parent links.
+	const Symbol& containingSymbol;
 
 	/// Finds the first ancestor symbol of the given kind. If this symbol is already of
 	/// the given kind, returns this symbol.
 	const Symbol* findAncestor(SymbolKind searchKind) const;
 
-	/// Gets the first containing parent symbol that is also a scope.
+	/// Gets the first containing parent symbol that is also a scope. If this is
+    /// the design root, returns itself.
 	const ScopeSymbol& containingScope() const;
 
 	/// Gets the symbol for the root of the design.
@@ -139,11 +141,11 @@ public:
 	const T& as() const { return *static_cast<const T*>(this); }
 
 protected:
-    explicit Symbol(SymbolKind kind, const Symbol* containingSymbol = nullptr, StringRef name = nullptr, SourceLocation location = SourceLocation()) :
+    explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, StringRef name = nullptr, SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location),
 		containingSymbol(containingSymbol) {}
 
-	Symbol(SymbolKind kind, Token token, const Symbol* containingSymbol = nullptr) :
+	Symbol(SymbolKind kind, Token token, const Symbol& containingSymbol) :
 		kind(kind), name(token.valueText()), location(token.location()),
 		containingSymbol(containingSymbol) {}
 
@@ -199,7 +201,7 @@ private:
 /// Base class for all data types.
 class TypeSymbol : public Symbol {
 public:
-	TypeSymbol(SymbolKind kind, StringRef name) : Symbol(kind, nullptr, name) {}
+	TypeSymbol(SymbolKind kind, StringRef name, const Symbol& parent) : Symbol(kind, parent, name) {}
 
     // SystemVerilog defines various levels of type compatibility, which are used
     // in different scenarios. See the spec, section 6.22.
@@ -231,15 +233,15 @@ public:
     bool isSigned;
     bool isFourState;
 
-    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState) :
-        IntegralTypeSymbol(keywordType, width, isSigned, isFourState, EmptyLowerBound, ArrayRef<int>(&width, 1)) {}
+    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, const Symbol& parent) :
+        IntegralTypeSymbol( keywordType, width, isSigned, isFourState, EmptyLowerBound, ArrayRef<int>(&width, 1), parent) {}
 
-    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, ArrayRef<int> lowerBounds, ArrayRef<int> widths) :
-        TypeSymbol(SymbolKind::IntegralType, nullptr, getTokenKindText(keywordType), SourceLocation()),
+    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, ArrayRef<int> lowerBounds, ArrayRef<int> widths, const Symbol& parent) :
+        TypeSymbol(SymbolKind::IntegralType, parent, getTokenKindText(keywordType), SourceLocation()),
         lowerBounds(lowerBounds), widths(widths),
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
 
-  private:
+private:
     static ArrayRef<int> EmptyLowerBound;
 };
 
@@ -248,8 +250,8 @@ public:
     int width;
     TokenKind keywordType;
 
-    RealTypeSymbol(TokenKind keywordType, int width) :
-        TypeSymbol(SymbolKind::RealType, nullptr, getTokenKindText(keywordType), SourceLocation()),
+    RealTypeSymbol(TokenKind keywordType, int width, const Symbol& parent) :
+        TypeSymbol(SymbolKind::RealType, parent, getTokenKindText(keywordType), SourceLocation()),
         width(width), keywordType(keywordType) {}
 };
 
@@ -275,11 +277,11 @@ public:
     bool isSigned;
 };
 
+/// An empty type symbol that indicates an error occurred while trying to
+/// resolve the type of some expression or declaration.
 class ErrorTypeSymbol : public TypeSymbol {
 public:
-    ErrorTypeSymbol() : TypeSymbol(SymbolKind::Unknown) {}
-
-	static const ErrorTypeSymbol Default;
+    explicit ErrorTypeSymbol(const Symbol& parent) : TypeSymbol(SymbolKind::Unknown, parent) {}
 };
 
 class TypeAliasSymbol : public TypeSymbol {
@@ -287,8 +289,8 @@ public:
     const SyntaxNode& syntax;
     const TypeSymbol* underlying;
 
-    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, StringRef alias) :
-        TypeSymbol(SymbolKind::TypeAlias, nullptr, alias, location),
+    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, StringRef alias, const Symbol& parent) :
+        TypeSymbol(SymbolKind::TypeAlias, parent, alias, location),
         syntax(syntax), underlying(underlying) {}
 };
 
@@ -329,6 +331,7 @@ public:
 	const TypeSymbol& getType(const DataTypeSyntax& syntax, const ScopeSymbol& scope) const;
 	const TypeSymbol& getKnownType(SyntaxKind kind) const;
 	const TypeSymbol& getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false) const;
+    const TypeSymbol& getErrorType() const;
 
 	/// Report an error at the specified location.
 	Diagnostic& addError(DiagCode code, SourceLocation location) const {
@@ -359,7 +362,7 @@ private:
 	// for example, a variable declaration that has multiple declarators.
 	void createSymbols(const SyntaxNode& node, SmallVector<const Symbol*>& results);
 
-	// top level scope map, list of roots, list of compilation units
+	// top level scope maps, list of roots, list of compilation units
     SymbolMap packageMap;
     SymbolMap definitionsMap;
 	std::vector<const CompilationUnitSymbol*> unitList;
@@ -380,7 +383,7 @@ private:
 /// The root of a single compilation unit. 
 class CompilationUnitSymbol : public ScopeSymbol {
 public:
-	CompilationUnitSymbol(const CompilationUnitSyntax& syntax);
+	CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent);
 
 	SymbolList members() const { return nullptr; }
 };
@@ -430,7 +433,7 @@ private:
 /// Represents a module that has had its parameters resolved to a specific set of values.
 class ParameterizedModuleSymbol : public ScopeSymbol {
 public:
-	ParameterizedModuleSymbol(const ModuleSymbol& module, const HashMapBase<StringRef, ConstantValue>& parameterAssignments);
+	ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent, const HashMapBase<StringRef, ConstantValue>& parameterAssignments);
 
 	SymbolList members() const;
 	
@@ -450,11 +453,11 @@ public:
 	const T& member(uint32_t index) const { return module.members()[index]->as<T>(); }
 };
 
-class GenvarSymbol : public Symbol {
-public:
-    GenvarSymbol(StringRef name, SourceLocation location) :
-        Symbol(SymbolKind::Genvar, nullptr, name, location) {}
-};
+//class GenvarSymbol : public Symbol {
+//public:
+//    GenvarSymbol(StringRef name, SourceLocation location, ) :
+//        Symbol(SymbolKind::Genvar, nullptr, name, location) {}
+//};
 
 class ParameterSymbol : public Symbol {
 public:
