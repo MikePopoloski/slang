@@ -471,7 +471,7 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
         StringRef numText;
         if (val == nullptr) {
             // create a dummy value to place in the generated token
-            val = alloc.emplace<SVInt>(16, 0, true);
+            val = alloc.emplace<SVInt>((uint16_t)16, 0, true);
             success = false;
         }
         else if (*val == 1) numText = "1";

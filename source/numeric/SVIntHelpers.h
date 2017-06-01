@@ -317,7 +317,7 @@ static void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16
     srcBitOffset %= 8;
 
     // Writing to the first byte is a special case, due to the bit offset
-    uint8_t bitsToWrite = std::min<uint8_t>((uint8_t)bitLength, 8 - destBitOffset);
+    uint8_t bitsToWrite = std::min<uint8_t>((uint8_t)bitLength, (uint8_t)(8 - destBitOffset));
 
     uint8_t srcByte = srcBitOffset ? (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset)) : *src;
     *dest = (*dest   & ((1 << destBitOffset) - 1)) + // preserved bits
@@ -334,7 +334,7 @@ static void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16
         srcBitOffset %= 8;
 
         // Number of bits we are writing to this byte
-        uint8_t bitsToWrite = std::min<uint8_t>((uint8_t)bitLength, 8);
+        bitsToWrite = std::min<uint8_t>((uint8_t)bitLength, 8);
         // get the next 8 bits of src, probably not byte aligned
         // (if bitsToWrite < 8, this could have some extra bits in it
         srcByte = srcBitOffset ? (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset)) : *src;

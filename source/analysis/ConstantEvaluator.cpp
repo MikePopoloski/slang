@@ -84,7 +84,7 @@ ConstantValue ConstantEvaluator::evaluateLiteral(const BoundLiteral& expr) {
             // In this case, the value depends on the final size, so we evaluate
             // the right value here
             logic_t digit = (logic_t)expr.value.integer();
-            uint16_t width = expr.type->width();
+            uint16_t width = (uint16_t)expr.type->width();
             bool isSigned = expr.type->isSigned();
             switch (digit.value) {
                 case 0:
@@ -194,9 +194,9 @@ ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression& exp
         // If any part of an address is unknown, then the whole thing returns
         // 'x; let's handle this here so everywhere else we can assume the inputs
         // are normal numbers
-        return SVInt::createFillX(expr.type->width(), false);
+        return SVInt::createFillX((uint16_t)expr.type->width(), false);
     }
-    int16_t actualMsb = (lb < 0 ? -1 : 1) * (int16_t)msb.getAssertInt64() - lb;
+    int16_t actualMsb = int16_t((lb < 0 ? -1 : 1) * (int16_t)msb.getAssertInt64() - lb);
     // here "actual" bit refers to bits numbered from
     // lsb 0 to msb <width>, which is what is understood by SVInt::bitSelect
     switch (expr.kind) {
@@ -204,7 +204,7 @@ ConstantValue ConstantEvaluator::evaluateSelect(const BoundSelectExpression& exp
             return first.bitSelect(actualMsb, actualMsb);
         }
         case SyntaxKind::SimpleRangeSelect: {
-            int16_t actualLsb = (lb < 0 ? -1 : 1) * (int16_t)lsbOrWidth.getAssertInt64() - lb;
+            int16_t actualLsb = int16_t((lb < 0 ? -1 : 1) * (int16_t)lsbOrWidth.getAssertInt64() - lb);
             return first.bitSelect(actualLsb, actualMsb);
         }
         case SyntaxKind::AscendingRangeSelect: {

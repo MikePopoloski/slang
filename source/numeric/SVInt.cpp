@@ -153,7 +153,8 @@ SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, Ar
     signFlag = isSigned;
     unknownFlag = anyUnknown;
 
-    int radix, shift;
+    int radix = 0;
+    int shift = 0;
 
     switch (base) {
         case LiteralBase::Binary:
@@ -265,22 +266,22 @@ SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, Ar
     }
 
     if (base != LiteralBase::Decimal && digits.count() * shift < bits && unknownFlag) {
-        uint16_t specifiedBits = digits.count() * shift;
+        int specifiedBits = digits.count() * shift;
         uint8_t numBitsSetInTopWord = specifiedBits % 64;
-        uint16_t topWord = getNumWords(bitWidth, false) + specifiedBits / 64;
+        int topWord = getNumWords(bitWidth, false) + specifiedBits / 64;
         if (pVal[topWord] >> (numBitsSetInTopWord - 1)) {
             // The highest bit was an x or a z, now we have to extend that unknown bit the rest of the way up
             uint64_t mask = bits - specifiedBits >= 64 ?
                             std::numeric_limits<uint64_t>::max() :
                             (1LL << (bits - specifiedBits)) - 1;
             pVal[topWord] |=  mask << numBitsSetInTopWord;
-            uint16_t topLowerWord = specifiedBits / 64;
+            int topLowerWord = specifiedBits / 64;
             if (pVal[topLowerWord] >> (numBitsSetInTopWord - 1)) {
                 // it's a z, so we also have to set the lower bits
                 pVal[topLowerWord] |= mask << numBitsSetInTopWord;
             }
 
-            if (topWord < getNumWords() - 1) {
+            if ((uint32_t)topWord < getNumWords() - 1) {
                 // The top word with any bits set wasn't the top word, so we have to
                 // set the rest of the words
                 size_t len = (getNumWords() - 1 - topWord) * sizeof(uint64_t);
@@ -520,7 +521,7 @@ SVInt SVInt::ashr(uint32_t amount) const {
         return ret;
     }
     // Pretend our width is just the width we shifted to, then signExtend
-    tmp.bitWidth = contractedWidth;
+    tmp.bitWidth = (uint16_t)contractedWidth;
     return signExtend(tmp, bitWidth);
 }
 
@@ -618,9 +619,9 @@ SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
     }
     else if (words == 1) {
         // If the output is a single word and everything is valid, we need to return a single-word output
-        uint64_t val = *newData;
+        uint64_t newVal = *newData;
         free(newData);
-        return SVInt(selectWidth, val, false);
+        return SVInt(selectWidth, newVal, false);
     }
 
     return SVInt(newData, selectWidth, signFlag, actualUnknownsInResult);
@@ -1382,7 +1383,7 @@ uint32_t SVInt::countLeadingOnesSlowCase() const {
     uint32_t count = slang::countLeadingOnes(pVal[i] << shift);
     if (count == bitsInMsw) {
         for (i--; i >= 0; i--) {
-            if (pVal[i] == -1ULL)
+            if (pVal[i] == (uint64_t)-1)
                 count += BITS_PER_WORD;
             else {
                 count += slang::countLeadingOnes(pVal[i]);
@@ -1844,7 +1845,7 @@ SVInt concatenate(ArrayRef<SVInt> operands) {
     }
 
     // words is the count of not unknown words
-    uint16_t words = SVInt::getNumWords(bits, unknownFlag);
+    int words = SVInt::getNumWords(bits, unknownFlag);
     if (words == 1) {
         // The concatenation still fits into a single word
         uint16_t offset = 0;

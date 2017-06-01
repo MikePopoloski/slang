@@ -66,8 +66,8 @@ const DesignRootSymbol& Symbol::getRoot() const {
 	return symbol->as<DesignRootSymbol>();
 }
 
-Diagnostic& Symbol::addError(DiagCode code, SourceLocation location) const {
-	return getRoot().addError(code, location);
+Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
+	return getRoot().addError(code, location_);
 }
 
 bool TypeSymbol::isMatching(const TypeSymbol& rhs) const {
@@ -154,16 +154,16 @@ int TypeSymbol::width() const {
     }
 }
 
-const Symbol* ScopeSymbol::lookup(StringRef name, LookupNamespace ns) const {
+const Symbol* ScopeSymbol::lookup(StringRef searchName, LookupNamespace ns) const {
     // TODO:
-    auto it = memberMap.find(name);
+    auto it = memberMap.find(searchName);
     if (it != memberMap.end())
         return it->second;
 
     if (kind == SymbolKind::Root)
         return nullptr;
 
-    return containingScope().lookup(name, ns);
+    return containingScope().lookup(searchName, ns);
 }
 
 ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
@@ -174,7 +174,7 @@ ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const 
 }
 
 ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType, SourceLocation errorLocation) const {
-	const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, location ? location : expr.getFirstToken().location(), targetType);
+	const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errorLocation ? errorLocation : expr.getFirstToken().location(), targetType);
 	if (bound.bad())
 		return nullptr;
 	return ConstantEvaluator().evaluateExpr(bound);
@@ -295,7 +295,7 @@ void DesignRootSymbol::addTrees(ArrayRef<const SyntaxTree*> trees) {
 	}
 }
 
-const PackageSymbol* DesignRootSymbol::findPackage(StringRef name) const {
+const PackageSymbol* DesignRootSymbol::findPackage(StringRef lookupName) const {
 	// TODO
 	return nullptr;
 }
@@ -366,8 +366,8 @@ const TypeSymbol& DesignRootSymbol::getType(const DataTypeSyntax& syntax, const 
 	return getErrorType();
 }
 
-const TypeSymbol& DesignRootSymbol::getKnownType(SyntaxKind kind) const {
-    auto it = knownTypes.find(kind);
+const TypeSymbol& DesignRootSymbol::getKnownType(SyntaxKind typeKind) const {
+    auto it = knownTypes.find(typeKind);
 	ASSERT(it != knownTypes.end());
     return *it->second;
 }
@@ -406,17 +406,17 @@ const TypeSymbol& DesignRootSymbol::getIntegralType(const IntegerTypeSyntax& syn
 	else if (dims.count() == 1 && dims[0].right == 0) {
 		// if we have the common case of only one dimension and lsb == 0
 		// then we can use the shared representation
-		uint16_t width = dims[0].left + 1;
+		int width = dims[0].left + 1;
 		return getIntegralType(width, isSigned, isFourState, isReg);
 	}
 	else {
 		SmallVectorSized<int, 4> lowerBounds;
 		SmallVectorSized<int, 4> widths;
-		uint16_t totalWidth = 0;
+		int totalWidth = 0;
 		for (auto& dim : dims) {
-			uint16_t msb = dim.left;
-			uint16_t lsb = dim.right;
-			uint16_t width;
+			int msb = dim.left;
+			int lsb = dim.right;
+			int width;
 			if (msb > lsb) {
 				width = msb - lsb + 1;
 				lowerBounds.append(lsb);
@@ -460,8 +460,8 @@ bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSy
 
 		bool bad = false;
         results.emplace(ConstantRange {
-            coerceInteger(evaluateConstant(range.left), MaxRangeBits, bad),
-            coerceInteger(evaluateConstant(range.right), MaxRangeBits, bad)
+            coerceInteger(scope.evaluateConstant(range.left), MaxRangeBits, bad),
+            coerceInteger(scope.evaluateConstant(range.right), MaxRangeBits, bad)
         });
 
 		if (bad)
@@ -470,7 +470,7 @@ bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSy
     return true;
 }
 
-int DesignRootSymbol::coerceInteger(const ConstantValue& cv, int maxRangeBits, bool& bad) const {
+int DesignRootSymbol::coerceInteger(const ConstantValue& cv, uint32_t maxRangeBits, bool& bad) const {
 	// TODO: report errors
 	if (cv.isInteger()) {
 		const SVInt& value = cv.integer();
@@ -654,14 +654,14 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& syntax, std::
     }
 
     for (const VariableDeclaratorSyntax* declarator : syntax.declarators) {
-        auto name = declarator->name.valueText();
-        if (!name)
+        auto declName = declarator->name.valueText();
+        if (!declName)
             continue;
 
-        auto location = declarator->name.location();
-        auto pair = nameDupMap.emplace(name, location);
+        auto declLocation = declarator->name.location();
+        auto pair = nameDupMap.emplace(declName, declLocation);
         if (!pair.second) {
-            addError(DiagCode::DuplicateDefinition, location) << StringRef("parameter") << name;
+            addError(DiagCode::DuplicateDefinition, declLocation) << StringRef("parameter") << declName;
 			addError(DiagCode::NotePreviousDefinition, pair.first->second);
         }
         else {
@@ -669,10 +669,10 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& syntax, std::
             if (declarator->initializer)
                 init = &declarator->initializer->expr;
             else if (local)
-				addError(DiagCode::LocalParamNoInitializer, location);
+				addError(DiagCode::LocalParamNoInitializer, declLocation);
             else if (bodyParam)
-				addError(DiagCode::BodyParamNoInitializer, location);
-            buffer.push_back({ syntax, *declarator, name, location, init, local, bodyParam });
+				addError(DiagCode::BodyParamNoInitializer, declLocation);
+            buffer.push_back({ syntax, *declarator, declName, declLocation, init, local, bodyParam });
         }
     }
     return local;

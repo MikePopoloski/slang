@@ -164,10 +164,9 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
         Token cur = *begin;
         // make sure to use all the whitespace
         if (!noWhitespace && cur.hasTrivia(TriviaKind::Whitespace)) {
-            for (const Trivia& trivia : cur.trivia()) {
-                if (trivia.kind == TriviaKind::Whitespace) {
-                    text.appendRange(trivia.getRawWhitespace());
-                }
+            for (const Trivia& t : cur.trivia()) {
+                if (t.kind == TriviaKind::Whitespace)
+                    text.appendRange(t.getRawWhitespace());
             }
         }
 
