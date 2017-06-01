@@ -13,11 +13,11 @@ BumpAllocator alloc;
 const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax) {
 	DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(syntax);
 
-	REQUIRE(root.tops().count() > 0);
+	REQUIRE(root.top().count() > 0);
 	if (!syntax.diagnostics().empty())
 		WARN(syntax.reportDiagnostics());
 
-	return *root.tops()[0];
+	return *root.top()[0];
 }
 
 TEST_CASE("Finding top level", "[binding:decls]") {
@@ -28,9 +28,9 @@ TEST_CASE("Finding top level", "[binding:decls]") {
 	DesignRootSymbol root({ &file1, &file2 });
 
     CHECK(diagnostics.empty());
-    REQUIRE(root.tops().count() == 2);
-    CHECK(root.tops()[0]->name == "C");
-    CHECK(root.tops()[1]->name == "D");
+    REQUIRE(root.top().count() == 2);
+    CHECK(root.top()[0]->name == "C");
+    CHECK(root.top()[1]->name == "D");
 }
 
 TEST_CASE("Bind module implicit", "[binding:modules]") {

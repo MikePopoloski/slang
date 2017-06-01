@@ -13,7 +13,7 @@ SVInt testParameter(const std::string& text, int index = 0) {
     auto tree = SyntaxTree::fromText(StringRef(fullText));
 
 	DesignRootSymbol root(tree);
-	const auto& instance = *root.tops()[0];
+	const auto& instance = *root.top()[0];
 	if (!tree.diagnostics().empty())
 		WARN(tree.reportDiagnostics());
 
@@ -44,7 +44,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     };
 
     // Bind the expression tree to the symbol
-    root.addSymbol(local);
+    root.addMember(local);
     Binder binder(root);
     const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
@@ -76,7 +76,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     };
 
     // Bind the expression tree to the symbol
-	root.addSymbol(local);
+	root.addMember(local);
 	Binder binder(root);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
@@ -103,7 +103,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     };
 
     // Bind the expression tree to the symbol
-	root.addSymbol(local);
+	root.addMember(local);
 	Binder binder(root);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
@@ -134,7 +134,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     };
 
     // Bind the expression tree to the symbol
-	root.addSymbol(local);
+	root.addMember(local);
 	Binder binder(root);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());

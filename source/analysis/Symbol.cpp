@@ -156,7 +156,14 @@ int TypeSymbol::width() const {
 
 const Symbol* ScopeSymbol::lookup(StringRef name, LookupNamespace ns) const {
     // TODO:
-    return nullptr;
+    auto it = memberMap.find(name);
+    if (it != memberMap.end())
+        return it->second;
+
+    if (kind == SymbolKind::Root)
+        return nullptr;
+
+    return containingScope().lookup(name, ns);
 }
 
 ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
@@ -177,10 +184,52 @@ const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
 	return getRoot().getType(syntax, *this);
 }
 
-void ScopeSymbol::addSymbol(const Symbol& symbol) const {
+void ScopeSymbol::addMember(const Symbol& symbol) {
+    static_cast<const ScopeSymbol*>(this)->addMember(symbol);
+}
+
+void ScopeSymbol::addMember(const Symbol& symbol) const {
     // TODO: check for duplicate names
     // TODO: packages and definition namespaces
     memberMap.try_emplace(symbol.name, &symbol);
+}
+
+void ScopeSymbol::createMembers(const SyntaxNode& node) {
+    createMembers(node, nullptr);
+}
+
+void ScopeSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol*>& results) {
+    createMembers(node, &results);
+}
+
+void ScopeSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol*>* results) const {
+    switch (node.kind) {
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::TaskDeclaration: {
+            const Symbol& s = allocate<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), *this);
+            addMember(s);
+            if (results)
+                results->append(&s);
+            break;
+        }
+
+        case SyntaxKind::DataDeclaration: {
+            // TODO: modifiers
+            const DataDeclarationSyntax& declSyntax = node.as<DataDeclarationSyntax>();
+            for (auto declarator : declSyntax.declarators) {
+                const ExpressionSyntax* initializer = declarator->initializer ? &declarator->initializer->expr : nullptr;
+                const Symbol& s = allocate<VariableSymbol>(declarator->name, declSyntax.type, *this,
+                                                           VariableLifetime::Automatic, false, initializer);
+
+                addMember(s);
+                if (results)
+                    results->append(&s);
+            }
+            break;
+        }
+        
+        DEFAULT_UNREACHABLE;
+    }
 }
 
 DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) :
@@ -208,6 +257,28 @@ DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees) :
 	knownTypes[SyntaxKind::EventType]	  = alloc.emplace<TypeSymbol>(SymbolKind::EventType,	"event", *this);
     knownTypes[SyntaxKind::Unknown]       = alloc.emplace<ErrorTypeSymbol>(*this);
 
+    // Register built-in system functions
+    auto intType = getKnownType(SyntaxKind::IntType);
+    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+    
+    args.append(alloc.emplace<FormalArgumentSymbol>(intType, *this));
+    addMember(allocate<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2, *this));
+    
+    // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
+    // assignment like context
+    // TODO: add support for all these operands on data_types, not just expressions,
+    // and add support for things like unpacked arrays
+    auto trivialIntType = getIntegralType(1, false, true);
+    args.clear();
+    args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType, *this));
+    addMember(allocate<SubroutineSymbol>("$bits", intType, args.copy(alloc), SystemFunction::bits, *this));
+    addMember(allocate<SubroutineSymbol>("$left", intType, args.copy(alloc), SystemFunction::left, *this));
+    addMember(allocate<SubroutineSymbol>("$right", intType, args.copy(alloc), SystemFunction::right, *this));
+    addMember(allocate<SubroutineSymbol>("$low", intType, args.copy(alloc), SystemFunction::low, *this));
+    addMember(allocate<SubroutineSymbol>("$high", intType, args.copy(alloc), SystemFunction::high, *this));
+    addMember(allocate<SubroutineSymbol>("$size", intType, args.copy(alloc), SystemFunction::size, *this));
+    addMember(allocate<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment, *this));
+
 	addTrees(syntaxTrees);
 }
 
@@ -219,25 +290,12 @@ void DesignRootSymbol::addTrees(ArrayRef<const SyntaxTree*> trees) {
 	for (auto tree : trees) {
 		if (tree->root().kind == SyntaxKind::CompilationUnit)
 			unitList.push_back(&allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>(), *this));
-		else {
-			SmallVectorSized<const Symbol*, 2> symbols;
-			createSymbols(tree->root(), symbols);
-			for (auto symbol : symbols)
-				addSymbol(*symbol);
-		}
+		else
+			createMembers(tree->root());
 	}
 }
 
-void DesignRootSymbol::addSymbol(const Symbol& symbol) {
-    ScopeSymbol::addSymbol(symbol);
-}
-
 const PackageSymbol* DesignRootSymbol::findPackage(StringRef name) const {
-	// TODO
-	return nullptr;
-}
-
-const Symbol* DesignRootSymbol::findDefinition(StringRef name) const {
 	// TODO
 	return nullptr;
 }
@@ -425,19 +483,6 @@ int DesignRootSymbol::coerceInteger(const ConstantValue& cv, int maxRangeBits, b
 
 	bad = true;
 	return 0;
-}
-
-void DesignRootSymbol::createSymbols(const SyntaxNode& node, SmallVector<const Symbol*>& results) {
-	switch (node.kind) {
-		case SyntaxKind::FunctionDeclaration:
-		case SyntaxKind::TaskDeclaration:
-			results.append(alloc.emplace<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), *this));
-			break;
-
-		default: { int i = 0;
-			i++;
-		}
-	}
 }
 
 CompilationUnitSymbol::CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent) :
@@ -703,8 +748,8 @@ SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, cons
 SubroutineSymbol::SubroutineSymbol(StringRef name, const TypeSymbol& returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
 								   SystemFunction systemFunction, const Symbol& parent) :
 	ScopeSymbol(SymbolKind::Subroutine, parent, name),
-	systemFunctionKind(systemFunction),
-	returnType_(&returnType), arguments_(arguments)
+	systemFunctionKind(systemFunction), returnType_(&returnType),
+    arguments_(arguments), initialized(true)
 {
 }
 
@@ -770,14 +815,16 @@ void SubroutineSymbol::init() const {
 	            direction
 	        ));
 	
-	        addSymbol(*arguments.back());
+	        addMember(*arguments.back());
 	
 	        lastDirection = direction;
 	        lastType = type;
 	    }
 	}
 	
+    returnType_ = &returnType;
 	body_ = &Binder(*this).bindStatementList(syntax->items);
+    arguments_ = arguments.copy(root.allocator());
 }
 
 }
