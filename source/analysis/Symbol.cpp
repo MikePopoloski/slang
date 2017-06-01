@@ -212,7 +212,6 @@ void ScopeSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol
                 results->append(&s);
             break;
         }
-
         case SyntaxKind::DataDeclaration: {
             // TODO: modifiers
             const DataDeclarationSyntax& declSyntax = node.as<DataDeclarationSyntax>();
@@ -225,6 +224,13 @@ void ScopeSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol
                 if (results)
                     results->append(&s);
             }
+            break;
+        }
+        case SyntaxKind::ModuleDeclaration: {
+            const Symbol& s = allocate<ModuleSymbol>(node.as<ModuleDeclarationSyntax>(), *this);
+            addMember(s);
+            if (results)
+                results->append(&s);
             break;
         }
         
@@ -495,11 +501,6 @@ ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& pa
 {
 }
 
-ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent, const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
-	ScopeSymbol(SymbolKind::Module, parent, module.name, module.location), module(module)
-{
-}
-
 const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValueAssignmentSyntax* assignments, const ScopeSymbol* instanceScope) const {
 	ASSERT(!assignments || instanceScope);
 
@@ -676,6 +677,12 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& syntax, std::
         }
     }
     return local;
+}
+
+ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
+                                                     const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
+    ScopeSymbol(SymbolKind::Module, parent, module.name, module.location), module(module)
+{
 }
 
 SymbolList ParameterizedModuleSymbol::members() const {

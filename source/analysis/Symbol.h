@@ -346,7 +346,7 @@ public:
 		return diags.add(code, location_);
 	}
 
-	/// Allocate an object using the design's shared bump allocator.
+	/// Allocate an object using the design's shared allocator.
 	template<typename T, typename... Args>
 	T& allocate(Args&&... args) const {
 		return *alloc.emplace<T>(std::forward<Args>(args)...);
@@ -422,7 +422,8 @@ private:
 	};
 
 	const std::vector<ParameterInfo>& getDeclaredParams() const;
-	ConstantValue evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope, const ExpressionSyntax& expr, SourceLocation declLocation) const;
+	ConstantValue evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope,
+                           const ExpressionSyntax& expr, SourceLocation declLocation) const;
 
 	// Helper function used by getModuleParams to convert a single parameter declaration into
 	// one or more ParameterInfo instances.
@@ -437,7 +438,8 @@ private:
 /// Represents a module that has had its parameters resolved to a specific set of values.
 class ParameterizedModuleSymbol : public ScopeSymbol {
 public:
-	ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent, const HashMapBase<StringRef, ConstantValue>& parameterAssignments);
+	ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
+                              const HashMapBase<StringRef, ConstantValue>& parameterAssignments);
 
 	SymbolList members() const;
 	
