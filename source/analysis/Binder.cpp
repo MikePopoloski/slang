@@ -423,6 +423,9 @@ BoundExpression& Binder::bindSelectExpression(const ElementSelectExpressionSynta
 BoundExpression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, const BoundExpression& expr, const SelectorSyntax& selector) {
     // if (down), the indices are declares going down, [15:0], so
     // msb > lsb
+    if (expr.bad())
+        return badExpr(&expr);
+
     bool down = expr.type->as<IntegralTypeSymbol>().lowerBounds[0] >= 0;
     BoundExpression* left;
     BoundExpression* right;

@@ -1370,6 +1370,30 @@ uint32_t SVInt::countLeadingZerosSlowCase() const {
     return count;
 }
 
+uint32_t SVInt::countLeadingOnesSlowCase() const {
+    uint32_t bitsInMsw = bitWidth % BITS_PER_WORD;
+    uint32_t shift = 0;
+    if (!bitsInMsw)
+        bitsInMsw = BITS_PER_WORD;
+    else
+        shift = BITS_PER_WORD - bitsInMsw;
+
+    int i = getNumWords() - 1;
+    uint32_t count = slang::countLeadingOnes(pVal[i] << shift);
+    if (count == bitsInMsw) {
+        for (i--; i >= 0; i--) {
+            if (pVal[i] == -1ULL)
+                count += BITS_PER_WORD;
+            else {
+                count += slang::countLeadingOnes(pVal[i]);
+                break;
+            }
+        }
+    }
+
+    return count;
+}
+
 uint32_t SVInt::countPopulation() const {
     // don't worry about unknowns in this function; only use it if the number is all known
     if (isSingleWord())

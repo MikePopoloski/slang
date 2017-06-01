@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "analysis/Binder.h"
 #include "parsing/SyntaxTree.h"
 #include "ConstantEvaluator.h"
 #include "SemanticModel.h"
@@ -22,14 +23,29 @@ public:
         const auto& node = syntaxTrees.back().root();
         switch (node.kind) {
             case SyntaxKind::ParameterDeclarationStatement:
-            case SyntaxKind::DataDeclaration:
             case SyntaxKind::FunctionDeclaration:
             case SyntaxKind::TaskDeclaration:
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::HierarchyInstantiation:
-				root.addTree(syntaxTrees.back());
+                root.addTree(syntaxTrees.back());
+                return true;
+
+            case SyntaxKind::DataDeclaration: {
+                SmallVectorSized<const Symbol*, 4> results;
+                root.createMembers(syntaxTrees.back().root(), results);
+                for (auto symbol : results) {
+                    ConstantValue& cv = evaluator.createTemporary(*symbol);
+
+                    const BoundExpression* init = symbol->as<VariableSymbol>().initializer();
+                    if (init)
+                        cv = evaluator.evaluateExpr(*init);
+                    else
+                        cv = SVInt(0);
+                }
 				return true;
+            }
+
             default:
                 if (isExpression(node.kind))
                     return evalExpression(node.as<ExpressionSyntax>());
@@ -42,7 +58,11 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-		return root.evaluateConstant(expr);
+        const auto& bound = Binder(root).bindConstantExpression(expr);
+        if (bound.bad())
+            return nullptr;
+
+        return evaluator.evaluateExpr(bound);
     }
 
     ConstantValue evalStatement(const StatementSyntax& stmt) {
@@ -62,6 +82,7 @@ private:
     BumpAllocator alloc;
     Diagnostics diagnostics;
 	DesignRootSymbol root;
+    ConstantEvaluator evaluator;
 };
 
 }

@@ -211,8 +211,7 @@ public:
 	/// integer type and if so returns it.
 	template<typename T>
 	std::optional<T> asBuiltIn() const {
-		// TODO: check active bits, not just specified bits
-		if (unknownFlag || bitWidth > std::numeric_limits<T>::digits)
+		if (unknownFlag || getMinRepresentedBits() > std::numeric_limits<T>::digits)
 			return std::nullopt;
 		return static_cast<T>(getRawData()[0]);
 	}
@@ -280,12 +279,31 @@ public:
     /// to a very small value, in which case it will have a low number of active bits.
     uint32_t getActiveBits() const { return bitWidth - countLeadingZeros(); }
 
+    /// Get the minimum number of bits required to hold this value, taking into account
+    /// the sign flag and whether or not the value would be considered positive.
+    uint32_t getMinRepresentedBits() const {
+        if (!signFlag)
+            return getActiveBits();
+        else if (isNegative())
+            return bitWidth - countLeadingOnes() + 1;
+        else
+            return getActiveBits() + 1;
+    }
+
     /// Count the number of leading zeros. This doesn't do anything special for
     /// unknown values, so make sure you know what you're doing with it.
     uint32_t countLeadingZeros() const {
         if (isSingleWord())
             return slang::countLeadingZeros(val) - (BITS_PER_WORD - bitWidth);
         return countLeadingZerosSlowCase();
+    }
+
+    /// Count the number of leading ones. This doesn't do anything special for
+    /// unknown values, so make sure you know what you're doing with it.
+    uint32_t countLeadingOnes() const {
+        if (isSingleWord())
+            return slang::countLeadingOnes(val << (BITS_PER_WORD - bitWidth));
+        return countLeadingOnesSlowCase();
     }
 
     SVInt& operator=(const SVInt& rhs) {
@@ -458,6 +476,7 @@ private:
     SVInt& assignSlowCase(const SVInt& other);
     logic_t equalsSlowCase(const SVInt& rhs) const;
     uint32_t countLeadingZerosSlowCase() const;
+    uint32_t countLeadingOnesSlowCase() const;
     uint32_t countPopulation() const;
 
     // Specialized shift left routine that doesn't remove the unknown flag.

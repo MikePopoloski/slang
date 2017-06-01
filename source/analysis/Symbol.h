@@ -184,12 +184,26 @@ public:
 	/// A helper method to get a type symbol, using the current scope as context.
 	const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
 
+    /// Adds an existing member symbol to the scope. The function will assert if
+    /// you pass it a non-member symbol.
+    void addMember(const Symbol& symbol);
+
+    /// Constructs symbols for the given syntax node in the current scope.
+    /// A single syntax node might expand to more than one symbol; for example,
+    /// a variable declaration that has multiple declarators. The created symbols
+    /// will also be added to the current scope's name map.
+    ///
+    /// Note that only certain syntax node kinds are supported here; the function will
+    /// assert if you pass it something unsupported.
+    void createMembers(const SyntaxNode& node);
+    void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>& results);
+
 protected:
 	using Symbol::Symbol;
     
-    // Adds a symbol to the scope. This is const because child classes will call this during
-    // lazy initialization. It's up to them to not abuse this and maintain logical constness.
-    void addSymbol(const Symbol& symbol) const;
+    // Const versions of addMember and createMembers for use by derived classes.
+    void addMember(const Symbol& symbol) const;
+    void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>* results) const;
 
 private:
     // For now, there is one hash table here for the normal members namespace. The other
@@ -310,21 +324,15 @@ public:
 	void addTree(const SyntaxTree& tree);
 	void addTrees(ArrayRef<const SyntaxTree*> syntaxTrees);
 
-	/// Adds a precreated symbol to the root scope.
-	void addSymbol(const Symbol& symbol);
-
 	/// Gets all of the compilation units in the design.
-	ArrayRef<const CompilationUnitSymbol*> units() const { return unitList; }
+	ArrayRef<const CompilationUnitSymbol*> compilationUnits() const { return unitList; }
 
 	/// Gets all of the top-level module instances in the design.
 	/// These form the roots of the actual design hierarchy.
-	ArrayRef<const ModuleInstanceSymbol*> tops() const { return topList; }
+	ArrayRef<const ModuleInstanceSymbol*> top() const { return topList; }
 
 	/// Finds a package in the design with the given name, or returns null if none is found.
 	const PackageSymbol* findPackage(StringRef name) const;
-
-	/// Finds a module, interface, or program with the given name, or returns null if none is found.
-	const Symbol* findDefinition(StringRef name) const;
 
 	/// Methods for getting various type symbols.
 	const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
@@ -358,13 +366,9 @@ private:
 	// Tries to convert a ConstantValue to a simple integer. Sets bad to true if the conversion fails.
 	int coerceInteger(const ConstantValue& cv, int maxRangeBits, bool& bad) const;
 
-	// Constructs symbols for the given syntax node. A single node might expand to more than one symbol;
-	// for example, a variable declaration that has multiple declarators.
-	void createSymbols(const SyntaxNode& node, SmallVector<const Symbol*>& results);
-
-	// top level scope maps, list of roots, list of compilation units
+    // The name map for packages. Note that packages have their own namespace,
+    // which is why they can't share the root name table.
     SymbolMap packageMap;
-    SymbolMap definitionsMap;
 	std::vector<const CompilationUnitSymbol*> unitList;
 	std::vector<const ModuleInstanceSymbol*> topList;
 
