@@ -2066,24 +2066,24 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(ArrayRef<AttributeIn
                 continue;
             }
 
-            Token semi;
+            Token innerSemi;
             SmallVectorSized<TokenOrSyntax, 4> assignments;
             if (!declaration && !defaultKeyword) {
                 parseSeparatedList<isIdentifierOrComma, isSemicolon>(
                     assignments,
                     TokenKind::Semicolon,
                     TokenKind::Comma,
-                    semi,
+                    innerSemi,
                     DiagCode::ExpectedIdentifier,
                     [this](bool) -> decltype(auto) { return parseAttributeSpec(); }
                 );
             }
             else if (!declaration) {
-                semi = expect(TokenKind::Semicolon);
+                innerSemi = expect(TokenKind::Semicolon);
             }
 
             error = false;
-            buffer.append(&allocate<ClockingItemSyntax>(defaultKeyword, direction, assignments.copy(alloc), semi, declaration));
+            buffer.append(&allocate<ClockingItemSyntax>(defaultKeyword, direction, assignments.copy(alloc), innerSemi, declaration));
         }
     }
 

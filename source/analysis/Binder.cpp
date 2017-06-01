@@ -427,8 +427,8 @@ BoundExpression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, co
         return badExpr(&expr);
 
     bool down = expr.type->as<IntegralTypeSymbol>().lowerBounds[0] >= 0;
-    BoundExpression* left;
-    BoundExpression* right;
+    BoundExpression* left = nullptr;
+    BoundExpression* right = nullptr;
     int width = 0;
 
     ConstantEvaluator evaluator;

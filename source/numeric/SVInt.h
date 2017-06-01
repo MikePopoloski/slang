@@ -124,10 +124,7 @@ struct logic_t {
 class SVInt {
 public:
     /// Simple default constructor for convenience, results in a 1 bit zero value.
-    SVInt() :
-        val(0), bitWidth(1), signFlag(false), unknownFlag(false)
-    {
-    }
+    SVInt() : val(0), bitWidth(1), signFlag(false), unknownFlag(false) {}
 
     /// Construct from a single bit that can be unknown.
     explicit SVInt(logic_t bit) :
@@ -139,8 +136,19 @@ public:
             initSlowCase(bit);
     }
 
+    /// Construct from a given signed 64-bit value. Uses only the bits necessary to hold the value.
+    explicit SVInt(int64_t value) :
+        val(value), signFlag(true), unknownFlag(false)
+    {
+        if (value < 0)
+            bitWidth = uint16_t(64 - slang::countLeadingOnes(value) + 1);
+        else
+            bitWidth = uint16_t(64 - slang::countLeadingZeros(value) + 1);
+        clearUnusedBits();
+    }
+
     /// Construct from a given 64-bit value. Uses only the bits necessary to hold the value.
-    explicit SVInt(uint64_t value, bool isSigned = false) :
+    explicit SVInt(uint64_t value, bool isSigned) :
         val(value), bitWidth((uint16_t)clog2(value+1)), signFlag(isSigned), unknownFlag(false)
     {
         if (bitWidth == 0) {
@@ -519,10 +527,12 @@ private:
     static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);
 
     // Build the output result of a divide (used for both quotients and remainders).
-    static void buildDivideResult(SVInt* result, uint32_t* value, uint16_t bitWidth, bool signFlag, uint32_t numWords);
+    static void buildDivideResult(SVInt* result, uint32_t* value, uint16_t bitWidth,
+                                  bool signFlag, uint32_t numWords);
 
     // Entry point for Knuth divide that handles corner cases and splitting the integers into 32-bit words.
-    static void divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords, SVInt* quotient, SVInt* remainder);
+    static void divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords,
+                       SVInt* quotient, SVInt* remainder);
 
     // Unsigned division algorithm.
     static SVInt udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned);

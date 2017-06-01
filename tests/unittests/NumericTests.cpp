@@ -11,7 +11,7 @@ TEST_CASE("Construction", "[numeric]") {
     SVInt value2(924);
     SVInt value3(924, false);
     SVInt value4(61, 924, false);
-    SVInt value5(69, -924, true);
+    SVInt value5(69, (uint64_t)-924, true);
 
     CHECK(value1 == 0);
     CHECK(value2 != value1);
@@ -45,9 +45,9 @@ TEST_CASE("String round trip", "[numeric]") {
 
 TEST_CASE("Comparison", "[numeric]") {
     CHECK(SVInt(9000) == SVInt(1024, 9000, false));
-    CHECK(SVInt(-4) == -4);
-    CHECK(SVInt(-4) != SVInt(9999, -4, true));
-    CHECK(SVInt(-4, true) == SVInt(9999, -4, true));
+    CHECK(SVInt(-4) == (uint64_t)-4);
+    CHECK(SVInt((uint64_t)-4, false) != SVInt(9999, (uint64_t)-4, true));
+    CHECK(SVInt(-4) == SVInt(9999, (uint64_t)-4, true));
     CHECK(SVInt("12'b101") == 5);
     CHECK(SVInt("12'b101") != 10);
 
@@ -55,7 +55,7 @@ TEST_CASE("Comparison", "[numeric]") {
     CHECK(SVInt("100'd999999999999999999999999") <= SVInt("120'd999999999999999999999999"));
     CHECK(SVInt("100'sd99999999999999999999999999") >= SVInt("-120'sd999999999999977789999"));
     CHECK(SVInt("100'd99999999999999999999999999") < SVInt("-120'sd999999999999977789999"));
-    CHECK(SVInt("100'd99999999999999999999999999") >= -50);
+    CHECK(SVInt("100'd99999999999999999999999999") >= (uint64_t)-50);
 
     SVInt v(6, 0, false);
     v.setAllOnes();
@@ -73,9 +73,9 @@ TEST_CASE("Arithmetic", "[numeric]") {
     CHECK(SVInt("100'sd99999999999") + SVInt("-120'sd999987654321") == SVInt("-137'sd899987654322"));
     CHECK(SVInt("100'sd32") - SVInt(32) == 0);
     CHECK(SVInt("100'sd99999999999") * SVInt("-120'sd999987654321") == SVInt("-137'sd99998765431100012345679"));
-    CHECK(SVInt("100'sd99999999999") / SVInt("-120'sd987654321") == SVInt(-101, true));
-    CHECK(SVInt("100'sd99999999999") % SVInt("120'sd987654321") == SVInt(246913578, true));
-    CHECK((SVInt(64, -7, true) % SVInt(64, 3, true)) == -1);
+    CHECK(SVInt("100'sd99999999999") / SVInt("-120'sd987654321") == SVInt(-101));
+    CHECK(SVInt("100'sd99999999999") % SVInt("120'sd987654321") == SVInt(246913578));
+    CHECK((SVInt(64, (uint64_t)-7, true) % SVInt(64, 3, true)) == (uint64_t)-1);
 
     SVInt v1("99'd99999999");
     SVInt v2 = v1++;

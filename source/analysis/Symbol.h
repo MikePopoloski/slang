@@ -342,8 +342,8 @@ public:
     const TypeSymbol& getErrorType() const;
 
 	/// Report an error at the specified location.
-	Diagnostic& addError(DiagCode code, SourceLocation location) const {
-		return diags.add(code, location);
+	Diagnostic& addError(DiagCode code, SourceLocation location_) const {
+		return diags.add(code, location_);
 	}
 
 	/// Allocate an object using the design's shared bump allocator.
@@ -364,7 +364,7 @@ private:
 	bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const;
 
 	// Tries to convert a ConstantValue to a simple integer. Sets bad to true if the conversion fails.
-	int coerceInteger(const ConstantValue& cv, int maxRangeBits, bool& bad) const;
+	int coerceInteger(const ConstantValue& cv, uint32_t maxRangeBits, bool& bad) const;
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the root name table.

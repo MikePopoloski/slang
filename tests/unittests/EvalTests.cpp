@@ -275,7 +275,7 @@ TEST_CASE("dimension based system functions", "[eval]") {
     EVAL("$bits(down_vect)", 16);
 
     EVAL("$increment(up_vect)", 1);
-    EVAL("$increment(down_vect)", SVInt(-1, true));
+    EVAL("$increment(down_vect)", SVInt(-1));
 #undef EVAL
 }
 }
