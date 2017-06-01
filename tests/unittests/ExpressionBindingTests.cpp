@@ -13,7 +13,7 @@ SVInt testParameter(const std::string& text, int index = 0) {
     auto tree = SyntaxTree::fromText(StringRef(fullText));
 
 	DesignRootSymbol root(tree);
-	const auto& instance = *root.top()[0];
+	const auto& instance = root.lookup("Top")->as<ModuleInstanceSymbol>();
 	if (!tree.diagnostics().empty())
 		WARN(tree.reportDiagnostics());
 
