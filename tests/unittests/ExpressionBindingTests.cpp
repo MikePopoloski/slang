@@ -13,14 +13,12 @@ SVInt testParameter(const std::string& text, int index = 0) {
     auto tree = SyntaxTree::fromText(StringRef(fullText));
 
 	DesignRootSymbol root(tree);
-	const auto& instance = root.lookup("Top")->as<ModuleInstanceSymbol>();
+	const auto& module = root.lookup("Top")->as<ModuleSymbol>();
 	if (!tree.diagnostics().empty())
 		WARN(tree.reportDiagnostics());
 
-    const auto& module = instance.module;
-	const ParameterSymbol& param = module.member<ParameterSymbol>(index);
-
-    return param.value.integer();
+    const ParameterSymbol& param = module.parameterize().member<ParameterSymbol>(index);
+    return param.value().integer();
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {

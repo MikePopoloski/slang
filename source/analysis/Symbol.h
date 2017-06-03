@@ -173,6 +173,14 @@ public:
 		return sym->as<T>();
 	}
 
+    /// Get a list of all of the members in the scope.
+    SymbolList members() const;
+
+    /// Get a specific member at the given zero-based index, expecting it to be of the specified type.
+    /// If the type does not match, this will assert.
+    template<typename T>
+    const T& member(uint32_t index) const { return members()[index]->as<T>(); }
+
 	/// A helper method to evaluate a constant in the current scope.
 	ConstantValue evaluateConstant(const ExpressionSyntax& expr) const;
 
@@ -184,32 +192,25 @@ public:
 	/// A helper method to get a type symbol, using the current scope as context.
 	const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
 
-    /// Adds an existing member symbol to the scope. The function will assert if
-    /// you pass it a non-member symbol.
-    void addMember(const Symbol& symbol);
-
-    /// Constructs symbols for the given syntax node in the current scope.
-    /// A single syntax node might expand to more than one symbol; for example,
-    /// a variable declaration that has multiple declarators. The created symbols
-    /// will also be added to the current scope's name map.
-    ///
-    /// Note that only certain syntax node kinds are supported here; the function will
-    /// assert if you pass it something unsupported.
-    void createMembers(const SyntaxNode& node);
-    void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>& results);
-
 protected:
 	using Symbol::Symbol;
     
     // Const versions of addMember and createMembers for use by derived classes.
     void addMember(const Symbol& symbol) const;
-    void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>* results) const;
+    void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>* results = nullptr) const;
+
+    // Derived classes override this to fill in members
+    virtual void initMembers() const {}
 
 private:
     // For now, there is one hash table here for the normal members namespace. The other
     // namespaces are specific to certain symbol types so I don't want to have extra overhead
     // on every kind of scope symbol.
     mutable std::unordered_map<StringRef, const Symbol*> memberMap;
+
+    // In addition to the hash, also maintain an ordered list of members for easier access.
+    mutable std::vector<const Symbol*> memberList;
+    mutable bool membersInitialized = false;
 };
 
 /// Base class for all data types.
@@ -341,6 +342,20 @@ public:
 	const TypeSymbol& getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false) const;
     const TypeSymbol& getErrorType() const;
 
+    /// Adds an existing member symbol to the scope. The function will assert if
+    /// you pass it a non-member symbol.
+    void addMember(const Symbol& symbol);
+
+    /// Constructs symbols for the given syntax node in the current scope.
+    /// A single syntax node might expand to more than one symbol; for example,
+    /// a variable declaration that has multiple declarators. The created symbols
+    /// will also be added to the current scope's name map.
+    ///
+    /// Note that only certain syntax node kinds are supported here; the function will
+    /// assert if you pass it something unsupported.
+    void createMembers(const SyntaxNode& node);
+    void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>& results);
+
 	/// Report an error at the specified location.
 	Diagnostic& addError(DiagCode code, SourceLocation location_) const {
 		return diags.add(code, location_);
@@ -388,21 +403,19 @@ private:
 class CompilationUnitSymbol : public ScopeSymbol {
 public:
 	CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent);
-
-	SymbolList members() const { return nullptr; }
 };
 
 /// A SystemVerilog package construct.
 class PackageSymbol : public ScopeSymbol {
 public:
 	PackageSymbol(const ModuleDeclarationSyntax& package, const Symbol& parent);
-
-	SymbolList members() const;
 };
 
 /// Represents a module declaration, with its parameters still unresolved.
 class ModuleSymbol : public Symbol {
 public:
+    const ModuleDeclarationSyntax& syntax;
+
 	ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& container);
 
 	/// Parameterizes the module with the given set of parameter assignments.
@@ -441,12 +454,9 @@ public:
 	ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
                               const HashMapBase<StringRef, ConstantValue>& parameterAssignments);
 
-	SymbolList members() const;
-	
-	template<typename T>
-	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
-
 private:
+    void initMembers() const final;
+
 	const ModuleSymbol& module;
 };
 
@@ -465,27 +475,24 @@ public:
 //        Symbol(SymbolKind::Genvar, nullptr, name, location) {}
 //};
 
-class ParameterSymbol : public Symbol {
-public:
-	ConstantValue value;
-};
+
 
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
-
-	SymbolList members() const { return nullptr; }
-
-	template<typename T>
-	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
 };
 
 class ProceduralBlockSymbol : public ScopeSymbol {
 public:
+};
 
-	SymbolList members() const { return nullptr; }
+class ParameterSymbol : public Symbol {
+public:
+    ParameterSymbol(StringRef name, SourceLocation location, const Symbol& parent);
 
-	template<typename T>
-	const T& member(uint32_t index) const { return members()[index]->as<T>(); }
+    const ConstantValue& value() const { return value_; }
+
+private:
+    mutable ConstantValue value_;
 };
 
 /// Represents a variable declaration (which does not include nets).

@@ -99,7 +99,7 @@ public:
         visitDefault(newDecl);*/
 
         buffer.appendRange(StringRef(" = "));
-        buffer.appendRange(param->value.integer().toString(LiteralBase::Decimal));
+//        buffer.appendRange(param->value.integer().toString(LiteralBase::Decimal));
     }
 
     void visit(const HierarchyInstantiationSyntax& instantiation) {
@@ -127,10 +127,10 @@ public:
 private:
     static string getParamString(const ParameterizedModuleSymbol* module) {
         string result;
-        for (auto child : module->members()) {
+        /*for (auto child : module->members()) {
             if (child->kind == SymbolKind::Parameter)
                 result += child->as<ParameterSymbol>().value.integer().toString(LiteralBase::Decimal);
-        }
+        }*/
         return result;
     }
 
