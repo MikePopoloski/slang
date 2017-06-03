@@ -166,6 +166,14 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, LookupNamespace ns) cons
     return containingScope().lookup(searchName, ns);
 }
 
+SymbolList ScopeSymbol::members() const {
+    if (!membersInitialized) {
+        initMembers();
+        membersInitialized = true;
+    }
+    return memberList;
+}
+
 ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
 	const auto& bound = Binder(*this).bindConstantExpression(expr);
 	if (bound.bad())
@@ -184,22 +192,11 @@ const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
 	return getRoot().getType(syntax, *this);
 }
 
-void ScopeSymbol::addMember(const Symbol& symbol) {
-    static_cast<const ScopeSymbol*>(this)->addMember(symbol);
-}
-
 void ScopeSymbol::addMember(const Symbol& symbol) const {
     // TODO: check for duplicate names
     // TODO: packages and definition namespaces
     memberMap.try_emplace(symbol.name, &symbol);
-}
-
-void ScopeSymbol::createMembers(const SyntaxNode& node) {
-    createMembers(node, nullptr);
-}
-
-void ScopeSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol*>& results) {
-    createMembers(node, &results);
+    memberList.push_back(&symbol);
 }
 
 void ScopeSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol*>* results) const {
@@ -448,6 +445,18 @@ const TypeSymbol& DesignRootSymbol::getErrorType() const {
     return getKnownType(SyntaxKind::Unknown);
 }
 
+void DesignRootSymbol::addMember(const Symbol& symbol) {
+    ScopeSymbol::addMember(symbol);
+}
+
+void DesignRootSymbol::createMembers(const SyntaxNode& node) {
+    ScopeSymbol::createMembers(node);
+}
+
+void DesignRootSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol*>& results) {
+    ScopeSymbol::createMembers(node, &results);
+}
+
 bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const {
     for (const VariableDimensionSyntax* dim : dimensions) {
         const SelectorSyntax* selector;
@@ -497,7 +506,8 @@ CompilationUnitSymbol::CompilationUnitSymbol(const CompilationUnitSyntax& syntax
 }
 
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
-	Symbol(SymbolKind::Module, decl.header.name, parent), decl(decl)
+	Symbol(SymbolKind::Module, decl.header.name, parent), decl(decl),
+    syntax(decl)
 {
 }
 
@@ -685,9 +695,32 @@ ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module,
 {
 }
 
-SymbolList ParameterizedModuleSymbol::members() const {
-	return nullptr;
+void ParameterizedModuleSymbol::initMembers() const {
+    ParameterPortListSyntax* parameterList = module.syntax.header.parameters;
+    if (parameterList) {
+        for (const ParameterDeclarationSyntax* declaration : parameterList->declarations) {
+            for (const VariableDeclaratorSyntax* decl : declaration->declarators) {
+                addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(), *this));
+            }
+        }
+    }
+
+    for (const MemberSyntax* node : module.syntax.members) {
+        switch (node->kind) {
+            case SyntaxKind::ParameterDeclarationStatement: {
+                const ParameterDeclarationSyntax& declaration = node->as<ParameterDeclarationStatementSyntax>().parameter;
+                for (const VariableDeclaratorSyntax* decl : declaration.declarators) {
+                    addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(), *this));
+                }
+            }
+        }
+    }
 }
+
+ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const Symbol& parent) :
+    Symbol(SymbolKind::Parameter, parent, name, location) {}
+
+
 
 VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const Symbol& parent, VariableLifetime lifetime,
 							   bool isConst, const ExpressionSyntax* initializer) :
