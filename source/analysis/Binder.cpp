@@ -656,97 +656,6 @@ void Binder::propagate(BoundExpression& expression, const TypeSymbol& type) {
     }
 }
 
-const BoundStatement& Binder::bindStatement(const StatementSyntax& syntax) {
-    switch (syntax.kind) {
-        case SyntaxKind::ReturnStatement: return bindReturnStatement((const ReturnStatementSyntax&)syntax);
-        case SyntaxKind::ConditionalStatement: return bindConditionalStatement((const ConditionalStatementSyntax&)syntax);
-        case SyntaxKind::ForLoopStatement: return bindForLoopStatement((const ForLoopStatementSyntax&)syntax);
-        case SyntaxKind::ExpressionStatement: return bindExpressionStatement((const ExpressionStatementSyntax&)syntax);
-
-        DEFAULT_UNREACHABLE;
-    }
-	return badStmt(nullptr);
-}
-
-const BoundStatementList& Binder::bindStatementList(const SyntaxList<SyntaxNode>& items) {
-    SmallVectorSized<const BoundStatement*, 8> buffer;
-    for (const auto& item : items) {
-        if (item->kind == SyntaxKind::DataDeclaration)
-            bindVariableDecl(item->as<DataDeclarationSyntax>(), buffer);
-        else if (isStatement(item->kind))
-            buffer.append(&bindStatement(item->as<StatementSyntax>()));
-    }
-    return root.allocate<BoundStatementList>(buffer.copy(root.allocator()));
-}
-
-BoundStatement& Binder::bindReturnStatement(const ReturnStatementSyntax& syntax) {
-    auto location = syntax.returnKeyword.location();
-	const Symbol* subroutine = scope.findAncestor(SymbolKind::Subroutine);
-    if (!subroutine) {
-        root.addError(DiagCode::ReturnNotInSubroutine, location);
-        return badStmt(nullptr);
-    }
-
-    const auto& expr = bindAssignmentLikeContext(*syntax.returnValue, location, subroutine->as<SubroutineSymbol>().returnType());
-    return root.allocate<BoundReturnStatement>(syntax, &expr);
-}
-
-BoundStatement& Binder::bindConditionalStatement(const ConditionalStatementSyntax& syntax) {
-    ASSERT(syntax.predicate.conditions.count() == 1,
-           "The &&& operator in if condition is not yet supported");
-    ASSERT(!syntax.predicate.conditions[0]->matchesClause,
-           "Pattern-matching is not yet supported");
-
-    const auto& cond = bindExpression(syntax.predicate.conditions[0]->expr);
-    const auto& ifTrue = bindStatement(syntax.statement);
-    const BoundStatement* ifFalse = nullptr;
-    if (syntax.elseClause)
-        ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>());
-
-    return root.allocate<BoundConditionalStatement>(syntax, cond, ifTrue, ifFalse);
-}
-
-BoundStatement& Binder::bindForLoopStatement(const ForLoopStatementSyntax& syntax) {
-    /*SmallVectorSized<const Symbol*, 2> initializers;
-    SmallVectorSized<const BoundVariableDecl*, 2> boundVars;
-    Scope *forScope = root.allocate<Scope>(scope);
-
-    for (auto initializer : syntax.initializers) {
-        auto forVarDecl = (const ForVariableDeclarationSyntax *)initializer;
-        const TypeSymbol *type = sem.getType(forVarDecl->type, forScope);
-        sem.handleVariableDeclarator(forVarDecl->declarator, initializers, forScope, {}, type);
-    }
-    ArrayRef<const Symbol*> initializersRef = initializers.copy(alloc);
-    for (auto initializerSym : initializersRef) {
-        boundVars.append(root.allocate<BoundVariableDecl>((const VariableSymbol*)initializerSym));
-    }
-    Binder binder(sem, forScope);
-    auto stopExpr = binder.bindExpression(syntax.stopExpr);
-    SmallVectorSized<const BoundExpression*, 2> steps;
-    for (auto step : syntax.steps) {
-        steps.append(binder.bindExpression(*step));
-    }
-    auto statement = binder.bindStatement(syntax.statement);
-
-    return root.allocate<BoundForLoopStatement>(syntax, boundVars.copy(alloc), stopExpr, steps.copy(alloc), statement);*/
-
-	return badStmt(nullptr);
-}
-
-void Binder::bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const BoundStatement*>& results) {
-    // TODO: figure out const-ness of the scope here; shouldn't const cast obviously
-    /*SmallVectorSized<const Symbol*, 8> buffer;
-    sem.makeVariables(syntax, buffer, const_cast<Scope*>(scope));
-
-    for (auto symbol : buffer)
-        results.append(root.allocate<BoundVariableDecl>((const VariableSymbol*)symbol));*/
-}
-
-BoundStatement& Binder::bindExpressionStatement(const ExpressionStatementSyntax& syntax) {
-    const auto& expr = bindExpression(syntax.expr);
-    return root.allocate<BoundExpressionStatement>(syntax, expr);
-}
-
 bool Binder::propagateAssignmentLike(BoundExpression& rhs, const TypeSymbol& lhsType) {
     // Integral case
     if (lhsType.width() > rhs.type->width()) {
@@ -788,10 +697,6 @@ const TypeSymbol& Binder::binaryOperatorResultType(const TypeSymbol* lhsType, co
 
 BadBoundExpression& Binder::badExpr(const BoundExpression* expr) {
     return root.allocate<BadBoundExpression>(expr, root.getErrorType());
-}
-
-BadBoundStatement& Binder::badStmt(const BoundStatement* stmt) {
-    return root.allocate<BadBoundStatement>(stmt);
 }
 
 }

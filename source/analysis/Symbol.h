@@ -69,7 +69,8 @@ enum class VariableLifetime {
     Static
 };
 
-/// Interprets a keyword token as a variable lifetime value. If the token is unset, returns the value `defaultIfUnset`.
+/// Interprets a keyword token as a variable lifetime value.
+/// If the token is unset, returns the value `defaultIfUnset`.
 VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUnset);
 
 /// Specifies behavior of an argument passed to a subroutine.
@@ -144,7 +145,8 @@ public:
 	const T& as() const { return *static_cast<const T*>(this); }
 
 protected:
-    explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, StringRef name = nullptr, SourceLocation location = SourceLocation()) :
+    explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, StringRef name = nullptr,
+                    SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location),
 		containingSymbol(containingSymbol) {}
 
@@ -190,7 +192,8 @@ public:
 	/// A helper method to evaluate a constant in the current scope and then
 	/// convert it to the given destination type. If the conversion fails, the
 	/// returned value will be marked bad.
-	ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType, SourceLocation errorLocation) const;
+	ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
+                                             SourceLocation errorLocation) const;
 
 	/// A helper method to get a type symbol, using the current scope as context.
 	const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
@@ -202,7 +205,7 @@ protected:
     void addMember(const Symbol& symbol) const;
     void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>* results = nullptr) const;
 
-    // Derived classes override this to fill in members
+    // Derived classes override this to fill in members.
     virtual void initMembers() const {}
 
 private:
@@ -252,9 +255,11 @@ public:
     bool isFourState;
 
     IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, const Symbol& parent) :
-        IntegralTypeSymbol( keywordType, width, isSigned, isFourState, EmptyLowerBound, ArrayRef<int>(&width, 1), parent) {}
+        IntegralTypeSymbol(keywordType, width, isSigned, isFourState,
+                           EmptyLowerBound, ArrayRef<int>(&width, 1), parent) {}
 
-    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, ArrayRef<int> lowerBounds, ArrayRef<int> widths, const Symbol& parent) :
+    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState,
+                       ArrayRef<int> lowerBounds, ArrayRef<int> widths, const Symbol& parent) :
         TypeSymbol(SymbolKind::IntegralType, parent, getTokenKindText(keywordType), SourceLocation()),
         lowerBounds(lowerBounds), widths(widths),
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
@@ -478,7 +483,32 @@ public:
 //        Symbol(SymbolKind::Genvar, nullptr, name, location) {}
 //};
 
+/// Base class for block scopes that can contain statements. This just lets us share some helper methods
+/// for binding statements and creating local members.
+class StatementBlockSymbol : public ScopeSymbol {
+public:
+    /// Binds a single statement.
+    const BoundStatement& bindStatement(const StatementSyntax& syntax);
 
+    /// Binds a list of statements, such as in a function body.
+    const BoundStatementList& bindStatementList(const SyntaxList<SyntaxNode>& items);
+
+protected:
+    using ScopeSymbol::ScopeSymbol;
+
+    const BoundStatement& bindStatement(const StatementSyntax& syntax) const;
+    const BoundStatementList& bindStatementList(const SyntaxList<SyntaxNode>& items) const;
+
+private:
+    BoundStatement& bindReturnStatement(const ReturnStatementSyntax& syntax) const;
+    BoundStatement& bindConditionalStatement(const ConditionalStatementSyntax& syntax) const;
+    BoundStatement& bindForLoopStatement(const ForLoopStatementSyntax& syntax) const;
+    BoundStatement& bindExpressionStatement(const ExpressionStatementSyntax& syntax) const;
+
+    BoundStatement& badStmt(const BoundStatement* stmt) const;
+
+    void bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const BoundStatement*>& results) const;
+};
 
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
@@ -542,7 +572,7 @@ public:
 };
 
 /// Represents a subroutine (task or function.
-class SubroutineSymbol : public ScopeSymbol {
+class SubroutineSymbol : public StatementBlockSymbol {
 public:
 	const FunctionDeclarationSyntax* syntax = nullptr;
 	VariableLifetime defaultLifetime = VariableLifetime::Automatic;
