@@ -19,6 +19,7 @@ enum class BoundNodeKind {
     AssignmentExpression,
     CallExpression,
     StatementList,
+    SequentialBlock,
     ReturnStatement,
     VariableDeclaration,
     ConditionalStatement,
@@ -178,6 +179,14 @@ public:
         BoundStatement(BoundNodeKind::StatementList), list(list) {}
 };
 
+class BoundSequentialBlock : public BoundStatement {
+public:
+    const SequentialBlockSymbol& block;
+
+    BoundSequentialBlock(const SequentialBlockSymbol& block) :
+        BoundStatement(BoundNodeKind::SequentialBlock), block(block) {}
+};
+
 class BoundReturnStatement : public BoundStatement {
 public:
     const BoundExpression* expr;
@@ -208,16 +217,16 @@ public:
 
 class BoundForLoopStatement : public BoundStatement {
 public:
-    ArrayRef<const BoundVariableDecl*> initializers;
+    //ArrayRef<const BoundVariableDecl*> initializers;
     const BoundExpression& stopExpr;
     ArrayRef<const BoundExpression*> steps;
     const BoundStatement& statement;
 
-    BoundForLoopStatement(const StatementSyntax& syntax, ArrayRef<const BoundVariableDecl*> initializers,
+    BoundForLoopStatement(const StatementSyntax& syntax, /*ArrayRef<const BoundVariableDecl*> initializers,*/
                           const BoundExpression& stopExpr, ArrayRef<const BoundExpression*> steps,
                           const BoundStatement& statement) :
         BoundStatement(BoundNodeKind::ForLoopStatement, syntax),
-        initializers(initializers), stopExpr(stopExpr), steps(steps), statement(statement) {}
+        /*initializers(initializers),*/ stopExpr(stopExpr), steps(steps), statement(statement) {}
 };
 
 class BoundExpressionStatement : public BoundStatement {

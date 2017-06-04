@@ -58,6 +58,9 @@ void ConstantEvaluator::evaluateStmt(const BoundStatement& tree) {
         case BoundNodeKind::StatementList:
             evaluateStatementList((BoundStatementList&)tree);
             break;
+        case BoundNodeKind::SequentialBlock:
+            evaluateStmt(((BoundSequentialBlock&)tree).block.getBody());
+            break;
         case BoundNodeKind::ReturnStatement:
             evaluateReturn((BoundReturnStatement&)tree);
             break;
@@ -366,8 +369,8 @@ void ConstantEvaluator::evaluateConditional(const BoundConditionalStatement& stm
 }
 
 void ConstantEvaluator::evaluateForLoop(const BoundForLoopStatement& loop) {
-    for (auto initializer : loop.initializers)
-        evaluateVariableDecl(*initializer);
+    /*for (auto initializer : loop.initializers)
+        evaluateVariableDecl(*initializer);*/
 
     while (evaluateBool(loop.stopExpr)) {
         evaluateStmt(loop.statement);

@@ -72,40 +72,47 @@ BoundStatement& StatementBlockSymbol::bindConditionalStatement(const Conditional
 }
 
 BoundStatement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSyntax& syntax) const {
-    /*SmallVectorSized<const Symbol*, 2> initializers;
-    SmallVectorSized<const BoundVariableDecl*, 2> boundVars;
-    Scope *forScope = root.allocate<Scope>(scope);
+    // TODO: initializers need better handling
 
-    for (auto initializer : syntax.initializers) {
-    auto forVarDecl = (const ForVariableDeclarationSyntax *)initializer;
-    const TypeSymbol *type = sem.getType(forVarDecl->type, forScope);
-    sem.handleVariableDeclarator(forVarDecl->declarator, initializers, forScope, {}, type);
-    }
-    ArrayRef<const Symbol*> initializersRef = initializers.copy(alloc);
-    for (auto initializerSym : initializersRef) {
-    boundVars.append(root.allocate<BoundVariableDecl>((const VariableSymbol*)initializerSym));
-    }
-    Binder binder(sem, forScope);
-    auto stopExpr = binder.bindExpression(syntax.stopExpr);
+    // If the initializers here involve doing variable declarations, then the spec says we create
+    // an implicit sequential block and do the declaration there.
+    SequentialBlockSymbol& implicitInitBlock = allocate<SequentialBlockSymbol>(*this);
+    const auto& forVariable = syntax.initializers[0]->as<ForVariableDeclarationSyntax>();
+
+    const auto& loopVar = allocate<VariableSymbol>(forVariable.declarator.name, forVariable.type, *this,
+                                                   VariableLifetime::Automatic, false,
+                                                   &forVariable.declarator.initializer->expr);
+    implicitInitBlock.addMember(loopVar);
+    addMember(implicitInitBlock);
+
+    Binder binder(implicitInitBlock);
+    const auto& stopExpr = binder.bindSelfDeterminedExpression(syntax.stopExpr);
+
     SmallVectorSized<const BoundExpression*, 2> steps;
-    for (auto step : syntax.steps) {
-    steps.append(binder.bindExpression(*step));
-    }
-    auto statement = binder.bindStatement(syntax.statement);
+    for (auto step : syntax.steps)
+        steps.append(&binder.bindSelfDeterminedExpression(*step));
 
-    return root.allocate<BoundForLoopStatement>(syntax, boundVars.copy(alloc), stopExpr, steps.copy(alloc), statement);*/
+    const auto& statement = implicitInitBlock.bindStatement(syntax.statement);
+    const auto& loop = allocate<BoundForLoopStatement>(syntax, stopExpr, steps.copy(getRoot().allocator()), statement);
 
-    return badStmt(nullptr);
+    SmallVectorSized<const BoundStatement*, 2> blockList;
+    blockList.append(&allocate<BoundVariableDecl>(loopVar));
+    blockList.append(&loop);
+
+    implicitInitBlock.setBody(allocate<BoundStatementList>(blockList.copy(getRoot().allocator())));
+    return allocate<BoundSequentialBlock>(implicitInitBlock);
 }
 
 void StatementBlockSymbol::bindVariableDecl(const DataDeclarationSyntax& syntax,
                                             SmallVector<const BoundStatement*>& results) const {
-    // TODO: figure out const-ness of the scope here; shouldn't const cast obviously
-    /*SmallVectorSized<const Symbol*, 8> buffer;
-    sem.makeVariables(syntax, buffer, const_cast<Scope*>(scope));
 
-    for (auto symbol : buffer)
-    results.append(root.allocate<BoundVariableDecl>((const VariableSymbol*)symbol));*/
+    SmallVectorSized<const VariableSymbol*, 4> symbols;
+    VariableSymbol::fromSyntax(*this, syntax, symbols);
+
+    for (auto symbol : symbols) {
+        addMember(*symbol);
+        results.append(&allocate<BoundVariableDecl>(*symbol));
+    }
 }
 
 BoundStatement& StatementBlockSymbol::bindExpressionStatement(const ExpressionStatementSyntax& syntax) const {
@@ -116,6 +123,9 @@ BoundStatement& StatementBlockSymbol::bindExpressionStatement(const ExpressionSt
 BoundStatement& StatementBlockSymbol::badStmt(const BoundStatement* stmt) const {
     return allocate<BadBoundStatement>(stmt);
 }
+
+SequentialBlockSymbol::SequentialBlockSymbol(const Symbol& parent) :
+    StatementBlockSymbol(SymbolKind::SequentialBlock, parent) {}
 
 ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const Symbol& parent) :
     Symbol(SymbolKind::Parameter, parent, name, location) {}
@@ -139,6 +149,18 @@ VariableSymbol::VariableSymbol(SymbolKind kind, StringRef name, SourceLocation l
     Symbol(kind, parent, name, location),
     lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer)
 {
+}
+
+void VariableSymbol::fromSyntax(const Symbol& parent, const DataDeclarationSyntax& syntax,
+                                SmallVector<const VariableSymbol*>& results) {
+
+    const DesignRootSymbol& root = parent.getRoot();
+    for (auto declarator : syntax.declarators) {
+        const ExpressionSyntax* initializer = declarator->initializer ? &declarator->initializer->expr : nullptr;
+
+        results.append(&root.allocate<VariableSymbol>(declarator->name, syntax.type, parent,
+                                                      VariableLifetime::Automatic, false, initializer));
+    }
 }
 
 const TypeSymbol& VariableSymbol::type() const {

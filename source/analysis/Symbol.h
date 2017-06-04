@@ -57,6 +57,7 @@ enum class SymbolKind {
     Genvar,
     GenerateBlock,
     ProceduralBlock,
+    SequentialBlock,
     Variable,
     Instance,
     FormalArgument,
@@ -510,11 +511,22 @@ private:
     void bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const BoundStatement*>& results) const;
 };
 
+class SequentialBlockSymbol : public StatementBlockSymbol {
+public:
+    SequentialBlockSymbol(const Symbol& parent);
+
+    const BoundStatement& getBody() const { ASSERT(body); return *body; }
+    void setBody(const BoundStatement& statement) { body = &statement; }
+
+private:
+    const BoundStatement* body = nullptr;
+};
+
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
 };
 
-class ProceduralBlockSymbol : public ScopeSymbol {
+class ProceduralBlockSymbol : public StatementBlockSymbol {
 public:
 };
 
@@ -540,6 +552,10 @@ public:
 	VariableSymbol(StringRef name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
 				   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
 				   const BoundExpression* initializer = nullptr);
+
+    /// Constructs all variable symbols specified by the given syntax node.
+    static void fromSyntax(const Symbol& parent, const DataDeclarationSyntax& syntax,
+                           SmallVector<const VariableSymbol*>& results);
 
     const TypeSymbol& type() const;
     const BoundExpression* initializer() const;
