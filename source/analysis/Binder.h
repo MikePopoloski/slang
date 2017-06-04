@@ -35,12 +35,6 @@ public:
 	/// to perform any necessary implicit conversions and checking.
     const BoundExpression& bindAssignmentLikeContext(const ExpressionSyntax& syntax, SourceLocation location, const TypeSymbol& assignmentType);
 
-	/// Binds a single statement.
-    const BoundStatement& bindStatement(const StatementSyntax& syntax);
-
-	/// Binds a list of statements, such as in a function body.
-    const BoundStatementList& bindStatementList(const SyntaxList<SyntaxNode>& items);
-
 private:
     BoundExpression& bindAndPropagate(const ExpressionSyntax& syntax);
     BoundExpression& bindExpression(const ExpressionSyntax& syntax);
@@ -63,13 +57,6 @@ private:
     BoundExpression& bindSelectExpression(const ElementSelectExpressionSyntax& syntax);
     BoundExpression& bindSelectExpression(const ExpressionSyntax& syntax, const BoundExpression& expr, const SelectorSyntax& selector);
 
-    BoundStatement& bindReturnStatement(const ReturnStatementSyntax& syntax);
-    BoundStatement& bindConditionalStatement(const ConditionalStatementSyntax& syntax);
-    BoundStatement& bindForLoopStatement(const ForLoopStatementSyntax& syntax);
-    BoundStatement& bindExpressionStatement(const ExpressionStatementSyntax& syntax);
-
-    void bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const BoundStatement*>& results);
-
     // functions to check whether operators are applicable to the given operand types
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand);
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** lhs, BoundExpression** rhs);
@@ -78,7 +65,6 @@ private:
     void propagate(BoundExpression& expression, const TypeSymbol& type);
 
     BadBoundExpression& badExpr(const BoundExpression* expr);
-    BadBoundStatement& badStmt(const BoundStatement* stmt);
 
     // Apply propagation rules for an assignment; increasing the rhs type to the lhs type if necessary
     // apply to both sides if symmetric. Returns true if a type expansion was necessary
