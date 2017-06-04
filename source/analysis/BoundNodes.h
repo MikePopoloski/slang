@@ -11,6 +11,7 @@ enum class BoundNodeKind {
     Unknown,
     Literal,
     Variable,
+    Parameter,
     UnaryExpression,
     BinaryExpression,
     TernaryExpression,
@@ -77,6 +78,14 @@ public:
 
     BoundVariable(const ExpressionSyntax& syntax, const VariableSymbol& symbol) :
         BoundExpression(BoundNodeKind::Variable, syntax, symbol.type()), symbol(symbol) {}
+};
+
+class BoundParameter : public BoundExpression {
+public:
+    const ParameterSymbol& symbol;
+
+    BoundParameter(const ExpressionSyntax& syntax, const ParameterSymbol& symbol) :
+        BoundExpression(BoundNodeKind::Parameter, syntax, symbol.type()), symbol(symbol) {}
 };
 
 class BoundUnaryExpression : public BoundExpression {

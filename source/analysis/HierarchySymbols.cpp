@@ -208,7 +208,11 @@ void ParameterizedModuleSymbol::initMembers() const {
     if (parameterList) {
         for (const ParameterDeclarationSyntax* declaration : parameterList->declarations) {
             for (const VariableDeclaratorSyntax* decl : declaration->declarators) {
-                addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(), *this));
+                // TODO: hack to get param values working
+                const ConstantValue& cv = evaluateConstant(decl->initializer->expr);
+
+                addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
+                                                    getRoot().getErrorType(), cv, *this));
             }
         }
     }
@@ -218,7 +222,12 @@ void ParameterizedModuleSymbol::initMembers() const {
             case SyntaxKind::ParameterDeclarationStatement: {
                 const ParameterDeclarationSyntax& declaration = node->as<ParameterDeclarationStatementSyntax>().parameter;
                 for (const VariableDeclaratorSyntax* decl : declaration.declarators) {
-                    addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(), *this));
+
+                    // TODO: hack to get param values working
+                    const ConstantValue& cv = evaluateConstant(decl->initializer->expr);
+
+                    addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
+                                                        getRoot().getErrorType(), cv, *this));
                 }
             }
         }
