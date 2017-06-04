@@ -49,11 +49,6 @@ endfunction
 
     session.eval(R"(
 function automatic int num_words_in_address_space(int dataBitsPerSymbol, int data_width, int address_width);
-    // Riviera-PRO 2015.10 crashes when calling a function from
-    // within a function. After all this is understandable since
-    // this is a really hard CS problem that has never been solved
-    // before... ???
-    //
     int address_bits_per_word = $clog2(symbols_in_data(dataBitsPerSymbol, data_width));
     return 2**(address_width - address_bits_per_word);
 endfunction

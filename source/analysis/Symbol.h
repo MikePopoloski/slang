@@ -69,6 +69,9 @@ enum class VariableLifetime {
     Static
 };
 
+/// Interprets a keyword token as a variable lifetime value. If the token is unset, returns the value `defaultIfUnset`.
+VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUnset);
+
 /// Specifies behavior of an argument passed to a subroutine.
 enum class FormalArgumentDirection {
     In,
