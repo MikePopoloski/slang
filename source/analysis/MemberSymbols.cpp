@@ -127,8 +127,13 @@ BoundStatement& StatementBlockSymbol::badStmt(const BoundStatement* stmt) const 
 SequentialBlockSymbol::SequentialBlockSymbol(const Symbol& parent) :
     StatementBlockSymbol(SymbolKind::SequentialBlock, parent) {}
 
-ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const Symbol& parent) :
-    Symbol(SymbolKind::Parameter, parent, name, location) {}
+ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol&type,
+                                 const ConstantValue& value, const Symbol& parent) :
+    Symbol(SymbolKind::Parameter, parent, name, location), type_(&type), value_(value) {}
+
+ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol&type,
+                                 ConstantValue&& value, const Symbol& parent) :
+    Symbol(SymbolKind::Parameter, parent, name, location), type_(&type), value_(std::move(value)) {}
 
 VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const Symbol& parent, VariableLifetime lifetime,
                                bool isConst, const ExpressionSyntax* initializer) :

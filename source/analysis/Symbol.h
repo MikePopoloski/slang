@@ -532,11 +532,17 @@ public:
 
 class ParameterSymbol : public Symbol {
 public:
-    ParameterSymbol(StringRef name, SourceLocation location, const Symbol& parent);
+    ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol& type,
+                    const ConstantValue& value, const Symbol& parent);
 
+    ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol& type,
+                    ConstantValue&& value, const Symbol& parent);
+
+    const TypeSymbol& type() const { return *type_; }
     const ConstantValue& value() const { return value_; }
 
 private:
+    mutable const TypeSymbol* type_;
     mutable ConstantValue value_;
 };
 

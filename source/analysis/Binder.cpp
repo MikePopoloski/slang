@@ -215,6 +215,9 @@ BoundExpression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
         case SymbolKind::FormalArgument:
             return root.allocate<BoundVariable>(syntax, symbol->as<VariableSymbol>());
 
+        case SymbolKind::Parameter:
+            return root.allocate<BoundParameter>(syntax, symbol->as<ParameterSymbol>());
+
         DEFAULT_UNREACHABLE;
     }
 	return badExpr(nullptr);
