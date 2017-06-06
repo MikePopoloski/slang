@@ -8,6 +8,7 @@
 
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "diagnostics/Diagnostics.h"
@@ -30,6 +31,7 @@ class Symbol;
 class ScopeSymbol;
 class DesignRootSymbol;
 class TypeSymbol;
+class ModuleSymbol;
 
 using SymbolList = ArrayRef<const Symbol*>;
 using SymbolMap = std::unordered_map<StringRef, const Symbol*>;
@@ -54,6 +56,7 @@ enum class SymbolKind {
     Module,
     Interface, // TODO: decouple interfaces from modules
     Modport,   // TODO: decouple interfaces from modules
+    ModuleInstance,
     Program,
     Attribute,
     Genvar,
@@ -356,7 +359,7 @@ public:
 
 	/// Finds all of the top-level module instances in the design. These form the roots of the
     /// actual design hierarchy.
-	ArrayRef<const ModuleInstanceSymbol*> topInstances() const { return topList; }
+	ArrayRef<const ModuleInstanceSymbol*> topInstances() const { init(); return topList; }
 
 	/// Finds a package in the design with the given name, or returns null if none is found.
 	const PackageSymbol* findPackage(StringRef name) const;
@@ -383,6 +386,8 @@ public:
 	Diagnostics& diagnostics() const { return diags; }
 
 private:
+    void initMembers() const final;
+
 	// Gets a type symbol for the given integer type syntax node.
 	const TypeSymbol& getIntegralType(const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) const;
 
@@ -393,15 +398,22 @@ private:
 	// Tries to convert a ConstantValue to a simple integer. Sets bad to true if the conversion fails.
 	int coerceInteger(const ConstantValue& cv, uint32_t maxRangeBits, bool& bad) const;
 
+    // Add a compilation unit to the design; has some shared code to filter out members of the compilation
+    // unit that belong in the root scope (for example, modules).
     void addCompilationUnit(const CompilationUnitSymbol& unit);
+
+    // These functions are used for traversing the syntax hierarchy and finding all instantiations.
+    using NameSet = std::unordered_set<StringRef>;
+    static void findInstantiations(const ModuleDeclarationSyntax& module, std::vector<NameSet>& scopeStack,
+                                   NameSet& found);
+    static void findInstantiations(const MemberSyntax& node, std::vector<NameSet>& scopeStack, NameSet& found);
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the root name table.
     SymbolMap packageMap;
 
-    // list of compilation units in the design, and of all top-level module instances
+    // list of compilation units in the design
 	std::vector<const CompilationUnitSymbol*> unitList;
-	std::vector<const ModuleInstanceSymbol*> topList;
 
 	// preallocated type symbols for known types
 	std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
@@ -410,6 +422,9 @@ private:
 	// members lazily but allocating them on demand and reporting errors when asked.
 	mutable BumpAllocator alloc;
 	mutable Diagnostics diags;
+
+    // list of top level module instances in the design
+    mutable std::vector<const ModuleInstanceSymbol*> topList;
 
 	// cache of simple integral types keyed by {width, signedness, 4-state, isReg}
 	mutable std::unordered_map<uint64_t, const TypeSymbol*> integralTypeCache;
@@ -479,7 +494,9 @@ private:
 
 class ModuleInstanceSymbol : public Symbol {
 public:
-	ParameterizedModuleSymbol& module;
+	const ParameterizedModuleSymbol& module;
+
+    ModuleInstanceSymbol(const ParameterizedModuleSymbol& module, const Symbol& parent);
 
 	/// A helper method to access a specific member of the module (of which this is an instance).
 	template<typename T>

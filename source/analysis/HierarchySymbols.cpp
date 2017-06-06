@@ -245,4 +245,10 @@ void ParameterizedModuleSymbol::initMembers() const {
     }
 }
 
+ModuleInstanceSymbol::ModuleInstanceSymbol(const ParameterizedModuleSymbol& module, const Symbol& parent) :
+    Symbol(SymbolKind::ModuleInstance, parent),
+    module(module)
+{
+}
+
 }

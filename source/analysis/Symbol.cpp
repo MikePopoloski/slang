@@ -19,6 +19,14 @@ TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
     return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
 }
 
+bool containsName(const std::vector<std::unordered_set<StringRef>>& scopeStack, StringRef name) {
+    for (const auto& set : scopeStack) {
+        if (set.find(name) != set.end())
+            return true;
+    }
+    return false;
+}
+
 }
 
 namespace slang {
@@ -425,6 +433,129 @@ void DesignRootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
     for (auto symbol : unit.members()) {
         if (symbol->kind == SymbolKind::Module)
             addMember(*symbol);
+    }
+}
+
+void DesignRootSymbol::initMembers() const {
+    // Compute which modules should be automatically instantiated; this is the set of modules that are:
+    // 1) declared at the root level
+    // 2) never instantiated anywhere in the design (even inside generate blocks that are not selected)
+    // 3) don't have any parameters, or all parameters have default values
+    //
+    // Because of the requirement that we look at uninstantiated branches of generate blocks, we need
+    // to look at the syntax nodes instead of any bound symbols.
+    NameSet instances;
+    for (auto symbol : unitList) {
+        for (auto member : symbol->members()) {
+            if (member->kind == SymbolKind::Module) {
+                std::vector<NameSet> scopeStack;
+                findInstantiations(member->as<ModuleSymbol>().syntax, scopeStack, instances);
+            }
+        }
+    }
+
+    // Now loop back over and find modules that have no instantiations.
+    for (auto symbol : unitList) {
+        for (auto member : symbol->members()) {
+            if (member->kind == SymbolKind::Module && instances.count(member->name) == 0) {
+                // TODO: check for no parameters here
+                const auto& pms = member->as<ModuleSymbol>().parameterize();
+                const auto& instance = allocate<ModuleInstanceSymbol>(pms, *this);
+                addMember(instance);
+                topList.push_back(&instance);
+            }
+        }
+    }
+}
+
+void DesignRootSymbol::findInstantiations(const ModuleDeclarationSyntax& module, std::vector<NameSet>& scopeStack,
+                                          NameSet& found) {
+    // If there are nested modules that shadow global module names, we need to
+    // ignore them when considering instantiations.
+    NameSet* localDefs = nullptr;
+    for (auto member : module.members) {
+        switch (member->kind) {
+            case SyntaxKind::ModuleDeclaration:
+            case SyntaxKind::InterfaceDeclaration:
+            case SyntaxKind::ProgramDeclaration: {
+                // ignore empty names
+                auto name = member->as<ModuleDeclarationSyntax>().header.name.valueText();
+                if (name) {
+                    // create new scope entry lazily
+                    if (!localDefs) {
+                        scopeStack.emplace_back();
+                        localDefs = &scopeStack.back();
+                    }
+                    localDefs->insert(name);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    // now traverse all children
+    for (auto member : module.members)
+        findInstantiations(*member, scopeStack, found);
+
+    if (localDefs)
+        scopeStack.pop_back();
+}
+
+void DesignRootSymbol::findInstantiations(const MemberSyntax& node, std::vector<NameSet>& scopeStack,
+                                          NameSet& found) {
+    switch (node.kind) {
+        case SyntaxKind::HierarchyInstantiation: {
+            // Determine whether this is a local or global module we're instantiating;
+            // don't worry about local instantiations right now, they can't be root.
+            const auto& his = node.as<HierarchyInstantiationSyntax>();
+            auto name = his.type.valueText();
+            if (name && !containsName(scopeStack, name))
+                found.insert(name);
+            break;
+        }
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration:
+            findInstantiations(node.as<ModuleDeclarationSyntax>(), scopeStack, found);
+            break;
+        case SyntaxKind::GenerateRegion:
+            for (auto& child : node.as<GenerateRegionSyntax>().members)
+                findInstantiations(*child, scopeStack, found);
+            break;
+        case SyntaxKind::GenerateBlock:
+            for (auto& child : node.as<GenerateBlockSyntax>().members)
+                findInstantiations(*child, scopeStack, found);
+            break;
+        case SyntaxKind::LoopGenerate:
+            findInstantiations(node.as<LoopGenerateSyntax>().block, scopeStack, found);
+            break;
+        case SyntaxKind::CaseGenerate:
+            for (auto& item : node.as<CaseGenerateSyntax>().items) {
+                switch (item->kind) {
+                    case SyntaxKind::DefaultCaseItem:
+                        findInstantiations(item->as<DefaultCaseItemSyntax>().clause.as<MemberSyntax>(),
+                                           scopeStack, found);
+                        break;
+                    case SyntaxKind::StandardCaseItem:
+                        findInstantiations(item->as<StandardCaseItemSyntax>().clause.as<MemberSyntax>(),
+                                           scopeStack, found);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        case SyntaxKind::IfGenerate: {
+            const auto& ifGen = node.as<IfGenerateSyntax>();
+            findInstantiations(ifGen.block, scopeStack, found);
+            if (ifGen.elseClause)
+                findInstantiations(ifGen.elseClause->clause.as<MemberSyntax>(), scopeStack, found);
+            break;
+        }
+        default:
+            break;
     }
 }
 
