@@ -9,8 +9,19 @@
 namespace slang {
 
 CompilationUnitSymbol::CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent) :
-    ScopeSymbol(SymbolKind::Unknown, parent)
+    ScopeSymbol(SymbolKind::CompilationUnit, parent)
 {
+    for (auto member : syntax.members) {
+        for (auto symbol : createSymbols(*member, *this))
+            addMember(*symbol);
+    }
+}
+
+CompilationUnitSymbol::CompilationUnitSymbol(SymbolList symbols, const Symbol& parent) :
+    ScopeSymbol(SymbolKind::CompilationUnit, parent)
+{
+    for (auto symbol : symbols)
+        addMember(*symbol);
 }
 
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :

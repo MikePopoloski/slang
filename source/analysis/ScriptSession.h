@@ -17,6 +17,8 @@ namespace slang {
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
+    ScriptSession() : scope(root) {}
+
     ConstantValue eval(const std::string& text) {
         syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text)));
 
@@ -28,13 +30,11 @@ public:
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::HierarchyInstantiation:
-                root.addTree(syntaxTrees.back());
+                scope.createAndAddSymbols(syntaxTrees.back().root());
                 return true;
 
             case SyntaxKind::DataDeclaration: {
-                SmallVectorSized<const Symbol*, 4> results;
-                root.createMembers(syntaxTrees.back().root(), results);
-                for (auto symbol : results) {
+                for (auto symbol : scope.createAndAddSymbols(syntaxTrees.back().root())) {
                     ConstantValue& cv = evaluator.createTemporary(*symbol);
 
                     const BoundExpression* init = symbol->as<VariableSymbol>().initializer();
@@ -58,7 +58,7 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-        const auto& bound = Binder(root).bindConstantExpression(expr);
+        const auto& bound = Binder(scope).bindConstantExpression(expr);
         if (bound.bad())
             return nullptr;
 
@@ -82,6 +82,7 @@ private:
     BumpAllocator alloc;
     Diagnostics diagnostics;
 	DesignRootSymbol root;
+    DynamicScopeSymbol scope;
     ConstantEvaluator evaluator;
 };
 
