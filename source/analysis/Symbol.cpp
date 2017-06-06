@@ -47,6 +47,9 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
         case SyntaxKind::ModuleDeclaration:
             results.append(&root.allocate<ModuleSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
             break;
+        case SyntaxKind::InterfaceDeclaration:
+            // TODO:
+            break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
             results.append(&root.allocate<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), parent));
@@ -59,7 +62,7 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
                 results.append(variable);
             break;
         }
-        //DEFAULT_UNREACHABLE;
+        DEFAULT_UNREACHABLE;
     }
 
     return results.copy(root.allocator());

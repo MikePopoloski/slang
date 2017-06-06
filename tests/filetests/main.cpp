@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 
-#include "analysis/DeclarationTable.h"
 #include "analysis/SemanticModel.h"
 #include "diagnostics/Diagnostics.h"
 #include "parsing/SyntaxTree.h"
@@ -21,7 +20,6 @@ int main() {
     DiagnosticWriter diagWriter(sourceManager);
     std::vector<SyntaxTree> trees;
     Diagnostics diags;
-    DeclarationTable table {diags};
     BumpAllocator alloc {4096};
     
     //definitions.addParentScope(model.getSystemScope());
@@ -38,7 +36,7 @@ int main() {
         files++;
 
         trees.emplace_back(std::move(tree));
-        table.addSyntaxTree(trees.back());
+        //table.addSyntaxTree(trees.back());
 
         if (errors > 100)
             return 1;
