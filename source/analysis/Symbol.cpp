@@ -31,6 +31,32 @@ VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUns
     }
 }
 
+SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
+    const DesignRootSymbol& root = parent.getRoot();
+    SmallVectorSized<const Symbol*, 4> results;
+
+    switch (node.kind) {
+        case SyntaxKind::ModuleDeclaration:
+            results.append(&root.allocate<ModuleSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
+            break;
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::TaskDeclaration:
+            results.append(&root.allocate<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), parent));
+            break;
+        case SyntaxKind::DataDeclaration: {
+            SmallVectorSized<const VariableSymbol*, 4> variables;
+            VariableSymbol::fromSyntax(parent, node.as<DataDeclarationSyntax>(), variables);
+
+            for (auto variable : variables)
+                results.append(variable);
+            break;
+        }
+        //DEFAULT_UNREACHABLE;
+    }
+
+    return results.copy(root.allocator());
+}
+
 const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
 	const Symbol* current = this;
     while (current->kind != searchKind) {
@@ -51,6 +77,7 @@ const ScopeSymbol& Symbol::containingScope() const {
             /*case SymbolKind::CompilationUnit:
             case SymbolKind::Package:
             case SymbolKind::ParameterizedModule:*/
+            case SymbolKind::DynamicScope:
             case SymbolKind::Subroutine:
                 return *static_cast<const ScopeSymbol*>(current);
 
@@ -70,6 +97,8 @@ Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
 }
 
 const Symbol* ScopeSymbol::lookup(StringRef searchName, LookupNamespace ns) const {
+    init();
+
     // TODO:
     auto it = memberMap.find(searchName);
     if (it != memberMap.end())
@@ -82,10 +111,7 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, LookupNamespace ns) cons
 }
 
 SymbolList ScopeSymbol::members() const {
-    if (!membersInitialized) {
-        initMembers();
-        membersInitialized = true;
-    }
+    init();
     return memberList;
 }
 
@@ -114,46 +140,27 @@ void ScopeSymbol::addMember(const Symbol& symbol) const {
     memberList.push_back(&symbol);
 }
 
-void ScopeSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol*>* results) const {
-    switch (node.kind) {
-        case SyntaxKind::FunctionDeclaration:
-        case SyntaxKind::TaskDeclaration: {
-            const Symbol& s = allocate<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), *this);
-            addMember(s);
-            if (results)
-                results->append(&s);
-            break;
-        }
-        case SyntaxKind::DataDeclaration: {
-            // TODO: modifiers
-            const DataDeclarationSyntax& declSyntax = node.as<DataDeclarationSyntax>();
-            for (auto declarator : declSyntax.declarators) {
-                const ExpressionSyntax* initializer = declarator->initializer ? &declarator->initializer->expr : nullptr;
-                const Symbol& s = allocate<VariableSymbol>(declarator->name, declSyntax.type, *this,
-                                                           VariableLifetime::Automatic, false, initializer);
-
-                addMember(s);
-                if (results)
-                    results->append(&s);
-            }
-            break;
-        }
-        case SyntaxKind::ModuleDeclaration: {
-            const Symbol& s = allocate<ModuleSymbol>(node.as<ModuleDeclarationSyntax>(), *this);
-            addMember(s);
-            if (results)
-                results->append(&s);
-            break;
-        }
-        
-        DEFAULT_UNREACHABLE;
+void ScopeSymbol::init() const {
+    if (!membersInitialized) {
+        membersInitialized = true;
+        initMembers();
     }
 }
 
-DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) :
-	DesignRootSymbol(ArrayRef<const SyntaxTree*> { &tree }) {}
+DynamicScopeSymbol::DynamicScopeSymbol(const Symbol& parent) : ScopeSymbol(SymbolKind::DynamicScope, parent) {}
 
-DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees) :
+void DynamicScopeSymbol::addSymbol(const Symbol& symbol) {
+    ScopeSymbol::addMember(symbol);
+}
+
+SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
+    SymbolList symbols = createSymbols(node, *this);
+    for (auto symbol : symbols)
+        addMember(*symbol);
+    return symbols;
+}
+
+DesignRootSymbol::DesignRootSymbol() :
 	ScopeSymbol(SymbolKind::Root, *this)
 {
 	// Register built-in types
@@ -196,21 +203,29 @@ DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees) :
     addMember(allocate<SubroutineSymbol>("$high", intType, args.copy(alloc), SystemFunction::high, *this));
     addMember(allocate<SubroutineSymbol>("$size", intType, args.copy(alloc), SystemFunction::size, *this));
     addMember(allocate<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment, *this));
-
-	addTrees(syntaxTrees);
 }
 
-void DesignRootSymbol::addTree(const SyntaxTree& tree) {
-	addTrees({ &tree });
+DesignRootSymbol::DesignRootSymbol(ArrayRef<const CompilationUnitSyntax*> units) :
+    DesignRootSymbol()
+{
+    for (auto unit : units)
+        addCompilationUnit(allocate<CompilationUnitSymbol>(*unit, *this));
 }
 
-void DesignRootSymbol::addTrees(ArrayRef<const SyntaxTree*> trees) {
-	for (auto tree : trees) {
-		if (tree->root().kind == SyntaxKind::CompilationUnit)
-			unitList.push_back(&allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>(), *this));
-		else
-			createMembers(tree->root());
-	}
+DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) :
+    DesignRootSymbol(ArrayRef<const SyntaxTree*> { &tree }) {}
+
+DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> trees) :
+    DesignRootSymbol()
+{
+    for (auto tree : trees) {
+        if (tree->root().kind == SyntaxKind::CompilationUnit)
+            addCompilationUnit(allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>(), *this));
+        else {
+            SymbolList symbols = createSymbols(tree->root(), *this);
+            addCompilationUnit(allocate<CompilationUnitSymbol>(symbols, *this));
+        }
+    }
 }
 
 const PackageSymbol* DesignRootSymbol::findPackage(StringRef lookupName) const {
@@ -360,18 +375,6 @@ const TypeSymbol& DesignRootSymbol::getErrorType() const {
     return getKnownType(SyntaxKind::Unknown);
 }
 
-void DesignRootSymbol::addMember(const Symbol& symbol) {
-    ScopeSymbol::addMember(symbol);
-}
-
-void DesignRootSymbol::createMembers(const SyntaxNode& node) {
-    ScopeSymbol::createMembers(node);
-}
-
-void DesignRootSymbol::createMembers(const SyntaxNode& node, SmallVector<const Symbol*>& results) {
-    ScopeSymbol::createMembers(node, &results);
-}
-
 bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const {
     for (const VariableDimensionSyntax* dim : dimensions) {
         const SelectorSyntax* selector;
@@ -413,6 +416,16 @@ int DesignRootSymbol::coerceInteger(const ConstantValue& cv, uint32_t maxRangeBi
 
 	bad = true;
 	return 0;
+}
+
+void DesignRootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
+    unitList.push_back(&unit);
+
+    // Add all modules to the root scope; we can look up modules anywhere in the design
+    for (auto symbol : unit.members()) {
+        if (symbol->kind == SymbolKind::Module)
+            addMember(*symbol);
+    }
 }
 
 }

@@ -213,15 +213,13 @@ SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, cons
 SubroutineSymbol::SubroutineSymbol(StringRef name, const TypeSymbol& returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
                                    SystemFunction systemFunction, const Symbol& parent) :
     StatementBlockSymbol(SymbolKind::Subroutine, parent, name),
-    systemFunctionKind(systemFunction), returnType_(&returnType),
-    arguments_(arguments), initialized(true)
+    systemFunctionKind(systemFunction), returnType_(&returnType), arguments_(arguments)
 {
 }
 
-void SubroutineSymbol::init() const {
-    if (initialized)
+void SubroutineSymbol::initMembers() const {
+    if (isSystemFunction())
         return;
-    initialized = true;
 
     const ScopeSymbol& parentScope = containingScope();
     const DesignRootSymbol& root = getRoot();
@@ -288,8 +286,11 @@ void SubroutineSymbol::init() const {
     }
 
     returnType_ = &returnType;
-    body_ = &bindStatementList(syntax->items);
     arguments_ = arguments.copy(root.allocator());
+
+    // Note: call this last; binding the statements might request other members
+    // of this subroutine, like the return type
+    body_ = &bindStatementList(syntax->items);
 }
 
 }

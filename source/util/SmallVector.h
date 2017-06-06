@@ -83,7 +83,7 @@ public:
     /// Add a range of elements to the end of the array.
     void appendRange(const T* begin, const T* end) {
         if (std::is_trivially_copyable<T>()) {
-            uint32_t count = (uint32_t)(end - begin);
+            uint32_t count = (uint32_t)std::distance(begin, end);
             uint32_t newLen = len + count;
             ensureSize(newLen);
 

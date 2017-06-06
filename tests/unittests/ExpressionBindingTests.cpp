@@ -33,17 +33,18 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     // Evaluate an assignment expression (has an LValue we can observe)
     auto syntax = SyntaxTree::fromText("i = i + 3");
 	DesignRootSymbol root;
+    DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-		root.getKnownType(SyntaxKind::LogicType), root
+		root.getKnownType(SyntaxKind::LogicType), scope
     };
 
     // Bind the expression tree to the symbol
-    root.addMember(local);
-    Binder binder(root);
+    scope.addSymbol(local);
+    Binder binder(scope);
     const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
@@ -65,17 +66,18 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     // Assignment operator should increase RHS size to 20
     auto syntax = SyntaxTree::fromText("i = 5'b0101 + 4'b1100");
 	DesignRootSymbol root;
+    DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-        root.getIntegralType(20, false), root
+        root.getIntegralType(20, false), scope
     };
 
     // Bind the expression tree to the symbol
-	root.addMember(local);
-	Binder binder(root);
+    scope.addSymbol(local);
+	Binder binder(scope);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
@@ -92,17 +94,18 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     // Tests a number of rules of size propogation
     auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 4'b1100) == 21'b1)");
 	DesignRootSymbol root;
+    DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-        root.getIntegralType(20, false), root
+        root.getIntegralType(20, false), scope
     };
 
     // Bind the expression tree to the symbol
-	root.addMember(local);
-	Binder binder(root);
+    scope.addSymbol(local);
+	Binder binder(scope);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
@@ -123,17 +126,18 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     // Tests a number of rules of size propogation
     auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 2.0) == 21'b1)");
 	DesignRootSymbol root;
+    DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
         varToken.valueText(), varToken.location(),
-        root.getIntegralType(20, false), root
+        root.getIntegralType(20, false), scope
     };
 
     // Bind the expression tree to the symbol
-	root.addMember(local);
-	Binder binder(root);
+    scope.addSymbol(local);
+	Binder binder(scope);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 

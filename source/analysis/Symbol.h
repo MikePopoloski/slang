@@ -39,6 +39,8 @@ using Dimensions = ArrayRef<ConstantRange>;
 enum class SymbolKind {
     Unknown,
 	Root,
+    DynamicScope,
+    CompilationUnit,
     IntegralType,
     RealType,
     StringType,
@@ -69,10 +71,6 @@ enum class VariableLifetime {
     Automatic,
     Static
 };
-
-/// Interprets a keyword token as a variable lifetime value.
-/// If the token is unset, returns the value `defaultIfUnset`.
-VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUnset);
 
 /// Specifies behavior of an argument passed to a subroutine.
 enum class FormalArgumentDirection {
@@ -109,6 +107,14 @@ enum class LookupNamespace {
     /// Namespace for members, which includes functions, tasks, parameters, variables, blocks, etc.
     Members
 };
+
+/// Interprets a keyword token as a variable lifetime value.
+/// If the token is unset, returns the value `defaultIfUnset`.
+VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUnset);
+
+/// Create symbols from the given syntax node. Note that this does not add them to the parent scope;
+/// the returned symbols are not part of any tree until you add them somewhere.
+SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent);
 
 /// Base class for all symbols (logical code constructs) such as modules, types,
 /// functions, variables, etc.
@@ -202,9 +208,8 @@ public:
 protected:
 	using Symbol::Symbol;
     
-    // Const versions of addMember and createMembers for use by derived classes.
+    void init() const;
     void addMember(const Symbol& symbol) const;
-    void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>* results = nullptr) const;
 
     // Derived classes override this to fill in members.
     virtual void initMembers() const {}
@@ -218,6 +223,20 @@ private:
     // In addition to the hash, also maintain an ordered list of members for easier access.
     mutable std::vector<const Symbol*> memberList;
     mutable bool membersInitialized = false;
+};
+
+/// A scope that can be dynamically modified programmatically. Not used for batch compilation; intended
+/// for tools and unit tests.
+class DynamicScopeSymbol : public ScopeSymbol {
+public:
+    explicit DynamicScopeSymbol(const Symbol& parent);
+
+    /// Adds a symbol to the scope.
+    void addSymbol(const Symbol& symbol);
+
+    /// Creates one or more symbols for the given syntax node and adds them to the scope.
+    /// Also returns the set of created symbols.
+    SymbolList createAndAddSymbols(const SyntaxNode& node);
 };
 
 /// Base class for all data types.
@@ -327,19 +346,17 @@ class ModuleInstanceSymbol;
 /// It also contains most of the machinery for creating and retrieving type symbols.
 class DesignRootSymbol : public ScopeSymbol {
 public:
-	explicit DesignRootSymbol(const SyntaxTree& tree);
-	explicit DesignRootSymbol(ArrayRef<const SyntaxTree*> syntaxTrees = nullptr);
-
-	/// Adds a syntax tree to the design.
-	void addTree(const SyntaxTree& tree);
-	void addTrees(ArrayRef<const SyntaxTree*> syntaxTrees);
+    DesignRootSymbol();
+    explicit DesignRootSymbol(const SyntaxTree& tree);
+    explicit DesignRootSymbol(ArrayRef<const SyntaxTree*> trees);
+    explicit DesignRootSymbol(ArrayRef<const CompilationUnitSyntax*> units);
 
 	/// Gets all of the compilation units in the design.
 	ArrayRef<const CompilationUnitSymbol*> compilationUnits() const { return unitList; }
 
-	/// Gets all of the top-level module instances in the design.
-	/// These form the roots of the actual design hierarchy.
-	ArrayRef<const ModuleInstanceSymbol*> top() const { return topList; }
+	/// Finds all of the top-level module instances in the design. These form the roots of the
+    /// actual design hierarchy.
+	ArrayRef<const ModuleInstanceSymbol*> topInstances() const { return topList; }
 
 	/// Finds a package in the design with the given name, or returns null if none is found.
 	const PackageSymbol* findPackage(StringRef name) const;
@@ -350,20 +367,6 @@ public:
 	const TypeSymbol& getKnownType(SyntaxKind kind) const;
 	const TypeSymbol& getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false) const;
     const TypeSymbol& getErrorType() const;
-
-    /// Adds an existing member symbol to the scope. The function will assert if
-    /// you pass it a non-member symbol.
-    void addMember(const Symbol& symbol);
-
-    /// Constructs symbols for the given syntax node in the current scope.
-    /// A single syntax node might expand to more than one symbol; for example,
-    /// a variable declaration that has multiple declarators. The created symbols
-    /// will also be added to the current scope's name map.
-    ///
-    /// Note that only certain syntax node kinds are supported here; the function will
-    /// assert if you pass it something unsupported.
-    void createMembers(const SyntaxNode& node);
-    void createMembers(const SyntaxNode& node, SmallVector<const Symbol*>& results);
 
 	/// Report an error at the specified location.
 	Diagnostic& addError(DiagCode code, SourceLocation location_) const {
@@ -390,9 +393,13 @@ private:
 	// Tries to convert a ConstantValue to a simple integer. Sets bad to true if the conversion fails.
 	int coerceInteger(const ConstantValue& cv, uint32_t maxRangeBits, bool& bad) const;
 
+    void addCompilationUnit(const CompilationUnitSymbol& unit);
+
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the root name table.
     SymbolMap packageMap;
+
+    // list of compilation units in the design, and of all top-level module instances
 	std::vector<const CompilationUnitSymbol*> unitList;
 	std::vector<const ModuleInstanceSymbol*> topList;
 
@@ -411,7 +418,8 @@ private:
 /// The root of a single compilation unit. 
 class CompilationUnitSymbol : public ScopeSymbol {
 public:
-	CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent);
+    CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent);
+    CompilationUnitSymbol(SymbolList symbols, const Symbol& parent);
 };
 
 /// A SystemVerilog package construct.
@@ -612,12 +620,11 @@ public:
 	bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
 
 private:
-	void init() const;
+	void initMembers() const final;
 
 	mutable const TypeSymbol* returnType_ = nullptr;
 	mutable const BoundStatementList* body_ = nullptr;
 	mutable ArrayRef<const FormalArgumentSymbol*> arguments_;
-	mutable bool initialized = false;
 };
 
 }
