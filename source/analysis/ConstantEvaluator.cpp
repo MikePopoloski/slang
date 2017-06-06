@@ -37,6 +37,7 @@ ConstantValue ConstantEvaluator::evaluateExpr(const BoundExpression& tree) {
     switch (tree.kind) {
         case BoundNodeKind::Literal: return evaluateLiteral((BoundLiteral&)tree);
         case BoundNodeKind::Variable: return evaluateVariable((BoundVariable&)tree);
+        case BoundNodeKind::Parameter: return evaluateParameter((BoundParameter&)tree);
         case BoundNodeKind::UnaryExpression: return evaluateUnary((BoundUnaryExpression&)tree);
         case BoundNodeKind::BinaryExpression: return evaluateBinary((BoundBinaryExpression&)tree);
         case BoundNodeKind::TernaryExpression: return evaluateConditional((BoundTernaryExpression&)tree);
@@ -113,6 +114,10 @@ ConstantValue ConstantEvaluator::evaluateVariable(const BoundVariable& expr) {
     ConstantValue& val = currentFrame->temporaries[&expr.symbol];
     ASSERT(val);
     return val;
+}
+
+ConstantValue ConstantEvaluator::evaluateParameter(const BoundParameter& expr) {
+    return expr.symbol.value();
 }
 
 ConstantValue ConstantEvaluator::evaluateUnary(const BoundUnaryExpression& expr) {

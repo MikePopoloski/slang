@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "analysis/DeclarationTable.h"
 #include "analysis/SemanticModel.h"
 #include "analysis/Symbol.h"
 #include "parsing/SyntaxTree.h"
@@ -151,7 +150,6 @@ int main(int argc, char* argv[]) {
 
     // Parse each file and find declarations
     Diagnostics diagnostics;
-    DeclarationTable declTable(diagnostics);
 
     vector<SyntaxTree> syntaxTrees;
     for (int i = 1; i < argc; i++) {
@@ -162,7 +160,7 @@ int main(int argc, char* argv[]) {
         if (!tree.diagnostics().empty())
             fprintf(stderr, "%s\n", tree.reportDiagnostics().c_str());
 
-        declTable.addSyntaxTree(tree);
+        //declTable.addSyntaxTree(tree);
     }
 
     // Do semantic analysis on each module to figure out parameter values

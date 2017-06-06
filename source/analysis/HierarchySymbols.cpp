@@ -240,6 +240,22 @@ void ParameterizedModuleSymbol::initMembers() const {
                     addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
                                                         getRoot().getErrorType(), cv, *this));
                 }
+                break;
+            }
+            case SyntaxKind::HierarchyInstantiation: {
+                const auto& his = node->as<HierarchyInstantiationSyntax>();
+                // TODO: module namespacing
+                auto symbol = lookup(his.type.valueText());
+                if (symbol) {
+                    const auto& pms = symbol->as<ModuleSymbol>().parameterize(his.parameters, this);
+                    addMember(allocate<ModuleInstanceSymbol>(pms, *this));
+                }
+                break;
+            }
+            default: {
+                for (auto symbol : createSymbols(*node, *this))
+                    addMember(*symbol);
+                break;
             }
         }
     }
