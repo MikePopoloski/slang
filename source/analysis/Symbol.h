@@ -60,7 +60,8 @@ enum class SymbolKind {
     Program,
     Attribute,
     Genvar,
-    GenerateBlock,
+    ConditionalGenerate,
+    LoopGenerate,
     ProceduralBlock,
     SequentialBlock,
     Variable,
@@ -395,9 +396,6 @@ private:
 	// Returns true if evaluation was successful; returns false and reports errors if not.
 	bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const;
 
-	// Tries to convert a ConstantValue to a simple integer. Sets bad to true if the conversion fails.
-	int coerceInteger(const ConstantValue& cv, uint32_t maxRangeBits, bool& bad) const;
-
     // Add a compilation unit to the design; has some shared code to filter out members of the compilation
     // unit that belong in the root scope (for example, modules).
     void addCompilationUnit(const CompilationUnitSymbol& unit);
@@ -547,8 +545,24 @@ private:
     const BoundStatement* body = nullptr;
 };
 
-class GenerateBlockSymbol : public ScopeSymbol {
+class ConditionalGenerateSymbol : public ScopeSymbol {
 public:
+    const IfGenerateSyntax& syntax;
+
+    ConditionalGenerateSymbol(const IfGenerateSyntax& syntax, const Symbol& parent);
+
+private:
+    void initMembers() const final;
+};
+
+class LoopGenerateSymbol : public ScopeSymbol {
+public:
+    const LoopGenerateSyntax& syntax;
+
+    LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const Symbol& parent);
+
+private:
+    void initMembers() const final;
 };
 
 class ProceduralBlockSymbol : public StatementBlockSymbol {
