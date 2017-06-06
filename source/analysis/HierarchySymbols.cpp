@@ -267,4 +267,19 @@ ModuleInstanceSymbol::ModuleInstanceSymbol(const ParameterizedModuleSymbol& modu
 {
 }
 
+ConditionalGenerateSymbol::ConditionalGenerateSymbol(const IfGenerateSyntax& syntax, const Symbol& parent) :
+    ScopeSymbol(SymbolKind::ConditionalGenerate, parent),
+    syntax(syntax) {}
+
+void ConditionalGenerateSymbol::initMembers() const {
+
+}
+
+LoopGenerateSymbol::LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const Symbol& parent) :
+    ScopeSymbol(SymbolKind::LoopGenerate, parent),
+    syntax(syntax) {}
+
+void LoopGenerateSymbol::initMembers() const {
+}
+
 }

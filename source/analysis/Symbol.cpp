@@ -50,6 +50,12 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
         case SyntaxKind::InterfaceDeclaration:
             // TODO:
             break;
+        case SyntaxKind::IfGenerate:
+            results.append(&root.allocate<ConditionalGenerateSymbol>(node.as<IfGenerateSyntax>(), parent));
+            break;
+        case SyntaxKind::LoopGenerate:
+            results.append(&root.allocate<LoopGenerateSymbol>(node.as<LoopGenerateSyntax>(), parent));
+            break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
             results.append(&root.allocate<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), parent));
@@ -402,31 +408,16 @@ bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSy
 		// §6.9.1 - Implementations may set a limit on the maximum length of a vector, but the limit shall be at least 65536 (2^16) bits.
 		const int MaxRangeBits = 16;
 
-		bool bad = false;
-        results.emplace(ConstantRange {
-            coerceInteger(scope.evaluateConstant(range.left), MaxRangeBits, bad),
-            coerceInteger(scope.evaluateConstant(range.right), MaxRangeBits, bad)
-        });
+        // TODO: errors
+        auto left = scope.evaluateConstant(range.left).coerceInteger(MaxRangeBits);
+        auto right = scope.evaluateConstant(range.right).coerceInteger(MaxRangeBits);
 
-		if (bad)
-			return false;
+        if (!left || !right)
+            return false;
+
+        results.emplace(ConstantRange { *left, *right });
     }
     return true;
-}
-
-int DesignRootSymbol::coerceInteger(const ConstantValue& cv, uint32_t maxRangeBits, bool& bad) const {
-	// TODO: report errors
-	if (cv.isInteger()) {
-		const SVInt& value = cv.integer();
-		if (!value.hasUnknown() && value.getActiveBits() <= maxRangeBits) {
-			auto result = value.asBuiltIn<int>();
-			if (result)
-				return *result;
-		}
-	}
-
-	bad = true;
-	return 0;
 }
 
 void DesignRootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
