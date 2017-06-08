@@ -145,7 +145,7 @@ endmodule
     REQUIRE(instance.module.members().count() == 10);
 
     for (uint32_t i = 0; i < 10; i++) {
-        const auto& leaf = instance.member<GenerateBlockSymbol>(i).member<ModuleInstanceSymbol>(0);
+        const auto& leaf = instance.member<GenerateBlockSymbol>(i).member<ModuleInstanceSymbol>(1);
         const auto& foo = leaf.module.lookup<ParameterSymbol>("foo");
         CHECK(foo.value().integer() == i);
     }
