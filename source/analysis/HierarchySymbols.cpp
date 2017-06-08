@@ -254,8 +254,9 @@ void ParameterizedModuleSymbol::initMembers() const {
     }
 }
 
-ModuleInstanceSymbol::ModuleInstanceSymbol(const ParameterizedModuleSymbol& module, const Symbol& parent) :
-    Symbol(SymbolKind::ModuleInstance, parent),
+ModuleInstanceSymbol::ModuleInstanceSymbol(StringRef name, SourceLocation location,
+                                           const ParameterizedModuleSymbol& module, const Symbol& parent) :
+    Symbol(SymbolKind::ModuleInstance, parent, name, location),
     module(module)
 {
 }
