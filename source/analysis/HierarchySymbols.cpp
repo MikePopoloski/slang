@@ -249,7 +249,7 @@ void ParameterizedModuleSymbol::initMembers() const {
                         evaluateConstant(decl->initializer->expr);
 
                     addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
-                                                        getRoot().getErrorType(), cv, *this));
+                                                        getRoot().getKnownType(SyntaxKind::IntType), cv, *this));
                 }
                 break;
             }
