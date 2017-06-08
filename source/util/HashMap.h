@@ -98,7 +98,7 @@ public:
     };
 
     using iterator = iterator_templ<Element, false>;
-    using const_iterator = iterator_templ<Element, true>;
+    using const_iterator = iterator_templ<const Element, true>;
 
     iterator begin() { return empty() ? end() : iterator(data, dataEnd()); }
     iterator end() { return iterator(dataEnd(), dataEnd()); }

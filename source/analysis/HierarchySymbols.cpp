@@ -215,6 +215,8 @@ ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module,
                                                      const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
     ScopeSymbol(SymbolKind::Module, parent, module.name, module.location), module(module)
 {
+    for (const auto& element : parameterAssignments)
+        paramAssignments.emplace(element.first, element.second);
 }
 
 void ParameterizedModuleSymbol::initMembers() const {
@@ -223,7 +225,10 @@ void ParameterizedModuleSymbol::initMembers() const {
         for (const ParameterDeclarationSyntax* declaration : parameterList->declarations) {
             for (const VariableDeclaratorSyntax* decl : declaration->declarators) {
                 // TODO: hack to get param values working
-                const ConstantValue& cv = evaluateConstant(decl->initializer->expr);
+                auto it = paramAssignments.find(decl->name.valueText());
+                const ConstantValue& cv = it != paramAssignments.end() ?
+                    it->second :
+                    evaluateConstant(decl->initializer->expr);
 
                 addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
                                                     getRoot().getKnownType(SyntaxKind::IntType), cv, *this));
@@ -238,7 +243,10 @@ void ParameterizedModuleSymbol::initMembers() const {
                 for (const VariableDeclaratorSyntax* decl : declaration.declarators) {
 
                     // TODO: hack to get param values working
-                    const ConstantValue& cv = evaluateConstant(decl->initializer->expr);
+                    auto it = paramAssignments.find(decl->name.valueText());
+                    const ConstantValue& cv = it != paramAssignments.end() ?
+                        it->second :
+                        evaluateConstant(decl->initializer->expr);
 
                     addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
                                                         getRoot().getErrorType(), cv, *this));
@@ -332,6 +340,7 @@ void GenerateBlockSymbol::fromSyntax(const ScopeSymbol& parent, const LoopGenera
                                                        root.getKnownType(SyntaxKind::IntType),
                                                        genvar, block));
         block.handleBlock(syntax.block);
+        results.append(&block);
     }
 }
 

@@ -500,6 +500,7 @@ private:
     void initMembers() const final;
 
 	const ModuleSymbol& module;
+    std::unordered_map<StringRef, ConstantValue> paramAssignments;
 };
 
 class ModuleInstanceSymbol : public Symbol {
