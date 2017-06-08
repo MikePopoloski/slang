@@ -60,8 +60,7 @@ enum class SymbolKind {
     Program,
     Attribute,
     Genvar,
-    ConditionalGenerate,
-    LoopGenerate,
+    GenerateBlock,
     ProceduralBlock,
     SequentialBlock,
     Variable,
@@ -545,24 +544,24 @@ private:
     const BoundStatement* body = nullptr;
 };
 
-class ConditionalGenerateSymbol : public ScopeSymbol {
+/// Represents blocks that are instantiated by a loop generate or conditional
+/// generate construct. These blocks can contain a bunch of members, or just
+/// a single item. They can also contain an implicit parameter representing
+/// the loop iteration value.
+class GenerateBlockSymbol : public ScopeSymbol {
 public:
-    const IfGenerateSyntax& syntax;
-
-    ConditionalGenerateSymbol(const IfGenerateSyntax& syntax, const Symbol& parent);
+    GenerateBlockSymbol(StringRef name, SourceLocation location, const Symbol& parent);
+    
+    static void fromSyntax(const ScopeSymbol& parent, const IfGenerateSyntax& syntax,
+                           SmallVector<const GenerateBlockSymbol*>& results);
+    static void fromSyntax(const ScopeSymbol& parent, const LoopGenerateSyntax& syntax,
+                           SmallVector<const GenerateBlockSymbol*>& results);
 
 private:
     void initMembers() const final;
-};
+    void handleBlock(const SyntaxNode& syntax);
 
-class LoopGenerateSymbol : public ScopeSymbol {
-public:
-    const LoopGenerateSyntax& syntax;
-
-    LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const Symbol& parent);
-
-private:
-    void initMembers() const final;
+    const GenerateBlockSyntax* syntax = nullptr;
 };
 
 class ProceduralBlockSymbol : public StatementBlockSymbol {
