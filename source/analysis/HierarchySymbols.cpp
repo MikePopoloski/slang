@@ -6,6 +6,9 @@
 //------------------------------------------------------------------------------
 #include "Symbol.h"
 
+#include "Binder.h"
+#include "ConstantEvaluator.h"
+
 namespace slang {
 
 CompilationUnitSymbol::CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent) :
@@ -223,7 +226,7 @@ void ParameterizedModuleSymbol::initMembers() const {
                 const ConstantValue& cv = evaluateConstant(decl->initializer->expr);
 
                 addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
-                                                    getRoot().getErrorType(), cv, *this));
+                                                    getRoot().getKnownType(SyntaxKind::IntType), cv, *this));
             }
         }
     }
@@ -242,16 +245,6 @@ void ParameterizedModuleSymbol::initMembers() const {
                 }
                 break;
             }
-            case SyntaxKind::HierarchyInstantiation: {
-                const auto& his = node->as<HierarchyInstantiationSyntax>();
-                // TODO: module namespacing
-                auto symbol = lookup(his.type.valueText());
-                if (symbol) {
-                    const auto& pms = symbol->as<ModuleSymbol>().parameterize(his.parameters, this);
-                    addMember(allocate<ModuleInstanceSymbol>(pms, *this));
-                }
-                break;
-            }
             default: {
                 for (auto symbol : createSymbols(*node, *this))
                     addMember(*symbol);
@@ -267,19 +260,87 @@ ModuleInstanceSymbol::ModuleInstanceSymbol(const ParameterizedModuleSymbol& modu
 {
 }
 
-ConditionalGenerateSymbol::ConditionalGenerateSymbol(const IfGenerateSyntax& syntax, const Symbol& parent) :
-    ScopeSymbol(SymbolKind::ConditionalGenerate, parent),
-    syntax(syntax) {}
-
-void ConditionalGenerateSymbol::initMembers() const {
-
+GenerateBlockSymbol::GenerateBlockSymbol(StringRef name, SourceLocation location, const Symbol& parent) :
+    ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location)
+{
 }
 
-LoopGenerateSymbol::LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const Symbol& parent) :
-    ScopeSymbol(SymbolKind::LoopGenerate, parent),
-    syntax(syntax) {}
+void GenerateBlockSymbol::initMembers() const {
+    if (syntax) {
+        for (auto member : syntax->members) {
+            for (auto symbol : createSymbols(*member, *this))
+                addMember(*symbol);
+        }
+    }
+}
 
-void LoopGenerateSymbol::initMembers() const {
+void GenerateBlockSymbol::fromSyntax(const ScopeSymbol& parent, const IfGenerateSyntax& syntax,
+                                     SmallVector<const GenerateBlockSymbol*>& results) {
+    // TODO: better error checking
+    const auto& cv = parent.evaluateConstant(syntax.condition);
+    if (!cv)
+        return;
+
+    const DesignRootSymbol& root = parent.getRoot();
+    auto& block = root.allocate<GenerateBlockSymbol>("", SourceLocation(), parent);
+    results.append(&block);
+
+    const SVInt& value = cv.integer();
+    if ((logic_t)value)
+        block.handleBlock(syntax.block);
+    else if (syntax.elseClause)
+        block.handleBlock(syntax.elseClause->clause);
+}
+
+void GenerateBlockSymbol::fromSyntax(const ScopeSymbol& parent, const LoopGenerateSyntax& syntax,
+                                     SmallVector<const GenerateBlockSymbol*>& results) {
+    // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
+    // we need to do a lookup to make sure we have the actual genvar.
+    // TODO: do the actual lookup
+    
+    // Initialize the genvar
+    const auto& initial = parent.evaluateConstant(syntax.initialExpr);
+    if (!initial)
+        return;
+    
+    // Fabricate a local variable that will serve as the loop iteration variable.
+    const DesignRootSymbol& root = parent.getRoot();
+    DynamicScopeSymbol iterScope(parent);
+    VariableSymbol local(syntax.identifier.valueText(), syntax.identifier.location(),
+                         root.getKnownType(SyntaxKind::IntType), iterScope);
+    iterScope.addSymbol(local);
+    
+    // Bind the stop and iteration expressions so we can reuse them on each iteration.
+    Binder binder(iterScope);
+    const auto& stopExpr = binder.bindConstantExpression(syntax.stopExpr);
+    const auto& iterExpr = binder.bindConstantExpression(syntax.iterationExpr);
+    
+    // Create storage for the iteration variable.
+    ConstantEvaluator ce;
+    auto& genvar = ce.createTemporary(local);
+    
+    // Generate blocks!
+    for (genvar = initial; ce.evaluateBool(stopExpr); ce.evaluateExpr(iterExpr)) {
+        // Spec: each generate block gets their own scope, with an implicit
+        // localparam of the same name as the genvar.
+        // TODO: scope name
+
+        auto& block = root.allocate<GenerateBlockSymbol>("", SourceLocation(), parent);
+        block.addMember(root.allocate<ParameterSymbol>(syntax.identifier.valueText(),
+                                                       syntax.identifier.location(),
+                                                       root.getKnownType(SyntaxKind::IntType),
+                                                       genvar, block));
+        block.handleBlock(syntax.block);
+    }
+}
+
+void GenerateBlockSymbol::handleBlock(const SyntaxNode& node) {
+    if (node.kind == SyntaxKind::GenerateBlock)
+        syntax = &node.as<GenerateBlockSyntax>();
+    else {
+        for (auto symbol : createSymbols(node, *this))
+            addMember(*symbol);
+    }
 }
 
 }

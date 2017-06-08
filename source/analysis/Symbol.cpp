@@ -50,12 +50,33 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
         case SyntaxKind::InterfaceDeclaration:
             // TODO:
             break;
-        case SyntaxKind::IfGenerate:
-            results.append(&root.allocate<ConditionalGenerateSymbol>(node.as<IfGenerateSyntax>(), parent));
+        case SyntaxKind::HierarchyInstantiation: {
+            const auto& his = node.as<HierarchyInstantiationSyntax>();
+            // TODO: module namespacing
+            auto symbol = parent.lookup(his.type.valueText());
+            if (symbol) {
+                const auto& pms = symbol->as<ModuleSymbol>().parameterize(his.parameters, &parent);
+                results.append(&root.allocate<ModuleInstanceSymbol>(pms, parent));
+            }
             break;
-        case SyntaxKind::LoopGenerate:
-            results.append(&root.allocate<LoopGenerateSymbol>(node.as<LoopGenerateSyntax>(), parent));
+        }
+        case SyntaxKind::IfGenerate: {
+            // TODO: add special name conflict checks for generate blocks
+            SmallVectorSized<const GenerateBlockSymbol*, 2> blocks;
+            GenerateBlockSymbol::fromSyntax(parent, node.as<IfGenerateSyntax>(), blocks);
+
+            for (auto block : blocks)
+                results.append(block);
             break;
+        }
+        case SyntaxKind::LoopGenerate: {
+            SmallVectorSized<const GenerateBlockSymbol*, 4> blocks;
+            GenerateBlockSymbol::fromSyntax(parent, node.as<LoopGenerateSyntax>(), blocks);
+
+            for (auto block : blocks)
+                results.append(block);
+            break;
+        }
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
             results.append(&root.allocate<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), parent));
@@ -240,6 +261,7 @@ DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> trees) :
             addCompilationUnit(allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>(), *this));
         else {
             SymbolList symbols = createSymbols(tree->root(), *this);
+            // TODO: fix parent pointer to be the compilation unit
             addCompilationUnit(allocate<CompilationUnitSymbol>(symbols, *this));
         }
     }
