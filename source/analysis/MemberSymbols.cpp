@@ -127,6 +127,25 @@ BoundStatement& StatementBlockSymbol::badStmt(const BoundStatement* stmt) const 
 SequentialBlockSymbol::SequentialBlockSymbol(const Symbol& parent) :
     StatementBlockSymbol(SymbolKind::SequentialBlock, parent) {}
 
+ProceduralBlockSymbol::ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const Symbol& parent) :
+    StatementBlockSymbol(SymbolKind::ProceduralBlock, parent),
+    syntax(syntax)
+{
+    switch (syntax.kind) {
+        case SyntaxKind::AlwaysBlock: procedureKind = ProceduralBlockKind::Always; break;
+        case SyntaxKind::AlwaysCombBlock: procedureKind = ProceduralBlockKind::AlwaysComb; break;
+        case SyntaxKind::AlwaysLatchBlock: procedureKind = ProceduralBlockKind::AlwaysLatch; break;
+        case SyntaxKind::AlwaysFFBlock: procedureKind = ProceduralBlockKind::AlwaysFF; break;
+        case SyntaxKind::InitialBlock: procedureKind = ProceduralBlockKind::Initial; break;
+        case SyntaxKind::FinalBlock: procedureKind = ProceduralBlockKind::Final; break;
+        DEFAULT_UNREACHABLE;
+    }
+}
+
+void ProceduralBlockSymbol::initMembers() const {
+    body = &bindStatement(syntax.statement);
+}
+
 ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol&type,
                                  const ConstantValue& value, const Symbol& parent) :
     Symbol(SymbolKind::Parameter, parent, name, location), type_(&type), value_(value) {}

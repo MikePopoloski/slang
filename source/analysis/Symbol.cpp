@@ -89,6 +89,14 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
                 results.append(variable);
             break;
         }
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::AlwaysCombBlock:
+        case SyntaxKind::AlwaysLatchBlock:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::FinalBlock:
+            results.append(&root.allocate<ProceduralBlockSymbol>(node.as<ProceduralBlockSyntax>(), parent));
+            break;
         DEFAULT_UNREACHABLE;
     }
 
