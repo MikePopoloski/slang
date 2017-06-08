@@ -56,7 +56,12 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
             auto symbol = parent.lookup(his.type.valueText());
             if (symbol) {
                 const auto& pms = symbol->as<ModuleSymbol>().parameterize(his.parameters, &parent);
-                results.append(&root.allocate<ModuleInstanceSymbol>(pms, parent));
+                for (auto instance : his.instances) {
+                    // TODO: handle arrays
+                    results.append(&root.allocate<ModuleInstanceSymbol>(instance->name.valueText(),
+                                                                        instance->name.location(),
+                                                                        pms, parent));
+                }
             }
             break;
         }
@@ -484,7 +489,7 @@ void DesignRootSymbol::initMembers() const {
             if (member->kind == SymbolKind::Module && instances.count(member->name) == 0) {
                 // TODO: check for no parameters here
                 const auto& pms = member->as<ModuleSymbol>().parameterize();
-                const auto& instance = allocate<ModuleInstanceSymbol>(pms, *this);
+                const auto& instance = allocate<ModuleInstanceSymbol>(member->name, SourceLocation(), pms, *this);
                 addMember(instance);
                 topList.push_back(&instance);
             }

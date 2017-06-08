@@ -506,7 +506,8 @@ class ModuleInstanceSymbol : public Symbol {
 public:
 	const ParameterizedModuleSymbol& module;
 
-    ModuleInstanceSymbol(const ParameterizedModuleSymbol& module, const Symbol& parent);
+    ModuleInstanceSymbol(StringRef name, SourceLocation location, const ParameterizedModuleSymbol& module,
+                         const Symbol& parent);
 
 	/// A helper method to access a specific member of the module (of which this is an instance).
 	template<typename T>
