@@ -209,11 +209,11 @@ endmodule
 )");
 
     const auto& instance = evalModule(tree);
-    const auto& alwaysComb = instance.member<ProceduralBlockSymbol>(0);
+    const auto& alwaysComb = instance.member<ProceduralBlockSymbol>(2);
 
-    //CHECK(alwaysComb.kind == ProceduralBlock::AlwaysComb);
+    CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
 
-    const auto& variable = instance.member<VariableSymbol>(2);
+    const auto& variable = instance.member<VariableSymbol>(4);
     CHECK(variable.type().kind == SymbolKind::IntegralType);
     CHECK(variable.name == "arr1");
 }

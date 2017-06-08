@@ -97,6 +97,16 @@ enum class SystemFunction {
     increment
 };
 
+/// Specifies possible procedural block kinds.
+enum class ProceduralBlockKind {
+    Initial,
+    Final,
+    Always,
+    AlwaysComb,
+    AlwaysLatch,
+    AlwaysFF
+};
+
 /// Names (and therefore symbols) are separated into a few different namespaces according to the spec. See §3.13.
 /// Note that a bunch of the namespaces listed in the spec aren't really applicable to the lookup process;
 /// for example, attribute names and macro names.
@@ -544,6 +554,21 @@ private:
     const BoundStatement* body = nullptr;
 };
 
+class ProceduralBlockSymbol : public StatementBlockSymbol {
+public:
+    ProceduralBlockKind procedureKind;
+
+    ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const Symbol& parent);
+
+    const BoundStatement& getBody() const { init(); ASSERT(body); return *body; }
+
+private:
+    void initMembers() const final;
+
+    const ProceduralBlockSyntax& syntax;
+    mutable const BoundStatement* body = nullptr;
+};
+
 /// Represents blocks that are instantiated by a loop generate or conditional
 /// generate construct. These blocks can contain a bunch of members, or just
 /// a single item. They can also contain an implicit parameter representing
@@ -562,10 +587,6 @@ private:
     void handleBlock(const SyntaxNode& syntax);
 
     const GenerateBlockSyntax* syntax = nullptr;
-};
-
-class ProceduralBlockSymbol : public StatementBlockSymbol {
-public:
 };
 
 class ParameterSymbol : public Symbol {
