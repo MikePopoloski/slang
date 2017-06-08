@@ -243,7 +243,7 @@ void SubroutineSymbol::initMembers() const {
     const ScopeSymbol& parentScope = containingScope();
     const DesignRootSymbol& root = getRoot();
     const auto& proto = syntax->prototype;
-    auto returnType = parentScope.getType(*proto.returnType);
+    const auto& returnType = parentScope.getType(*proto.returnType);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
 

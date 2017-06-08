@@ -229,7 +229,7 @@ DesignRootSymbol::DesignRootSymbol() :
     knownTypes[SyntaxKind::Unknown]       = alloc.emplace<ErrorTypeSymbol>(*this);
 
     // Register built-in system functions
-    auto intType = getKnownType(SyntaxKind::IntType);
+    const auto& intType = getKnownType(SyntaxKind::IntType);
     SmallVectorSized<const FormalArgumentSymbol*, 8> args;
     
     args.append(alloc.emplace<FormalArgumentSymbol>(intType, *this));
@@ -239,7 +239,7 @@ DesignRootSymbol::DesignRootSymbol() :
     // assignment like context
     // TODO: add support for all these operands on data_types, not just expressions,
     // and add support for things like unpacked arrays
-    auto trivialIntType = getIntegralType(1, false, true);
+    const auto& trivialIntType = getIntegralType(1, false, true);
     args.clear();
     args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType, *this));
     addMember(allocate<SubroutineSymbol>("$bits", intType, args.copy(alloc), SystemFunction::bits, *this));

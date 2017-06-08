@@ -164,6 +164,9 @@ public:
 	template<typename T>
 	const T& as() const { return *static_cast<const T*>(this); }
 
+    Symbol(const Symbol&) = delete;
+    Symbol& operator=(const Symbol&) = delete;
+
 protected:
     explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, StringRef name = nullptr,
                     SourceLocation location = SourceLocation()) :
