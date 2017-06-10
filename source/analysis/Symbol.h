@@ -180,9 +180,7 @@ protected:
 	Diagnostic& addError(DiagCode code, SourceLocation location) const;
 
 	template<typename T, typename... Args>
-	T& allocate(Args&&... args) const {
-		return getRoot().allocate<T>(std::forward<Args>(args)...);
-	}
+	T& allocate(Args&&... args) const;
 };
 
 /// Base class for symbols that also act as scopes, which means they contain
@@ -682,5 +680,10 @@ private:
 	mutable const BoundStatementList* body_ = nullptr;
 	mutable ArrayRef<const FormalArgumentSymbol*> arguments_;
 };
+
+template<typename T, typename... Args>
+T& Symbol::allocate(Args&&... args) const {
+    return getRoot().allocate<T>(std::forward<Args>(args)...);
+}
 
 }
