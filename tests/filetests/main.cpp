@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 
-#include "analysis/SemanticModel.h"
 #include "diagnostics/Diagnostics.h"
 #include "parsing/SyntaxTree.h"
 #include "text/SourceManager.h"

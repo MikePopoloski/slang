@@ -8,8 +8,6 @@
 
 #include <algorithm>
 
-#include "SemanticModel.h"
-
 namespace slang {
 
 ConstantEvaluator::ConstantEvaluator() {
