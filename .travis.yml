@@ -1,5 +1,6 @@
 language: cpp
 sudo: false
+dist: trusty
 
 matrix:
   include:
@@ -12,16 +13,16 @@ addons:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-precise
     packages:
-      - gcc-6
-      - g++-6
+      - gcc-7
+      - g++-7
       - clang-5.0
 
 install:
   - mkdir -p latest-symlinks
   - ln -s /usr/bin/clang++-5.0 latest-symlinks/clang++
   - ln -s /usr/bin/clang-5.0 latest-symlinks/clang
-  - ln -s /usr/bin/g++-6 latest-symlinks/g++
-  - ln -s /usr/bin/gcc-6 latest-symlinks/gcc
+  - ln -s /usr/bin/g++-7 latest-symlinks/g++
+  - ln -s /usr/bin/gcc-7 latest-symlinks/gcc
   - export PATH=$PWD/latest-symlinks:$PATH
   - clang++ --version
   - g++ --version
