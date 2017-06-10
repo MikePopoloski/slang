@@ -164,6 +164,9 @@ function toolchain(_buildDir, _libDir)
 		}
 
 	configuration { "linux-clang" }
+		buildoptions {
+			"-stdlib=libc++"
+		}
 
 	configuration { "linux-gcc" }
 		buildoptions {
