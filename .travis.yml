@@ -1,4 +1,5 @@
 language: cpp
+sudo: false
 
 matrix:
   include:
@@ -9,16 +10,16 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-4.0
+      - llvm-toolchain-precise
     packages:
       - gcc-7
       - g++-7
-      - clang-4.0
+      - clang-5.0
 
 install:
   - mkdir -p latest-symlinks
-  - ln -s /usr/bin/clang++-4.0 latest-symlinks/clang++
-  - ln -s /usr/bin/clang-4.0 latest-symlinks/clang
+  - ln -s /usr/bin/clang++-5.0 latest-symlinks/clang++
+  - ln -s /usr/bin/clang-5.0 latest-symlinks/clang
   - export PATH=$PWD/latest-symlinks:$PATH
   - tools/bin/linux/genie --gcc=$BUILD_TARGET gmake
 
