@@ -2,29 +2,29 @@ language: cpp
 
 matrix:
   include:
-    - env: BUILD_TARGET=linux-gcc-6
+    - env: BUILD_TARGET=linux-gcc
     - env: BUILD_TARGET=linux-clang
 
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-3.9
+      - llvm-toolchain-precise-4.0
     packages:
-      - gcc-6
-      - g++-6
-      - clang-3.9
+      - gcc-7
+      - g++-7
+      - clang-4.0
 
 install:
   - mkdir -p latest-symlinks
-  - ln -s /usr/bin/clang++-3.9 latest-symlinks/clang++
-  - ln -s /usr/bin/clang-3.9 latest-symlinks/clang
+  - ln -s /usr/bin/clang++-4.0 latest-symlinks/clang++
+  - ln -s /usr/bin/clang-4.0 latest-symlinks/clang
   - export PATH=$PWD/latest-symlinks:$PATH
   - tools/bin/linux/genie --gcc=$BUILD_TARGET gmake
 
 script:
   - if [ "$BUILD_TARGET" == "linux-clang" ]; then make -C build/projects/gmake-linux-clang -j 8; build/linux64_clang/bin/unittestsDebug; fi
-  - if [ "$BUILD_TARGET" == "linux-gcc-6" ]; then make -C build/projects/gmake-linux -j 8; build/linux64_gcc/bin/unittestsDebug; fi
+  - if [ "$BUILD_TARGET" == "linux-gcc" ]; then make -C build/projects/gmake-linux -j 8; build/linux64_gcc/bin/unittestsDebug; fi
 
 branches:
   only:

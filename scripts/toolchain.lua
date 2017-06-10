@@ -6,7 +6,6 @@ function toolchain(_buildDir, _libDir)
 		description = "Choose GCC flavor",
 		allowed = {
 			{ "linux-gcc",       "Linux (GCC compiler)"       },
-			{ "linux-gcc-6",     "Linux (GCC-6 compiler)"     },
 			{ "linux-clang",     "Linux (Clang compiler)"     },
 		},
 	}
@@ -60,11 +59,8 @@ function toolchain(_buildDir, _libDir)
 		end
 
 		if "linux-gcc" == _OPTIONS["gcc"] then
-			location (path.join(_buildDir, "projects", _ACTION .. "-linux"))
-
-		elseif "linux-gcc-6" == _OPTIONS["gcc"] then
-			premake.gcc.cc  = "gcc-6"
-			premake.gcc.cxx = "g++-6"
+			premake.gcc.cc  = "gcc-7"
+			premake.gcc.cxx = "g++-7"
 			premake.gcc.ar  = "ar"
 			location (path.join(_buildDir, "projects", _ACTION .. "-linux"))
 
@@ -189,9 +185,6 @@ function toolchain(_buildDir, _libDir)
 		linkoptions {
 			"-Wl,--gc-sections",
 			"-Wl,--as-needed",
-		}
-		includedirs {
-			path.join(_buildDir, "../compat")
 		}
 
 	configuration { "linux-gcc*", "x64" }
