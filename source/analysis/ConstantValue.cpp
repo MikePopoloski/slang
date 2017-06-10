@@ -14,7 +14,7 @@ std::optional<int> ConstantValue::coerceInteger(uint32_t maxBits, Diagnostics* d
     if (isInteger()) {
         const SVInt& value = integer();
         if (!value.hasUnknown() && value.getActiveBits() <= maxBits) {
-            auto result = value.asBuiltIn<int>();
+            auto result = value.as<int>();
             if (result)
                 return *result;
         }

@@ -218,10 +218,21 @@ public:
 	/// Checks whether it's possible to convert the value to a simple built-in
 	/// integer type and if so returns it.
 	template<typename T>
-	std::optional<T> asBuiltIn() const {
+	std::optional<T> as() const {
 		if (unknownFlag || getMinRepresentedBits() > std::numeric_limits<T>::digits)
 			return std::nullopt;
-		return static_cast<T>(getRawData()[0]);
+
+        uint64_t word = getRawData()[0];
+        if (signFlag && isNegative()) {
+            // If we're a negative value, make sure the top "unused" bits
+            // have ones in them, so that when we cast to an int it correctly
+            // appears to be negative.
+            uint32_t wordBits = bitWidth % BITS_PER_WORD;
+            if (wordBits > 0)
+                word |= ~uint64_t(0ULL) << wordBits;
+        }
+
+		return static_cast<T>(word);
 	}
 
     /// Check whether the number is negative. Note that this doesn't care about
@@ -383,7 +394,7 @@ public:
     /// Otherwise, if bit lengths are unequal we extend the smaller one and then compare.
     logic_t operator==(const SVInt& rhs) const {
         if (isSingleWord() && rhs.isSingleWord())
-            return logic_t(val == rhs.val);
+            return logic_t(as<uint64_t>() == rhs.as<uint64_t>());
         return equalsSlowCase(rhs);
     }
 
@@ -428,36 +439,32 @@ public:
     friend SVInt concatenate(ArrayRef<SVInt> operands);
 
     /// Optimized operators that work with direct integer values.
-    friend logic_t operator==(const SVInt& lhs, uint64_t rhs) {
+    friend logic_t operator==(const SVInt& lhs, int64_t rhs) {
         if (lhs.hasUnknown())
             return logic_t::x;
-        if (lhs.isSingleWord())
-            return logic_t(lhs.val == rhs);
-        if (lhs.getActiveBits() <= BITS_PER_WORD)
-            return logic_t(lhs.pVal[0] == rhs);
-        return logic_t(false);
+        auto l = lhs.as<int64_t>();
+        return l ? logic_t(*l == rhs) : logic_t(false);
     }
-    friend logic_t operator==(uint64_t lhs, const SVInt& rhs) { return rhs == lhs; }
-    friend logic_t operator!=(const SVInt& lhs, uint64_t rhs) { return !(lhs == rhs); }
-    friend logic_t operator!=(uint64_t lhs, const SVInt& rhs) { return !(rhs == lhs); }
 
-    friend logic_t operator<(const SVInt& lhs, uint64_t rhs) {
+    friend logic_t operator==(int64_t lhs, const SVInt& rhs) { return rhs == lhs; }
+    friend logic_t operator!=(const SVInt& lhs, int64_t rhs) { return !(lhs == rhs); }
+    friend logic_t operator!=(int64_t lhs, const SVInt& rhs) { return !(rhs == lhs); }
+
+    friend logic_t operator<(const SVInt& lhs, int64_t rhs) {
         if (lhs.hasUnknown())
             return logic_t::x;
-        if (lhs.isSingleWord())
-            return logic_t(lhs.val < rhs);
-        if (lhs.getActiveBits() <= BITS_PER_WORD)
-            return logic_t(lhs.pVal[0] < rhs);
-        return logic_t(false);
+        auto l = lhs.as<int64_t>();
+        return l ? logic_t(*l < rhs) : logic_t(false);
     }
-    friend logic_t operator<=(const SVInt& lhs, uint64_t rhs) { return (lhs < rhs) || (lhs == rhs); }
-    friend logic_t operator>(const SVInt& lhs, uint64_t rhs) { return !(lhs <= rhs); }
-    friend logic_t operator>=(const SVInt& lhs, uint64_t rhs) { return !(lhs < rhs); }
 
-    friend logic_t operator<(uint64_t lhs, const SVInt& rhs) { return rhs >= lhs; }
-    friend logic_t operator<=(uint64_t lhs, const SVInt& rhs) { return rhs > lhs; }
-    friend logic_t operator>(uint64_t lhs, const SVInt& rhs) { return rhs <= lhs; }
-    friend logic_t operator>=(uint64_t lhs, const SVInt& rhs) { return rhs < lhs; }
+    friend logic_t operator<=(const SVInt& lhs, int64_t rhs) { return (lhs < rhs) || (lhs == rhs); }
+    friend logic_t operator>(const SVInt& lhs, int64_t rhs) { return !(lhs <= rhs); }
+    friend logic_t operator>=(const SVInt& lhs, int64_t rhs) { return !(lhs < rhs); }
+
+    friend logic_t operator<(int64_t lhs, const SVInt& rhs) { return rhs >= lhs; }
+    friend logic_t operator<=(int64_t lhs, const SVInt& rhs) { return rhs > lhs; }
+    friend logic_t operator>(int64_t lhs, const SVInt& rhs) { return rhs <= lhs; }
+    friend logic_t operator>=(int64_t lhs, const SVInt& rhs) { return rhs < lhs; }
 
     enum {
         MAX_BITS = UINT16_MAX,
