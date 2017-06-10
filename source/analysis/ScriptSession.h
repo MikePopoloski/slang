@@ -9,7 +9,6 @@
 #include "analysis/Binder.h"
 #include "parsing/SyntaxTree.h"
 #include "ConstantEvaluator.h"
-#include "SemanticModel.h"
 
 namespace slang {
 

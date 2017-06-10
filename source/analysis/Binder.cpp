@@ -8,7 +8,6 @@
 
 #include <algorithm>
 
-#include "SemanticModel.h"
 #include "ConstantEvaluator.h"
 
 namespace slang {

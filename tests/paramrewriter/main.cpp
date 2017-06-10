@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "analysis/SemanticModel.h"
 #include "analysis/Symbol.h"
 #include "parsing/SyntaxTree.h"
 #include "parsing/SyntaxVisitor.h"
