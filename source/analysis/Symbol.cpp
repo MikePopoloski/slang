@@ -50,6 +50,9 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
         case SyntaxKind::InterfaceDeclaration:
             // TODO:
             break;
+        case SyntaxKind::PackageDeclaration:
+            results.append(&root.allocate<PackageSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
+            break;
         case SyntaxKind::HierarchyInstantiation: {
             const auto& his = node.as<HierarchyInstantiationSyntax>();
             // TODO: module namespacing
@@ -92,6 +95,19 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
 
             for (auto variable : variables)
                 results.append(variable);
+            break;
+        }
+        case SyntaxKind::ParameterDeclarationStatement: {
+            const ParameterDeclarationSyntax& declaration = node.as<ParameterDeclarationStatementSyntax>().parameter;
+            for (const VariableDeclaratorSyntax* decl : declaration.declarators) {
+
+                // TODO: hack to get param values working
+                //auto it = paramAssignments.find(decl->name.valueText());
+                const ConstantValue& cv = parent.evaluateConstant(decl->initializer->expr);
+
+                results.append(&root.allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
+                                                    root.getKnownType(SyntaxKind::IntType), cv, parent));
+            }
             break;
         }
         case SyntaxKind::AlwaysBlock:
@@ -281,8 +297,13 @@ DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> trees) :
 }
 
 const PackageSymbol* DesignRootSymbol::findPackage(StringRef lookupName) const {
-	// TODO
-	return nullptr;
+    init();
+
+    auto it = packageMap.find(lookupName);
+    if (it == packageMap.end())
+        return nullptr;
+
+	return (const PackageSymbol*)it->second;
 }
 
 const TypeSymbol& DesignRootSymbol::getType(const DataTypeSyntax& syntax) const {
@@ -458,10 +479,19 @@ bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSy
 void DesignRootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
     unitList.push_back(&unit);
 
-    // Add all modules to the root scope; we can look up modules anywhere in the design
+    // Add all modules to the root scope; we can look up modules anywhere in the design.
+    // Also keep track of packages separately; they live in their own namespace.
     for (auto symbol : unit.members()) {
-        if (symbol->kind == SymbolKind::Module)
-            addMember(*symbol);
+        switch (symbol->kind) {
+            case SymbolKind::Module:
+                addMember(*symbol);
+                break;
+            case SymbolKind::Package:
+                packageMap.emplace(symbol->name, symbol);
+                break;
+            default:
+                break;
+        }
     }
 }
 

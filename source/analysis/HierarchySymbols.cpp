@@ -27,6 +27,18 @@ CompilationUnitSymbol::CompilationUnitSymbol(SymbolList symbols, const Symbol& p
         addMember(*symbol);
 }
 
+PackageSymbol::PackageSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& parent) :
+    ScopeSymbol(SymbolKind::Package, syntax.header.name, parent), syntax(syntax)
+{
+}
+
+void PackageSymbol::initMembers() const {
+    for (auto member : syntax.members) {
+        for (auto symbol : createSymbols(*member, *this))
+            addMember(*symbol);
+    }
+}
+
 ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
     Symbol(SymbolKind::Module, decl.header.name, parent), decl(decl),
     syntax(decl)

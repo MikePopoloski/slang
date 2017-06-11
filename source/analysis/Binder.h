@@ -43,6 +43,7 @@ private:
     BoundExpression& bindName(const NameSyntax& syntax);
     BoundExpression& bindSimpleName(const IdentifierNameSyntax& syntax);
     BoundExpression& bindSelectName(const IdentifierSelectNameSyntax& syntax);
+    BoundExpression& bindScopedName(const ScopedNameSyntax& syntax);
     BoundExpression& bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax& syntax);
     BoundExpression& bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax& syntax);
     BoundExpression& bindArithmeticOperator(const BinaryExpressionSyntax& syntax);

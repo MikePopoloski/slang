@@ -192,6 +192,8 @@ BoundExpression& Binder::bindName(const NameSyntax& syntax) {
             return bindSimpleName(syntax.as<IdentifierNameSyntax>());
         case SyntaxKind::IdentifierSelectName:
             return bindSelectName(syntax.as<IdentifierSelectNameSyntax>());
+        case SyntaxKind::ScopedName:
+            return bindScopedName(syntax.as<ScopedNameSyntax>());
         DEFAULT_UNREACHABLE;
     }
 	return badExpr(nullptr);
@@ -234,6 +236,22 @@ BoundExpression& Binder::bindSelectName(const IdentifierSelectNameSyntax& syntax
     // spoof this being just a simple ElementSelectExpression
     return bindSelectExpression(syntax,
         bindName(root.allocate<IdentifierNameSyntax>(syntax.identifier)), *syntax.selectors[0]->selector);
+}
+
+BoundExpression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
+    // TODO: only handles packages right now
+    if (syntax.separator.kind != TokenKind::DoubleColon || syntax.left.kind != SyntaxKind::IdentifierName)
+        return badExpr(nullptr);
+
+    StringRef identifier = syntax.left.as<IdentifierNameSyntax>().identifier.valueText();
+    if (!identifier)
+        return badExpr(nullptr);
+
+    auto package = root.findPackage(identifier);
+    if (!package)
+        return badExpr(nullptr);
+
+    return Binder(*package).bindName(syntax.right);
 }
 
 BoundExpression& Binder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax& syntax) {

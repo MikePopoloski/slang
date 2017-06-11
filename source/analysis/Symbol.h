@@ -57,6 +57,7 @@ enum class SymbolKind {
     Interface, // TODO: decouple interfaces from modules
     Modport,   // TODO: decouple interfaces from modules
     ModuleInstance,
+    Package,
     Program,
     Attribute,
     Genvar,
@@ -449,6 +450,11 @@ public:
 class PackageSymbol : public ScopeSymbol {
 public:
 	PackageSymbol(const ModuleDeclarationSyntax& package, const Symbol& parent);
+
+private:
+    void initMembers() const final;
+
+    const ModuleDeclarationSyntax& syntax;
 };
 
 /// Represents a module declaration, with its parameters still unresolved.

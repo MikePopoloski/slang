@@ -277,4 +277,20 @@ endmodule
     // TODO: test (and implement) all the restrictions on enum and enum values
 }
 
+TEST_CASE("Package declaration", "[symbols]") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    parameter int blah = Foo::x;
+endmodule
+
+package Foo;
+    parameter int x = 4;
+endpackage
+)");
+
+    DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(tree);
+    const auto& cv = root.topInstances()[0]->member<ParameterSymbol>(0).value();
+    CHECK(cv.integer() == 4);
+}
+
 }
