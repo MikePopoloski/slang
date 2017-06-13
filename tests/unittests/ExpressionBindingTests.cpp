@@ -13,7 +13,7 @@ SVInt testParameter(const std::string& text, int index = 0) {
     auto tree = SyntaxTree::fromText(StringRef(fullText));
 
 	DesignRootSymbol root(tree);
-	const auto& module = root.lookup("Top")->as<ModuleSymbol>();
+	const auto& module = root.lookup<ModuleSymbol>("Top");
 	if (!tree.diagnostics().empty())
 		WARN(tree.reportDiagnostics());
 
@@ -32,7 +32,7 @@ TEST_CASE("Bind parameter", "[binding:expressions]") {
 TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     // Evaluate an assignment expression (has an LValue we can observe)
     auto syntax = SyntaxTree::fromText("i = i + 3");
-	DesignRootSymbol root;
+	DesignRootSymbol root(syntax.sourceManager());
     DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
@@ -65,7 +65,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 TEST_CASE("Check type propagation", "[binding:expressions]") {
     // Assignment operator should increase RHS size to 20
     auto syntax = SyntaxTree::fromText("i = 5'b0101 + 4'b1100");
-	DesignRootSymbol root;
+	DesignRootSymbol root(syntax.sourceManager());
     DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
@@ -93,7 +93,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
 TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     // Tests a number of rules of size propogation
     auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 4'b1100) == 21'b1)");
-	DesignRootSymbol root;
+	DesignRootSymbol root(syntax.sourceManager());
     DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
@@ -125,7 +125,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 TEST_CASE("Check type propagation real", "[binding:expressions]") {
     // Tests a number of rules of size propogation
     auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 2.0) == 21'b1)");
-	DesignRootSymbol root;
+	DesignRootSymbol root(syntax.sourceManager());
     DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable

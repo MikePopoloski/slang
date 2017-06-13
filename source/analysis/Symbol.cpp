@@ -63,7 +63,7 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
         case SyntaxKind::HierarchyInstantiation: {
             const auto& his = node.as<HierarchyInstantiationSyntax>();
             // TODO: module namespacing
-            auto symbol = parent.lookup(his.type.valueText());
+            auto symbol = parent.lookup(his.type.valueText(), his.type.location(), LookupKind::Local);
             if (symbol) {
                 const auto& pms = symbol->as<ModuleSymbol>().parameterize(his.parameters, &parent);
                 for (auto instance : his.instances) {
@@ -170,23 +170,61 @@ Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
 	return getRoot().addError(code, location_);
 }
 
-const Symbol* ScopeSymbol::lookup(StringRef searchName, LookupNamespace ns) const {
+const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLocation,
+                                  LookupKind lookupKind) const {
     init();
 
-    // TODO:
-    auto it = memberMap.find(searchName);
-    if (it != memberMap.end()) {
-        // If we found an explicit package import, unwrap and return the imported symbol instead
-        const Symbol* result = it->second;
-        if (result->kind == SymbolKind::ExplicitImport)
-            return result->as<ExplicitImportSymbol>().getImport();
-        return result;
-    }
-
-    if (kind == SymbolKind::Root)
+    // If the parser added a missing identifier token, it already issued an
+    // appropriate error. This check here makes it easier to silently continue
+    // in that case without checking every time someone wants to do a lookup.
+    if (!searchName)
         return nullptr;
 
-    return containingScope().lookup(searchName, ns);
+    // First, do a direct search within the current scope's name map.
+    auto it = memberMap.find(searchName);
+    if (it != memberMap.end()) {
+        // If this is a local or scoped lookup, check that we can access
+        // the symbol (it must be declared before usage). Callables can be
+        // referenced anywhere in the scope; location doesn't matter.
+        bool locationGood = true;
+        const Symbol* result = it->second;
+
+        if (lookupKind == LookupKind::Local || lookupKind == LookupKind::Scoped) {
+            const SourceManager& sm = getRoot().sourceManager();
+            /*SourceLocation expandedLookupLoc = sm.getCanonicalSourceLoc(lookupLocation);
+            SourceLocation expandedSymbolLoc = sm.getCanonicalSourceLoc(result->location);
+            locationGood = expandedSymbolLoc <= expandedLookupLoc;*/
+            locationGood = true;
+        }
+
+        if (locationGood) {
+            // If this is a package import, unwrap it to return the imported symbol.
+            // Direct lookups don't allow package imports, so ignore it in that case.
+            if (result->kind == SymbolKind::ExplicitImport) {
+                if (lookupKind != LookupKind::Direct)
+                    return result->as<ExplicitImportSymbol>().getImport();
+            }
+            else {
+                return result;
+            }
+        }
+    }
+
+    // If we got here, we didn't find a viable symbol locally. Depending on the lookup
+    // kind, try searching elsewhere.
+    if (lookupKind == LookupKind::Direct)
+        return nullptr;
+
+    if (kind == SymbolKind::Root) {
+        // For scoped lookups, if we reach the root without finding anything,
+        // look for a package.
+        if (lookupKind == LookupKind::Scoped)
+            return getRoot().findPackage(searchName);
+        return nullptr;
+    }
+
+    // Continue up the scope chain.
+    return containingScope().lookup(searchName, lookupLocation, lookupKind);
 }
 
 SymbolList ScopeSymbol::members() const {
@@ -239,8 +277,9 @@ SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
     return symbols;
 }
 
-DesignRootSymbol::DesignRootSymbol() :
-	ScopeSymbol(SymbolKind::Root, *this)
+DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager) :
+	ScopeSymbol(SymbolKind::Root, *this),
+    sourceMan(sourceManager)
 {
 	// Register built-in types
 	knownTypes[SyntaxKind::ShortIntType]  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword,	16, true, false, *this);
@@ -284,8 +323,8 @@ DesignRootSymbol::DesignRootSymbol() :
     addMember(allocate<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment, *this));
 }
 
-DesignRootSymbol::DesignRootSymbol(ArrayRef<const CompilationUnitSyntax*> units) :
-    DesignRootSymbol()
+DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager, ArrayRef<const CompilationUnitSyntax*> units) :
+    DesignRootSymbol(sourceManager)
 {
     for (auto unit : units)
         addCompilationUnit(allocate<CompilationUnitSymbol>(*unit, *this));
@@ -295,9 +334,11 @@ DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) :
     DesignRootSymbol(ArrayRef<const SyntaxTree*> { &tree }) {}
 
 DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> trees) :
-    DesignRootSymbol()
+    DesignRootSymbol(trees[0]->sourceManager())
 {
     for (auto tree : trees) {
+        ASSERT(&tree->sourceManager() == &sourceMan);
+
         if (tree->root().kind == SyntaxKind::CompilationUnit)
             addCompilationUnit(allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>(), *this));
         else {

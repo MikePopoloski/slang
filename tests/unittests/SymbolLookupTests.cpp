@@ -21,7 +21,7 @@ import Foo::x;
     DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(tree);
     const CompilationUnitSymbol& unit = *root.compilationUnits()[0];
 
-    const Symbol* x = unit.lookup("x");
+    const Symbol* x = unit.lookup("x", tree.root().sourceRange().end(), LookupKind::Local);
     REQUIRE(x);
     CHECK(x->kind == SymbolKind::Parameter);
     CHECK(x->as<ParameterSymbol>().value().integer() == 4);

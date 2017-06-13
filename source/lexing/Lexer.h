@@ -2,7 +2,7 @@
 // Lexer.h
 // Source file lexer.
 //
-// File is under the MIT license; see LICENSE for details
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #pragma once
 

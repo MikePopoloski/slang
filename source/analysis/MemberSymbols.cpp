@@ -158,8 +158,9 @@ const Symbol* ExplicitImportSymbol::getImport() const {
         initialized = true;
 
         const PackageSymbol* package = getRoot().findPackage(packageName);
+        // TODO: errors
         if (package)
-            import = package->lookup(importName);
+            import = package->lookup(importName, location, LookupKind::Direct);
     }
     return import;
 }

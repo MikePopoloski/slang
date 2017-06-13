@@ -222,7 +222,6 @@ public:
     std::string report(Diagnostics& diagnostics);
 
 private:
-    SourceLocation getFullyExpandedLoc(SourceLocation loc);
     StringRef getBufferLine(SourceLocation location, uint32_t col);
     bool sortDiagnostics(const Diagnostic& x, const Diagnostic& y);
     void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);

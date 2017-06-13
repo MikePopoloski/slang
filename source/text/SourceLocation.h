@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "util/Debug.h"
+
 namespace slang {
 
 class SourceManager;
@@ -53,7 +55,7 @@ public:
 
     BufferID buffer() const { return bufferID; }
     uint32_t offset() const { return charOffset; }
-    bool isValid() const { return charOffset != 0; }
+    bool isValid() const { return bufferID.valid(); }
 
 	explicit operator bool() const { return isValid(); }
 
@@ -73,7 +75,13 @@ public:
     }
 
     bool operator<(const SourceLocation& rhs) const {
+        ASSERT(bufferID == rhs.bufferID);
         return charOffset < rhs.charOffset;
+    }
+
+    bool operator<=(const SourceLocation& rhs) const {
+        ASSERT(bufferID == rhs.bufferID);
+        return charOffset <= rhs.charOffset;
     }
 
 private:

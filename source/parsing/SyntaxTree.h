@@ -36,16 +36,20 @@ public:
     }
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
-    static SyntaxTree fromText(StringRef text) {
-        return fromText(text, getDefaultSourceManager());
+    static SyntaxTree fromText(StringRef text, BufferID existingBuffer = BufferID()) {
+        return fromText(text, getDefaultSourceManager(), existingBuffer);
     }
 
     static SyntaxTree fromFile(StringRef path, SourceManager& sourceManager) {
         return create(sourceManager, sourceManager.readSource(path), false);
     }
 
-    static SyntaxTree fromText(StringRef text, SourceManager& sourceManager) {
-        return create(sourceManager, sourceManager.assignText(text), true);
+    static SyntaxTree fromText(StringRef text, SourceManager& sourceManager,
+                               BufferID existingBuffer = BufferID()) {
+        SourceBuffer buffer = existingBuffer ?
+            sourceManager.appendText(existingBuffer, text) : sourceManager.assignText(text);
+
+        return create(sourceManager, buffer, true);
     }
 
     /// Gets any diagnostics generated while parsing.
@@ -61,15 +65,28 @@ public:
 
     /// Gets the source manager used to build the syntax tree.
     SourceManager& sourceManager() { return sourceMan; }
+    const SourceManager& sourceManager() const { return sourceMan; }
 
 	/// Gets the root of the syntax tree.
     const SyntaxNode& root() const { return *rootNode; }
 
+    /// The ID of the source buffer used to create the syntax tree.
+    BufferID bufferID() const { return bufferID_; }
+
+    /// This is a shared default source manager for cases where the user doesn't
+    /// care about managing the lifetime of loaded source. Note that all of
+    /// the source loaded by this thing will live in memory for the lifetime of
+    /// the process.
+    static SourceManager& getDefaultSourceManager() {
+        static SourceManager instance;
+        return instance;
+    }
+
 private:
     SyntaxTree(const SyntaxNode* root, SourceManager& sourceManager,
-               BumpAllocator&& alloc, Diagnostics&& diagnostics) :
+               BumpAllocator&& alloc, Diagnostics&& diagnostics, BufferID bufferID) :
         rootNode(root), sourceMan(sourceManager),
-        alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)) {}
+        alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)), bufferID_(bufferID) {}
 
     static SyntaxTree create(SourceManager& sourceManager, SourceBuffer source, bool guess) {
         BumpAllocator alloc;
@@ -79,22 +96,14 @@ private:
 
         Parser parser(preprocessor);
         return SyntaxTree(guess ? &parser.parseGuess() : &parser.parseCompilationUnit(),
-                          sourceManager, std::move(alloc), std::move(diagnostics));
+                          sourceManager, std::move(alloc), std::move(diagnostics), source.id);
     }
-
-	// This is a shared default source manager for cases where the user doesn't
-	// care about managing the lifetime of loaded source. Note that all of
-	// the source loaded by this thing will live in memory for the lifetime of
-	// the process.
-	static SourceManager& getDefaultSourceManager() {
-		static SourceManager instance;
-		return instance;
-	}
 
     const SyntaxNode* rootNode;
     SourceManager& sourceMan;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
+    BufferID bufferID_;
 };
 
 }

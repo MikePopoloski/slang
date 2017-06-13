@@ -246,7 +246,7 @@ std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
     fmt::MemoryWriter writer;
 
     for (auto& diag : diagnostics) {
-        SourceLocation loc = getFullyExpandedLoc(diag.location);
+        SourceLocation loc = sourceManager.getFullyExpandedLoc(diag.location);
         if (loc.buffer() != lastBuffer) {
             // We're looking at diagnostics from another file now. See if we should print
             // include stack info before we go on with the reports.
@@ -265,16 +265,10 @@ std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
     return writer.str();
 }
 
-SourceLocation DiagnosticWriter::getFullyExpandedLoc(SourceLocation loc) {
-    while (sourceManager.isMacroLoc(loc))
-        loc = sourceManager.getExpansionLoc(loc);
-    return loc;
-}
-
 bool DiagnosticWriter::sortDiagnostics(const Diagnostic& x, const Diagnostic& y) {
     // start by expanding out macro locations
-    SourceLocation xl = getFullyExpandedLoc(x.location);
-    SourceLocation yl = getFullyExpandedLoc(y.location);
+    SourceLocation xl = sourceManager.getFullyExpandedLoc(x.location);
+    SourceLocation yl = sourceManager.getFullyExpandedLoc(y.location);
     return xl.buffer() < yl.buffer();
 }
 
@@ -307,7 +301,7 @@ void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc
                                       StringRef sourceLine, std::string& buffer) {
     // If the end location is within a macro, we want to push it out to the
     // end of the expanded location so that it encompasses the entire macro usage
-    SourceLocation startLoc = getFullyExpandedLoc(range.start());
+    SourceLocation startLoc = sourceManager.getFullyExpandedLoc(range.start());
     SourceLocation endLoc = range.end();
     while (sourceManager.isMacroLoc(endLoc)) {
         SourceRange endRange = sourceManager.getExpansionRange(endLoc);

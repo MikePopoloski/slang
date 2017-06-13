@@ -32,48 +32,22 @@ void SourceManager::addUserDirectory(StringRef path) {
     userDirectories.push_back(Path::makeAbsolute(path));
 }
 
-SourceLocation SourceManager::getFirstFileLocation(SourceLocation location) {
-    while (isMacroLoc(location)) {
-        location = getExpansionLoc(location);
-    }
-    return location;
-}
-
-uint32_t SourceManager::getRawLineNumber(SourceLocation location) {
-    FileData* fd = getFileData(location.buffer());
-    if (!fd)
-        return 0;
-
-    // compute line offsets if we haven't already
-    if (fd->lineOffsets.empty())
-        computeLineOffsets(fd->mem, fd->lineOffsets);
-
-    // Find the first line offset that is greater than the given location offset. That iterator
-    // then tells us how many lines away from the beginning we are.
-    auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset());
-
-    // We want to ensure the line we return is strictly greater than the given location offset.
-    // So if it is equal, add one to the lower bound we got
-    return (uint32_t)(it - fd->lineOffsets.begin()) + (*it == location.offset());
-}
-
-uint32_t SourceManager::getLineNumber(SourceLocation location) {
-    SourceLocation fileLocation = getFirstFileLocation(location);
+uint32_t SourceManager::getLineNumber(SourceLocation location) const {
+    SourceLocation fileLocation = getFullyExpandedLoc(location);
     uint32_t rawLineNumber = getRawLineNumber(fileLocation);
     if (rawLineNumber == 0)
         return 0;
 
-    FileData *fd = getFileData(fileLocation.buffer());
+    FileData* fd = getFileData(fileLocation.buffer());
     auto lineDirective = fd->getPreviousLineDirective(rawLineNumber);
 
-    if (!lineDirective) {
+    if (!lineDirective)
         return rawLineNumber;
-    } else {
+    else
         return lineDirective->lineOfDirective + (rawLineNumber - lineDirective->lineInFile) - 1;
-    }
 }
 
-uint32_t SourceManager::getColumnNumber(SourceLocation location) {
+uint32_t SourceManager::getColumnNumber(SourceLocation location) const {
     FileData* fd = getFileData(location.buffer());
     if (!fd)
         return 0;
@@ -87,10 +61,11 @@ uint32_t SourceManager::getColumnNumber(SourceLocation location) {
     return location.offset() - lineStart + 1;
 }
 
-StringRef SourceManager::getFileName(SourceLocation location) {
-    SourceLocation fileLocation = getFirstFileLocation(location);
+StringRef SourceManager::getFileName(SourceLocation location) const {
+    SourceLocation fileLocation = getFullyExpandedLoc(location);
+
     // Avoid computing line offsets if we just need a name of `line-less file
-    FileData *fd = getFileData(fileLocation.buffer());
+    FileData* fd = getFileData(fileLocation.buffer());
     if (!fd)
         return nullptr;
     else if (fd->lineDirectives.empty())
@@ -103,7 +78,7 @@ StringRef SourceManager::getFileName(SourceLocation location) {
         return StringRef(lineDirective->name);
 }
 
-SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
+SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
     if (!buffer)
         return SourceLocation();
 
@@ -111,7 +86,7 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) {
     return std::get<FileInfo>(bufferEntries[buffer.id]).includedFrom;
 }
 
-bool SourceManager::isFileLoc(SourceLocation location) {
+bool SourceManager::isFileLoc(SourceLocation location) const {
     auto buffer = location.buffer();
     if (!buffer)
         return false;
@@ -120,7 +95,7 @@ bool SourceManager::isFileLoc(SourceLocation location) {
     return std::get_if<FileInfo>(&bufferEntries[buffer.id]) != nullptr;
 }
 
-bool SourceManager::isMacroLoc(SourceLocation location) {
+bool SourceManager::isMacroLoc(SourceLocation location) const {
     auto buffer = location.buffer();
     if (!buffer)
         return false;
@@ -129,7 +104,11 @@ bool SourceManager::isMacroLoc(SourceLocation location) {
     return std::get_if<ExpansionInfo>(&bufferEntries[buffer.id]) != nullptr;
 }
 
-SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
+bool SourceManager::isIncludedFileLoc(SourceLocation location) const {
+    return getIncludedFrom(location.buffer()).isValid();
+}
+
+SourceLocation SourceManager::getExpansionLoc(SourceLocation location) const {
     auto buffer = location.buffer();
     if (!buffer)
         return SourceLocation();
@@ -138,17 +117,17 @@ SourceLocation SourceManager::getExpansionLoc(SourceLocation location) {
     return std::get<ExpansionInfo>(bufferEntries[buffer.id]).expansionStart;
 }
 
-SourceRange SourceManager::getExpansionRange(SourceLocation location) {
+SourceRange SourceManager::getExpansionRange(SourceLocation location) const {
     auto buffer = location.buffer();
     if (!buffer)
         return SourceRange();
 
     ASSERT(buffer.id < bufferEntries.size());
-    ExpansionInfo& info = std::get<ExpansionInfo>(bufferEntries[buffer.id]);
+    const ExpansionInfo& info = std::get<ExpansionInfo>(bufferEntries[buffer.id]);
     return SourceRange(info.expansionStart, info.expansionEnd);
 }
 
-SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
+SourceLocation SourceManager::getOriginalLoc(SourceLocation location) const {
     auto buffer = location.buffer();
     if (!buffer)
         return SourceLocation();
@@ -157,7 +136,13 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) {
     return std::get<ExpansionInfo>(bufferEntries[buffer.id]).originalLoc + location.offset();
 }
 
-StringRef SourceManager::getSourceText(BufferID buffer) {
+SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const {
+    while (isMacroLoc(location))
+        location = getExpansionLoc(location);
+    return location;
+}
+
+StringRef SourceManager::getSourceText(BufferID buffer) const {
     FileData* fd = getFileData(buffer);
     if (!fd)
         return nullptr;
@@ -165,32 +150,40 @@ StringRef SourceManager::getSourceText(BufferID buffer) {
     return StringRef(fd->mem);
 }
 
-SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart, SourceLocation expansionEnd) {
+SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
+                                                 SourceLocation expansionEnd) {
     bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionStart, expansionEnd));
     return SourceLocation(BufferID::get((uint32_t)(bufferEntries.size() - 1)), 0);
 }
 
-SourceBuffer SourceManager::assignText(StringRef text) {
+SourceBuffer SourceManager::assignText(StringRef text, SourceLocation includedFrom) {
     // Generate a placeholder name for this "file"
-    return assignText(StringRef("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">"), text);
+    return assignText(StringRef("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">"), text, includedFrom);
 }
 
-SourceBuffer SourceManager::assignText(StringRef path, StringRef text) {
+SourceBuffer SourceManager::assignText(StringRef path, StringRef text, SourceLocation includedFrom) {
     SmallVectorSized<char, 2> buffer;
     buffer.appendRange(text);
     if (buffer.empty() || buffer.back() != '\0')
         buffer.append('\0');
 
-    return assignBuffer(path, std::move(buffer));
+    return assignBuffer(path, std::move(buffer), includedFrom);
 }
 
-SourceBuffer SourceManager::assignBuffer(StringRef path, Vector<char>&& buffer) {
+SourceBuffer SourceManager::appendText(BufferID buffer, StringRef text) {
+    ASSERT(buffer);
+    FileInfo& fi = std::get<FileInfo>(bufferEntries[buffer.id]);
+    SourceLocation includeLoc = SourceLocation(buffer, fi.data->mem.count());
+    return assignText(text, includeLoc);
+}
+
+SourceBuffer SourceManager::assignBuffer(StringRef path, Vector<char>&& buffer, SourceLocation includedFrom) {
     Path fullPath = path;
     std::string canonicalStr = fullPath.str();
     auto it = lookupCache.find(canonicalStr);
     ASSERT(it == lookupCache.end());
 
-    return cacheBuffer(std::move(canonicalStr), fullPath, SourceLocation(), std::move(buffer));
+    return cacheBuffer(std::move(canonicalStr), fullPath, includedFrom, std::move(buffer));
 }
 
 SourceBuffer SourceManager::readSource(StringRef path) {
@@ -233,7 +226,18 @@ SourceBuffer SourceManager::readHeader(StringRef path, SourceLocation includedFr
     return SourceBuffer();
 }
 
-SourceManager::FileData* SourceManager::getFileData(BufferID buffer) {
+void SourceManager::addLineDirective(SourceLocation location, uint32_t lineNum,
+                                     StringRef name, uint8_t level) {
+    SourceLocation fileLocation = getFullyExpandedLoc(location);
+    FileData* fd = getFileData(fileLocation.buffer());
+    if (!fd)
+        return;
+
+    uint32_t sourceLineNum = getRawLineNumber(fileLocation);
+    fd->lineDirectives.emplace_back(sourceLineNum, lineNum, name, level);
+}
+
+SourceManager::FileData* SourceManager::getFileData(BufferID buffer) const {
     if (!buffer)
         return nullptr;
 
@@ -244,7 +248,10 @@ SourceManager::FileData* SourceManager::getFileData(BufferID buffer) {
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom) {
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
-    return SourceBuffer { StringRef(fd->mem), BufferID::get((uint32_t)(bufferEntries.size() - 1)) };
+    return SourceBuffer {
+        StringRef(fd->mem),
+        BufferID::get((uint32_t)(bufferEntries.size() - 1))
+    };
 }
 
 SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation includedFrom) {
@@ -328,18 +335,8 @@ void SourceManager::computeLineOffsets(const Vector<char>& buffer, std::vector<u
     }
 }
 
-void SourceManager::addLineDirective(SourceLocation location, uint32_t lineNum, StringRef name, uint8_t level) {
-    SourceLocation fileLocation = getFirstFileLocation(location);
-    FileData *fd = getFileData(fileLocation.buffer());
-    if (!fd) {
-        return;
-    }
-
-    uint32_t sourceLineNum = getRawLineNumber(fileLocation);
-    fd->lineDirectives.emplace_back(sourceLineNum, lineNum, name, level);
-}
-
-SourceManager::FileData::LineDirectiveInfo* SourceManager::FileData::getPreviousLineDirective(uint32_t rawLineNumber) {
+const SourceManager::FileData::LineDirectiveInfo*
+SourceManager::FileData::getPreviousLineDirective(uint32_t rawLineNumber) const {
     auto it = std::lower_bound(lineDirectives.begin(), lineDirectives.end(),
         LineDirectiveInfo(rawLineNumber, 0, "", 0), LineDirectiveComparator());
 
@@ -349,14 +346,32 @@ SourceManager::FileData::LineDirectiveInfo* SourceManager::FileData::getPrevious
         if (it == lineDirectives.end()) {
             // Check to see whether the actual last directive is before the
             // given line number
-            if (lineDirectives.back().lineInFile >= rawLineNumber) {
+            if (lineDirectives.back().lineInFile >= rawLineNumber)
                 return nullptr;
-            }
         }
         return &*(it - 1);
-    } else {
+    }
+    else {
         return nullptr;
     }
+}
+
+uint32_t SourceManager::getRawLineNumber(SourceLocation location) const {
+    FileData* fd = getFileData(location.buffer());
+    if (!fd)
+        return 0;
+
+    // compute line offsets if we haven't already
+    if (fd->lineOffsets.empty())
+        computeLineOffsets(fd->mem, fd->lineOffsets);
+
+    // Find the first line offset that is greater than the given location offset. That iterator
+    // then tells us how many lines away from the beginning we are.
+    auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset());
+
+    // We want to ensure the line we return is strictly greater than the given location offset.
+    // So if it is equal, add one to the lower bound we got
+    return (uint32_t)(it - fd->lineOffsets.begin()) + (*it == location.offset());
 }
 
 }

@@ -54,50 +54,62 @@ public:
     void addUserDirectory(StringRef path);
 
     /// Gets the source line number for a given source location.
-    uint32_t getLineNumber(SourceLocation location);
+    uint32_t getLineNumber(SourceLocation location) const;
 
     /// Gets the source file name for a given source location
-    StringRef getFileName(SourceLocation location);
+    StringRef getFileName(SourceLocation location) const;
 
     /// Gets the column line number for a given source location.
     /// @a location must be a file location.
-    uint32_t getColumnNumber(SourceLocation location);
+    uint32_t getColumnNumber(SourceLocation location) const;
 
     /// Gets a location that indicates from where the given buffer was included.
     /// @a location must be a file location.
-    SourceLocation getIncludedFrom(BufferID buffer);
+    SourceLocation getIncludedFrom(BufferID buffer) const;
 
     /// Determines whether the given location exists in a source file.
-    bool isFileLoc(SourceLocation location);
+    bool isFileLoc(SourceLocation location) const;
 
     /// Determines whether the given location points to a macro expansion.
-    bool isMacroLoc(SourceLocation location);
+    bool isMacroLoc(SourceLocation location) const;
+
+    /// Determines whether the given location is inside an include file.
+    bool isIncludedFileLoc(SourceLocation location) const;
 
     /// Gets the expansion location of a given macro location.
-    SourceLocation getExpansionLoc(SourceLocation location);
+    SourceLocation getExpansionLoc(SourceLocation location) const;
 
     /// Gets the expansion range of a given macro location.
-    SourceRange getExpansionRange(SourceLocation location);
+    SourceRange getExpansionRange(SourceLocation location) const;
 
     /// Gets the original source location of a given macro location.
-    SourceLocation getOriginalLoc(SourceLocation location);
+    SourceLocation getOriginalLoc(SourceLocation location) const;
+
+    /// If the given location is a macro location, fully expands it out to its actual
+    /// file expansion location. Otherwise just returns the location itself.
+    SourceLocation getFullyExpandedLoc(SourceLocation location) const;
 
     /// Gets the actual source text for a given file buffer.
-    StringRef getSourceText(BufferID buffer);
+    StringRef getSourceText(BufferID buffer) const;
 
     /// Creates a macro expansion location; used by the preprocessor.
-    SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart, SourceLocation expansionEnd);
+    SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
+                                      SourceLocation expansionEnd);
 
     /// Instead of loading source from a file, copy it from text already in memory.
-    SourceBuffer assignText(StringRef text);
+    SourceBuffer assignText(StringRef text, SourceLocation includedFrom = SourceLocation());
 
     /// Instead of loading source from a file, copy it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignText(StringRef path, StringRef text);
+    SourceBuffer assignText(StringRef path, StringRef text, SourceLocation includedFrom = SourceLocation());
+
+    /// Pretend that the given text has been appended to the specified buffer.
+    /// This is mostly for testing purposes.
+    SourceBuffer appendText(BufferID buffer, StringRef text);
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignBuffer(StringRef path, Vector<char>&& buffer);
+    SourceBuffer assignBuffer(StringRef path, Vector<char>&& buffer, SourceLocation includedFrom = SourceLocation());
 
     /// Read in a source file from disk.
     SourceBuffer readSource(StringRef path);
@@ -105,7 +117,7 @@ public:
     /// Read in a header file from disk.
     SourceBuffer readHeader(StringRef path, SourceLocation includedFrom, bool isSystemPath);
 
-    /// Adds a line directive at the given location
+    /// Adds a line directive at the given location.
     void addLineDirective(SourceLocation location, uint32_t lineNum, StringRef name, uint8_t level);
 
 private:
@@ -119,10 +131,10 @@ private:
         std::vector<uint32_t> lineOffsets;  // char offset for each line
 
         struct LineDirectiveInfo {
-            uint32_t lineInFile; // Actual file line where directive occurred
-            uint32_t lineOfDirective; // Line number set by directive
-            std::string name; // File name set by directive
-            uint8_t level; // level of directive
+            uint32_t lineInFile;        // Actual file line where directive occurred
+            uint32_t lineOfDirective;   // Line number set by directive
+            std::string name;           // File name set by directive
+            uint8_t level;              // level of directive
 
             LineDirectiveInfo(uint32_t lif, uint32_t lod, StringRef fname, uint8_t _level) :
                 lineInFile(lif), lineOfDirective(lod), name(fname.begin(), fname.end()),
@@ -131,7 +143,7 @@ private:
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none
-        LineDirectiveInfo* getPreviousLineDirective(uint32_t rawLineNumber);
+        const LineDirectiveInfo* getPreviousLineDirective(uint32_t rawLineNumber) const;
 
         struct LineDirectiveComparator {
             bool operator()(const LineDirectiveInfo& info1, const LineDirectiveInfo& info2) {
@@ -140,14 +152,12 @@ private:
         };
 
         std::vector<LineDirectiveInfo> lineDirectives; // info about `line in file
-        const Path* directory;              // directory that the file exists in
+        const Path* directory;                         // directory that the file exists in
 
         FileData(const Path* directory, const std::string& name, SmallVector<char>&& data) :
             mem(std::move(data)),
             name(name),
-            directory(directory)
-        {
-        }
+            directory(directory) {}
     };
 
     // Stores a pointer to file data along with information about where we included it.
@@ -158,9 +168,7 @@ private:
 
         FileInfo() {}
         FileInfo(FileData* data, SourceLocation includedFrom) :
-            data(data), includedFrom(includedFrom)
-        {
-        }
+            data(data), includedFrom(includedFrom) {}
     };
 
     // Instead of a file, this lets a BufferID point to a macro expansion location.
@@ -177,9 +185,7 @@ private:
 
         ExpansionInfo() {}
         ExpansionInfo(SourceLocation originalLoc, SourceLocation expansionStart, SourceLocation expansionEnd) :
-            originalLoc(originalLoc), expansionStart(expansionStart), expansionEnd(expansionEnd)
-        {
-        }
+            originalLoc(originalLoc), expansionStart(expansionStart), expansionEnd(expansionEnd) {}
     };
 
     // index from BufferID to buffer metadata
@@ -195,20 +201,17 @@ private:
     // uniquified backing memory for directories
     std::set<Path> directories;
 
-    FileData* getFileData(BufferID buffer);
+    FileData* getFileData(BufferID buffer) const;
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom);
 
     SourceBuffer openCached(const Path& fullPath, SourceLocation includedFrom);
     SourceBuffer cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Vector<char>&& buffer);
 
-    // For an ExpansionLocation, keeps returning the enclosing ExpansionLocation
-    // until it reaches a location with FileInfo
-    SourceLocation getFirstFileLocation(SourceLocation location);
     static void computeLineOffsets(const Vector<char>& buffer, std::vector<uint32_t>& offsets);
     static bool readFile(const Path& path, Vector<char>& buffer);
 
     // Get raw line number of a file location, ignoring any line directives
-    uint32_t getRawLineNumber(SourceLocation location);
+    uint32_t getRawLineNumber(SourceLocation location) const;
 };
 
 }

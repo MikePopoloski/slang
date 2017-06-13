@@ -200,12 +200,8 @@ BoundExpression& Binder::bindName(const NameSyntax& syntax) {
 }
 
 BoundExpression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
-    // if we have an invalid name token just give up now; the error has already been reported
     StringRef identifier = syntax.identifier.valueText();
-    if (!identifier)
-        return badExpr(nullptr);
-
-    const Symbol* symbol = scope.lookup(identifier);
+    const Symbol* symbol = scope.lookup(identifier, syntax.identifier.location(), LookupKind::Local);
     if (!symbol) {
         root.addError(DiagCode::UndeclaredIdentifier, syntax.identifier.location()) << identifier;
         return badExpr(nullptr);
@@ -364,7 +360,7 @@ BoundExpression& Binder::bindAssignmentOperator(const BinaryExpressionSyntax& sy
 BoundExpression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& syntax) {
     // TODO: check for something other than a simple name on the LHS
     auto name = syntax.left.getFirstToken();
-    const Symbol* symbol = scope.lookup(name.valueText());
+    const Symbol* symbol = scope.lookup(name.valueText(), name.location(), LookupKind::Callable);
     ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
 
     auto actualArgs = syntax.arguments->parameters;

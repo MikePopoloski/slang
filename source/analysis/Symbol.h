@@ -109,18 +109,25 @@ enum class ProceduralBlockKind {
     AlwaysFF
 };
 
-/// Names (and therefore symbols) are separated into a few different namespaces according to the spec. See §3.13.
-/// Note that a bunch of the namespaces listed in the spec aren't really applicable to the lookup process;
-/// for example, attribute names and macro names.
-enum class LookupNamespace {
-    /// Definitions encompass all non-nested modules, primitives, programs, and interfaces.
-    Definitions,
+/// Specifies possible kinds of lookups that can be done.
+enum class LookupKind {
+    /// A direct lookup within the scope is performed, with no upward name referencing
+    /// allowed. The lookup location is only used for error reporting, not qualifying
+    /// which signals are accessible. Package imports are not considered.
+    Direct,
 
-    /// Namespace for all packages.
-    Package,
+    /// A lookup of a simple name, starting in the local scope. The lookup location is
+    /// used to qualify accessible signals. Package imports are considered.
+    Local,
 
-    /// Namespace for members, which includes functions, tasks, parameters, variables, blocks, etc.
-    Members
+    /// The lookup is for the first part of a scoped name. This first performs
+    /// the equivalent of a Local lookup; if no symbol is found using that method,
+    /// it will search for a package with the given name.
+    Scoped,
+
+    /// A lookup for a simple name that is part of a callable expression (task or function).
+    /// This is similar to a Local lookup, with additional rules specific to callables.
+    Callable
 };
 
 /// Interprets a keyword token as a variable lifetime value.
@@ -189,22 +196,31 @@ protected:
 /// child symbols that can be looked up by name.
 class ScopeSymbol : public Symbol {
 public:
-	/// Look up a symbol in the current scope. Returns null if no symbol is found.
-	const Symbol* lookup(StringRef name, LookupNamespace ns = LookupNamespace::Members) const;
+	/// Looks up a symbol in the current scope. Returns null if no symbol is found.
+    ///
+    /// @param lookupLocation is used for reporting errors if the symbol is not found.
+    ///        Additionally, depending on the `lookupKind` being used, it may be used
+    ///        to qualify which local symbols are accessible.
+    /// @param lookupKind specifies the kind of lookup to perform. This controls which
+    ///        symbols are accessible, whether package imports are considered, and
+    ///        whether parent scopes should be included.
+    ///
+	const Symbol* lookup(StringRef searchName, SourceLocation lookupLocation, LookupKind lookupKind) const;
 
-	/// Look up a symbol in the current scope, expecting it to exist and be of the
+	/// Looks up a symbol in the current scope, expecting it to exist and be of the
 	/// given type. If those conditions do not hold, this will assert.
 	template<typename T>
-	const T& lookup(StringRef name) const {
-		const Symbol* sym = lookup(name);
+	const T& lookup(StringRef name, SourceLocation lookupLocation = SourceLocation(),
+                    LookupKind lookupKind = LookupKind::Direct) const {
+		const Symbol* sym = lookup(name, lookupLocation, lookupKind);
 		ASSERT(sym);
 		return sym->as<T>();
 	}
 
-    /// Get a list of all of the members in the scope.
+    /// Gets a list of all of the members in the scope.
     SymbolList members() const;
 
-    /// Get a specific member at the given zero-based index, expecting it to be of the specified type.
+    /// Gets a specific member at the given zero-based index, expecting it to be of the specified type.
     /// If the type does not match, this will assert.
     template<typename T>
     const T& member(uint32_t index) const { return members()[index]->as<T>(); }
@@ -362,10 +378,10 @@ class ModuleInstanceSymbol;
 /// It also contains most of the machinery for creating and retrieving type symbols.
 class DesignRootSymbol : public ScopeSymbol {
 public:
-    DesignRootSymbol();
+    explicit DesignRootSymbol(const SourceManager& sourceManager);
     explicit DesignRootSymbol(const SyntaxTree& tree);
     explicit DesignRootSymbol(ArrayRef<const SyntaxTree*> trees);
-    explicit DesignRootSymbol(ArrayRef<const CompilationUnitSyntax*> units);
+    DesignRootSymbol(const SourceManager& sourceManager, ArrayRef<const CompilationUnitSyntax*> units);
 
 	/// Gets all of the compilation units in the design.
 	ArrayRef<const CompilationUnitSymbol*> compilationUnits() const { return unitList; }
@@ -397,6 +413,7 @@ public:
 
 	BumpAllocator& allocator() const { return alloc; }
 	Diagnostics& diagnostics() const { return diags; }
+    const SourceManager& sourceManager() const { return sourceMan; }
 
 private:
     void initMembers() const final;
@@ -438,6 +455,8 @@ private:
 
 	// cache of simple integral types keyed by {width, signedness, 4-state, isReg}
 	mutable std::unordered_map<uint64_t, const TypeSymbol*> integralTypeCache;
+
+    const SourceManager& sourceMan;
 };
 
 /// The root of a single compilation unit. 
