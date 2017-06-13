@@ -53,6 +53,13 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
         case SyntaxKind::PackageDeclaration:
             results.append(&root.allocate<PackageSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
             break;
+        case SyntaxKind::PackageImportDeclaration:
+            for (auto item : node.as<PackageImportDeclarationSyntax>().items) {
+                results.append(&root.allocate<ExplicitImportSymbol>(item->package.valueText(),
+                                                                    item->item.valueText(),
+                                                                    item->item.location(), parent));
+            }
+            break;
         case SyntaxKind::HierarchyInstantiation: {
             const auto& his = node.as<HierarchyInstantiationSyntax>();
             // TODO: module namespacing
@@ -168,8 +175,13 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, LookupNamespace ns) cons
 
     // TODO:
     auto it = memberMap.find(searchName);
-    if (it != memberMap.end())
-        return it->second;
+    if (it != memberMap.end()) {
+        // If we found an explicit package import, unwrap and return the imported symbol instead
+        const Symbol* result = it->second;
+        if (result->kind == SymbolKind::ExplicitImport)
+            return result->as<ExplicitImportSymbol>().getImport();
+        return result;
+    }
 
     if (kind == SymbolKind::Root)
         return nullptr;

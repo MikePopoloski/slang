@@ -146,6 +146,24 @@ void ProceduralBlockSymbol::initMembers() const {
     body = &bindStatement(syntax.statement);
 }
 
+ExplicitImportSymbol::ExplicitImportSymbol(StringRef packageName, StringRef importName,
+                                           SourceLocation location, const Symbol& parent) :
+    Symbol(SymbolKind::ExplicitImport, parent, importName, location),
+    packageName(packageName), importName(importName)
+{
+}
+
+const Symbol* ExplicitImportSymbol::getImport() const {
+    if (!initialized) {
+        initialized = true;
+
+        const PackageSymbol* package = getRoot().findPackage(packageName);
+        if (package)
+            import = package->lookup(importName);
+    }
+    return import;
+}
+
 ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol&type,
                                  const ConstantValue& value, const Symbol& parent) :
     Symbol(SymbolKind::Parameter, parent, name, location), type_(&type), value_(value) {}

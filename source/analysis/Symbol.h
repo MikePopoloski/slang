@@ -58,6 +58,7 @@ enum class SymbolKind {
     Modport,   // TODO: decouple interfaces from modules
     ModuleInstance,
     Package,
+    ExplicitImport,
     Program,
     Attribute,
     Genvar,
@@ -596,6 +597,24 @@ private:
     void handleBlock(const SyntaxNode& syntax);
 
     const GenerateBlockSyntax* syntax = nullptr;
+};
+
+/// Represents an explicit import from a package. This symbol type is
+/// special in that it won't be returned from a lookup() call; instead
+/// it will be unwrapped into the imported symbol.
+class ExplicitImportSymbol : public Symbol {
+public:
+    StringRef packageName;
+    StringRef importName;
+
+    ExplicitImportSymbol(StringRef packageName, StringRef importName,
+                         SourceLocation location, const Symbol& parent);
+
+    const Symbol* getImport() const;
+
+private:
+    mutable const Symbol* import = nullptr;
+    mutable bool initialized = false;
 };
 
 class ParameterSymbol : public Symbol {
