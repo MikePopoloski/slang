@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // Binder.h
-// Centralized code for convert expressions and statements into an AST.
+// Centralized code for converting expressions into an AST.
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
@@ -14,14 +14,17 @@
 namespace slang {
 
 /// A binder is responsible for binding symbols with expressions to form
-/// bound expression trees and with statements to form bound statement trees.
-/// This involves doing full type checking and name resolution of all identifiers.
+/// bound expression trees. This involves doing full type checking and name
+/// resolution of all identifiers.
 ///
 /// This class is lightweight; feel free to construct it and throw it away on demand.
 ///
 class Binder {
 public:
-	explicit Binder(const ScopeSymbol& scope);
+    /// Constructs a new binder for the given scope. The lookup kind is used whenever
+    /// a name lookup must be performed (excepting some specific cases that are always
+    /// done a certain way, such as callable expressions).
+	explicit Binder(const ScopeSymbol& scope, LookupKind lookupKind = LookupKind::Local);
 
 	/// Binds an expression in a context that requires a compile-time value.
     const BoundExpression& bindConstantExpression(const ExpressionSyntax& syntax);
@@ -75,6 +78,7 @@ private:
 
     const ScopeSymbol& scope;
 	const DesignRootSymbol& root;
+    LookupKind lookupKind;
 };
 
 }

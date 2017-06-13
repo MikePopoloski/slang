@@ -74,16 +74,6 @@ public:
         return charOffset != rhs.charOffset;
     }
 
-    bool operator<(const SourceLocation& rhs) const {
-        ASSERT(bufferID == rhs.bufferID);
-        return charOffset < rhs.charOffset;
-    }
-
-    bool operator<=(const SourceLocation& rhs) const {
-        ASSERT(bufferID == rhs.bufferID);
-        return charOffset <= rhs.charOffset;
-    }
-
 private:
     BufferID bufferID;
     uint32_t charOffset;

@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // Binder.h
-// Centralized code for convert expressions and statements into an AST.
+// Centralized code for converting expressions into an AST.
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
@@ -15,8 +15,8 @@ namespace slang {
 const LiteralExpressionSyntax BadBoundExpression::EmptyLiteral(SyntaxKind::Unknown, Token());
 const EmptyStatementSyntax BoundStatement::EmptyStatement(nullptr, nullptr, Token());
 
-Binder::Binder(const ScopeSymbol& scope) :
-    scope(scope), root(scope.getRoot())
+Binder::Binder(const ScopeSymbol& scope, LookupKind lookupKind) :
+    scope(scope), root(scope.getRoot()), lookupKind(lookupKind)
 {
 }
 
@@ -201,7 +201,7 @@ BoundExpression& Binder::bindName(const NameSyntax& syntax) {
 
 BoundExpression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
     StringRef identifier = syntax.identifier.valueText();
-    const Symbol* symbol = scope.lookup(identifier, syntax.identifier.location(), LookupKind::Local);
+    const Symbol* symbol = scope.lookup(identifier, syntax.identifier.location(), lookupKind);
     if (!symbol) {
         root.addError(DiagCode::UndeclaredIdentifier, syntax.identifier.location()) << identifier;
         return badExpr(nullptr);
@@ -247,7 +247,7 @@ BoundExpression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
     if (!package)
         return badExpr(nullptr);
 
-    return Binder(*package).bindName(syntax.right);
+    return Binder(*package, LookupKind::Direct).bindName(syntax.right);
 }
 
 BoundExpression& Binder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax& syntax) {

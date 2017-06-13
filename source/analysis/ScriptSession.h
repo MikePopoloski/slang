@@ -16,14 +16,10 @@ namespace slang {
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
-    ScriptSession() :
-        root(SyntaxTree::getDefaultSourceManager()), scope(root)
-    {
-        bufferID = SyntaxTree::getDefaultSourceManager().assignText("").id;
-    }
+    ScriptSession() : root(SyntaxTree::getDefaultSourceManager()), scope(root) {}
 
     ConstantValue eval(const std::string& text) {
-        syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text), bufferID));
+        syntaxTrees.emplace_back(SyntaxTree::fromText(StringRef(text)));
 
         const auto& node = syntaxTrees.back().root();
         switch (node.kind) {
@@ -61,7 +57,7 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-        const auto& bound = Binder(scope).bindConstantExpression(expr);
+        const auto& bound = Binder(scope, LookupKind::Direct).bindConstantExpression(expr);
         if (bound.bad())
             return nullptr;
 
@@ -87,7 +83,6 @@ private:
 	DesignRootSymbol root;
     DynamicScopeSymbol scope;
     ConstantEvaluator evaluator;
-    BufferID bufferID;
 };
 
 }

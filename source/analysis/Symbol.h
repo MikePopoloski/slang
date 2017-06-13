@@ -127,7 +127,11 @@ enum class LookupKind {
 
     /// A lookup for a simple name that is part of a callable expression (task or function).
     /// This is similar to a Local lookup, with additional rules specific to callables.
-    Callable
+    Callable,
+
+    /// A lookup for a module, interface, or program definition. Similar to a Callable lookup,
+    /// there are additional rules about where definitions can be found.
+    Definition
 };
 
 /// Interprets a keyword token as a variable lifetime value.

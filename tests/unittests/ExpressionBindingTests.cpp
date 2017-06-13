@@ -44,7 +44,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
-    Binder binder(scope);
+    Binder binder(scope, LookupKind::Direct);
     const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
@@ -67,7 +67,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     auto syntax = SyntaxTree::fromText("i = 5'b0101 + 4'b1100");
 	DesignRootSymbol root(syntax.sourceManager());
     DynamicScopeSymbol scope(root);
-
+    
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {
@@ -77,7 +77,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
-	Binder binder(scope);
+	Binder binder(scope, LookupKind::Direct);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
@@ -105,7 +105,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
-	Binder binder(scope);
+	Binder binder(scope, LookupKind::Direct);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
@@ -137,7 +137,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
-	Binder binder(scope);
+	Binder binder(scope, LookupKind::Direct);
 	const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 

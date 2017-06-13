@@ -63,7 +63,7 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
         case SyntaxKind::HierarchyInstantiation: {
             const auto& his = node.as<HierarchyInstantiationSyntax>();
             // TODO: module namespacing
-            auto symbol = parent.lookup(his.type.valueText(), his.type.location(), LookupKind::Local);
+            auto symbol = parent.lookup(his.type.valueText(), his.type.location(), LookupKind::Definition);
             if (symbol) {
                 const auto& pms = symbol->as<ModuleSymbol>().parameterize(his.parameters, &parent);
                 for (auto instance : his.instances) {
@@ -191,10 +191,7 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLoc
 
         if (lookupKind == LookupKind::Local || lookupKind == LookupKind::Scoped) {
             const SourceManager& sm = getRoot().sourceManager();
-            /*SourceLocation expandedLookupLoc = sm.getCanonicalSourceLoc(lookupLocation);
-            SourceLocation expandedSymbolLoc = sm.getCanonicalSourceLoc(result->location);
-            locationGood = expandedSymbolLoc <= expandedLookupLoc;*/
-            locationGood = true;
+            locationGood = sm.isBeforeInCompilationUnit(result->location, lookupLocation);
         }
 
         if (locationGood) {
