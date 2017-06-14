@@ -107,7 +107,7 @@ bool SourceManager::isMacroLoc(SourceLocation location) const {
 }
 
 bool SourceManager::isIncludedFileLoc(SourceLocation location) const {
-    return getIncludedFrom(location.buffer()).isValid();
+    return getIncludedFrom(location.buffer()).valid();
 }
 
 bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocation right) const {

@@ -225,7 +225,7 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& syntax, std::
 
 ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
                                                      const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
-    ScopeSymbol(SymbolKind::Module, parent, module.name, module.location), module(module)
+    ScopeSymbol(SymbolKind::ParameterizedModule, parent, module.name, module.location), module(module)
 {
     for (const auto& element : parameterAssignments)
         paramAssignments.emplace(element.first, element.second);

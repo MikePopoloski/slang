@@ -153,16 +153,58 @@ ExplicitImportSymbol::ExplicitImportSymbol(StringRef packageName, StringRef impo
 {
 }
 
-const Symbol* ExplicitImportSymbol::getImport() const {
+const PackageSymbol* ExplicitImportSymbol::package() const {
+    importedSymbol();
+    return package_;
+}
+
+const Symbol* ExplicitImportSymbol::importedSymbol() const {
     if (!initialized) {
         initialized = true;
 
-        const PackageSymbol* package = getRoot().findPackage(packageName);
+        package_ = getRoot().findPackage(packageName);
         // TODO: errors
-        if (package)
-            import = package->lookup(importName, location, LookupKind::Direct);
+        if (package_)
+            import = package_->lookup(importName, location, LookupKind::Direct);
     }
     return import;
+}
+
+ImplicitImportSymbol::ImplicitImportSymbol(const WildcardImportSymbol& wildcard, const Symbol& importedSymbol,
+                                           const Symbol& parent) :
+    Symbol(SymbolKind::ImplicitImport, parent, importedSymbol.name, wildcard.location),
+    wildcard_(wildcard), import(importedSymbol)
+{
+}
+
+const PackageSymbol* ImplicitImportSymbol::package() const {
+    return wildcard_.package();
+}
+
+WildcardImportSymbol::WildcardImportSymbol(StringRef packageName, SourceLocation location, const Symbol& parent) :
+    Symbol(SymbolKind::WildcardImport, parent, /* no name */ "", location),
+    packageName(packageName)
+{
+}
+
+const PackageSymbol* WildcardImportSymbol::package() const {
+    if (!initialized) {
+        initialized = true;
+        package_ = getRoot().findPackage(packageName);
+    }
+    return package_;
+}
+
+const ImplicitImportSymbol* WildcardImportSymbol::resolve(StringRef lookupName, SourceLocation lookupLocation) const {
+    if (!package())
+        return nullptr;
+
+    // TODO: errors... don't error on missing!
+    auto symbol = package_->lookup(lookupName, lookupLocation, LookupKind::Direct);
+    if (!symbol)
+        return nullptr;
+
+    return &allocate<ImplicitImportSymbol>(*this, *symbol, containingSymbol);
 }
 
 ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol&type,

@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// SourceManager.h
+// SourceLocation.h
 // Source element location tracking.
 //
 // File is under the MIT license; see LICENSE for details.
@@ -48,16 +48,13 @@ private:
 class SourceLocation {
 public:
     SourceLocation() : charOffset(0) {}
-    SourceLocation(BufferID buffer, uint32_t offset) :
-        bufferID(buffer), charOffset(offset)
-    {
-    }
+    SourceLocation(BufferID buffer, uint32_t offset) : bufferID(buffer), charOffset(offset) {}
 
     BufferID buffer() const { return bufferID; }
     uint32_t offset() const { return charOffset; }
-    bool isValid() const { return bufferID.valid(); }
+    bool valid() const { return bufferID.valid(); }
 
-	explicit operator bool() const { return isValid(); }
+	explicit operator bool() const { return valid(); }
 
     /// Computes a source location that is offset from the current one.
     /// Note that there is no error checking to ensure that the location
@@ -66,12 +63,16 @@ public:
         return SourceLocation(bufferID, charOffset + delta);
     }
 
+    SourceLocation operator-(int delta) const {
+        return SourceLocation(bufferID, charOffset - delta);
+    }
+
     bool operator==(const SourceLocation& rhs) const {
-        return charOffset == rhs.charOffset;
+        return bufferID == rhs.bufferID && charOffset == rhs.charOffset;
     }
 
     bool operator!=(const SourceLocation& rhs) const {
-        return charOffset != rhs.charOffset;
+        return !(*this == rhs);
     }
 
 private:

@@ -32,6 +32,8 @@ class ScopeSymbol;
 class DesignRootSymbol;
 class TypeSymbol;
 class ModuleSymbol;
+class WildcardImportSymbol;
+class PackageSymbol;
 
 using SymbolList = ArrayRef<const Symbol*>;
 using SymbolMap = std::unordered_map<StringRef, const Symbol*>;
@@ -54,11 +56,14 @@ enum class SymbolKind {
     Parameter,
     EnumValue,
     Module,
+    ParameterizedModule,
     Interface, // TODO: decouple interfaces from modules
     Modport,   // TODO: decouple interfaces from modules
     ModuleInstance,
     Package,
     ExplicitImport,
+    ImplicitImport,
+    WildcardImport,
     Program,
     Attribute,
     Genvar,
@@ -258,6 +263,11 @@ private:
 
     // In addition to the hash, also maintain an ordered list of members for easier access.
     mutable std::vector<const Symbol*> memberList;
+
+    // Also, maintain a separate list containing just wildcard imports.
+    // Every time we fail to look up a symbol name, we'll fall back to looking at imports.
+    mutable std::vector<const WildcardImportSymbol*> wildcardImports;
+
     mutable bool membersInitialized = false;
 };
 
@@ -633,10 +643,48 @@ public:
     ExplicitImportSymbol(StringRef packageName, StringRef importName,
                          SourceLocation location, const Symbol& parent);
 
-    const Symbol* getImport() const;
+    const PackageSymbol* package() const;
+    const Symbol* importedSymbol() const;
 
 private:
+    mutable const PackageSymbol* package_ = nullptr;
     mutable const Symbol* import = nullptr;
+    mutable bool initialized = false;
+};
+
+/// Represents a symbol that has been implicitly imported into a scope via
+/// a wildcard import. This symbol type is special in that it won't be
+/// returned from a lookup() call; also it is created on demand during
+/// lookups of other symbols.
+class ImplicitImportSymbol : public Symbol {
+public:
+    ImplicitImportSymbol(const WildcardImportSymbol& wildcard, const Symbol& importedSymbol,
+                         const Symbol& parent);
+
+    const WildcardImportSymbol& wildcard() const { return wildcard_; }
+    const Symbol* importedSymbol() const { return &import; }
+    const PackageSymbol* package() const;
+
+private:
+    const WildcardImportSymbol& wildcard_;
+    const Symbol& import;
+};
+
+/// Represents a wildcard import declaration. This symbol is special in
+/// that it won't be returned by a lookup, and won't even be in the name
+/// map of a symbol at all. Instead there is a sideband list used to
+/// resolve names via wildcard.
+class WildcardImportSymbol : public Symbol {
+public:
+    StringRef packageName;
+
+    WildcardImportSymbol(StringRef packageName, SourceLocation location, const Symbol& parent);
+
+    const PackageSymbol* package() const;
+    const ImplicitImportSymbol* resolve(StringRef lookupName, SourceLocation lookupLocation) const;
+
+private:
+    mutable const PackageSymbol* package_ = nullptr;
     mutable bool initialized = false;
 };
 

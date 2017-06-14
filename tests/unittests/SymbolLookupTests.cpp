@@ -36,7 +36,7 @@ endpackage
 module top;
     import p::*;
 
-    if (1) begin : b
+    if (1) begin : gen_b
         // (1) A lookup here returns p::x
         parameter int x = 12;
         // (2) A lookup here returns local x
@@ -46,7 +46,25 @@ endmodule
 )");
 
     DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(tree);
-    //root.topInstances()[0]->member<GenerateBlockSymbol>(0).
+    const auto& top = *root.topInstances()[0];
+    const auto& gen_b = top.member<GenerateBlockSymbol>(1);
+    const auto& param = gen_b.member<ParameterSymbol>(0);
+    CHECK(root.diagnostics().empty());
+    CHECK(param.value().integer() == 12);
+
+    // Lookup at (2); should return the local parameter
+    auto symbol = gen_b.lookup("x", param.location + 22, LookupKind::Local);
+    REQUIRE(symbol);
+    CHECK(symbol->kind == SymbolKind::Parameter);
+    CHECK(symbol == &param);
+    CHECK(root.diagnostics().empty());
+
+    // Lookup at (1); should return the package parameter
+    symbol = gen_b.lookup("x", param.location - 2, LookupKind::Local);
+    REQUIRE(symbol);
+    CHECK(symbol->kind == SymbolKind::Parameter);
+    CHECK(symbol->as<ParameterSymbol>().value().integer() == 4);
+
 }
 
 

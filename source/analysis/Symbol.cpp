@@ -55,9 +55,19 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
             break;
         case SyntaxKind::PackageImportDeclaration:
             for (auto item : node.as<PackageImportDeclarationSyntax>().items) {
-                results.append(&root.allocate<ExplicitImportSymbol>(item->package.valueText(),
-                                                                    item->item.valueText(),
-                                                                    item->item.location(), parent));
+                if (item->item.kind == TokenKind::Star) {
+                    results.append(&root.allocate<WildcardImportSymbol>(
+                        item->package.valueText(),
+                        item->item.location(),
+                        parent));
+                }
+                else {
+                    results.append(&root.allocate<ExplicitImportSymbol>(
+                        item->package.valueText(),
+                        item->item.valueText(),
+                        item->item.location(),
+                        parent));
+                }
             }
             break;
         case SyntaxKind::HierarchyInstantiation: {
@@ -148,9 +158,12 @@ const ScopeSymbol& Symbol::containingScope() const {
         current = &current->containingSymbol;
         switch (current->kind) {
             case SymbolKind::Root:
-            /*case SymbolKind::CompilationUnit:
+            case SymbolKind::CompilationUnit:
             case SymbolKind::Package:
-            case SymbolKind::ParameterizedModule:*/
+            case SymbolKind::ParameterizedModule:
+            case SymbolKind::SequentialBlock:
+            case SymbolKind::ProceduralBlock:
+            case SymbolKind::GenerateBlock:
             case SymbolKind::DynamicScope:
             case SymbolKind::Subroutine:
                 return *static_cast<const ScopeSymbol*>(current);
@@ -181,6 +194,7 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLoc
         return nullptr;
 
     // First, do a direct search within the current scope's name map.
+    const SourceManager& sm = getRoot().sourceManager();
     auto it = memberMap.find(searchName);
     if (it != memberMap.end()) {
         // If this is a local or scoped lookup, check that we can access
@@ -188,18 +202,15 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLoc
         // referenced anywhere in the scope; location doesn't matter.
         bool locationGood = true;
         const Symbol* result = it->second;
-
-        if (lookupKind == LookupKind::Local || lookupKind == LookupKind::Scoped) {
-            const SourceManager& sm = getRoot().sourceManager();
+        if (lookupKind == LookupKind::Local || lookupKind == LookupKind::Scoped)
             locationGood = sm.isBeforeInCompilationUnit(result->location, lookupLocation);
-        }
 
         if (locationGood) {
             // If this is a package import, unwrap it to return the imported symbol.
             // Direct lookups don't allow package imports, so ignore it in that case.
-            if (result->kind == SymbolKind::ExplicitImport) {
+            if (result->kind == SymbolKind::ExplicitImport || result->kind == SymbolKind::ImplicitImport) {
                 if (lookupKind != LookupKind::Direct)
-                    return result->as<ExplicitImportSymbol>().getImport();
+                    return result->as<ExplicitImportSymbol>().importedSymbol();
             }
             else {
                 return result;
@@ -218,6 +229,22 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLoc
         if (lookupKind == LookupKind::Scoped)
             return getRoot().findPackage(searchName);
         return nullptr;
+    }
+    
+    if (lookupKind != LookupKind::Definition) {
+        // Check wildcard imports that lexically preceed the lookup location
+        // to see if the symbol can be found in one of them.
+        for (auto wildcard : wildcardImports) {
+            if (sm.isBeforeInCompilationUnit(wildcard->location, lookupLocation)) {
+                // TODO: if we find multiple, error and report all matching locations
+                auto result = wildcard->resolve(searchName, lookupLocation);
+                if (result) {
+                    // TODO: this can cause other errors for this particular scope
+                    addMember(*result);
+                    return result->importedSymbol();
+                }
+            }
+        }
     }
 
     // Continue up the scope chain.
@@ -250,8 +277,12 @@ const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
 void ScopeSymbol::addMember(const Symbol& symbol) const {
     // TODO: check for duplicate names
     // TODO: packages and definition namespaces
-    memberMap.try_emplace(symbol.name, &symbol);
     memberList.push_back(&symbol);
+    if (symbol.name)
+        memberMap.try_emplace(symbol.name, &symbol);
+
+    if (symbol.kind == SymbolKind::WildcardImport)
+        wildcardImports.push_back(&symbol.as<WildcardImportSymbol>());
 }
 
 void ScopeSymbol::init() const {
