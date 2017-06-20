@@ -600,10 +600,12 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
                 break;
             case TokenKind::NewKeyword:
                 expr = &parseNewExpression(expr);
+                break;
             case TokenKind::DoubleHash: {
                 auto timing = parseTimingControl();
                 ASSERT(timing);
                 expr = &allocate<TimingControlExpressionConcatenationSyntax>(*expr, *timing, parseExpression());
+                break;
             }
             default:
                 return *expr;
