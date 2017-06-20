@@ -279,7 +279,7 @@ ConstantValue ConstantEvaluator::evaluateCall(const BoundCallExpression& expr) {
     // Don't actually update that pointer until we finish evaluating arguments.
     Frame newFrame { currentFrame };
 
-	ArrayRef<const FormalArgumentSymbol*> args = subroutine.arguments();
+    ArrayRef<const FormalArgumentSymbol*> args = subroutine.arguments();
     for (uint32_t i = 0; i < args.count(); i++)
         newFrame.temporaries[args[i]] = evaluateExpr(*expr.arguments[i]);
 
@@ -340,7 +340,7 @@ void ConstantEvaluator::evaluateStatementList(const BoundStatementList& stmt) {
 }
 
 void ConstantEvaluator::evaluateReturn(const BoundReturnStatement& stmt) {
-	// TODO: empty return?
+    // TODO: empty return?
     currentFrame->returnValue = evaluateExpr(*stmt.expr);
     currentFrame->hasReturned = true;
 }

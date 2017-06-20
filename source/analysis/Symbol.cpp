@@ -142,14 +142,14 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
 }
 
 const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
-	const Symbol* current = this;
+    const Symbol* current = this;
     while (current->kind != searchKind) {
         if (current->kind == SymbolKind::Root)
             return nullptr;
 
         current = &current->containingSymbol;
     }
-	return current;
+    return current;
 }
 
 const ScopeSymbol& Symbol::containingScope() const {
@@ -174,13 +174,13 @@ const ScopeSymbol& Symbol::containingScope() const {
 }
 
 const DesignRootSymbol& Symbol::getRoot() const {
-	const Symbol* symbol = findAncestor(SymbolKind::Root);
-	ASSERT(symbol);
-	return symbol->as<DesignRootSymbol>();
+    const Symbol* symbol = findAncestor(SymbolKind::Root);
+    ASSERT(symbol);
+    return symbol->as<DesignRootSymbol>();
 }
 
 Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
-	return getRoot().addError(code, location_);
+    return getRoot().addError(code, location_);
 }
 
 const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLocation,
@@ -230,7 +230,7 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLoc
             return getRoot().findPackage(searchName);
         return nullptr;
     }
-    
+
     if (lookupKind != LookupKind::Definition) {
         // Check wildcard imports that lexically preceed the lookup location
         // to see if the symbol can be found in one of them.
@@ -257,21 +257,21 @@ SymbolList ScopeSymbol::members() const {
 }
 
 ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
-	const auto& bound = Binder(*this).bindConstantExpression(expr);
-	if (bound.bad())
-		return nullptr;
-	return ConstantEvaluator().evaluateExpr(bound);
+    const auto& bound = Binder(*this).bindConstantExpression(expr);
+    if (bound.bad())
+        return nullptr;
+    return ConstantEvaluator().evaluateExpr(bound);
 }
 
 ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType, SourceLocation errorLocation) const {
-	const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errorLocation ? errorLocation : expr.getFirstToken().location(), targetType);
-	if (bound.bad())
-		return nullptr;
-	return ConstantEvaluator().evaluateExpr(bound);
+    const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errorLocation ? errorLocation : expr.getFirstToken().location(), targetType);
+    if (bound.bad())
+        return nullptr;
+    return ConstantEvaluator().evaluateExpr(bound);
 }
 
 const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
-	return getRoot().getType(syntax, *this);
+    return getRoot().getType(syntax, *this);
 }
 
 void ScopeSymbol::addMember(const Symbol& symbol) const {
@@ -306,35 +306,35 @@ SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
 }
 
 DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager) :
-	ScopeSymbol(SymbolKind::Root, *this),
+    ScopeSymbol(SymbolKind::Root, *this),
     sourceMan(sourceManager)
 {
-	// Register built-in types
-	knownTypes[SyntaxKind::ShortIntType]  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword,	16, true, false, *this);
-	knownTypes[SyntaxKind::IntType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword,		32, true, false, *this);
-	knownTypes[SyntaxKind::LongIntType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::LongIntKeyword,	64, true, false, *this);
-	knownTypes[SyntaxKind::ByteType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ByteKeyword,		8, true, false, *this);
-	knownTypes[SyntaxKind::BitType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::BitKeyword,		1, false, false, *this);
-	knownTypes[SyntaxKind::LogicType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::LogicKeyword,		1, false, true, *this);
-	knownTypes[SyntaxKind::RegType]		  = alloc.emplace<IntegralTypeSymbol>(TokenKind::RegKeyword,		1, false, true, *this);
-	knownTypes[SyntaxKind::IntegerType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntegerKeyword,	32, true, true, *this);
-	knownTypes[SyntaxKind::TimeType]	  = alloc.emplace<IntegralTypeSymbol>(TokenKind::TimeKeyword,		64, false, true, *this);
-	knownTypes[SyntaxKind::RealType]	  = alloc.emplace<RealTypeSymbol>(TokenKind::RealKeyword,		64, *this);
-	knownTypes[SyntaxKind::RealTimeType]  = alloc.emplace<RealTypeSymbol>(TokenKind::RealTimeKeyword,	64, *this);
-	knownTypes[SyntaxKind::ShortRealType] = alloc.emplace<RealTypeSymbol>(TokenKind::ShortRealKeyword,	32, *this);
-	knownTypes[SyntaxKind::StringType]	  = alloc.emplace<TypeSymbol>(SymbolKind::StringType,	"string", *this);
-	knownTypes[SyntaxKind::CHandleType]	  = alloc.emplace<TypeSymbol>(SymbolKind::CHandleType,	"chandle", *this);
-	knownTypes[SyntaxKind::VoidType]	  = alloc.emplace<TypeSymbol>(SymbolKind::VoidType,		"void", *this);
-	knownTypes[SyntaxKind::EventType]	  = alloc.emplace<TypeSymbol>(SymbolKind::EventType,	"event", *this);
+    // Register built-in types
+    knownTypes[SyntaxKind::ShortIntType]  = alloc.emplace<IntegralTypeSymbol>(TokenKind::ShortIntKeyword,   16, true, false, *this);
+    knownTypes[SyntaxKind::IntType]       = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntKeyword,        32, true, false, *this);
+    knownTypes[SyntaxKind::LongIntType]   = alloc.emplace<IntegralTypeSymbol>(TokenKind::LongIntKeyword,    64, true, false, *this);
+    knownTypes[SyntaxKind::ByteType]      = alloc.emplace<IntegralTypeSymbol>(TokenKind::ByteKeyword,       8, true, false, *this);
+    knownTypes[SyntaxKind::BitType]       = alloc.emplace<IntegralTypeSymbol>(TokenKind::BitKeyword,        1, false, false, *this);
+    knownTypes[SyntaxKind::LogicType]     = alloc.emplace<IntegralTypeSymbol>(TokenKind::LogicKeyword,      1, false, true, *this);
+    knownTypes[SyntaxKind::RegType]       = alloc.emplace<IntegralTypeSymbol>(TokenKind::RegKeyword,        1, false, true, *this);
+    knownTypes[SyntaxKind::IntegerType]   = alloc.emplace<IntegralTypeSymbol>(TokenKind::IntegerKeyword,    32, true, true, *this);
+    knownTypes[SyntaxKind::TimeType]      = alloc.emplace<IntegralTypeSymbol>(TokenKind::TimeKeyword,       64, false, true, *this);
+    knownTypes[SyntaxKind::RealType]      = alloc.emplace<RealTypeSymbol>(TokenKind::RealKeyword,       64, *this);
+    knownTypes[SyntaxKind::RealTimeType]  = alloc.emplace<RealTypeSymbol>(TokenKind::RealTimeKeyword,   64, *this);
+    knownTypes[SyntaxKind::ShortRealType] = alloc.emplace<RealTypeSymbol>(TokenKind::ShortRealKeyword,  32, *this);
+    knownTypes[SyntaxKind::StringType]    = alloc.emplace<TypeSymbol>(SymbolKind::StringType,   "string", *this);
+    knownTypes[SyntaxKind::CHandleType]   = alloc.emplace<TypeSymbol>(SymbolKind::CHandleType,  "chandle", *this);
+    knownTypes[SyntaxKind::VoidType]      = alloc.emplace<TypeSymbol>(SymbolKind::VoidType,     "void", *this);
+    knownTypes[SyntaxKind::EventType]     = alloc.emplace<TypeSymbol>(SymbolKind::EventType,    "event", *this);
     knownTypes[SyntaxKind::Unknown]       = alloc.emplace<ErrorTypeSymbol>(*this);
 
     // Register built-in system functions
     const auto& intType = getKnownType(SyntaxKind::IntType);
     SmallVectorSized<const FormalArgumentSymbol*, 8> args;
-    
+
     args.append(alloc.emplace<FormalArgumentSymbol>(intType, *this));
     addMember(allocate<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2, *this));
-    
+
     // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
     // assignment like context
     // TODO: add support for all these operands on data_types, not just expressions,
@@ -384,78 +384,78 @@ const PackageSymbol* DesignRootSymbol::findPackage(StringRef lookupName) const {
     if (it == packageMap.end())
         return nullptr;
 
-	return (const PackageSymbol*)it->second;
+    return (const PackageSymbol*)it->second;
 }
 
 const TypeSymbol& DesignRootSymbol::getType(const DataTypeSyntax& syntax) const {
-	return getType(syntax, *this);
+    return getType(syntax, *this);
 }
 
 const TypeSymbol& DesignRootSymbol::getType(const DataTypeSyntax& syntax, const ScopeSymbol& scope) const {
-	switch (syntax.kind) {
-	    case SyntaxKind::BitType:
-	    case SyntaxKind::LogicType:
-	    case SyntaxKind::RegType:
-			return getIntegralType(syntax.as<IntegerTypeSyntax>(), scope);
-	    case SyntaxKind::ByteType:
-	    case SyntaxKind::ShortIntType:
-	    case SyntaxKind::IntType:
-	    case SyntaxKind::LongIntType:
-	    case SyntaxKind::IntegerType:
-	    case SyntaxKind::TimeType: {
-	        // TODO: signing
-	        auto& its = syntax.as<IntegerTypeSyntax>();
-	        if (its.dimensions.count() > 0) {
-	            // Error but don't fail out; just remove the dims and keep trucking
-	            auto& diag = addError(DiagCode::PackedDimsOnPredefinedType, its.dimensions[0]->openBracket.location());
-	            diag << getTokenKindText(its.keyword.kind);
-	        }
-	        return getKnownType(syntax.kind);
-	    }
-	    case SyntaxKind::RealType:
-	    case SyntaxKind::RealTimeType:
-	    case SyntaxKind::ShortRealType:
-	    case SyntaxKind::StringType:
-	    case SyntaxKind::CHandleType:
-	    case SyntaxKind::EventType:
-	        return getKnownType(syntax.kind);
-	    //case SyntaxKind::EnumType: {
-	    //    ExpressionBinder binder {*this, scope};
-	    //    const EnumTypeSyntax& enumSyntax = syntax.as<EnumTypeSyntax>();
-	    //    const IntegralTypeSymbol& baseType = (enumSyntax.baseType ? getTypeSymbol(*enumSyntax.baseType, scope) : getKnownType(SyntaxKind::IntType))->as<IntegralTypeSymbol>();
-	
-	    //    SmallVectorSized<EnumValueSymbol *, 8> values;
-	    //    SVInt nextVal;
-	    //    for (auto member : enumSyntax.members) {
-	    //        //TODO: add each member to the scope
-	    //        if (member->initializer) {
-	    //            auto bound = binder.bindConstantExpression(member->initializer->expr);
-	    //            nextVal = std::get<SVInt>(evaluateConstant(bound));
-	    //        }
-	    //        EnumValueSymbol *valSymbol = alloc.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location(), &baseType, nextVal);
-	    //        values.append(valSymbol);
-	    //        scope->add(valSymbol);
-	    //        ++nextVal;
-	    //    }
-	    //    return alloc.emplace<EnumTypeSymbol>(&baseType, enumSyntax.keyword.location(), values.copy(alloc));
-	    //}
-	    //case SyntaxKind::TypedefDeclaration: {
-	    //    const auto& tds = syntax.as<TypedefDeclarationSyntax>();
-	    //    auto type = getTypeSymbol(tds.type, scope);
-	    //    return alloc.emplace<TypeAliasSymbol>(syntax, tds.name.location(), type, tds.name.valueText());
-	    //}
-	    default:
-	        break;
-	}
-	
-	// TODO: consider Void Type
-	
-	return getErrorType();
+    switch (syntax.kind) {
+        case SyntaxKind::BitType:
+        case SyntaxKind::LogicType:
+        case SyntaxKind::RegType:
+            return getIntegralType(syntax.as<IntegerTypeSyntax>(), scope);
+        case SyntaxKind::ByteType:
+        case SyntaxKind::ShortIntType:
+        case SyntaxKind::IntType:
+        case SyntaxKind::LongIntType:
+        case SyntaxKind::IntegerType:
+        case SyntaxKind::TimeType: {
+            // TODO: signing
+            auto& its = syntax.as<IntegerTypeSyntax>();
+            if (its.dimensions.count() > 0) {
+                // Error but don't fail out; just remove the dims and keep trucking
+                auto& diag = addError(DiagCode::PackedDimsOnPredefinedType, its.dimensions[0]->openBracket.location());
+                diag << getTokenKindText(its.keyword.kind);
+            }
+            return getKnownType(syntax.kind);
+        }
+        case SyntaxKind::RealType:
+        case SyntaxKind::RealTimeType:
+        case SyntaxKind::ShortRealType:
+        case SyntaxKind::StringType:
+        case SyntaxKind::CHandleType:
+        case SyntaxKind::EventType:
+            return getKnownType(syntax.kind);
+        //case SyntaxKind::EnumType: {
+        //    ExpressionBinder binder {*this, scope};
+        //    const EnumTypeSyntax& enumSyntax = syntax.as<EnumTypeSyntax>();
+        //    const IntegralTypeSymbol& baseType = (enumSyntax.baseType ? getTypeSymbol(*enumSyntax.baseType, scope) : getKnownType(SyntaxKind::IntType))->as<IntegralTypeSymbol>();
+
+        //    SmallVectorSized<EnumValueSymbol *, 8> values;
+        //    SVInt nextVal;
+        //    for (auto member : enumSyntax.members) {
+        //        //TODO: add each member to the scope
+        //        if (member->initializer) {
+        //            auto bound = binder.bindConstantExpression(member->initializer->expr);
+        //            nextVal = std::get<SVInt>(evaluateConstant(bound));
+        //        }
+        //        EnumValueSymbol *valSymbol = alloc.emplace<EnumValueSymbol>(member->name.valueText(), member->name.location(), &baseType, nextVal);
+        //        values.append(valSymbol);
+        //        scope->add(valSymbol);
+        //        ++nextVal;
+        //    }
+        //    return alloc.emplace<EnumTypeSymbol>(&baseType, enumSyntax.keyword.location(), values.copy(alloc));
+        //}
+        //case SyntaxKind::TypedefDeclaration: {
+        //    const auto& tds = syntax.as<TypedefDeclarationSyntax>();
+        //    auto type = getTypeSymbol(tds.type, scope);
+        //    return alloc.emplace<TypeAliasSymbol>(syntax, tds.name.location(), type, tds.name.valueText());
+        //}
+        default:
+            break;
+    }
+
+    // TODO: consider Void Type
+
+    return getErrorType();
 }
 
 const TypeSymbol& DesignRootSymbol::getKnownType(SyntaxKind typeKind) const {
     auto it = knownTypes.find(typeKind);
-	ASSERT(it != knownTypes.end());
+    ASSERT(it != knownTypes.end());
     return *it->second;
 }
 
@@ -476,53 +476,53 @@ const TypeSymbol& DesignRootSymbol::getIntegralType(int width, bool isSigned, bo
 }
 
 const TypeSymbol& DesignRootSymbol::getIntegralType(const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) const {
-	// This is a simple integral vector (possibly of just one element).
-	bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
-	bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
-	bool isFourState = syntax.kind != SyntaxKind::BitType;
+    // This is a simple integral vector (possibly of just one element).
+    bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
+    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
+    bool isFourState = syntax.kind != SyntaxKind::BitType;
 
-	SmallVectorSized<ConstantRange, 4> dims;
-	if (!evaluateConstantDims(syntax.dimensions, dims, scope))
-		return getErrorType();
+    SmallVectorSized<ConstantRange, 4> dims;
+    if (!evaluateConstantDims(syntax.dimensions, dims, scope))
+        return getErrorType();
 
-	// TODO: review this whole mess
+    // TODO: review this whole mess
 
-	if (dims.empty())
-		// TODO: signing
-		return getKnownType(syntax.kind);
-	else if (dims.count() == 1 && dims[0].right == 0) {
-		// if we have the common case of only one dimension and lsb == 0
-		// then we can use the shared representation
-		int width = dims[0].left + 1;
-		return getIntegralType(width, isSigned, isFourState, isReg);
-	}
-	else {
-		SmallVectorSized<int, 4> lowerBounds;
-		SmallVectorSized<int, 4> widths;
-		int totalWidth = 0;
-		for (auto& dim : dims) {
-			int msb = dim.left;
-			int lsb = dim.right;
-			int width;
-			if (msb > lsb) {
-				width = msb - lsb + 1;
-				lowerBounds.append(lsb);
-			}
-			else {
-				// TODO: msb == lsb
-				width = lsb - msb + 1;
-				lowerBounds.append(-lsb);
-			}
-			widths.append(width);
+    if (dims.empty())
+        // TODO: signing
+        return getKnownType(syntax.kind);
+    else if (dims.count() == 1 && dims[0].right == 0) {
+        // if we have the common case of only one dimension and lsb == 0
+        // then we can use the shared representation
+        int width = dims[0].left + 1;
+        return getIntegralType(width, isSigned, isFourState, isReg);
+    }
+    else {
+        SmallVectorSized<int, 4> lowerBounds;
+        SmallVectorSized<int, 4> widths;
+        int totalWidth = 0;
+        for (auto& dim : dims) {
+            int msb = dim.left;
+            int lsb = dim.right;
+            int width;
+            if (msb > lsb) {
+                width = msb - lsb + 1;
+                lowerBounds.append(lsb);
+            }
+            else {
+                // TODO: msb == lsb
+                width = lsb - msb + 1;
+                lowerBounds.append(-lsb);
+            }
+            widths.append(width);
 
-			// TODO: overflow
-			totalWidth += width;
-		}
-		return allocate<IntegralTypeSymbol>(
-			getIntegralKeywordKind(isFourState, isReg),
-			totalWidth, isSigned, isFourState,
-			lowerBounds.copy(alloc), widths.copy(alloc), *this);
-	}
+            // TODO: overflow
+            totalWidth += width;
+        }
+        return allocate<IntegralTypeSymbol>(
+            getIntegralKeywordKind(isFourState, isReg),
+            totalWidth, isSigned, isFourState,
+            lowerBounds.copy(alloc), widths.copy(alloc), *this);
+    }
 }
 
 const TypeSymbol& DesignRootSymbol::getErrorType() const {
@@ -542,8 +542,8 @@ bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSy
 
         const RangeSelectSyntax& range = selector->as<RangeSelectSyntax>();
 
-		// §6.9.1 - Implementations may set a limit on the maximum length of a vector, but the limit shall be at least 65536 (2^16) bits.
-		const int MaxRangeBits = 16;
+        // §6.9.1 - Implementations may set a limit on the maximum length of a vector, but the limit shall be at least 65536 (2^16) bits.
+        const int MaxRangeBits = 16;
 
         // TODO: errors
         auto left = scope.evaluateConstant(range.left).coerceInteger(MaxRangeBits);

@@ -54,7 +54,7 @@ public:
     uint32_t offset() const { return charOffset; }
     bool valid() const { return bufferID.valid(); }
 
-	explicit operator bool() const { return valid(); }
+    explicit operator bool() const { return valid(); }
 
     /// Computes a source location that is offset from the current one.
     /// Note that there is no error checking to ensure that the location

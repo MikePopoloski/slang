@@ -34,9 +34,9 @@ public:
 
     BoundNode(BoundNodeKind kind) : kind(kind) {}
 
-	// Not copyable
-	BoundNode(const BoundNode&) = delete;
-	BoundNode& operator=(const BoundNode&) = delete;
+    // Not copyable
+    BoundNode(const BoundNode&) = delete;
+    BoundNode& operator=(const BoundNode&) = delete;
 
     bool bad() const { return kind == BoundNodeKind::Unknown; }
 };
@@ -58,7 +58,7 @@ public:
         BoundExpression(BoundNodeKind::Unknown, EmptyLiteral, type), child(child) {}
 
 private:
-	static const LiteralExpressionSyntax EmptyLiteral;
+    static const LiteralExpressionSyntax EmptyLiteral;
 };
 
 class BoundLiteral : public BoundExpression {
@@ -162,14 +162,14 @@ class BoundStatement : public BoundNode {
 public:
     const StatementSyntax& syntax;
 
-	explicit BoundStatement(BoundNodeKind kind) :
-		BoundNode(kind), syntax(EmptyStatement) {}
+    explicit BoundStatement(BoundNodeKind kind) :
+        BoundNode(kind), syntax(EmptyStatement) {}
 
     BoundStatement(BoundNodeKind kind, const StatementSyntax& syntax) :
         BoundNode(kind), syntax(syntax) {}
 
 private:
-	static const EmptyStatementSyntax EmptyStatement;
+    static const EmptyStatementSyntax EmptyStatement;
 };
 
 class BadBoundStatement : public BoundStatement {

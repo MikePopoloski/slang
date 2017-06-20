@@ -215,12 +215,12 @@ public:
 
     int64_t getAssertInt64() const;
 
-	/// Checks whether it's possible to convert the value to a simple built-in
-	/// integer type and if so returns it.
-	template<typename T>
-	std::optional<T> as() const {
-		if (unknownFlag || getMinRepresentedBits() > std::numeric_limits<T>::digits)
-			return std::nullopt;
+    /// Checks whether it's possible to convert the value to a simple built-in
+    /// integer type and if so returns it.
+    template<typename T>
+    std::optional<T> as() const {
+        if (unknownFlag || getMinRepresentedBits() > std::numeric_limits<T>::digits)
+            return std::nullopt;
 
         uint64_t word = getRawData()[0];
         if (signFlag && isNegative()) {
@@ -232,8 +232,8 @@ public:
                 word |= ~uint64_t(0ULL) << wordBits;
         }
 
-		return static_cast<T>(word);
-	}
+        return static_cast<T>(word);
+    }
 
     /// Check whether the number is negative. Note that this doesn't care about
     /// the sign flag; it simply looks at the highest bit to determine whether it is set.
@@ -472,8 +472,8 @@ public:
         WORD_SIZE = sizeof(uint64_t)
     };
 
-	static SVInt Zero;
-	static SVInt One;
+    static SVInt Zero;
+    static SVInt One;
 
 private:
     // fast internal constructors to just set fields on new values

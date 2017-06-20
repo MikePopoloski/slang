@@ -42,7 +42,7 @@ public:
                     else
                         cv = SVInt(0);
                 }
-				return true;
+                return true;
             }
 
             default:
@@ -65,13 +65,13 @@ public:
     }
 
     ConstantValue evalStatement(const StatementSyntax& stmt) {
-		// TODO:
+        // TODO:
         return nullptr;
     }
 
     std::string reportDiagnostics() {
-		if (syntaxTrees.empty())
-			return "";
+        if (syntaxTrees.empty())
+            return "";
 
         return DiagnosticWriter(syntaxTrees[0].sourceManager()).report(diagnostics);
     }
@@ -80,7 +80,7 @@ private:
     std::vector<SyntaxTree> syntaxTrees;
     BumpAllocator alloc;
     Diagnostics diagnostics;
-	DesignRootSymbol root;
+    DesignRootSymbol root;
     DynamicScopeSymbol scope;
     ConstantEvaluator evaluator;
 };

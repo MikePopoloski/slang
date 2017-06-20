@@ -24,18 +24,18 @@ public:
     /// Constructs a new binder for the given scope. The lookup kind is used whenever
     /// a name lookup must be performed (excepting some specific cases that are always
     /// done a certain way, such as callable expressions).
-	explicit Binder(const ScopeSymbol& scope, LookupKind lookupKind = LookupKind::Local);
+    explicit Binder(const ScopeSymbol& scope, LookupKind lookupKind = LookupKind::Local);
 
-	/// Binds an expression in a context that requires a compile-time value.
+    /// Binds an expression in a context that requires a compile-time value.
     const BoundExpression& bindConstantExpression(const ExpressionSyntax& syntax);
 
-	/// Binds an expression in a self-determined context. This is a SystemVerilog concept that
-	/// means that the final type of the expression is known without needing to know the broader
-	/// context in which it is used.
+    /// Binds an expression in a self-determined context. This is a SystemVerilog concept that
+    /// means that the final type of the expression is known without needing to know the broader
+    /// context in which it is used.
     const BoundExpression& bindSelfDeterminedExpression(const ExpressionSyntax& syntax);
 
-	/// Binds an expression in the context of an assignment, using the type of the left hand side
-	/// to perform any necessary implicit conversions and checking.
+    /// Binds an expression in the context of an assignment, using the type of the left hand side
+    /// to perform any necessary implicit conversions and checking.
     const BoundExpression& bindAssignmentLikeContext(const ExpressionSyntax& syntax, SourceLocation location, const TypeSymbol& assignmentType);
 
 private:
@@ -77,7 +77,7 @@ private:
     const TypeSymbol& binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState);
 
     const ScopeSymbol& scope;
-	const DesignRootSymbol& root;
+    const DesignRootSymbol& root;
     LookupKind lookupKind;
 };
 

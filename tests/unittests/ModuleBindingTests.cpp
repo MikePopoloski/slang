@@ -11,13 +11,13 @@ namespace {
 BumpAllocator alloc;
 
 const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax) {
-	DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(syntax);
+    DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(syntax);
 
-	REQUIRE(root.topInstances().count() > 0);
-	if (!syntax.diagnostics().empty())
-		WARN(syntax.reportDiagnostics());
+    REQUIRE(root.topInstances().count() > 0);
+    if (!syntax.diagnostics().empty())
+        WARN(syntax.reportDiagnostics());
 
-	return *root.topInstances()[0];
+    return *root.topInstances()[0];
 }
 
 TEST_CASE("Finding top level", "[binding:decls]") {
@@ -44,7 +44,7 @@ module Leaf();
 endmodule
 )");
 
-	evalModule(tree);
+    evalModule(tree);
 }
 
 TEST_CASE("Module parameterization errors", "[binding:modules]") {
@@ -75,7 +75,7 @@ endmodule
 )");
 
     // TODO:
-	/*DesignRootSymbol root(tree);
+    /*DesignRootSymbol root(tree);
     CHECK(tree.diagnostics().count() == 15);*/
 }
 

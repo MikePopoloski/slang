@@ -39,9 +39,8 @@ void PackageSymbol::initMembers() const {
     }
 }
 
-ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& parent) :
-    Symbol(SymbolKind::Module, decl.header.name, parent), decl(decl),
-    syntax(decl)
+ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& parent) :
+    Symbol(SymbolKind::Module, syntax.header.name, parent), syntax(syntax)
 {
 }
 
@@ -100,7 +99,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
         // Make sure there aren't extra param assignments for non-existent params.
         if (orderedIndex < orderedParams.count()) {
             auto& diag = addError(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
-            diag << decl.header.name.valueText();
+            diag << syntax.header.name.valueText();
             diag << orderedParams.count();
             diag << orderedIndex;
         }
@@ -134,7 +133,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
             if (!pair.second.second) {
                 auto& diag = addError(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
                 diag << pair.second.first->name.valueText();
-                diag << decl.header.name.valueText();
+                diag << syntax.header.name.valueText();
             }
         }
     }
@@ -159,7 +158,7 @@ const std::vector<ModuleSymbol::ParameterInfo>& ModuleSymbol::getDeclaredParams(
         // Discover all of the element's parameters. If we have a parameter port list, the only
         // publicly visible parameters are the ones in that list. Otherwise, parameters declared
         // in the module body are publicly visible.
-        const ModuleHeaderSyntax& header = decl.header;
+        const ModuleHeaderSyntax& header = syntax.header;
         SmallHashMap<StringRef, SourceLocation, 16> nameDupMap;
         std::vector<ParameterInfo> buffer;
 
@@ -172,7 +171,7 @@ const std::vector<ModuleSymbol::ParameterInfo>& ModuleSymbol::getDeclaredParams(
         }
 
         // also find direct body parameters
-        for (const MemberSyntax* member : decl.members) {
+        for (const MemberSyntax* member : syntax.members) {
             if (member->kind == SyntaxKind::ParameterDeclarationStatement)
                 getParamDecls(member->as<ParameterDeclarationStatementSyntax>().parameter, buffer,
                               nameDupMap, false, overrideLocal, true);
@@ -183,22 +182,22 @@ const std::vector<ModuleSymbol::ParameterInfo>& ModuleSymbol::getDeclaredParams(
     return *paramInfoCache;
 }
 
-bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& syntax, std::vector<ParameterInfo>& buffer,
+bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, std::vector<ParameterInfo>& buffer,
                                  HashMapBase<StringRef, SourceLocation>& nameDupMap,
                                  bool lastLocal, bool overrideLocal, bool bodyParam) const {
     // It's legal to leave off the parameter keyword in the parameter port list.
     // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
     // This isn't allowed in a module body, but the parser will take care of the error for us.
     bool local = false;
-    if (!syntax.keyword)
+    if (!paramDecl.keyword)
         local = lastLocal;
     else {
         // In the body of a module that has a parameter port list in its header, parameters are
         // actually just localparams. overrideLocal will be true in this case.
-        local = syntax.keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
+        local = paramDecl.keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
     }
 
-    for (const VariableDeclaratorSyntax* declarator : syntax.declarators) {
+    for (const VariableDeclaratorSyntax* declarator : paramDecl.declarators) {
         auto declName = declarator->name.valueText();
         if (!declName)
             continue;
@@ -217,7 +216,7 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& syntax, std::
                 addError(DiagCode::LocalParamNoInitializer, declLocation);
             else if (bodyParam)
                 addError(DiagCode::BodyParamNoInitializer, declLocation);
-            buffer.push_back({ syntax, *declarator, declName, declLocation, init, local, bodyParam });
+            buffer.push_back({ paramDecl, *declarator, declName, declLocation, init, local, bodyParam });
         }
     }
     return local;

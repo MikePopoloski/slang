@@ -20,23 +20,23 @@ namespace slang {
 ///
 class ConstantValue {
 public:
-	ConstantValue() {}
-	ConstantValue(std::nullptr_t) {}
+    ConstantValue() {}
+    ConstantValue(std::nullptr_t) {}
 
-	ConstantValue(const SVInt& integer) : value(integer) {}
+    ConstantValue(const SVInt& integer) : value(integer) {}
     ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
     ConstantValue(double real) : value(real) {}
 
-	ConstantValue(const ConstantValue& other) = default;
-	ConstantValue(ConstantValue&& other) noexcept = default;
-	ConstantValue& operator=(const ConstantValue& other) = default;
-	ConstantValue& operator=(ConstantValue&& other) noexcept = default;
+    ConstantValue(const ConstantValue& other) = default;
+    ConstantValue(ConstantValue&& other) noexcept = default;
+    ConstantValue& operator=(const ConstantValue& other) = default;
+    ConstantValue& operator=(ConstantValue&& other) noexcept = default;
 
-	bool bad() const { return value.index() == 0; }
+    bool bad() const { return value.index() == 0; }
     explicit operator bool() const { return !bad(); }
 
-	bool isInteger() const { return value.index() == 1; }
-	bool isReal() const { return value.index() == 2; }
+    bool isInteger() const { return value.index() == 1; }
+    bool isReal() const { return value.index() == 2; }
 
     const SVInt& integer() const { return std::get<1>(value); }
     double real() const { return std::get<2>(value); }
@@ -48,7 +48,7 @@ public:
                                      SourceLocation location = SourceLocation());
 
 private:
-	std::variant<std::monostate, SVInt, double> value;
+    std::variant<std::monostate, SVInt, double> value;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative
@@ -58,21 +58,21 @@ private:
 /// SystemVerilog places tighter bounds on possible ranges anyway so it shouldn't be an issue.
 ///
 struct ConstantRange {
-	int left;
-	int right;
+    int left;
+    int right;
 
-	/// Gets the width of the range, regardless of the order in which
-	/// the bounds are specified.
-	int width() const {
-		int diff = left - right;
-		return (diff < 0 ? -diff : diff) + 1;
-	}
+    /// Gets the width of the range, regardless of the order in which
+    /// the bounds are specified.
+    int width() const {
+        int diff = left - right;
+        return (diff < 0 ? -diff : diff) + 1;
+    }
 
-	/// "Little endian" bit order is when the msb is >= the lsb.
-	bool isLittleEndian() const { return left >= right; }
+    /// "Little endian" bit order is when the msb is >= the lsb.
+    bool isLittleEndian() const { return left >= right; }
 
-	/// Normalizes the range so that it's of the form [msb-lsb, 0] and in little endian bit order.
-	ConstantRange normalize() const { return { std::max(left, right) - std::min(left, right), 0 }; }
+    /// Normalizes the range so that it's of the form [msb-lsb, 0] and in little endian bit order.
+    ConstantRange normalize() const { return { std::max(left, right) - std::min(left, right), 0 }; }
 };
 
 }

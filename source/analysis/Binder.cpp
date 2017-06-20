@@ -112,7 +112,7 @@ BoundExpression& Binder::bindExpression(const ExpressionSyntax& syntax) {
 
             DEFAULT_UNREACHABLE;
     }
-	return badExpr(nullptr);
+    return badExpr(nullptr);
 }
 
 const BoundExpression& Binder::bindConstantExpression(const ExpressionSyntax& syntax) {
@@ -153,13 +153,13 @@ BoundExpression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
         case SyntaxKind::IntegerLiteralExpression:
             return root.allocate<BoundLiteral>(
                 syntax,
-				root.getKnownType(SyntaxKind::IntType),
+                root.getKnownType(SyntaxKind::IntType),
                 std::get<SVInt>(syntax.literal.numericValue())
             );
         case SyntaxKind::RealLiteralExpression:
             return root.allocate<BoundLiteral>(
                 syntax,
-				root.getKnownType(SyntaxKind::RealType),
+                root.getKnownType(SyntaxKind::RealType),
                 std::get<double>(syntax.literal.numericValue())
             );
         case SyntaxKind::UnbasedUnsizedLiteralExpression: {
@@ -168,7 +168,7 @@ BoundExpression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
             logic_t val = std::get<logic_t>(syntax.literal.numericValue());
             return root.allocate<BoundLiteral>(
                 syntax,
-				root.getIntegralType(1, false, val.isUnknown()),
+                root.getIntegralType(1, false, val.isUnknown()),
                 SVInt(val));
         }
 
@@ -196,7 +196,7 @@ BoundExpression& Binder::bindName(const NameSyntax& syntax) {
             return bindScopedName(syntax.as<ScopedNameSyntax>());
         DEFAULT_UNREACHABLE;
     }
-	return badExpr(nullptr);
+    return badExpr(nullptr);
 }
 
 BoundExpression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
@@ -217,7 +217,7 @@ BoundExpression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
 
         DEFAULT_UNREACHABLE;
     }
-	return badExpr(nullptr);
+    return badExpr(nullptr);
 }
 
 BoundExpression& Binder::bindSelectName(const IdentifierSelectNameSyntax& syntax) {
@@ -227,8 +227,8 @@ BoundExpression& Binder::bindSelectName(const IdentifierSelectNameSyntax& syntax
     // expression. For now though, we implement the most simple case:
     // foo[SELECT] where foo is an integral type.
 
-	ASSERT(syntax.selectors.count() == 1);
-	ASSERT(syntax.selectors[0]->selector);
+    ASSERT(syntax.selectors.count() == 1);
+    ASSERT(syntax.selectors[0]->selector);
     // spoof this being just a simple ElementSelectExpression
     return bindSelectExpression(syntax,
         bindName(root.allocate<IdentifierNameSyntax>(syntax.identifier)), *syntax.selectors[0]->selector);
@@ -367,7 +367,7 @@ BoundExpression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& sy
     const SubroutineSymbol& subroutine = symbol->as<SubroutineSymbol>();
 
     // TODO: handle too few args as well, which requires looking at default values
-	auto formalArgs = subroutine.arguments();
+    auto formalArgs = subroutine.arguments();
     if (formalArgs.count() < actualArgs.count()) {
         auto& diag = root.addError(DiagCode::TooManyArguments, name.location());
         diag << syntax.left.sourceRange();
@@ -432,7 +432,7 @@ BoundExpression& Binder::bindMultipleConcatenationExpression(const MultipleConca
 
 BoundExpression& Binder::bindSelectExpression(const ElementSelectExpressionSyntax& syntax) {
     BoundExpression& expr = bindAndPropagate(syntax.left);
-	// TODO: null selector?
+    // TODO: null selector?
     return bindSelectExpression(syntax, expr, *syntax.select.selector);
 }
 
@@ -472,13 +472,13 @@ BoundExpression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, co
         DEFAULT_UNREACHABLE;
     }
     return root.allocate<BoundSelectExpression>(
-		syntax,
-		root.getIntegralType(width, expr.type->isSigned(), expr.type->isFourState()),
-		kind,
-		expr,
-		*left,
-		*right
-	);
+        syntax,
+        root.getIntegralType(width, expr.type->isSigned(), expr.type->isFourState()),
+        kind,
+        expr,
+        *left,
+        *right
+    );
 }
 
 bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, BoundExpression** operand) {
@@ -574,7 +574,7 @@ void Binder::propagate(BoundExpression& expression, const TypeSymbol& type) {
         case SyntaxKind::IntegerLiteralExpression:
         case SyntaxKind::IntegerVectorExpression:
         case SyntaxKind::InvocationExpression:
-			expression.type = &type;
+            expression.type = &type;
             break;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
@@ -678,11 +678,11 @@ bool Binder::propagateAssignmentLike(BoundExpression& rhs, const TypeSymbol& lhs
         if (!lhsType.isReal() && !rhs.type->isReal()) {
             rhs.type = &root.getIntegralType(lhsType.width(), rhs.type->isSigned(), rhs.type->isFourState());
         }
-		else {
+        else {
             if (lhsType.width() > 32)
-				rhs.type = &root.getKnownType(SyntaxKind::RealType);
+                rhs.type = &root.getKnownType(SyntaxKind::RealType);
             else
-				rhs.type = &root.getKnownType(SyntaxKind::ShortRealType);
+                rhs.type = &root.getKnownType(SyntaxKind::ShortRealType);
         }
         propagate(rhs, *rhs.type);
         return true;
@@ -702,11 +702,11 @@ const TypeSymbol& Binder::binaryOperatorResultType(const TypeSymbol* lhsType, co
         // integral type. For the conditional operator it is clear that this case should lead to a shortreal, and
         // it isn't explicitly mentioned for other binary operators
         if (width >= 64)
-			return root.getKnownType(SyntaxKind::RealType);
+            return root.getKnownType(SyntaxKind::RealType);
         else
-			return root.getKnownType(SyntaxKind::ShortRealType);
+            return root.getKnownType(SyntaxKind::ShortRealType);
     }
-	else {
+    else {
         return root.getIntegralType(width, isSigned, fourState);
     }
 }

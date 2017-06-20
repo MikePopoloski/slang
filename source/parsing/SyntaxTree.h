@@ -67,7 +67,7 @@ public:
     SourceManager& sourceManager() { return sourceMan; }
     const SourceManager& sourceManager() const { return sourceMan; }
 
-	/// Gets the root of the syntax tree.
+    /// Gets the root of the syntax tree.
     const SyntaxNode& root() const { return *rootNode; }
 
     /// The ID of the source buffer used to create the syntax tree.
