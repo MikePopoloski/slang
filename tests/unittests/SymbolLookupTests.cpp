@@ -64,7 +64,6 @@ endmodule
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol->as<ParameterSymbol>().value().integer() == 4);
-
 }
 
 

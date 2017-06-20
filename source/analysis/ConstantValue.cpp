@@ -12,9 +12,9 @@ std::optional<int> ConstantValue::coerceInteger(uint32_t maxBits, Diagnostics* d
                                                 SourceLocation location) {
     // TODO: report errors
     if (isInteger()) {
-        const SVInt& value = integer();
-        if (!value.hasUnknown() && value.getActiveBits() <= maxBits) {
-            auto result = value.as<int>();
+        const SVInt& intVal = integer();
+        if (!intVal.hasUnknown() && intVal.getActiveBits() <= maxBits) {
+            auto result = intVal.as<int>();
             if (result)
                 return *result;
         }

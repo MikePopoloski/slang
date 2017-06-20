@@ -44,14 +44,14 @@ const BoundStatementList& StatementBlockSymbol::bindStatementList(const SyntaxLi
 }
 
 BoundStatement& StatementBlockSymbol::bindReturnStatement(const ReturnStatementSyntax& syntax) const {
-    auto location = syntax.returnKeyword.location();
+    auto stmtLoc = syntax.returnKeyword.location();
     const Symbol* subroutine = findAncestor(SymbolKind::Subroutine);
     if (!subroutine) {
-        addError(DiagCode::ReturnNotInSubroutine, location);
+        addError(DiagCode::ReturnNotInSubroutine, stmtLoc);
         return badStmt(nullptr);
     }
 
-    const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, location,
+    const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, stmtLoc,
                                                                subroutine->as<SubroutineSymbol>().returnType());
     return allocate<BoundReturnStatement>(syntax, &expr);
 }
