@@ -2,7 +2,7 @@
 // Token.cpp
 // Contains Token class and related helpers.
 //
-// File is under the MIT license; see LICENSE for details
+// File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
 #include "Token.h"
 
@@ -10,6 +10,15 @@
 #include "util/BumpAllocator.h"
 
 namespace slang {
+
+void NumericTokenFlags::set(LiteralBase base_, bool isSigned_) {
+    raw |= uint8_t(base_);
+    raw |= uint8_t(isSigned_) << 2;
+}
+
+void NumericTokenFlags::set(TimeUnit unit_) {
+    raw |= uint8_t(unit_) << 3;
+}
 
 Token::Info::Info() :
     flags(0)
@@ -34,14 +43,11 @@ void Token::Info::setNumInfo(NumericTokenValue&& value) {
 
 void Token::Info::setNumFlags(LiteralBase base, bool isSigned) {
     NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
-    if (target) {
-        target->numericFlags.base = base;
-        target->numericFlags.isSigned = isSigned;
-    }
+    if (target)
+        target->numericFlags.set(base, isSigned);
     else {
         NumericLiteralInfo numInfo;
-        numInfo.numericFlags.base = base;
-        numInfo.numericFlags.isSigned = isSigned;
+        numInfo.numericFlags.set(base, isSigned);
         extra = std::move(numInfo);
     }
 }
@@ -49,10 +55,10 @@ void Token::Info::setNumFlags(LiteralBase base, bool isSigned) {
 void Token::Info::setTimeUnit(TimeUnit unit) {
     NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
     if (target)
-        target->numericFlags.unit = unit;
+        target->numericFlags.set(unit);
     else {
         NumericLiteralInfo numInfo;
-        numInfo.numericFlags.unit = unit;
+        numInfo.numericFlags.set(unit);
         extra = std::move(numInfo);
     }
 }

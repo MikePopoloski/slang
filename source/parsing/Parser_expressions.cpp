@@ -302,7 +302,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     uint32_t length = 0;
     NumericTokenFlags baseFlags = baseToken.numericFlags();
 
-    vectorBuilder.start(baseFlags.base, sizeBits, baseFlags.isSigned, first.location());
+    vectorBuilder.start(baseFlags.base(), sizeBits, baseFlags.isSigned(), first.location());
     do {
         length += next.rawText().length();
         consume();

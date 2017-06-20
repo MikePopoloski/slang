@@ -60,14 +60,14 @@ StringRef timeUnitToSuffix(TimeUnit unit);
 
 /// Various flags for numeric tokens.
 struct NumericTokenFlags {
-    LiteralBase base : 2;
-    bool isSigned : 1;
-    TimeUnit unit : 3;
+    uint8_t raw = 0;
 
-    NumericTokenFlags() :
-        base(LiteralBase::Binary), isSigned(false), unit(TimeUnit::Seconds)
-    {
-    }
+    LiteralBase base() const { return LiteralBase(raw & 0b11); }
+    bool isSigned() const { return (raw & 0b100) != 0; }
+    TimeUnit unit() const { return TimeUnit((raw & 0b111000) >> 3); }
+
+    void set(LiteralBase base, bool isSigned);
+    void set(TimeUnit unit);
 };
 
 /// The original kind of identifier represented by a token.

@@ -369,8 +369,8 @@ void checkVectorBase(const std::string& s, LiteralBase base, bool isSigned) {
 
     CHECK(token.kind == TokenKind::IntegerBase);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
-    CHECK(token.numericFlags().base == base);
-    CHECK(token.numericFlags().isSigned == isSigned);
+    CHECK(token.numericFlags().base() == base);
+    CHECK(token.numericFlags().isSigned() == isSigned);
     CHECK(diagnostics.empty());
 }
 
@@ -508,17 +508,19 @@ void checkTimeLiteral(const std::string& s, TimeUnit flagCheck, double num) {
 
     CHECK(token.kind == TokenKind::TimeLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
-    CHECK(token.numericFlags().unit == flagCheck);
+    CHECK(token.numericFlags().unit() == flagCheck);
+
     double value;
-    const SVInt *svIntValue = std::get_if<SVInt>(&token.numericValue());
-    const double *doubValue = std::get_if<double>(&token.numericValue());
-    if (svIntValue) {
+    const SVInt* svIntValue = std::get_if<SVInt>(&token.numericValue());
+    const double* doubValue = std::get_if<double>(&token.numericValue());
+
+    if (svIntValue)
         value = (double)svIntValue->getAssertUInt16();
-    } else if (doubValue) {
+    else if (doubValue)
         value = *doubValue;
-    } else {
+    else
         value = 0.0; // will ensure check failure
-    }
+
     CHECK(value == num);
     CHECK(diagnostics.empty());
 }

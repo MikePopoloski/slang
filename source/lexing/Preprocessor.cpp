@@ -485,7 +485,7 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
         value = *alloc.emplace<Token>(TokenKind::IntegerLiteral, valueInfo);
         valueInfo->setNumInfo(*val);
 
-        StringRef timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit);
+        StringRef timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit());
         Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
             timeUnitSuffix,
             token.location() + numText.length(), token.getInfo()->flags);
