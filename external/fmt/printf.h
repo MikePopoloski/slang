@@ -62,21 +62,21 @@ class IsZeroInt : public ArgVisitor<IsZeroInt, bool> {
 };
 
 // returns the default type for format specific "%s"
-class DefaultType : public ArgVisitor<DefaultType, wchar_t> {
+class DefaultType : public ArgVisitor<DefaultType, char> {
  public:
-  wchar_t visit_char(int) { return 'c'; }
+  char visit_char(int) { return 'c'; }
 
-  wchar_t visit_bool(bool) { return 's'; }
+  char visit_bool(bool) { return 's'; }
 
-  wchar_t visit_pointer(const void *) { return 'p'; }
-
-  template <typename T>
-  wchar_t visit_any_int(T) { return 'd'; }
+  char visit_pointer(const void *) { return 'p'; }
 
   template <typename T>
-  wchar_t visit_any_double(T) { return 'g'; }
+  char visit_any_int(T) { return 'd'; }
 
-  wchar_t visit_unhandled_arg() { return 's'; }
+  template <typename T>
+  char visit_any_double(T) { return 'g'; }
+
+  char visit_unhandled_arg() { return 's'; }
 };
 
 template <typename T, typename U>
@@ -110,7 +110,7 @@ class ArgConverter : public ArgVisitor<ArgConverter<T>, void> {
       visit_any_int(value);
   }
 
-  void visit_char(char value) {
+  void visit_char(int value) {
     if (type_ != 's')
       visit_any_int(value);
   }
@@ -125,7 +125,8 @@ class ArgConverter : public ArgVisitor<ArgConverter<T>, void> {
     using internal::Arg;
     typedef typename internal::Conditional<
         is_same<T, void>::value, U, T>::type TargetType;
-    if (sizeof(TargetType) <= sizeof(int)) {
+    constexpr bool is32OrLess = sizeof(TargetType) <= sizeof(int);
+    if (is32OrLess) {
       // Extra casts are used to silence warnings.
       if (is_signed) {
         arg_.type = Arg::INT;
@@ -336,7 +337,7 @@ class PrintfFormatter : private internal::FormatterBase {
     : FormatterBase(al), writer_(w) {}
 
   /** Formats stored arguments and writes the output to the writer. */
-  FMT_API void format(BasicCStringRef<Char> format_str);
+  void format(BasicCStringRef<Char> format_str);
 };
 
 template <typename Char, typename AF>
@@ -439,6 +440,8 @@ void PrintfFormatter<Char, AF>::format(BasicCStringRef<Char> format_str) {
       } else if (*s == '*') {
         ++s;
         spec.precision_ = internal::PrecisionHandler().visit(get_arg(s));
+      } else {
+        spec.precision_ = 0;
       }
     }
 

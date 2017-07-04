@@ -1,4 +1,5 @@
 #define CATCH_CONFIG_MAIN
+#define DO_NOT_USE_WMAIN
 #include "Catch/catch.hpp"
 
 // This file contains the Catch unit testing framework implementation

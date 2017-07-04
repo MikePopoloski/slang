@@ -41,7 +41,7 @@
 #include <utility>  // for std::pair
 
 // The fmt library version in the form major * 10000 + minor * 100 + patch.
-#define FMT_VERSION 30002
+#define FMT_VERSION 40000
 
 #ifdef _SECURE_SCL
 # define FMT_SECURE_SCL _SECURE_SCL
@@ -107,6 +107,7 @@ typedef __int64          intmax_t;
 #endif
 
 #if defined(__clang__) && !defined(FMT_ICC_VERSION)
+# define FMT_CLANG_VERSION (__clang_major__ * 100 + __clang_minor__)
 # pragma clang diagnostic push
 # pragma clang diagnostic ignored "-Wdocumentation-unknown-command"
 # pragma clang diagnostic ignored "-Wpadded"
@@ -269,21 +270,9 @@ typedef __int64          intmax_t;
 #endif
 
 #ifndef FMT_USE_EXTERN_TEMPLATES
-// Clang doesn't have a feature check for extern templates so we check
-// for variadic templates which were introduced in the same version.
-// For GCC according to cppreference.com they were introduced in 3.3.
 # define FMT_USE_EXTERN_TEMPLATES \
-    ((__clang__ && FMT_USE_VARIADIC_TEMPLATES) || \
-     (FMT_GCC_VERSION >= 303 && FMT_HAS_GXX_CXX11))
+    (FMT_CLANG_VERSION >= 209 || (FMT_GCC_VERSION >= 303 && FMT_HAS_GXX_CXX11))
 #endif
-
-// Checks if decltype v1.1 is supported
-// http://en.cppreference.com/w/cpp/compiler_support
-#define FMT_HAS_DECLTYPE_INCOMPLETE_RETURN_TYPES \
-    (FMT_HAS_FEATURE(cxx_decltype_incomplete_return_types) || \
-    (FMT_GCC_VERSION >= 408 && FMT_HAS_GXX_CXX11) || \
-    FMT_MSC_VER >= 1900 || \
-    FMT_ICC_VERSION >= 1200)
 
 #ifdef FMT_HEADER_ONLY
 // If header only do not use extern templates.
@@ -295,12 +284,16 @@ typedef __int64          intmax_t;
 # define FMT_ASSERT(condition, message) assert((condition) && message)
 #endif
 
-#if FMT_GCC_VERSION >= 400 || FMT_HAS_BUILTIN(__builtin_clz)
-# define FMT_BUILTIN_CLZ(n) __builtin_clz(n)
-#endif
+// __builtin_clz is broken in clang with Microsoft CodeGen:
+// https://github.com/fmtlib/fmt/issues/519
+#ifndef _MSC_VER
+# if FMT_GCC_VERSION >= 400 || FMT_HAS_BUILTIN(__builtin_clz)
+#  define FMT_BUILTIN_CLZ(n) __builtin_clz(n)
+# endif
 
-#if FMT_GCC_VERSION >= 400 || FMT_HAS_BUILTIN(__builtin_clzll)
-# define FMT_BUILTIN_CLZLL(n) __builtin_clzll(n)
+# if FMT_GCC_VERSION >= 400 || FMT_HAS_BUILTIN(__builtin_clzll)
+#  define FMT_BUILTIN_CLZLL(n) __builtin_clzll(n)
+# endif
 #endif
 
 // Some compilers masquerade as both MSVC and GCC-likes or
@@ -732,7 +725,8 @@ class Buffer {
 template <typename T>
 template <typename U>
 void Buffer<T>::append(const U *begin, const U *end) {
-  std::size_t new_size = size_ + internal::to_unsigned(end - begin);
+  FMT_ASSERT(end >= begin, "negative value");
+  std::size_t new_size = size_ + (end - begin);
   if (new_size > capacity_)
     grow(new_size);
   std::uninitialized_copy(begin, end,
@@ -1402,14 +1396,9 @@ class MakeValue : public Arg {
   }
 
   template <typename T>
-  MakeValue(const T &value,
-            typename EnableIf<ConvertToInt<T>::value, int>::type = 0) {
-    int_value = value;
-  }
-
-  template <typename T>
-  static uint64_t type(const T &) {
-    return ConvertToInt<T>::value ? Arg::INT : Arg::CUSTOM;
+  static typename EnableIf<Not<ConvertToInt<T>::value>::value, uint64_t>::type
+      type(const T &) {
+    return Arg::CUSTOM;
   }
 
   // Additional template param `Char_` is needed here because make_type always
@@ -1959,6 +1948,9 @@ class ArgFormatterBase : public ArgVisitor<Impl, void> {
     writer_.write_int(reinterpret_cast<uintptr_t>(p), spec_);
   }
 
+  // workaround MSVC two-phase lookup issue
+  typedef internal::Arg Arg;
+
  protected:
   BasicWriter<Char> &writer() { return writer_; }
   Spec &spec() { return spec_; }
@@ -2223,10 +2215,10 @@ inline uint64_t make_type(const T &arg) {
   return MakeValue< BasicFormatter<char> >::type(arg);
 }
 
-template <unsigned N, bool/*IsPacked*/= (N < ArgList::MAX_PACKED_ARGS)>
+template <std::size_t N, bool/*IsPacked*/= (N < ArgList::MAX_PACKED_ARGS)>
 struct ArgArray;
 
-template <unsigned N>
+template <std::size_t N>
 struct ArgArray<N, true/*IsPacked*/> {
   typedef Value Type[N > 0 ? N : 1];
 
@@ -2244,7 +2236,7 @@ struct ArgArray<N, true/*IsPacked*/> {
   }
 };
 
-template <unsigned N>
+template <std::size_t N>
 struct ArgArray<N, false/*IsPacked*/> {
   typedef Arg Type[N + 1]; // +1 for the list end Arg::NONE
 

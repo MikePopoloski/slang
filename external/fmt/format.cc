@@ -41,6 +41,9 @@
 #endif
 
 #if FMT_USE_WINDOWS_H
+# if !defined(FMT_HEADER_ONLY) && !defined(WIN32_LEAN_AND_MEAN)
+#  define WIN32_LEAN_AND_MEAN
+# endif
 # if defined(NOMINMAX) || defined(FMT_WIN_MINMAX)
 #  include <windows.h>
 # else
@@ -209,16 +212,6 @@ void report_error(FormatFunc func, int error_code,
   std::fputc('\n', stderr);
 }
 }  // namespace
-
-namespace internal {
-
-// This method is used to preserve binary compatibility with fmt 3.0.
-// It can be removed in 4.0.
-FMT_FUNC void format_system_error(
-  Writer &out, int error_code, StringRef message) FMT_NOEXCEPT {
-  fmt::format_system_error(out, error_code, message);
-}
-}  // namespace internal
 
 FMT_FUNC void SystemError::init(
     int err_code, CStringRef format_str, ArgList args) {
