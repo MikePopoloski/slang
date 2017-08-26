@@ -669,10 +669,9 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
     }
 
     info->extra = getDirectiveKind(lexeme().subString(1));
-    if (!onNewLine && std::get<SyntaxKind>(info->extra) != SyntaxKind::MacroUsage) {
-        // All directives other than a macro usage must be on their own line
-        addError(DiagCode::DirectiveNotFirstOnLine, startingOffset);
-    }
+    if (!onNewLine && std::get<SyntaxKind>(info->extra) == SyntaxKind::IncludeDirective)
+        addError(DiagCode::IncludeNotFirstOnLine, startingOffset);
+
     return TokenKind::Directive;
 }
 

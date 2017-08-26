@@ -250,21 +250,20 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
 }
 
 bool suffixToTimeUnit(StringRef timeSuffix, TimeUnit& unit) {
-    if (timeSuffix == "s") {
+    if (timeSuffix == "s")
         unit = TimeUnit::Seconds;
-    } else if (timeSuffix == "ms") {
+    else if (timeSuffix == "ms")
         unit = TimeUnit::Milliseconds;
-    } else if (timeSuffix == "us") {
+    else if (timeSuffix == "us")
         unit = TimeUnit::Microseconds;
-    } else if (timeSuffix == "ns") {
+    else if (timeSuffix == "ns")
         unit = TimeUnit::Nanoseconds;
-    } else if (timeSuffix == "ps") {
+    else if (timeSuffix == "ps")
         unit = TimeUnit::Picoseconds;
-    } else if (timeSuffix == "fs") {
+    else if (timeSuffix == "fs")
         unit = TimeUnit::Femtoseconds;
-    } else {
+    else
         return false;
-    }
     return true;
 }
 

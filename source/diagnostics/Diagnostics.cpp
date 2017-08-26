@@ -78,7 +78,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::BadOctalDigit] = { "expected octal digit", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadDecimalDigit] = { "expected decimal digit", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadHexDigit] = { "expected hexadecimal digit", DiagnosticSeverity::Error };
-    descriptors[DiagCode::DirectiveNotFirstOnLine] = { "compiler directives must begin on their own line", DiagnosticSeverity::Error };
+    descriptors[DiagCode::IncludeNotFirstOnLine] = { "include directives must begin on their own line", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyLexerErrors] = { "lexer has encountered too many errors (input is a binary file?)", DiagnosticSeverity::Error };
 
     // numeric

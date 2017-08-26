@@ -551,23 +551,19 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
 }
 
 TEST_CASE("Directive not on own line", "[lexer]") {
-    auto& text = "`begin_keywords\nfoo `end_keywords";
+    auto& text = "foo `include <sdf.svh>";
 
     diagnostics.clear();
     auto buffer = sourceManager.assignText(StringRef(text));
     Lexer lexer(buffer, alloc, diagnostics);
 
     Token token = lexer.lex();
-    CHECK(token.kind == TokenKind::Directive);
-    token = lexer.lex();
     CHECK(token.kind == TokenKind::Identifier);
     token = lexer.lex();
     CHECK(token.kind == TokenKind::Directive);
-    token = lexer.lex();
-    CHECK(token.kind == TokenKind::EndOfFile);
 
     REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == DiagCode::DirectiveNotFirstOnLine);
+    CHECK(diagnostics.back().code == DiagCode::IncludeNotFirstOnLine);
 }
 
 TEST_CASE("Escaped keyword identifiers", "[lexer]") {
