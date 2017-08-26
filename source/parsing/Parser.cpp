@@ -374,19 +374,29 @@ MemberSyntax* Parser::parseMember() {
             // TODO: parse these
             break;
         case TokenKind::Identifier: {
-            // named assertion label
-            // TODO: Don't assume we have an assert here; this could be an accidental label or something
-            auto name = consume();
-            auto& label = allocate<NamedLabelSyntax>(name, expect(TokenKind::Colon));
-            auto& statement = parseAssertionStatement(&label, nullptr);
-            switch (statement.kind) {
-                case SyntaxKind::ImmediateAssertStatement:
-                case SyntaxKind::ImmediateAssumeStatement:
-                case SyntaxKind::ImmediateCoverStatement:
-                    return &allocate<ImmediateAssertionMemberSyntax>(attributes, statement.as<ImmediateAssertionStatementSyntax>());
-                default:
-                    return &allocate<ConcurrentAssertionMemberSyntax>(attributes, statement.as<ConcurrentAssertionStatementSyntax>());
+            // Declarations and instantiations have already been handled, so if we reach this point we either
+            // have a labeled assertion, or this is some kind of error.
+            if (peek(1).kind == TokenKind::Colon) {
+                TokenKind next = peek(2).kind;
+                if (next == TokenKind::AssertKeyword || next == TokenKind::AssumeKeyword ||
+                    next == TokenKind::CoverKeyword) {
+
+                    auto name = consume();
+                    auto& label = allocate<NamedLabelSyntax>(name, expect(TokenKind::Colon));
+                    auto& statement = parseAssertionStatement(&label, nullptr);
+                    switch (statement.kind) {
+                        case SyntaxKind::ImmediateAssertStatement:
+                        case SyntaxKind::ImmediateAssumeStatement:
+                        case SyntaxKind::ImmediateCoverStatement:
+                            return &allocate<ImmediateAssertionMemberSyntax>(
+                                attributes, statement.as<ImmediateAssertionStatementSyntax>());
+                        default:
+                            return &allocate<ConcurrentAssertionMemberSyntax>(
+                                attributes, statement.as<ConcurrentAssertionStatementSyntax>());
+                    }
+                }
             }
+            break;
         }
         case TokenKind::AssertKeyword:
         case TokenKind::AssumeKeyword:
