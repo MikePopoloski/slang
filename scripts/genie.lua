@@ -54,3 +54,4 @@ group "tests"
 testProject('unittests')
 testProject('filetests')
 testProject('paramrewriter')
+testProject('depmap')
