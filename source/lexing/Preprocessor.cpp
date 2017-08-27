@@ -589,23 +589,18 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
 Trivia Preprocessor::handleUndefDirective(Token directive) {
     Token nameToken = expect(TokenKind::Identifier);
 
-    // Other preprocessors consider an attempt to undef, say, `define to also
-    // be an error for undefining a builtin directive, and allow undefining
-    // undefined macros, making that just a warning. We instead only consider
-    // __LINE__ and __FILE__ illegal to undef as builtins, and consider all
-    // undefining of undefined macros to be errors.
+    // TODO: additional checks for undefining other builtin directives
     if (!nameToken.isMissing()) {
         StringRef name = nameToken.valueText();
-        if (macros.count(name) > 0) {
-            if (name != "__LINE__" && name != "__FILE__") {
-                macros.erase(name);
-            } else {
+        auto it = macros.find(name);
+        if (it != macros.end()) {
+            if (name != "__LINE__" && name != "__FILE__")
+                macros.erase(it);
+            else
                 addError(DiagCode::UndefineBuiltinDirective, nameToken.location());
-            }
-        } else {
-            addError(DiagCode::UnknownDirective, nameToken.location());
         }
-    } // else we add an error due to the missing token
+    }
+
     auto result = alloc.emplace<UndefDirectiveSyntax>(directive, nameToken, parseEndOfDirective());
     return Trivia(TriviaKind::Directive, result);
 }
@@ -621,21 +616,21 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
     Token versionToken = expect(TokenKind::StringLiteral);
     if (!versionToken.isMissing()) {
         StringRef verStr = versionToken.valueText();
-        if (verStr == "1364-1995") {
+        if (verStr == "1364-1995")
             keywordVersionStack.push_back(KeywordVersion::v1364_1995);
-        } else if (verStr == "1364-2001-noconfig") {
+        else if (verStr == "1364-2001-noconfig")
             keywordVersionStack.push_back(KeywordVersion::v1364_2001_noconfig);
-        } else if (verStr == "1364-2001") {
+        else if (verStr == "1364-2001")
             keywordVersionStack.push_back(KeywordVersion::v1364_2001);
-        } else if (verStr == "1364-2005") {
+        else if (verStr == "1364-2005")
             keywordVersionStack.push_back(KeywordVersion::v1364_2005);
-        } else if (verStr == "1800-2005") {
+        else if (verStr == "1800-2005")
             keywordVersionStack.push_back(KeywordVersion::v1800_2005);
-        } else if (verStr == "1800-2009") {
+        else if (verStr == "1800-2009")
             keywordVersionStack.push_back(KeywordVersion::v1800_2009);
-        } else if (verStr == "1800-2012") {
+        else if (verStr == "1800-2012")
             keywordVersionStack.push_back(KeywordVersion::v1800_2012);
-        } else {
+        else {
             // An error will already have been added if the version is missing
             addError(DiagCode::UnrecognizedKeywordVersion, versionToken.location());
         }
@@ -723,6 +718,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     // Now that all macros have been expanded, handle token concatenation and stringification.
     // TODO: do we have to worry about non-macros being concatenated into real macros?
+    SmallVectorSized<Trivia, 16> emptyArgTrivia;
     Token stringify;
     buffer.clear();
     expandedTokens.clear();
@@ -813,17 +809,23 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         }
 
         if (newToken) {
-            // if we're stringifying, save this in a temporary buffer,
-            // included saving any empty macro arguments that may have
-            // important trivia. Don't pass those tokens on in a non-strinficiation
-            // context though
-            if (stringify)
-                buffer.append(newToken);
-            else if (newToken.kind != TokenKind::EmptyMacroArgument)
-                expandedTokens.append(newToken);
+            // If we have an empty macro argument just collect its trivia and use it on the next token we find.
+            if (newToken.kind == TokenKind::EmptyMacroArgument)
+                emptyArgTrivia.appendRange(newToken.trivia());
+            else {
+                if (!emptyArgTrivia.empty()) {
+                    emptyArgTrivia.appendRange(newToken.trivia());
+                    newToken = newToken.withTrivia(alloc, emptyArgTrivia.copy(alloc));
+                    emptyArgTrivia.clear();
+                }
+
+                if (stringify)
+                    buffer.append(newToken);
+                else
+                    expandedTokens.append(newToken);
+            }
         }
     }
-
 
     // if the macro expanded into any tokens at all, set the pointer so that we'll pull from them next
     if (!expandedTokens.empty())
@@ -848,10 +850,9 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
         );
 
         // simple macro; just take body tokens
-        for (auto& token : macro->body) {
-            int delta = token.location().offset() - start.offset();
-            dest.append(token.withLocation(alloc, expansionLoc + delta));
-        }
+        bool isFirst = true;
+        for (auto& token : macro->body)
+            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
         return true;
     }
 
@@ -860,7 +861,7 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
     auto& formalList = macro->formalArguments->args;
     auto& actualList = actualArgs->args;
     if (actualList.count() > formalList.count()) {
-        addError(DiagCode::TooManyActualMacroArgs, actualArgs->args[formalList.count()]->getFirstToken().location());
+        addError(DiagCode::TooManyActualMacroArgs, actualArgs->getFirstToken().location());
         return false;
     }
 
@@ -903,17 +904,18 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
     );
 
     // now add each body token, substituting arguments as necessary
+    bool isFirst = true;
     for (auto& token : macro->body) {
-        int delta = token.location().offset() - start.offset();
-
         if (token.kind != TokenKind::Identifier && !isKeyword(token.kind))
-            dest.append(token.withLocation(alloc, expansionLoc + delta));
+            appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
         else {
             // check for formal param
             auto it = argumentMap.find(token.valueText());
             if (it == argumentMap.end())
-                dest.append(token.withLocation(alloc, expansionLoc + delta));
+                appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
             else {
+                // TODO: leading trivia not handled correctly for first token in body
+
                 // we need to ensure that we get correct spacing for the leading token here;
                 // it needs to come from the *formal* parameter used in the macro body, not
                 // from the argument itself
@@ -922,10 +924,11 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
                 if (begin != end) {
                     dest.append(begin->withTrivia(alloc, token.trivia()));
                     dest.appendRange(++begin, end);
-                } else {
+                }
+                else {
                     // the macro argument contained no tokens.
                     // we still need to supply an empty token here to ensure
-                    // that the trivia of the formal paremter is passed on
+                    // that the trivia of the formal parameter is passed on
                     dest.append(Token(TokenKind::EmptyMacroArgument, token.getInfo()));
                 }
             }
@@ -986,6 +989,16 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
     // Make a heap copy of the tokens before we leave
     tokens = nextBuffer->copy(alloc);
     return true;
+}
+
+void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
+                                   SourceLocation expansionLoc, Token usageSite, bool& isFirst) {
+    int delta = token.location().offset() - startLoc.offset();
+    if (isFirst) {
+        token = token.withTrivia(alloc, usageSite.trivia());
+        isFirst = false;
+    }
+    dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
 
 Token Preprocessor::peek(LexerMode mode) {

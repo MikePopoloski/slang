@@ -37,10 +37,12 @@ struct TokenFlags {
 /// Various flags used to control conversion to string.
 struct SyntaxToStringFlags {
     enum {
-        None = 0,
-        IncludeTrivia = 1,
-        IncludeMissing = 2,
-        IncludePreprocessed = 4
+        None = 0x0,
+        IncludeTrivia = 0x1,
+        IncludeMissing = 0x2,
+        IncludePreprocessed = 0x4,
+        IncludeSkipped = 0x8,
+        IncludeDirectives = 0x10
     };
 };
 

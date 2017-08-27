@@ -45,6 +45,23 @@ Token lexToken(StringRef text) {
     return token;
 }
 
+std::string preprocess(StringRef text) {
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    std::string result;
+    while (true) {
+        Token token = preprocessor.next();
+        result += token.toString(SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia);
+        if (token.kind == TokenKind::EndOfFile)
+            break;
+    }
+
+    return result;
+}
+
 TEST_CASE("Include File", "[preprocessor]") {
     auto& text = "`include \"include.svh\"";
     Token token = lexToken(text);
@@ -98,7 +115,7 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
     CHECK(diagnostics.empty());
     REQUIRE(token.trivia().count() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
@@ -117,7 +134,7 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
     CHECK(diagnostics.empty());
     REQUIRE(token.trivia().count() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
@@ -272,6 +289,93 @@ TEST_CASE("Macro stringify whitespace", "[preprocessor]") {
     REQUIRE(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == " bar ( )\t  bar   bar");
     CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro deferred define", "[preprocessor]") {
+    auto& text = R"(
+`define DEFIF_DEFNOT(d, a) \
+    `undef d \
+    `ifndef a \
+        `DEFINEIT(`define d 1) \
+    `endif
+
+`define DEFINEIT(d) d \
+
+// BAR is not define, so FOO should be
+`DEFIF_DEFNOT(FOO, BAR)
+
+`FOO
+)";
+    Token token = lexToken(text);
+
+    logDiagnostics();
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 1);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro string expansions", "[preprocessor]") {
+    // These examples were all pulled from the spec.
+    auto& text = R"(
+`define D(x,y) initial $display("start", x , y, "end");
+
+`D( "msg1" , "msg2" )
+`D( " msg1", )
+`D(, "msg2 ")
+`D(,)
+`D(  ,  )
+`D("msg1")  // not enough args
+`D()        // not enough args
+`D(,,)      // too many args
+`define MACRO1(a=5,b="B",c) $display(a,,b,,c);
+
+
+`MACRO1 ( , 2, 3 )
+`MACRO1 ( 1 , , 3 )
+`MACRO1 ( , 2, )
+`MACRO1 ( 1 ) // no default for C
+`define MACRO2(a=5, b, c="C") $display(a,,b,,c);
+
+
+`MACRO2 (1, , 3)
+`MACRO2 (, 2, )
+`MACRO2 (, 2)
+`define MACRO3(a=5, b=0, c="C") $display(a,,b,,c);
+
+
+`MACRO3 ( 1 )
+`MACRO3 ( )
+`MACRO3
+)";
+
+    auto& expected = R"(
+initial $display("start", "msg1" , "msg2", "end");
+initial $display("start", " msg1" , , "end");
+initial $display("start",  , "msg2 ", "end");
+initial $display("start",  , , "end");
+initial $display("start",  , , "end");
+
+$display(5,,2,,3);
+$display(1,,"B",,3);
+$display(5,,2,,);
+
+$display(1,,,,3);
+$display(5,,2,,"C");
+$display(5,,2,,"C");
+
+$display(1,,0,,"C");
+$display(5,,0,,"C");
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    REQUIRE(diagnostics.count() == 5);
+    CHECK(diagnostics[0].code == DiagCode::NotEnoughMacroArgs);
+    CHECK(diagnostics[1].code == DiagCode::NotEnoughMacroArgs);
+    CHECK(diagnostics[2].code == DiagCode::TooManyActualMacroArgs);
+    CHECK(diagnostics[3].code == DiagCode::NotEnoughMacroArgs);
+    CHECK(diagnostics[4].code == DiagCode::ExpectedMacroArgs);
 }
 
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {

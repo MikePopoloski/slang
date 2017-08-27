@@ -88,6 +88,8 @@ private:
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
     bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest);
     bool expandReplacementList(ArrayRef<Token>& tokens);
+    void appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
+                         SourceLocation expansionLoc, Token usageSite, bool& isFirst);
 
     // functions to advance the underlying token stream
     Token peek(LexerMode mode = LexerMode::Directive);

@@ -69,7 +69,7 @@ TEST_CASE("Diagnostic reporting with `line", "[diagnostic]") {
 }
 
 TEST_CASE("undef errors", "[diagnostic]") {
-        // There are errors for attempting to undef something not defined
+    // There are errors for attempting to undef a built-in
     // and also for missing the token of what to undef altogether
     // make sure we only give an error about one at a time
     auto& text = "`undef\n";
@@ -80,13 +80,13 @@ TEST_CASE("undef errors", "[diagnostic]") {
     REQUIRE(diagnostics.count() == 1);
     CHECK(diagnostics[0].code == DiagCode::ExpectedIdentifier);
 
-    auto& text2 = "`undef FOO\n";
+    auto& text2 = "`undef __LINE__\n";
     token = lexToken(text2);
 
     CHECK(token.kind == TokenKind::EndOfFile);
 
     REQUIRE(diagnostics.count() == 1);
-    CHECK(diagnostics[0].code == DiagCode::UnknownDirective);
+    CHECK(diagnostics[0].code == DiagCode::UndefineBuiltinDirective);
 }
 
 TEST_CASE("keywords_errors", "[diagnostic]") {

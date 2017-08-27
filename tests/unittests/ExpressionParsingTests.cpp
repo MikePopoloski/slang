@@ -365,7 +365,7 @@ TEST_CASE("Bad argument recovery", "[parser:expressions]") {
     auto& expr = parse(text);
 
     REQUIRE(expr.kind == SyntaxKind::InvocationExpression);
-    CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeSkipped) == text);
     CHECK(!diagnostics.empty());
 }
 

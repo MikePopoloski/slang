@@ -19,15 +19,19 @@ SyntaxNode* Trivia::syntax() const {
 void Trivia::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
     switch (kind) {
         case TriviaKind::Directive:
+            if (flags & SyntaxToStringFlags::IncludeDirectives)
+                syntaxNode->writeTo(buffer, flags);
+            break;
         case TriviaKind::SkippedSyntax:
-            syntaxNode->writeTo(buffer, flags);
+            if (flags & SyntaxToStringFlags::IncludeSkipped)
+                syntaxNode->writeTo(buffer, flags);
             break;
-
         case TriviaKind::SkippedTokens:
-            for (Token t : tokens)
-                t.writeTo(buffer, flags);
+            if (flags & SyntaxToStringFlags::IncludeSkipped) {
+                for (Token t : tokens)
+                    t.writeTo(buffer, flags);
+            }
             break;
-
         default:
             buffer.appendRange(rawText);
             break;
