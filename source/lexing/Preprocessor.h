@@ -54,6 +54,8 @@ private:
     Token nextRaw(LexerMode mode);
 
     // directive handling methods
+    Token handleDirectives(LexerMode mode, Token token);
+    Token handlePossibleConcatenation(LexerMode mode, Token left, Token right);
     Trivia handleIncludeDirective(Token directive);
     Trivia handleResetAllDirective(Token directive);
     Trivia handleDefineDirective(Token directive);
@@ -181,11 +183,15 @@ private:
     // the latest token pulled from a lexer
     Token currentToken;
 
+    // holds a token for looking ahead to check for macro concatenation
+    Token lookaheadToken;
+
     // the last token consumed before the currentToken; used to back up and
     // report errors in a different location in certain scenarios
     Token lastConsumed;
 
-    // we adjust lexing behavior slightly when lexing within a macro body
+    // Directives don't get handled when lexing within a macro body
+    // (either define or usage).
     bool inMacroBody = false;
 
     // The stack of changes to which keyword versions to use, pushed to by

@@ -53,11 +53,42 @@ Token Preprocessor::next() {
 }
 
 Token Preprocessor::next(LexerMode mode) {
-    // common case: lex a token and return it
+    // The core preprocessing routine; this method pulls raw tokens from various text
+    // files and converts them into a unified logical stream of sanitized tokens that
+    // future stages like a parser can ingest without difficulty.
+    //
+    // Start off by grabbing the next raw token, either from the current file, an
+    // active include file, or an expanded macro.
     auto token = nextRaw(mode);
-    if (token.kind != TokenKind::Directive || inMacroBody)
+
+    // If we're currently within a macro body, return whatever we got right away.
+    // If it was a directive it will be deferred until the macro is used.
+    if (inMacroBody)
         return token;
 
+    // If we found a directive token, process it and pull another. We don't want
+    // to return directives to the caller; we handle them ourselves and turn them
+    // into trivia. 
+    if (token.kind == TokenKind::Directive)
+        token = handleDirectives(mode, token);
+
+    // There is an additional complication to handle; if the next raw token is right
+    // next to this one (no whitespace) and is a macro expansion or include, we may
+    // need to end up concatenating two tokens together before we return this one.
+    // For example:
+    //      `define FOO 9
+    //      int i = 8`FOO;
+    // This should result in "int i = 89", where the '89' is one integer token.
+    if (mode == LexerMode::Normal && token.kind != TokenKind::EndOfFile) {
+        lookaheadToken = nextRaw(mode);
+        if (lookaheadToken.kind == TokenKind::Directive)
+            token = handlePossibleConcatenation(mode, token, lookaheadToken);
+    }
+
+    return token;
+}
+
+Token Preprocessor::handleDirectives(LexerMode mode, Token token) {
     // burn through any preprocessor directives we find and convert them to trivia
     SmallVectorSized<Trivia, 16> trivia;
     do {
@@ -84,7 +115,7 @@ Token Preprocessor::next(LexerMode mode) {
             case SyntaxKind::CellDefineDirective:
             case SyntaxKind::EndCellDefineDirective:
             default:
-            // default can be reached in certain error cases
+                // default can be reached in certain error cases
                 trivia.append(createSimpleDirective(token));
                 break;
         }
@@ -95,13 +126,40 @@ Token Preprocessor::next(LexerMode mode) {
     return token.withTrivia(alloc, trivia.copy(alloc));
 }
 
+Token Preprocessor::handlePossibleConcatenation(LexerMode mode, Token left, Token right) {
+    while (true) {
+        // Only perform concatenation if the next upcoming token is a macro usage
+        // or include directive and there is no trivia in the way.
+        if (!right.trivia().empty())
+            return left;
+
+        if (right.directiveKind() != SyntaxKind::MacroUsage && right.directiveKind() != SyntaxKind::IncludeDirective)
+            return left;
+
+        lookaheadToken = Token();
+        right = handleDirectives(mode, right);
+
+        bool error;
+        Token result = Lexer::concatenateTokens(alloc, left, right, error);
+        if (!result) {
+            // Failed to concatenate; put the token back and deal with it later.
+            lookaheadToken = right;
+            return left;
+        }
+
+        left = result;
+        right = lookaheadToken = nextRaw(mode);
+        if (lookaheadToken.kind != TokenKind::Directive)
+            return left;
+    }
+}
+
 Token Preprocessor::nextRaw(LexerMode mode) {
     // it's possible we have a token buffered from looking ahead when handling a directive
-    if (currentToken) {
-        auto result = currentToken;
-        currentToken = Token();
-        return result;
-    }
+    if (currentToken)
+        return std::exchange(currentToken, Token());
+    if (lookaheadToken)
+        return std::exchange(lookaheadToken, Token());
 
     // if we just expanded a macro we'll have tokens from that to return
     if (currentMacroToken) {
@@ -314,7 +372,10 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
 Trivia Preprocessor::handleMacroUsage(Token directive) {
     // delegate to a nested function to simplify the error handling paths
+    inMacroBody = true;
     auto actualArgs = handleTopLevelMacro(directive);
+    inMacroBody = false;
+
     auto syntax = alloc.emplace<MacroUsageSyntax>(directive, actualArgs);
     return Trivia(TriviaKind::Directive, syntax);
 }
@@ -1110,6 +1171,7 @@ ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
     SmallVectorSized<TokenKind, 16> delimPairStack;
     while (true) {
         auto kind = peek().kind;
+        // TODO: EndOfFile as well?
         if (kind == TokenKind::EndOfDirective) {
             if (delimPairStack.empty())
                 pp.addError(DiagCode::ExpectedEndOfMacroArgs, peek().location());

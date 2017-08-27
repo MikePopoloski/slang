@@ -143,7 +143,7 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     CHECK(def.name.valueText() == "FOO");
     CHECK(def.endOfDirective);
     CHECK(def.directive);
-    CHECK(def.formalArguments);
+    REQUIRE(def.formalArguments);
     CHECK(def.formalArguments->args.count() == 1);
     CHECK(def.formalArguments->args[0]->name.valueText() == "a");
     REQUIRE(def.body.count() == 3);
@@ -395,7 +395,23 @@ $display("left side: \"right side\"");
 
     std::string result = preprocess(text);
     CHECK(result == expected);
-    REQUIRE(diagnostics.empty());
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro auto-concatenate", "[preprocessor]") {
+    auto& text = "`define FOO 8\n`define BAR 9\n1`FOO`BAR";
+
+    diagnostics.clear();
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 189);
+    
+    token = preprocessor.next();
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
