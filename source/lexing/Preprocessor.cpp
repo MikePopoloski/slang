@@ -914,15 +914,22 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
             if (it == argumentMap.end())
                 appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
             else {
-                // TODO: leading trivia not handled correctly for first token in body
-
                 // we need to ensure that we get correct spacing for the leading token here;
                 // it needs to come from the *formal* parameter used in the macro body, not
                 // from the argument itself
                 auto begin = it->second->begin();
                 auto end = it->second->end();
                 if (begin != end) {
-                    dest.append(begin->withTrivia(alloc, token.trivia()));
+                    // For the first token in the expansion, take the leading trivia
+                    // from the usage site itself instead of the formal.
+                    if (isFirst) {
+                        dest.append(begin->withTrivia(alloc, usageSite.trivia()));
+                        isFirst = false;
+                    }
+                    else {
+                        dest.append(begin->withTrivia(alloc, token.trivia()));
+                    }
+
                     dest.appendRange(++begin, end);
                 }
                 else {
@@ -936,6 +943,16 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
     }
 
     return true;
+}
+
+void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
+                                  SourceLocation expansionLoc, Token usageSite, bool& isFirst) {
+    int delta = token.location().offset() - startLoc.offset();
+    if (isFirst) {
+        token = token.withTrivia(alloc, usageSite.trivia());
+        isFirst = false;
+    }
+    dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
 
 bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
@@ -989,16 +1006,6 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
     // Make a heap copy of the tokens before we leave
     tokens = nextBuffer->copy(alloc);
     return true;
-}
-
-void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
-                                   SourceLocation expansionLoc, Token usageSite, bool& isFirst) {
-    int delta = token.location().offset() - startLoc.offset();
-    if (isFirst) {
-        token = token.withTrivia(alloc, usageSite.trivia());
-        isFirst = false;
-    }
-    dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
 
 Token Preprocessor::peek(LexerMode mode) {

@@ -319,30 +319,27 @@ TEST_CASE("Macro string expansions", "[preprocessor]") {
     // These examples were all pulled from the spec.
     auto& text = R"(
 `define D(x,y) initial $display("start", x , y, "end");
+`define MACRO1(a=5,b="B",c) $display(a,,b,,c);
+`define MACRO2(a=5, b, c="C") $display(a,,b,,c);
+`define MACRO3(a=5, b=0, c="C") $display(a,,b,,c);
 
 `D( "msg1" , "msg2" )
 `D( " msg1", )
 `D(, "msg2 ")
 `D(,)
 `D(  ,  )
-`D("msg1")  // not enough args
-`D()        // not enough args
-`D(,,)      // too many args
-`define MACRO1(a=5,b="B",c) $display(a,,b,,c);
-
+`D("msg1")
+`D()
+`D(,,)
 
 `MACRO1 ( , 2, 3 )
 `MACRO1 ( 1 , , 3 )
 `MACRO1 ( , 2, )
-`MACRO1 ( 1 ) // no default for C
-`define MACRO2(a=5, b, c="C") $display(a,,b,,c);
-
+`MACRO1 ( 1 )
 
 `MACRO2 (1, , 3)
 `MACRO2 (, 2, )
 `MACRO2 (, 2)
-`define MACRO3(a=5, b=0, c="C") $display(a,,b,,c);
-
 
 `MACRO3 ( 1 )
 `MACRO3 ( )
@@ -376,6 +373,29 @@ $display(5,,0,,"C");
     CHECK(diagnostics[2].code == DiagCode::TooManyActualMacroArgs);
     CHECK(diagnostics[3].code == DiagCode::NotEnoughMacroArgs);
     CHECK(diagnostics[4].code == DiagCode::ExpectedMacroArgs);
+}
+
+TEST_CASE("Macro string expansions 2", "[preprocessor]") {
+    // These examples were all pulled from the spec.
+    auto& text = R"(
+`define max(a,b)((a) > (b)) ? (a) : (b)
+`define msg(x,y) `"x: `\`"y`\`"`"
+`define TOP(a,b) a + b
+
+n = `max(p+q, r+s) ;
+`TOP( `TOP(b,1), `TOP(42,a) )
+$display(`msg(left side,right side));
+)";
+
+    auto& expected = R"(
+n = ((p+q) > (r+s)) ? (p+q) : (r+s) ;
+b + 1 + 42 + a
+$display("left side: \"right side\"");
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    REQUIRE(diagnostics.empty());
 }
 
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {

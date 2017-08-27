@@ -182,8 +182,10 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
     text.append('"');
     text.append('\0');
 
+    StringRef raw(text.copy(alloc));
+
     Diagnostics unused;
-    Lexer lexer { BufferID(), StringRef(text), alloc, unused };
+    Lexer lexer { BufferID(), raw, alloc, unused };
 
     auto token = lexer.lex();
     if (token.kind != TokenKind::StringLiteral)
@@ -196,7 +198,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
     auto info = alloc.emplace<Token::Info>(*token.getInfo());
     info->location = location;
     info->trivia = trivia;
-    info->rawText = std::get<StringRef>(info->extra);
+    info->rawText = raw.subString(0, raw.length() - 1);
     return Token(token.kind, info);
 }
 
