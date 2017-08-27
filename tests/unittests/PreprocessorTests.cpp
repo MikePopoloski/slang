@@ -531,6 +531,15 @@ TEST_CASE("LINE Directive", "[preprocessor]") {
     CHECK(diagnostics.empty());
 }
 
+TEST_CASE("LINE Directive as actual arg", "[preprocessor]") {
+    auto& text = "`define FOO(x) x\n`define BAR `FOO(`__LINE__)`__LINE__\n`BAR";
+    Token token = lexToken(text);
+
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 33);
+    CHECK(diagnostics.empty());
+}
+
 TEST_CASE("LINE Directive (include+nesting)", "[preprocessor]") {
     auto& text =
 "`include \"local.svh\"\n"

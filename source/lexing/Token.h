@@ -574,11 +574,7 @@ enum class TokenKind : uint16_t {
     MacroQuote,
     MacroEscapedQuote,
     MacroPaste,
-    EmptyMacroArgument,
-
-    // special placeholders for intrinsic macros
-    IntrinsicFileMacro,
-    IntrinsicLineMacro
+    EmptyMacroArgument
 };
 
 }

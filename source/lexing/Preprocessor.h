@@ -85,10 +85,34 @@ private:
     // Timescale specifier parser
     bool expectTimescaleSpecifier(Token& unit, Token& precision);
 
+    // Specifies possible macro intrinsics.
+    enum class MacroIntrinsic {
+        None,
+        Line,
+        File
+    };
+
+    // A saved macro definition; if it came from source code, we will have a parsed DefineDirectiveSyntax.
+    // Otherwise, it's an intrinsic macro and we'll note that here.
+    struct MacroDef {
+        DefineDirectiveSyntax* syntax = nullptr;
+        MacroIntrinsic intrinsic = MacroIntrinsic::None;
+
+        MacroDef() = default;
+        MacroDef(DefineDirectiveSyntax* syntax) : syntax(syntax) {}
+        MacroDef(MacroIntrinsic intrinsic) : intrinsic(intrinsic) {}
+
+        bool valid() const { return syntax || intrinsic != MacroIntrinsic::None; }
+        bool isIntrinsic() const { return intrinsic != MacroIntrinsic::None; }
+        bool needsArgs() const;
+    };
+
     // Macro handling methods
-    DefineDirectiveSyntax* findMacro(Token directive);
+    MacroDef findMacro(Token directive);
     MacroActualArgumentListSyntax* handleTopLevelMacro(Token directive);
-    bool expandMacro(DefineDirectiveSyntax* definition, Token usageSite, MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest);
+    bool expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,
+                     SmallVector<Token>& dest);
+    bool expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest);
     bool expandReplacementList(ArrayRef<Token>& tokens);
     void appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
                          SourceLocation expansionLoc, Token usageSite, bool& isFirst);
@@ -171,7 +195,7 @@ private:
     std::deque<BranchEntry> branchStack;
 
     // map from macro name to macro definition
-    std::unordered_map<StringRef, DefineDirectiveSyntax*> macros;
+    std::unordered_map<StringRef, MacroDef> macros;
 
     // scratch space for mapping macro formal parameters to argument values
     std::unordered_map<StringRef, const TokenList*> argumentMap;

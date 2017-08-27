@@ -13,14 +13,6 @@
 
 namespace slang {
 
-// Placeholders for __FILE__ and __LINE__ macros; these exist so that we get nice tokens
-// automatically when expanding macros that we can replace with the correct values.
-static Token::Info unusedTokenInfo;
-static Token intrinsicFileToken = Token(TokenKind::IntrinsicFileMacro, &unusedTokenInfo);
-static Token intrinsicLineToken = Token(TokenKind::IntrinsicLineMacro, &unusedTokenInfo);
-static DefineDirectiveSyntax fileDirective { Token(), Token(), nullptr, ArrayRef<Token>(&intrinsicFileToken, 1), Token() };
-static DefineDirectiveSyntax lineDirective { Token(), Token(), nullptr, ArrayRef<Token>(&intrinsicLineToken, 1), Token() };
-
 SyntaxKind getDirectiveKind(StringRef directive);
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics) :
@@ -29,8 +21,8 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, D
     diagnostics(diagnostics)
 {
     keywordVersionStack.push_back(KeywordVersion::v1800_2012);
-    macros["__FILE__"] = &fileDirective;
-    macros["__LINE__"] = &lineDirective;
+    macros["__FILE__"] = MacroIntrinsic::File;
+    macros["__LINE__"] = MacroIntrinsic::Line;
 }
 
 void Preprocessor::pushSource(StringRef source) {
@@ -668,8 +660,8 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
 
 Trivia Preprocessor::handleUndefineAllDirective(Token directive) {
     macros.clear();
-    macros["__FILE__"] = &fileDirective;
-    macros["__LINE__"] = &lineDirective;
+    macros["__FILE__"] = MacroIntrinsic::File;
+    macros["__LINE__"] = MacroIntrinsic::Line;
     return createSimpleDirective(directive);
 }
 
@@ -737,7 +729,7 @@ Trivia Preprocessor::createSimpleDirective(Token directive, bool suppressError) 
     return Trivia(TriviaKind::Directive, syntax);
 }
 
-DefineDirectiveSyntax* Preprocessor::findMacro(Token directive) {
+Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
     auto it = macros.find(directive.valueText().subString(1));
     if (it == macros.end()) {
         addError(DiagCode::UnknownDirective, directive.location());
@@ -752,24 +744,22 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
 
     // lookup the macro definition; findMacro will report an error for us if
     // the directive is not found
-    auto definition = findMacro(directive);
-    if (!definition)
+    auto macro = findMacro(directive);
+    if (!macro.valid())
         return nullptr;
 
     // parse arguments if necessary
     MacroActualArgumentListSyntax* actualArgs = nullptr;
-    if (definition->formalArguments) {
+    if (macro.needsArgs()) {
         MacroParser parser(*this);
         actualArgs = parser.parseActualArgumentList();
         if (!actualArgs)
             return actualArgs;
     }
-    // TODO: if any of the actualArgs are themselves intrinsic macros, they
-    // should be expanded before expanding the outer macro
 
     // Expand out the macro
     SmallVectorSized<Token, 32> buffer;
-    if (!expandMacro(definition, directive, actualArgs, buffer))
+    if (!expandMacro(macro, directive, actualArgs, buffer))
         return actualArgs;
 
     // Recursively expand macros in the replacement list
@@ -786,23 +776,10 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     for (uint32_t i = 0; i < tokens.count(); i++) {
         Token newToken;
 
-        // replace intrinsic macros before we do anything else
-        Token token = tokens[i];
-
-        if (token.kind == TokenKind::IntrinsicFileMacro) {
-            auto info = alloc.emplace<Token::Info>(token.trivia(), "", token.location(), 0);
-            info->extra = sourceManager.getFileName(token.location());
-            token = Token(TokenKind::StringLiteral, info);
-        } else if (token.kind == TokenKind::IntrinsicLineMacro) {
-            auto info = alloc.emplace<Token::Info>(token.trivia(), "", token.location(), 0);
-            uint64_t lineNum = sourceManager.getLineNumber(token.location());
-            info->setNumInfo(SVInt(lineNum));
-            token = Token(TokenKind::IntegerLiteral, info);
-        }
-
         // Once we see a `" token, we start collecting tokens into their own
         // buffer for stringification. Otherwise, just add them to the final
         // expansion buffer.
+        Token token = tokens[i];
         switch (token.kind) {
             case TokenKind::MacroQuote:
                 if (!stringify)
@@ -895,15 +872,25 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     return actualArgs;
 }
 
-bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite,
-                               MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest) {
+bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,
+                               SmallVector<Token>& dest) {
+    if (macro.isIntrinsic()) {
+        // for now, no intrisics can have arguments
+        ASSERT(!actualArgs);
+        return expandIntrinsic(macro.intrinsic, usageSite, dest);
+    }
+
+    DefineDirectiveSyntax* directive = macro.syntax;
+    ASSERT(directive);
+
     // ignore empty macro
-    if (macro->body.count() == 0)
+    const auto& body = directive->body;
+    if (body.count() == 0)
         return true;
 
-    if (!macro->formalArguments) {
+    if (!directive->formalArguments) {
         // each macro expansion gets its own location entry
-        SourceLocation start = macro->body[0].location();
+        SourceLocation start = body[0].location();
         SourceLocation usageLoc = usageSite.location();
         SourceLocation expansionLoc = sourceManager.createExpansionLoc(
             start,
@@ -913,14 +900,14 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite,
 
         // simple macro; just take body tokens
         bool isFirst = true;
-        for (auto& token : macro->body)
+        for (auto& token : body)
             appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
         return true;
     }
 
     // match up actual arguments with formal parameters
     ASSERT(actualArgs);
-    auto& formalList = macro->formalArguments->args;
+    auto& formalList = directive->formalArguments->args;
     auto& actualList = actualArgs->args;
     if (actualList.count() > formalList.count()) {
         addError(DiagCode::TooManyActualMacroArgs, actualArgs->getFirstToken().location());
@@ -957,7 +944,7 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite,
     }
 
     // TODO: the expansion range for a function-like macro should include the parenthesis and arguments
-    SourceLocation start = macro->body[0].location();
+    SourceLocation start = body[0].location();
     SourceLocation usageLoc = usageSite.location();
     SourceLocation expansionLoc = sourceManager.createExpansionLoc(
         start,
@@ -967,7 +954,7 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite,
 
     // now add each body token, substituting arguments as necessary
     bool isFirst = true;
-    for (auto& token : macro->body) {
+    for (auto& token : body) {
         if (token.kind != TokenKind::Identifier && !isKeyword(token.kind))
             appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
         else {
@@ -1039,23 +1026,26 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
         // loop through each token in the replacement list and expand it if it's a nested macro
         Token token;
         while ((token = parser.next())) {
-            if (token.kind != TokenKind::Directive || token.directiveKind() != SyntaxKind::MacroUsage)
+            if ((expandedSomething && token.trivia().empty()) || token.kind != TokenKind::Directive ||
+                token.directiveKind() != SyntaxKind::MacroUsage) {
+
                 currentBuffer->append(token);
+            }
             else {
                 // lookup the macro definition
-                auto definition = findMacro(token);
-                if (!definition)
+                auto macro = findMacro(token);
+                if (!macro.valid())
                     return false;
 
                 // parse arguments if necessary
                 MacroActualArgumentListSyntax* actualArgs = nullptr;
-                if (definition->formalArguments) {
+                if (macro.needsArgs()) {
                     actualArgs = parser.parseActualArgumentList();
                     if (!actualArgs)
                         return false;
                 }
 
-                if (!expandMacro(definition, token, actualArgs, *currentBuffer))
+                if (!expandMacro(macro, token, actualArgs, *currentBuffer))
                     return false;
 
                 expandedSomething = true;
@@ -1071,6 +1061,44 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
 
     // Make a heap copy of the tokens before we leave
     tokens = nextBuffer->copy(alloc);
+    return true;
+}
+
+bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest) {
+    // Take the location and trivia from the usage site; the source text we're
+    // going to make up here doesn't actually exist and shouldn't be shown to the
+    // user as an "expanded from here" note.
+    auto info = alloc.emplace<Token::Info>(usageSite.trivia(), "", usageSite.location(), 0);
+
+    // Create a buffer to hold the raw text for the new tokens we will fabricate.
+    SmallVectorSized<char, 64> text;
+
+    switch (intrinsic) {
+        case MacroIntrinsic::File: {
+            StringRef fileName = sourceManager.getFileName(usageSite.location());
+            text.appendRange(fileName);
+            info->extra = fileName;
+            info->rawText = StringRef(text.copy(alloc));
+
+            dest.append(Token(TokenKind::StringLiteral, info));
+            break;
+        }
+        case MacroIntrinsic::Line: {
+            uint32_t lineNum = sourceManager.getLineNumber(usageSite.location());
+            text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
+            info->setNumInfo(SVInt(lineNum));
+            info->rawText = StringRef(text.copy(alloc));
+
+            // Use appendBodyToken so that implicit concatenation will occur if something else
+            // was already in the destination buffer.
+            bool isFirst = true;
+            appendBodyToken(dest, Token(TokenKind::IntegerLiteral, info), usageSite.location(),
+                            usageSite.location(), usageSite, isFirst);
+            break;
+        }
+        DEFAULT_UNREACHABLE;
+    }
+
     return true;
 }
 
@@ -1098,6 +1126,10 @@ Token Preprocessor::expect(TokenKind kind, LexerMode mode) {
 
 Diagnostic& Preprocessor::addError(DiagCode code, SourceLocation location) {
     return diagnostics.add(code, location);
+}
+
+bool Preprocessor::MacroDef::needsArgs() const {
+    return syntax && syntax->formalArguments;
 }
 
 MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentList() {
