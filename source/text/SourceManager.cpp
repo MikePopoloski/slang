@@ -414,7 +414,10 @@ uint32_t SourceManager::getRawLineNumber(SourceLocation location) const {
 
     // We want to ensure the line we return is strictly greater than the given location offset.
     // So if it is equal, add one to the lower bound we got
-    return (uint32_t)(it - fd->lineOffsets.begin()) + (*it == location.offset());
+    uint32_t line = uint32_t(it - fd->lineOffsets.begin());
+    if (it != fd->lineOffsets.end() && *it == location.offset())
+        line++;
+    return line;
 }
 
 }
