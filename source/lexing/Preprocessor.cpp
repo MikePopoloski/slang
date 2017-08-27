@@ -895,7 +895,8 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     return actualArgs;
 }
 
-bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest) {
+bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite,
+                               MacroActualArgumentListSyntax* actualArgs, SmallVector<Token>& dest) {
     // ignore empty macro
     if (macro->body.count() == 0)
         return true;
@@ -975,29 +976,23 @@ bool Preprocessor::expandMacro(DefineDirectiveSyntax* macro, Token usageSite, Ma
             if (it == argumentMap.end())
                 appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
             else {
-                // we need to ensure that we get correct spacing for the leading token here;
+                // We need to ensure that we get correct spacing for the leading token here;
                 // it needs to come from the *formal* parameter used in the macro body, not
-                // from the argument itself
+                // from the argument itself.
                 auto begin = it->second->begin();
                 auto end = it->second->end();
                 if (begin != end) {
-                    // For the first token in the expansion, take the leading trivia
-                    // from the usage site itself instead of the formal.
-                    if (isFirst) {
-                        dest.append(begin->withTrivia(alloc, usageSite.trivia()));
-                        isFirst = false;
-                    }
-                    else {
-                        dest.append(begin->withTrivia(alloc, token.trivia()));
-                    }
+                    appendBodyToken(dest, begin->withTrivia(alloc, token.trivia()),
+                                    begin->location(), begin->location(), usageSite, isFirst);
 
-                    dest.appendRange(++begin, end);
+                    for (++begin; begin != end; begin++)
+                        appendBodyToken(dest, *begin, begin->location(), begin->location(), usageSite, isFirst);
                 }
                 else {
-                    // the macro argument contained no tokens.
-                    // we still need to supply an empty token here to ensure
-                    // that the trivia of the formal parameter is passed on
-                    dest.append(Token(TokenKind::EmptyMacroArgument, token.getInfo()));
+                    // The macro argument contained no tokens. We still need to supply an empty token
+                    // here to ensure that the trivia of the formal parameter is passed on.
+                    appendBodyToken(dest, Token(TokenKind::EmptyMacroArgument, token.getInfo()),
+                                    start, expansionLoc, usageSite, isFirst);
                 }
             }
         }
@@ -1012,6 +1007,16 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
     if (isFirst) {
         token = token.withTrivia(alloc, usageSite.trivia());
         isFirst = false;
+
+        // If our usageSite had no whitespace, we should concatenate with whatever was previously in the buffer.
+        if (usageSite.trivia().empty() && !dest.empty()) {
+            bool error;
+            Token concat = Lexer::concatenateTokens(alloc, dest.back(), token, error);
+            if (concat) {
+                dest.back() = concat;
+                return;
+            }
+        }
     }
     dest.append(token.withLocation(alloc, expansionLoc + delta));
 }

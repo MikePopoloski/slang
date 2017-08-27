@@ -398,7 +398,7 @@ $display("left side: \"right side\"");
     CHECK(diagnostics.empty());
 }
 
-TEST_CASE("Macro auto-concatenate", "[preprocessor]") {
+TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
     auto& text = "`define FOO 8\n`define BAR 9\n1`FOO`BAR";
 
     diagnostics.clear();
@@ -409,6 +409,22 @@ TEST_CASE("Macro auto-concatenate", "[preprocessor]") {
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 189);
     
+    token = preprocessor.next();
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(diagnostics.empty());
+}
+
+TEST_CASE("Macro nested implicit concatenate", "[preprocessor]") {
+    auto& text = "`define FOO 8\n`define BAR 9`FOO\n1`BAR";
+
+    diagnostics.clear();
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(std::get<SVInt>(token.numericValue()) == 198);
+
     token = preprocessor.next();
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(diagnostics.empty());
