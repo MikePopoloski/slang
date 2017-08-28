@@ -60,7 +60,7 @@ Token Preprocessor::next(LexerMode mode) {
 
     // If we found a directive token, process it and pull another. We don't want
     // to return directives to the caller; we handle them ourselves and turn them
-    // into trivia. 
+    // into trivia.
     if (token.kind == TokenKind::Directive)
         token = handleDirectives(mode, token);
 
@@ -732,7 +732,7 @@ Trivia Preprocessor::createSimpleDirective(Token directive, bool suppressError) 
 Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
     auto it = macros.find(directive.valueText().subString(1));
     if (it == macros.end()) {
-        addError(DiagCode::UnknownDirective, directive.location());
+        addError(DiagCode::UnknownDirective, directive.location()) << directive.valueText();
         return nullptr;
     }
     return it->second;

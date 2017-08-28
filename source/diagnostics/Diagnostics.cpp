@@ -92,7 +92,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     // preprocessor
     descriptors[DiagCode::CouldNotOpenIncludeFile] = { "could not find or open include file", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExceededMaxIncludeDepth] = { "exceeded max include depth", DiagnosticSeverity::Error };
-    descriptors[DiagCode::UnknownDirective] = { "unknown macro or compiler directive", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnknownDirective] = { "unknown macro or compiler directive '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedEndOfDirective] = { "expected end of directive (missing newline?)", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedEndOfMacroArgs] = { "expected end of macro arguments (missing closing parenthesis?)", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnexpectedConditionalDirective] = { "unexpected conditional directive", DiagnosticSeverity::Error };
