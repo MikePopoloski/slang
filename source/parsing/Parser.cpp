@@ -339,13 +339,15 @@ MemberSyntax* Parser::parseMember() {
             // We'll parse it here and then issue a diagnostic about how it's not kosher.
             if (peek(TokenKind::BeginKeyword)) {
                 // TODO: error
-                auto member = &parseGenerateBlock();
-                ArrayRef<MemberSyntax*> members { &member, 1 };
-                return &allocate<GenerateRegionSyntax>(attributes, keyword, members, expect(TokenKind::EndGenerateKeyword));
+                SmallVectorSized<MemberSyntax*, 2> buffer;
+                buffer.append(&parseGenerateBlock());
+                return &allocate<GenerateRegionSyntax>(attributes, keyword, buffer.copy(alloc),
+                                                       expect(TokenKind::EndGenerateKeyword));
             }
 
             Token endgenerate;
-            auto members = parseMemberList<MemberSyntax>(TokenKind::EndGenerateKeyword, endgenerate, [this]() { return parseMember(); });
+            auto members = parseMemberList<MemberSyntax>(TokenKind::EndGenerateKeyword, endgenerate,
+                                                         [this]() { return parseMember(); });
             return &allocate<GenerateRegionSyntax>(attributes, keyword, members, endgenerate);
         }
         case TokenKind::TimeUnitKeyword:
