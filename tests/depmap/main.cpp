@@ -4,6 +4,7 @@
 
 #include <cstdlib>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #if defined(_WIN32)
@@ -14,6 +15,7 @@
 #endif
 
 #include "parsing/SyntaxTree.h"
+#include "parsing/SyntaxVisitor.h"
 
 using namespace slang;
 using namespace std;
@@ -57,7 +59,8 @@ void findVerilogFiles(const string& path, vector<string>& results) {
                 if (ext && strcmp(ext, ".sv") == 0)
                     results.push_back(base + dir->d_name);
             }
-            else if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0) {
+            else if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0 &&
+                     strstr(dir->d_name, ".generated") == NULL) {
                 directories.push_back(base + dir->d_name);
             }
         }
@@ -68,21 +71,48 @@ void findVerilogFiles(const string& path, vector<string>& results) {
         findVerilogFiles(dir.c_str(), results);
 }
 
-class DependencyMapper {
+class DependencyMapper : public SyntaxVisitor<DependencyMapper> {
 public:
     void addIncludeDir(const string& dir) {
         sourceManager.addUserDirectory(StringRef(dir));
     }
 
     void parseFile(const string& path) {
-        SyntaxTree tree = SyntaxTree::fromFile(StringRef(path), sourceManager);
-        printf("%s", tree.reportDiagnostics().c_str());
+        currentFile = StringRef(path);
+        SyntaxTree tree = SyntaxTree::fromFile(currentFile, sourceManager);
+        visitNode(&tree.root());
+        //printf("%s", tree.reportDiagnostics().c_str());
+    }
 
-        printf("\n%s\n", tree.root().toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludePreprocessed).c_str());
+    void visit(const ModuleHeaderSyntax& header) {
+        if (!declToFile.try_emplace(header.name.valueText(), currentFile).second)
+            printf("Duplicate declaration: %s\n", header.name.valueText().toString().c_str());
+    }
+
+    void visit(const HierarchyInstantiationSyntax& instantiation) {
+        fileToDeps.emplace(currentFile, instantiation.type.valueText());
+    }
+
+    // void visit(const ScopedNameSyntax& scopedName) {
+    //     if (scopedName.separator.kind == TokenKind::DoubleColon) {
+
+    //         printf("Package ref: %s\n", scopedName.left.toString().c_str());
+    //     }
+    // }
+
+    void visit(const PackageImportItemSyntax& packageImport) {
+        fileToDeps.emplace(currentFile, packageImport.package.valueText());
     }
 
 private:
     SourceManager sourceManager;
+    StringRef currentFile;
+
+    // Map from source element (module declaration, package declaration) to file.
+    unordered_map<StringRef, StringRef> declToFile;
+
+    // Map from file to a dependency (via a module instantiation or package reference).
+    unordered_multimap<StringRef, StringRef> fileToDeps;
 };
 
 int main(int argc, char* argv[]) {
@@ -91,7 +121,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Find all Verilog files in the given directories.                
+    // Find all Verilog files in the given directories.
     DependencyMapper mapper;
     vector<string> verilogFiles;
     for (int i = 1; i < argc; i++) {
@@ -111,7 +141,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Parse each file, build a map of top-level module, interface, and
-    // package definitions.                                            
+    // package definitions.
     for (const string& path : verilogFiles)
         mapper.parseFile(path);
 }
