@@ -745,16 +745,20 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     // lookup the macro definition; findMacro will report an error for us if
     // the directive is not found
     auto macro = findMacro(directive);
-    if (!macro.valid())
+    if (!macro.valid()) {
+        // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
+        // and skip over the tokens.
+        if (peek(TokenKind::OpenParenthesis))
+            return MacroParser(*this).parseActualArgumentList();
         return nullptr;
+    }
 
     // parse arguments if necessary
     MacroActualArgumentListSyntax* actualArgs = nullptr;
     if (macro.needsArgs()) {
-        MacroParser parser(*this);
-        actualArgs = parser.parseActualArgumentList();
+        actualArgs = MacroParser(*this).parseActualArgumentList();
         if (!actualArgs)
-            return actualArgs;
+            return nullptr;
     }
 
     // Expand out the macro
