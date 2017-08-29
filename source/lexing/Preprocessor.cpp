@@ -748,7 +748,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     if (!macro.valid()) {
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.
-        if (peek(TokenKind::OpenParenthesis))
+        if (peek(TokenKind::OpenParenthesis, LexerMode::Normal))
             return MacroParser(*this).parseActualArgumentList();
         return nullptr;
     }
