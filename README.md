@@ -28,7 +28,7 @@ msbuild build/projects/vs2017/slang.sln
 
 #### Linux - GCC
 ```
-tools/bin/linux/genie --gcc=linux-gcc-6 gmake
+tools/bin/linux/genie --gcc=linux-gcc-7 gmake
 make -C build/projects/gmake-linux -j 8
 ```
 
@@ -36,4 +36,17 @@ make -C build/projects/gmake-linux -j 8
 ```
 tools/bin/linux/genie --gcc=linux-clang gmake
 make -C build/projects/gmake-linux-clang -j 8
+```
+
+#### Linux - Docker
+
+Compilation:
+```
+docker run --rm -v "$PWD":/usr/src/slang -w /usr/src/slang -ti gcc:7 tools/bin/linux/genie --gcc=linux-gcc gmake
+docker run --rm -v "$PWD":/usr/src/slang -w /usr/src/slang -ti gcc:7 make -C build/projects/gmake-linux
+```
+
+Tests:
+```
+docker run --rm -v "$PWD":/usr/src/slang -w /usr/src/slang -ti gcc:7 build/linux64_gcc/bin/unittestsDebug
 ```
