@@ -81,9 +81,9 @@ public:
         currentFile = StringRef(path);
         SyntaxTree tree = SyntaxTree::fromFile(currentFile, sourceManager);
         visitNode(&tree.root());
-        printf("%s\n", tree.reportDiagnostics().c_str());
+        printf("%s", tree.reportDiagnostics().c_str());
 
-        printf("%s", tree.root().toString(SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia).c_str());
+        //printf("%s", tree.root().toString(SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia).c_str());
     }
 
     void visit(const ModuleHeaderSyntax& header) {

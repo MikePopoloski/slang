@@ -349,6 +349,9 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     }
     inMacroBody = false;
 
+    if (needEod)
+        body.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
+
     auto result = alloc.emplace<DefineDirectiveSyntax>(
         directive,
         name,
