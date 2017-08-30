@@ -1113,14 +1113,24 @@ AssertionItemPortListSyntax? portList
 EqualsValueClauseSyntax initializer
 token semi
 
-PropertySequenceDeclarationSyntax kind=PropertySequenceDeclaration base=MemberSyntax
-token start
+PropertyDeclarationSyntax kind=PropertyDeclaration base=MemberSyntax
+token keyword
 token name
 AssertionItemPortListSyntax? portList
 token semi
-list<DataDeclarationSyntax> assertionVariables
-PropertySpecSyntax? propertySpec
-ExpressionSyntax? seqExpr
+list<MemberSyntax> assertionVariables
+PropertySpecSyntax propertySpec
+token optionalSemi
+token end
+NamedBlockClauseSyntax? endBlockName
+
+SequenceDeclarationSyntax kind=SequenceDeclaration base=MemberSyntax
+token keyword
+token name
+AssertionItemPortListSyntax? portList
+token semi
+list<MemberSyntax> assertionVariables
+ExpressionSyntax seqExpr
 token optionalSemi
 token end
 NamedBlockClauseSyntax? endBlockName

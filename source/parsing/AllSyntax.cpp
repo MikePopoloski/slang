@@ -11,732 +11,544 @@
 
 namespace slang {
 
-ImmediateAssertionStatementSyntax& SyntaxFactory::immediateAssertionStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax& expr, ActionBlockSyntax& action) {
-    return *alloc.emplace<ImmediateAssertionStatementSyntax>(kind, label, attributes, keyword, delay, expr, action);
-}
-
-VirtualInterfaceTypeSyntax& SyntaxFactory::virtualInterfaceType(Token virtualKeyword, Token interfaceKeyword, Token name, ParameterValueAssignmentSyntax* parameters, DotMemberClauseSyntax* modport) {
-    return *alloc.emplace<VirtualInterfaceTypeSyntax>(virtualKeyword, interfaceKeyword, name, parameters, modport);
-}
-
-StreamExpressionWithRange& SyntaxFactory::streamExpressionWithRange(Token withKeyword, ElementSelectSyntax& range) {
-    return *alloc.emplace<StreamExpressionWithRange>(withKeyword, range);
-}
-
-EmptyIdentifierNameSyntax& SyntaxFactory::emptyIdentifierName() {
-    return *alloc.emplace<EmptyIdentifierNameSyntax>();
-}
-
-PackageImportDeclarationSyntax& SyntaxFactory::packageImportDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token semi) {
-    return *alloc.emplace<PackageImportDeclarationSyntax>(attributes, keyword, items, semi);
-}
-
-RandCaseItemSyntax& SyntaxFactory::randCaseItem(ExpressionSyntax& expr, Token colon, StatementSyntax& statement) {
-    return *alloc.emplace<RandCaseItemSyntax>(expr, colon, statement);
-}
-
-TimeUnitsDeclarationSyntax& SyntaxFactory::timeUnitsDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token time, DividerClauseSyntax* divider, Token semi) {
-    return *alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, semi);
-}
-
-EmptyMemberSyntax& SyntaxFactory::emptyMember(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token semi) {
-    return *alloc.emplace<EmptyMemberSyntax>(attributes, qualifiers, semi);
-}
-
-MatchesClauseSyntax& SyntaxFactory::matchesClause(Token matchesKeyword, PatternSyntax& pattern) {
-    return *alloc.emplace<MatchesClauseSyntax>(matchesKeyword, pattern);
-}
-
-ExternModuleSyntax& SyntaxFactory::externModule(Token externKeyword, ModuleHeaderSyntax& header) {
-    return *alloc.emplace<ExternModuleSyntax>(externKeyword, header);
-}
-
-InvocationExpressionSyntax& SyntaxFactory::invocationExpression(ExpressionSyntax& left, SyntaxList<AttributeInstanceSyntax> attributes, ArgumentListSyntax* arguments) {
-    return *alloc.emplace<InvocationExpressionSyntax>(left, attributes, arguments);
-}
-
-IdentifierListSyntax& SyntaxFactory::identifierList(Token openParen, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token closeParen) {
-    return *alloc.emplace<IdentifierListSyntax>(openParen, identifiers, closeParen);
-}
-
-AssignmentPatternExpressionSyntax& SyntaxFactory::assignmentPatternExpression(DataTypeSyntax* type, AssignmentPatternSyntax& pattern) {
-    return *alloc.emplace<AssignmentPatternExpressionSyntax>(type, pattern);
-}
-
-RangeSelectSyntax& SyntaxFactory::rangeSelect(SyntaxKind kind, ExpressionSyntax& left, Token range, ExpressionSyntax& right) {
-    return *alloc.emplace<RangeSelectSyntax>(kind, left, range, right);
-}
-
-SimpleAssignmentPatternSyntax& SyntaxFactory::simpleAssignmentPattern(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token closeBrace) {
-    return *alloc.emplace<SimpleAssignmentPatternSyntax>(openBrace, items, closeBrace);
-}
-
-PatternCaseItemSyntax& SyntaxFactory::patternCaseItem(PatternSyntax& pattern, Token tripleAnd, ExpressionSyntax* expr, Token colon, StatementSyntax& statement) {
-    return *alloc.emplace<PatternCaseItemSyntax>(pattern, tripleAnd, expr, colon, statement);
-}
-
-AttributeInstanceSyntax& SyntaxFactory::attributeInstance(Token openParen, SeparatedSyntaxList<AttributeSpecSyntax> specs, Token closeParen) {
-    return *alloc.emplace<AttributeInstanceSyntax>(openParen, specs, closeParen);
-}
-
-IntegerTypeSyntax& SyntaxFactory::integerType(SyntaxKind kind, Token keyword, Token signing, SyntaxList<VariableDimensionSyntax> dimensions) {
-    return *alloc.emplace<IntegerTypeSyntax>(kind, keyword, signing, dimensions);
-}
-
-GenerateBlockSyntax& SyntaxFactory::generateBlock(SyntaxList<AttributeInstanceSyntax> attributes, NamedLabelSyntax* label, Token begin, NamedBlockClauseSyntax* beginName, SyntaxList<MemberSyntax> members, Token end, NamedBlockClauseSyntax* endName) {
-    return *alloc.emplace<GenerateBlockSyntax>(attributes, label, begin, beginName, members, end, endName);
-}
-
-ForeverStatementSyntax& SyntaxFactory::foreverStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token foreverKeyword, StatementSyntax& statement) {
-    return *alloc.emplace<ForeverStatementSyntax>(label, attributes, foreverKeyword, statement);
-}
-
-NamedStructurePatternMemberSyntax& SyntaxFactory::namedStructurePatternMember(Token name, Token colon, PatternSyntax& pattern) {
-    return *alloc.emplace<NamedStructurePatternMemberSyntax>(name, colon, pattern);
-}
-
-ExplicitNonAnsiPortSyntax& SyntaxFactory::explicitNonAnsiPort(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
-    return *alloc.emplace<ExplicitNonAnsiPortSyntax>(dot, name, openParen, expr, closeParen);
-}
-
-ReturnStatementSyntax& SyntaxFactory::returnStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token returnKeyword, ExpressionSyntax* returnValue, Token semi) {
-    return *alloc.emplace<ReturnStatementSyntax>(label, attributes, returnKeyword, returnValue, semi);
-}
-
-DPIImportExportSyntax& SyntaxFactory::dPIImportExport(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token stringLiteral, Token property, Token name, Token equals, FunctionPrototypeSyntax& method) {
-    return *alloc.emplace<DPIImportExportSyntax>(attributes, keyword, stringLiteral, property, name, equals, method);
-}
-
-MacroActualArgumentSyntax& SyntaxFactory::macroActualArgument(TokenList tokens) {
-    return *alloc.emplace<MacroActualArgumentSyntax>(tokens);
-}
-
-NamedPortConnectionSyntax& SyntaxFactory::namedPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
-    return *alloc.emplace<NamedPortConnectionSyntax>(attributes, dot, name, openParen, expr, closeParen);
-}
-
-ParameterValueAssignmentSyntax& SyntaxFactory::parameterValueAssignment(Token hash, ArgumentListSyntax& parameters) {
-    return *alloc.emplace<ParameterValueAssignmentSyntax>(hash, parameters);
-}
-
-StreamExpressionSyntax& SyntaxFactory::streamExpression(ExpressionSyntax& expression, StreamExpressionWithRange* withRange) {
-    return *alloc.emplace<StreamExpressionSyntax>(expression, withRange);
-}
-
-OrderedArgumentSyntax& SyntaxFactory::orderedArgument(ExpressionSyntax& expr) {
-    return *alloc.emplace<OrderedArgumentSyntax>(expr);
-}
-
-ForLoopStatementSyntax& SyntaxFactory::forLoopStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token forKeyword, Token openParen, SeparatedSyntaxList<SyntaxNode> initializers, Token semi1, ExpressionSyntax& stopExpr, Token semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token closeParen, StatementSyntax& statement) {
-    return *alloc.emplace<ForLoopStatementSyntax>(label, attributes, forKeyword, openParen, initializers, semi1, stopExpr, semi2, steps, closeParen, statement);
-}
-
-CaseStatementSyntax& SyntaxFactory::caseStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token caseKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen, Token matchesOrInside, SyntaxList<CaseItemSyntax> items, Token endcase) {
-    return *alloc.emplace<CaseStatementSyntax>(label, attributes, uniqueOrPriority, caseKeyword, openParen, expr, closeParen, matchesOrInside, items, endcase);
-}
-
-ParameterDeclarationSyntax& SyntaxFactory::parameterDeclaration(Token keyword, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) {
-    return *alloc.emplace<ParameterDeclarationSyntax>(keyword, type, declarators);
-}
-
-EventTriggerStatementSyntax& SyntaxFactory::eventTriggerStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token trigger, TimingControlSyntax* timing, NameSyntax& name) {
-    return *alloc.emplace<EventTriggerStatementSyntax>(kind, label, attributes, trigger, timing, name);
-}
-
-CoverageBinsSyntax& SyntaxFactory::coverageBins(SyntaxList<AttributeInstanceSyntax> attributes, Token wildcard, Token keyword, Token name, ElementSelectSyntax* selector, Token equals, CoverageBinInitializerSyntax& initializer, IffClauseSyntax* iff, Token semi) {
-    return *alloc.emplace<CoverageBinsSyntax>(attributes, wildcard, keyword, name, selector, equals, initializer, iff, semi);
-}
-
-ChargeStrengthSyntax& SyntaxFactory::chargeStrength(Token openParen, Token strength, Token closeParen) {
-    return *alloc.emplace<ChargeStrengthSyntax>(openParen, strength, closeParen);
-}
-
-InterconnectPortHeaderSyntax& SyntaxFactory::interconnectPortHeader(Token direction, Token interconnect, DataTypeSyntax* type) {
-    return *alloc.emplace<InterconnectPortHeaderSyntax>(direction, interconnect, type);
-}
-
-PortDeclarationSyntax& SyntaxFactory::portDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
-    return *alloc.emplace<PortDeclarationSyntax>(attributes, header, declarators, semi);
-}
-
-TypedefDeclarationSyntax& SyntaxFactory::typedefDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, DataTypeSyntax& type, Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token semi) {
-    return *alloc.emplace<TypedefDeclarationSyntax>(attributes, typedefKeyword, type, name, dimensions, semi);
-}
-
-RangeDimensionSpecifierSyntax& SyntaxFactory::rangeDimensionSpecifier(SelectorSyntax& selector) {
-    return *alloc.emplace<RangeDimensionSpecifierSyntax>(selector);
-}
-
-ExpressionOrDistSyntax& SyntaxFactory::expressionOrDist(ExpressionSyntax& expr, DistConstraintListSyntax& distribution) {
-    return *alloc.emplace<ExpressionOrDistSyntax>(expr, distribution);
-}
-
-ClockingDeclarationSyntax& SyntaxFactory::clockingDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token globalOrDefault, Token clocking, Token blockName, Token at, ParenthesizedEventExpressionSyntax* event, Token eventIdentifier, Token semi, SyntaxList<ClockingItemSyntax> items, Token endClocking, NamedBlockClauseSyntax* endBlockName) {
-    return *alloc.emplace<ClockingDeclarationSyntax>(attributes, globalOrDefault, clocking, blockName, at, event, eventIdentifier, semi, items, endClocking, endBlockName);
-}
-
-ClockingItemSyntax& SyntaxFactory::clockingItem(Token defaultKeyword, ClockingDirectionSyntax* direction, SeparatedSyntaxList<AttributeSpecSyntax> assignments, Token semi, MemberSyntax* declaration) {
-    return *alloc.emplace<ClockingItemSyntax>(defaultKeyword, direction, assignments, semi, declaration);
-}
-
-DisableStatementSyntax& SyntaxFactory::disableStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, NameSyntax& name, Token semi) {
-    return *alloc.emplace<DisableStatementSyntax>(label, attributes, disable, name, semi);
-}
-
-ImplicationConstraintSyntax& SyntaxFactory::implicationConstraint(ExpressionSyntax& left, Token arrow, ConstraintItemSyntax& constraints) {
-    return *alloc.emplace<ImplicationConstraintSyntax>(left, arrow, constraints);
-}
-
-BadExpressionSyntax& SyntaxFactory::badExpression(ExpressionSyntax& expr) {
-    return *alloc.emplace<BadExpressionSyntax>(expr);
-}
-
-ElementSelectExpressionSyntax& SyntaxFactory::elementSelectExpression(ExpressionSyntax& left, ElementSelectSyntax& select) {
-    return *alloc.emplace<ElementSelectExpressionSyntax>(left, select);
-}
-
-CoverpointSyntax& SyntaxFactory::coverpoint(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, NamedLabelSyntax* label, Token coverpoint, ExpressionSyntax& expr, Token openBrace, SyntaxList<MemberSyntax> members, Token closeBrace, Token emptySemi) {
-    return *alloc.emplace<CoverpointSyntax>(attributes, type, label, coverpoint, expr, openBrace, members, closeBrace, emptySemi);
-}
-
-ElementSelectSyntax& SyntaxFactory::elementSelect(Token openBracket, SelectorSyntax* selector, Token closeBracket) {
-    return *alloc.emplace<ElementSelectSyntax>(openBracket, selector, closeBracket);
-}
-
-WildcardDimensionSpecifierSyntax& SyntaxFactory::wildcardDimensionSpecifier(Token star) {
-    return *alloc.emplace<WildcardDimensionSpecifierSyntax>(star);
-}
-
-TypeReferenceSyntax& SyntaxFactory::typeReference(Token typeKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen) {
-    return *alloc.emplace<TypeReferenceSyntax>(typeKeyword, openParen, expr, closeParen);
-}
-
-ExpressionCoverageBinInitializerSyntax& SyntaxFactory::expressionCoverageBinInitializer(ExpressionSyntax& expr, WithClauseSyntax* withClause) {
-    return *alloc.emplace<ExpressionCoverageBinInitializerSyntax>(expr, withClause);
-}
-
-ImplicitTypeSyntax& SyntaxFactory::implicitType(Token signing, SyntaxList<VariableDimensionSyntax> dimensions) {
-    return *alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
-}
-
-ConcurrentAssertionStatementSyntax& SyntaxFactory::concurrentAssertionStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token propertyOrSequence, Token openParen, PropertySpecSyntax& propertySpec, Token closeParen, ActionBlockSyntax& action) {
-    return *alloc.emplace<ConcurrentAssertionStatementSyntax>(kind, label, attributes, keyword, propertyOrSequence, openParen, propertySpec, closeParen, action);
-}
-
-MacroActualArgumentListSyntax& SyntaxFactory::macroActualArgumentList(Token openParen, SeparatedSyntaxList<MacroActualArgumentSyntax> args, Token closeParen) {
-    return *alloc.emplace<MacroActualArgumentListSyntax>(openParen, args, closeParen);
-}
-
-IdentifierNameSyntax& SyntaxFactory::identifierName(Token identifier) {
-    return *alloc.emplace<IdentifierNameSyntax>(identifier);
-}
-
-ElseConstraintClauseSyntax& SyntaxFactory::elseConstraintClause(Token elseKeyword, ConstraintItemSyntax& constraints) {
-    return *alloc.emplace<ElseConstraintClauseSyntax>(elseKeyword, constraints);
-}
-
-ClockingSkewSyntax& SyntaxFactory::clockingSkew(Token edge, Token hash, ExpressionSyntax* value) {
-    return *alloc.emplace<ClockingSkewSyntax>(edge, hash, value);
-}
-
-OrderedPortConnectionSyntax& SyntaxFactory::orderedPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr) {
-    return *alloc.emplace<OrderedPortConnectionSyntax>(attributes, expr);
-}
-
-UndefDirectiveSyntax& SyntaxFactory::undefDirective(Token directive, Token name, Token endOfDirective) {
-    return *alloc.emplace<UndefDirectiveSyntax>(directive, name, endOfDirective);
-}
-
-IfGenerateSyntax& SyntaxFactory::ifGenerate(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax& condition, Token closeParen, MemberSyntax& block, ElseClauseSyntax* elseClause) {
-    return *alloc.emplace<IfGenerateSyntax>(attributes, keyword, openParen, condition, closeParen, block, elseClause);
-}
-
-NamedLabelSyntax& SyntaxFactory::namedLabel(Token name, Token colon) {
-    return *alloc.emplace<NamedLabelSyntax>(name, colon);
-}
-
-LetDeclarationSyntax& SyntaxFactory::letDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token let, Token identifier, AssertionItemPortListSyntax* portList, EqualsValueClauseSyntax& initializer, Token semi) {
-    return *alloc.emplace<LetDeclarationSyntax>(attributes, let, identifier, portList, initializer, semi);
-}
-
-ClockingDirectionSyntax& SyntaxFactory::clockingDirection(Token input, ClockingSkewSyntax* inputSkew, Token output, ClockingSkewSyntax* ouputSkew, Token inout) {
-    return *alloc.emplace<ClockingDirectionSyntax>(input, inputSkew, output, ouputSkew, inout);
-}
-
-ClassScopeSyntax& SyntaxFactory::classScope(NameSyntax& left, Token separator) {
-    return *alloc.emplace<ClassScopeSyntax>(left, separator);
-}
-
-MacroArgumentDefaultSyntax& SyntaxFactory::macroArgumentDefault(Token equals, TokenList tokens) {
-    return *alloc.emplace<MacroArgumentDefaultSyntax>(equals, tokens);
-}
-
-LineDirectiveSyntax& SyntaxFactory::lineDirective(Token directive, Token lineNumber, Token fileName, Token level, Token endOfDirective) {
-    return *alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level, endOfDirective);
-}
-
-ParenImplicitEventControlSyntax& SyntaxFactory::parenImplicitEventControl(Token at, Token openParenStarCloseParen) {
-    return *alloc.emplace<ParenImplicitEventControlSyntax>(at, openParenStarCloseParen);
-}
-
-VariableDeclaratorSyntax& SyntaxFactory::variableDeclarator(Token name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer) {
-    return *alloc.emplace<VariableDeclaratorSyntax>(name, dimensions, initializer);
-}
-
-WildcardPortListSyntax& SyntaxFactory::wildcardPortList(Token openParen, Token dotStar, Token closeParen) {
-    return *alloc.emplace<WildcardPortListSyntax>(openParen, dotStar, closeParen);
-}
-
-RepeatedEventControlSyntax& SyntaxFactory::repeatedEventControl(Token repeat, Token openParen, ExpressionSyntax& expr, Token closeParen, TimingControlSyntax* eventControl) {
-    return *alloc.emplace<RepeatedEventControlSyntax>(repeat, openParen, expr, closeParen, eventControl);
-}
-
-ConditionalPredicateSyntax& SyntaxFactory::conditionalPredicate(SeparatedSyntaxList<ConditionalPatternSyntax> conditions) {
-    return *alloc.emplace<ConditionalPredicateSyntax>(conditions);
-}
-
-VarDataTypeSyntax& SyntaxFactory::varDataType(Token var, DataTypeSyntax& type) {
-    return *alloc.emplace<VarDataTypeSyntax>(var, type);
-}
-
-TimingControlExpressionConcatenationSyntax& SyntaxFactory::timingControlExpressionConcatenation(ExpressionSyntax& left, TimingControlSyntax& timing, ExpressionSyntax& right) {
-    return *alloc.emplace<TimingControlExpressionConcatenationSyntax>(left, timing, right);
-}
-
-DefaultCaseItemSyntax& SyntaxFactory::defaultCaseItem(Token defaultKeyword, Token colon, SyntaxNode& clause) {
-    return *alloc.emplace<DefaultCaseItemSyntax>(defaultKeyword, colon, clause);
-}
-
-TimescaleDirectiveSyntax& SyntaxFactory::timescaleDirective(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit, Token endOfDirective) {
-    return *alloc.emplace<TimescaleDirectiveSyntax>(directive, timeUnit, timeUnitUnit, slash, timePrecision, timePrecisionUnit, endOfDirective);
-}
-
-ModportItemSyntax& SyntaxFactory::modportItem(Token name, AnsiPortListSyntax& ports) {
-    return *alloc.emplace<ModportItemSyntax>(name, ports);
-}
-
-FunctionPrototypeSyntax& SyntaxFactory::functionPrototype(Token keyword, Token lifetime, DataTypeSyntax* returnType, NameSyntax& name, FunctionPortListSyntax* portList, Token semi) {
-    return *alloc.emplace<FunctionPrototypeSyntax>(keyword, lifetime, returnType, name, portList, semi);
-}
-
-SignalEventExpressionSyntax& SyntaxFactory::signalEventExpression(Token edge, ExpressionSyntax& expr) {
-    return *alloc.emplace<SignalEventExpressionSyntax>(edge, expr);
-}
-
-IffClauseSyntax& SyntaxFactory::iffClause(Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) {
-    return *alloc.emplace<IffClauseSyntax>(iff, openParen, expr, closeParen);
-}
-
-ConstraintPrototypeSyntax& SyntaxFactory::constraintPrototype(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, Token semi) {
-    return *alloc.emplace<ConstraintPrototypeSyntax>(attributes, qualifiers, keyword, name, semi);
-}
-
-ModuleDeclarationSyntax& SyntaxFactory::moduleDeclaration(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax& header, SyntaxList<MemberSyntax> members, Token endmodule, NamedBlockClauseSyntax* blockName) {
-    return *alloc.emplace<ModuleDeclarationSyntax>(kind, attributes, header, members, endmodule, blockName);
-}
-
-NetDeclarationSyntax& SyntaxFactory::netDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token netType, NetStrengthSyntax* strength, Token expansionHint, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
-    return *alloc.emplace<NetDeclarationSyntax>(attributes, netType, strength, expansionHint, type, declarators, semi);
-}
-
-ModportDeclarationSyntax& SyntaxFactory::modportDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<ModportItemSyntax> items, Token semi) {
-    return *alloc.emplace<ModportDeclarationSyntax>(attributes, keyword, items, semi);
-}
-
-ElseClauseSyntax& SyntaxFactory::elseClause(Token elseKeyword, SyntaxNode& clause) {
-    return *alloc.emplace<ElseClauseSyntax>(elseKeyword, clause);
-}
-
-DefParamSyntax& SyntaxFactory::defParam(SyntaxList<AttributeInstanceSyntax> attributes, Token defparam, SeparatedSyntaxList<DefParamAssignmentSyntax> assignments, Token semi) {
-    return *alloc.emplace<DefParamSyntax>(attributes, defparam, assignments, semi);
-}
-
-NewExpressionSyntax& SyntaxFactory::newExpression(Token newKeyword, ExpressionSyntax& expr) {
-    return *alloc.emplace<NewExpressionSyntax>(newKeyword, expr);
-}
-
-ScopedNameSyntax& SyntaxFactory::scopedName(NameSyntax& left, Token separator, NameSyntax& right) {
-    return *alloc.emplace<ScopedNameSyntax>(left, separator, right);
-}
-
-ClassNameSyntax& SyntaxFactory::className(Token identifier, ParameterValueAssignmentSyntax& parameters) {
-    return *alloc.emplace<ClassNameSyntax>(identifier, parameters);
-}
-
-DoWhileStatementSyntax& SyntaxFactory::doWhileStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token doKeyword, StatementSyntax& statement, Token whileKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen, Token semi) {
-    return *alloc.emplace<DoWhileStatementSyntax>(label, attributes, doKeyword, statement, whileKeyword, openParen, expr, closeParen, semi);
-}
-
-ExpressionConstraintSyntax& SyntaxFactory::expressionConstraint(Token soft, ExpressionSyntax& expr, Token semi) {
-    return *alloc.emplace<ExpressionConstraintSyntax>(soft, expr, semi);
-}
-
-ForeachLoopListSyntax& SyntaxFactory::foreachLoopList(Token openParen, NameSyntax& arrayName, Token openBracket, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeBracket, Token closeParen) {
-    return *alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, openBracket, loopVariables, closeBracket, closeParen);
-}
-
-ImplicitAnsiPortSyntax& SyntaxFactory::implicitAnsiPort(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, VariableDeclaratorSyntax& declarator) {
-    return *alloc.emplace<ImplicitAnsiPortSyntax>(attributes, header, declarator);
-}
-
-ProceduralBlockSyntax& SyntaxFactory::proceduralBlock(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, StatementSyntax& statement) {
-    return *alloc.emplace<ProceduralBlockSyntax>(kind, attributes, keyword, statement);
-}
-
-ConditionalPatternSyntax& SyntaxFactory::conditionalPattern(ExpressionSyntax& expr, MatchesClauseSyntax* matchesClause) {
-    return *alloc.emplace<ConditionalPatternSyntax>(expr, matchesClause);
-}
-
-CastExpressionSyntax& SyntaxFactory::castExpression(ExpressionSyntax& left, Token apostrophe, ParenthesizedExpressionSyntax& right) {
-    return *alloc.emplace<CastExpressionSyntax>(left, apostrophe, right);
-}
-
-ConditionalStatementSyntax& SyntaxFactory::conditionalStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token ifKeyword, Token openParen, ConditionalPredicateSyntax& predicate, Token closeParen, StatementSyntax& statement, ElseClauseSyntax* elseClause) {
-    return *alloc.emplace<ConditionalStatementSyntax>(label, attributes, uniqueOrPriority, ifKeyword, openParen, predicate, closeParen, statement, elseClause);
-}
-
-ConstraintBlockSyntax& SyntaxFactory::constraintBlock(Token openBrace, SyntaxList<ConstraintItemSyntax> items, Token closeBrace) {
-    return *alloc.emplace<ConstraintBlockSyntax>(openBrace, items, closeBrace);
-}
-
-FunctionDeclarationSyntax& SyntaxFactory::functionDeclaration(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, FunctionPrototypeSyntax& prototype, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) {
-    return *alloc.emplace<FunctionDeclarationSyntax>(kind, attributes, prototype, items, end, endBlockName);
-}
-
-MacroFormalArgumentSyntax& SyntaxFactory::macroFormalArgument(Token name, MacroArgumentDefaultSyntax* defaultValue) {
-    return *alloc.emplace<MacroFormalArgumentSyntax>(name, defaultValue);
-}
-
-StreamingConcatenationExpressionSyntax& SyntaxFactory::streamingConcatenationExpression(Token openBrace, Token operatorToken, ExpressionSyntax* sliceSize, Token innerOpenBrace, SeparatedSyntaxList<StreamExpressionSyntax> expressions, Token innerCloseBrace, Token closeBrace) {
-    return *alloc.emplace<StreamingConcatenationExpressionSyntax>(openBrace, operatorToken, sliceSize, innerOpenBrace, expressions, innerCloseBrace, closeBrace);
-}
-
-NamedArgumentSyntax& SyntaxFactory::namedArgument(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
-    return *alloc.emplace<NamedArgumentSyntax>(dot, name, openParen, expr, closeParen);
-}
-
-ModuleHeaderSyntax& SyntaxFactory::moduleHeader(SyntaxKind kind, Token moduleKeyword, Token lifetime, Token name, SyntaxList<PackageImportDeclarationSyntax> imports, ParameterPortListSyntax* parameters, PortListSyntax* ports, Token semi) {
-    return *alloc.emplace<ModuleHeaderSyntax>(kind, moduleKeyword, lifetime, name, imports, parameters, ports, semi);
-}
-
-ProceduralDeassignStatementSyntax& SyntaxFactory::proceduralDeassignStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax& variable, Token semi) {
-    return *alloc.emplace<ProceduralDeassignStatementSyntax>(kind, label, attributes, keyword, variable, semi);
-}
-
-DataTypeDimensionSpecifierSyntax& SyntaxFactory::dataTypeDimensionSpecifier(DataTypeSyntax& type) {
-    return *alloc.emplace<DataTypeDimensionSpecifierSyntax>(type);
-}
-
-VariablePortHeaderSyntax& SyntaxFactory::variablePortHeader(Token direction, Token varKeyword, DataTypeSyntax* type) {
-    return *alloc.emplace<VariablePortHeaderSyntax>(direction, varKeyword, type);
-}
-
-ParenthesizedExpressionSyntax& SyntaxFactory::parenthesizedExpression(Token openParen, ExpressionSyntax& expression, Token closeParen) {
-    return *alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expression, closeParen);
-}
-
-NewArrayExpressionSyntax& SyntaxFactory::newArrayExpression(Token newKeyword, Token openBracket, ExpressionSyntax& sizeExpr, Token closeBracket, ParenthesizedExpressionSyntax* initializer) {
-    return *alloc.emplace<NewArrayExpressionSyntax>(newKeyword, openBracket, sizeExpr, closeBracket, initializer);
-}
-
-WildcardPortConnectionSyntax& SyntaxFactory::wildcardPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, Token dotStar) {
-    return *alloc.emplace<WildcardPortConnectionSyntax>(attributes, dotStar);
-}
-
-StructUnionTypeSyntax& SyntaxFactory::structUnionType(SyntaxKind kind, Token keyword, Token tagged, Token packed, Token signing, Token openBrace, SyntaxList<StructUnionMemberSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) {
-    return *alloc.emplace<StructUnionTypeSyntax>(kind, keyword, tagged, packed, signing, openBrace, members, closeBrace, dimensions);
-}
-
-SimpleDirectiveSyntax& SyntaxFactory::simpleDirective(SyntaxKind kind, Token directive, Token endOfDirective) {
-    return *alloc.emplace<SimpleDirectiveSyntax>(kind, directive, endOfDirective);
-}
-
-MemberAccessExpressionSyntax& SyntaxFactory::memberAccessExpression(ExpressionSyntax& left, Token dot, Token name) {
-    return *alloc.emplace<MemberAccessExpressionSyntax>(left, dot, name);
-}
-
-ConstraintDeclarationSyntax& SyntaxFactory::constraintDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, ConstraintBlockSyntax& block) {
-    return *alloc.emplace<ConstraintDeclarationSyntax>(attributes, qualifiers, keyword, name, block);
-}
-
-DistItemSyntax& SyntaxFactory::distItem(ExpressionSyntax& range, DistWeightSyntax* weight) {
-    return *alloc.emplace<DistItemSyntax>(range, weight);
-}
-
-InsideExpressionSyntax& SyntaxFactory::insideExpression(ExpressionSyntax& expr, Token inside, OpenRangeListSyntax& ranges) {
-    return *alloc.emplace<InsideExpressionSyntax>(expr, inside, ranges);
-}
-
-ArgumentListSyntax& SyntaxFactory::argumentList(Token openParen, SeparatedSyntaxList<ArgumentSyntax> parameters, Token closeParen) {
-    return *alloc.emplace<ArgumentListSyntax>(openParen, parameters, closeParen);
-}
-
-DividerClauseSyntax& SyntaxFactory::dividerClause(Token divide, Token value) {
-    return *alloc.emplace<DividerClauseSyntax>(divide, value);
-}
-
-DriveStrengthSyntax& SyntaxFactory::driveStrength(Token openParen, Token strength0, Token comma, Token strength1, Token closeParen) {
-    return *alloc.emplace<DriveStrengthSyntax>(openParen, strength0, comma, strength1, closeParen);
-}
-
-IntegerVectorExpressionSyntax& SyntaxFactory::integerVectorExpression(Token size, Token base, Token value) {
-    return *alloc.emplace<IntegerVectorExpressionSyntax>(size, base, value);
-}
-
-NetPortHeaderSyntax& SyntaxFactory::netPortHeader(Token direction, Token netType, DataTypeSyntax& dataType) {
-    return *alloc.emplace<NetPortHeaderSyntax>(direction, netType, dataType);
-}
-
-CoverageOptionSyntax& SyntaxFactory::coverageOption(SyntaxList<AttributeInstanceSyntax> attributes, Token option, Token dot, Token name, Token equals, ExpressionSyntax& expr, Token semi) {
-    return *alloc.emplace<CoverageOptionSyntax>(attributes, option, dot, name, equals, expr, semi);
-}
-
-AssertionItemPortSyntax& SyntaxFactory::assertionItemPort(SyntaxList<AttributeInstanceSyntax> attributes, Token local, Token direction, DataTypeSyntax& type, VariableDeclaratorSyntax& declarator) {
-    return *alloc.emplace<AssertionItemPortSyntax>(attributes, local, direction, type, declarator);
-}
-
-WildcardPatternSyntax& SyntaxFactory::wildcardPattern(Token dotStar) {
-    return *alloc.emplace<WildcardPatternSyntax>(dotStar);
-}
-
-CaseGenerateSyntax& SyntaxFactory::caseGenerate(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax& condition, Token closeParen, SyntaxList<CaseItemSyntax> items, Token endCase) {
-    return *alloc.emplace<CaseGenerateSyntax>(attributes, keyword, openParen, condition, closeParen, items, endCase);
-}
-
-ClassPropertyDeclarationSyntax& SyntaxFactory::classPropertyDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, MemberSyntax& declaration) {
-    return *alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, qualifiers, declaration);
-}
-
-PostfixUnaryExpressionSyntax& SyntaxFactory::postfixUnaryExpression(SyntaxKind kind, ExpressionSyntax& operand, SyntaxList<AttributeInstanceSyntax> attributes, Token operatorToken) {
-    return *alloc.emplace<PostfixUnaryExpressionSyntax>(kind, operand, attributes, operatorToken);
-}
-
-ConcurrentAssertionMemberSyntax& SyntaxFactory::concurrentAssertionMember(SyntaxList<AttributeInstanceSyntax> attributes, ConcurrentAssertionStatementSyntax& statement) {
-    return *alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, statement);
-}
-
-GenerateRegionSyntax& SyntaxFactory::generateRegion(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SyntaxList<MemberSyntax> members, Token endgenerate) {
-    return *alloc.emplace<GenerateRegionSyntax>(attributes, keyword, members, endgenerate);
-}
-
-ForeachLoopStatementSyntax& SyntaxFactory::foreachLoopStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ForeachLoopListSyntax& loopList, StatementSyntax& statement) {
-    return *alloc.emplace<ForeachLoopStatementSyntax>(label, attributes, keyword, loopList, statement);
-}
-
-SignedCastExpressionSyntax& SyntaxFactory::signedCastExpression(Token signing, Token apostrophe, ParenthesizedExpressionSyntax& inner) {
-    return *alloc.emplace<SignedCastExpressionSyntax>(signing, apostrophe, inner);
-}
-
-EventControlWithExpressionSyntax& SyntaxFactory::eventControlWithExpression(Token at, EventExpressionSyntax& expr) {
-    return *alloc.emplace<EventControlWithExpressionSyntax>(at, expr);
-}
-
-DeferredAssertionSyntax& SyntaxFactory::deferredAssertion(Token hash, Token zero, Token finalKeyword) {
-    return *alloc.emplace<DeferredAssertionSyntax>(hash, zero, finalKeyword);
-}
-
-IncludeDirectiveSyntax& SyntaxFactory::includeDirective(Token directive, Token fileName, Token endOfDirective) {
-    return *alloc.emplace<IncludeDirectiveSyntax>(directive, fileName, endOfDirective);
-}
-
-ImplicitEventControlSyntax& SyntaxFactory::implicitEventControl(Token atStar) {
-    return *alloc.emplace<ImplicitEventControlSyntax>(atStar);
-}
-
-StructUnionMemberSyntax& SyntaxFactory::structUnionMember(SyntaxList<AttributeInstanceSyntax> attributes, Token randomQualifier, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
-    return *alloc.emplace<StructUnionMemberSyntax>(attributes, randomQualifier, type, declarators, semi);
-}
-
-SolveBeforeConstraintSyntax& SyntaxFactory::solveBeforeConstraint(Token solve, SeparatedSyntaxList<ExpressionSyntax> beforeExpr, Token before, SeparatedSyntaxList<ExpressionSyntax> afterExpr, Token semi) {
-    return *alloc.emplace<SolveBeforeConstraintSyntax>(solve, beforeExpr, before, afterExpr, semi);
-}
-
-EmptyArgumentSyntax& SyntaxFactory::emptyArgument() {
-    return *alloc.emplace<EmptyArgumentSyntax>();
-}
-
-ConditionalConstraintSyntax& SyntaxFactory::conditionalConstraint(Token ifKeyword, Token openParen, ExpressionSyntax& condition, Token closeParen, ConstraintItemSyntax& constraints, ElseConstraintClauseSyntax* elseClause) {
-    return *alloc.emplace<ConditionalConstraintSyntax>(ifKeyword, openParen, condition, closeParen, constraints, elseClause);
-}
-
-OrderedStructurePatternMemberSyntax& SyntaxFactory::orderedStructurePatternMember(PatternSyntax& pattern) {
-    return *alloc.emplace<OrderedStructurePatternMemberSyntax>(pattern);
-}
-
-TypedefInterfaceClassDeclarationSyntax& SyntaxFactory::typedefInterfaceClassDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi) {
-    return *alloc.emplace<TypedefInterfaceClassDeclarationSyntax>(attributes, typedefKeyword, interfaceKeyword, classKeyword, name, semi);
-}
-
-RandomizeMethodWithClauseSyntax& SyntaxFactory::randomizeMethodWithClause(Token with, IdentifierListSyntax* names, ConstraintBlockSyntax& constraints) {
-    return *alloc.emplace<RandomizeMethodWithClauseSyntax>(with, names, constraints);
-}
-
-DisableIffSyntax& SyntaxFactory::disableIff(Token disable, Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) {
-    return *alloc.emplace<DisableIffSyntax>(disable, iff, openParen, expr, closeParen);
-}
-
-DistConstraintListSyntax& SyntaxFactory::distConstraintList(Token dist, Token openBrace, SeparatedSyntaxList<DistItemSyntax> items, Token closeBrace) {
-    return *alloc.emplace<DistConstraintListSyntax>(dist, openBrace, items, closeBrace);
-}
-
-WithClauseSyntax& SyntaxFactory::withClause(Token with, Token openParen, ExpressionSyntax& expr, Token closeParen) {
-    return *alloc.emplace<WithClauseSyntax>(with, openParen, expr, closeParen);
-}
-
-NewClassExpressionSyntax& SyntaxFactory::newClassExpression(ClassScopeSyntax& classScope, Token newKeyword, ArgumentListSyntax* arguments) {
-    return *alloc.emplace<NewClassExpressionSyntax>(classScope, newKeyword, arguments);
-}
-
-VariableDimensionSyntax& SyntaxFactory::variableDimension(Token openBracket, DimensionSpecifierSyntax* specifier, Token closeBracket) {
-    return *alloc.emplace<VariableDimensionSyntax>(openBracket, specifier, closeBracket);
-}
-
-ImplicitNonAnsiPortSyntax& SyntaxFactory::implicitNonAnsiPort(ExpressionSyntax& expr) {
-    return *alloc.emplace<ImplicitNonAnsiPortSyntax>(expr);
-}
-
-ParenthesizedEventExpressionSyntax& SyntaxFactory::parenthesizedEventExpression(Token openParen, EventExpressionSyntax& expr, Token closeParen) {
-    return *alloc.emplace<ParenthesizedEventExpressionSyntax>(openParen, expr, closeParen);
-}
-
-PropertySequenceDeclarationSyntax& SyntaxFactory::propertySequenceDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token start, Token name, AssertionItemPortListSyntax* portList, Token semi, SyntaxList<DataDeclarationSyntax> assertionVariables, PropertySpecSyntax* propertySpec, ExpressionSyntax* seqExpr, Token optionalSemi, Token end, NamedBlockClauseSyntax* endBlockName) {
-    return *alloc.emplace<PropertySequenceDeclarationSyntax>(attributes, start, name, portList, semi, assertionVariables, propertySpec, seqExpr, optionalSemi, end, endBlockName);
-}
-
-ImplementsClauseSyntax& SyntaxFactory::implementsClause(Token keyword, SeparatedSyntaxList<NameSyntax> interfaces) {
-    return *alloc.emplace<ImplementsClauseSyntax>(keyword, interfaces);
-}
-
-ForVariableDeclarationSyntax& SyntaxFactory::forVariableDeclaration(Token varKeyword, DataTypeSyntax& type, VariableDeclaratorSyntax& declarator) {
-    return *alloc.emplace<ForVariableDeclarationSyntax>(varKeyword, type, declarator);
-}
-
-DefineDirectiveSyntax& SyntaxFactory::defineDirective(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token endOfDirective) {
-    return *alloc.emplace<DefineDirectiveSyntax>(directive, name, formalArguments, body, endOfDirective);
-}
-
-EmptyQueueExpressionSyntax& SyntaxFactory::emptyQueueExpression(Token openBrace, Token closeBrace) {
-    return *alloc.emplace<EmptyQueueExpressionSyntax>(openBrace, closeBrace);
-}
-
-ClassDeclarationSyntax& SyntaxFactory::classDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token virtualOrInterface, Token classKeyword, Token lifetime, Token name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token semi, SyntaxList<MemberSyntax> items, Token endClass, NamedBlockClauseSyntax* endBlockName) {
-    return *alloc.emplace<ClassDeclarationSyntax>(attributes, virtualOrInterface, classKeyword, lifetime, name, parameters, extendsClause, implementsClause, semi, items, endClass, endBlockName);
-}
-
-DefaultCoverageBinInitializerSyntax& SyntaxFactory::defaultCoverageBinInitializer(Token defaultKeyword, Token sequenceKeyword) {
-    return *alloc.emplace<DefaultCoverageBinInitializerSyntax>(defaultKeyword, sequenceKeyword);
-}
-
-ReplicatedAssignmentPatternSyntax& SyntaxFactory::replicatedAssignmentPattern(Token openBrace, ExpressionSyntax& countExpr, Token innerOpenBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token innerCloseBrace, Token closeBrace) {
-    return *alloc.emplace<ReplicatedAssignmentPatternSyntax>(openBrace, countExpr, innerOpenBrace, items, innerCloseBrace, closeBrace);
-}
-
-LoopConstraintSyntax& SyntaxFactory::loopConstraint(Token foreachKeyword, ForeachLoopListSyntax& loopList, ConstraintItemSyntax& constraints) {
-    return *alloc.emplace<LoopConstraintSyntax>(foreachKeyword, loopList, constraints);
-}
-
-RandCaseStatementSyntax& SyntaxFactory::randCaseStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token randCase, SyntaxList<RandCaseItemSyntax> items, Token endCase) {
-    return *alloc.emplace<RandCaseStatementSyntax>(label, attributes, randCase, items, endCase);
-}
-
-CompilationUnitSyntax& SyntaxFactory::compilationUnit(SyntaxList<MemberSyntax> members, Token endOfFile) {
-    return *alloc.emplace<CompilationUnitSyntax>(members, endOfFile);
-}
-
-InterfacePortHeaderSyntax& SyntaxFactory::interfacePortHeader(Token nameOrKeyword, DotMemberClauseSyntax* modport) {
-    return *alloc.emplace<InterfacePortHeaderSyntax>(nameOrKeyword, modport);
+EqualsValueClauseSyntax& SyntaxFactory::equalsValueClause(Token equals, ExpressionSyntax& expr) {
+    return *alloc.emplace<EqualsValueClauseSyntax>(equals, expr);
 }
 
 AttributeSpecSyntax& SyntaxFactory::attributeSpec(Token name, EqualsValueClauseSyntax* value) {
     return *alloc.emplace<AttributeSpecSyntax>(name, value);
 }
 
-WaitOrderStatementSyntax& SyntaxFactory::waitOrderStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait_order, Token openParen, SeparatedSyntaxList<NameSyntax> names, Token closeParen, ActionBlockSyntax& action) {
-    return *alloc.emplace<WaitOrderStatementSyntax>(label, attributes, wait_order, openParen, names, closeParen, action);
+AttributeInstanceSyntax& SyntaxFactory::attributeInstance(Token openParen, SeparatedSyntaxList<AttributeSpecSyntax> specs, Token closeParen) {
+    return *alloc.emplace<AttributeInstanceSyntax>(openParen, specs, closeParen);
+}
+
+NamedLabelSyntax& SyntaxFactory::namedLabel(Token name, Token colon) {
+    return *alloc.emplace<NamedLabelSyntax>(name, colon);
+}
+
+EmptyArgumentSyntax& SyntaxFactory::emptyArgument() {
+    return *alloc.emplace<EmptyArgumentSyntax>();
+}
+
+OrderedArgumentSyntax& SyntaxFactory::orderedArgument(ExpressionSyntax& expr) {
+    return *alloc.emplace<OrderedArgumentSyntax>(expr);
+}
+
+NamedArgumentSyntax& SyntaxFactory::namedArgument(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
+    return *alloc.emplace<NamedArgumentSyntax>(dot, name, openParen, expr, closeParen);
+}
+
+ArgumentListSyntax& SyntaxFactory::argumentList(Token openParen, SeparatedSyntaxList<ArgumentSyntax> parameters, Token closeParen) {
+    return *alloc.emplace<ArgumentListSyntax>(openParen, parameters, closeParen);
+}
+
+ParameterValueAssignmentSyntax& SyntaxFactory::parameterValueAssignment(Token hash, ArgumentListSyntax& parameters) {
+    return *alloc.emplace<ParameterValueAssignmentSyntax>(hash, parameters);
+}
+
+VariablePatternSyntax& SyntaxFactory::variablePattern(Token dot, Token variableName) {
+    return *alloc.emplace<VariablePatternSyntax>(dot, variableName);
+}
+
+WildcardPatternSyntax& SyntaxFactory::wildcardPattern(Token dotStar) {
+    return *alloc.emplace<WildcardPatternSyntax>(dotStar);
 }
 
 ExpressionPatternSyntax& SyntaxFactory::expressionPattern(ExpressionSyntax& expr) {
     return *alloc.emplace<ExpressionPatternSyntax>(expr);
 }
 
-HierarchicalInstanceSyntax& SyntaxFactory::hierarchicalInstance(Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token closeParen) {
-    return *alloc.emplace<HierarchicalInstanceSyntax>(name, dimensions, openParen, connections, closeParen);
+TaggedPatternSyntax& SyntaxFactory::taggedPattern(Token tagged, Token memberName, PatternSyntax* pattern) {
+    return *alloc.emplace<TaggedPatternSyntax>(tagged, memberName, pattern);
 }
 
-GenvarDeclarationSyntax& SyntaxFactory::genvarDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token semi) {
-    return *alloc.emplace<GenvarDeclarationSyntax>(attributes, keyword, identifiers, semi);
+OrderedStructurePatternMemberSyntax& SyntaxFactory::orderedStructurePatternMember(PatternSyntax& pattern) {
+    return *alloc.emplace<OrderedStructurePatternMemberSyntax>(pattern);
 }
 
-ColonExpressionClauseSyntax& SyntaxFactory::colonExpressionClause(Token colon, ExpressionSyntax& expr) {
-    return *alloc.emplace<ColonExpressionClauseSyntax>(colon, expr);
+NamedStructurePatternMemberSyntax& SyntaxFactory::namedStructurePatternMember(Token name, Token colon, PatternSyntax& pattern) {
+    return *alloc.emplace<NamedStructurePatternMemberSyntax>(name, colon, pattern);
 }
 
-UnconditionalBranchDirectiveSyntax& SyntaxFactory::unconditionalBranchDirective(SyntaxKind kind, Token directive, Token endOfDirective, TokenList disabledTokens) {
-    return *alloc.emplace<UnconditionalBranchDirectiveSyntax>(kind, directive, endOfDirective, disabledTokens);
+StructurePatternSyntax& SyntaxFactory::structurePattern(Token openBrace, SeparatedSyntaxList<StructurePatternMemberSyntax> members, Token closeBrace) {
+    return *alloc.emplace<StructurePatternSyntax>(openBrace, members, closeBrace);
 }
 
-DisableForkStatementSyntax& SyntaxFactory::disableForkStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, Token fork, Token semi) {
-    return *alloc.emplace<DisableForkStatementSyntax>(label, attributes, disable, fork, semi);
+MatchesClauseSyntax& SyntaxFactory::matchesClause(Token matchesKeyword, PatternSyntax& pattern) {
+    return *alloc.emplace<MatchesClauseSyntax>(matchesKeyword, pattern);
 }
 
-CovergroupDeclarationSyntax& SyntaxFactory::covergroupDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token covergroup, Token name, AnsiPortListSyntax* portList, SyntaxNode* event, Token semi, SyntaxList<MemberSyntax> members, Token endgroup, NamedBlockClauseSyntax* endBlockName) {
-    return *alloc.emplace<CovergroupDeclarationSyntax>(attributes, covergroup, name, portList, event, semi, members, endgroup, endBlockName);
+ConditionalPatternSyntax& SyntaxFactory::conditionalPattern(ExpressionSyntax& expr, MatchesClauseSyntax* matchesClause) {
+    return *alloc.emplace<ConditionalPatternSyntax>(expr, matchesClause);
 }
 
-FunctionPortSyntax& SyntaxFactory::functionPort(SyntaxList<AttributeInstanceSyntax> attributes, Token constKeyword, Token direction, Token varKeyword, DataTypeSyntax* dataType, VariableDeclaratorSyntax& declarator) {
-    return *alloc.emplace<FunctionPortSyntax>(attributes, constKeyword, direction, varKeyword, dataType, declarator);
+ConditionalPredicateSyntax& SyntaxFactory::conditionalPredicate(SeparatedSyntaxList<ConditionalPatternSyntax> conditions) {
+    return *alloc.emplace<ConditionalPredicateSyntax>(conditions);
 }
 
-QueueDimensionSpecifierSyntax& SyntaxFactory::queueDimensionSpecifier(Token dollar, ColonExpressionClauseSyntax* maxSizeClause) {
-    return *alloc.emplace<QueueDimensionSpecifierSyntax>(dollar, maxSizeClause);
+SimpleAssignmentPatternSyntax& SyntaxFactory::simpleAssignmentPattern(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token closeBrace) {
+    return *alloc.emplace<SimpleAssignmentPatternSyntax>(openBrace, items, closeBrace);
 }
 
-ClassMethodPrototypeSyntax& SyntaxFactory::classMethodPrototype(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionPrototypeSyntax& prototype) {
-    return *alloc.emplace<ClassMethodPrototypeSyntax>(attributes, qualifiers, prototype);
+AssignmentPatternItemSyntax& SyntaxFactory::assignmentPatternItem(ExpressionSyntax& key, Token colon, ExpressionSyntax& expr) {
+    return *alloc.emplace<AssignmentPatternItemSyntax>(key, colon, expr);
 }
 
-AssertionItemPortListSyntax& SyntaxFactory::assertionItemPortList(Token openParen, SeparatedSyntaxList<AssertionItemPortSyntax> ports, Token closeParen) {
-    return *alloc.emplace<AssertionItemPortListSyntax>(openParen, ports, closeParen);
+StructuredAssignmentPatternSyntax& SyntaxFactory::structuredAssignmentPattern(Token openBrace, SeparatedSyntaxList<AssignmentPatternItemSyntax> items, Token closeBrace) {
+    return *alloc.emplace<StructuredAssignmentPatternSyntax>(openBrace, items, closeBrace);
 }
 
-DotMemberClauseSyntax& SyntaxFactory::dotMemberClause(Token dot, Token member) {
-    return *alloc.emplace<DotMemberClauseSyntax>(dot, member);
+ReplicatedAssignmentPatternSyntax& SyntaxFactory::replicatedAssignmentPattern(Token openBrace, ExpressionSyntax& countExpr, Token innerOpenBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token innerCloseBrace, Token closeBrace) {
+    return *alloc.emplace<ReplicatedAssignmentPatternSyntax>(openBrace, countExpr, innerOpenBrace, items, innerCloseBrace, closeBrace);
 }
 
-DataDeclarationSyntax& SyntaxFactory::dataDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
-    return *alloc.emplace<DataDeclarationSyntax>(attributes, modifiers, type, declarators, semi);
+BadExpressionSyntax& SyntaxFactory::badExpression(ExpressionSyntax& expr) {
+    return *alloc.emplace<BadExpressionSyntax>(expr);
 }
 
-BeginKeywordsDirectiveSyntax& SyntaxFactory::beginKeywordsDirective(Token directive, Token versionSpecifier, Token endOfDirective) {
-    return *alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionSpecifier, endOfDirective);
+PrefixUnaryExpressionSyntax& SyntaxFactory::prefixUnaryExpression(SyntaxKind kind, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& operand) {
+    return *alloc.emplace<PrefixUnaryExpressionSyntax>(kind, operatorToken, attributes, operand);
 }
 
-ImmediateAssertionMemberSyntax& SyntaxFactory::immediateAssertionMember(SyntaxList<AttributeInstanceSyntax> attributes, ImmediateAssertionStatementSyntax& statement) {
-    return *alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, statement);
+PostfixUnaryExpressionSyntax& SyntaxFactory::postfixUnaryExpression(SyntaxKind kind, ExpressionSyntax& operand, SyntaxList<AttributeInstanceSyntax> attributes, Token operatorToken) {
+    return *alloc.emplace<PostfixUnaryExpressionSyntax>(kind, operand, attributes, operatorToken);
 }
 
-ContinuousAssignSyntax& SyntaxFactory::continuousAssign(SyntaxList<AttributeInstanceSyntax> attributes, Token assign, SeparatedSyntaxList<ExpressionSyntax> assignments, Token semi) {
-    return *alloc.emplace<ContinuousAssignSyntax>(attributes, assign, assignments, semi);
+BinaryExpressionSyntax& SyntaxFactory::binaryExpression(SyntaxKind kind, ExpressionSyntax& left, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& right) {
+    return *alloc.emplace<BinaryExpressionSyntax>(kind, left, operatorToken, attributes, right);
+}
+
+MinTypMaxExpressionSyntax& SyntaxFactory::minTypMaxExpression(ExpressionSyntax& min, Token colon1, ExpressionSyntax& typ, Token colon2, ExpressionSyntax& max) {
+    return *alloc.emplace<MinTypMaxExpressionSyntax>(min, colon1, typ, colon2, max);
+}
+
+TaggedUnionExpressionSyntax& SyntaxFactory::taggedUnionExpression(Token tagged, Token member, ExpressionSyntax* expr) {
+    return *alloc.emplace<TaggedUnionExpressionSyntax>(tagged, member, expr);
+}
+
+OpenRangeListSyntax& SyntaxFactory::openRangeList(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token closeBrace) {
+    return *alloc.emplace<OpenRangeListSyntax>(openBrace, valueRanges, closeBrace);
+}
+
+InsideExpressionSyntax& SyntaxFactory::insideExpression(ExpressionSyntax& expr, Token inside, OpenRangeListSyntax& ranges) {
+    return *alloc.emplace<InsideExpressionSyntax>(expr, inside, ranges);
+}
+
+ConditionalExpressionSyntax& SyntaxFactory::conditionalExpression(ConditionalPredicateSyntax& predicate, Token question, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& left, Token colon, ExpressionSyntax& right) {
+    return *alloc.emplace<ConditionalExpressionSyntax>(predicate, question, attributes, left, colon, right);
+}
+
+AssignmentPatternExpressionSyntax& SyntaxFactory::assignmentPatternExpression(DataTypeSyntax* type, AssignmentPatternSyntax& pattern) {
+    return *alloc.emplace<AssignmentPatternExpressionSyntax>(type, pattern);
+}
+
+BitSelectSyntax& SyntaxFactory::bitSelect(ExpressionSyntax& expr) {
+    return *alloc.emplace<BitSelectSyntax>(expr);
+}
+
+RangeSelectSyntax& SyntaxFactory::rangeSelect(SyntaxKind kind, ExpressionSyntax& left, Token range, ExpressionSyntax& right) {
+    return *alloc.emplace<RangeSelectSyntax>(kind, left, range, right);
+}
+
+ElementSelectSyntax& SyntaxFactory::elementSelect(Token openBracket, SelectorSyntax* selector, Token closeBracket) {
+    return *alloc.emplace<ElementSelectSyntax>(openBracket, selector, closeBracket);
+}
+
+IdentifierNameSyntax& SyntaxFactory::identifierName(Token identifier) {
+    return *alloc.emplace<IdentifierNameSyntax>(identifier);
+}
+
+IdentifierSelectNameSyntax& SyntaxFactory::identifierSelectName(Token identifier, SyntaxList<ElementSelectSyntax> selectors) {
+    return *alloc.emplace<IdentifierSelectNameSyntax>(identifier, selectors);
+}
+
+EmptyIdentifierNameSyntax& SyntaxFactory::emptyIdentifierName() {
+    return *alloc.emplace<EmptyIdentifierNameSyntax>();
+}
+
+KeywordNameSyntax& SyntaxFactory::keywordName(SyntaxKind kind, Token keyword) {
+    return *alloc.emplace<KeywordNameSyntax>(kind, keyword);
+}
+
+ClassNameSyntax& SyntaxFactory::className(Token identifier, ParameterValueAssignmentSyntax& parameters) {
+    return *alloc.emplace<ClassNameSyntax>(identifier, parameters);
+}
+
+ScopedNameSyntax& SyntaxFactory::scopedName(NameSyntax& left, Token separator, NameSyntax& right) {
+    return *alloc.emplace<ScopedNameSyntax>(left, separator, right);
+}
+
+ClassScopeSyntax& SyntaxFactory::classScope(NameSyntax& left, Token separator) {
+    return *alloc.emplace<ClassScopeSyntax>(left, separator);
+}
+
+LiteralExpressionSyntax& SyntaxFactory::literalExpression(SyntaxKind kind, Token literal) {
+    return *alloc.emplace<LiteralExpressionSyntax>(kind, literal);
+}
+
+IntegerVectorExpressionSyntax& SyntaxFactory::integerVectorExpression(Token size, Token base, Token value) {
+    return *alloc.emplace<IntegerVectorExpressionSyntax>(size, base, value);
+}
+
+EmptyQueueExpressionSyntax& SyntaxFactory::emptyQueueExpression(Token openBrace, Token closeBrace) {
+    return *alloc.emplace<EmptyQueueExpressionSyntax>(openBrace, closeBrace);
+}
+
+ConcatenationExpressionSyntax& SyntaxFactory::concatenationExpression(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> expressions, Token closeBrace) {
+    return *alloc.emplace<ConcatenationExpressionSyntax>(openBrace, expressions, closeBrace);
+}
+
+MultipleConcatenationExpressionSyntax& SyntaxFactory::multipleConcatenationExpression(Token openBrace, ExpressionSyntax& expression, ConcatenationExpressionSyntax& concatenation, Token closeBrace) {
+    return *alloc.emplace<MultipleConcatenationExpressionSyntax>(openBrace, expression, concatenation, closeBrace);
+}
+
+StreamExpressionWithRange& SyntaxFactory::streamExpressionWithRange(Token withKeyword, ElementSelectSyntax& range) {
+    return *alloc.emplace<StreamExpressionWithRange>(withKeyword, range);
+}
+
+StreamExpressionSyntax& SyntaxFactory::streamExpression(ExpressionSyntax& expression, StreamExpressionWithRange* withRange) {
+    return *alloc.emplace<StreamExpressionSyntax>(expression, withRange);
+}
+
+StreamingConcatenationExpressionSyntax& SyntaxFactory::streamingConcatenationExpression(Token openBrace, Token operatorToken, ExpressionSyntax* sliceSize, Token innerOpenBrace, SeparatedSyntaxList<StreamExpressionSyntax> expressions, Token innerCloseBrace, Token closeBrace) {
+    return *alloc.emplace<StreamingConcatenationExpressionSyntax>(openBrace, operatorToken, sliceSize, innerOpenBrace, expressions, innerCloseBrace, closeBrace);
+}
+
+ParenthesizedExpressionSyntax& SyntaxFactory::parenthesizedExpression(Token openParen, ExpressionSyntax& expression, Token closeParen) {
+    return *alloc.emplace<ParenthesizedExpressionSyntax>(openParen, expression, closeParen);
+}
+
+NewClassExpressionSyntax& SyntaxFactory::newClassExpression(ClassScopeSyntax& classScope, Token newKeyword, ArgumentListSyntax* arguments) {
+    return *alloc.emplace<NewClassExpressionSyntax>(classScope, newKeyword, arguments);
+}
+
+NewArrayExpressionSyntax& SyntaxFactory::newArrayExpression(Token newKeyword, Token openBracket, ExpressionSyntax& sizeExpr, Token closeBracket, ParenthesizedExpressionSyntax* initializer) {
+    return *alloc.emplace<NewArrayExpressionSyntax>(newKeyword, openBracket, sizeExpr, closeBracket, initializer);
+}
+
+NewExpressionSyntax& SyntaxFactory::newExpression(Token newKeyword, ExpressionSyntax& expr) {
+    return *alloc.emplace<NewExpressionSyntax>(newKeyword, expr);
+}
+
+ElementSelectExpressionSyntax& SyntaxFactory::elementSelectExpression(ExpressionSyntax& left, ElementSelectSyntax& select) {
+    return *alloc.emplace<ElementSelectExpressionSyntax>(left, select);
+}
+
+MemberAccessExpressionSyntax& SyntaxFactory::memberAccessExpression(ExpressionSyntax& left, Token dot, Token name) {
+    return *alloc.emplace<MemberAccessExpressionSyntax>(left, dot, name);
+}
+
+InvocationExpressionSyntax& SyntaxFactory::invocationExpression(ExpressionSyntax& left, SyntaxList<AttributeInstanceSyntax> attributes, ArgumentListSyntax* arguments) {
+    return *alloc.emplace<InvocationExpressionSyntax>(left, attributes, arguments);
+}
+
+CastExpressionSyntax& SyntaxFactory::castExpression(ExpressionSyntax& left, Token apostrophe, ParenthesizedExpressionSyntax& right) {
+    return *alloc.emplace<CastExpressionSyntax>(left, apostrophe, right);
+}
+
+SignedCastExpressionSyntax& SyntaxFactory::signedCastExpression(Token signing, Token apostrophe, ParenthesizedExpressionSyntax& inner) {
+    return *alloc.emplace<SignedCastExpressionSyntax>(signing, apostrophe, inner);
+}
+
+DelaySyntax& SyntaxFactory::delay(SyntaxKind kind, Token hash, ExpressionSyntax& delayValue) {
+    return *alloc.emplace<DelaySyntax>(kind, hash, delayValue);
+}
+
+EventControlSyntax& SyntaxFactory::eventControl(Token at, NameSyntax& eventName) {
+    return *alloc.emplace<EventControlSyntax>(at, eventName);
+}
+
+SignalEventExpressionSyntax& SyntaxFactory::signalEventExpression(Token edge, ExpressionSyntax& expr) {
+    return *alloc.emplace<SignalEventExpressionSyntax>(edge, expr);
 }
 
 BinaryEventExpressionSyntax& SyntaxFactory::binaryEventExpression(EventExpressionSyntax& left, Token operatorToken, EventExpressionSyntax& right) {
     return *alloc.emplace<BinaryEventExpressionSyntax>(left, operatorToken, right);
 }
 
-ParameterPortListSyntax& SyntaxFactory::parameterPortList(Token hash, Token openParen, SeparatedSyntaxList<ParameterDeclarationSyntax> declarations, Token closeParen) {
-    return *alloc.emplace<ParameterPortListSyntax>(hash, openParen, declarations, closeParen);
+ParenthesizedEventExpressionSyntax& SyntaxFactory::parenthesizedEventExpression(Token openParen, EventExpressionSyntax& expr, Token closeParen) {
+    return *alloc.emplace<ParenthesizedEventExpressionSyntax>(openParen, expr, closeParen);
 }
 
-MacroUsageSyntax& SyntaxFactory::macroUsage(Token directive, MacroActualArgumentListSyntax* args) {
-    return *alloc.emplace<MacroUsageSyntax>(directive, args);
+ImplicitEventControlSyntax& SyntaxFactory::implicitEventControl(Token atStar) {
+    return *alloc.emplace<ImplicitEventControlSyntax>(atStar);
 }
 
-ExplicitAnsiPortSyntax& SyntaxFactory::explicitAnsiPort(SyntaxList<AttributeInstanceSyntax> attributes, Token direction, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
-    return *alloc.emplace<ExplicitAnsiPortSyntax>(attributes, direction, dot, name, openParen, expr, closeParen);
+ParenImplicitEventControlSyntax& SyntaxFactory::parenImplicitEventControl(Token at, Token openParenStarCloseParen) {
+    return *alloc.emplace<ParenImplicitEventControlSyntax>(at, openParenStarCloseParen);
 }
 
-ConditionalBranchDirectiveSyntax& SyntaxFactory::conditionalBranchDirective(SyntaxKind kind, Token directive, Token name, Token endOfDirective, TokenList disabledTokens) {
-    return *alloc.emplace<ConditionalBranchDirectiveSyntax>(kind, directive, name, endOfDirective, disabledTokens);
+EventControlWithExpressionSyntax& SyntaxFactory::eventControlWithExpression(Token at, EventExpressionSyntax& expr) {
+    return *alloc.emplace<EventControlWithExpressionSyntax>(at, expr);
+}
+
+RepeatedEventControlSyntax& SyntaxFactory::repeatedEventControl(Token repeat, Token openParen, ExpressionSyntax& expr, Token closeParen, TimingControlSyntax* eventControl) {
+    return *alloc.emplace<RepeatedEventControlSyntax>(repeat, openParen, expr, closeParen, eventControl);
+}
+
+TimingControlExpressionSyntax& SyntaxFactory::timingControlExpression(TimingControlSyntax& timing, ExpressionSyntax& expr) {
+    return *alloc.emplace<TimingControlExpressionSyntax>(timing, expr);
+}
+
+TimingControlExpressionConcatenationSyntax& SyntaxFactory::timingControlExpressionConcatenation(ExpressionSyntax& left, TimingControlSyntax& timing, ExpressionSyntax& right) {
+    return *alloc.emplace<TimingControlExpressionConcatenationSyntax>(left, timing, right);
+}
+
+ShortcutCycleDelayRangeSyntax& SyntaxFactory::shortcutCycleDelayRange(Token doubleHash, Token openBracket, Token op, Token closeBracket) {
+    return *alloc.emplace<ShortcutCycleDelayRangeSyntax>(doubleHash, openBracket, op, closeBracket);
+}
+
+RangeDimensionSpecifierSyntax& SyntaxFactory::rangeDimensionSpecifier(SelectorSyntax& selector) {
+    return *alloc.emplace<RangeDimensionSpecifierSyntax>(selector);
+}
+
+DataTypeDimensionSpecifierSyntax& SyntaxFactory::dataTypeDimensionSpecifier(DataTypeSyntax& type) {
+    return *alloc.emplace<DataTypeDimensionSpecifierSyntax>(type);
+}
+
+WildcardDimensionSpecifierSyntax& SyntaxFactory::wildcardDimensionSpecifier(Token star) {
+    return *alloc.emplace<WildcardDimensionSpecifierSyntax>(star);
+}
+
+ColonExpressionClauseSyntax& SyntaxFactory::colonExpressionClause(Token colon, ExpressionSyntax& expr) {
+    return *alloc.emplace<ColonExpressionClauseSyntax>(colon, expr);
+}
+
+QueueDimensionSpecifierSyntax& SyntaxFactory::queueDimensionSpecifier(Token dollar, ColonExpressionClauseSyntax* maxSizeClause) {
+    return *alloc.emplace<QueueDimensionSpecifierSyntax>(dollar, maxSizeClause);
+}
+
+VariableDimensionSyntax& SyntaxFactory::variableDimension(Token openBracket, DimensionSpecifierSyntax* specifier, Token closeBracket) {
+    return *alloc.emplace<VariableDimensionSyntax>(openBracket, specifier, closeBracket);
+}
+
+VariableDeclaratorSyntax& SyntaxFactory::variableDeclarator(Token name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer) {
+    return *alloc.emplace<VariableDeclaratorSyntax>(name, dimensions, initializer);
+}
+
+DataDeclarationSyntax& SyntaxFactory::dataDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
+    return *alloc.emplace<DataDeclarationSyntax>(attributes, modifiers, type, declarators, semi);
+}
+
+TypedefDeclarationSyntax& SyntaxFactory::typedefDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, DataTypeSyntax& type, Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token semi) {
+    return *alloc.emplace<TypedefDeclarationSyntax>(attributes, typedefKeyword, type, name, dimensions, semi);
+}
+
+TypedefKeywordDeclarationSyntax& SyntaxFactory::typedefKeywordDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi) {
+    return *alloc.emplace<TypedefKeywordDeclarationSyntax>(attributes, typedefKeyword, keyword, name, semi);
+}
+
+TypedefInterfaceClassDeclarationSyntax& SyntaxFactory::typedefInterfaceClassDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi) {
+    return *alloc.emplace<TypedefInterfaceClassDeclarationSyntax>(attributes, typedefKeyword, interfaceKeyword, classKeyword, name, semi);
+}
+
+ChargeStrengthSyntax& SyntaxFactory::chargeStrength(Token openParen, Token strength, Token closeParen) {
+    return *alloc.emplace<ChargeStrengthSyntax>(openParen, strength, closeParen);
+}
+
+DriveStrengthSyntax& SyntaxFactory::driveStrength(Token openParen, Token strength0, Token comma, Token strength1, Token closeParen) {
+    return *alloc.emplace<DriveStrengthSyntax>(openParen, strength0, comma, strength1, closeParen);
+}
+
+NetDeclarationSyntax& SyntaxFactory::netDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token netType, NetStrengthSyntax* strength, Token expansionHint, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
+    return *alloc.emplace<NetDeclarationSyntax>(attributes, netType, strength, expansionHint, type, declarators, semi);
+}
+
+PackageImportItemSyntax& SyntaxFactory::packageImportItem(Token package, Token doubleColon, Token item) {
+    return *alloc.emplace<PackageImportItemSyntax>(package, doubleColon, item);
+}
+
+PackageImportDeclarationSyntax& SyntaxFactory::packageImportDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token semi) {
+    return *alloc.emplace<PackageImportDeclarationSyntax>(attributes, keyword, items, semi);
+}
+
+ParameterDeclarationSyntax& SyntaxFactory::parameterDeclaration(Token keyword, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) {
+    return *alloc.emplace<ParameterDeclarationSyntax>(keyword, type, declarators);
+}
+
+ParameterDeclarationStatementSyntax& SyntaxFactory::parameterDeclarationStatement(SyntaxList<AttributeInstanceSyntax> attributes, ParameterDeclarationSyntax& parameter, Token semi) {
+    return *alloc.emplace<ParameterDeclarationStatementSyntax>(attributes, parameter, semi);
+}
+
+PortDeclarationSyntax& SyntaxFactory::portDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
+    return *alloc.emplace<PortDeclarationSyntax>(attributes, header, declarators, semi);
+}
+
+GenvarDeclarationSyntax& SyntaxFactory::genvarDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token semi) {
+    return *alloc.emplace<GenvarDeclarationSyntax>(attributes, keyword, identifiers, semi);
+}
+
+IntegerTypeSyntax& SyntaxFactory::integerType(SyntaxKind kind, Token keyword, Token signing, SyntaxList<VariableDimensionSyntax> dimensions) {
+    return *alloc.emplace<IntegerTypeSyntax>(kind, keyword, signing, dimensions);
+}
+
+KeywordTypeSyntax& SyntaxFactory::keywordType(SyntaxKind kind, Token keyword) {
+    return *alloc.emplace<KeywordTypeSyntax>(kind, keyword);
+}
+
+NamedTypeSyntax& SyntaxFactory::namedType(NameSyntax& name) {
+    return *alloc.emplace<NamedTypeSyntax>(name);
+}
+
+StructUnionMemberSyntax& SyntaxFactory::structUnionMember(SyntaxList<AttributeInstanceSyntax> attributes, Token randomQualifier, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
+    return *alloc.emplace<StructUnionMemberSyntax>(attributes, randomQualifier, type, declarators, semi);
+}
+
+StructUnionTypeSyntax& SyntaxFactory::structUnionType(SyntaxKind kind, Token keyword, Token tagged, Token packed, Token signing, Token openBrace, SyntaxList<StructUnionMemberSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) {
+    return *alloc.emplace<StructUnionTypeSyntax>(kind, keyword, tagged, packed, signing, openBrace, members, closeBrace, dimensions);
+}
+
+EnumTypeSyntax& SyntaxFactory::enumType(Token keyword, DataTypeSyntax* baseType, Token openBrace, SeparatedSyntaxList<VariableDeclaratorSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) {
+    return *alloc.emplace<EnumTypeSyntax>(keyword, baseType, openBrace, members, closeBrace, dimensions);
+}
+
+TypeReferenceSyntax& SyntaxFactory::typeReference(Token typeKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen) {
+    return *alloc.emplace<TypeReferenceSyntax>(typeKeyword, openParen, expr, closeParen);
+}
+
+DotMemberClauseSyntax& SyntaxFactory::dotMemberClause(Token dot, Token member) {
+    return *alloc.emplace<DotMemberClauseSyntax>(dot, member);
+}
+
+VirtualInterfaceTypeSyntax& SyntaxFactory::virtualInterfaceType(Token virtualKeyword, Token interfaceKeyword, Token name, ParameterValueAssignmentSyntax* parameters, DotMemberClauseSyntax* modport) {
+    return *alloc.emplace<VirtualInterfaceTypeSyntax>(virtualKeyword, interfaceKeyword, name, parameters, modport);
+}
+
+ImplicitTypeSyntax& SyntaxFactory::implicitType(Token signing, SyntaxList<VariableDimensionSyntax> dimensions) {
+    return *alloc.emplace<ImplicitTypeSyntax>(signing, dimensions);
+}
+
+VarDataTypeSyntax& SyntaxFactory::varDataType(Token var, DataTypeSyntax& type) {
+    return *alloc.emplace<VarDataTypeSyntax>(var, type);
+}
+
+DeferredAssertionSyntax& SyntaxFactory::deferredAssertion(Token hash, Token zero, Token finalKeyword) {
+    return *alloc.emplace<DeferredAssertionSyntax>(hash, zero, finalKeyword);
+}
+
+ElseClauseSyntax& SyntaxFactory::elseClause(Token elseKeyword, SyntaxNode& clause) {
+    return *alloc.emplace<ElseClauseSyntax>(elseKeyword, clause);
+}
+
+ActionBlockSyntax& SyntaxFactory::actionBlock(StatementSyntax* statement, ElseClauseSyntax* elseClause) {
+    return *alloc.emplace<ActionBlockSyntax>(statement, elseClause);
+}
+
+ImmediateAssertionStatementSyntax& SyntaxFactory::immediateAssertionStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax& expr, ActionBlockSyntax& action) {
+    return *alloc.emplace<ImmediateAssertionStatementSyntax>(kind, label, attributes, keyword, delay, expr, action);
+}
+
+DisableIffSyntax& SyntaxFactory::disableIff(Token disable, Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) {
+    return *alloc.emplace<DisableIffSyntax>(disable, iff, openParen, expr, closeParen);
+}
+
+PropertySpecSyntax& SyntaxFactory::propertySpec(TimingControlSyntax* clocking, DisableIffSyntax* disable, ExpressionSyntax& expr) {
+    return *alloc.emplace<PropertySpecSyntax>(clocking, disable, expr);
+}
+
+ConcurrentAssertionStatementSyntax& SyntaxFactory::concurrentAssertionStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token propertyOrSequence, Token openParen, PropertySpecSyntax& propertySpec, Token closeParen, ActionBlockSyntax& action) {
+    return *alloc.emplace<ConcurrentAssertionStatementSyntax>(kind, label, attributes, keyword, propertyOrSequence, openParen, propertySpec, closeParen, action);
+}
+
+ConcurrentAssertionMemberSyntax& SyntaxFactory::concurrentAssertionMember(SyntaxList<AttributeInstanceSyntax> attributes, ConcurrentAssertionStatementSyntax& statement) {
+    return *alloc.emplace<ConcurrentAssertionMemberSyntax>(attributes, statement);
+}
+
+ImmediateAssertionMemberSyntax& SyntaxFactory::immediateAssertionMember(SyntaxList<AttributeInstanceSyntax> attributes, ImmediateAssertionStatementSyntax& statement) {
+    return *alloc.emplace<ImmediateAssertionMemberSyntax>(attributes, statement);
+}
+
+EmptyStatementSyntax& SyntaxFactory::emptyStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token semicolon) {
+    return *alloc.emplace<EmptyStatementSyntax>(label, attributes, semicolon);
+}
+
+ConditionalStatementSyntax& SyntaxFactory::conditionalStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token ifKeyword, Token openParen, ConditionalPredicateSyntax& predicate, Token closeParen, StatementSyntax& statement, ElseClauseSyntax* elseClause) {
+    return *alloc.emplace<ConditionalStatementSyntax>(label, attributes, uniqueOrPriority, ifKeyword, openParen, predicate, closeParen, statement, elseClause);
+}
+
+DefaultCaseItemSyntax& SyntaxFactory::defaultCaseItem(Token defaultKeyword, Token colon, SyntaxNode& clause) {
+    return *alloc.emplace<DefaultCaseItemSyntax>(defaultKeyword, colon, clause);
+}
+
+PatternCaseItemSyntax& SyntaxFactory::patternCaseItem(PatternSyntax& pattern, Token tripleAnd, ExpressionSyntax* expr, Token colon, StatementSyntax& statement) {
+    return *alloc.emplace<PatternCaseItemSyntax>(pattern, tripleAnd, expr, colon, statement);
+}
+
+StandardCaseItemSyntax& SyntaxFactory::standardCaseItem(SeparatedSyntaxList<ExpressionSyntax> expressions, Token colon, SyntaxNode& clause) {
+    return *alloc.emplace<StandardCaseItemSyntax>(expressions, colon, clause);
+}
+
+CaseStatementSyntax& SyntaxFactory::caseStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token caseKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen, Token matchesOrInside, SyntaxList<CaseItemSyntax> items, Token endcase) {
+    return *alloc.emplace<CaseStatementSyntax>(label, attributes, uniqueOrPriority, caseKeyword, openParen, expr, closeParen, matchesOrInside, items, endcase);
+}
+
+ForeverStatementSyntax& SyntaxFactory::foreverStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token foreverKeyword, StatementSyntax& statement) {
+    return *alloc.emplace<ForeverStatementSyntax>(label, attributes, foreverKeyword, statement);
+}
+
+LoopStatementSyntax& SyntaxFactory::loopStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token repeatOrWhile, Token openParen, ExpressionSyntax& expr, Token closeParen, StatementSyntax& statement) {
+    return *alloc.emplace<LoopStatementSyntax>(label, attributes, repeatOrWhile, openParen, expr, closeParen, statement);
+}
+
+DoWhileStatementSyntax& SyntaxFactory::doWhileStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token doKeyword, StatementSyntax& statement, Token whileKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen, Token semi) {
+    return *alloc.emplace<DoWhileStatementSyntax>(label, attributes, doKeyword, statement, whileKeyword, openParen, expr, closeParen, semi);
+}
+
+ForVariableDeclarationSyntax& SyntaxFactory::forVariableDeclaration(Token varKeyword, DataTypeSyntax& type, VariableDeclaratorSyntax& declarator) {
+    return *alloc.emplace<ForVariableDeclarationSyntax>(varKeyword, type, declarator);
+}
+
+ForLoopStatementSyntax& SyntaxFactory::forLoopStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token forKeyword, Token openParen, SeparatedSyntaxList<SyntaxNode> initializers, Token semi1, ExpressionSyntax& stopExpr, Token semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token closeParen, StatementSyntax& statement) {
+    return *alloc.emplace<ForLoopStatementSyntax>(label, attributes, forKeyword, openParen, initializers, semi1, stopExpr, semi2, steps, closeParen, statement);
+}
+
+ForeachLoopListSyntax& SyntaxFactory::foreachLoopList(Token openParen, NameSyntax& arrayName, Token openBracket, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeBracket, Token closeParen) {
+    return *alloc.emplace<ForeachLoopListSyntax>(openParen, arrayName, openBracket, loopVariables, closeBracket, closeParen);
+}
+
+ForeachLoopStatementSyntax& SyntaxFactory::foreachLoopStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ForeachLoopListSyntax& loopList, StatementSyntax& statement) {
+    return *alloc.emplace<ForeachLoopStatementSyntax>(label, attributes, keyword, loopList, statement);
+}
+
+ReturnStatementSyntax& SyntaxFactory::returnStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token returnKeyword, ExpressionSyntax* returnValue, Token semi) {
+    return *alloc.emplace<ReturnStatementSyntax>(label, attributes, returnKeyword, returnValue, semi);
+}
+
+JumpStatementSyntax& SyntaxFactory::jumpStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token breakOrContinue, Token semi) {
+    return *alloc.emplace<JumpStatementSyntax>(label, attributes, breakOrContinue, semi);
+}
+
+TimingControlStatementSyntax& SyntaxFactory::timingControlStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, TimingControlSyntax& timingControl, StatementSyntax& statement) {
+    return *alloc.emplace<TimingControlStatementSyntax>(label, attributes, timingControl, statement);
+}
+
+ExpressionStatementSyntax& SyntaxFactory::expressionStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr, Token semi) {
+    return *alloc.emplace<ExpressionStatementSyntax>(label, attributes, expr, semi);
+}
+
+ProceduralAssignStatementSyntax& SyntaxFactory::proceduralAssignStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax& lvalue, Token equals, ExpressionSyntax& value, Token semi) {
+    return *alloc.emplace<ProceduralAssignStatementSyntax>(kind, label, attributes, keyword, lvalue, equals, value, semi);
+}
+
+ProceduralDeassignStatementSyntax& SyntaxFactory::proceduralDeassignStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax& variable, Token semi) {
+    return *alloc.emplace<ProceduralDeassignStatementSyntax>(kind, label, attributes, keyword, variable, semi);
+}
+
+DisableStatementSyntax& SyntaxFactory::disableStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, NameSyntax& name, Token semi) {
+    return *alloc.emplace<DisableStatementSyntax>(label, attributes, disable, name, semi);
+}
+
+DisableForkStatementSyntax& SyntaxFactory::disableForkStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, Token fork, Token semi) {
+    return *alloc.emplace<DisableForkStatementSyntax>(label, attributes, disable, fork, semi);
+}
+
+NamedBlockClauseSyntax& SyntaxFactory::namedBlockClause(Token colon, Token name) {
+    return *alloc.emplace<NamedBlockClauseSyntax>(colon, name);
+}
+
+BlockStatementSyntax& SyntaxFactory::blockStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) {
+    return *alloc.emplace<BlockStatementSyntax>(kind, label, attributes, begin, blockName, items, end, endBlockName);
 }
 
 WaitStatementSyntax& SyntaxFactory::waitStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait, Token openParen, ExpressionSyntax& expr, Token closeParen, StatementSyntax& statement) {
@@ -747,232 +559,424 @@ WaitForkStatementSyntax& SyntaxFactory::waitForkStatement(NamedLabelSyntax* labe
     return *alloc.emplace<WaitForkStatementSyntax>(label, attributes, wait, fork, semi);
 }
 
-MinTypMaxExpressionSyntax& SyntaxFactory::minTypMaxExpression(ExpressionSyntax& min, Token colon1, ExpressionSyntax& typ, Token colon2, ExpressionSyntax& max) {
-    return *alloc.emplace<MinTypMaxExpressionSyntax>(min, colon1, typ, colon2, max);
+WaitOrderStatementSyntax& SyntaxFactory::waitOrderStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait_order, Token openParen, SeparatedSyntaxList<NameSyntax> names, Token closeParen, ActionBlockSyntax& action) {
+    return *alloc.emplace<WaitOrderStatementSyntax>(label, attributes, wait_order, openParen, names, closeParen, action);
 }
 
-EqualsValueClauseSyntax& SyntaxFactory::equalsValueClause(Token equals, ExpressionSyntax& expr) {
-    return *alloc.emplace<EqualsValueClauseSyntax>(equals, expr);
+RandCaseItemSyntax& SyntaxFactory::randCaseItem(ExpressionSyntax& expr, Token colon, StatementSyntax& statement) {
+    return *alloc.emplace<RandCaseItemSyntax>(expr, colon, statement);
 }
 
-ActionBlockSyntax& SyntaxFactory::actionBlock(StatementSyntax* statement, ElseClauseSyntax* elseClause) {
-    return *alloc.emplace<ActionBlockSyntax>(statement, elseClause);
+RandCaseStatementSyntax& SyntaxFactory::randCaseStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token randCase, SyntaxList<RandCaseItemSyntax> items, Token endCase) {
+    return *alloc.emplace<RandCaseStatementSyntax>(label, attributes, randCase, items, endCase);
 }
 
-FunctionPortListSyntax& SyntaxFactory::functionPortList(Token openParen, SeparatedSyntaxList<FunctionPortSyntax> ports, Token closeParen) {
-    return *alloc.emplace<FunctionPortListSyntax>(openParen, ports, closeParen);
+EventTriggerStatementSyntax& SyntaxFactory::eventTriggerStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token trigger, TimingControlSyntax* timing, NameSyntax& name) {
+    return *alloc.emplace<EventTriggerStatementSyntax>(kind, label, attributes, trigger, timing, name);
 }
 
-ExpressionStatementSyntax& SyntaxFactory::expressionStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr, Token semi) {
-    return *alloc.emplace<ExpressionStatementSyntax>(label, attributes, expr, semi);
+ImplicitNonAnsiPortSyntax& SyntaxFactory::implicitNonAnsiPort(ExpressionSyntax& expr) {
+    return *alloc.emplace<ImplicitNonAnsiPortSyntax>(expr);
 }
 
-EmptyStatementSyntax& SyntaxFactory::emptyStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token semicolon) {
-    return *alloc.emplace<EmptyStatementSyntax>(label, attributes, semicolon);
-}
-
-OpenRangeListSyntax& SyntaxFactory::openRangeList(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token closeBrace) {
-    return *alloc.emplace<OpenRangeListSyntax>(openBrace, valueRanges, closeBrace);
-}
-
-NamedBlockClauseSyntax& SyntaxFactory::namedBlockClause(Token colon, Token name) {
-    return *alloc.emplace<NamedBlockClauseSyntax>(colon, name);
+ExplicitNonAnsiPortSyntax& SyntaxFactory::explicitNonAnsiPort(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
+    return *alloc.emplace<ExplicitNonAnsiPortSyntax>(dot, name, openParen, expr, closeParen);
 }
 
 NonAnsiPortListSyntax& SyntaxFactory::nonAnsiPortList(Token openParen, SeparatedSyntaxList<NonAnsiPortSyntax> ports, Token closeParen) {
     return *alloc.emplace<NonAnsiPortListSyntax>(openParen, ports, closeParen);
 }
 
-DefParamAssignmentSyntax& SyntaxFactory::defParamAssignment(NameSyntax& name, EqualsValueClauseSyntax* setter) {
-    return *alloc.emplace<DefParamAssignmentSyntax>(name, setter);
+InterfacePortHeaderSyntax& SyntaxFactory::interfacePortHeader(Token nameOrKeyword, DotMemberClauseSyntax* modport) {
+    return *alloc.emplace<InterfacePortHeaderSyntax>(nameOrKeyword, modport);
 }
 
-PropertySpecSyntax& SyntaxFactory::propertySpec(TimingControlSyntax* clocking, DisableIffSyntax* disable, ExpressionSyntax& expr) {
-    return *alloc.emplace<PropertySpecSyntax>(clocking, disable, expr);
+VariablePortHeaderSyntax& SyntaxFactory::variablePortHeader(Token direction, Token varKeyword, DataTypeSyntax* type) {
+    return *alloc.emplace<VariablePortHeaderSyntax>(direction, varKeyword, type);
 }
 
-BlockCoverageEventSyntax& SyntaxFactory::blockCoverageEvent(Token atat, Token openParen, BlockEventExpressionSyntax& expr, Token closeParen) {
-    return *alloc.emplace<BlockCoverageEventSyntax>(atat, openParen, expr, closeParen);
+InterconnectPortHeaderSyntax& SyntaxFactory::interconnectPortHeader(Token direction, Token interconnect, DataTypeSyntax* type) {
+    return *alloc.emplace<InterconnectPortHeaderSyntax>(direction, interconnect, type);
 }
 
-DefaultNetTypeDirectiveSyntax& SyntaxFactory::defaultNetTypeDirective(Token directive, Token netType, Token endOfDirective) {
-    return *alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType, endOfDirective);
+NetPortHeaderSyntax& SyntaxFactory::netPortHeader(Token direction, Token netType, DataTypeSyntax& dataType) {
+    return *alloc.emplace<NetPortHeaderSyntax>(direction, netType, dataType);
 }
 
-IdentifierSelectNameSyntax& SyntaxFactory::identifierSelectName(Token identifier, SyntaxList<ElementSelectSyntax> selectors) {
-    return *alloc.emplace<IdentifierSelectNameSyntax>(identifier, selectors);
+ImplicitAnsiPortSyntax& SyntaxFactory::implicitAnsiPort(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, VariableDeclaratorSyntax& declarator) {
+    return *alloc.emplace<ImplicitAnsiPortSyntax>(attributes, header, declarator);
 }
 
-MultipleConcatenationExpressionSyntax& SyntaxFactory::multipleConcatenationExpression(Token openBrace, ExpressionSyntax& expression, ConcatenationExpressionSyntax& concatenation, Token closeBrace) {
-    return *alloc.emplace<MultipleConcatenationExpressionSyntax>(openBrace, expression, concatenation, closeBrace);
-}
-
-NamedTypeSyntax& SyntaxFactory::namedType(NameSyntax& name) {
-    return *alloc.emplace<NamedTypeSyntax>(name);
-}
-
-PackageImportItemSyntax& SyntaxFactory::packageImportItem(Token package, Token doubleColon, Token item) {
-    return *alloc.emplace<PackageImportItemSyntax>(package, doubleColon, item);
-}
-
-ExtendsClauseSyntax& SyntaxFactory::extendsClause(Token keyword, NameSyntax& baseName, ArgumentListSyntax* arguments) {
-    return *alloc.emplace<ExtendsClauseSyntax>(keyword, baseName, arguments);
-}
-
-VariablePatternSyntax& SyntaxFactory::variablePattern(Token dot, Token variableName) {
-    return *alloc.emplace<VariablePatternSyntax>(dot, variableName);
-}
-
-KeywordTypeSyntax& SyntaxFactory::keywordType(SyntaxKind kind, Token keyword) {
-    return *alloc.emplace<KeywordTypeSyntax>(kind, keyword);
-}
-
-StandardCaseItemSyntax& SyntaxFactory::standardCaseItem(SeparatedSyntaxList<ExpressionSyntax> expressions, Token colon, SyntaxNode& clause) {
-    return *alloc.emplace<StandardCaseItemSyntax>(expressions, colon, clause);
-}
-
-DelaySyntax& SyntaxFactory::delay(SyntaxKind kind, Token hash, ExpressionSyntax& delayValue) {
-    return *alloc.emplace<DelaySyntax>(kind, hash, delayValue);
-}
-
-TaggedUnionExpressionSyntax& SyntaxFactory::taggedUnionExpression(Token tagged, Token member, ExpressionSyntax* expr) {
-    return *alloc.emplace<TaggedUnionExpressionSyntax>(tagged, member, expr);
-}
-
-ProceduralAssignStatementSyntax& SyntaxFactory::proceduralAssignStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax& lvalue, Token equals, ExpressionSyntax& value, Token semi) {
-    return *alloc.emplace<ProceduralAssignStatementSyntax>(kind, label, attributes, keyword, lvalue, equals, value, semi);
-}
-
-HierarchyInstantiationSyntax& SyntaxFactory::hierarchyInstantiation(SyntaxList<AttributeInstanceSyntax> attributes, Token type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token semi) {
-    return *alloc.emplace<HierarchyInstantiationSyntax>(attributes, type, parameters, instances, semi);
-}
-
-TypedefKeywordDeclarationSyntax& SyntaxFactory::typedefKeywordDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi) {
-    return *alloc.emplace<TypedefKeywordDeclarationSyntax>(attributes, typedefKeyword, keyword, name, semi);
-}
-
-ConcatenationExpressionSyntax& SyntaxFactory::concatenationExpression(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> expressions, Token closeBrace) {
-    return *alloc.emplace<ConcatenationExpressionSyntax>(openBrace, expressions, closeBrace);
-}
-
-BinaryExpressionSyntax& SyntaxFactory::binaryExpression(SyntaxKind kind, ExpressionSyntax& left, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& right) {
-    return *alloc.emplace<BinaryExpressionSyntax>(kind, left, operatorToken, attributes, right);
-}
-
-WithFunctionSampleSyntax& SyntaxFactory::withFunctionSample(Token with, Token function, Token sample, AnsiPortListSyntax& portList) {
-    return *alloc.emplace<WithFunctionSampleSyntax>(with, function, sample, portList);
-}
-
-AssignmentPatternItemSyntax& SyntaxFactory::assignmentPatternItem(ExpressionSyntax& key, Token colon, ExpressionSyntax& expr) {
-    return *alloc.emplace<AssignmentPatternItemSyntax>(key, colon, expr);
-}
-
-ParameterDeclarationStatementSyntax& SyntaxFactory::parameterDeclarationStatement(SyntaxList<AttributeInstanceSyntax> attributes, ParameterDeclarationSyntax& parameter, Token semi) {
-    return *alloc.emplace<ParameterDeclarationStatementSyntax>(attributes, parameter, semi);
-}
-
-EventControlSyntax& SyntaxFactory::eventControl(Token at, NameSyntax& eventName) {
-    return *alloc.emplace<EventControlSyntax>(at, eventName);
-}
-
-BinaryBlockEventExpressionSyntax& SyntaxFactory::binaryBlockEventExpression(BlockEventExpressionSyntax& left, Token orKeyword, BlockEventExpressionSyntax& right) {
-    return *alloc.emplace<BinaryBlockEventExpressionSyntax>(left, orKeyword, right);
-}
-
-PrefixUnaryExpressionSyntax& SyntaxFactory::prefixUnaryExpression(SyntaxKind kind, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& operand) {
-    return *alloc.emplace<PrefixUnaryExpressionSyntax>(kind, operatorToken, attributes, operand);
-}
-
-LoopStatementSyntax& SyntaxFactory::loopStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token repeatOrWhile, Token openParen, ExpressionSyntax& expr, Token closeParen, StatementSyntax& statement) {
-    return *alloc.emplace<LoopStatementSyntax>(label, attributes, repeatOrWhile, openParen, expr, closeParen, statement);
-}
-
-LiteralExpressionSyntax& SyntaxFactory::literalExpression(SyntaxKind kind, Token literal) {
-    return *alloc.emplace<LiteralExpressionSyntax>(kind, literal);
-}
-
-DistWeightSyntax& SyntaxFactory::distWeight(Token op, ExpressionSyntax& expr) {
-    return *alloc.emplace<DistWeightSyntax>(op, expr);
-}
-
-JumpStatementSyntax& SyntaxFactory::jumpStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token breakOrContinue, Token semi) {
-    return *alloc.emplace<JumpStatementSyntax>(label, attributes, breakOrContinue, semi);
-}
-
-StructuredAssignmentPatternSyntax& SyntaxFactory::structuredAssignmentPattern(Token openBrace, SeparatedSyntaxList<AssignmentPatternItemSyntax> items, Token closeBrace) {
-    return *alloc.emplace<StructuredAssignmentPatternSyntax>(openBrace, items, closeBrace);
-}
-
-KeywordNameSyntax& SyntaxFactory::keywordName(SyntaxKind kind, Token keyword) {
-    return *alloc.emplace<KeywordNameSyntax>(kind, keyword);
-}
-
-PrimaryBlockEventExpressionSyntax& SyntaxFactory::primaryBlockEventExpression(Token keyword, NameSyntax& name) {
-    return *alloc.emplace<PrimaryBlockEventExpressionSyntax>(keyword, name);
-}
-
-UniquenessConstraintSyntax& SyntaxFactory::uniquenessConstraint(Token unique, OpenRangeListSyntax& ranges, Token semi) {
-    return *alloc.emplace<UniquenessConstraintSyntax>(unique, ranges, semi);
-}
-
-DisableConstraintSyntax& SyntaxFactory::disableConstraint(Token disable, Token soft, NameSyntax& name, Token semi) {
-    return *alloc.emplace<DisableConstraintSyntax>(disable, soft, name, semi);
-}
-
-LoopGenerateSyntax& SyntaxFactory::loopGenerate(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, Token genvar, Token identifier, Token equals, ExpressionSyntax& initialExpr, Token semi1, ExpressionSyntax& stopExpr, Token semi2, ExpressionSyntax& iterationExpr, Token closeParen, MemberSyntax& block) {
-    return *alloc.emplace<LoopGenerateSyntax>(attributes, keyword, openParen, genvar, identifier, equals, initialExpr, semi1, stopExpr, semi2, iterationExpr, closeParen, block);
-}
-
-TimingControlExpressionSyntax& SyntaxFactory::timingControlExpression(TimingControlSyntax& timing, ExpressionSyntax& expr) {
-    return *alloc.emplace<TimingControlExpressionSyntax>(timing, expr);
-}
-
-ShortcutCycleDelayRangeSyntax& SyntaxFactory::shortcutCycleDelayRange(Token doubleHash, Token openBracket, Token op, Token closeBracket) {
-    return *alloc.emplace<ShortcutCycleDelayRangeSyntax>(doubleHash, openBracket, op, closeBracket);
+ExplicitAnsiPortSyntax& SyntaxFactory::explicitAnsiPort(SyntaxList<AttributeInstanceSyntax> attributes, Token direction, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
+    return *alloc.emplace<ExplicitAnsiPortSyntax>(attributes, direction, dot, name, openParen, expr, closeParen);
 }
 
 AnsiPortListSyntax& SyntaxFactory::ansiPortList(Token openParen, SeparatedSyntaxList<MemberSyntax> ports, Token closeParen) {
     return *alloc.emplace<AnsiPortListSyntax>(openParen, ports, closeParen);
 }
 
-BitSelectSyntax& SyntaxFactory::bitSelect(ExpressionSyntax& expr) {
-    return *alloc.emplace<BitSelectSyntax>(expr);
+WildcardPortListSyntax& SyntaxFactory::wildcardPortList(Token openParen, Token dotStar, Token closeParen) {
+    return *alloc.emplace<WildcardPortListSyntax>(openParen, dotStar, closeParen);
 }
 
-TaggedPatternSyntax& SyntaxFactory::taggedPattern(Token tagged, Token memberName, PatternSyntax* pattern) {
-    return *alloc.emplace<TaggedPatternSyntax>(tagged, memberName, pattern);
+ParameterPortListSyntax& SyntaxFactory::parameterPortList(Token hash, Token openParen, SeparatedSyntaxList<ParameterDeclarationSyntax> declarations, Token closeParen) {
+    return *alloc.emplace<ParameterPortListSyntax>(hash, openParen, declarations, closeParen);
 }
 
-StructurePatternSyntax& SyntaxFactory::structurePattern(Token openBrace, SeparatedSyntaxList<StructurePatternMemberSyntax> members, Token closeBrace) {
-    return *alloc.emplace<StructurePatternSyntax>(openBrace, members, closeBrace);
+ModuleHeaderSyntax& SyntaxFactory::moduleHeader(SyntaxKind kind, Token moduleKeyword, Token lifetime, Token name, SyntaxList<PackageImportDeclarationSyntax> imports, ParameterPortListSyntax* parameters, PortListSyntax* ports, Token semi) {
+    return *alloc.emplace<ModuleHeaderSyntax>(kind, moduleKeyword, lifetime, name, imports, parameters, ports, semi);
 }
 
-EnumTypeSyntax& SyntaxFactory::enumType(Token keyword, DataTypeSyntax* baseType, Token openBrace, SeparatedSyntaxList<VariableDeclaratorSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) {
-    return *alloc.emplace<EnumTypeSyntax>(keyword, baseType, openBrace, members, closeBrace, dimensions);
+ModuleDeclarationSyntax& SyntaxFactory::moduleDeclaration(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax& header, SyntaxList<MemberSyntax> members, Token endmodule, NamedBlockClauseSyntax* blockName) {
+    return *alloc.emplace<ModuleDeclarationSyntax>(kind, attributes, header, members, endmodule, blockName);
 }
 
-RangeCoverageBinInitializerSyntax& SyntaxFactory::rangeCoverageBinInitializer(OpenRangeListSyntax& ranges, WithClauseSyntax* withClause) {
-    return *alloc.emplace<RangeCoverageBinInitializerSyntax>(ranges, withClause);
+ExternModuleSyntax& SyntaxFactory::externModule(Token externKeyword, ModuleHeaderSyntax& header) {
+    return *alloc.emplace<ExternModuleSyntax>(externKeyword, header);
 }
 
-MacroFormalArgumentListSyntax& SyntaxFactory::macroFormalArgumentList(Token openParen, SeparatedSyntaxList<MacroFormalArgumentSyntax> args, Token closeParen) {
-    return *alloc.emplace<MacroFormalArgumentListSyntax>(openParen, args, closeParen);
+EmptyMemberSyntax& SyntaxFactory::emptyMember(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token semi) {
+    return *alloc.emplace<EmptyMemberSyntax>(attributes, qualifiers, semi);
 }
 
-TimingControlStatementSyntax& SyntaxFactory::timingControlStatement(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, TimingControlSyntax& timingControl, StatementSyntax& statement) {
-    return *alloc.emplace<TimingControlStatementSyntax>(label, attributes, timingControl, statement);
+ProceduralBlockSyntax& SyntaxFactory::proceduralBlock(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, StatementSyntax& statement) {
+    return *alloc.emplace<ProceduralBlockSyntax>(kind, attributes, keyword, statement);
+}
+
+GenerateRegionSyntax& SyntaxFactory::generateRegion(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SyntaxList<MemberSyntax> members, Token endgenerate) {
+    return *alloc.emplace<GenerateRegionSyntax>(attributes, keyword, members, endgenerate);
+}
+
+LoopGenerateSyntax& SyntaxFactory::loopGenerate(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, Token genvar, Token identifier, Token equals, ExpressionSyntax& initialExpr, Token semi1, ExpressionSyntax& stopExpr, Token semi2, ExpressionSyntax& iterationExpr, Token closeParen, MemberSyntax& block) {
+    return *alloc.emplace<LoopGenerateSyntax>(attributes, keyword, openParen, genvar, identifier, equals, initialExpr, semi1, stopExpr, semi2, iterationExpr, closeParen, block);
+}
+
+IfGenerateSyntax& SyntaxFactory::ifGenerate(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax& condition, Token closeParen, MemberSyntax& block, ElseClauseSyntax* elseClause) {
+    return *alloc.emplace<IfGenerateSyntax>(attributes, keyword, openParen, condition, closeParen, block, elseClause);
+}
+
+CaseGenerateSyntax& SyntaxFactory::caseGenerate(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax& condition, Token closeParen, SyntaxList<CaseItemSyntax> items, Token endCase) {
+    return *alloc.emplace<CaseGenerateSyntax>(attributes, keyword, openParen, condition, closeParen, items, endCase);
+}
+
+GenerateBlockSyntax& SyntaxFactory::generateBlock(SyntaxList<AttributeInstanceSyntax> attributes, NamedLabelSyntax* label, Token begin, NamedBlockClauseSyntax* beginName, SyntaxList<MemberSyntax> members, Token end, NamedBlockClauseSyntax* endName) {
+    return *alloc.emplace<GenerateBlockSyntax>(attributes, label, begin, beginName, members, end, endName);
+}
+
+DividerClauseSyntax& SyntaxFactory::dividerClause(Token divide, Token value) {
+    return *alloc.emplace<DividerClauseSyntax>(divide, value);
+}
+
+TimeUnitsDeclarationSyntax& SyntaxFactory::timeUnitsDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token time, DividerClauseSyntax* divider, Token semi) {
+    return *alloc.emplace<TimeUnitsDeclarationSyntax>(attributes, keyword, time, divider, semi);
+}
+
+OrderedPortConnectionSyntax& SyntaxFactory::orderedPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr) {
+    return *alloc.emplace<OrderedPortConnectionSyntax>(attributes, expr);
+}
+
+NamedPortConnectionSyntax& SyntaxFactory::namedPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) {
+    return *alloc.emplace<NamedPortConnectionSyntax>(attributes, dot, name, openParen, expr, closeParen);
+}
+
+WildcardPortConnectionSyntax& SyntaxFactory::wildcardPortConnection(SyntaxList<AttributeInstanceSyntax> attributes, Token dotStar) {
+    return *alloc.emplace<WildcardPortConnectionSyntax>(attributes, dotStar);
+}
+
+HierarchicalInstanceSyntax& SyntaxFactory::hierarchicalInstance(Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token closeParen) {
+    return *alloc.emplace<HierarchicalInstanceSyntax>(name, dimensions, openParen, connections, closeParen);
+}
+
+HierarchyInstantiationSyntax& SyntaxFactory::hierarchyInstantiation(SyntaxList<AttributeInstanceSyntax> attributes, Token type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token semi) {
+    return *alloc.emplace<HierarchyInstantiationSyntax>(attributes, type, parameters, instances, semi);
+}
+
+FunctionPortSyntax& SyntaxFactory::functionPort(SyntaxList<AttributeInstanceSyntax> attributes, Token constKeyword, Token direction, Token varKeyword, DataTypeSyntax* dataType, VariableDeclaratorSyntax& declarator) {
+    return *alloc.emplace<FunctionPortSyntax>(attributes, constKeyword, direction, varKeyword, dataType, declarator);
+}
+
+FunctionPortListSyntax& SyntaxFactory::functionPortList(Token openParen, SeparatedSyntaxList<FunctionPortSyntax> ports, Token closeParen) {
+    return *alloc.emplace<FunctionPortListSyntax>(openParen, ports, closeParen);
+}
+
+FunctionPrototypeSyntax& SyntaxFactory::functionPrototype(Token keyword, Token lifetime, DataTypeSyntax* returnType, NameSyntax& name, FunctionPortListSyntax* portList, Token semi) {
+    return *alloc.emplace<FunctionPrototypeSyntax>(keyword, lifetime, returnType, name, portList, semi);
+}
+
+FunctionDeclarationSyntax& SyntaxFactory::functionDeclaration(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, FunctionPrototypeSyntax& prototype, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) {
+    return *alloc.emplace<FunctionDeclarationSyntax>(kind, attributes, prototype, items, end, endBlockName);
+}
+
+AssertionItemPortSyntax& SyntaxFactory::assertionItemPort(SyntaxList<AttributeInstanceSyntax> attributes, Token local, Token direction, DataTypeSyntax& type, VariableDeclaratorSyntax& declarator) {
+    return *alloc.emplace<AssertionItemPortSyntax>(attributes, local, direction, type, declarator);
+}
+
+AssertionItemPortListSyntax& SyntaxFactory::assertionItemPortList(Token openParen, SeparatedSyntaxList<AssertionItemPortSyntax> ports, Token closeParen) {
+    return *alloc.emplace<AssertionItemPortListSyntax>(openParen, ports, closeParen);
+}
+
+LetDeclarationSyntax& SyntaxFactory::letDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token let, Token identifier, AssertionItemPortListSyntax* portList, EqualsValueClauseSyntax& initializer, Token semi) {
+    return *alloc.emplace<LetDeclarationSyntax>(attributes, let, identifier, portList, initializer, semi);
+}
+
+PropertyDeclarationSyntax& SyntaxFactory::propertyDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token name, AssertionItemPortListSyntax* portList, Token semi, SyntaxList<MemberSyntax> assertionVariables, PropertySpecSyntax& propertySpec, Token optionalSemi, Token end, NamedBlockClauseSyntax* endBlockName) {
+    return *alloc.emplace<PropertyDeclarationSyntax>(attributes, keyword, name, portList, semi, assertionVariables, propertySpec, optionalSemi, end, endBlockName);
+}
+
+SequenceDeclarationSyntax& SyntaxFactory::sequenceDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token name, AssertionItemPortListSyntax* portList, Token semi, SyntaxList<MemberSyntax> assertionVariables, ExpressionSyntax& seqExpr, Token optionalSemi, Token end, NamedBlockClauseSyntax* endBlockName) {
+    return *alloc.emplace<SequenceDeclarationSyntax>(attributes, keyword, name, portList, semi, assertionVariables, seqExpr, optionalSemi, end, endBlockName);
+}
+
+ExtendsClauseSyntax& SyntaxFactory::extendsClause(Token keyword, NameSyntax& baseName, ArgumentListSyntax* arguments) {
+    return *alloc.emplace<ExtendsClauseSyntax>(keyword, baseName, arguments);
+}
+
+ImplementsClauseSyntax& SyntaxFactory::implementsClause(Token keyword, SeparatedSyntaxList<NameSyntax> interfaces) {
+    return *alloc.emplace<ImplementsClauseSyntax>(keyword, interfaces);
+}
+
+ClassDeclarationSyntax& SyntaxFactory::classDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token virtualOrInterface, Token classKeyword, Token lifetime, Token name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token semi, SyntaxList<MemberSyntax> items, Token endClass, NamedBlockClauseSyntax* endBlockName) {
+    return *alloc.emplace<ClassDeclarationSyntax>(attributes, virtualOrInterface, classKeyword, lifetime, name, parameters, extendsClause, implementsClause, semi, items, endClass, endBlockName);
+}
+
+ClassPropertyDeclarationSyntax& SyntaxFactory::classPropertyDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, MemberSyntax& declaration) {
+    return *alloc.emplace<ClassPropertyDeclarationSyntax>(attributes, qualifiers, declaration);
 }
 
 ClassMethodDeclarationSyntax& SyntaxFactory::classMethodDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionDeclarationSyntax& declaration) {
     return *alloc.emplace<ClassMethodDeclarationSyntax>(attributes, qualifiers, declaration);
 }
 
-BlockStatementSyntax& SyntaxFactory::blockStatement(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) {
-    return *alloc.emplace<BlockStatementSyntax>(kind, label, attributes, begin, blockName, items, end, endBlockName);
+ClassMethodPrototypeSyntax& SyntaxFactory::classMethodPrototype(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionPrototypeSyntax& prototype) {
+    return *alloc.emplace<ClassMethodPrototypeSyntax>(attributes, qualifiers, prototype);
 }
 
-ConditionalExpressionSyntax& SyntaxFactory::conditionalExpression(ConditionalPredicateSyntax& predicate, Token question, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& left, Token colon, ExpressionSyntax& right) {
-    return *alloc.emplace<ConditionalExpressionSyntax>(predicate, question, attributes, left, colon, right);
+ContinuousAssignSyntax& SyntaxFactory::continuousAssign(SyntaxList<AttributeInstanceSyntax> attributes, Token assign, SeparatedSyntaxList<ExpressionSyntax> assignments, Token semi) {
+    return *alloc.emplace<ContinuousAssignSyntax>(attributes, assign, assignments, semi);
+}
+
+DefParamAssignmentSyntax& SyntaxFactory::defParamAssignment(NameSyntax& name, EqualsValueClauseSyntax* setter) {
+    return *alloc.emplace<DefParamAssignmentSyntax>(name, setter);
+}
+
+DefParamSyntax& SyntaxFactory::defParam(SyntaxList<AttributeInstanceSyntax> attributes, Token defparam, SeparatedSyntaxList<DefParamAssignmentSyntax> assignments, Token semi) {
+    return *alloc.emplace<DefParamSyntax>(attributes, defparam, assignments, semi);
+}
+
+ModportItemSyntax& SyntaxFactory::modportItem(Token name, AnsiPortListSyntax& ports) {
+    return *alloc.emplace<ModportItemSyntax>(name, ports);
+}
+
+ModportDeclarationSyntax& SyntaxFactory::modportDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<ModportItemSyntax> items, Token semi) {
+    return *alloc.emplace<ModportDeclarationSyntax>(attributes, keyword, items, semi);
+}
+
+ClockingSkewSyntax& SyntaxFactory::clockingSkew(Token edge, Token hash, ExpressionSyntax* value) {
+    return *alloc.emplace<ClockingSkewSyntax>(edge, hash, value);
+}
+
+ClockingDirectionSyntax& SyntaxFactory::clockingDirection(Token input, ClockingSkewSyntax* inputSkew, Token output, ClockingSkewSyntax* ouputSkew, Token inout) {
+    return *alloc.emplace<ClockingDirectionSyntax>(input, inputSkew, output, ouputSkew, inout);
+}
+
+ClockingItemSyntax& SyntaxFactory::clockingItem(Token defaultKeyword, ClockingDirectionSyntax* direction, SeparatedSyntaxList<AttributeSpecSyntax> assignments, Token semi, MemberSyntax* declaration) {
+    return *alloc.emplace<ClockingItemSyntax>(defaultKeyword, direction, assignments, semi, declaration);
+}
+
+ClockingDeclarationSyntax& SyntaxFactory::clockingDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token globalOrDefault, Token clocking, Token blockName, Token at, ParenthesizedEventExpressionSyntax* event, Token eventIdentifier, Token semi, SyntaxList<ClockingItemSyntax> items, Token endClocking, NamedBlockClauseSyntax* endBlockName) {
+    return *alloc.emplace<ClockingDeclarationSyntax>(attributes, globalOrDefault, clocking, blockName, at, event, eventIdentifier, semi, items, endClocking, endBlockName);
+}
+
+DPIImportExportSyntax& SyntaxFactory::dPIImportExport(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token stringLiteral, Token property, Token name, Token equals, FunctionPrototypeSyntax& method) {
+    return *alloc.emplace<DPIImportExportSyntax>(attributes, keyword, stringLiteral, property, name, equals, method);
+}
+
+DistWeightSyntax& SyntaxFactory::distWeight(Token op, ExpressionSyntax& expr) {
+    return *alloc.emplace<DistWeightSyntax>(op, expr);
+}
+
+DistItemSyntax& SyntaxFactory::distItem(ExpressionSyntax& range, DistWeightSyntax* weight) {
+    return *alloc.emplace<DistItemSyntax>(range, weight);
+}
+
+DistConstraintListSyntax& SyntaxFactory::distConstraintList(Token dist, Token openBrace, SeparatedSyntaxList<DistItemSyntax> items, Token closeBrace) {
+    return *alloc.emplace<DistConstraintListSyntax>(dist, openBrace, items, closeBrace);
+}
+
+ExpressionOrDistSyntax& SyntaxFactory::expressionOrDist(ExpressionSyntax& expr, DistConstraintListSyntax& distribution) {
+    return *alloc.emplace<ExpressionOrDistSyntax>(expr, distribution);
+}
+
+ExpressionConstraintSyntax& SyntaxFactory::expressionConstraint(Token soft, ExpressionSyntax& expr, Token semi) {
+    return *alloc.emplace<ExpressionConstraintSyntax>(soft, expr, semi);
+}
+
+UniquenessConstraintSyntax& SyntaxFactory::uniquenessConstraint(Token unique, OpenRangeListSyntax& ranges, Token semi) {
+    return *alloc.emplace<UniquenessConstraintSyntax>(unique, ranges, semi);
+}
+
+ImplicationConstraintSyntax& SyntaxFactory::implicationConstraint(ExpressionSyntax& left, Token arrow, ConstraintItemSyntax& constraints) {
+    return *alloc.emplace<ImplicationConstraintSyntax>(left, arrow, constraints);
+}
+
+ElseConstraintClauseSyntax& SyntaxFactory::elseConstraintClause(Token elseKeyword, ConstraintItemSyntax& constraints) {
+    return *alloc.emplace<ElseConstraintClauseSyntax>(elseKeyword, constraints);
+}
+
+ConditionalConstraintSyntax& SyntaxFactory::conditionalConstraint(Token ifKeyword, Token openParen, ExpressionSyntax& condition, Token closeParen, ConstraintItemSyntax& constraints, ElseConstraintClauseSyntax* elseClause) {
+    return *alloc.emplace<ConditionalConstraintSyntax>(ifKeyword, openParen, condition, closeParen, constraints, elseClause);
+}
+
+LoopConstraintSyntax& SyntaxFactory::loopConstraint(Token foreachKeyword, ForeachLoopListSyntax& loopList, ConstraintItemSyntax& constraints) {
+    return *alloc.emplace<LoopConstraintSyntax>(foreachKeyword, loopList, constraints);
+}
+
+DisableConstraintSyntax& SyntaxFactory::disableConstraint(Token disable, Token soft, NameSyntax& name, Token semi) {
+    return *alloc.emplace<DisableConstraintSyntax>(disable, soft, name, semi);
+}
+
+SolveBeforeConstraintSyntax& SyntaxFactory::solveBeforeConstraint(Token solve, SeparatedSyntaxList<ExpressionSyntax> beforeExpr, Token before, SeparatedSyntaxList<ExpressionSyntax> afterExpr, Token semi) {
+    return *alloc.emplace<SolveBeforeConstraintSyntax>(solve, beforeExpr, before, afterExpr, semi);
+}
+
+ConstraintBlockSyntax& SyntaxFactory::constraintBlock(Token openBrace, SyntaxList<ConstraintItemSyntax> items, Token closeBrace) {
+    return *alloc.emplace<ConstraintBlockSyntax>(openBrace, items, closeBrace);
+}
+
+ConstraintPrototypeSyntax& SyntaxFactory::constraintPrototype(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, Token semi) {
+    return *alloc.emplace<ConstraintPrototypeSyntax>(attributes, qualifiers, keyword, name, semi);
+}
+
+ConstraintDeclarationSyntax& SyntaxFactory::constraintDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, ConstraintBlockSyntax& block) {
+    return *alloc.emplace<ConstraintDeclarationSyntax>(attributes, qualifiers, keyword, name, block);
+}
+
+WithClauseSyntax& SyntaxFactory::withClause(Token with, Token openParen, ExpressionSyntax& expr, Token closeParen) {
+    return *alloc.emplace<WithClauseSyntax>(with, openParen, expr, closeParen);
+}
+
+IdentifierListSyntax& SyntaxFactory::identifierList(Token openParen, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token closeParen) {
+    return *alloc.emplace<IdentifierListSyntax>(openParen, identifiers, closeParen);
+}
+
+RandomizeMethodWithClauseSyntax& SyntaxFactory::randomizeMethodWithClause(Token with, IdentifierListSyntax* names, ConstraintBlockSyntax& constraints) {
+    return *alloc.emplace<RandomizeMethodWithClauseSyntax>(with, names, constraints);
+}
+
+WithFunctionSampleSyntax& SyntaxFactory::withFunctionSample(Token with, Token function, Token sample, AnsiPortListSyntax& portList) {
+    return *alloc.emplace<WithFunctionSampleSyntax>(with, function, sample, portList);
+}
+
+BinaryBlockEventExpressionSyntax& SyntaxFactory::binaryBlockEventExpression(BlockEventExpressionSyntax& left, Token orKeyword, BlockEventExpressionSyntax& right) {
+    return *alloc.emplace<BinaryBlockEventExpressionSyntax>(left, orKeyword, right);
+}
+
+PrimaryBlockEventExpressionSyntax& SyntaxFactory::primaryBlockEventExpression(Token keyword, NameSyntax& name) {
+    return *alloc.emplace<PrimaryBlockEventExpressionSyntax>(keyword, name);
+}
+
+BlockCoverageEventSyntax& SyntaxFactory::blockCoverageEvent(Token atat, Token openParen, BlockEventExpressionSyntax& expr, Token closeParen) {
+    return *alloc.emplace<BlockCoverageEventSyntax>(atat, openParen, expr, closeParen);
+}
+
+CovergroupDeclarationSyntax& SyntaxFactory::covergroupDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token covergroup, Token name, AnsiPortListSyntax* portList, SyntaxNode* event, Token semi, SyntaxList<MemberSyntax> members, Token endgroup, NamedBlockClauseSyntax* endBlockName) {
+    return *alloc.emplace<CovergroupDeclarationSyntax>(attributes, covergroup, name, portList, event, semi, members, endgroup, endBlockName);
+}
+
+CoverageOptionSyntax& SyntaxFactory::coverageOption(SyntaxList<AttributeInstanceSyntax> attributes, Token option, Token dot, Token name, Token equals, ExpressionSyntax& expr, Token semi) {
+    return *alloc.emplace<CoverageOptionSyntax>(attributes, option, dot, name, equals, expr, semi);
+}
+
+CoverpointSyntax& SyntaxFactory::coverpoint(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, NamedLabelSyntax* label, Token coverpoint, ExpressionSyntax& expr, Token openBrace, SyntaxList<MemberSyntax> members, Token closeBrace, Token emptySemi) {
+    return *alloc.emplace<CoverpointSyntax>(attributes, type, label, coverpoint, expr, openBrace, members, closeBrace, emptySemi);
+}
+
+DefaultCoverageBinInitializerSyntax& SyntaxFactory::defaultCoverageBinInitializer(Token defaultKeyword, Token sequenceKeyword) {
+    return *alloc.emplace<DefaultCoverageBinInitializerSyntax>(defaultKeyword, sequenceKeyword);
+}
+
+ExpressionCoverageBinInitializerSyntax& SyntaxFactory::expressionCoverageBinInitializer(ExpressionSyntax& expr, WithClauseSyntax* withClause) {
+    return *alloc.emplace<ExpressionCoverageBinInitializerSyntax>(expr, withClause);
+}
+
+RangeCoverageBinInitializerSyntax& SyntaxFactory::rangeCoverageBinInitializer(OpenRangeListSyntax& ranges, WithClauseSyntax* withClause) {
+    return *alloc.emplace<RangeCoverageBinInitializerSyntax>(ranges, withClause);
+}
+
+IffClauseSyntax& SyntaxFactory::iffClause(Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) {
+    return *alloc.emplace<IffClauseSyntax>(iff, openParen, expr, closeParen);
+}
+
+CoverageBinsSyntax& SyntaxFactory::coverageBins(SyntaxList<AttributeInstanceSyntax> attributes, Token wildcard, Token keyword, Token name, ElementSelectSyntax* selector, Token equals, CoverageBinInitializerSyntax& initializer, IffClauseSyntax* iff, Token semi) {
+    return *alloc.emplace<CoverageBinsSyntax>(attributes, wildcard, keyword, name, selector, equals, initializer, iff, semi);
+}
+
+CompilationUnitSyntax& SyntaxFactory::compilationUnit(SyntaxList<MemberSyntax> members, Token endOfFile) {
+    return *alloc.emplace<CompilationUnitSyntax>(members, endOfFile);
+}
+
+SimpleDirectiveSyntax& SyntaxFactory::simpleDirective(SyntaxKind kind, Token directive, Token endOfDirective) {
+    return *alloc.emplace<SimpleDirectiveSyntax>(kind, directive, endOfDirective);
+}
+
+IncludeDirectiveSyntax& SyntaxFactory::includeDirective(Token directive, Token fileName, Token endOfDirective) {
+    return *alloc.emplace<IncludeDirectiveSyntax>(directive, fileName, endOfDirective);
+}
+
+ConditionalBranchDirectiveSyntax& SyntaxFactory::conditionalBranchDirective(SyntaxKind kind, Token directive, Token name, Token endOfDirective, TokenList disabledTokens) {
+    return *alloc.emplace<ConditionalBranchDirectiveSyntax>(kind, directive, name, endOfDirective, disabledTokens);
+}
+
+UnconditionalBranchDirectiveSyntax& SyntaxFactory::unconditionalBranchDirective(SyntaxKind kind, Token directive, Token endOfDirective, TokenList disabledTokens) {
+    return *alloc.emplace<UnconditionalBranchDirectiveSyntax>(kind, directive, endOfDirective, disabledTokens);
+}
+
+MacroArgumentDefaultSyntax& SyntaxFactory::macroArgumentDefault(Token equals, TokenList tokens) {
+    return *alloc.emplace<MacroArgumentDefaultSyntax>(equals, tokens);
+}
+
+MacroFormalArgumentSyntax& SyntaxFactory::macroFormalArgument(Token name, MacroArgumentDefaultSyntax* defaultValue) {
+    return *alloc.emplace<MacroFormalArgumentSyntax>(name, defaultValue);
+}
+
+MacroFormalArgumentListSyntax& SyntaxFactory::macroFormalArgumentList(Token openParen, SeparatedSyntaxList<MacroFormalArgumentSyntax> args, Token closeParen) {
+    return *alloc.emplace<MacroFormalArgumentListSyntax>(openParen, args, closeParen);
+}
+
+DefineDirectiveSyntax& SyntaxFactory::defineDirective(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token endOfDirective) {
+    return *alloc.emplace<DefineDirectiveSyntax>(directive, name, formalArguments, body, endOfDirective);
+}
+
+MacroActualArgumentSyntax& SyntaxFactory::macroActualArgument(TokenList tokens) {
+    return *alloc.emplace<MacroActualArgumentSyntax>(tokens);
+}
+
+MacroActualArgumentListSyntax& SyntaxFactory::macroActualArgumentList(Token openParen, SeparatedSyntaxList<MacroActualArgumentSyntax> args, Token closeParen) {
+    return *alloc.emplace<MacroActualArgumentListSyntax>(openParen, args, closeParen);
+}
+
+MacroUsageSyntax& SyntaxFactory::macroUsage(Token directive, MacroActualArgumentListSyntax* args) {
+    return *alloc.emplace<MacroUsageSyntax>(directive, args);
+}
+
+TimescaleDirectiveSyntax& SyntaxFactory::timescaleDirective(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit, Token endOfDirective) {
+    return *alloc.emplace<TimescaleDirectiveSyntax>(directive, timeUnit, timeUnitUnit, slash, timePrecision, timePrecisionUnit, endOfDirective);
+}
+
+DefaultNetTypeDirectiveSyntax& SyntaxFactory::defaultNetTypeDirective(Token directive, Token netType, Token endOfDirective) {
+    return *alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType, endOfDirective);
+}
+
+LineDirectiveSyntax& SyntaxFactory::lineDirective(Token directive, Token lineNumber, Token fileName, Token level, Token endOfDirective) {
+    return *alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level, endOfDirective);
+}
+
+UndefDirectiveSyntax& SyntaxFactory::undefDirective(Token directive, Token name, Token endOfDirective) {
+    return *alloc.emplace<UndefDirectiveSyntax>(directive, name, endOfDirective);
+}
+
+BeginKeywordsDirectiveSyntax& SyntaxFactory::beginKeywordsDirective(Token directive, Token versionSpecifier, Token endOfDirective) {
+    return *alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionSpecifier, endOfDirective);
 }
 
 }

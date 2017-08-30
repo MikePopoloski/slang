@@ -120,7 +120,8 @@ private:
     PackageImportItemSyntax& parsePackageImportItem();
     DPIImportExportSyntax& parseDPIImportExport(ArrayRef<AttributeInstanceSyntax*> attributes);
     AssertionItemPortListSyntax* parseAssertionItemPortList(TokenKind declarationKind);
-    PropertySequenceDeclarationSyntax& parsePropertySequenceDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    PropertyDeclarationSyntax& parsePropertyDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
+    SequenceDeclarationSyntax& parseSequenceDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
     ParameterDeclarationSyntax& parseParameterPort();
     ClockingSkewSyntax* parseClockingSkew();
     ClockingDeclarationSyntax& parseClockingDeclaration(ArrayRef<AttributeInstanceSyntax*> attributes);
