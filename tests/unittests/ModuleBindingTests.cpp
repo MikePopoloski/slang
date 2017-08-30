@@ -1,14 +1,8 @@
-#include "Catch/catch.hpp"
+#include "Test.h"
 
-#include "analysis/BoundNodes.h"
 #include "analysis/Symbol.h"
+#include "analysis/BoundNodes.h"
 #include "parsing/SyntaxTree.h"
-
-using namespace slang;
-
-namespace {
-
-BumpAllocator alloc;
 
 const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax) {
     DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(syntax);
@@ -24,10 +18,8 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     auto file1 = SyntaxTree::fromText("module A; A a(); endmodule\nmodule B; endmodule\nmodule C; endmodule");
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
-    Diagnostics diagnostics;
 	DesignRootSymbol root({ &file1, &file2 });
 
-    CHECK(diagnostics.empty());
     REQUIRE(root.topInstances().count() == 2);
     CHECK(root.topInstances()[0]->name == "C");
     CHECK(root.topInstances()[1]->name == "D");
@@ -291,6 +283,4 @@ endpackage
     DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(tree);
     const auto& cv = root.topInstances()[0]->member<ParameterSymbol>(0).value();
     CHECK(cv.integer() == 4);
-}
-
 }

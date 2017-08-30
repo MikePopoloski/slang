@@ -1,49 +1,4 @@
-#include "Catch/catch.hpp"
-
-#include "lexing/Preprocessor.h"
-#include "parsing/AllSyntax.h"
-#include "text/SourceManager.h"
-
-using namespace slang;
-
-namespace {
-
-BumpAllocator alloc;
-Diagnostics diagnostics;
-
-SourceManager& getSourceManager() {
-    static SourceManager* sourceManager = nullptr;
-    if (!sourceManager) {
-        auto path = Path::getCurrentDirectory();
-        while (!(path + "tests").exists()) {
-            path = path.parentPath();
-            ASSERT(!path.empty(), "Failed to find root project directory");
-        }
-        
-        auto pathStr = (path + "tests/unittests/data/").str();
-        sourceManager = new SourceManager();
-        sourceManager->addUserDirectory(StringRef(pathStr));
-    }
-    return *sourceManager;
-}
-
-// A helper for when tests break and you want to see the diagnostics
-void logDiagnostics() {
-    for (auto& diag : diagnostics) {
-        fprintf(stderr, "%s\n", DiagnosticWriter(getSourceManager()).report(diag).c_str());
-    }
-}
-
-Token lexToken(StringRef text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Token token = preprocessor.next();
-    REQUIRE(token);
-    return token;
-}
+#include "Test.h"
 
 std::string preprocess(StringRef text) {
     diagnostics.clear();
@@ -68,7 +23,7 @@ TEST_CASE("Include File", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == "test string");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 void testDirective(SyntaxKind kind) {
@@ -84,7 +39,7 @@ void testDirective(SyntaxKind kind) {
     CHECK(token.kind == TokenKind::Directive);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(token.valueText() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Directives", "[preprocessor]") {
@@ -116,7 +71,7 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(token.trivia().count() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
 
@@ -135,7 +90,7 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(token.trivia().count() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
 
@@ -164,7 +119,7 @@ TEST_CASE("Macro usage (simple)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 42);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Function macro (simple)", "[preprocessor]") {
@@ -173,7 +128,7 @@ TEST_CASE("Function macro (simple)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 3);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Function macro (defaults)", "[preprocessor]") {
@@ -182,7 +137,7 @@ TEST_CASE("Function macro (defaults)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 9);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Function macro (no tokens)", "[preprocessor]") {
@@ -190,7 +145,7 @@ TEST_CASE("Function macro (no tokens)", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::EndOfFile);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Function macro (simple nesting)", "[preprocessor]") {
@@ -199,7 +154,7 @@ TEST_CASE("Function macro (simple nesting)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 15);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
@@ -208,7 +163,7 @@ TEST_CASE("Function macro (arg nesting)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 3);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Function macro (keyword as formal argument)", "[preprocessor]") {
@@ -217,7 +172,7 @@ TEST_CASE("Function macro (keyword as formal argument)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 3);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
@@ -226,7 +181,7 @@ TEST_CASE("Macro pasting (identifiers)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "bar_blah_BAZ");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro pasting (operator)", "[preprocessor]") {
@@ -234,7 +189,7 @@ TEST_CASE("Macro pasting (operator)", "[preprocessor]") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::DoublePlus);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
@@ -243,7 +198,7 @@ TEST_CASE("Macro pasting (combination)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "bar_foo3242");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro pasting (keyword)", "[preprocessor]") {
@@ -252,7 +207,7 @@ TEST_CASE("Macro pasting (keyword)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::LogicKeyword);
     CHECK(token.valueText() == "logic");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro pasting (mixed)", "[preprocessor]") {
@@ -261,7 +216,7 @@ TEST_CASE("Macro pasting (mixed)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::Semicolon);
     CHECK(token.valueText() == ";");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro pasting (whitespace)", "[preprocessor]") {
@@ -270,7 +225,7 @@ TEST_CASE("Macro pasting (whitespace)", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "a");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro stringify", "[preprocessor]") {
@@ -279,7 +234,7 @@ TEST_CASE("Macro stringify", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == " \" bar_foo42 \"");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro stringify whitespace", "[preprocessor]") {
@@ -288,7 +243,7 @@ TEST_CASE("Macro stringify whitespace", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == " bar ( )\t  bar   bar");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro deferred define", "[preprocessor]") {
@@ -308,11 +263,9 @@ TEST_CASE("Macro deferred define", "[preprocessor]") {
 )";
     Token token = lexToken(text);
 
-    logDiagnostics();
-
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 1);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro string expansions", "[preprocessor]") {
@@ -395,7 +348,7 @@ $display("left side: \"right side\"");
 
     std::string result = preprocess(text);
     CHECK(result == expected);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
@@ -411,7 +364,7 @@ TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
     
     token = preprocessor.next();
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Macro nested implicit concatenate", "[preprocessor]") {
@@ -427,7 +380,7 @@ TEST_CASE("Macro nested implicit concatenate", "[preprocessor]") {
 
     token = preprocessor.next();
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
@@ -436,7 +389,7 @@ TEST_CASE("IfDef branch (taken)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 42);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("IfDef branch (not taken)", "[preprocessor]") {
@@ -444,7 +397,7 @@ TEST_CASE("IfDef branch (not taken)", "[preprocessor]") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("IfNDef branch", "[preprocessor]") {
@@ -453,7 +406,7 @@ TEST_CASE("IfNDef branch", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 42);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("ElseIf branch", "[preprocessor]") {
@@ -462,7 +415,7 @@ TEST_CASE("ElseIf branch", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 99);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("EndIf not done", "[preprocessor]") {
@@ -471,7 +424,7 @@ TEST_CASE("EndIf not done", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::RealLiteral);
     CHECK(std::get<double>(token.numericValue()) == 42.3);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Nested branches", "[preprocessor]") {
@@ -501,7 +454,7 @@ TEST_CASE("Nested branches", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 99);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("IfDef inside macro", "[preprocessor]") {
@@ -519,7 +472,7 @@ TEST_CASE("IfDef inside macro", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 32);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("LINE Directive", "[preprocessor]") {
@@ -528,7 +481,7 @@ TEST_CASE("LINE Directive", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 1);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("LINE Directive as actual arg", "[preprocessor]") {
@@ -537,7 +490,7 @@ TEST_CASE("LINE Directive as actual arg", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 33);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("LINE Directive (include+nesting)", "[preprocessor]") {
@@ -559,7 +512,7 @@ TEST_CASE("LINE Directive (include+nesting)", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 5);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("FILE Directive", "[preprocessor]") {
@@ -570,7 +523,7 @@ TEST_CASE("FILE Directive", "[preprocessor]") {
     // we set the name by default for files created this way as
     // <unnamed_bufferN> for some N, let's not be sensitive to that number
     CHECK(token.valueText().subString(0,15) == "<unnamed_buffer");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("FILE Directive (include+nesting)", "[preprocessor]") {
@@ -597,7 +550,7 @@ TEST_CASE("FILE Directive (include+nesting)", "[preprocessor]") {
     REQUIRE(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() != "file_uses_defn.svh");
 
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("undef Directive", "[preprocessor]") {
@@ -622,7 +575,7 @@ TEST_CASE("undef Directive 2", "[preprocessor]") {
 
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 45);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("undefineall", "[preprocessor]") {
@@ -656,7 +609,7 @@ TEST_CASE("begin_keywords", "[preprocessor]") {
     token = preprocessor.next();
     REQUIRE(token.kind == TokenKind::SoftKeyword);
 
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("begin_keywords (nested)", "[preprocessor]") {
@@ -683,18 +636,18 @@ TEST_CASE("begin_keywords (nested)", "[preprocessor]") {
     token = preprocessor.next();
     REQUIRE(token.kind == TokenKind::UWireKeyword);
 
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("timescale directive", "[preprocessor]") {
     lexToken("`timescale 10 ns / 1 fs");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
     lexToken("`timescale 100 s / 10fs");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
     lexToken("`timescale 1s/1fs");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
     lexToken("`timescale 10fs / 100fs");
     CHECK(!diagnostics.empty());
@@ -720,7 +673,7 @@ TEST_CASE("macro-defined include file", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == "test string");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
     auto& text2 =
 "`define FILE \"include.svh\"\n"
@@ -729,7 +682,7 @@ TEST_CASE("macro-defined include file", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == "test string");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
     auto& text3 =
 "`define FILE(arg) `\"arg`\"\n"
@@ -738,7 +691,7 @@ TEST_CASE("macro-defined include file", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.valueText() == "test string");
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
 
     auto& text4 =
@@ -747,6 +700,4 @@ TEST_CASE("macro-defined include file", "[preprocessor]") {
     token = lexToken(text4);
 
     CHECK(!diagnostics.empty());
-}
-
 }

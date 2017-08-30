@@ -1,12 +1,8 @@
-#include "Catch/catch.hpp"
+#include "Test.h"
 
 #include "analysis/Binder.h"
 #include "analysis/ConstantEvaluator.h"
 #include "parsing/SyntaxTree.h"
-
-using namespace slang;
-
-namespace {
 
 SVInt testParameter(const std::string& text, int index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
@@ -158,6 +154,4 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     CHECK(op1.type->isReal());
     const BoundExpression& op2 = ((const BoundBinaryExpression&)rrhs).right;
     CHECK(op2.type->width() == 21);
-}
-
 }

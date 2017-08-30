@@ -1,38 +1,7 @@
-#include "Catch/catch.hpp"
-
-#include "diagnostics/Diagnostics.h"
-#include "lexing/Preprocessor.h"
-#include "text/SourceManager.h"
-
-using namespace slang;
-
-namespace {
-
-BumpAllocator alloc;
-Diagnostics diagnostics;
-
-SourceManager& getSourceManager() {
-    static SourceManager* sourceManager = nullptr;
-    if (!sourceManager) {
-        sourceManager = new SourceManager();
-        sourceManager->addUserDirectory("tests/unittests/data/");
-    }
-    return *sourceManager;
-}
+#include "Test.h"
 
 std::string getDiagnostic(int i) {
     return DiagnosticWriter(getSourceManager()).report(diagnostics[i]);
-}
-
-Token lexToken(StringRef text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(text);
-
-    Token token = preprocessor.next();
-    REQUIRE(token);
-    return token;
 }
 
 TEST_CASE("Diagnostic Line Number", "[diagnostic]") {
@@ -111,7 +80,4 @@ TEST_CASE("keywords_errors", "[diagnostic]") {
     CHECK(token.kind == TokenKind::EndOfFile);
     REQUIRE(diagnostics.count() == 1);
     CHECK(diagnostics[0].code == DiagCode::MismatchedEndKeywordsDirective);
-}
-
-
 }

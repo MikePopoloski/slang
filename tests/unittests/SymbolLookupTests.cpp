@@ -1,13 +1,7 @@
-#include "Catch/catch.hpp"
+#include "Test.h"
 
 #include "analysis/Symbol.h"
 #include "parsing/SyntaxTree.h"
-
-using namespace slang;
-
-namespace {
-
-BumpAllocator alloc;
 
 TEST_CASE("Explicit import lookup", "[symbols:lookup]") {
     auto tree = SyntaxTree::fromText(R"(
@@ -64,7 +58,4 @@ endmodule
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol->as<ParameterSymbol>().value().integer() == 4);
-}
-
-
 }

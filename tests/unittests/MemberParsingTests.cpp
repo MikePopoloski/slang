@@ -1,36 +1,4 @@
-#include "Catch/catch.hpp"
-
-#include "lexing/Preprocessor.h"
-#include "parsing/Parser.h"
-#include "text/SourceManager.h"
-
-using namespace slang;
-
-namespace {
-
-BumpAllocator alloc;
-Diagnostics diagnostics;
-SourceManager sourceManager;
-
-const ModuleDeclarationSyntax& parseModule(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-    preprocessor.pushSource(StringRef(text));
-
-    Parser parser(preprocessor);
-    return parser.parseModule();
-}
-
-const ClassDeclarationSyntax& parseClass(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-    preprocessor.pushSource(StringRef(text));
-
-    Parser parser(preprocessor);
-    return parser.parseClass();
-}
+#include "Test.h"
 
 TEST_CASE("Simple module", "[parser:modules]") {
     auto& text = "module foo(); endmodule";
@@ -38,7 +6,7 @@ TEST_CASE("Simple module", "[parser:modules]") {
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
     CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
 }
 
@@ -48,7 +16,7 @@ TEST_CASE("Simple interface", "[parser:modules]") {
 
     REQUIRE(module.kind == SyntaxKind::InterfaceDeclaration);
     CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
 }
 
@@ -58,7 +26,7 @@ TEST_CASE("Simple program", "[parser:modules]") {
 
     REQUIRE(module.kind == SyntaxKind::ProgramDeclaration);
     CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
 }
 
@@ -68,7 +36,7 @@ TEST_CASE("Complex header", "[parser:modules]") {
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
     CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
     CHECK(module.attributes.count() == 1);
     CHECK(module.header.imports[0]->items.count() == 2);
@@ -82,7 +50,7 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
     CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
     auto parameters = module.header.parameters->declarations;
     CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
@@ -100,7 +68,7 @@ const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) 
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
     CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
     REQUIRE(module.members.count() == 1);
     REQUIRE(module.members[0]->kind == kind);
@@ -131,7 +99,7 @@ const MemberSyntax* parseClassMember(const std::string& text, SyntaxKind kind) {
 
     REQUIRE(classDecl.kind == SyntaxKind::ClassDeclaration);
     CHECK(classDecl.toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 
     REQUIRE(classDecl.items.count() == 1);
     REQUIRE(classDecl.items[0]->kind == kind);
@@ -144,4 +112,29 @@ TEST_CASE("Class members", "[parser:class]") {
     parseClassMember("static function type_id blah(); endfunction", SyntaxKind::ClassMethodDeclaration);
 }
 
+TEST_CASE("Property declarations", "[parser:properties]") {
+    auto& text = R"(
+property p3;
+    b ##1 c;
+endproperty
+
+c1: cover property (@(posedge clk) a #-# p3);
+a1: assert property (@(posedge clk) a |-> p3);
+)";
+
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(StringRef(text));
+
+    Parser parser(preprocessor);
+
+    auto propertyDecl = parser.parseMember();
+    auto coverStatement = parser.parseMember();
+    auto assertStatement = parser.parseMember();
+
+    REQUIRE(propertyDecl);
+    REQUIRE(coverStatement);
+    REQUIRE(assertStatement);
+    CHECK_DIAGNOSTICS_EMPTY;
 }

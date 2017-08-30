@@ -81,12 +81,14 @@ public:
         currentFile = StringRef(path);
         SyntaxTree tree = SyntaxTree::fromFile(currentFile, sourceManager);
         visitNode(&tree.root());
-        //printf("%s", tree.reportDiagnostics().c_str());
+        printf("%s\n", tree.reportDiagnostics().c_str());
+
+        printf("%s", tree.root().toString(SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia).c_str());
     }
 
     void visit(const ModuleHeaderSyntax& header) {
-        if (!declToFile.try_emplace(header.name.valueText(), currentFile).second)
-            printf("Duplicate declaration: %s\n", header.name.valueText().toString().c_str());
+        //if (!declToFile.try_emplace(header.name.valueText(), currentFile).second)
+            //printf("Duplicate declaration: %s\n", header.name.valueText().toString().c_str());
     }
 
     void visit(const HierarchyInstantiationSyntax& instantiation) {

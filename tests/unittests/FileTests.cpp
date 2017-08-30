@@ -1,20 +1,4 @@
-#include "Catch/catch.hpp"
-
-#include "text/SourceManager.h"
-
-using namespace slang;
-
-namespace {
-
-std::string findTestDir() {
-    auto path = Path::getCurrentDirectory();
-    while (!(path + "tests").exists()) {
-        path = path.parentPath();
-        ASSERT(!path.empty(), "Failed to find root project directory");
-    }
-
-    return (path + "tests/unittests/data/").str();
-}
+#include "Test.h"
 
 std::string getTestInclude() {
     return findTestDir() + "/include.svh";
@@ -81,6 +65,4 @@ TEST_CASE("Read header (include dirs)", "[files]") {
     manager.addUserDirectory(StringRef(manager.makeAbsolutePath(StringRef(findTestDir() + "/nested"))));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
-}
-
 }

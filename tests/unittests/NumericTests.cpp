@@ -1,10 +1,6 @@
-#include "Catch/catch.hpp"
+#include "Test.h"
 
 #include "numeric/SVInt.h"
-
-using namespace slang;
-
-namespace {
 
 TEST_CASE("Construction", "[numeric]") {
     SVInt value1;
@@ -106,6 +102,4 @@ TEST_CASE("Bitwise", "[numeric]") {
     CHECK(SVInt("100'h10111111111111111111111111111111111").reductionAnd() == logic_t(0));
     CHECK(SVInt("35'b11111111111111111111111111111111111").reductionAnd() == logic_t(1));
     CHECK(SVInt("35'b11111100000011111111111111111101110").reductionXor() == logic_t(1));
-}
-
 }

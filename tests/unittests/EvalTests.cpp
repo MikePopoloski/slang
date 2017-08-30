@@ -1,10 +1,6 @@
-#include "Catch/catch.hpp"
+#include "Test.h"
 
 #include "analysis/ScriptSession.h"
-
-using namespace slang;
-
-namespace {
 
 TEST_CASE("Simple eval", "[eval]") {
     ScriptSession session;
@@ -55,11 +51,6 @@ endfunction
 )");
 
     auto value = session.eval("num_words_in_address_space(8, 64, 20)");
-
-    auto diagnostics = session.reportDiagnostics();
-    if (!diagnostics.empty())
-        WARN(diagnostics.c_str());
-
     CHECK(value.integer() == 131072);
 }
 //
@@ -272,5 +263,4 @@ TEST_CASE("dimension based system functions", "[eval]") {
     EVAL("$increment(up_vect)", -1);
     // TODO: EVAL("$increment(down_vect)", 1);
 #undef EVAL
-}
 }

@@ -1,30 +1,8 @@
-#include "Catch/catch.hpp"
-
-#include "lexing/Preprocessor.h"
-#include "parsing/Parser.h"
-#include "text/SourceManager.h"
-
-using namespace slang;
-
-namespace {
-
-BumpAllocator alloc;
-Diagnostics diagnostics;
-SourceManager sourceManager;
-
-ExpressionSyntax& parse(const std::string& text) {
-    diagnostics.clear();
-
-    Preprocessor preprocessor(sourceManager, alloc, diagnostics);
-    preprocessor.pushSource(StringRef(text));
-
-    Parser parser(preprocessor);
-    return parser.parseExpression();
-}
+#include "Test.h"
 
 TEST_CASE("Empty string", "[parser:expressions]") {
     auto& text = "";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::IdentifierName);
     CHECK(expr.as<IdentifierNameSyntax>().identifier.isMissing());
@@ -32,40 +10,40 @@ TEST_CASE("Empty string", "[parser:expressions]") {
 
 TEST_CASE("Name expression", "[parser:expressions]") {
     auto& text = "foo";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::IdentifierName);
     CHECK(!expr.as<IdentifierNameSyntax>().identifier.isMissing());
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Parenthesized expression", "[parser:expressions]") {
     auto& text = "(foo)";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ParenthesizedExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("MinTypMax expression", "[parser:expressions]") {
     auto& text = "(foo:34+99:baz)";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ParenthesizedExpression);
     CHECK(expr.as<ParenthesizedExpressionSyntax>().expression.kind == SyntaxKind::MinTypMaxExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 void testImplicitClassHandle(TokenKind kind) {
     auto text = getTokenKindText(kind);
-    auto& expr = parse(text.toString());
+    auto& expr = parseExpression(text.toString());
 
     REQUIRE(expr.kind == getKeywordNameExpression(kind));
     CHECK(expr.as<KeywordNameSyntax>().keyword.kind == kind);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Implicit class handles", "[parser:expressions]") {
@@ -75,65 +53,65 @@ TEST_CASE("Implicit class handles", "[parser:expressions]") {
 
 TEST_CASE("String literal expression", "[parser:expressions]") {
     auto& text = "\"asdf\"";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::StringLiteralExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Integer literal expression", "[parser:expressions]") {
     auto& text = "34'd56";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::IntegerVectorExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Real literal expression", "[parser:expressions]") {
     auto& text = "42.42";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::RealLiteralExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Time literal expression", "[parser:expressions]") {
     auto& text = "42ns";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::TimeLiteralExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Null literal expression", "[parser:expressions]") {
     auto& text = "null";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::NullLiteralExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Wildcard expression", "[parser:expressions]") {
     auto& text = "$";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::WildcardLiteralExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 void testPrefixUnary(TokenKind kind) {
     auto text = getTokenKindText(kind).toString() + "a";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == getUnaryPrefixExpression(kind));
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<PrefixUnaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
     CHECK(us.operand.kind == SyntaxKind::IdentifierName);
@@ -157,11 +135,11 @@ TEST_CASE("Unary prefix operators", "[parser:expressions]") {
 
 void testPostfixUnary(TokenKind kind) {
     auto text = "a" + getTokenKindText(kind).toString();
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == getUnaryPostfixExpression(kind));
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<PostfixUnaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
     CHECK(us.operand.kind == SyntaxKind::IdentifierName);
@@ -174,11 +152,11 @@ TEST_CASE("Unary postfix operators", "[parser:expressions]") {
 
 void testBinaryOperator(TokenKind kind) {
     auto text = "a " + getTokenKindText(kind).toString() + " 4";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == getBinaryExpression(kind));
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     auto& us = expr.as<BinaryExpressionSyntax>();
     CHECK(us.operatorToken.kind == kind);
     CHECK(us.left.kind == SyntaxKind::IdentifierName);
@@ -231,11 +209,11 @@ TEST_CASE("Binary operators", "[parser:expression]") {
 }
 
 void testScopedName(StringRef text) {
-    auto& expr = parse(text.toString());
+    auto& expr = parseExpression(text.toString());
 
     REQUIRE(expr.kind == SyntaxKind::ScopedName);
     CHECK(expr.toString() == text.begin());
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Scoped identifiers", "[parser:expressions]") {
@@ -248,74 +226,74 @@ TEST_CASE("Scoped identifiers", "[parser:expressions]") {
 
 TEST_CASE("Class scoped name", "[parser:expressions]") {
     auto& text = "blah::foo #(stuff, .thing(3+9))::bar";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ScopedName);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Empty queue", "[parser:expressions]") {
     auto& text = "{}";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::EmptyQueueExpression);
     CHECK(expr.toString() == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Concatenation", "[parser:expressions]") {
     auto& text = "{3+4, foo.bar}";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ConcatenationExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Concatenation (single)", "[parser:expressions]") {
     auto& text = "{3+4}";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ConcatenationExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Multiple concatenation", "[parser:expressions]") {
     auto& text = "{3+4 {foo.bar, 9**22}}";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::MultipleConcatenationExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Streaming concatenation", "[parser:expressions]") {
     auto& text = "{<< 3+9 {foo, 24.32 with [3+:4]}}";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::StreamingConcatenationExpression);
     CHECK(expr.as<StreamingConcatenationExpressionSyntax>().expressions[1]->withRange->range.selector->kind == SyntaxKind::AscendingRangeSelect);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Element Access", "[parser:expressions]") {
     auto& text = "(foo)[3][9+4]";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ElementSelectExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 void testElementRange(StringRef text, SyntaxKind kind) {
-    auto& expr = parse(text.toString());
+    auto& expr = parseExpression(text.toString());
     REQUIRE(expr.kind == SyntaxKind::ElementSelectExpression);
     CHECK(expr.as<ElementSelectExpressionSyntax>().select.selector->kind == kind);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Element range", "[parser:expressions]") {
@@ -326,43 +304,43 @@ TEST_CASE("Element range", "[parser:expressions]") {
 
 TEST_CASE("Member Access", "[parser:expressions]") {
     auto& text = "(foo).bar";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::MemberAccessExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Invocation expression", "[parser:expressions]") {
     auto& text = "foo.bar(5, 6, .param(9))";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::InvocationExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Inside expression", "[parser:expressions]") {
     auto& text = "34 inside { 34, [12:12], 19 }";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::InsideExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Tagged union expression", "[parser:expressions]") {
     auto& text = "tagged foo";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::TaggedUnionExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Bad argument recovery", "[parser:expressions]") {
     auto& text = "foo(]], 3 4,)";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::InvocationExpression);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeSkipped) == text);
@@ -372,10 +350,10 @@ TEST_CASE("Bad argument recovery", "[parser:expressions]") {
 TEST_CASE("Conditional expression", "[parser:expressions]") {
     // check proper precedence
     auto& text = "foo || bar ? 3 : 4";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(expr.kind == SyntaxKind::ConditionalExpression);
 
     auto& cond = expr.as<ConditionalExpressionSyntax>();
@@ -386,10 +364,10 @@ TEST_CASE("Conditional expression", "[parser:expressions]") {
 TEST_CASE("Conditional expression (pattern matching)", "[parser:expressions]") {
     // check proper precedence
     auto& text = "foo matches 34 &&& foo ? 3 : 4";
-    auto& expr = parse(text);
+    auto& expr = parseExpression(text);
 
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(diagnostics.empty());
+    CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(expr.kind == SyntaxKind::ConditionalExpression);
 
     auto& cond = expr.as<ConditionalExpressionSyntax>();
@@ -404,16 +382,14 @@ TEST_CASE("Big expression", "[parser:expressions]") {
         "((stackDepth == 13101) || ((stackDepth == 13102) || ((stackDepth == 13103) || ((stackDepth == 13201) || ((stackDepth == 13202) || ((stackDepth == 13203) || ((stackDepth == 13301) || ((stackDepth == 13302) || ((stackDepth == 13303) || ((stackDepth == 13304) || ((stackDepth == 13401) || ((stackDepth == 13402) || ((stackDepth == 13403) || ((stackDepth == 13404) || ((stackDepth == 13405) || ((stackDepth == 13501) || ((stackDepth == 13502) || ((stackDepth == 13600) || ((stackDepth == 13701) || ((stackDepth == 13702) || ((stackDepth == 13703) || ((stackDepth == 13800) || ((stackDepth == 13901) || ((stackDepth == 13902) || ((stackDepth == 13903) || ((stackDepth == 14001) || ((stackDepth == 14002) || ((stackDepth == 14100) || ((stackDepth == 14200) || ((stackDepth == 14301) || ((stackDepth == 14302) || ((stackDepth == 14400) || ((stackDepth == 14501) || ((stackDepth == 14502) || ((stackDepth == 14601) || ((stackDepth == 14602) || ((stackDepth == 14603) || ((stackDepth == 14604) || ((stackDepth == 14605) || ((stackDepth == 14606) || ((stackDepth == 14607) || ((stackDepth == 14701) || ((stackDepth == 14702) || ((stackDepth == 14703) || ((stackDepth == 14704) || ((stackDepth == 14705) || ((stackDepth == 14706) || ((stackDepth == 14707) || ((stackDepth == 14708) || ((stackDepth == 14709) || ((stackDepth == 14710) || ((stackDepth == 14711) || ((stackDepth == 14712) || ((stackDepth == 14713) || ((stackDepth == 14714) || ((stackDepth == 14715) || ((stackDepth == 14716) || ((stackDepth == 14717) || ((stackDepth == 14718) || ((stackDepth == 14719) || ((stackDepth == 14720 || ((stackDepth == 14717 || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717 || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717 || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717) || ((stackDepth == 14717))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));";
     
     try {
-        parse(text);
+        parseExpression(text);
     }
     catch (const std::runtime_error&) {
     }
 }
 
 TEST_CASE("Arithmetic expressions", "[parser]") {
-    auto& expr = parse("3 + 4 / 2 * 9");
+    auto& expr = parseExpression("3 + 4 / 2 * 9");
     REQUIRE(expr.kind == SyntaxKind::AddExpression);
     CHECK(expr.as<BinaryExpressionSyntax>().right.kind == SyntaxKind::MultiplyExpression);
-}
-
 }
