@@ -40,6 +40,6 @@ make -C build/projects/gmake-linux-clang -j 8
 
 #### OSX - Xcode
 ```
-tools/bin/linux/genie --xcode=osx xcode4
+tools/bin/osx/genie --xcode=osx xcode4
 open build/projects/xcode4-osx/slang.xcworkspace
 ```
