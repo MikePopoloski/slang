@@ -18,7 +18,7 @@ Still under heavy construction!
 
 ### Build Instructions
 
-You need a compiler for your platform that supports C++17. The tests run under Visual Studio 2017, GCC-6, and Clang-3.9.
+You need a compiler for your platform that supports C++17. The tests run under Visual Studio 2017, GCC-7, and Clang-5.0.
 
 #### Windows
 ```
@@ -28,7 +28,7 @@ msbuild build/projects/vs2017/slang.sln
 
 #### Linux - GCC
 ```
-tools/bin/linux/genie --gcc=linux-gcc-6 gmake
+tools/bin/linux/genie --gcc=linux-gcc gmake
 make -C build/projects/gmake-linux -j 8
 ```
 
@@ -36,4 +36,10 @@ make -C build/projects/gmake-linux -j 8
 ```
 tools/bin/linux/genie --gcc=linux-clang gmake
 make -C build/projects/gmake-linux-clang -j 8
+```
+
+#### OSX - Xcode
+```
+tools/bin/linux/genie --xcode=osx xcode4
+open build/projects/xcode4-osx/slang.xcworkspace
 ```
