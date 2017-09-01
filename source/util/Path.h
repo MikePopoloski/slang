@@ -29,6 +29,8 @@
 
 #if defined(__linux)
 # include <linux/limits.h>
+#else
+# include <limits.h>
 #endif
 
 #include "Debug.h"

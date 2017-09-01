@@ -59,8 +59,15 @@ function toolchain(_buildDir, _libDir)
 		end
 
 		if "linux-gcc" == _OPTIONS["gcc"] then
-			premake.gcc.cc  = "gcc"
-			premake.gcc.cxx = "g++"
+
+			if os.is("macosx") then
+				premake.gcc.cc  = "gcc-7"
+				premake.gcc.cxx = "g++-7"
+			else
+				premake.gcc.cc  = "gcc"
+				premake.gcc.cxx = "g++"
+			end
+
 			premake.gcc.ar  = "ar"
 			location (path.join(_buildDir, "projects", _ACTION .. "-linux"))
 
@@ -181,14 +188,23 @@ function toolchain(_buildDir, _libDir)
 		buildoptions_cpp {
 			"-std=c++1z",
 		}
-		links {
-			"rt",
-			"dl",
-		}
-		linkoptions {
-			"-Wl,--gc-sections",
-			"-Wl,--as-needed",
-		}
+		if os.is("macosx") then
+			links {
+				"dl",
+			}
+			linkoptions {
+				"-W",
+			}
+		else
+   	        	links {
+                        	"rt",
+                        	"dl",
+                  	}
+                  	linkoptions {
+                        	"-Wl,--gc-sections",
+                        	"-Wl,--as-needed",
+                	}
+   		end
 
 	configuration { "linux-gcc*", "x64" }
 		targetdir (path.join(_buildDir, "linux64_gcc/bin"))
