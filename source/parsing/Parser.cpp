@@ -12,6 +12,7 @@ namespace slang {
 
 Parser::Parser(Preprocessor& preprocessor) :
     ParserBase::ParserBase(preprocessor),
+    factory(alloc),
     vectorBuilder(getDiagnostics())
 {
 }
@@ -1157,7 +1158,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
         selector = &parseElementSelect();
 
     // bunch of different kinds of initializers here
-    CoverageBinInitializerSyntax* initializer;
+    CoverageBinInitializerSyntax* initializer = nullptr;
     Token equals = expect(TokenKind::Equals);
 
     switch (peek().kind) {
@@ -1173,7 +1174,9 @@ MemberSyntax* Parser::parseCoverpointMember() {
             initializer = &allocate<DefaultCoverageBinInitializerSyntax>(defaultKeyword, sequenceKeyword);
             break;
         }
-        // TODO: trans_list
+        case TokenKind::OpenParenthesis:
+            initializer = &parseTransListInitializer();
+            break;
         default: {
             auto& expr = parseExpression();
             auto with = parseWithClause();
@@ -1201,6 +1204,75 @@ MemberSyntax* Parser::parseCoverpointMember() {
         iffClause,
         expect(TokenKind::Semicolon)
     );
+}
+
+TransRangeSyntax& Parser::parseTransRange() {
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    while (true) {
+        if (peek(TokenKind::OpenBracket))
+            buffer.append(&parseElementSelect());
+        else
+            buffer.append(&parseExpression());
+
+        if (!peek(TokenKind::Comma))
+            break;
+
+        buffer.append(consume());
+    }
+
+    TransRepeatRangeSyntax* repeat = nullptr;
+    if (peek(TokenKind::OpenBracket)) {
+        auto openBracket = consume();
+
+        Token specifier;
+        switch (peek().kind) {
+            case TokenKind::Star:
+            case TokenKind::MinusArrow:
+            case TokenKind::Equals:
+                specifier = consume();
+                break;
+            default:
+                specifier = expect(TokenKind::Star);
+                break;
+        }
+
+        SelectorSyntax* selector = parseElementSelector();
+        repeat = &factory.transRepeatRange(openBracket, specifier, selector, expect(TokenKind::CloseBracket));
+    }
+
+    return factory.transRange(buffer.copy(alloc), repeat);
+}
+
+TransSetSyntax& Parser::parseTransSet() {
+    Token openParen;
+    Token closeParen;
+    ArrayRef<TokenOrSyntax> list;
+
+    parseSeparatedList<isPossibleTransSet, isEndOfTransSet>(
+        TokenKind::OpenParenthesis,
+        TokenKind::CloseParenthesis,
+        TokenKind::EqualsArrow,
+        openParen,
+        list,
+        closeParen,
+        DiagCode::ExpectedExpression,
+        [this](bool) -> decltype(auto) { return parseTransRange(); }
+    );
+
+    return factory.transSet(openParen, list, closeParen);
+}
+
+TransListCoverageBinInitializerSyntax& Parser::parseTransListInitializer() {
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    while (true) {
+        buffer.append(&parseTransSet());
+        if (!peek(TokenKind::Comma))
+            break;
+
+        buffer.append(consume());
+    }
+
+    return factory.transListCoverageBinInitializer(buffer.copy(alloc), parseWithClause());
 }
 
 BlockEventExpressionSyntax& Parser::parseBlockEventExpression() {

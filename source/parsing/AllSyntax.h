@@ -6130,6 +6130,104 @@ protected:
     }
 };
 
+struct TransRepeatRangeSyntax : public SyntaxNode {
+    Token openBracket;
+    Token specifier;
+    SelectorSyntax* selector;
+    Token closeBracket;
+
+    TransRepeatRangeSyntax(Token openBracket, Token specifier, SelectorSyntax* selector, Token closeBracket) :
+        SyntaxNode(SyntaxKind::TransRepeatRange), openBracket(openBracket), specifier(specifier), selector(selector), closeBracket(closeBracket)
+    {
+        childCount += 4;
+    }
+
+    TransRepeatRangeSyntax(const TransRepeatRangeSyntax&) = delete;
+    TransRepeatRangeSyntax& operator=(const TransRepeatRangeSyntax&) = delete;
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch (index) {
+            case 0: return openBracket;
+            case 1: return specifier;
+            case 2: return selector;
+            case 3: return closeBracket;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TransRangeSyntax : public SyntaxNode {
+    SeparatedSyntaxList<ExpressionSyntax> items;
+    TransRepeatRangeSyntax* repeat;
+
+    TransRangeSyntax(SeparatedSyntaxList<ExpressionSyntax> items, TransRepeatRangeSyntax* repeat) :
+        SyntaxNode(SyntaxKind::TransRange), items(items), repeat(repeat)
+    {
+        childCount += 2;
+    }
+
+    TransRangeSyntax(const TransRangeSyntax&) = delete;
+    TransRangeSyntax& operator=(const TransRangeSyntax&) = delete;
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch (index) {
+            case 0: return &items;
+            case 1: return repeat;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TransSetSyntax : public SyntaxNode {
+    Token openParen;
+    SeparatedSyntaxList<TransRangeSyntax> ranges;
+    Token closeParen;
+
+    TransSetSyntax(Token openParen, SeparatedSyntaxList<TransRangeSyntax> ranges, Token closeParen) :
+        SyntaxNode(SyntaxKind::TransSet), openParen(openParen), ranges(ranges), closeParen(closeParen)
+    {
+        childCount += 3;
+    }
+
+    TransSetSyntax(const TransSetSyntax&) = delete;
+    TransSetSyntax& operator=(const TransSetSyntax&) = delete;
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch (index) {
+            case 0: return openParen;
+            case 1: return &ranges;
+            case 2: return closeParen;
+            default: return nullptr;
+        }
+    }
+};
+
+struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
+    SeparatedSyntaxList<TransSetSyntax> sets;
+    WithClauseSyntax* withClause;
+
+    TransListCoverageBinInitializerSyntax(SeparatedSyntaxList<TransSetSyntax> sets, WithClauseSyntax* withClause) :
+        CoverageBinInitializerSyntax(SyntaxKind::TransListCoverageBinInitializer), sets(sets), withClause(withClause)
+    {
+        childCount += 2;
+    }
+
+    TransListCoverageBinInitializerSyntax(const TransListCoverageBinInitializerSyntax&) = delete;
+    TransListCoverageBinInitializerSyntax& operator=(const TransListCoverageBinInitializerSyntax&) = delete;
+
+protected:
+    TokenOrSyntax getChild(uint32_t index) const override final {
+        switch (index) {
+            case 0: return &sets;
+            case 1: return withClause;
+            default: return nullptr;
+        }
+    }
+};
+
 struct IffClauseSyntax : public SyntaxNode {
     Token iff;
     Token openParen;
@@ -6863,6 +6961,10 @@ public:
     DefaultCoverageBinInitializerSyntax& defaultCoverageBinInitializer(Token defaultKeyword, Token sequenceKeyword);
     ExpressionCoverageBinInitializerSyntax& expressionCoverageBinInitializer(ExpressionSyntax& expr, WithClauseSyntax* withClause);
     RangeCoverageBinInitializerSyntax& rangeCoverageBinInitializer(OpenRangeListSyntax& ranges, WithClauseSyntax* withClause);
+    TransRepeatRangeSyntax& transRepeatRange(Token openBracket, Token specifier, SelectorSyntax* selector, Token closeBracket);
+    TransRangeSyntax& transRange(SeparatedSyntaxList<ExpressionSyntax> items, TransRepeatRangeSyntax* repeat);
+    TransSetSyntax& transSet(Token openParen, SeparatedSyntaxList<TransRangeSyntax> ranges, Token closeParen);
+    TransListCoverageBinInitializerSyntax& transListCoverageBinInitializer(SeparatedSyntaxList<TransSetSyntax> sets, WithClauseSyntax* withClause);
     IffClauseSyntax& iffClause(Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen);
     CoverageBinsSyntax& coverageBins(SyntaxList<AttributeInstanceSyntax> attributes, Token wildcard, Token keyword, Token name, ElementSelectSyntax* selector, Token equals, CoverageBinInitializerSyntax& initializer, IffClauseSyntax* iff, Token semi);
     CompilationUnitSyntax& compilationUnit(SyntaxList<MemberSyntax> members, Token endOfFile);
@@ -7261,6 +7363,10 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::DefaultCoverageBinInitializer: SyntaxNode::dispatch(v, *(const DefaultCoverageBinInitializerSyntax*)node); break;
         case SyntaxKind::ExpressionCoverageBinInitializer: SyntaxNode::dispatch(v, *(const ExpressionCoverageBinInitializerSyntax*)node); break;
         case SyntaxKind::RangeCoverageBinInitializer: SyntaxNode::dispatch(v, *(const RangeCoverageBinInitializerSyntax*)node); break;
+        case SyntaxKind::TransRepeatRange: SyntaxNode::dispatch(v, *(const TransRepeatRangeSyntax*)node); break;
+        case SyntaxKind::TransRange: SyntaxNode::dispatch(v, *(const TransRangeSyntax*)node); break;
+        case SyntaxKind::TransSet: SyntaxNode::dispatch(v, *(const TransSetSyntax*)node); break;
+        case SyntaxKind::TransListCoverageBinInitializer: SyntaxNode::dispatch(v, *(const TransListCoverageBinInitializerSyntax*)node); break;
         case SyntaxKind::IffClause: SyntaxNode::dispatch(v, *(const IffClauseSyntax*)node); break;
         case SyntaxKind::CoverageBins: SyntaxNode::dispatch(v, *(const CoverageBinsSyntax*)node); break;
         case SyntaxKind::CompilationUnit: SyntaxNode::dispatch(v, *(const CompilationUnitSyntax*)node); break;

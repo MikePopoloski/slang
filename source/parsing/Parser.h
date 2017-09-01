@@ -162,6 +162,9 @@ private:
     DefParamAssignmentSyntax& parseDefParamAssignment();
     DefParamSyntax& parseDefParam(ArrayRef<AttributeInstanceSyntax*> attributes);
     ExpressionSyntax& parseExpressionOrDist();
+    TransRangeSyntax& parseTransRange();
+    TransSetSyntax& parseTransSet();
+    TransListCoverageBinInitializerSyntax& parseTransListInitializer();
 
     bool isPortDeclaration();
     bool isNetDeclaration();
@@ -221,6 +224,8 @@ private:
 
     template<bool(*IsEnd)(TokenKind)>
     bool scanTypePart(int& index, TokenKind start, TokenKind end);
+
+    SyntaxFactory factory;
 
     // Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;

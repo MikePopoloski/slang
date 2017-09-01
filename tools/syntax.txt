@@ -1401,6 +1401,25 @@ RangeCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=RangeCo
 OpenRangeListSyntax ranges
 WithClauseSyntax? withClause
 
+TransRepeatRangeSyntax kind=TransRepeatRange
+token openBracket
+token specifier
+SelectorSyntax? selector
+token closeBracket
+
+TransRangeSyntax kind=TransRange
+separated_list<ExpressionSyntax> items
+TransRepeatRangeSyntax? repeat
+
+TransSetSyntax kind=TransSet
+token openParen
+separated_list<TransRangeSyntax> ranges
+token closeParen
+
+TransListCoverageBinInitializerSyntax base=CoverageBinInitializerSyntax kind=TransListCoverageBinInitializer
+separated_list<TransSetSyntax> sets
+WithClauseSyntax? withClause
+
 IffClauseSyntax kind=IffClause
 token iff
 token openParen

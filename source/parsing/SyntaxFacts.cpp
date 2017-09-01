@@ -800,6 +800,19 @@ bool isEndOfParameterList(TokenKind kind) {
     return kind == TokenKind::CloseParenthesis || kind == TokenKind::OpenParenthesis || kind == TokenKind::Semicolon;
 }
 
+bool isEndOfTransSet(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Semicolon:
+        case TokenKind::CloseParenthesis:
+        case TokenKind::BinsKeyword:
+        case TokenKind::IllegalBinsKeyword:
+        case TokenKind::IgnoreBinsKeyword:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool isNotInType(TokenKind kind) {
     switch (kind) {
         case TokenKind::Semicolon:
@@ -840,7 +853,7 @@ bool isNotInParameterList(TokenKind kind) {
 }
 
 bool isPossiblePropertyPortItem(TokenKind kind) {
-    switch(kind) {
+    switch (kind) {
         case TokenKind::OpenParenthesisStar:
         case TokenKind::LocalKeyword:
         case TokenKind::PropertyKeyword:
@@ -849,6 +862,18 @@ bool isPossiblePropertyPortItem(TokenKind kind) {
             return true;
         default:
             return isPossibleDataType(kind);
+    }
+}
+
+bool isPossibleTransSet(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenParenthesis:
+        case TokenKind::Comma:
+        case TokenKind::EqualsArrow:
+        case TokenKind::OpenBracket:
+            return true;
+        default:
+            return isPossibleExpression(kind);
     }
 }
 

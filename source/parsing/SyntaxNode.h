@@ -457,9 +457,13 @@ enum class SyntaxKind : uint16_t {
     CovergroupDeclaration,
     CoverageOption,
     Coverpoint,
+    TransRepeatRange,
+    TransRange,
+    TransSet,
     DefaultCoverageBinInitializer,
     ExpressionCoverageBinInitializer,
     RangeCoverageBinInitializer,
+    TransListCoverageBinInitializer,
     IffClause,
     CoverageBins,
 
@@ -508,6 +512,7 @@ bool isEndOfCaseItem(TokenKind kind);
 bool isEndOfConditionalPredicate(TokenKind kind);
 bool isEndOfAttribute(TokenKind kind);
 bool isEndOfParameterList(TokenKind kind);
+bool isEndOfTransSet(TokenKind kind);
 bool isNotInType(TokenKind kind);
 bool isNotInPortReference(TokenKind kind);
 bool isNotInConcatenationExpr(TokenKind kind);
@@ -520,6 +525,7 @@ bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);
 bool isPossibleVectorDigit(TokenKind kind);
 bool isPossibleLetPortItem(TokenKind kind);
+bool isPossibleTransSet(TokenKind kind);
 bool isBeforeOrSemicolon(TokenKind kind);
 bool isStatement(SyntaxKind kind);
 bool isExpression(SyntaxKind kind);

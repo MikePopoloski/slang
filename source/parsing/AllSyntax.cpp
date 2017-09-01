@@ -903,6 +903,22 @@ RangeCoverageBinInitializerSyntax& SyntaxFactory::rangeCoverageBinInitializer(Op
     return *alloc.emplace<RangeCoverageBinInitializerSyntax>(ranges, withClause);
 }
 
+TransRepeatRangeSyntax& SyntaxFactory::transRepeatRange(Token openBracket, Token specifier, SelectorSyntax* selector, Token closeBracket) {
+    return *alloc.emplace<TransRepeatRangeSyntax>(openBracket, specifier, selector, closeBracket);
+}
+
+TransRangeSyntax& SyntaxFactory::transRange(SeparatedSyntaxList<ExpressionSyntax> items, TransRepeatRangeSyntax* repeat) {
+    return *alloc.emplace<TransRangeSyntax>(items, repeat);
+}
+
+TransSetSyntax& SyntaxFactory::transSet(Token openParen, SeparatedSyntaxList<TransRangeSyntax> ranges, Token closeParen) {
+    return *alloc.emplace<TransSetSyntax>(openParen, ranges, closeParen);
+}
+
+TransListCoverageBinInitializerSyntax& SyntaxFactory::transListCoverageBinInitializer(SeparatedSyntaxList<TransSetSyntax> sets, WithClauseSyntax* withClause) {
+    return *alloc.emplace<TransListCoverageBinInitializerSyntax>(sets, withClause);
+}
+
 IffClauseSyntax& SyntaxFactory::iffClause(Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) {
     return *alloc.emplace<IffClauseSyntax>(iff, openParen, expr, closeParen);
 }
