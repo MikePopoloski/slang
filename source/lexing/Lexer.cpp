@@ -207,7 +207,7 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
         return lexIncludeFileName();
 
     auto info = alloc.emplace<Token::Info>();
-    SmallVectorSized<Trivia, 8> triviaBuffer;
+    SmallVectorSized<Trivia, 32> triviaBuffer;
     bool directiveMode = mode == LexerMode::Directive;
 
     // Lex any leading trivia; if we're in directive mode this might require

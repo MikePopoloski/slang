@@ -321,14 +321,14 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
     // consume all remaining tokens as macro text
     bool needEod = false;
-    SmallVectorSized<Token, 32> body;
+    scratchTokenBuffer.clear();
     while (!peek(TokenKind::EndOfDirective)) {
         // In SystemVerilog macros can actually contain other directives, such as ifdef. We
         // therefore have to keep track of where EndOfDirective tokens need to be so that
         // when the macro gets expanded they parse correctly.
         Token t = peek();
         if (needEod && (t.hasTrivia(TriviaKind::EndOfLine) || t.hasTrivia(TriviaKind::LineContinuation))) {
-            body.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
+            scratchTokenBuffer.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
             needEod = false;
         }
 
@@ -345,18 +345,18 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
                     break;
             }
         }
-        body.append(consume());
+        scratchTokenBuffer.append(consume());
     }
     inMacroBody = false;
 
     if (needEod)
-        body.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
+        scratchTokenBuffer.append(Token(TokenKind::EndOfDirective, alloc.emplace<Token::Info>()));
 
     auto result = alloc.emplace<DefineDirectiveSyntax>(
         directive,
         name,
         formalArguments,
-        body.copy(alloc),
+        scratchTokenBuffer.copy(alloc),
         consume()
     );
 
@@ -434,7 +434,7 @@ bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf, 
 
 Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool taken) {
     auto eod = parseEndOfDirective();
-    SmallVectorSized<Token, 32> skipped;
+    scratchTokenBuffer.clear();
     if (!taken) {
         // skip over everything until we find another conditional compilation directive
         while (true) {
@@ -449,7 +449,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
                     // we still need to handle line continuations correctly for macro defines
                     case SyntaxKind::DefineDirective:
                         do {
-                            skipped.append(token);
+                            scratchTokenBuffer.append(token);
                             token = nextRaw(LexerMode::Directive);
                         } while (token.kind != TokenKind::EndOfDirective);
                         break;
@@ -471,7 +471,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
                 currentToken = token;
                 break;
             }
-            skipped.append(token);
+            scratchTokenBuffer.append(token);
         }
     }
 
@@ -482,7 +482,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
             directive,
             condition,
             eod,
-            skipped.copy(alloc)
+            scratchTokenBuffer.copy(alloc)
         );
     }
     else {
@@ -490,7 +490,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
             directive.directiveKind(),
             directive,
             eod,
-            skipped.copy(alloc)
+            scratchTokenBuffer.copy(alloc)
         );
     }
     return Trivia(TriviaKind::Directive, syntax);

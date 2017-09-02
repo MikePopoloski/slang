@@ -222,6 +222,9 @@ private:
     // `begin_keywords, popped to by `end_keywords
     std::vector<KeywordVersion> keywordVersionStack;
 
+    // A buffer used to hold tokens while we're busy consuming them for directives.
+    SmallVectorSized<Token, 16> scratchTokenBuffer;
+
     // maximum number of nested includes
     static constexpr int MaxIncludeDepth = 1024;
 };
