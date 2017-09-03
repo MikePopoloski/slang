@@ -260,26 +260,22 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     bool suppressEODError = false;
     if (fileName.kind != TokenKind::IncludeFileName) {
         suppressEODError = true;
+
         // A raw include file name will always yield a IncludeFileName token.
-        // a (valid) macro-expanded include filename will be lexed as either
+        // A (valid) macro-expanded include filename will be lexed as either
         // a StringLiteral or the token sequence '<' ... '>'
-        bool angleBrackets = false;
         if (fileName.kind == TokenKind::LessThan) {
-            angleBrackets = true;
             // In this case, we know that the first token is LessThan, and
             // if things are proper, the last token is >, but there can be an
             // arbitrary number of tokens that the macro expanded to in-between
             // (as file names have no restrictions like identifiers do)
             // so let us now concatenate all of the tokens from the macro expansion
-            // up to the '>'' in order to get the file name
+            // up to the '>'' in order to get the file name.
             SourceLocation rootExpansionLoc = sourceManager.getExpansionLoc(fileName.location());
             SmallVectorSized<Token, 8> tokens;
             tokens.append(fileName);
             Token nextToken = peek();
             while (nextToken.kind != TokenKind::GreaterThan) {
-                // TODO: we should probably stop at something like a >>, >>= token,
-                // but behavior when reaching those tokens is likely to be destructive either way
-                // unless you have some crazy filenames you want to include
                 if (sourceManager.getExpansionLoc(nextToken.location()) != rootExpansionLoc) {
                     addError(DiagCode::ExpectedIncludeFileName, fileName.location());
                     break;
@@ -289,38 +285,42 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                 nextToken = peek();
                 if (nextToken.kind == TokenKind::GreaterThan) {
                     tokens.append(nextToken);
-                    // do stringification
-                    fileName = Lexer::stringify(alloc, fileName.location(), fileName.getInfo()->trivia,
-                        tokens.begin(), tokens.end(), true);
+                    fileName = Lexer::stringify(alloc, fileName.location(), fileName.trivia(),
+                                                tokens.begin(), tokens.end(), true);
                     fileName.kind = TokenKind::IncludeFileName;
                 }
             }
-        } else if (fileName.kind == TokenKind::StringLiteral) {
+        }
+        else if (fileName.kind == TokenKind::StringLiteral) {
             uint32_t len = fileName.valueText().length();
             uint8_t* stringBuffer = alloc.allocate(len + 3);
             stringBuffer[0] = '"';
             memcpy(stringBuffer + 1, fileName.valueText().begin(), len);
             stringBuffer[len + 1] = '"';
             stringBuffer[len + 2] = '\0';
-            Token::Info *fileNameInfo = alloc.emplace<Token::Info>(fileName.trivia(),
+
+            auto fileNameInfo = alloc.emplace<Token::Info>(fileName.trivia(),
                 fileName.rawText(), fileName.location(), fileName.getInfo()->flags);
+
             fileNameInfo->extra = StringRef((const char *)stringBuffer, len + 2);
-            fileName = *alloc.emplace<Token>(TokenKind::IncludeFileName, fileNameInfo);
-        } else {
+            fileName = Token(TokenKind::IncludeFileName, fileNameInfo);
+        }
+        else {
             addError(DiagCode::ExpectedIncludeFileName, fileName.location());
         }
     }
+
     Token end = parseEndOfDirective(suppressEODError);
 
     // path should be at least three chars: "a" or <a>
     StringRef path = fileName.valueText();
-
     if (path.length() < 3)
         addError(DiagCode::ExpectedIncludeFileName, fileName.location());
     else {
         // remove delimiters
+        bool isSystem = path[0] == '<';
         path = path.subString(1, path.length() - 2);
-        SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), false);
+        SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), isSystem);
         if (!buffer.id)
             addError(DiagCode::CouldNotOpenIncludeFile, fileName.location());
         else if (lexerStack.size() >= MaxIncludeDepth)
@@ -556,19 +556,23 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
         value = consume();
         unit = expect(TokenKind::Identifier);
         return true;
-    } else if (token.kind == TokenKind::TimeLiteral) {
-        bool success = true;
+    }
+
+    if (token.kind == TokenKind::TimeLiteral) {
         // So long as we are dealing with a time literal, we should consume and
         // output the split tokens, even though those split tokens might be
         // invalid if the data is poorly formated, i.e with a number other than
         // 1,10,100
 
         // get_if necessary to check for the case where there is a double TimeLiteral
-        const SVInt *val = std::get_if<SVInt>(&token.numericValue());
+        bool success = true;
+        SVInt dummy(16, 0, true);
+        const SVInt* val = std::get_if<SVInt>(&token.numericValue());
+
         StringRef numText;
-        if (val == nullptr) {
+        if (!val) {
             // create a dummy value to place in the generated token
-            val = alloc.emplace<SVInt>((uint16_t)16, 0, true);
+            val = &dummy;
             success = false;
         }
         else if (*val == 1) numText = "1";
@@ -584,22 +588,19 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
 
         StringRef timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit());
         Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
-            timeUnitSuffix,
-            token.location() + numText.length(), token.getInfo()->flags);
+            timeUnitSuffix, token.location() + numText.length(), token.getInfo()->flags);
+
         unit = *alloc.emplace<Token>(TokenKind::Identifier, unitInfo);
         unitInfo->extra = IdentifierType::Normal;
 
         consume();
-        if (!success) {
+        if (!success)
             addError(DiagCode::InvalidTimescaleSpecifier, token.location());
-            return false;
-        } else {
-            return true;
-        }
-    } else {
-        value = Token::createExpected(alloc, diagnostics, token, TokenKind::IntegerLiteral, lastConsumed);
-        unit  = Token::createExpected(alloc, diagnostics, token, TokenKind::Identifier, lastConsumed);
+        return success;
     }
+
+    value = Token::createExpected(alloc, diagnostics, token, TokenKind::IntegerLiteral, lastConsumed);
+    unit  = Token::createExpected(alloc, diagnostics, token, TokenKind::Identifier, lastConsumed);
     return false;
 }
 
@@ -616,6 +617,7 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
         TimeUnit unitValue, unitPrecision;
         bool success1 = suffixToTimeUnit(valueUnit.valueText(), unitValue);
         bool success2 = suffixToTimeUnit(precisionUnit.valueText(), unitPrecision);
+
         // both unit and precision must have valid units, and
         // the precision must be at least as precise as the value.
         // larger values of TimeUnit are more precise than smaller values
@@ -625,7 +627,8 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
             addError(DiagCode::InvalidTimescaleSpecifier, directive.location());
         }
     }
-    auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash, precision, precisionUnit, eod);
+    auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash,
+                                                             precision, precisionUnit, eod);
     return Trivia(TriviaKind::Directive, timescale);
 }
 
@@ -633,19 +636,25 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
     Token lineNumber = expect(TokenKind::IntegerLiteral);
     Token fileName = expect(TokenKind::StringLiteral);
     Token level = expect(TokenKind::IntegerLiteral);
-    const SVInt& levNum = std::get<SVInt>(level.numericValue());
-    if (!(levNum == 0 || levNum == 1 || levNum == 2)) {
-        // We don't actually use the level for anything, but the spec allows
-        // only the values 0,1,2
-        addError(DiagCode::InvalidLineDirectiveLevel, level.location());
-    }
-    auto result = alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName, level, parseEndOfDirective());
-    if (!(lineNumber.isMissing() || fileName.isMissing() || level.isMissing())) {
-        // We should only notify the source manager about the line directive if it
-        // is well formed, to avoid very strange line number issues
-        sourceManager.addLineDirective(directive.location(),
-            std::get<SVInt>(lineNumber.numericValue()).getAssertUInt32(),
-            fileName.valueText(), (uint8_t)levNum.getAssertUInt16());
+
+    auto result = alloc.emplace<LineDirectiveSyntax>(directive, lineNumber, fileName,
+                                                     level, parseEndOfDirective());
+
+    if (!lineNumber.isMissing() && !fileName.isMissing() && !level.isMissing()) {
+        std::optional<uint8_t> levNum = std::get<SVInt>(level.numericValue()).as<uint8_t>();
+        std::optional<uint32_t> lineNum = std::get<SVInt>(lineNumber.numericValue()).as<uint32_t>();
+
+        if (!levNum || (levNum != 0 && levNum != 1 && levNum != 2)) {
+            // We don't actually use the level for anything, but the spec allows
+            // only the values 0,1,2
+            addError(DiagCode::InvalidLineDirectiveLevel, level.location());
+        }
+        else if (lineNum) {
+            // We should only notify the source manager about the line directive if it
+            // is well formed, to avoid very strange line number issues.
+            sourceManager.addLineDirective(directive.location(),
+                *lineNum, fileName.valueText(), *levNum);
+        }
     }
     return Trivia(TriviaKind::Directive, result);
 }
@@ -710,26 +719,13 @@ Trivia Preprocessor::handleUndefineAllDirective(Token directive) {
 Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
     Token versionToken = expect(TokenKind::StringLiteral);
     if (!versionToken.isMissing()) {
-        StringRef verStr = versionToken.valueText();
-        if (verStr == "1364-1995")
-            keywordVersionStack.push_back(KeywordVersion::v1364_1995);
-        else if (verStr == "1364-2001-noconfig")
-            keywordVersionStack.push_back(KeywordVersion::v1364_2001_noconfig);
-        else if (verStr == "1364-2001")
-            keywordVersionStack.push_back(KeywordVersion::v1364_2001);
-        else if (verStr == "1364-2005")
-            keywordVersionStack.push_back(KeywordVersion::v1364_2005);
-        else if (verStr == "1800-2005")
-            keywordVersionStack.push_back(KeywordVersion::v1800_2005);
-        else if (verStr == "1800-2009")
-            keywordVersionStack.push_back(KeywordVersion::v1800_2009);
-        else if (verStr == "1800-2012")
-            keywordVersionStack.push_back(KeywordVersion::v1800_2012);
-        else {
-            // An error will already have been added if the version is missing
+        auto versionOpt = getKeywordVersion(versionToken.valueText());
+        if (!versionOpt)
             addError(DiagCode::UnrecognizedKeywordVersion, versionToken.location());
-        }
+        else
+            keywordVersionStack.push_back(*versionOpt);
     }
+
     auto result = alloc.emplace<BeginKeywordsDirectiveSyntax>(directive, versionToken, parseEndOfDirective());
     return Trivia(TriviaKind::Directive, result);
 }
@@ -767,7 +763,9 @@ Token Preprocessor::parseEndOfDirective(bool suppressError) {
 }
 
 Trivia Preprocessor::createSimpleDirective(Token directive, bool suppressError) {
-    DirectiveSyntax* syntax = alloc.emplace<SimpleDirectiveSyntax>(directive.directiveKind(), directive, parseEndOfDirective(suppressError));
+    DirectiveSyntax* syntax = alloc.emplace<SimpleDirectiveSyntax>(
+        directive.directiveKind(), directive, parseEndOfDirective(suppressError));
+
     return Trivia(TriviaKind::Directive, syntax);
 }
 
@@ -1231,11 +1229,10 @@ MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
 
 MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     Token arg = peek();
-    if (arg.kind == TokenKind::Identifier || isKeyword(arg.kind)) {
+    if (arg.kind == TokenKind::Identifier || isKeyword(arg.kind))
         consume();
-    } else {
+    else
         arg = expect(TokenKind::Identifier);
-    }
 
     MacroArgumentDefaultSyntax* argDef = nullptr;
     if (peek(TokenKind::Equals)) {

@@ -37,8 +37,17 @@ const static StringTable<SyntaxKind> directiveTable = {
     { "undefineall", SyntaxKind::UndefineAllDirective }
 };
 
-// Lists of keywords, separated by which specification they were first introduced
-// in
+const static StringTable<KeywordVersion> keywordVersionTable = {
+    { "1364-1995", KeywordVersion::v1364_1995 },
+    { "1364-2001-noconfig", KeywordVersion::v1364_2001_noconfig },
+    { "1364-2001", KeywordVersion::v1364_2001 },
+    { "1364-2005", KeywordVersion::v1364_2005 },
+    { "1800-2005", KeywordVersion::v1800_2005 },
+    { "1800-2009", KeywordVersion::v1800_2009 },
+    { "1800-2012", KeywordVersion::v1800_2012 }
+};
+
+// Lists of keywords, separated by the specification in which they were first introduced
 #define KEYWORDS_1364_1995 \
     { "always", TokenKind::AlwaysKeyword },\
     { "and", TokenKind::AndKeyword },\
@@ -611,6 +620,13 @@ SyntaxKind getDirectiveKind(StringRef directive) {
     if (directiveTable.lookup(directive, kind))
         return kind;
     return SyntaxKind::MacroUsage;
+}
+
+std::optional<KeywordVersion> getKeywordVersion(StringRef text) {
+    KeywordVersion version;
+    if (keywordVersionTable.lookup(text, version))
+        return version;
+    return std::nullopt;
 }
 
 const StringTable<TokenKind>* getKeywordTable(KeywordVersion version) {

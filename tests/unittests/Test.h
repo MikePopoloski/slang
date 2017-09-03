@@ -30,8 +30,10 @@ inline std::string findTestDir() {
 inline SourceManager& getSourceManager() {
     static SourceManager* sourceManager = nullptr;
     if (!sourceManager) {
+        auto testDir = findTestDir();
         sourceManager = new SourceManager();
-        sourceManager->addUserDirectory(StringRef(findTestDir()));
+        sourceManager->addUserDirectory(StringRef(testDir));
+        sourceManager->addSystemDirectory(StringRef(testDir));
     }
     return *sourceManager;
 }

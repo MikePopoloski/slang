@@ -187,9 +187,6 @@ private:
     const Info* info;
 };
 
-TokenKind getSystemKeywordKind(StringRef text);
-StringRef getTokenKindText(TokenKind kind);
-
 /// Different restricted sets of keywords that can be set using the
 /// `begin_keywords directive. The values of the enum correspond to indexes to
 /// allKeywords[] in LexerFacts.cpp
@@ -203,6 +200,9 @@ enum class KeywordVersion : uint8_t {
     v1800_2012 = 6,
 };
 
+TokenKind getSystemKeywordKind(StringRef text);
+StringRef getTokenKindText(TokenKind kind);
+std::optional<KeywordVersion> getKeywordVersion(StringRef text);
 const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 
 /// This checks all keywords, regardless of the current keyword table.  Should

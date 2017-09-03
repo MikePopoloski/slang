@@ -43,6 +43,8 @@ struct SourceBuffer {
 class SourceManager {
 public:
     SourceManager();
+    SourceManager(const SourceManager&) = delete;
+    SourceManager& operator=(const SourceManager&) = delete;
 
     /// Convert the given relative path into an absolute path.
     std::string makeAbsolutePath(StringRef path) const;
