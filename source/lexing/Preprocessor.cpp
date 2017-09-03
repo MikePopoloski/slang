@@ -172,8 +172,7 @@ Token Preprocessor::handlePossibleConcatenation(LexerMode mode, Token left, Toke
         lookaheadToken = Token();
         right = handleDirectives(mode, right);
 
-        bool error;
-        Token result = Lexer::concatenateTokens(alloc, left, right, error);
+        Token result = Lexer::concatenateTokens(alloc, left, right);
         if (!result) {
             // Failed to concatenate; put the token back and deal with it later.
             lookaheadToken = right;
@@ -830,59 +829,39 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                     stringify = token;
                 else {
                     // all done stringifying; convert saved tokens to string
-                    newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(), buffer.begin(), buffer.end());
-                    if (!newToken) {
-                        // TODO: error
-                    }
+                    newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
+                                                buffer.begin(), buffer.end());
                     stringify = Token();
-                }
-                break;
-            case TokenKind::MacroEscapedQuote:
-                if (!stringify) {
-                    // TODO: error
-                }
-                else {
-                    // plop this into our stringify buffer; we'll handle it later
-                    newToken = token;
                 }
                 break;
             case TokenKind::MacroPaste:
                 // Paste together previous token and next token; a macro paste on either end
                 // of the buffer or one that borders whitespace should be ignored.
                 // This isn't specified in the standard so I'm just guessing.
-                if (i == 0 || i == tokens.count() - 1 || !token.trivia().empty() || !tokens[i+1].trivia().empty()) {
-                    // TODO: warning?
+                if (i == 0 || i == tokens.count() - 1 || !token.trivia().empty() ||
+                    !tokens[i + 1].trivia().empty()) {
+
+                    addError(DiagCode::IgnoredMacroPaste, token.location());
                 }
                 else if (stringify) {
                     // if this is right after the opening quote or right before the closing quote, we're
                     // trying to concatenate something with nothing, so assume an error
-                    if (buffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote) {
-                        // TODO: error
-                    }
+                    if (buffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
+                        addError(DiagCode::IgnoredMacroPaste, token.location());
                     else {
-                        bool error;
-                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[i+1], error);
+                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[i + 1]);
                         if (newToken) {
                             buffer.pop();
                             ++i;
                         }
-                        else if (error) {
-                            // TODO: handle error cases
-                        }
-                        // else: just discard the MacroPaste
                     }
                 }
                 else {
-                    bool error;
-                    newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[i+1], error);
+                    newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[i + 1]);
                     if (newToken) {
                         expandedTokens.pop();
                         ++i;
                     }
-                    else if (error) {
-                        // TODO: handle error cases
-                    }
-                    // else: just discard the MacroPaste
                 }
                 break;
             default:
@@ -1041,8 +1020,7 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
 
         // If our usageSite had no whitespace, we should concatenate with whatever was previously in the buffer.
         if (usageSite.trivia().empty() && !dest.empty()) {
-            bool error;
-            Token concat = Lexer::concatenateTokens(alloc, dest.back(), token, error);
+            Token concat = Lexer::concatenateTokens(alloc, dest.back(), token);
             if (concat) {
                 dest.back() = concat;
                 return;

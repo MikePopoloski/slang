@@ -58,9 +58,12 @@ public:
     Diagnostics& getDiagnostics() { return diagnostics; }
 
     /// Concatenates two tokens together; used for macro pasting.
-    static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right, bool& error);
+    static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
     /// Converts a range of tokens into a string literal; used for macro stringification.
+    /// The @a location and @a trivia parameters are used in the newly created token.
+    /// The range of tokens to stringify is given by @a begin and @a end.
+    /// If @a noWhitespace is set to true, all whitespace in between tokens will be stripped.
     static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end, bool noWhitespace = false);
 
     // TODO: have this based on some options system or otherwise not just a randomly

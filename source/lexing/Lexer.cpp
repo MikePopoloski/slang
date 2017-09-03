@@ -109,18 +109,15 @@ Lexer::Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnost
     }
 }
 
-Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right, bool& error) {
-    // TODO: think about what we should set the resulting location to be in order to capture expansion info
+Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     auto location = left.location();
     auto trivia = left.trivia();
 
     // if either side is empty, we have an error; the user tried to concatenate some weird kind of token
     auto leftText = left.rawText();
     auto rightText = right.rawText();
-    if (!leftText || !rightText) {
-        error = true;
+    if (!leftText || !rightText)
         return Token();
-    }
 
     // combine the text for both sides; make sure to include room for a null
     uint32_t newLength = leftText.length() + rightText.length() + 1;
@@ -128,45 +125,38 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right, bo
     memcpy(mem, leftText.begin(), leftText.length());
     memcpy(mem + leftText.length(), rightText.begin(), rightText.length());
     mem[newLength - 1] = '\0';
-    StringRef combined{ (char*)mem, newLength };
-
-    // TODO: handle other kinds of errors and invalid combinations
+    StringRef combined { (char*)mem, newLength };
 
     Diagnostics unused;
     Lexer lexer { BufferID(), combined, alloc, unused };
 
     auto token = lexer.lex();
-    if (token.kind == TokenKind::Unknown || !token.rawText()) {
-        error = true;
+    if (token.kind == TokenKind::Unknown || !token.rawText())
         return Token();
-    }
 
     // make sure the next token is an EoF, otherwise the tokens were unable to
     // be combined and should be left alone
-    if (lexer.lex().kind != TokenKind::EndOfFile) {
-        error = false;
+    if (lexer.lex().kind != TokenKind::EndOfFile)
         return Token();
-    }
 
     auto info = alloc.emplace<Token::Info>(*token.getInfo());
     info->location = location;
     info->trivia = trivia;
-
-    error = false;
     return Token(token.kind, info);
 }
 
-Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end, bool noWhitespace) {
+Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia,
+                       Token* begin, Token* end, bool noWhitespace) {
     SmallVectorSized<char, 64> text;
     text.append('"');
 
     while (begin != end) {
         Token cur = *begin;
-        // make sure to use all the whitespace
-        if (!noWhitespace && cur.hasTrivia(TriviaKind::Whitespace)) {
+
+        if (!noWhitespace) {
             for (const Trivia& t : cur.trivia()) {
                 if (t.kind == TriviaKind::Whitespace)
-                    text.appendRange(t.getRawWhitespace());
+                    text.appendRange(t.getRawText());
             }
         }
 
@@ -188,12 +178,8 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<T
     Lexer lexer { BufferID(), raw, alloc, unused };
 
     auto token = lexer.lex();
-    if (token.kind != TokenKind::StringLiteral)
-        return Token();
-
-    // make sure the next token is an EoF, otherwise there is junk left in the buffer
-    if (lexer.lex().kind != TokenKind::EndOfFile)
-        return Token();
+    ASSERT(token.kind == TokenKind::StringLiteral);
+    ASSERT(lexer.lex().kind == TokenKind::EndOfFile);
 
     auto info = alloc.emplace<Token::Info>(*token.getInfo());
     info->location = location;

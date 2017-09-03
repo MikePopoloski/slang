@@ -225,7 +225,7 @@ TEST_CASE("Macro pasting (whitespace)", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "a");
-    CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(diagnostics.count() == 1);
 }
 
 TEST_CASE("Macro stringify", "[preprocessor]") {

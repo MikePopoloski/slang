@@ -75,6 +75,8 @@ enum class DiagCode : uint8_t {
     UnrecognizedKeywordVersion,
     MismatchedEndKeywordsDirective,
     InvalidTimescaleSpecifier,
+    IgnoredMacroPaste,
+    SpuriousMacroToken,
 
     // parser
     ExpectedIdentifier,
