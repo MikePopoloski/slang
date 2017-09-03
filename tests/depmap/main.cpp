@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #if defined(_WIN32)
@@ -49,7 +50,10 @@ void findVerilogFiles(const string& path, vector<string>& results) {
 #else
     DIR* d;
     struct dirent* dir;
-    string base = string(path) + "/";
+    string base = path;
+    if (base.back() != '/')
+        base += '/';
+
     d = opendir(base.c_str());
     if (d) {
         while ((dir = readdir(d))) {
@@ -81,29 +85,46 @@ public:
         currentFile = StringRef(path);
         SyntaxTree tree = SyntaxTree::fromFile(currentFile, sourceManager);
         visitNode(&tree.root());
-        printf("%s", tree.reportDiagnostics().c_str());
 
+        //printf("%s", tree.reportDiagnostics().c_str());
         //printf("%s", tree.root().toString(SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia).c_str());
     }
 
     void visit(const ModuleHeaderSyntax& header) {
-        //if (!declToFile.try_emplace(header.name.valueText(), currentFile).second)
-            //printf("Duplicate declaration: %s\n", header.name.valueText().toString().c_str());
+        StringRef name = header.name.valueText();
+        if (name) {
+            auto pair = declToFile.try_emplace(name, currentFile);
+            if (!pair.second) {
+                printf("Duplicate declaration: %s (%s, %s)\n",
+                       name.toString().c_str(), currentFile.toString().c_str(),
+                       pair.first->second.toString().c_str());
+            }
+        }
     }
 
     void visit(const HierarchyInstantiationSyntax& instantiation) {
-        fileToDeps.emplace(currentFile, instantiation.type.valueText());
+        StringRef name = instantiation.type.valueText();
+        if (name)
+            fileToDeps[currentFile].insert(name);
     }
 
-    // void visit(const ScopedNameSyntax& scopedName) {
-    //     if (scopedName.separator.kind == TokenKind::DoubleColon) {
-
-    //         printf("Package ref: %s\n", scopedName.left.toString().c_str());
-    //     }
-    // }
-
     void visit(const PackageImportItemSyntax& packageImport) {
-        fileToDeps.emplace(currentFile, packageImport.package.valueText());
+        StringRef name = packageImport.package.valueText();
+        if (name)
+            fileToDeps[currentFile].insert(name);
+    }
+
+    void printDeps() {
+        for (const auto& fileAndSet : fileToDeps) {
+            StringRef file = fileAndSet.first;
+            for (const auto& dep : fileAndSet.second) {
+                auto it = declToFile.find(dep);
+                if (it == declToFile.end())
+                    printf("Couldn't find decl: %s\n", dep.toString().c_str());
+                else if (it->second != file)
+                    printf("%s: %s\n", file.toString().c_str(), it->second.toString().c_str());
+            }
+        }
     }
 
 private:
@@ -114,7 +135,7 @@ private:
     unordered_map<StringRef, StringRef> declToFile;
 
     // Map from file to a dependency (via a module instantiation or package reference).
-    unordered_multimap<StringRef, StringRef> fileToDeps;
+    unordered_map<StringRef, unordered_set<StringRef>> fileToDeps;
 };
 
 int main(int argc, char* argv[]) {
@@ -146,4 +167,6 @@ int main(int argc, char* argv[]) {
     // package definitions.
     for (const string& path : verilogFiles)
         mapper.parseFile(path);
+
+    mapper.printDeps();
 }
