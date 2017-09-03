@@ -246,6 +246,33 @@ TEST_CASE("Macro stringify whitespace", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Macro define with missing paren", "[preprocessor]") {
+    auto& text = "`define FOO(asdf asdfasdf";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    REQUIRE(diagnostics.count() == 1);
+    CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
+}
+
+TEST_CASE("Macro default with missing paren", "[preprocessor]") {
+    auto& text = "`define FOO(asdf= asdfasdf";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    REQUIRE(diagnostics.count() == 1);
+    CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
+}
+
+TEST_CASE("Macro usage with missing paren", "[preprocessor]") {
+    auto& text = "`define FOO(asdf)\n`FOO(lkj ";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    REQUIRE(diagnostics.count() == 1);
+    CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
+}
+
 TEST_CASE("Macro deferred define", "[preprocessor]") {
     auto& text = R"(
 `define DEFIF_DEFNOT(d, a) \

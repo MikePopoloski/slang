@@ -1211,13 +1211,12 @@ void Preprocessor::MacroParser::parseArgumentList(SmallVector<TokenOrSyntax>& bu
     while (true) {
         buffer.append(parseItem());
 
-        auto kind = peek().kind;
-        if (kind == TokenKind::CloseParenthesis)
-            break;
-        else if (kind == TokenKind::Comma)
+        if (peek().kind == TokenKind::Comma)
             buffer.append(consume());
         else {
-            // TODO: skipped tokens
+            // Just break out of the loop. Our caller will expect
+            // that there is a closing parenthesis here.
+            break;
         }
     }
 }
@@ -1251,13 +1250,9 @@ ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
     SmallVectorSized<TokenKind, 16> delimPairStack;
     while (true) {
         auto kind = peek().kind;
-        // TODO: EndOfFile as well?
-        if (kind == TokenKind::EndOfDirective) {
-            if (delimPairStack.empty())
-                pp.addError(DiagCode::ExpectedEndOfMacroArgs, peek().location());
-            else
+        if (kind == TokenKind::EndOfDirective || kind == TokenKind::EndOfFile) {
+            if (!delimPairStack.empty())
                 pp.addError(DiagCode::UnbalancedMacroArgDims, peek().location()) << getTokenKindText(delimPairStack.back());
-            delimPairStack.clear();
             break;
         }
 
