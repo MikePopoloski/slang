@@ -41,6 +41,29 @@ public:
     void pushSource(StringRef source);
     void pushSource(SourceBuffer buffer);
 
+    /// Predefines the given macro definition. The given definition string is lexed
+    /// as if it were source text immediately following a `define directive.
+    /// If any diagnostics are printed for the created text, they will be marked
+    /// as coming from @a fileName.
+    void predefine(StringRef definition, StringRef fileName = "<api>");
+
+    /// Undefines a previously defined macro. If the macro is not defined, or
+    /// if you pass the name of an intrinsic macro, this call returns false and
+    /// does not undefine anything.
+    bool undefine(StringRef name);
+
+    /// Undefines all currently defined macros.
+    void undefineAll();
+
+    /// Checks whether the given macro is defined. This does not check built-in
+    /// directives except for the intrinsic macros (__LINE__, etc).
+    bool isDefined(StringRef name);
+
+    /// Sets the base keyword version for the current compilation unit. Note that this does not
+    /// affect the keyword version if the user has explicitly requested a different
+    /// version via the begin_keywords directive.
+    void setKeywordVersion(KeywordVersion version);
+
     /// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
 

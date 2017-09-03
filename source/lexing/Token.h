@@ -192,7 +192,7 @@ StringRef getTokenKindText(TokenKind kind);
 
 /// Different restricted sets of keywords that can be set using the
 /// `begin_keywords directive. The values of the enum correspond to indexes to
-/// allKeyword[] in LexerFacts.cpp
+/// allKeywords[] in LexerFacts.cpp
 enum class KeywordVersion : uint8_t {
     v1364_1995 = 0,
     v1364_2001_noconfig = 1,

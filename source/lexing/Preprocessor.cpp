@@ -21,8 +21,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, D
     diagnostics(diagnostics)
 {
     keywordVersionStack.push_back(KeywordVersion::v1800_2012);
-    macros["__FILE__"] = MacroIntrinsic::File;
-    macros["__LINE__"] = MacroIntrinsic::Line;
+    undefineAll();
 }
 
 void Preprocessor::pushSource(StringRef source) {
@@ -36,6 +35,48 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
 
     auto lexer = alloc.emplace<Lexer>(buffer, alloc, diagnostics);
     lexerStack.push_back(lexer);
+}
+
+void Preprocessor::predefine(StringRef definition, StringRef fileName) {
+    std::string text = "`define " + definition.toString() + "\n";
+
+    Preprocessor pp(sourceManager, alloc, diagnostics);
+    pp.pushSource(sourceManager.assignText(fileName, StringRef(text)));
+    pp.undefineAll();
+
+    // Consume all of the definition text.
+    while (pp.next().kind != TokenKind::EndOfFile) {}
+
+    // Look for the macro in the temporary preprocessor's macro map.
+    // Any macros found that are not the built-in intrinsic macros should
+    // be copied over to our own map.
+    for (const auto& pair : pp.macros) {
+        if (!pair.second.isIntrinsic())
+            macros.insert(pair);
+    }
+}
+
+bool Preprocessor::undefine(StringRef name) {
+    auto it = macros.find(name);
+    if (it != macros.end() && !it->second.isIntrinsic()) {
+        macros.erase(it);
+        return true;
+    }
+    return false;
+}
+
+void Preprocessor::undefineAll() {
+    macros.clear();
+    macros["__FILE__"] = MacroIntrinsic::File;
+    macros["__LINE__"] = MacroIntrinsic::Line;
+}
+
+bool Preprocessor::isDefined(StringRef name) {
+    return name && macros.find(name) != macros.end();
+}
+
+void Preprocessor::setKeywordVersion(KeywordVersion version) {
+    keywordVersionStack[0] = version;
 }
 
 Token Preprocessor::next() {
@@ -662,9 +703,7 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleUndefineAllDirective(Token directive) {
-    macros.clear();
-    macros["__FILE__"] = MacroIntrinsic::File;
-    macros["__LINE__"] = MacroIntrinsic::Line;
+    undefineAll();
     return createSimpleDirective(directive);
 }
 
@@ -696,11 +735,11 @@ Trivia Preprocessor::handleBeginKeywordsDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
-    if (keywordVersionStack.size() == 1) {
+    if (keywordVersionStack.size() == 1)
         addError(DiagCode::MismatchedEndKeywordsDirective, directive.location());
-    } else {
+    else
         keywordVersionStack.pop_back();
-    }
+
     return createSimpleDirective(directive);
 }
 

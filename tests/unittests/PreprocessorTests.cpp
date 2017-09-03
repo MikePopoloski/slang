@@ -361,7 +361,7 @@ TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
     Token token = preprocessor.next();
     REQUIRE(token.kind == TokenKind::IntegerLiteral);
     CHECK(std::get<SVInt>(token.numericValue()) == 189);
-    
+
     token = preprocessor.next();
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK_DIAGNOSTICS_EMPTY;
@@ -700,4 +700,16 @@ TEST_CASE("macro-defined include file", "[preprocessor]") {
     token = lexToken(text4);
 
     CHECK(!diagnostics.empty());
+}
+
+TEST_CASE("Preprocessor API", "[preprocessor]") {
+    Preprocessor pp(getSourceManager(), alloc, diagnostics);
+    CHECK(!pp.isDefined("FOO"));
+    CHECK(pp.isDefined("__LINE__"));
+    CHECK(!pp.undefine("FOO"));
+
+    pp.predefine("FOO");
+    CHECK(pp.isDefined("FOO"));
+    CHECK(pp.undefine("FOO"));
+    CHECK(!pp.isDefined("FOO"));
 }
