@@ -11,11 +11,11 @@ namespace slang {
 static int zero = 0;
 ArrayRef<int> IntegralTypeSymbol::EmptyLowerBound{ &zero, 1 };
 
-bool isDefaultSigned(TokenKind kind) {
+bool isDefaultSigned(TokenKind) {
     return false;
 }
 
-bool TypeSymbol::isMatching(const TypeSymbol& rhs) const {
+bool TypeSymbol::isMatching(const TypeSymbol&) const {
     return true;
 }
 

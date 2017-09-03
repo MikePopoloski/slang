@@ -22,7 +22,7 @@ Token identifier(const std::string& name, ArrayRef<Trivia> trivia) {
 
 class ModuleRewriter : public SyntaxVisitor<ModuleRewriter> {
 public:
-    void registerInstance(const ModuleInstanceSymbol& instance) {
+    void registerInstance(const ModuleInstanceSymbol&) {
         /*instanceToModule[&instance.syntax] = instance.module;
         syntaxToModules[&instance.module.syntax].push_back(instance.module);
         for (auto child : instance.module.members()) {
@@ -123,7 +123,7 @@ public:
     }
 
 private:
-    static string getParamString(const ParameterizedModuleSymbol* module) {
+    static string getParamString(const ParameterizedModuleSymbol*) {
         string result;
         /*for (auto child : module->members()) {
             if (child->kind == SymbolKind::Parameter)

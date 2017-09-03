@@ -64,7 +64,7 @@ public:
         return evaluator.evaluateExpr(bound);
     }
 
-    ConstantValue evalStatement(const StatementSyntax& stmt) {
+    ConstantValue evalStatement(const StatementSyntax&) {
         // TODO:
         return nullptr;
     }

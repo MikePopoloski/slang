@@ -18,17 +18,16 @@ TEST_CASE("Read source", "[files]") {
 TEST_CASE("Read header (absolute)", "[files]") {
     SourceManager manager;
     std::string testPath = manager.makeAbsolutePath(StringRef(getTestInclude()));
-    
+
     // check load failure
     CHECK(!manager.readHeader("X:\\nonsense.txt", SourceLocation(), false));
-    
+
     // successful load
     SourceBuffer buffer = manager.readHeader(StringRef(testPath), SourceLocation(), false);
     REQUIRE(buffer);
     CHECK(!buffer.data.empty());
-    
+
     // next load should be cached
-    BufferID id1 = buffer.id;
     buffer = manager.readHeader(StringRef(testPath), SourceLocation(), false);
     CHECK(!buffer.data.empty());
 }

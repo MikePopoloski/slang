@@ -27,7 +27,7 @@ TEST_CASE("Diagnostic reporting with `line", "[diagnostic]") {
 "`include \"foofile\"\n"
 "ident";
 
-    Token token = lexToken(text);
+    lexToken(text);
     CHECK(diagnostics.count() == 1);
     std::string message = getDiagnostic(0);
     int line, col;

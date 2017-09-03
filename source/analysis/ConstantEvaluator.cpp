@@ -323,7 +323,7 @@ ConstantValue ConstantEvaluator::evaluateSystemCall(SystemFunction func, ArrayRe
                 case SystemFunction::increment: return SVInt(down ? -1 : 1, true);
                 DEFAULT_UNREACHABLE;
             }
-
+            break;
         }
         DEFAULT_UNREACHABLE;
     }

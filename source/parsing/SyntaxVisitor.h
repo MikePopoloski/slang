@@ -35,7 +35,7 @@ public:
 
 private:
     // This is to make things compile if the derived class doesn't provide an implementation.
-    void visitToken(Token t) {}
+    void visitToken(Token) {}
 };
 
 }
