@@ -233,6 +233,8 @@ static bool reportErrorAdjacent(TokenKind kind) {
 }
 
 Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual, TokenKind expected, Token lastConsumed) {
+    // Figure out the best place to report this error based on the current
+    // token as well as the last real token we consumed.
     SourceLocation location;
     if (!lastConsumed || !reportErrorAdjacent(expected))
         location = actual.location();
@@ -241,10 +243,25 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
         location = location + lastConsumed.rawText().length();
     }
 
-    // report an error here for the missing token
-    switch (expected) {
-        case TokenKind::Identifier: diagnostics.add(DiagCode::ExpectedIdentifier, location); break;
-        default: diagnostics.add(DiagCode::ExpectedToken, location) << getTokenKindText(expected); break;
+    // If there is already a diagnostic issued for this location, don't report this
+    // one as well since it will just lead to lots of spam and the first error is
+    // probably the thing that actually caused the issue.
+    bool report = true;
+    if (!diagnostics.empty()) {
+        const Diagnostic& diag = diagnostics.back();
+        if (diag.location == location &&
+            (diag.code == DiagCode::ExpectedIdentifier ||
+             diag.code == DiagCode::ExpectedToken)) {
+            report = false;
+        }
+    }
+
+    if (report) {
+        // Since identifiers are so common, give a specialized error here.
+        if (expected == TokenKind::Identifier)
+            diagnostics.add(DiagCode::ExpectedIdentifier, location);
+        else
+            diagnostics.add(DiagCode::ExpectedToken, location) << getTokenKindText(expected);
     }
     return Token::createMissing(alloc, expected, location);
 }

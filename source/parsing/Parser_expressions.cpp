@@ -709,13 +709,13 @@ ArgumentSyntax& Parser::parseArgument() {
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
         auto name = expect(TokenKind::Identifier);
-        auto innerOpenParen = expect(TokenKind::OpenParenthesis);
 
-        ExpressionSyntax* expr = nullptr;
-        if (!peek(TokenKind::CloseParenthesis))
-            expr = &parseExpression();
+        auto [innerOpenParen, innerCloseParen, expr] = parseGroupOrSkip(
+            TokenKind::OpenParenthesis, TokenKind::CloseParenthesis,
+            [this]() { return &parseExpression(); }
+        );
 
-        return factory.namedArgument(dot, name, innerOpenParen, expr, expect(TokenKind::CloseParenthesis));
+        return factory.namedArgument(dot, name, innerOpenParen, expr, innerCloseParen);
     }
 
     return factory.orderedArgument(parseExpression());
