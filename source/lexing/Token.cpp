@@ -249,34 +249,4 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     return Token::createMissing(alloc, expected, location);
 }
 
-bool suffixToTimeUnit(StringRef timeSuffix, TimeUnit& unit) {
-    if (timeSuffix == "s")
-        unit = TimeUnit::Seconds;
-    else if (timeSuffix == "ms")
-        unit = TimeUnit::Milliseconds;
-    else if (timeSuffix == "us")
-        unit = TimeUnit::Microseconds;
-    else if (timeSuffix == "ns")
-        unit = TimeUnit::Nanoseconds;
-    else if (timeSuffix == "ps")
-        unit = TimeUnit::Picoseconds;
-    else if (timeSuffix == "fs")
-        unit = TimeUnit::Femtoseconds;
-    else
-        return false;
-    return true;
-}
-
-StringRef timeUnitToSuffix(TimeUnit unit) {
-    switch (unit) {
-        case TimeUnit::Seconds: return "s";
-        case TimeUnit::Milliseconds: return "ms";
-        case TimeUnit::Microseconds: return "us";
-        case TimeUnit::Nanoseconds: return "ns";
-        case TimeUnit::Picoseconds: return "ps";
-        case TimeUnit::Femtoseconds: return "fs";
-        default: return "";
-    }
-}
-
 }

@@ -21,6 +21,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, D
     diagnostics(diagnostics)
 {
     keywordVersionStack.push_back(KeywordVersion::v1800_2012);
+    resetAllDirectives();
     undefineAll();
 }
 
@@ -77,6 +78,11 @@ bool Preprocessor::isDefined(StringRef name) {
 
 void Preprocessor::setKeywordVersion(KeywordVersion version) {
     keywordVersionStack[0] = version;
+}
+
+void Preprocessor::resetAllDirectives() {
+    activeTimescale = std::nullopt;
+    defaultNetType = TokenKind::WireKeyword;
 }
 
 Token Preprocessor::next() {
@@ -333,8 +339,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleResetAllDirective(Token directive) {
-    // TODO: reset all preprocessor state here
-    // TODO: keep track of any of the state that this resets
+    resetAllDirectives();
     return createSimpleDirective(directive);
 }
 
@@ -549,7 +554,7 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
     return parseBranchDirective(directive, Token(), taken);
 }
 
-bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
+bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, TimescaleMagnitude& magnitude) {
     auto token = peek();
     if (token.kind == TokenKind::IntegerLiteral) {
         value = consume();
@@ -574,10 +579,21 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
             val = &dummy;
             success = false;
         }
-        else if (*val == 1) numText = "1";
-        else if (*val == 10) numText = "10";
-        else if (*val == 100) numText = "100";
-        else success = false;
+        else if (*val == 1) {
+            numText = "1";
+            magnitude = TimescaleMagnitude::One;
+        }
+        else if (*val == 10) {
+            numText = "10";
+            magnitude = TimescaleMagnitude::Ten;
+        }
+        else if (*val == 100) {
+            numText = "100";
+            magnitude = TimescaleMagnitude::Hundred;
+        }
+        else {
+            success = false;
+        }
 
         // generate the tokens that come from splitting the TimeLiteral
         Token::Info* valueInfo = alloc.emplace<Token::Info>(token.trivia(),
@@ -605,10 +621,11 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit) {
 
 Trivia Preprocessor::handleTimescaleDirective(Token directive) {
     Token value, valueUnit, precision, precisionUnit;
-    bool foundSpecifiers = expectTimescaleSpecifier(value, valueUnit);
+    TimescaleMagnitude valueMagnitude, precisionMagnitude;
+    bool foundSpecifiers = expectTimescaleSpecifier(value, valueUnit, valueMagnitude);
 
     auto slash = expect(TokenKind::Slash);
-    foundSpecifiers |= expectTimescaleSpecifier(precision, precisionUnit);
+    foundSpecifiers |= expectTimescaleSpecifier(precision, precisionUnit, precisionMagnitude);
 
     auto eod = parseEndOfDirective();
 
@@ -624,6 +641,10 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
                 (unitPrecision == unitValue &&
                 std::get<SVInt>(precision.numericValue()) > std::get<SVInt>(value.numericValue()))) {
             addError(DiagCode::InvalidTimescaleSpecifier, directive.location());
+        }
+        else {
+            activeTimescale = Timescale(TimescaleValue(unitValue, valueMagnitude),
+                                        TimescaleValue(unitPrecision, precisionMagnitude));
         }
     }
     auto timescale = alloc.emplace<TimescaleDirectiveSyntax>(directive, value, valueUnit, slash,
@@ -672,11 +693,14 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
         case TokenKind::TriOrKeyword:
         case TokenKind::TriRegKeyword:
             netType = consume();
+            defaultNetType = netType.kind;
             break;
         case TokenKind::Identifier:
             // none isn't a keyword but it's special here
-            if (peek().rawText() == "none")
+            if (peek().rawText() == "none") {
                 netType = consume();
+                defaultNetType = TokenKind::Unknown;
+            }
             break;
         default:
             break;

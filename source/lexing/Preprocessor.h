@@ -64,6 +64,19 @@ public:
     /// version via the begin_keywords directive.
     void setKeywordVersion(KeywordVersion version);
 
+    /// Resets the state of all compiler directives; this is equivalent to encountering the
+    /// `resetall directive in source. Note that this does not include the state of any
+    /// macros that have been defined.
+    void resetAllDirectives();
+
+    /// Gets the currently active timescale value, if any has been set by the user.
+    const std::optional<Timescale>& getTimescale() const { return activeTimescale; }
+
+    /// Gets the default net type to use if none is specified. This is set via
+    /// the `default_nettype directive. If it is set to "none" by the user, this
+    /// will return TokenKind::Unknown.
+    TokenKind getDefaultNetType() const { return defaultNetType; }
+
     /// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
 
@@ -106,7 +119,7 @@ private:
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
 
     // Timescale specifier parser
-    bool expectTimescaleSpecifier(Token& unit, Token& precision);
+    bool expectTimescaleSpecifier(Token& unit, Token& precision, TimescaleMagnitude& magnitude);
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic {
@@ -241,12 +254,13 @@ private:
     // (either define or usage).
     bool inMacroBody = false;
 
-    // The stack of changes to which keyword versions to use, pushed to by
-    // `begin_keywords, popped to by `end_keywords
-    std::vector<KeywordVersion> keywordVersionStack;
-
     // A buffer used to hold tokens while we're busy consuming them for directives.
     SmallVectorSized<Token, 16> scratchTokenBuffer;
+
+    /// Various state set by preprocessor directives.
+    std::vector<KeywordVersion> keywordVersionStack;
+    std::optional<Timescale> activeTimescale;
+    TokenKind defaultNetType;
 
     // maximum number of nested includes
     static constexpr int MaxIncludeDepth = 1024;

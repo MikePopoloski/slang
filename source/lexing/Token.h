@@ -10,6 +10,7 @@
 #include <variant>
 
 #include "numeric/SVInt.h"
+#include "numeric/Time.h"
 #include "text/SourceLocation.h"
 #include "util/ArrayRef.h"
 #include "util/SmallVector.h"
@@ -45,20 +46,6 @@ struct SyntaxToStringFlags {
         IncludeDirectives = 0x10
     };
 };
-
-/// Time unit specifier.
-enum class TimeUnit : uint8_t {
-    Seconds,
-    Milliseconds,
-    Microseconds,
-    Nanoseconds,
-    Picoseconds,
-    Femtoseconds
-};
-
-bool suffixToTimeUnit(StringRef timeSuffix, TimeUnit& unit);
-
-StringRef timeUnitToSuffix(TimeUnit unit);
 
 /// Various flags for numeric tokens.
 struct NumericTokenFlags {
