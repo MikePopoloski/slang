@@ -24,7 +24,7 @@ ExpressionSyntax& Parser::parseMinTypMaxExpression() {
     auto colon2 = expect(TokenKind::Colon);
     auto& max = parseSubExpression(ExpressionOptions::AllowPatternMatch, 0);
 
-    return allocate<MinTypMaxExpressionSyntax>(first, colon1, typ, colon2, max);
+    return factory.minTypMaxExpression(first, colon1, typ, colon2, max);
 }
 
 ExpressionSyntax& Parser::parseSubExpression(ExpressionOptions::Enum options, int precedence) {
@@ -37,14 +37,14 @@ ExpressionSyntax& Parser::parseSubExpression(ExpressionOptions::Enum options, in
         auto timingControl = parseTimingControl();
         ASSERT(timingControl);
 
-        auto& expr = allocate<TimingControlExpressionSyntax>(*timingControl, parseExpression());
+        auto& expr = factory.timingControlExpression(*timingControl, parseExpression());
         return parsePostfixExpression(expr);
     }
     else if (current.kind == TokenKind::TaggedKeyword) {
         // TODO: check for trailing expression
         auto tagged = consume();
         auto member = expect(TokenKind::Identifier);
-        return allocate<TaggedUnionExpressionSyntax>(tagged, member, nullptr);
+        return factory.taggedUnionExpression(tagged, member, nullptr);
     }
 
     ExpressionSyntax* leftOperand;
@@ -88,7 +88,7 @@ ExpressionSyntax& Parser::parseSubExpression(ExpressionOptions::Enum options, in
             auto opToken = consume();
             auto attributes = parseAttributes();
             auto& rightOperand = parseSubExpression(options, newPrecedence);
-            leftOperand = &allocate<BinaryExpressionSyntax>(opKind, *leftOperand, opToken, attributes, rightOperand);
+            leftOperand = &factory.binaryExpression(opKind, *leftOperand, opToken, attributes, rightOperand);
         }
     }
 
@@ -106,7 +106,7 @@ ExpressionSyntax& Parser::parseSubExpression(ExpressionOptions::Enum options, in
             auto& left = parseSubExpression(options, logicalOrPrecedence - 1);
             auto colon = expect(TokenKind::Colon);
             auto& right = parseSubExpression(options, logicalOrPrecedence - 1);
-            leftOperand = &allocate<ConditionalExpressionSyntax>(predicate, question, attributes, left, colon, right);
+            leftOperand = &factory.conditionalExpression(predicate, question, attributes, left, colon, right);
         }
     }
     return *leftOperand;
@@ -118,7 +118,7 @@ ExpressionSyntax& Parser::parsePrefixExpression(ExpressionOptions::Enum options,
         case SyntaxKind::UnarySequenceEventExpression: {
             auto timing = parseTimingControl();
             ASSERT(timing);
-            return allocate<TimingControlExpressionSyntax>(*timing, parseExpression());
+            return factory.timingControlExpression(*timing, parseExpression());
         }
         case SyntaxKind::NextTimePropertyExpression:
         case SyntaxKind::SNextTimePropertyExpression:
@@ -142,7 +142,7 @@ ExpressionSyntax& Parser::parsePrefixExpression(ExpressionOptions::Enum options,
     auto attributes = parseAttributes();
 
     ExpressionSyntax& operand = parseSubExpression(options, getPrecedence(opKind));
-    return allocate<PrefixUnaryExpressionSyntax>(opKind, opToken, attributes, operand);
+    return factory.prefixUnaryExpression(opKind, opToken, attributes, operand);
 }
 
 ExpressionSyntax& Parser::parsePrimaryExpression() {
@@ -156,7 +156,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
         case TokenKind::OneStep:
         case TokenKind::Dollar: {
             auto literal = consume();
-            expr = &allocate<LiteralExpressionSyntax>(getLiteralExpression(literal.kind), literal);
+            expr = &factory.literalExpression(getLiteralExpression(literal.kind), literal);
             break;
         }
         case TokenKind::RealLiteral: {
@@ -164,7 +164,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             auto literal = consume();
             if (!std::isfinite(std::get<double>(literal.numericValue())))
                 addError(DiagCode::RealExponentOverflow, literal.location());
-            expr = &allocate<LiteralExpressionSyntax>(SyntaxKind::RealLiteralExpression, literal);
+            expr = &factory.literalExpression(SyntaxKind::RealLiteralExpression, literal);
             break;
         }
         case TokenKind::IntegerLiteral:
@@ -173,7 +173,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             break;
         case TokenKind::SystemIdentifier: {
             auto identifier = consume();
-            expr = &allocate<KeywordNameSyntax>(SyntaxKind::SystemName, identifier);
+            expr = &factory.keywordName(SyntaxKind::SystemName, identifier);
             break;
         }
         case TokenKind::OpenParenthesis: {
@@ -181,7 +181,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             expr = &parseMinTypMaxExpression();
 
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            expr = &allocate<ParenthesizedExpressionSyntax>(openParen, *expr, closeParen);
+            expr = &factory.parenthesizedExpression(openParen, *expr, closeParen);
             break;
         }
         case TokenKind::ApostropheOpenBrace:
@@ -195,7 +195,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             auto openBrace = consume();
             switch (peek().kind) {
                 case TokenKind::CloseBrace:
-                    expr = &allocate<EmptyQueueExpressionSyntax>(openBrace, consume());
+                    expr = &factory.emptyQueueExpression(openBrace, consume());
                     break;
                 case TokenKind::LeftShift:
                 case TokenKind::RightShift:
@@ -209,7 +209,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
                         auto openBraceInner = consume();
                         auto& concat = parseConcatenation(openBraceInner, nullptr);
                         auto closeBrace = expect(TokenKind::CloseBrace);
-                        expr = &allocate<MultipleConcatenationExpressionSyntax>(openBrace, first, concat, closeBrace);
+                        expr = &factory.multipleConcatenationExpression(openBrace, first, concat, closeBrace);
                     }
                     break;
                 }
@@ -223,8 +223,8 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto& innerExpr = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            auto& parenExpr = allocate<ParenthesizedExpressionSyntax>(openParen, innerExpr, closeParen);
-            expr = &allocate<SignedCastExpressionSyntax>(signing, apostrophe, parenExpr);
+            auto& parenExpr = factory.parenthesizedExpression(openParen, innerExpr, closeParen);
+            expr = &factory.signedCastExpression(signing, apostrophe, parenExpr);
             break;
         }
         default:
@@ -247,7 +247,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
                 // TODO: better error for "expected expression" instead of "expected identifier"
                 auto& name = parseName();
                 if (peek(TokenKind::ApostropheOpenBrace))
-                    expr = &parseAssignmentPatternExpression(&allocate<NamedTypeSyntax>(name));
+                    expr = &parseAssignmentPatternExpression(&factory.namedType(name));
                 else {
                     // otherwise just a name expression
                     expr = &name;
@@ -272,7 +272,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         if (!peek(TokenKind::IntegerBase)) {
             if (tokenValue > INT32_MAX)
                 addError(DiagCode::SignedIntegerOverflow, token.location());
-            return allocate<LiteralExpressionSyntax>(SyntaxKind::IntegerLiteralExpression, token);
+            return factory.literalExpression(SyntaxKind::IntegerLiteralExpression, token);
         }
 
         sizeToken = token;
@@ -295,7 +295,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     auto first = peek();
     if (!isPossibleVectorDigit(first.kind)) {
         addError(DiagCode::ExpectedVectorDigits, first.location());
-        return allocate<IntegerVectorExpressionSyntax>(sizeToken, baseToken, Token::createMissing(alloc, TokenKind::IntegerLiteral, first.location()));
+        return factory.integerVectorExpression(sizeToken, baseToken, Token::createMissing(alloc, TokenKind::IntegerLiteral, first.location()));
     }
 
     Token next = first;
@@ -316,13 +316,13 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location(), 0);
     info->setNumInfo(std::move(value));
 
-    return allocate<IntegerVectorExpressionSyntax>(sizeToken, baseToken, Token(TokenKind::IntegerLiteral, info));
+    return factory.integerVectorExpression(sizeToken, baseToken, Token(TokenKind::IntegerLiteral, info));
 }
 
 ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
     auto inside = expect(TokenKind::InsideKeyword);
     auto& list = parseOpenRangeList();
-    return allocate<InsideExpressionSyntax>(expr, inside, list);
+    return factory.insideExpression(expr, inside, list);
 }
 
 OpenRangeListSyntax& Parser::parseOpenRangeList() {
@@ -341,7 +341,7 @@ OpenRangeListSyntax& Parser::parseOpenRangeList() {
         [this](bool) -> decltype(auto) { return parseOpenRangeElement(); }
     );
 
-    return allocate<OpenRangeListSyntax>(openBrace, list, closeBrace);
+    return factory.openRangeList(openBrace, list, closeBrace);
 }
 
 ExpressionSyntax& Parser::parseOpenRangeElement() {
@@ -356,7 +356,7 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace, Expre
         // it's possible to have just one element in the concatenation list, so check for a close brace
         buffer.append(first);
         if (peek(TokenKind::CloseBrace))
-            return allocate<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), consume());
+            return factory.concatenationExpression(openBrace, buffer.copy(alloc), consume());
 
         buffer.append(expect(TokenKind::Comma));
     }
@@ -370,7 +370,7 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace, Expre
         DiagCode::ExpectedExpression,
         [this](bool) -> decltype(auto) { return parseExpression(); }
     );
-    return allocate<ConcatenationExpressionSyntax>(openBrace, buffer.copy(alloc), closeBrace);
+    return factory.concatenationExpression(openBrace, buffer.copy(alloc), closeBrace);
 }
 
 StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token openBrace) {
@@ -395,7 +395,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
     );
 
     auto closeBrace = expect(TokenKind::CloseBrace);
-    return allocate<StreamingConcatenationExpressionSyntax>(
+    return factory.streamingConcatenationExpression(
         openBrace,
         op,
         sliceSize,
@@ -415,7 +415,7 @@ StreamExpressionSyntax& Parser::parseStreamExpression() {
         withRange = &allocate<StreamExpressionWithRange>(with, parseElementSelect());
     }
 
-    return allocate<StreamExpressionSyntax>(expr, withRange);
+    return factory.streamExpression(expr, withRange);
 }
 
 AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(DataTypeSyntax* type) {
@@ -424,7 +424,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
     // we either have an expression here, or the default keyword for a pattern key
     ExpressionSyntax* firstExpr;
     if (peek(TokenKind::DefaultKeyword))
-        firstExpr = &allocate<LiteralExpressionSyntax>(SyntaxKind::DefaultPatternKeyExpression, consume());
+        firstExpr = &factory.literalExpression(SyntaxKind::DefaultPatternKeyExpression, consume());
     else
         firstExpr = &parseExpression();
 
@@ -443,7 +443,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 DiagCode::ExpectedAssignmentKey,
                 [this](bool) -> decltype(auto) { return parseAssignmentPatternItem(nullptr); }
             );
-            pattern = &allocate<StructuredAssignmentPatternSyntax>(
+            pattern = &factory.structuredAssignmentPattern(
                 openBrace,
                 buffer.copy(alloc),
                 closeBrace);
@@ -458,7 +458,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 DiagCode::ExpectedExpression,
                 [this](bool) -> decltype(auto) { return parseExpression(); }
             );
-            pattern = &allocate<ReplicatedAssignmentPatternSyntax>(
+            pattern = &factory.replicatedAssignmentPattern(
                 openBrace,
                 *firstExpr,
                 innerOpenBrace,
@@ -479,7 +479,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 DiagCode::ExpectedExpression,
                 [this](bool) -> decltype(auto) { return parseExpression(); }
             );
-            pattern = &allocate<SimpleAssignmentPatternSyntax>(
+            pattern = &factory.simpleAssignmentPattern(
                 openBrace,
                 buffer.copy(alloc),
                 closeBrace);
@@ -494,14 +494,14 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 DiagCode::ExpectedExpression,
                 [this](bool) -> decltype(auto) { return parseExpression(); }
             );
-            pattern = &allocate<SimpleAssignmentPatternSyntax>(
+            pattern = &factory.simpleAssignmentPattern(
                 openBrace,
                 buffer.copy(alloc),
                 closeBrace);
             break;
     }
     ASSERT(pattern);
-    return allocate<AssignmentPatternExpressionSyntax>(type, *pattern);
+    return factory.assignmentPatternExpression(type, *pattern);
 }
 
 AssignmentPatternItemSyntax& Parser::parseAssignmentPatternItem(ExpressionSyntax* key) {
@@ -509,14 +509,14 @@ AssignmentPatternItemSyntax& Parser::parseAssignmentPatternItem(ExpressionSyntax
         key = &parseExpression();
 
     auto colon = expect(TokenKind::Colon);
-    return allocate<AssignmentPatternItemSyntax>(*key, colon, parseExpression());
+    return factory.assignmentPatternItem(*key, colon, parseExpression());
 }
 
 ElementSelectSyntax& Parser::parseElementSelect() {
     auto openBracket = expect(TokenKind::OpenBracket);
     auto selector = parseElementSelector();
     auto closeBracket = expect(TokenKind::CloseBracket);
-    return allocate<ElementSelectSyntax>(openBracket, selector, closeBracket);
+    return factory.elementSelect(openBracket, selector, closeBracket);
 }
 
 SelectorSyntax* Parser::parseElementSelector() {
@@ -527,18 +527,18 @@ SelectorSyntax* Parser::parseElementSelector() {
     switch (peek().kind) {
         case TokenKind::Colon: {
             auto range = consume();
-            return &allocate<RangeSelectSyntax>(SyntaxKind::SimpleRangeSelect, expr, range, parseExpression());
+            return &factory.rangeSelect(SyntaxKind::SimpleRangeSelect, expr, range, parseExpression());
         }
         case TokenKind::PlusColon: {
             auto range = consume();
-            return &allocate<RangeSelectSyntax>(SyntaxKind::AscendingRangeSelect, expr, range, parseExpression());
+            return &factory.rangeSelect(SyntaxKind::AscendingRangeSelect, expr, range, parseExpression());
         }
         case TokenKind::MinusColon: {
             auto range = consume();
-            return &allocate<RangeSelectSyntax>(SyntaxKind::DescendingRangeSelect, expr, range, parseExpression());
+            return &factory.rangeSelect(SyntaxKind::DescendingRangeSelect, expr, range, parseExpression());
         }
         default:
-            return &allocate<BitSelectSyntax>(expr);
+            return &factory.bitSelect(expr);
     }
 }
 
@@ -547,30 +547,30 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
     while (true) {
         switch (peek().kind) {
             case TokenKind::OpenBracket:
-                expr = &allocate<ElementSelectExpressionSyntax>(*expr, parseElementSelect());
+                expr = &factory.elementSelectExpression(*expr, parseElementSelect());
                 break;
             case TokenKind::Dot: {
                 auto dot = consume();
                 auto name = expect(TokenKind::Identifier);
-                expr = &allocate<MemberAccessExpressionSyntax>(*expr, dot, name);
+                expr = &factory.memberAccessExpression(*expr, dot, name);
                 break;
             }
             case TokenKind::OpenParenthesis:
-                expr = &allocate<InvocationExpressionSyntax>(*expr, nullptr, &parseArgumentList());
+                expr = &factory.invocationExpression(*expr, nullptr, &parseArgumentList());
                 break;
             case TokenKind::DoublePlus:
             case TokenKind::DoubleMinus: {
                 // can't have any other postfix expressions after inc/dec
                 auto op = consume();
-                return allocate<PostfixUnaryExpressionSyntax>(getUnaryPostfixExpression(op.kind), *expr, nullptr, op);
+                return factory.postfixUnaryExpression(getUnaryPostfixExpression(op.kind), *expr, nullptr, op);
             }
             case TokenKind::Apostrophe: {
                 auto apostrophe = consume();
                 auto openParen = expect(TokenKind::OpenParenthesis);
                 auto& innerExpr = parseExpression();
                 auto closeParen = expect(TokenKind::CloseParenthesis);
-                auto& parenExpr = allocate<ParenthesizedExpressionSyntax>(openParen, innerExpr, closeParen);
-                expr = &allocate<CastExpressionSyntax>(*expr, apostrophe, parenExpr);
+                auto& parenExpr = factory.parenthesizedExpression(openParen, innerExpr, closeParen);
+                expr = &factory.castExpression(*expr, apostrophe, parenExpr);
                 break;
             }
             case TokenKind::OpenParenthesisStar: {
@@ -579,14 +579,14 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
                     case TokenKind::DoublePlus:
                     case TokenKind::DoubleMinus: {
                         auto op = consume();
-                        return allocate<PostfixUnaryExpressionSyntax>(getUnaryPostfixExpression(op.kind), *expr, attributes, op);
+                        return factory.postfixUnaryExpression(getUnaryPostfixExpression(op.kind), *expr, attributes, op);
                     }
                     case TokenKind::OpenParenthesis:
-                        expr = &allocate<InvocationExpressionSyntax>(*expr, attributes, &parseArgumentList());
+                        expr = &factory.invocationExpression(*expr, attributes, &parseArgumentList());
                         break;
                     default:
                         // otherwise, this has to be a function call without any arguments
-                        expr = &allocate<InvocationExpressionSyntax>(*expr, attributes, nullptr);
+                        expr = &factory.invocationExpression(*expr, attributes, nullptr);
                         break;
                 }
                 break;
@@ -604,7 +604,7 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
             case TokenKind::DoubleHash: {
                 auto timing = parseTimingControl();
                 ASSERT(timing);
-                expr = &allocate<TimingControlExpressionConcatenationSyntax>(*expr, *timing, parseExpression());
+                expr = &factory.timingControlExpressionConcatenation(*expr, *timing, parseExpression());
                 break;
             }
             default:
@@ -629,10 +629,10 @@ NameSyntax& Parser::parseName(bool isForEach) {
             addError(DiagCode::ColonShouldBeDot, separator.location());
         }
         if (peek().kind == TokenKind::NewKeyword) {
-            name = &allocate<ClassScopeSyntax>(*name, separator);
+            name = &factory.classScope(*name, separator);
             break;
         }
-        name = &allocate<ScopedNameSyntax>(*name, separator, parseNamePart(isForEach));
+        name = &factory.scopedName(*name, separator, parseNamePart(isForEach));
         kind = peek().kind;
     }
 
@@ -642,17 +642,17 @@ NameSyntax& Parser::parseName(bool isForEach) {
 NameSyntax& Parser::parseNamePart(bool isForEach) {
     auto kind = getKeywordNameExpression(peek().kind);
     if (kind != SyntaxKind::Unknown)
-        return allocate<KeywordNameSyntax>(kind, consume());
+        return factory.keywordName(kind, consume());
     TokenKind next = peek().kind;
     if (isForEach && (next == TokenKind::Comma || next == TokenKind::CloseBracket))
-        return allocate<EmptyIdentifierNameSyntax>();
+        return factory.emptyIdentifierName();
 
     auto identifier = expect(TokenKind::Identifier);
     switch (peek().kind) {
         case TokenKind::Hash: {
             auto parameterValues = parseParameterValueAssignment();
             ASSERT(parameterValues);
-            return allocate<ClassNameSyntax>(identifier, *parameterValues);
+            return factory.className(identifier, *parameterValues);
         }
         case TokenKind::OpenBracket: {
             int index = 1;
@@ -663,13 +663,13 @@ NameSyntax& Parser::parseNamePart(bool isForEach) {
                     buffer.append(&parseElementSelect());
                 } while (peek(TokenKind::OpenBracket));
 
-                return allocate<IdentifierSelectNameSyntax>(identifier, buffer.copy(alloc));
+                return factory.identifierSelectName(identifier, buffer.copy(alloc));
             } else {
-                return allocate<IdentifierNameSyntax>(identifier);
+                return factory.identifierName(identifier);
             }
         }
         default:
-            return allocate<IdentifierNameSyntax>(identifier);
+            return factory.identifierName(identifier);
     }
 }
 
@@ -678,7 +678,7 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
         return nullptr;
 
     auto hash = consume();
-    return &allocate<ParameterValueAssignmentSyntax>(hash, parseArgumentList());
+    return &factory.parameterValueAssignment(hash, parseArgumentList());
 }
 
 ArgumentListSyntax& Parser::parseArgumentList() {
@@ -697,13 +697,13 @@ ArgumentListSyntax& Parser::parseArgumentList() {
         [this](bool) -> decltype(auto) { return parseArgument(); }
     );
 
-    return allocate<ArgumentListSyntax>(openParen, list, closeParen);
+    return factory.argumentList(openParen, list, closeParen);
 }
 
 ArgumentSyntax& Parser::parseArgument() {
     // check for empty arguments
     if (peek(TokenKind::Comma))
-        return allocate<EmptyArgumentSyntax>();
+        return factory.emptyArgument();
 
     // check for named arguments
     if (peek(TokenKind::Dot)) {
@@ -715,25 +715,25 @@ ArgumentSyntax& Parser::parseArgument() {
         if (!peek(TokenKind::CloseParenthesis))
             expr = &parseExpression();
 
-        return allocate<NamedArgumentSyntax>(dot, name, innerOpenParen, expr, expect(TokenKind::CloseParenthesis));
+        return factory.namedArgument(dot, name, innerOpenParen, expr, expect(TokenKind::CloseParenthesis));
     }
 
-    return allocate<OrderedArgumentSyntax>(parseExpression());
+    return factory.orderedArgument(parseExpression());
 }
 
 PatternSyntax& Parser::parsePattern() {
     switch (peek().kind) {
         case TokenKind::DotStar:
-            return allocate<WildcardPatternSyntax>(consume());
+            return factory.wildcardPattern(consume());
         case TokenKind::Dot: {
             auto dot = consume();
-            return allocate<VariablePatternSyntax>(dot, expect(TokenKind::Identifier));
+            return factory.variablePattern(dot, expect(TokenKind::Identifier));
         }
         case TokenKind::TaggedKeyword: {
             auto tagged = consume();
             auto name = expect(TokenKind::Identifier);
             // TODO: optional trailing pattern
-            return allocate<TaggedPatternSyntax>(tagged, name, nullptr);
+            return factory.taggedPattern(tagged, name, nullptr);
         }
         case TokenKind::ApostropheOpenBrace:
             // TODO: assignment pattern
@@ -742,7 +742,7 @@ PatternSyntax& Parser::parsePattern() {
             break;
     }
     // otherwise, it's either an expression or an error (parseExpression will handle that for us)
-    return allocate<ExpressionPatternSyntax>(parseSubExpression(ExpressionOptions::None, 0));
+    return factory.expressionPattern(parseSubExpression(ExpressionOptions::None, 0));
 }
 
 ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& first, TokenKind endKind, Token& end) {
@@ -751,10 +751,10 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
     MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
         auto matches = consume();
-        matchesClause = &allocate<MatchesClauseSyntax>(matches, parsePattern());
+        matchesClause = &factory.matchesClause(matches, parsePattern());
     }
 
-    buffer.append(&allocate<ConditionalPatternSyntax>(first, matchesClause));
+    buffer.append(&factory.conditionalPattern(first, matchesClause));
     if (peek(TokenKind::TripleAnd))
         buffer.append(consume());
 
@@ -767,7 +767,7 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
         [this](bool) -> decltype(auto) { return parseConditionalPattern(); }
     );
 
-    return allocate<ConditionalPredicateSyntax>(buffer.copy(alloc));
+    return factory.conditionalPredicate(buffer.copy(alloc));
 }
 
 ConditionalPatternSyntax& Parser::parseConditionalPattern() {
@@ -776,10 +776,10 @@ ConditionalPatternSyntax& Parser::parseConditionalPattern() {
     MatchesClauseSyntax* matchesClause = nullptr;
     if (peek(TokenKind::MatchesKeyword)) {
         auto matches = consume();
-        matchesClause = &allocate<MatchesClauseSyntax>(matches, parsePattern());
+        matchesClause = &factory.matchesClause(matches, parsePattern());
     }
 
-    return allocate<ConditionalPatternSyntax>(expr, matchesClause);
+    return factory.conditionalPattern(expr, matchesClause);
 }
 
 EventExpressionSyntax& Parser::parseEventExpression() {
@@ -789,7 +789,7 @@ EventExpressionSyntax& Parser::parseEventExpression() {
         auto openParen = consume();
         auto& expr = parseEventExpression();
         auto closeParen = expect(TokenKind::CloseParenthesis);
-        left = &allocate<ParenthesizedEventExpressionSyntax>(openParen, expr, closeParen);
+        left = &factory.parenthesizedEventExpression(openParen, expr, closeParen);
     }
     else {
         Token edge;
@@ -797,13 +797,13 @@ EventExpressionSyntax& Parser::parseEventExpression() {
             edge = consume();
 
         auto& expr = parseSubExpression((ExpressionOptions::Enum)(ExpressionOptions::AllowPatternMatch | ExpressionOptions::EventExpressionContext), 0);
-        left = &allocate<SignalEventExpressionSyntax>(edge, expr);
+        left = &factory.signalEventExpression(edge, expr);
     }
 
     kind = peek().kind;
     if (kind == TokenKind::Comma || kind == TokenKind::OrKeyword) {
         auto op = consume();
-        left = &allocate<BinaryEventExpressionSyntax>(*left, op, parseEventExpression());
+        left = &factory.binaryEventExpression(*left, op, parseEventExpression());
     }
     return *left;
 }
@@ -826,9 +826,9 @@ ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
         if (peek(TokenKind::OpenParenthesis)) {
             auto openParen = consume();
             auto& initializerExpr = parseExpression();
-            initializer = &allocate<ParenthesizedExpressionSyntax>(openParen, initializerExpr, expect(TokenKind::CloseParenthesis));
+            initializer = &factory.parenthesizedExpression(openParen, initializerExpr, expect(TokenKind::CloseParenthesis));
         }
-        return allocate<NewArrayExpressionSyntax>(newKeyword, openBracket, sizeExpr, closeBracket, initializer);
+        return factory.newArrayExpression(newKeyword, openBracket, sizeExpr, closeBracket, initializer);
     }
 
     // new class
@@ -836,9 +836,9 @@ ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
     if (kind == TokenKind::OpenParenthesis)
         arguments = &parseArgumentList();
     else if (!scope && isPossibleExpression(kind))
-        return allocate<NewExpressionSyntax>(newKeyword, parseExpression());
+        return factory.newExpression(newKeyword, parseExpression());
 
-    return allocate<NewClassExpressionSyntax>(scope->as<ClassScopeSyntax>(), newKeyword, arguments);
+    return factory.newClassExpression(scope->as<ClassScopeSyntax>(), newKeyword, arguments);
 }
 
 TimingControlSyntax* Parser::parseTimingControl() {
@@ -851,7 +851,7 @@ TimingControlSyntax* Parser::parseTimingControl() {
                 if (peek(1).kind == TokenKind::Star || peek(1).kind == TokenKind::Plus) {
                     Token openBracket = consume();
                     Token op = consume();
-                    return &allocate<ShortcutCycleDelayRangeSyntax>(hash, openBracket, op, expect(TokenKind::CloseBracket));
+                    return &factory.shortcutCycleDelayRange(hash, openBracket, op, expect(TokenKind::CloseBracket));
                 }
                 else {
                     delay = &parseElementSelect();
@@ -863,7 +863,7 @@ TimingControlSyntax* Parser::parseTimingControl() {
             }
 
             SyntaxKind kind = hash.kind == TokenKind::Hash ? SyntaxKind::DelayControl : SyntaxKind::CycleDelay;
-            return &allocate<DelaySyntax>(kind, hash, *delay);
+            return &factory.delay(kind, hash, *delay);
         }
         case TokenKind::At: {
             auto at = consume();
@@ -871,21 +871,21 @@ TimingControlSyntax* Parser::parseTimingControl() {
                 auto openParen = consume();
                 auto& eventExpr = parseEventExpression();
                 auto closeParen = expect(TokenKind::CloseParenthesis);
-                return &allocate<EventControlWithExpressionSyntax>(at, allocate<ParenthesizedEventExpressionSyntax>(openParen, eventExpr, closeParen));
+                return &factory.eventControlWithExpression(at, factory.parenthesizedEventExpression(openParen, eventExpr, closeParen));
             }
             else if (peek(TokenKind::OpenParenthesisStarCloseParenthesis))
-                return &allocate<ParenImplicitEventControlSyntax>(at, consume());
+                return &factory.parenImplicitEventControl(at, consume());
             else
-                return &allocate<EventControlSyntax>(at, parseName());
+                return &factory.eventControl(at, parseName());
         }
         case TokenKind::AtStar:
-            return &allocate<ImplicitEventControlSyntax>(consume());
+            return &factory.implicitEventControl(consume());
         case TokenKind::RepeatKeyword: {
             auto repeat = consume();
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto& expr = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            return &allocate<RepeatedEventControlSyntax>(repeat, openParen, expr, closeParen, parseTimingControl());
+            return &factory.repeatedEventControl(repeat, openParen, expr, closeParen, parseTimingControl());
         }
         default:
             return nullptr;
@@ -895,17 +895,17 @@ TimingControlSyntax* Parser::parseTimingControl() {
 ExpressionSyntax& Parser::parseArrayOrRandomizeWithClause() {
     auto with = consume();
     if (!peek(TokenKind::OpenParenthesis))
-        return allocate<RandomizeMethodWithClauseSyntax>(with, nullptr, parseConstraintBlock());
+        return factory.randomizeMethodWithClause(with, nullptr, parseConstraintBlock());
 
     auto openParen = consume();
     if (peek(TokenKind::CloseParenthesis)) {
-        auto idList = &allocate<IdentifierListSyntax>(openParen, nullptr, consume());
-        return allocate<RandomizeMethodWithClauseSyntax>(with, idList, parseConstraintBlock());
+        auto idList = &factory.identifierList(openParen, nullptr, consume());
+        return factory.randomizeMethodWithClause(with, idList, parseConstraintBlock());
     }
 
     if (!peek(TokenKind::Identifier) || (peek(1).kind == TokenKind::CloseParenthesis && peek(2).kind != TokenKind::OpenBrace)) {
         auto& expr = parseExpression();
-        return allocate<WithClauseSyntax>(with, openParen, expr, expect(TokenKind::CloseParenthesis));
+        return factory.withClause(with, openParen, expr, expect(TokenKind::CloseParenthesis));
     }
 
     // otherwise we have an identifier list here
@@ -917,11 +917,11 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeWithClause() {
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedIdentifier,
-        [this](bool) -> decltype(auto) { return allocate<IdentifierNameSyntax>(consume()); }
+        [this](bool) -> decltype(auto) { return factory.identifierName(consume()); }
     );
 
-    auto& idList = allocate<IdentifierListSyntax>(openParen, buffer.copy(alloc), closeParen);
-    return allocate<RandomizeMethodWithClauseSyntax>(with, &idList, parseConstraintBlock());
+    auto& idList = factory.identifierList(openParen, buffer.copy(alloc), closeParen);
+    return factory.randomizeMethodWithClause(with, &idList, parseConstraintBlock());
 }
 
 }
