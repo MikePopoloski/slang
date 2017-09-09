@@ -20,6 +20,7 @@
 #define GSL_SPAN_H
 
 #include <array>
+#include <cstddef>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -476,7 +477,7 @@ public:
     constexpr index_type length_bytes() const GSL_NOEXCEPT { return size_bytes(); }
     constexpr index_type size_bytes() const GSL_NOEXCEPT
     {
-        return size() * narrow_cast<index_type>(sizeof(element_type));
+        return size() * narrow<index_type>(sizeof(element_type));
     }
     constexpr bool empty() const GSL_NOEXCEPT { return size() == 0; }
 

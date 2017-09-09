@@ -462,7 +462,7 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, span<A
 }
 
 ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelSyntax* label, span<AttributeInstanceSyntax* const> attributes) {
-    SyntaxKind kind;
+    SyntaxKind kind = SyntaxKind::Unknown;
     Token propertyOrSequence;
     auto keyword = consume();
 

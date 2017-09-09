@@ -179,7 +179,7 @@ NonAnsiPortSyntax& Parser::parseNonAnsiPort() {
         auto name = expect(TokenKind::Identifier);
         auto openParen = expect(TokenKind::OpenParenthesis);
 
-        ExpressionSyntax* expr;
+        ExpressionSyntax* expr = nullptr;
         if (!peek(TokenKind::CloseParenthesis))
             expr = &parsePrimaryExpression();
 
@@ -246,7 +246,7 @@ AnsiPortSyntax& Parser::parseAnsiPort() {
         auto name = expect(TokenKind::Identifier);
         auto openParen = expect(TokenKind::OpenParenthesis);
 
-        ExpressionSyntax* expr;
+        ExpressionSyntax* expr = nullptr;
         if (!peek(TokenKind::CloseParenthesis))
             expr = &parseExpression();
 
