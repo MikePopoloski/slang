@@ -72,7 +72,7 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
     CHECK_DIAGNOSTICS_EMPTY;
-    REQUIRE(token.trivia().count() == 1);
+    REQUIRE(token.trivia().size() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
 
     const auto& def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
@@ -91,7 +91,7 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
     CHECK_DIAGNOSTICS_EMPTY;
-    REQUIRE(token.trivia().count() == 1);
+    REQUIRE(token.trivia().size() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
 
     const auto& def = token.trivia()[0].syntax()->as<DefineDirectiveSyntax>();
@@ -225,7 +225,7 @@ TEST_CASE("Macro pasting (whitespace)", "[preprocessor]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "a");
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
 }
 
 TEST_CASE("Macro stringify", "[preprocessor]") {
@@ -251,7 +251,7 @@ TEST_CASE("Macro define with missing paren", "[preprocessor]") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
 }
 
@@ -260,7 +260,7 @@ TEST_CASE("Macro default with missing paren", "[preprocessor]") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
 }
 
@@ -269,7 +269,7 @@ TEST_CASE("Macro usage with missing paren", "[preprocessor]") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::EndOfFile);
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
 }
 
@@ -347,7 +347,7 @@ $display(5,,0,,"C");
 
     std::string result = preprocess(text);
     CHECK(result == expected);
-    REQUIRE(diagnostics.count() == 5);
+    REQUIRE(diagnostics.size() == 5);
     CHECK(diagnostics[0].code == DiagCode::NotEnoughMacroArgs);
     CHECK(diagnostics[1].code == DiagCode::NotEnoughMacroArgs);
     CHECK(diagnostics[2].code == DiagCode::TooManyActualMacroArgs);

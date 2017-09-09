@@ -56,7 +56,7 @@ uint32_t SourceManager::getColumnNumber(SourceLocation location) const {
 
     // walk backward to find start of line
     uint32_t lineStart = location.offset();
-    ASSERT(lineStart < fd->mem.count());
+    ASSERT(lineStart < fd->mem.size());
     while (lineStart > 0 && fd->mem[lineStart - 1] != '\n' && fd->mem[lineStart - 1] != '\r')
         lineStart--;
 
@@ -216,7 +216,7 @@ SourceBuffer SourceManager::assignText(StringRef path, StringRef text, SourceLoc
 SourceBuffer SourceManager::appendText(BufferID buffer, StringRef text) {
     ASSERT(buffer);
     FileInfo& fi = std::get<FileInfo>(bufferEntries[buffer.id]);
-    SourceLocation includeLoc = SourceLocation(buffer, fi.data->mem.count());
+    SourceLocation includeLoc = SourceLocation(buffer, fi.data->mem.size());
     return assignText(text, includeLoc);
 }
 

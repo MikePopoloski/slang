@@ -145,7 +145,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     return Token(token.kind, info);
 }
 
-Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia,
+Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia> trivia,
                        Token* begin, Token* end, bool noWhitespace) {
     SmallVectorSized<char, 64> text;
     text.append('"');
@@ -209,7 +209,7 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
     onNewLine = false;
     info->rawText = lexeme();
 
-    if (kind != TokenKind::EndOfFile && diagnostics.count() >= MAX_LEXER_ERRORS) {
+    if (kind != TokenKind::EndOfFile && diagnostics.size() >= MAX_LEXER_ERRORS) {
         // Stop any further lexing by claiming to at the end of the buffer
         addError(DiagCode::TooManyLexerErrors, currentOffset());
 
@@ -671,7 +671,7 @@ Token Lexer::lexIncludeFileName() {
         scanWhitespace(triviaBuffer);
     }
 
-    ArrayRef<Trivia> trivia = triviaBuffer.copy(alloc);
+    span<Trivia> trivia = triviaBuffer.copy(alloc);
     uint32_t offset = currentOffset();
     auto location = SourceLocation(getBufferID(), offset);
 

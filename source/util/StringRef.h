@@ -30,8 +30,8 @@ public:
 
     template<typename Container>
     explicit StringRef(const Container& container) :
-        ptr(container.begin()),
-        len(uint32_t(container.end() - ptr))
+        ptr(&*container.begin()),
+        len(uint32_t(container.size()))
     {
     }
 

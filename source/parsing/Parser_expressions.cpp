@@ -328,7 +328,7 @@ ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
 OpenRangeListSyntax& Parser::parseOpenRangeList() {
     Token openBrace;
     Token closeBrace;
-    ArrayRef<TokenOrSyntax> list;
+    span<TokenOrSyntax> list;
 
     parseSeparatedList<isPossibleOpenRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace,
@@ -381,7 +381,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
 
     Token openBraceInner;
     Token closeBraceInner;
-    ArrayRef<TokenOrSyntax> list = nullptr;
+    span<TokenOrSyntax> list = nullptr;
 
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
         TokenKind::OpenBrace,
@@ -684,7 +684,7 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
 ArgumentListSyntax& Parser::parseArgumentList() {
     Token openParen;
     Token closeParen;
-    ArrayRef<TokenOrSyntax> list = nullptr;
+    span<TokenOrSyntax> list = nullptr;
 
     parseSeparatedList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis,

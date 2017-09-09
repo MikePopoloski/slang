@@ -290,7 +290,7 @@ SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, cons
     isTask = syntax.kind == SyntaxKind::TaskDeclaration;
 }
 
-SubroutineSymbol::SubroutineSymbol(StringRef name, const TypeSymbol& returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
+SubroutineSymbol::SubroutineSymbol(StringRef name, const TypeSymbol& returnType, span<const FormalArgumentSymbol*> arguments,
                                    SystemFunction systemFunction, const Symbol& parent) :
     StatementBlockSymbol(SymbolKind::Subroutine, parent, name),
     systemFunctionKind(systemFunction), returnType_(&returnType), arguments_(arguments)

@@ -1,13 +1,15 @@
 #include "Test.h"
 
+#include <array>
+
 #include "analysis/Symbol.h"
 #include "analysis/BoundNodes.h"
 #include "parsing/SyntaxTree.h"
 
 const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax) {
-    DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(syntax);
+    DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(&syntax);
 
-    REQUIRE(root.topInstances().count() > 0);
+    REQUIRE(root.topInstances().size() > 0);
     if (!syntax.diagnostics().empty())
         WARN(syntax.reportDiagnostics());
 
@@ -18,9 +20,10 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     auto file1 = SyntaxTree::fromText("module A; A a(); endmodule\nmodule B; endmodule\nmodule C; endmodule");
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
-	DesignRootSymbol root({ &file1, &file2 });
+    std::array<const SyntaxTree*, 2> trees = { &file1, &file2 };
+	DesignRootSymbol root(trees);
 
-    REQUIRE(root.topInstances().count() == 2);
+    REQUIRE(root.topInstances().size() == 2);
     CHECK(root.topInstances()[0]->name == "C");
     CHECK(root.topInstances()[1]->name == "D");
 }
@@ -135,7 +138,7 @@ endmodule
 )");
 
     const auto& instance = evalModule(tree);
-    REQUIRE(instance.module.members().count() == 10);
+    REQUIRE(instance.module.members().size() == 10);
 
     for (uint32_t i = 0; i < 10; i++) {
         const auto& leaf = instance.member<GenerateBlockSymbol>(i).member<ModuleInstanceSymbol>(1);
@@ -226,7 +229,7 @@ endmodule
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
     CHECK(foo.returnType().as<IntegralTypeSymbol>().width == 16);
     CHECK(foo.name == "foo");
-    REQUIRE(foo.arguments().count() == 5);
+    REQUIRE(foo.arguments().size() == 5);
     CHECK(foo.arguments()[0]->type().as<IntegralTypeSymbol>().width == 1);
     CHECK(foo.arguments()[0]->direction == FormalArgumentDirection::In);
     CHECK(foo.arguments()[1]->type().as<IntegralTypeSymbol>().width == 32);
@@ -280,7 +283,7 @@ package Foo;
 endpackage
 )");
 
-    DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(tree);
+    DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(&tree);
     const auto& cv = root.topInstances()[0]->member<ParameterSymbol>(0).value();
     CHECK(cv.integer() == 4);
 }

@@ -25,7 +25,7 @@ Token::Info::Info() :
 {
 }
 
-Token::Info::Info(ArrayRef<Trivia> trivia, StringRef rawText, SourceLocation location, int flags) :
+Token::Info::Info(span<Trivia> trivia, StringRef rawText, SourceLocation location, int flags) :
     trivia(trivia), rawText(rawText), location(location), flags((uint8_t)flags)
 {
 }
@@ -193,7 +193,7 @@ Token Token::asPreprocessed(BumpAllocator& alloc) const {
     return Token(kind, newInfo);
 }
 
-Token Token::withTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const {
+Token Token::withTrivia(BumpAllocator& alloc, span<Trivia> trivia) const {
     auto newInfo = alloc.emplace<Info>(*info);
     newInfo->trivia = trivia;
     return Token(kind, newInfo);

@@ -11,11 +11,11 @@
 #include <unordered_set>
 #include <vector>
 
+#include "span.h"
 #include "diagnostics/Diagnostics.h"
 #include "numeric/SVInt.h"
 #include "parsing/AllSyntax.h"
 #include "text/SourceLocation.h"
-#include "util/ArrayRef.h"
 #include "util/HashMap.h"
 #include "util/StringRef.h"
 
@@ -35,10 +35,10 @@ class ModuleSymbol;
 class WildcardImportSymbol;
 class PackageSymbol;
 
-using SymbolList = ArrayRef<const Symbol*>;
+using SymbolList = span<const Symbol*>;
 using SymbolMap = std::unordered_map<StringRef, const Symbol*>;
 
-using Dimensions = ArrayRef<ConstantRange>;
+using Dimensions = span<ConstantRange>;
 
 enum class SymbolKind {
     Unknown,
@@ -313,8 +313,8 @@ protected:
 class IntegralTypeSymbol : public TypeSymbol {
 public:
     // a negative lower bound is actually an upper bound specified in the opposite order
-    ArrayRef<int> lowerBounds;
-    ArrayRef<int> widths;
+    span<int> lowerBounds;
+    span<int> widths;
     int width;
     TokenKind keywordType;
     bool isSigned;
@@ -322,16 +322,16 @@ public:
 
     IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, const Symbol& parent) :
         IntegralTypeSymbol(keywordType, width, isSigned, isFourState,
-                           EmptyLowerBound, ArrayRef<int>(&width, 1), parent) {}
+                           EmptyLowerBound, span<int>(&width, 1), parent) {}
 
     IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState,
-                       ArrayRef<int> lowerBounds, ArrayRef<int> widths, const Symbol& parent) :
+                       span<int> lowerBounds, span<int> widths, const Symbol& parent) :
         TypeSymbol(SymbolKind::IntegralType, parent, getTokenKindText(keywordType), SourceLocation()),
         lowerBounds(lowerBounds), widths(widths),
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
 
 private:
-    static ArrayRef<int> EmptyLowerBound;
+    static span<int> EmptyLowerBound;
 };
 
 class RealTypeSymbol : public TypeSymbol {
@@ -353,9 +353,9 @@ public:
 //class EnumTypeSymbol : public TypeSymbol {
 //public:
 //    const IntegralTypeSymbol* baseType;
-//    ArrayRef<EnumValueSymbol *> values;
+//    span<EnumValueSymbol *> values;
 //
-//    EnumTypeSymbol(const IntegralTypeSymbol *baseType, SourceLocation location, ArrayRef<EnumValueSymbol *> values) :
+//    EnumTypeSymbol(const IntegralTypeSymbol *baseType, SourceLocation location, span<EnumValueSymbol *> values) :
 //        TypeSymbol(SymbolKind::EnumType, "", location),
 //        baseType(baseType), values(values) {}
 //};
@@ -393,16 +393,16 @@ class ModuleInstanceSymbol;
 class DesignRootSymbol : public ScopeSymbol {
 public:
     explicit DesignRootSymbol(const SourceManager& sourceManager);
-    explicit DesignRootSymbol(const SyntaxTree& tree);
-    explicit DesignRootSymbol(ArrayRef<const SyntaxTree*> trees);
-    DesignRootSymbol(const SourceManager& sourceManager, ArrayRef<const CompilationUnitSyntax*> units);
+    explicit DesignRootSymbol(const SyntaxTree* tree);
+    explicit DesignRootSymbol(span<const SyntaxTree*> trees);
+    DesignRootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax*> units);
 
     /// Gets all of the compilation units in the design.
-    ArrayRef<const CompilationUnitSymbol*> compilationUnits() const { return unitList; }
+    span<const CompilationUnitSymbol* const> compilationUnits() const { return unitList; }
 
     /// Finds all of the top-level module instances in the design. These form the roots of the
     /// actual design hierarchy.
-    ArrayRef<const ModuleInstanceSymbol*> topInstances() const { init(); return topList; }
+    span<const ModuleInstanceSymbol*> topInstances() const { init(); return topList; }
 
     /// Finds a package in the design with the given name, or returns null if none is found.
     const PackageSymbol* findPackage(StringRef name) const;
@@ -759,12 +759,12 @@ public:
     bool isTask = false;
 
     SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const Symbol& parent);
-    SubroutineSymbol(StringRef name, const TypeSymbol& returnType, ArrayRef<const FormalArgumentSymbol*> arguments,
+    SubroutineSymbol(StringRef name, const TypeSymbol& returnType, span<const FormalArgumentSymbol*> arguments,
                      SystemFunction systemFunction, const Symbol& parent);
 
     const TypeSymbol& returnType() const { init(); return *returnType_; }
     const BoundStatementList& body() const { init(); return *body_; }
-    ArrayRef<const FormalArgumentSymbol*> arguments() const { init(); return arguments_; }
+    span<const FormalArgumentSymbol*> arguments() const { init(); return arguments_; }
 
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
 
@@ -773,7 +773,7 @@ private:
 
     mutable const TypeSymbol* returnType_ = nullptr;
     mutable const BoundStatementList* body_ = nullptr;
-    mutable ArrayRef<const FormalArgumentSymbol*> arguments_;
+    mutable span<const FormalArgumentSymbol*> arguments_;
 };
 
 template<typename T, typename... Args>

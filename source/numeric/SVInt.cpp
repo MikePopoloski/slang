@@ -141,14 +141,14 @@ SVInt::SVInt(StringRef str) {
     // currently uninitialized
     pVal = nullptr;
 
-    *this = SVInt(bitWidth, base, signFlag, unknownFlag, ArrayRef<logic_t>(digits.begin(), digits.end()));
+    *this = SVInt(bitWidth, base, signFlag, unknownFlag, span<logic_t>(digits.begin(), digits.end()));
 
     // if it's supposed to be negative, flip it around
     if (negative)
         *this = -(*this);
 }
 
-SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, ArrayRef<logic_t> digits) {
+SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, span<logic_t> digits) {
     bitWidth = bits;
     signFlag = isSigned;
     unknownFlag = anyUnknown;
@@ -265,8 +265,8 @@ SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, Ar
         }
     }
 
-    if (base != LiteralBase::Decimal && digits.count() * shift < bits && unknownFlag) {
-        int specifiedBits = digits.count() * shift;
+    if (base != LiteralBase::Decimal && digits.size() * shift < bits && unknownFlag) {
+        int specifiedBits = (int)digits.size() * shift;
         uint8_t numBitsSetInTopWord = specifiedBits % 64;
         int topWord = getNumWords(bitWidth, false) + specifiedBits / 64;
         if (pVal[topWord] >> (numBitsSetInTopWord - 1)) {
@@ -563,7 +563,7 @@ SVInt SVInt::replicate(const SVInt& times) const {
     SmallVectorSized<SVInt, 8> buffer;
     for (size_t i = 0; i < n; ++i)
         buffer.append(*this);
-    return concatenate(ArrayRef<SVInt>(buffer.begin(), buffer.end()));
+    return concatenate(span<SVInt>(buffer.begin(), buffer.end()));
 }
 
 SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
@@ -661,7 +661,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
     }
 
     // for bases 2, 8, and 16 we can just shift instead of dividing
-    uint32_t startOffset = buffer.count();
+    uint32_t startOffset = buffer.size();
     static const char Digits[] = "0123456789abcdef";
     if (base == LiteralBase::Decimal) {
         // decimal numbers that have unknown values only print as a single letter
@@ -719,7 +719,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
     }
 
     // no digits means this is zero
-    if (startOffset == buffer.count())
+    if (startOffset == buffer.size())
         buffer.append('0');
     else {
         // reverse the digits
@@ -1829,9 +1829,9 @@ logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     return logic_t(true);
 }
 
-SVInt concatenate(ArrayRef<SVInt> operands) {
+SVInt concatenate(span<SVInt> operands) {
     // 0 operand concatenations can be valid inside of larger concatenations
-    if (operands.count() == 0) {
+    if (operands.size() == 0) {
         return SVInt(0, 0, false);
     }
 
@@ -1851,9 +1851,9 @@ SVInt concatenate(ArrayRef<SVInt> operands) {
         uint16_t offset = 0;
         uint64_t val = 0;
         // The first operand wriets the msb, therefore, we must operate in reverse
-        for (const SVInt* op = operands.end() - 1; op >= operands.begin(); --op) {
-            copyBits((uint8_t*)&val, offset, (uint8_t*)&op->val, op->bitWidth);
-            offset += op->bitWidth;
+        for (auto it = operands.rbegin(); it != operands.rend(); it++) {
+            copyBits((uint8_t*)&val, offset, (uint8_t*)&it->val, it->bitWidth);
+            offset += it->bitWidth;
         }
         return SVInt(bits, val, false);
     }
@@ -1864,14 +1864,13 @@ SVInt concatenate(ArrayRef<SVInt> operands) {
 
     // offset (in bits) to which we are writing
     uint16_t offset = 0;
-    for (const SVInt* op = operands.end() - 1; op >= operands.begin(); --op) {
-
-        copyBits((uint8_t*)data, offset, (uint8_t*)op->getRawData(), op->bitWidth);
-        if (op->unknownFlag) {
+    for (auto it = operands.rbegin(); it != operands.rend(); it++) {
+        copyBits((uint8_t*)data, offset, (uint8_t*)it->getRawData(), it->bitWidth);
+        if (it->unknownFlag) {
             copyBits((uint8_t*)(data + words / 2), offset,
-                     (uint8_t*)(op->pVal + op->getNumWords() / 2), op->bitWidth);
+                     (uint8_t*)(it->pVal + it->getNumWords() / 2), it->bitWidth);
         }
-        offset += op->bitWidth;
+        offset += it->bitWidth;
     }
     return SVInt(data, bits, false, unknownFlag);
 }

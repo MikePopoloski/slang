@@ -64,7 +64,7 @@ public:
     /// The @a location and @a trivia parameters are used in the newly created token.
     /// The range of tokens to stringify is given by @a begin and @a end.
     /// If @a noWhitespace is set to true, all whitespace in between tokens will be stripped.
-    static Token stringify(BumpAllocator& alloc, SourceLocation location, ArrayRef<Trivia> trivia, Token* begin, Token* end, bool noWhitespace = false);
+    static Token stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia> trivia, Token* begin, Token* end, bool noWhitespace = false);
 
     // TODO: have this based on some options system or otherwise not just a randomly
     // chosen number.

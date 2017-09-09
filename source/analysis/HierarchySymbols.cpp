@@ -87,7 +87,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
         // or if we didn't have any parameter assignments at all.
         uint32_t orderedIndex = 0;
         for (const auto& info : getDeclaredParams()) {
-            if (orderedIndex >= orderedParams.count())
+            if (orderedIndex >= orderedParams.size())
                 break;
 
             if (info.local)
@@ -97,10 +97,10 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
         }
 
         // Make sure there aren't extra param assignments for non-existent params.
-        if (orderedIndex < orderedParams.count()) {
+        if (orderedIndex < orderedParams.size()) {
             auto& diag = addError(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
             diag << syntax.header.name.valueText();
-            diag << orderedParams.count();
+            diag << orderedParams.size();
             diag << orderedIndex;
         }
     }

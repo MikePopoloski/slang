@@ -9,10 +9,10 @@
 #include <cstdint>
 #include <variant>
 
+#include "span.h"
 #include "numeric/SVInt.h"
 #include "numeric/Time.h"
 #include "text/SourceLocation.h"
-#include "util/ArrayRef.h"
 #include "util/SmallVector.h"
 #include "util/StringRef.h"
 #include "util/StringTable.h"
@@ -86,7 +86,7 @@ public:
         };
 
         /// Leading trivia.
-        ArrayRef<slang::Trivia> trivia;
+        span<slang::Trivia> trivia;
 
         /// The raw source span.
         StringRef rawText;
@@ -106,7 +106,7 @@ public:
         uint8_t flags;
 
         Info();
-        Info(ArrayRef<Trivia> trivia, StringRef rawText, SourceLocation location, int flags);
+        Info(span<Trivia> trivia, StringRef rawText, SourceLocation location, int flags);
 
         void setNumInfo(NumericTokenValue&& value);
         void setNumFlags(LiteralBase base, bool isSigned);
@@ -132,7 +132,7 @@ public:
     bool isFromPreprocessor() const { return (info->flags & TokenFlags::IsFromPreprocessor) != 0; }
 
     SourceLocation location() const { return info->location; }
-    ArrayRef<Trivia> trivia() const { return info->trivia; }
+    span<Trivia> trivia() const { return info->trivia; }
     const Info* getInfo() const { return info; }
 
     /// Value text is the "nice" lexed version of certain tokens;
@@ -164,7 +164,7 @@ public:
 
     /// Modification methods to make it easier to deal with immutable tokens.
     Token asPreprocessed(BumpAllocator& alloc) const;
-    Token withTrivia(BumpAllocator& alloc, ArrayRef<Trivia> trivia) const;
+    Token withTrivia(BumpAllocator& alloc, span<Trivia> trivia) const;
     Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);

@@ -9,7 +9,7 @@
 namespace slang {
 
 static int zero = 0;
-ArrayRef<int> IntegralTypeSymbol::EmptyLowerBound{ &zero, 1 };
+span<int> IntegralTypeSymbol::EmptyLowerBound{ &zero, 1 };
 
 bool isDefaultSigned(TokenKind) {
     return false;

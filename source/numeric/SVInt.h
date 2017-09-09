@@ -10,7 +10,7 @@
 #include <ostream>
 #include <string>
 
-#include "util/ArrayRef.h"
+#include "span.h"
 #include "util/SmallVector.h"
 #include "util/StringRef.h"
 
@@ -180,7 +180,7 @@ public:
     /// any errors will assert instead of being handled gracefully.
     explicit SVInt(StringRef str);
 
-    SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, ArrayRef<logic_t> digits);
+    SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, span<logic_t> digits);
 
     ~SVInt() {
         if (!isSingleWord())
@@ -436,7 +436,7 @@ public:
     friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     /// Concatenation operator
-    friend SVInt concatenate(ArrayRef<SVInt> operands);
+    friend SVInt concatenate(span<SVInt> operands);
 
     /// Optimized operators that work with direct integer values.
     friend logic_t operator==(const SVInt& lhs, int64_t rhs) {

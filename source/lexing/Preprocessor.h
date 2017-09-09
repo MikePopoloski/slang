@@ -149,7 +149,7 @@ private:
     bool expandMacro(MacroDef macro, Token usageSite, MacroActualArgumentListSyntax* actualArgs,
                      SmallVector<Token>& dest);
     bool expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, SmallVector<Token>& dest);
-    bool expandReplacementList(ArrayRef<Token>& tokens);
+    bool expandReplacementList(span<Token>& tokens);
     void appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
                          SourceLocation expansionLoc, Token usageSite, bool& isFirst);
 
@@ -187,7 +187,7 @@ private:
 
         // Set a buffer to use first, in order, before looking at an underlying preprocessor
         // stream for macro argument lists.
-        void setBuffer(ArrayRef<Token> newBuffer);
+        void setBuffer(span<Token> newBuffer);
 
         // Pull tokens one at a time from a previously set buffer. Note that this won't pull
         // from the underlying preprocessor stream; its purpose is to allow stepping through
@@ -203,7 +203,7 @@ private:
 
         MacroActualArgumentSyntax* parseActualArgument();
         MacroFormalArgumentSyntax* parseFormalArgument();
-        ArrayRef<Token> parseTokenList();
+        span<Token> parseTokenList();
 
         Token peek();
         Token consume();
@@ -211,7 +211,7 @@ private:
         bool peek(TokenKind kind) { return peek().kind == kind; }
 
         Preprocessor& pp;
-        ArrayRef<Token> buffer;
+        span<Token> buffer;
         uint32_t currentIndex = 0;
 
         // When we're parsing formal arguments, we're in directive mode since the macro needs to

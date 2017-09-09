@@ -132,9 +132,9 @@ public:
 
 class BoundNaryExpression : public BoundExpression {
 public:
-    ArrayRef<const BoundExpression*> exprs;
+    span<const BoundExpression*> exprs;
 
-    BoundNaryExpression(const ExpressionSyntax& syntax, const TypeSymbol& type, ArrayRef<const BoundExpression*> exprs) :
+    BoundNaryExpression(const ExpressionSyntax& syntax, const TypeSymbol& type, span<const BoundExpression*> exprs) :
         BoundExpression(BoundNodeKind::NaryExpression, syntax, type),
         exprs(exprs) {}
 };
@@ -151,9 +151,9 @@ public:
 class BoundCallExpression : public BoundExpression {
 public:
     const SubroutineSymbol& subroutine;
-    ArrayRef<const BoundExpression*> arguments;
+    span<const BoundExpression*> arguments;
 
-    BoundCallExpression(const ExpressionSyntax& syntax, const SubroutineSymbol& subroutine, ArrayRef<const BoundExpression*> arguments) :
+    BoundCallExpression(const ExpressionSyntax& syntax, const SubroutineSymbol& subroutine, span<const BoundExpression*> arguments) :
         BoundExpression(BoundNodeKind::CallExpression, syntax, subroutine.returnType()),
         subroutine(subroutine), arguments(arguments) {}
 };
@@ -182,9 +182,9 @@ public:
 
 class BoundStatementList : public BoundStatement {
 public:
-    ArrayRef<const BoundStatement*> list;
+    span<const BoundStatement*> list;
 
-    BoundStatementList(ArrayRef<const BoundStatement*> list) :
+    BoundStatementList(span<const BoundStatement*> list) :
         BoundStatement(BoundNodeKind::StatementList), list(list) {}
 };
 
@@ -226,13 +226,13 @@ public:
 
 class BoundForLoopStatement : public BoundStatement {
 public:
-    //ArrayRef<const BoundVariableDecl*> initializers;
+    //span<const BoundVariableDecl*> initializers;
     const BoundExpression& stopExpr;
-    ArrayRef<const BoundExpression*> steps;
+    span<const BoundExpression*> steps;
     const BoundStatement& statement;
 
-    BoundForLoopStatement(const StatementSyntax& syntax, /*ArrayRef<const BoundVariableDecl*> initializers,*/
-                          const BoundExpression& stopExpr, ArrayRef<const BoundExpression*> steps,
+    BoundForLoopStatement(const StatementSyntax& syntax, /*span<const BoundVariableDecl*> initializers,*/
+                          const BoundExpression& stopExpr, span<const BoundExpression*> steps,
                           const BoundStatement& statement) :
         BoundStatement(BoundNodeKind::ForLoopStatement, syntax),
         /*initializers(initializers),*/ stopExpr(stopExpr), steps(steps), statement(statement) {}

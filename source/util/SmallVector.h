@@ -10,8 +10,9 @@
 #include <cstring>
 #include <iterator>
 
+#include "span.h"
 #include "BumpAllocator.h"
-#include "ArrayRef.h"
+#include "Debug.h"
 
 namespace slang {
 
@@ -52,7 +53,7 @@ public:
         return data[len - 1];
     }
 
-    uint32_t count() const { return len; }
+    uint32_t size() const { return len; }
     bool empty() const { return len == 0; }
 
     /// Clear all elements but retain underlying storage.
@@ -125,7 +126,7 @@ public:
     }
 
     /// Creates a copy of the array using the given allocator.
-    ArrayRef<T> copy(BumpAllocator& alloc) const {
+    span<T> copy(BumpAllocator& alloc) const {
         if (len == 0)
             return nullptr;
 
@@ -133,7 +134,7 @@ public:
         T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T)));
         for (uint32_t i = 0; i < len; i++)
             new (&dest[i]) T(*source++);
-        return ArrayRef<T>(dest, len);
+        return span<T>(dest, len);
     }
 
     T& operator[](int index) { return data[index]; }

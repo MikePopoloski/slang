@@ -368,10 +368,10 @@ BoundExpression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& sy
 
     // TODO: handle too few args as well, which requires looking at default values
     auto formalArgs = subroutine.arguments();
-    if (formalArgs.count() < actualArgs.count()) {
+    if (formalArgs.size() < actualArgs.count()) {
         auto& diag = root.addError(DiagCode::TooManyArguments, name.location());
         diag << syntax.left.sourceRange();
-        diag << formalArgs.count();
+        diag << (int)formalArgs.size();
         diag << actualArgs.count();
         return badExpr(nullptr);
     }

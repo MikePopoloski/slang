@@ -51,7 +51,7 @@ TEST_CASE("Line Comment", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -62,7 +62,7 @@ TEST_CASE("Block Comment (one line)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -77,7 +77,7 @@ multiple lines
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -88,7 +88,7 @@ TEST_CASE("Block Comment (unterminated)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::UnterminatedBlockComment);
@@ -100,7 +100,7 @@ TEST_CASE("Block Comment (nested)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::NestedBlockComment);
@@ -112,7 +112,7 @@ TEST_CASE("Whitespace", "[lexer]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::Whitespace);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -122,7 +122,7 @@ TEST_CASE("Newlines (CR)", "[lexer]") {
     Token token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::EndOfLine);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -132,7 +132,7 @@ TEST_CASE("Newlines (CR/LF)", "[lexer]") {
     Token token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::EndOfLine);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -142,7 +142,7 @@ TEST_CASE("Newlines (LF)", "[lexer]") {
     Token token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
-    CHECK(token.trivia().count() == 1);
+    CHECK(token.trivia().size() == 1);
     CHECK(token.trivia()[0].kind == TriviaKind::EndOfLine);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -563,7 +563,7 @@ TEST_CASE("Too many errors", "[lexer]") {
         token = lexer.lex();
     }
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(diagnostics.count() == Lexer::MAX_LEXER_ERRORS + 1);
+    CHECK(diagnostics.size() == Lexer::MAX_LEXER_ERRORS + 1);
     CHECK(diagnostics.back().code == DiagCode::TooManyLexerErrors);
 }
 

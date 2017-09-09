@@ -830,7 +830,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         return actualArgs;
 
     // Recursively expand macros in the replacement list
-    ArrayRef<Token> tokens = buffer.copy(alloc);
+    span<Token> tokens = buffer.copy(alloc);
     if (!expandReplacementList(tokens))
         return actualArgs;
 
@@ -840,7 +840,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     Token stringify;
     buffer.clear();
     expandedTokens.clear();
-    for (uint32_t i = 0; i < tokens.count(); i++) {
+    for (uint32_t i = 0; i < tokens.size(); i++) {
         Token newToken;
 
         // Once we see a `" token, we start collecting tokens into their own
@@ -862,7 +862,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
                 // Paste together previous token and next token; a macro paste on either end
                 // of the buffer or one that borders whitespace should be ignored.
                 // This isn't specified in the standard so I'm just guessing.
-                if (i == 0 || i == tokens.count() - 1 || !token.trivia().empty() ||
+                if (i == 0 || i == tokens.size() - 1 || !token.trivia().empty() ||
                     !tokens[i + 1].trivia().empty()) {
 
                     addError(DiagCode::IgnoredMacroPaste, token.location());
@@ -1054,7 +1054,7 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
     dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
 
-bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
+bool Preprocessor::expandReplacementList(span<Token>& tokens) {
     // keep expanding macros in the replacement list until we've got them all
     // use two alternating buffers to hold the tokens
     SmallVectorSized<Token, 64> buffer1;
@@ -1099,7 +1099,7 @@ bool Preprocessor::expandReplacementList(ArrayRef<Token>& tokens) {
         }
 
         // shake the box until the cat stops making noise
-        tokens = ArrayRef<Token>(currentBuffer->begin(), currentBuffer->end());
+        tokens = span<Token>(currentBuffer->begin(), currentBuffer->end());
         std::swap(currentBuffer, nextBuffer);
         currentBuffer->clear();
 
@@ -1244,7 +1244,7 @@ MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     return pp.alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef);
 }
 
-ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
+span<Token> Preprocessor::MacroParser::parseTokenList() {
     // comma and right parenthesis only end the default token list if they are
     // not inside a nested pair of (), [], or {}
     // otherwise, keep swallowing tokens as part of the default
@@ -1283,19 +1283,19 @@ ArrayRef<Token> Preprocessor::MacroParser::parseTokenList() {
     return tokens.copy(pp.alloc);
 }
 
-void Preprocessor::MacroParser::setBuffer(ArrayRef<Token> newBuffer) {
+void Preprocessor::MacroParser::setBuffer(span<Token> newBuffer) {
     buffer = newBuffer;
     currentIndex = 0;
 }
 
 Token Preprocessor::MacroParser::next() {
-    if (currentIndex < buffer.count())
+    if (currentIndex < buffer.size())
         return buffer[currentIndex++];
     return Token();
 }
 
 Token Preprocessor::MacroParser::peek() {
-    if (currentIndex < buffer.count())
+    if (currentIndex < buffer.size())
         return buffer[currentIndex];
     return pp.peek(currentMode);
 }
@@ -1308,7 +1308,7 @@ Token Preprocessor::MacroParser::consume() {
 }
 
 Token Preprocessor::MacroParser::expect(TokenKind kind) {
-    if (currentIndex >= buffer.count())
+    if (currentIndex >= buffer.size())
         return pp.expect(kind, currentMode);
 
     if (buffer[currentIndex].kind != kind) {

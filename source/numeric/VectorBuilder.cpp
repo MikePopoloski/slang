@@ -157,8 +157,8 @@ SVInt VectorBuilder::finish() {
         // so only requires clog2(d+1) bits. If the leading digit is unknown
         // however, we go with the default multiplier amount.
         int bits = 0;
-        if (digits.count() > 1)
-            bits = (digits.count() - 1) * multiplier;
+        if (digits.size() > 1)
+            bits = (digits.size() - 1) * multiplier;
 
         if (digits[0].isUnknown())
             bits += multiplier;
@@ -172,7 +172,7 @@ SVInt VectorBuilder::finish() {
             }
             if (sizeBits == 0) {
                 return SVInt((uint16_t)std::max(32, bits), literalBase, signFlag, hasUnknown,
-                             ArrayRef<logic_t>(digits.begin(), digits.count()));
+                             span<logic_t>(digits.begin(), digits.size()));
             } else {
                 // we should warn about overflow here, but the spec says it is valid and
                 // the literal gets truncated. Definitely a warning though.
@@ -182,13 +182,13 @@ SVInt VectorBuilder::finish() {
     }
 
     return SVInt(sizeBits ? sizeBits : 32, literalBase, signFlag, hasUnknown,
-                 ArrayRef<logic_t>(digits.begin(), digits.count()));
+                 span<logic_t>(digits.begin(), digits.size()));
 }
 
 void VectorBuilder::addDigit(logic_t digit, int maxValue) {
     // Leading zeros obviously don't count towards our bit limit, so
     // only count them if we've seen other non-zero digits
-    if (digit.value != 0 || digits.count() != 0) {
+    if (digit.value != 0 || digits.size() != 0) {
         digits.append(digit);
         if (digit.isUnknown())
             hasUnknown = true;

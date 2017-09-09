@@ -13,7 +13,7 @@ TEST_CASE("Diagnostic Line Number", "[diagnostic]") {
 
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "ident");
-    CHECK(diagnostics.count() == 1);
+    CHECK(diagnostics.size() == 1);
     std::string message = getDiagnostic(0);
     int bufNum, line, col;
     sscanf(message.c_str(), "<unnamed_buffer%d>:%d:%d", &bufNum, &line, &col);
@@ -28,7 +28,7 @@ TEST_CASE("Diagnostic reporting with `line", "[diagnostic]") {
 "ident";
 
     lexToken(text);
-    CHECK(diagnostics.count() == 1);
+    CHECK(diagnostics.size() == 1);
     std::string message = getDiagnostic(0);
     int line, col;
     int matches = sscanf(message.c_str(), "foo.svh:%d:%d", &line, &col);
@@ -46,7 +46,7 @@ TEST_CASE("undef errors", "[diagnostic]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
 
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::ExpectedIdentifier);
 
     auto& text2 = "`undef __LINE__\n";
@@ -54,7 +54,7 @@ TEST_CASE("undef errors", "[diagnostic]") {
 
     CHECK(token.kind == TokenKind::EndOfFile);
 
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::UndefineBuiltinDirective);
 }
 
@@ -64,20 +64,20 @@ TEST_CASE("keywords_errors", "[diagnostic]") {
 
     Token token = lexToken(text);
     CHECK(token.kind == TokenKind::EndOfFile);
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::UnrecognizedKeywordVersion);
 
     auto& text2 = "`begin_keywords\n";
 
     token = lexToken(text2);
     CHECK(token.kind == TokenKind::EndOfFile);
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::ExpectedToken);
 
     auto& text3 = "`end_keywords\n";
 
     token = lexToken(text3);
     CHECK(token.kind == TokenKind::EndOfFile);
-    REQUIRE(diagnostics.count() == 1);
+    REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == DiagCode::MismatchedEndKeywordsDirective);
 }

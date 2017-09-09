@@ -11,8 +11,8 @@
 #include <cstddef>
 #include <string>
 
+#include "span.h"
 #include "lexing/Token.h"
-#include "util/ArrayRef.h"
 #include "util/SmallVector.h"
 
 namespace slang {
@@ -632,48 +632,48 @@ protected:
 template<typename T>
 class SyntaxList : public SyntaxNode {
 public:
-    SyntaxList(std::nullptr_t) : SyntaxList(ArrayRef<T*>(nullptr)) {}
-    SyntaxList(ArrayRef<T*> elements) :
+    SyntaxList(std::nullptr_t) : SyntaxList(span<T*>(nullptr)) {}
+    SyntaxList(span<T*> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
-        childCount = elements.count();
+        childCount = (uint32_t)elements.size();
     }
 
-    uint32_t count() const { return elements.count(); }
+    uint32_t count() const { return (uint32_t)elements.size(); }
 
-    const T* const* begin() const { return elements.begin(); }
-    const T* const* end() const { return elements.end(); }
+    typename span<T*>::const_iterator begin() const { return elements.begin(); }
+    typename span<T*>::const_iterator end() const { return elements.end(); }
 
     const T* operator[](uint32_t index) const { return elements[index]; }
 
 private:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
-    ArrayRef<T*> elements;
+    span<T*> elements;
 };
 
 class TokenList : public SyntaxNode {
 public:
-    TokenList(std::nullptr_t) : TokenList(ArrayRef<Token>(nullptr)) {}
-    TokenList(ArrayRef<Token> elements) :
+    TokenList(std::nullptr_t) : TokenList(span<Token>(nullptr)) {}
+    TokenList(span<Token> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
-        childCount = elements.count();
+        childCount = (uint32_t)elements.size();
     }
 
-    uint32_t count() const { return elements.count(); }
+    uint32_t count() const { return (uint32_t)elements.size(); }
 
-    const Token* begin() const { return elements.begin(); }
-    const Token* end() const { return elements.end(); }
+    span<Token>::const_iterator begin() const { return elements.begin(); }
+    span<Token>::const_iterator end() const { return elements.end(); }
 
     Token operator[](uint32_t index) const { return elements[index]; }
 
 private:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
-    ArrayRef<Token> elements;
+    span<Token> elements;
 };
 
 template<typename T>
@@ -710,16 +710,16 @@ public:
         int index;
     };
 
-    SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(ArrayRef<TokenOrSyntax>(nullptr)) {}
-    SeparatedSyntaxList(ArrayRef<TokenOrSyntax> elements) :
+    SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>(nullptr)) {}
+    SeparatedSyntaxList(span<TokenOrSyntax> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
-        childCount = elements.count();
+        childCount = (uint32_t)elements.size();
     }
 
     bool empty() const { return count() == 0; }
-    uint32_t count() const { return (uint32_t)std::ceil(elements.count() / 2.0); }
+    uint32_t count() const { return (uint32_t)std::ceil(elements.size() / 2.0); }
 
     const T* operator[](uint32_t index) const {
         index <<= 1;
@@ -735,7 +735,7 @@ public:
 private:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
-    ArrayRef<TokenOrSyntax> elements;
+    span<TokenOrSyntax> elements;
 };
 
 }

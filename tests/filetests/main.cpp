@@ -31,7 +31,7 @@ int main() {
             printf("Parsing '%s'\n", p.str().c_str());
             printf("%s\n\n", diagWriter.report(tree.diagnostics()).c_str());
         }
-        errors += tree.diagnostics().count();
+        errors += tree.diagnostics().size();
         files++;
 
         trees.emplace_back(std::move(tree));
@@ -50,7 +50,7 @@ int main() {
     /*for (const auto interfacep : table.getInterfaces()) {
         auto scope = alloc.emplace<Scope>();
         scope->addParentScope(&definitions);
-        auto interfaceSym = alloc.emplace<ModuleSymbol>(*interfacep, scope, ArrayRef<const Symbol*>());
+        auto interfaceSym = alloc.emplace<ModuleSymbol>(*interfacep, scope, span<const Symbol*>());
         definitions.add(interfaceSym);
     }
 

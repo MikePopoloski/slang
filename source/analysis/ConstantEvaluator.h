@@ -83,7 +83,7 @@ private:
     void evaluateConditional(const BoundConditionalStatement& stmt);
     void evaluateForLoop(const BoundForLoopStatement& loop);
 
-    ConstantValue evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments);
+    ConstantValue evaluateSystemCall(SystemFunction func, span<const BoundExpression*> arguments);
 
     bool evaluateLValue(const BoundExpression& expr, LValue& lvalue);
 

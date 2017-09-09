@@ -351,17 +351,17 @@ DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager) :
     addMember(allocate<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment, *this));
 }
 
-DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager, ArrayRef<const CompilationUnitSyntax*> units) :
+DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax*> units) :
     DesignRootSymbol(sourceManager)
 {
     for (auto unit : units)
         addCompilationUnit(allocate<CompilationUnitSymbol>(*unit, *this));
 }
 
-DesignRootSymbol::DesignRootSymbol(const SyntaxTree& tree) :
-    DesignRootSymbol(ArrayRef<const SyntaxTree*> { &tree }) {}
+DesignRootSymbol::DesignRootSymbol(const SyntaxTree* tree) :
+    DesignRootSymbol(make_span(&tree, 1)) {}
 
-DesignRootSymbol::DesignRootSymbol(ArrayRef<const SyntaxTree*> trees) :
+DesignRootSymbol::DesignRootSymbol(span<const SyntaxTree*> trees) :
     DesignRootSymbol(trees[0]->sourceManager())
 {
     for (auto tree : trees) {
@@ -490,7 +490,7 @@ const TypeSymbol& DesignRootSymbol::getIntegralType(const IntegerTypeSyntax& syn
     if (dims.empty())
         // TODO: signing
         return getKnownType(syntax.kind);
-    else if (dims.count() == 1 && dims[0].right == 0) {
+    else if (dims.size() == 1 && dims[0].right == 0) {
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
         int width = dims[0].left + 1;

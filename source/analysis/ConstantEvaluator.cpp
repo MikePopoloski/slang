@@ -234,7 +234,7 @@ ConstantValue ConstantEvaluator::evaluateNary(const BoundNaryExpression& expr) {
 
     // TODO: add support for other Nary Expressions, like stream concatenation
     switch(expr.syntax.kind) {
-        case SyntaxKind::ConcatenationExpression: return concatenate(ArrayRef<SVInt>(operands.begin(), operands.end()));
+        case SyntaxKind::ConcatenationExpression: return concatenate(span<SVInt>(operands.begin(), operands.end()));
         DEFAULT_UNREACHABLE;
     }
 
@@ -279,8 +279,8 @@ ConstantValue ConstantEvaluator::evaluateCall(const BoundCallExpression& expr) {
     // Don't actually update that pointer until we finish evaluating arguments.
     Frame newFrame { currentFrame };
 
-    ArrayRef<const FormalArgumentSymbol*> args = subroutine.arguments();
-    for (uint32_t i = 0; i < args.count(); i++)
+    span<const FormalArgumentSymbol*> args = subroutine.arguments();
+    for (uint32_t i = 0; i < args.size(); i++)
         newFrame.temporaries[args[i]] = evaluateExpr(*expr.arguments[i]);
 
     VariableSymbol callValue(subroutine.name, subroutine.location, subroutine.returnType(), subroutine);
@@ -295,7 +295,7 @@ ConstantValue ConstantEvaluator::evaluateCall(const BoundCallExpression& expr) {
     return newFrame.returnValue;
 }
 
-ConstantValue ConstantEvaluator::evaluateSystemCall(SystemFunction func, ArrayRef<const BoundExpression*> arguments) {
+ConstantValue ConstantEvaluator::evaluateSystemCall(SystemFunction func, span<const BoundExpression*> arguments) {
     SmallVectorSized<ConstantValue, 8> args;
     for (auto arg : arguments)
         args.emplace(evaluateExpr(*arg));
