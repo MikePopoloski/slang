@@ -141,14 +141,14 @@ SVInt::SVInt(StringRef str) {
     // currently uninitialized
     pVal = nullptr;
 
-    *this = SVInt(bitWidth, base, signFlag, unknownFlag, span<logic_t>(digits.begin(), digits.end()));
+    *this = SVInt(bitWidth, base, signFlag, unknownFlag, span<logic_t const>(digits.begin(), digits.end()));
 
     // if it's supposed to be negative, flip it around
     if (negative)
         *this = -(*this);
 }
 
-SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, span<logic_t> digits) {
+SVInt::SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, span<logic_t const> digits) {
     bitWidth = bits;
     signFlag = isSigned;
     unknownFlag = anyUnknown;
@@ -563,7 +563,7 @@ SVInt SVInt::replicate(const SVInt& times) const {
     SmallVectorSized<SVInt, 8> buffer;
     for (size_t i = 0; i < n; ++i)
         buffer.append(*this);
-    return concatenate(span<SVInt>(buffer.begin(), buffer.end()));
+    return concatenate(span<SVInt const>(buffer.begin(), buffer.end()));
 }
 
 SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
@@ -1829,7 +1829,7 @@ logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     return logic_t(true);
 }
 
-SVInt concatenate(span<SVInt> operands) {
+SVInt concatenate(span<SVInt const> operands) {
     // 0 operand concatenations can be valid inside of larger concatenations
     if (operands.size() == 0) {
         return SVInt(0, 0, false);

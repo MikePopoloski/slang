@@ -632,8 +632,8 @@ protected:
 template<typename T>
 class SyntaxList : public SyntaxNode {
 public:
-    SyntaxList(std::nullptr_t) : SyntaxList(span<T*>(nullptr)) {}
-    SyntaxList(span<T*> elements) :
+    SyntaxList(std::nullptr_t) : SyntaxList(span<T* const>(nullptr)) {}
+    SyntaxList(span<T* const> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
@@ -642,21 +642,21 @@ public:
 
     uint32_t count() const { return (uint32_t)elements.size(); }
 
-    typename span<T*>::const_iterator begin() const { return elements.begin(); }
-    typename span<T*>::const_iterator end() const { return elements.end(); }
+    typename span<T* const>::const_iterator begin() const { return elements.begin(); }
+    typename span<T* const>::const_iterator end() const { return elements.end(); }
 
     const T* operator[](uint32_t index) const { return elements[index]; }
 
 private:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
-    span<T*> elements;
+    span<T* const> elements;
 };
 
 class TokenList : public SyntaxNode {
 public:
-    TokenList(std::nullptr_t) : TokenList(span<Token>(nullptr)) {}
-    TokenList(span<Token> elements) :
+    TokenList(std::nullptr_t) : TokenList(span<Token const>(nullptr)) {}
+    TokenList(span<Token const> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
@@ -665,15 +665,15 @@ public:
 
     uint32_t count() const { return (uint32_t)elements.size(); }
 
-    span<Token>::const_iterator begin() const { return elements.begin(); }
-    span<Token>::const_iterator end() const { return elements.end(); }
+    span<Token const>::const_iterator begin() const { return elements.begin(); }
+    span<Token const>::const_iterator end() const { return elements.end(); }
 
     Token operator[](uint32_t index) const { return elements[index]; }
 
 private:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
-    span<Token> elements;
+    span<Token const> elements;
 };
 
 template<typename T>
@@ -710,8 +710,8 @@ public:
         int index;
     };
 
-    SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>(nullptr)) {}
-    SeparatedSyntaxList(span<TokenOrSyntax> elements) :
+    SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>(nullptr)) {}
+    SeparatedSyntaxList(span<TokenOrSyntax const> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
@@ -735,7 +735,7 @@ public:
 private:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
-    span<TokenOrSyntax> elements;
+    span<TokenOrSyntax const> elements;
 };
 
 }

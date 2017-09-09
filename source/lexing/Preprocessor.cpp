@@ -830,7 +830,7 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
         return actualArgs;
 
     // Recursively expand macros in the replacement list
-    span<Token> tokens = buffer.copy(alloc);
+    span<Token const> tokens = buffer.copy(alloc);
     if (!expandReplacementList(tokens))
         return actualArgs;
 
@@ -1054,7 +1054,7 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
     dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
 
-bool Preprocessor::expandReplacementList(span<Token>& tokens) {
+bool Preprocessor::expandReplacementList(span<Token const>& tokens) {
     // keep expanding macros in the replacement list until we've got them all
     // use two alternating buffers to hold the tokens
     SmallVectorSized<Token, 64> buffer1;
@@ -1099,7 +1099,7 @@ bool Preprocessor::expandReplacementList(span<Token>& tokens) {
         }
 
         // shake the box until the cat stops making noise
-        tokens = span<Token>(currentBuffer->begin(), currentBuffer->end());
+        tokens = span<Token const>(currentBuffer->begin(), currentBuffer->end());
         std::swap(currentBuffer, nextBuffer);
         currentBuffer->clear();
 
@@ -1244,7 +1244,7 @@ MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     return pp.alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef);
 }
 
-span<Token> Preprocessor::MacroParser::parseTokenList() {
+span<Token const> Preprocessor::MacroParser::parseTokenList() {
     // comma and right parenthesis only end the default token list if they are
     // not inside a nested pair of (), [], or {}
     // otherwise, keep swallowing tokens as part of the default
@@ -1283,7 +1283,7 @@ span<Token> Preprocessor::MacroParser::parseTokenList() {
     return tokens.copy(pp.alloc);
 }
 
-void Preprocessor::MacroParser::setBuffer(span<Token> newBuffer) {
+void Preprocessor::MacroParser::setBuffer(span<Token const> newBuffer) {
     buffer = newBuffer;
     currentIndex = 0;
 }

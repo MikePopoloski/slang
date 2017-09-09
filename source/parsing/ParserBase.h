@@ -108,7 +108,7 @@ protected:
         TokenKind closeKind,
         TokenKind separatorKind,
         Token& openToken,
-        span<TokenOrSyntax>& list,
+        span<TokenOrSyntax const>& list,
         Token& closeToken,
         DiagCode code,
         TParserFunc&& parseItem

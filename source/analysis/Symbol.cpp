@@ -351,7 +351,7 @@ DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager) :
     addMember(allocate<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment, *this));
 }
 
-DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax*> units) :
+DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units) :
     DesignRootSymbol(sourceManager)
 {
     for (auto unit : units)
@@ -361,7 +361,7 @@ DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager, span<cons
 DesignRootSymbol::DesignRootSymbol(const SyntaxTree* tree) :
     DesignRootSymbol(make_span(&tree, 1)) {}
 
-DesignRootSymbol::DesignRootSymbol(span<const SyntaxTree*> trees) :
+DesignRootSymbol::DesignRootSymbol(span<const SyntaxTree* const> trees) :
     DesignRootSymbol(trees[0]->sourceManager())
 {
     for (auto tree : trees) {

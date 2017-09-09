@@ -172,7 +172,7 @@ SVInt VectorBuilder::finish() {
             }
             if (sizeBits == 0) {
                 return SVInt((uint16_t)std::max(32, bits), literalBase, signFlag, hasUnknown,
-                             span<logic_t>(digits.begin(), digits.size()));
+                             span<logic_t const>(digits.begin(), digits.size()));
             } else {
                 // we should warn about overflow here, but the spec says it is valid and
                 // the literal gets truncated. Definitely a warning though.
@@ -182,7 +182,7 @@ SVInt VectorBuilder::finish() {
     }
 
     return SVInt(sizeBits ? sizeBits : 32, literalBase, signFlag, hasUnknown,
-                 span<logic_t>(digits.begin(), digits.size()));
+                 span<logic_t const>(digits.begin(), digits.size()));
 }
 
 void VectorBuilder::addDigit(logic_t digit, int maxValue) {

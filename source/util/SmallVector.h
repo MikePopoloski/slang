@@ -126,7 +126,7 @@ public:
     }
 
     /// Creates a copy of the array using the given allocator.
-    span<T> copy(BumpAllocator& alloc) const {
+    span<T const> copy(BumpAllocator& alloc) const {
         if (len == 0)
             return nullptr;
 
@@ -134,7 +134,7 @@ public:
         T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T)));
         for (uint32_t i = 0; i < len; i++)
             new (&dest[i]) T(*source++);
-        return span<T>(dest, len);
+        return span<T const>(dest, len);
     }
 
     T& operator[](int index) { return data[index]; }

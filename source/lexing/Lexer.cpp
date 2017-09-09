@@ -145,7 +145,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     return Token(token.kind, info);
 }
 
-Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia> trivia,
+Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
                        Token* begin, Token* end, bool noWhitespace) {
     SmallVectorSized<char, 64> text;
     text.append('"');
@@ -671,7 +671,7 @@ Token Lexer::lexIncludeFileName() {
         scanWhitespace(triviaBuffer);
     }
 
-    span<Trivia> trivia = triviaBuffer.copy(alloc);
+    span<Trivia const> trivia = triviaBuffer.copy(alloc);
     uint32_t offset = currentOffset();
     auto location = SourceLocation(getBufferID(), offset);
 

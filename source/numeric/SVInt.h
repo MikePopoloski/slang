@@ -180,7 +180,7 @@ public:
     /// any errors will assert instead of being handled gracefully.
     explicit SVInt(StringRef str);
 
-    SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, span<logic_t> digits);
+    SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, span<logic_t const> digits);
 
     ~SVInt() {
         if (!isSingleWord())
@@ -436,7 +436,7 @@ public:
     friend logic_t wildcardEqual(const SVInt& lhs, const SVInt& rhs);
 
     /// Concatenation operator
-    friend SVInt concatenate(span<SVInt> operands);
+    friend SVInt concatenate(span<SVInt const> operands);
 
     /// Optimized operators that work with direct integer values.
     friend logic_t operator==(const SVInt& lhs, int64_t rhs) {

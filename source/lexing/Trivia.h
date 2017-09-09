@@ -40,7 +40,7 @@ public:
 
     Trivia() : kind(TriviaKind::Unknown), rawText(nullptr) {}
     Trivia(TriviaKind kind, StringRef rawText) : kind(kind), rawText(rawText) {}
-    Trivia(TriviaKind kind, span<Token> tokens) : kind(kind), tokens(tokens) {}
+    Trivia(TriviaKind kind, span<Token const> tokens) : kind(kind), tokens(tokens) {}
     Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
 
     /// Writes the trivia's text to the given buffer.
@@ -56,7 +56,7 @@ public:
 private:
     union {
         StringRef rawText;
-        span<Token> tokens;
+        span<Token const> tokens;
         SyntaxNode* syntaxNode;
     };
 };

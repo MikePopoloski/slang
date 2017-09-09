@@ -13,7 +13,7 @@ using namespace std;
 
 BumpAllocator alloc;
 
-Token identifier(const std::string& name, span<Trivia> trivia) {
+Token identifier(const std::string& name, span<Trivia const> trivia) {
     StringRef text{ name };
     auto info = alloc.emplace<Token::Info>(trivia, text.intern(alloc), SourceLocation(), 0);
     info->extra = IdentifierType::Normal;
