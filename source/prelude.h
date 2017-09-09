@@ -1,0 +1,51 @@
+//------------------------------------------------------------------------------
+// prelude.h
+// File is included automatically in all source files.
+//
+// File is under the MIT license; see LICENSE for details.
+//------------------------------------------------------------------------------
+#pragma once
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <climits>
+#include <iterator>
+#include <limits>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+using std::array;
+using std::byte;
+using std::initializer_list;
+using std::int8_t;
+using std::int16_t;
+using std::int32_t;
+using std::int64_t;
+using std::intptr_t;
+using std::nullptr_t;
+using std::numeric_limits;
+using std::optional;
+using std::pair;
+using std::ptrdiff_t;
+using std::size_t;
+using std::string;
+using std::string_view;
+using std::tuple;
+using std::uint8_t;
+using std::uint16_t;
+using std::uint32_t;
+using std::uint64_t;
+using std::uintptr_t;
+using std::variant;
+
+using std::make_pair;
+using std::make_tuple;
+using std::make_optional;
+using std::nullopt;

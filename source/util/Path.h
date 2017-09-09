@@ -16,11 +16,6 @@
 #include <cstring>
 
 #if defined(_WIN32)
-# undef DEFAULT_UNREACHABLE
-# define NOMINMAX
-# include <windows.h>
-# undef interface
-# undef DEFAULT_UNREACHABLE
 #else
 # include <unistd.h>
 # include <dirent.h>
@@ -83,53 +78,11 @@ public:
     bool isAbsolute() const { return absolute; }
 
     /// Checks if the file exists; note that there is the typical IO race condition here.
-    bool exists() const {
-#if defined(_WIN32)
-        return GetFileAttributesW(wstr().c_str()) != INVALID_FILE_ATTRIBUTES;
-#else
-        struct stat sb;
-        return stat(str().c_str(), &sb) == 0;
-#endif
-    }
+    bool exists() const;
 
-    size_t fileSize() const {
-#if defined(_WIN32)
-        struct _stati64 sb;
-        if (_wstati64(wstr().c_str(), &sb) != 0)
-            throw std::runtime_error("path::file_size(): cannot stat file \"" + str() + "\"!");
-#else
-        struct stat sb;
-        if (stat(str().c_str(), &sb) != 0)
-            throw std::runtime_error("path::file_size(): cannot stat file \"" + str() + "\"!");
-#endif
-        return (size_t)sb.st_size;
-    }
-
-    bool isDirectory() const {
-#if defined(_WIN32)
-        DWORD result = GetFileAttributesW(wstr().c_str());
-        if (result == INVALID_FILE_ATTRIBUTES)
-            return false;
-        return (result & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
-        struct stat sb;
-        if (stat(str().c_str(), &sb))
-            return false;
-        return S_ISDIR(sb.st_mode);
-#endif
-    }
-
-    bool isFile() const {
-#if defined(_WIN32)
-        DWORD attr = GetFileAttributesW(wstr().c_str());
-        return (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY) == 0);
-#else
-        struct stat sb;
-        if (stat(str().c_str(), &sb))
-            return false;
-        return S_ISREG(sb.st_mode);
-#endif
-    }
+    size_t fileSize() const;
+    bool isDirectory() const;
+    bool isFile() const;
 
     std::string extension() const {
         const std::string& name = filename();
@@ -234,58 +187,14 @@ public:
     }
 
     /// Convert a relative path to an absolute one.
-    static Path makeAbsolute(const Path& path) {
-#if !defined(_WIN32)
-        char temp[PATH_MAX];
-        if (realpath(path.str().c_str(), temp) == nullptr)
-            throw std::runtime_error("Internal error in realpath(): " + std::string(strerror(errno)));
-        return Path(temp);
-#else
-        std::wstring value = path.wstr();
-        std::wstring out(MAX_PATH, '\0');
-        DWORD length = GetFullPathNameW(value.c_str(), MAX_PATH, &out[0], nullptr);
-        if (length == 0)
-            throw std::runtime_error("Internal error in GetFullPathNameW(): " + std::to_string(GetLastError()));
-        return Path(out.substr(0, length));
-#endif
-    }
+    static Path makeAbsolute(const Path& path);
 
     /// Gets the process's current working directory.
-    static Path getCurrentDirectory() {
-#if !defined(_WIN32)
-        char temp[PATH_MAX];
-        if (::getcwd(temp, PATH_MAX) == NULL)
-            throw std::runtime_error("Internal error in getcwd(): " + std::string(strerror(errno)));
-        return Path(temp);
-#else
-        std::wstring temp(MAX_PATH, '\0');
-        if (!_wgetcwd(&temp[0], MAX_PATH))
-            throw std::runtime_error("Internal error in _wgetcwd(): " + std::to_string(GetLastError()));
-        return Path(temp.c_str());
-#endif
-    }
+    static Path getCurrentDirectory();
 
 #if defined(_WIN32)
-    std::wstring wstr(PathType type = NativePath) const {
-        std::string temp = str(type);
-        int size = MultiByteToWideChar(CP_UTF8, 0, &temp[0], (int)temp.size(), NULL, 0);
-        std::wstring result(size, 0);
-        MultiByteToWideChar(CP_UTF8, 0, &temp[0], (int)temp.size(), &result[0], size);
-        return result;
-    }
-
-
-    void set(const std::wstring& wstring, PathType type = NativePath) {
-        std::string string;
-        if (!wstring.empty()) {
-            int size = WideCharToMultiByte(CP_UTF8, 0, &wstring[0], (int)wstring.size(),
-                NULL, 0, NULL, NULL);
-            string.resize(size, 0);
-            WideCharToMultiByte(CP_UTF8, 0, &wstring[0], (int)wstring.size(),
-                &string[0], size, NULL, NULL);
-        }
-        set(string, type);
-    }
+    std::wstring wstr(PathType type = NativePath) const;
+    void set(const std::wstring& wstring, PathType type = NativePath);
 
     Path& operator=(const std::wstring& str) { set(str); return *this; }
 #endif
@@ -315,41 +224,6 @@ private:
 /// Simple utility method to iterate all of the files in a given directory. Note that the
 /// entire set is realized in one go; you may want something smarter if you only need to
 /// look at a few entries.
-inline std::vector<Path> getFilesInDirectory(const Path& path) {
-    std::vector<Path> result;
-
-#if defined(_WIN32)
-    WIN32_FIND_DATA ffd;
-    std::wstring base = path.wstr() + L"\\";
-    HANDLE hFind = FindFirstFile((base + +L"*").c_str(), &ffd);
-    if (hFind == INVALID_HANDLE_VALUE)
-        throw std::runtime_error("Internal error in FindFirstFile(): " + std::to_string(GetLastError()));
-
-    do {
-        if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-            result.push_back(base + ffd.cFileName);
-    } while (FindNextFile(hFind, &ffd) != 0);
-
-    DWORD dwError = GetLastError();
-    if (dwError != ERROR_NO_MORE_FILES)
-        throw std::runtime_error("Internal error in FindNextFile(): " + std::to_string(dwError));
-
-    FindClose(hFind);
-#else
-    DIR* d;
-    struct dirent* dir;
-    std::string base = path.str() + "/";
-    d = opendir(base.c_str());
-    if (d) {
-        while ((dir = readdir(d))) {
-            if (dir->d_type == DT_REG)
-                result.push_back(base + dir->d_name);
-        }
-        closedir(d);
-    }
-#endif
-
-    return result;
-}
+std::vector<Path> getFilesInDirectory(const Path& path);
 
 }

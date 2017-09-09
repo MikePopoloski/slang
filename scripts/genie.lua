@@ -34,6 +34,16 @@ project "slang"
 		path.join(ROOT_DIR, "external/**.cc"),
 	}
 
+	configuration { "vs*" }
+		buildoptions {
+			"/FI prelude.h"
+		}
+
+	configuration { "linux-gcc* or linux-clang*" }
+		buildoptions {
+			"-include prelude.h"
+		}
+
 function testProject(_name)
 	project (_name)
 		kind "ConsoleApp"

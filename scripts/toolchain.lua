@@ -196,15 +196,15 @@ function toolchain(_buildDir, _libDir)
 				"-W",
 			}
 		else
-   	        	links {
-                        	"rt",
-                        	"dl",
-                  	}
-                  	linkoptions {
-                        	"-Wl,--gc-sections",
-                        	"-Wl,--as-needed",
-                	}
-   		end
+			links {
+				"rt",
+				"dl",
+			}
+			linkoptions {
+				"-Wl,--gc-sections",
+				"-Wl,--as-needed",
+			}
+		end
 
 	configuration { "linux-gcc*", "x64" }
 		targetdir (path.join(_buildDir, "linux64_gcc/bin"))
