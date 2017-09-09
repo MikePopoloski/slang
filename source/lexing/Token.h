@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <variant>
 
-#include "span.h"
 #include "numeric/SVInt.h"
 #include "numeric/Time.h"
 #include "text/SourceLocation.h"

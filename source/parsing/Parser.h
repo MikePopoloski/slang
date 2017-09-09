@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "span.h"
 #include "lexing/Token.h"
 #include "numeric/VectorBuilder.h"
 

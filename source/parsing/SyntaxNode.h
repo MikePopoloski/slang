@@ -11,7 +11,6 @@
 #include <cstddef>
 #include <string>
 
-#include "span.h"
 #include "lexing/Token.h"
 #include "util/SmallVector.h"
 

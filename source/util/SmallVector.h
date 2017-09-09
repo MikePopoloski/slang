@@ -10,9 +10,7 @@
 #include <cstring>
 #include <iterator>
 
-#include "span.h"
 #include "BumpAllocator.h"
-#include "Debug.h"
 
 namespace slang {
 

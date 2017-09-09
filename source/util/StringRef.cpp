@@ -10,7 +10,6 @@
 #include <cstring>
 
 #include "BumpAllocator.h"
-#include "Debug.h"
 #include "Hash.h"
 
 namespace slang {

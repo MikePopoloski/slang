@@ -11,7 +11,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "span.h"
 #include "diagnostics/Diagnostics.h"
 #include "numeric/SVInt.h"
 #include "parsing/AllSyntax.h"

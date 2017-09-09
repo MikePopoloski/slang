@@ -6346,6 +6346,7 @@ namespace Catch {
 #ifdef __AFXDLL
 #include <AfxWin.h>
 #else
+#undef DEFAULT_UNREACHABLE
 #include <windows.h>
 #endif
 

@@ -665,9 +665,6 @@ inline constexpr ElementType& at(const span<ElementType, Extent>& s, std::ptrdif
 
 } // namespace gsl
 
-using gsl::span;
-using gsl::make_span;
-
 #undef GSL_NOEXCEPT
 #undef Expects
 

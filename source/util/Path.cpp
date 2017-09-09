@@ -7,60 +7,7 @@
 #include "Path.h"
 
 #if defined(_WIN32)
-
-typedef char CHAR;
-typedef wchar_t WCHAR;
-typedef int BOOL;
-typedef unsigned int UINT;
-typedef unsigned long DWORD;
-typedef __int64 LONG_PTR;
-typedef void *HANDLE;
-typedef WCHAR *NWPSTR, *LPWSTR, *PWSTR;
-typedef const WCHAR *LPCWSTR, *PCWSTR;
-typedef const WCHAR *LPCWCH, *PCWCH;
-typedef const CHAR *LPCCH, *PCCH;
-typedef CHAR *NPSTR, *LPSTR, *PSTR;
-typedef BOOL *LPBOOL;
-
-#define MAX_PATH 260
-#define CP_UTF8 65001
-#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
-#define FILE_ATTRIBUTE_DIRECTORY 0x00000010  
-#define INVALID_HANDLE_VALUE ((HANDLE)(LONG_PTR)-1)
-#define ERROR_NO_MORE_FILES 18L
-#define WINAPI __stdcall
-
-extern "C" {
-
-typedef struct _FILETIME {
-    DWORD dwLowDateTime;
-    DWORD dwHighDateTime;
-} FILETIME, *PFILETIME, *LPFILETIME;
-
-typedef struct _WIN32_FIND_DATAW {
-    DWORD dwFileAttributes;
-    FILETIME ftCreationTime;
-    FILETIME ftLastAccessTime;
-    FILETIME ftLastWriteTime;
-    DWORD nFileSizeHigh;
-    DWORD nFileSizeLow;
-    DWORD dwReserved0;
-    DWORD dwReserved1;
-    WCHAR  cFileName[MAX_PATH];
-    WCHAR  cAlternateFileName[14];
-} WIN32_FIND_DATAW, *PWIN32_FIND_DATAW, *LPWIN32_FIND_DATAW;
-
-DWORD WINAPI GetFileAttributesW(LPCWSTR lpFileName);
-DWORD WINAPI GetFullPathNameW(LPCWSTR lpFileName, DWORD nBufferLength, LPWSTR lpBuffer, LPWSTR * lpFilePart);
-int WINAPI MultiByteToWideChar(UINT CodePage, DWORD dwFlags, LPCCH lpMultiByteStr, int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar);
-int WINAPI WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWCH lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar);
-HANDLE WINAPI FindFirstFileW(LPCWSTR lpFileName, LPWIN32_FIND_DATAW lpFindFileData);
-BOOL WINAPI FindNextFileW(HANDLE hFindFile, LPWIN32_FIND_DATAW lpFindFileData);
-BOOL WINAPI FindClose(HANDLE hFindFile);
-DWORD WINAPI GetLastError(void);
-
-}
-
+#include "compat/windows.h"
 #endif
 
 namespace slang {
@@ -165,41 +112,76 @@ void Path::set(const std::wstring& wstring, PathType type) {
 }
 #endif
 
-std::vector<Path> getFilesInDirectory(const Path& path) {
-    std::vector<Path> result;
+template<typename CharType>
+static void findFilesImpl(const Path& path, vector<Path>& results, const CharType* extension, bool recurse) {
+    vector<Path> directories;
 
 #if defined(_WIN32)
     WIN32_FIND_DATAW ffd;
     std::wstring base = path.wstr() + L"\\";
-    HANDLE hFind = FindFirstFileW((base + +L"*").c_str(), &ffd);
+    HANDLE hFind = FindFirstFileW((base + L"*").c_str(), &ffd);
     if (hFind == INVALID_HANDLE_VALUE)
         throw std::runtime_error("Internal error in FindFirstFile(): " + std::to_string(GetLastError()));
 
     do {
-        if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-            result.push_back(base + ffd.cFileName);
+        if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+            const wchar_t* ext = wcsrchr(ffd.cFileName, '.');
+            if (!extension || (ext && wcscmp(ext, extension) == 0))
+                results.push_back(base + ffd.cFileName);
+        }
+        else if (wcscmp(ffd.cFileName, L".") != 0 && wcscmp(ffd.cFileName, L"..") != 0) {
+            directories.push_back(base + ffd.cFileName);
+        }
     } while (FindNextFileW(hFind, &ffd) != 0);
 
     DWORD dwError = GetLastError();
     if (dwError != ERROR_NO_MORE_FILES)
         throw std::runtime_error("Internal error in FindNextFile(): " + std::to_string(dwError));
-
     FindClose(hFind);
 #else
     DIR* d;
     struct dirent* dir;
-    std::string base = path.str() + "/";
+    string base = path.str();
+    if (base.back() != '/')
+        base += '/';
+
     d = opendir(base.c_str());
     if (d) {
         while ((dir = readdir(d))) {
-            if (dir->d_type == DT_REG)
-                result.push_back(base + dir->d_name);
+            if (dir->d_type == DT_REG) {
+                const char* ext = strrchr(dir->d_name, '.');
+                if (!extension || (ext && strcmp(ext, extension) == 0))
+                    results.push_back(base + dir->d_name);
+            }
+            else if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0) {
+                directories.push_back(base + dir->d_name);
+            }
         }
         closedir(d);
     }
 #endif
 
-    return result;
+    if (recurse) {
+        for (const auto& dir : directories)
+            findFilesImpl(dir, results, extension, recurse);
+    }
+}
+
+vector<Path> findFiles(const Path& path, StringRef extension, bool recurse) {
+#if defined(_WIN32)
+    std::wstring extensionCheck;
+    if (extension) {
+        int size = MultiByteToWideChar(CP_UTF8, 0, extension.begin(), (int)extension.length(), NULL, 0);
+        extensionCheck.resize(size, 0);
+        MultiByteToWideChar(CP_UTF8, 0, extension.begin(), (int)extension.length(), &extensionCheck[0], size);
+    }
+#else
+    string extensionCheck = extension.toString();
+#endif
+
+    vector<Path> results;
+    findFilesImpl(path, results, extensionCheck.c_str(), recurse);
+    return results;
 }
 
 }

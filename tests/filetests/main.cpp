@@ -25,7 +25,7 @@ int main() {
 
     int errors = 0;
     int files = 0;
-    for (auto& p : getFilesInDirectory(RelativeTestPath)) {
+    for (auto& p : findFiles(RelativeTestPath)) {
         SyntaxTree tree = SyntaxTree::fromFile(StringRef(p.str()), sourceManager);
         if (!tree.diagnostics().empty()) {
             printf("Parsing '%s'\n", p.str().c_str());

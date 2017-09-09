@@ -28,7 +28,6 @@
 # include <limits.h>
 #endif
 
-#include "Debug.h"
 #include "StringRef.h"
 
 namespace slang {
@@ -221,9 +220,10 @@ private:
     bool absolute = false;
 };
 
-/// Simple utility method to iterate all of the files in a given directory. Note that the
-/// entire set is realized in one go; you may want something smarter if you only need to
-/// look at a few entries.
-std::vector<Path> getFilesInDirectory(const Path& path);
+/// Simple utility method to iterate all of the files in a given directory,
+/// returning any that have the given extension (which should include the leading period).
+/// If the extension provided is empty, all files will be returned. If @a recurse is set
+/// to true, this will also look in subdirectories recursively.
+vector<Path> findFiles(const Path& path, StringRef extension = nullptr, bool recurse = false);
 
 }

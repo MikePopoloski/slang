@@ -20,6 +20,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 using std::array;
 using std::byte;
@@ -44,8 +45,20 @@ using std::uint32_t;
 using std::uint64_t;
 using std::uintptr_t;
 using std::variant;
+using std::vector;
 
 using std::make_pair;
 using std::make_tuple;
 using std::make_optional;
 using std::nullopt;
+
+#include "span.h"
+
+using gsl::span;
+using gsl::make_span;
+
+#include "ppk_assert/ppk_assert.h"
+
+// Just delegate our assert handling to the 3rd part lib
+#define ASSERT PPK_ASSERT
+#define DEFAULT_UNREACHABLE default: ASSERT(false, "Default case should be unreachable!")

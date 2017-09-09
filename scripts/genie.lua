@@ -24,6 +24,7 @@ project "slang"
 	includedirs {
 		path.join(ROOT_DIR, "source"),
 		path.join(ROOT_DIR, "external"),
+		ROOT_DIR,
 	}
 
 	files {
@@ -32,6 +33,7 @@ project "slang"
 		path.join(ROOT_DIR, "external/**.h"),
 		path.join(ROOT_DIR, "external/**.cpp"),
 		path.join(ROOT_DIR, "external/**.cc"),
+		path.join(ROOT_DIR, "compat/**.h"),
 	}
 
 	configuration { "vs*" }
@@ -57,6 +59,16 @@ function testProject(_name)
 		}
 		links {
 			"slang"
+		}
+
+	configuration { "vs*" }
+		buildoptions {
+			"/FI prelude.h"
+		}
+
+	configuration { "linux-gcc* or linux-clang*" }
+		buildoptions {
+			"-include prelude.h"
 		}
 end
 

@@ -8,7 +8,6 @@
 
 #include <cstdint>
 
-#include "span.h"
 #include "util/SmallVector.h"
 #include "util/StringRef.h"
 

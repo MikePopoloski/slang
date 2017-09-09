@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "util/Debug.h"
-
 namespace slang {
 
 class SourceManager;

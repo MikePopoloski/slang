@@ -10,7 +10,6 @@
 #include <ostream>
 #include <string>
 
-#include "span.h"
 #include "util/SmallVector.h"
 #include "util/StringRef.h"
 

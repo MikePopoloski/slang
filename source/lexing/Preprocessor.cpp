@@ -8,7 +8,6 @@
 
 #include "parsing/AllSyntax.h"
 #include "text/SourceManager.h"
-#include "util/Debug.h"
 #include "util/BumpAllocator.h"
 
 namespace slang {
