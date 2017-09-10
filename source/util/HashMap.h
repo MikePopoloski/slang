@@ -156,8 +156,8 @@ protected:
 template<typename TKey, typename TValue>
 class HashMapBase : public HashMapRef<TKey, TValue> {
 public:
-    using HashMapRef<TKey, TValue>::iterator;
-    using HashMapRef<TKey, TValue>::Element;
+    using typename HashMapRef<TKey, TValue>::iterator;
+    using typename HashMapRef<TKey, TValue>::Element;
     using HashMapRef<TKey, TValue>::begin;
     using HashMapRef<TKey, TValue>::end;
     using HashMapRef<TKey, TValue>::find;
