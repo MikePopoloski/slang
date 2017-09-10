@@ -167,7 +167,10 @@ enum class DiagnosticSeverity {
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = std::variant<std::string, int>;
+    struct Arg : public variant<string, int> {
+        using variant<string, int>::variant;
+        friend std::ostream& operator<<(std::ostream& os, const Arg& arg);
+    };
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
 
@@ -186,8 +189,6 @@ public:
     friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);
     friend Diagnostic& operator<<(Diagnostic& diag, SourceRange arg);
 };
-
-std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg);
 
 /// A collection of diagnostics.
 class Diagnostics : public SmallVectorSized<Diagnostic, 8> {

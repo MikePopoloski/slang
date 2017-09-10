@@ -176,7 +176,7 @@ vector<Path> findFiles(const Path& path, StringRef extension, bool recurse) {
         MultiByteToWideChar(CP_UTF8, 0, extension.data(), (int)extension.length(), &extensionCheck[0], size);
     }
 #else
-    string extensionCheck = extension;
+    string extensionCheck { extension };
 #endif
 
     vector<Path> results;

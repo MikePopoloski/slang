@@ -6,10 +6,6 @@
 //------------------------------------------------------------------------------
 #include "Diagnostics.h"
 
-std::ostream& operator<<(std::ostream& os, const slang::Diagnostic::Arg& arg) {
-    return visit([&](auto&& t) -> auto& { return os << t; }, arg);
-}
-
 #include "fmt/format.h"
 #include "fmt/ostream.h"
 
@@ -47,7 +43,8 @@ Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
-    return visit([&](auto&& t) -> auto& { return os << t; }, arg);
+    return std::visit([&](auto&& t) -> auto& { return os << t; },
+                      static_cast<const variant<string, int>&>(arg));
 }
 
 Diagnostics::Diagnostics() {
