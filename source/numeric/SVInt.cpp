@@ -42,13 +42,14 @@ bool literalBaseFromChar(char base, LiteralBase& result) {
 }
 
 SVInt::SVInt(StringRef str) {
-    ASSERT(str);
+    ASSERT(!str.empty());
 
-    const char* c = str.begin();
+    const char* c = str.data();
+    const char* end = c + str.length();
     bool negative = *c == '-';
     if (*c == '-' || *c == '+') {
         c++;    // heh
-        ASSERT(c != str.end(), "String only has a sign?");
+        ASSERT(c != end, "String only has a sign?");
     }
 
     // look for a base specifier (optional)
@@ -57,7 +58,7 @@ SVInt::SVInt(StringRef str) {
     bool sizeBad = false;
     uint32_t possibleSize = 0;
     const char* apostrophe = nullptr;
-    for (const char* tmp = c; tmp != str.end(); tmp++) {
+    for (const char* tmp = c; tmp != end; tmp++) {
         char d = *tmp;
         if (d == '\'') {
             // found it, we're done
@@ -89,12 +90,12 @@ SVInt::SVInt(StringRef str) {
         bitWidth = (uint16_t)possibleSize;
 
         c = apostrophe + 1;
-        ASSERT(c != str.end(), "Nothing after size specifier");
+        ASSERT(c != end, "Nothing after size specifier");
 
         if (*c == 's' || *c == 'S') {
             signFlag = true;
             c++;
-            ASSERT(c != str.end(), "Nothing after sign specifier");
+            ASSERT(c != end, "Nothing after sign specifier");
         }
         else {
             signFlag = false;
@@ -104,14 +105,14 @@ SVInt::SVInt(StringRef str) {
         ASSERT(validBase, "Unknown base specifier '%c'", *c);
 
         c++;
-        ASSERT(c != str.end(), "Nothing after base specifier");
+        ASSERT(c != end, "Nothing after base specifier");
     }
 
     // convert the remaining chars to an array of digits to pass to the other
     // constructor
     unknownFlag = false;
     SmallVectorSized<logic_t, 16> digits;
-    for (; c != str.end(); ++c) {
+    for (; c != end; ++c) {
         char d = *c;
         if (d == '_')
             continue;

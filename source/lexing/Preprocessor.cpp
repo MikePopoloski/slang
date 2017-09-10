@@ -38,7 +38,7 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
 }
 
 void Preprocessor::predefine(StringRef definition, StringRef fileName) {
-    std::string text = "`define " + definition.toString() + "\n";
+    std::string text = "`define " + string(definition) + "\n";
 
     Preprocessor pp(sourceManager, alloc, diagnostics);
     pp.pushSource(sourceManager.assignText(fileName, StringRef(text)));
@@ -72,7 +72,7 @@ void Preprocessor::undefineAll() {
 }
 
 bool Preprocessor::isDefined(StringRef name) {
-    return name && macros.find(name) != macros.end();
+    return !name.empty() && macros.find(name) != macros.end();
 }
 
 void Preprocessor::setKeywordVersion(KeywordVersion version) {
@@ -296,17 +296,17 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             }
         }
         else if (fileName.kind == TokenKind::StringLiteral) {
-            uint32_t len = fileName.valueText().length();
-            uint8_t* stringBuffer = alloc.allocate(len + 3);
+            uint32_t len = (uint32_t)fileName.valueText().length();
+            char* stringBuffer = (char*)alloc.allocate(len + 3);
             stringBuffer[0] = '"';
-            memcpy(stringBuffer + 1, fileName.valueText().begin(), len);
+            fileName.valueText().copy(stringBuffer + 1, len);
             stringBuffer[len + 1] = '"';
             stringBuffer[len + 2] = '\0';
 
             auto fileNameInfo = alloc.emplace<Token::Info>(fileName.trivia(),
                 fileName.rawText(), fileName.location(), fileName.getInfo()->flags);
 
-            fileNameInfo->extra = StringRef((const char *)stringBuffer, len + 2);
+            fileNameInfo->extra = StringRef(stringBuffer, len + 2);
             fileName = Token(TokenKind::IncludeFileName, fileNameInfo);
         }
         else {
@@ -323,7 +323,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     else {
         // remove delimiters
         bool isSystem = path[0] == '<';
-        path = path.subString(1, path.length() - 2);
+        path = path.substr(1, path.length() - 2);
         SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), isSystem);
         if (!buffer.id)
             addError(DiagCode::CouldNotOpenIncludeFile, fileName.location());
@@ -405,7 +405,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     );
 
     if (noErrors)
-        macros[name.valueText().intern(alloc)] = result;
+        macros[intern(alloc, name.valueText())] = result;
     return Trivia(TriviaKind::Directive, result);
 }
 
@@ -443,7 +443,7 @@ Trivia Preprocessor::handleElsIfDirective(Token directive) {
 }
 
 Trivia Preprocessor::handleElseDirective(Token directive) {
-    bool take = shouldTakeElseBranch(directive.location(), false, nullptr);
+    bool take = shouldTakeElseBranch(directive.location(), false, "");
     return parseBranchDirective(directive, Token(), take);
 }
 
@@ -792,7 +792,7 @@ Trivia Preprocessor::createSimpleDirective(Token directive, bool suppressError) 
 }
 
 Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
-    auto it = macros.find(directive.valueText().subString(1));
+    auto it = macros.find(directive.valueText().substr(1));
     if (it == macros.end()) {
         addError(DiagCode::UnknownDirective, directive.location()) << directive.valueText();
         return nullptr;

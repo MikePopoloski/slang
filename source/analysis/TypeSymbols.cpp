@@ -45,13 +45,13 @@ std::string TypeSymbol::toString() const {
     switch (kind) {
         case SymbolKind::IntegralType: {
             const auto& s = as<IntegralTypeSymbol>();
-            result = name.toString();
+            result = name;
             if (isDefaultSigned(s.keywordType) != s.isSigned)
                 result += s.isSigned ? " signed" : " unsigned";
             break;
         }
         case SymbolKind::RealType:
-            result = name.toString();
+            result = name;
             break;
             /*case SymbolKind::Instance: {
             result = name.toString();

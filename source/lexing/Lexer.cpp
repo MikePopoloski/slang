@@ -81,9 +81,9 @@ Lexer::Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnost
     alloc(alloc),
     diagnostics(diagnostics),
     bufferId(bufferId),
-    originalBegin(source.begin()),
-    sourceBuffer(source.begin()),
-    sourceEnd(source.end()),
+    originalBegin(source.data()),
+    sourceBuffer(source.data()),
+    sourceEnd(source.data() + source.length()),
     marker(nullptr)
 {
     ptrdiff_t count = sourceEnd - sourceBuffer;
@@ -116,22 +116,22 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     // if either side is empty, we have an error; the user tried to concatenate some weird kind of token
     auto leftText = left.rawText();
     auto rightText = right.rawText();
-    if (!leftText || !rightText)
+    if (leftText.empty() || rightText.empty())
         return Token();
 
     // combine the text for both sides; make sure to include room for a null
-    uint32_t newLength = leftText.length() + rightText.length() + 1;
-    uint8_t* mem = alloc.allocate(newLength);
-    memcpy(mem, leftText.begin(), leftText.length());
-    memcpy(mem + leftText.length(), rightText.begin(), rightText.length());
+    uint32_t newLength = (uint32_t)(leftText.length() + rightText.length() + 1);
+    char* mem = (char*)alloc.allocate(newLength);
+    leftText.copy(mem, leftText.length());
+    rightText.copy(mem + leftText.length(), rightText.length());
     mem[newLength - 1] = '\0';
-    StringRef combined { (char*)mem, newLength };
+    StringRef combined { mem, newLength };
 
     Diagnostics unused;
     Lexer lexer { BufferID(), combined, alloc, unused };
 
     auto token = lexer.lex();
-    if (token.kind == TokenKind::Unknown || !token.rawText())
+    if (token.kind == TokenKind::Unknown || token.rawText().empty())
         return Token();
 
     // make sure the next token is an EoF, otherwise the tokens were unable to
@@ -184,7 +184,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     auto info = alloc.emplace<Token::Info>(*token.getInfo());
     info->location = location;
     info->trivia = trivia;
-    info->rawText = raw.subString(0, raw.length() - 1);
+    info->rawText = raw.substr(0, raw.length() - 1);
     return Token(token.kind, info);
 }
 
@@ -606,7 +606,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
         }
     }
 
-    info->extra = StringRef(stringBuffer).intern(alloc);
+    info->extra = StringRef(stringBuffer.copy(alloc));
 }
 
 TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
@@ -656,7 +656,7 @@ TokenKind Lexer::lexDirective(Token::Info* info) {
         return TokenKind::Directive;
     }
 
-    info->extra = getDirectiveKind(lexeme().subString(1));
+    info->extra = getDirectiveKind(lexeme().substr(1));
     if (!onNewLine && std::get<SyntaxKind>(info->extra) == SyntaxKind::IncludeDirective)
         addError(DiagCode::IncludeNotFirstOnLine, startingOffset);
 

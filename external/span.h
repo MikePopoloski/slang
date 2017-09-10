@@ -505,6 +505,10 @@ public:
     const_reverse_iterator crbegin() const GSL_NOEXCEPT { return const_reverse_iterator{cend()}; }
     const_reverse_iterator crend() const GSL_NOEXCEPT { return const_reverse_iterator{cbegin()}; }
 
+    template<typename U = ElementType,
+             typename = typename std::enable_if_t<std::is_same_v<U, const char>>>
+    operator std::string_view() const { return std::string_view(data(), length()); }
+
 private:
     // this implementation detail class lets us take advantage of the
     // empty base class optimization to pay for only storage of a single

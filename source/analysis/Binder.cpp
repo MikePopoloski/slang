@@ -240,7 +240,7 @@ BoundExpression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
         return badExpr(nullptr);
 
     StringRef identifier = syntax.left.as<IdentifierNameSyntax>().identifier.valueText();
-    if (!identifier)
+    if (identifier.empty())
         return badExpr(nullptr);
 
     auto package = root.findPackage(identifier);

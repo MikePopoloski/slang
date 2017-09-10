@@ -30,25 +30,25 @@ public:
 
     void visit(const ModuleHeaderSyntax& header) {
         StringRef name = header.name.valueText();
-        if (name) {
+        if (!name.empty()) {
             auto pair = declToFile.try_emplace(name, currentFile);
             if (!pair.second) {
                 printf("Duplicate declaration: %s (%s, %s)\n",
-                       name.toString().c_str(), currentFile.toString().c_str(),
-                       pair.first->second.toString().c_str());
+                       string(name).c_str(), string(currentFile).c_str(),
+                       string(pair.first->second).c_str());
             }
         }
     }
 
     void visit(const HierarchyInstantiationSyntax& instantiation) {
         StringRef name = instantiation.type.valueText();
-        if (name)
+        if (!name.empty())
             fileToDeps[currentFile].insert(name);
     }
 
     void visit(const PackageImportItemSyntax& packageImport) {
         StringRef name = packageImport.package.valueText();
-        if (name)
+        if (!name.empty())
             fileToDeps[currentFile].insert(name);
     }
 
@@ -58,9 +58,9 @@ public:
             for (const auto& dep : fileAndSet.second) {
                 auto it = declToFile.find(dep);
                 if (it == declToFile.end())
-                    printf("Couldn't find decl: %s\n", dep.toString().c_str());
+                    printf("Couldn't find decl: %s\n", string(dep).c_str());
                 else if (it->second != file)
-                    printf("%s: %s\n", file.toString().c_str(), it->second.toString().c_str());
+                    printf("%s: %s\n", string(file).c_str(), string(it->second).c_str());
             }
         }
     }

@@ -61,6 +61,10 @@ public:
         return SourceLocation(bufferID, charOffset + delta);
     }
 
+    SourceLocation operator+(size_t delta) const {
+        return SourceLocation(bufferID, (uint32_t)(charOffset + delta));
+    }
+
     SourceLocation operator-(int delta) const {
         return SourceLocation(bufferID, charOffset - delta);
     }

@@ -75,19 +75,15 @@ Token::Token(TokenKind kind, const Info* info) :
 }
 
 StringRef Token::valueText() const {
-    StringRef text = getTokenKindText(kind);
-    if (text)
-        return text;
-
     switch (kind) {
         case TokenKind::Identifier:
             switch (identifierType()) {
                 case IdentifierType::Escaped:
                     // strip off leading backslash
-                    return info->rawText.subString(1);
+                    return info->rawText.substr(1);
                 case IdentifierType::Unknown:
                     // unknown tokens don't have value text
-                    return nullptr;
+                    return "";
                 default:
                     return info->rawText;
             }
@@ -101,13 +97,13 @@ StringRef Token::valueText() const {
         case TokenKind::MacroUsage:
             return info->rawText;
         default:
-            return nullptr;
+            return getTokenKindText(kind);
     }
 }
 
 StringRef Token::rawText() const {
     StringRef text = getTokenKindText(kind);
-    if (text)
+    if (!text.empty())
         return text;
     else {
         // not a simple token, so extract info from our data pointer
@@ -133,7 +129,7 @@ StringRef Token::rawText() const {
                 ASSERT(false, "Unknown token kind: %u", (uint32_t)kind);
         }
     }
-    return nullptr;
+    return "";
 }
 
 void Token::writeTo(SmallVector<char>& buffer, uint8_t writeFlags) const {

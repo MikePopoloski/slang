@@ -155,8 +155,6 @@ enum class DiagCode : uint8_t {
     MaxValue
 };
 
-class Diagnostic;
-
 /// The severity of a given diagnostic. This is not tied to the diagnostic itself;
 /// it can be configured on a per-diagnostic basis at runtime.
 enum class DiagnosticSeverity {
@@ -169,7 +167,7 @@ enum class DiagnosticSeverity {
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = std::variant<std::string, SourceRange, int>;
+    using Arg = std::variant<std::string, int>;
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
 
@@ -183,8 +181,10 @@ public:
     Diagnostic(DiagCode code, SourceLocation location);
 
     /// Adds an argument to the diagnostic.
-    friend Diagnostic& operator<<(Diagnostic& diag, Arg&& arg);
-    friend Diagnostic& operator<<(Diagnostic& diag, StringRef arg);
+    friend Diagnostic& operator<<(Diagnostic& diag, int arg);
+    friend Diagnostic& operator<<(Diagnostic& diag, string&& arg);
+    friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);
+    friend Diagnostic& operator<<(Diagnostic& diag, SourceRange arg);
 };
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg);

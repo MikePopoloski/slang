@@ -198,14 +198,14 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, st
     }
 
     for (const VariableDeclaratorSyntax* declarator : paramDecl.declarators) {
-        auto declName = declarator->name.valueText();
-        if (!declName)
+        StringRef declName = declarator->name.valueText();
+        if (declName.empty())
             continue;
 
         auto declLocation = declarator->name.location();
         auto pair = nameDupMap.emplace(declName, declLocation);
         if (!pair.second) {
-            addError(DiagCode::DuplicateDefinition, declLocation) << StringRef("parameter") << declName;
+            addError(DiagCode::DuplicateDefinition, declLocation) << string("parameter") << declName;
             addError(DiagCode::NotePreviousDefinition, pair.first->second);
         }
         else {

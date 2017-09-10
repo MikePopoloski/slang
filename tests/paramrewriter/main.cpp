@@ -15,7 +15,7 @@ BumpAllocator alloc;
 
 Token identifier(const std::string& name, span<Trivia const> trivia) {
     StringRef text{ name };
-    auto info = alloc.emplace<Token::Info>(trivia, text.intern(alloc), SourceLocation(), 0);
+    auto info = alloc.emplace<Token::Info>(trivia, intern(alloc, text), SourceLocation(), 0);
     info->extra = IdentifierType::Normal;
     return Token(TokenKind::Identifier, info);
 }
@@ -37,7 +37,7 @@ public:
         bool visited = !visitedFiles.insert(location.buffer()).second;
 
         StringRef fileName = tree.sourceManager().getFileName(location);
-        FILE* fp = fopen((fileName.toString() + "_rewrite").c_str(), visited ? "ab" : "wb");
+        FILE* fp = fopen((string(fileName) + "_rewrite").c_str(), visited ? "ab" : "wb");
         ASSERT(fp);
 
         buffer.clear();

@@ -268,7 +268,7 @@ const BoundExpression* VariableSymbol::initializer() const {
 }
 
 FormalArgumentSymbol::FormalArgumentSymbol(const TypeSymbol& type, const Symbol& parent) :
-    VariableSymbol(SymbolKind::FormalArgument, nullptr, SourceLocation(), type, parent)
+    VariableSymbol(SymbolKind::FormalArgument, "", SourceLocation(), type, parent)
 {
 }
 

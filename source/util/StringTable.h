@@ -29,7 +29,7 @@ public:
         table = new Entry[capacity];
 
         for (auto& entry : entries) {
-            size_t hc = entry.first.hash();
+            size_t hc = std::hash<StringRef>()(entry.first);
             uint32_t index = hc & (capacity - 1);
             while (table[index].hashCode != 0)
                 index = (index + 1) & (capacity - 1);
@@ -41,7 +41,7 @@ public:
     }
 
     bool lookup(StringRef key, T& value) const {
-        size_t hc = key.hash();
+        size_t hc = std::hash<StringRef>()(key);
         uint32_t index = hc & (capacity - 1);
         do {
             if (table[index].hashCode == hc &&

@@ -20,7 +20,7 @@ SourceManager::SourceManager() {
 }
 
 std::string SourceManager::makeAbsolutePath(StringRef path) const {
-    if (!path)
+    if (path.empty())
         return "";
 
     return Path::makeAbsolute(path).str();
@@ -69,7 +69,7 @@ StringRef SourceManager::getFileName(SourceLocation location) const {
     // Avoid computing line offsets if we just need a name of `line-less file
     FileData* fd = getFileData(fileLocation.buffer());
     if (!fd)
-        return nullptr;
+        return "";
     else if (fd->lineDirectives.empty())
         return StringRef(fd->name);
 
@@ -176,7 +176,7 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) const {
         return SourceLocation();
 
     ASSERT(buffer.id < bufferEntries.size());
-    return std::get<ExpansionInfo>(bufferEntries[buffer.id]).originalLoc + location.offset();
+    return std::get<ExpansionInfo>(bufferEntries[buffer.id]).originalLoc + (size_t)location.offset();
 }
 
 SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const {
@@ -188,9 +188,9 @@ SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const
 StringRef SourceManager::getSourceText(BufferID buffer) const {
     FileData* fd = getFileData(buffer);
     if (!fd)
-        return nullptr;
+        return "";
 
-    return StringRef(fd->mem);
+    return StringRef(fd->mem.begin(), fd->mem.size());
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
@@ -230,13 +230,13 @@ SourceBuffer SourceManager::assignBuffer(StringRef path, Vector<char>&& buffer, 
 }
 
 SourceBuffer SourceManager::readSource(StringRef path) {
-    ASSERT(path);
+    ASSERT(!path.empty());
     return openCached(path, SourceLocation());
 }
 
 SourceBuffer SourceManager::readHeader(StringRef path, SourceLocation includedFrom, bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
-    ASSERT(path);
+    ASSERT(!path.empty());
     Path p = path;
     if (p.isAbsolute())
         return openCached(p, includedFrom);
@@ -292,7 +292,7 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
     return SourceBuffer {
-        StringRef(fd->mem),
+        StringRef(fd->mem.begin(), fd->mem.size()),
         BufferID::get((uint32_t)(bufferEntries.size() - 1))
     };
 }

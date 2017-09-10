@@ -655,7 +655,7 @@ StringRef getDirectiveText(SyntaxKind kind) {
         case SyntaxKind::UnconnectedDriveDirective: return "`unconnected_drive";
         case SyntaxKind::UndefDirective: return "`undef";
         case SyntaxKind::UndefineAllDirective: return "`undefineall";
-        default: return nullptr;
+        default: return "";
     }
 }
 
@@ -1009,7 +1009,7 @@ StringRef getTokenKindText(TokenKind kind) {
         case TokenKind::MacroEscapedQuote: return "`\\`\"";
         case TokenKind::MacroPaste: return "``";
 
-        default: return nullptr;
+        default: return "";
     }
 }
 

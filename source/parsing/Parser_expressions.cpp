@@ -304,13 +304,13 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
 
     vectorBuilder.start(baseFlags.base(), sizeBits, baseFlags.isSigned(), first.location());
     do {
-        length += next.rawText().length();
+        length += (uint32_t)next.rawText().length();
         consume();
         vectorBuilder.append(next);
         next = peek();
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
-    StringRef rawText(first.rawText().begin(), length);
+    StringRef rawText(first.rawText().data(), length);
     NumericTokenValue value = vectorBuilder.finish();
 
     auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location(), 0);

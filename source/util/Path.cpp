@@ -170,13 +170,13 @@ static void findFilesImpl(const Path& path, vector<Path>& results, const CharTyp
 vector<Path> findFiles(const Path& path, StringRef extension, bool recurse) {
 #if defined(_WIN32)
     std::wstring extensionCheck;
-    if (extension) {
-        int size = MultiByteToWideChar(CP_UTF8, 0, extension.begin(), (int)extension.length(), NULL, 0);
+    if (!extension.empty()) {
+        int size = MultiByteToWideChar(CP_UTF8, 0, extension.data(), (int)extension.length(), NULL, 0);
         extensionCheck.resize(size, 0);
-        MultiByteToWideChar(CP_UTF8, 0, extension.begin(), (int)extension.length(), &extensionCheck[0], size);
+        MultiByteToWideChar(CP_UTF8, 0, extension.data(), (int)extension.length(), &extensionCheck[0], size);
     }
 #else
-    string extensionCheck = extension.toString();
+    string extensionCheck = extension;
 #endif
 
     vector<Path> results;

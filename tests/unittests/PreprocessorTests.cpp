@@ -549,7 +549,7 @@ TEST_CASE("FILE Directive", "[preprocessor]") {
     REQUIRE(token.kind == TokenKind::StringLiteral);
     // we set the name by default for files created this way as
     // <unnamed_bufferN> for some N, let's not be sensitive to that number
-    CHECK(token.valueText().subString(0,15) == "<unnamed_buffer");
+    CHECK(token.valueText().substr(0,15) == "<unnamed_buffer");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 

@@ -105,11 +105,11 @@ TEST_CASE("Disable fork statement", "[parser:statements]") {
 }
 
 void testTimingControl(StringRef text, SyntaxKind kind) {
-    auto& stmt = parseStatement(text.toString());
+    auto& stmt = parseStatement(string(text));
 
     REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
     CHECK(stmt.as<TimingControlStatementSyntax>().timingControl.kind == kind);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());
+    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
 }
 
 TEST_CASE("Timing control statements", "[parser:statements]") {
@@ -126,10 +126,10 @@ TEST_CASE("Timing control statements", "[parser:statements]") {
 }
 
 void testStatement(StringRef text, SyntaxKind kind) {
-    auto& stmt = parseStatement(text.toString());
+    auto& stmt = parseStatement(string(text));
 
     REQUIRE(stmt.kind == kind);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text.begin());
+    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
 }
 
 TEST_CASE("Procedural assign", "[parser:statements]") {

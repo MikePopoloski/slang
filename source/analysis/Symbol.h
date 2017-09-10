@@ -185,7 +185,7 @@ public:
     Symbol& operator=(const Symbol&) = delete;
 
 protected:
-    explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, StringRef name = nullptr,
+    explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, StringRef name = "",
                     SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location),
         containingSymbol(containingSymbol) {}

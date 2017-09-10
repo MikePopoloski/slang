@@ -6,10 +6,12 @@
 //------------------------------------------------------------------------------
 #include "Diagnostics.h"
 
-#include <algorithm>
+std::ostream& operator<<(std::ostream& os, const slang::Diagnostic::Arg& arg) {
+    return visit([&](auto&& t) -> auto& { return os << t; }, arg);
+}
 
-#include "../external/fmt/format.h"
-#include "../external/fmt/ostream.h"
+#include "fmt/format.h"
+#include "fmt/ostream.h"
 
 #include "text/SourceManager.h"
 
@@ -22,21 +24,26 @@ static const char* severityToString[] = {
 };
 
 Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
-    code(code), location(location)
-{
-}
+    code(code), location(location) {}
 
-Diagnostic& operator<<(Diagnostic& diag, Diagnostic::Arg&& arg) {
-    SourceRange* range = std::get_if<SourceRange>(&arg);
-    if (range)
-        diag.ranges.push_back(*range);
-    else
-        diag.args.push_back(std::move(arg));
+Diagnostic& operator<<(Diagnostic& diag, int arg) {
+    diag.args.emplace_back(arg);
     return diag;
 }
 
-Diagnostic& operator<<(Diagnostic& diag, StringRef arg) {
-    return diag << arg.toString();
+Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
+    diag.args.emplace_back(string(arg));
+    return diag;
+}
+
+Diagnostic& operator<<(Diagnostic& diag, string&& arg) {
+    diag.args.emplace_back(std::move(arg));
+    return diag;
+}
+
+Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
+    diag.ranges.push_back(range);
+    return diag;
 }
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
@@ -275,10 +282,10 @@ bool DiagnosticWriter::sortDiagnostics(const Diagnostic& x, const Diagnostic& y)
 
 StringRef DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {
     StringRef text = sourceManager.getSourceText(location.buffer());
-    if (!text)
+    if (text.empty())
         return nullptr;
 
-    const char* start = text.begin() + location.offset() - (col - 1);
+    const char* start = text.data() + location.offset() - (col - 1);
     const char* curr = start;
     while (*curr != '\n' && *curr != '\r' && *curr != '\0')
         curr++;
@@ -320,7 +327,7 @@ void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc
     uint32_t start = startLoc.offset();
     uint32_t end = endLoc.offset();
     uint32_t startOfLine = caretLoc.offset() - (col - 1);
-    uint32_t endOfLine = startOfLine + sourceLine.length();
+    uint32_t endOfLine = startOfLine + (uint32_t)sourceLine.length();
     if (start < startOfLine)
         start = startOfLine;
     if (end > endOfLine)
@@ -361,7 +368,7 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
     );
 
     StringRef line = getBufferLine(loc, col);
-    if (line) {
+    if (!line.empty()) {
         writer.write("\n{}\n", line);
 
         // Highlight any ranges and print the caret location.

@@ -37,7 +37,7 @@ class Trivia {
 public:
     TriviaKind kind;
 
-    Trivia() : kind(TriviaKind::Unknown), rawText(nullptr) {}
+    Trivia() : kind(TriviaKind::Unknown), rawText("") {}
     Trivia(TriviaKind kind, StringRef rawText) : kind(kind), rawText(rawText) {}
     Trivia(TriviaKind kind, span<Token const> tokens) : kind(kind), tokens(tokens) {}
     Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}

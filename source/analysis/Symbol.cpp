@@ -190,7 +190,7 @@ const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLoc
     // If the parser added a missing identifier token, it already issued an
     // appropriate error. This check here makes it easier to silently continue
     // in that case without checking every time someone wants to do a lookup.
-    if (!searchName)
+    if (searchName.empty())
         return nullptr;
 
     // First, do a direct search within the current scope's name map.
@@ -278,7 +278,7 @@ void ScopeSymbol::addMember(const Symbol& symbol) const {
     // TODO: check for duplicate names
     // TODO: packages and definition namespaces
     memberList.push_back(&symbol);
-    if (symbol.name)
+    if (!symbol.name.empty())
         memberMap.try_emplace(symbol.name, &symbol);
 
     if (symbol.kind == SymbolKind::WildcardImport)
@@ -619,8 +619,8 @@ void DesignRootSymbol::findInstantiations(const ModuleDeclarationSyntax& module,
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ProgramDeclaration: {
                 // ignore empty names
-                auto name = member->as<ModuleDeclarationSyntax>().header.name.valueText();
-                if (name) {
+                StringRef name = member->as<ModuleDeclarationSyntax>().header.name.valueText();
+                if (!name.empty()) {
                     // create new scope entry lazily
                     if (!localDefs) {
                         scopeStack.emplace_back();
@@ -650,8 +650,8 @@ void DesignRootSymbol::findInstantiations(const MemberSyntax& node, std::vector<
             // Determine whether this is a local or global module we're instantiating;
             // don't worry about local instantiations right now, they can't be root.
             const auto& his = node.as<HierarchyInstantiationSyntax>();
-            auto name = his.type.valueText();
-            if (name && !containsName(scopeStack, name))
+            StringRef name = his.type.valueText();
+            if (!name.empty() && !containsName(scopeStack, name))
                 found.insert(name);
             break;
         }
