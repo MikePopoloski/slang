@@ -155,7 +155,7 @@ protected:
 
         while (true) {
             if (IsExpected(current.kind)) {
-                buffer.append(&parseItem(true));
+                buffer.append(parseItem(true));
                 while (true) {
                     current = peek();
                     if (IsEnd(current.kind))
@@ -163,7 +163,7 @@ protected:
 
                     if (IsExpected(current.kind)) {
                         buffer.append(expect(separatorKind));
-                        buffer.append(&parseItem(false));
+                        buffer.append(parseItem(false));
                         continue;
                     }
 

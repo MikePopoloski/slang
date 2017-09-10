@@ -109,7 +109,7 @@ AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedAnsiPort,
-        [this](bool) -> decltype(auto) { return parseAnsiPort(); }
+        [this](bool) { return &parseAnsiPort(); }
     );
     return factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
 }
@@ -137,7 +137,7 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
                 TokenKind::Comma,
                 closeParen,
                 DiagCode::ExpectedNonAnsiPort,
-                [this](bool) -> decltype(auto) { return parseNonAnsiPort(); }
+                [this](bool) { return &parseNonAnsiPort(); }
             );
             ports = &factory.nonAnsiPortList(openParen, buffer.copy(alloc), closeParen);
         }
@@ -166,7 +166,7 @@ ParameterPortListSyntax* Parser::parseParameterPortList() {
         parameters,
         closeParen,
         DiagCode::ExpectedParameterPort,
-        [this](bool) -> decltype(auto) { return parseParameterPort(); }
+        [this](bool) { return &parseParameterPort(); }
     );
 
     return &factory.parameterPortList(hash, openParen, parameters, closeParen);
@@ -541,7 +541,7 @@ ModportDeclarationSyntax& Parser::parseModportDeclaration(span<AttributeInstance
         TokenKind::Comma,
         semi,
         DiagCode::ExpectedIdentifier,
-        [this](bool) -> decltype(auto) { return parseModportItem(); }
+        [this](bool) { return &parseModportItem(); }
     );
 
     return factory.modportDeclaration(attributes, keyword, buffer.copy(alloc), semi);
@@ -616,7 +616,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
                 TokenKind::Comma,
                 closeParen,
                 DiagCode::ExpectedFunctionPort,
-                [this](bool) -> decltype(auto) { return parseFunctionPort(); }
+                [this](bool) { return &parseFunctionPort(); }
             );
             portList = &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
         }
@@ -648,7 +648,7 @@ GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(span<AttributeInstanceSy
         identifiers,
         semi,
         DiagCode::ExpectedIdentifier,
-        [this](bool) -> decltype(auto) { return factory.identifierName(consume()); }
+        [this](bool) { return &factory.identifierName(consume()); }
     );
 
     return factory.genvarDeclaration(attributes, keyword, identifiers, semi);
@@ -774,7 +774,7 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(span<AttributeInstanceSyn
                 TokenKind::Comma,
                 colon,
                 DiagCode::ExpectedExpression,
-                [this](bool) -> decltype(auto) { return parseExpression(); }
+                [this](bool) { return &parseExpression(); }
             );
             itemBuffer.append(&factory.standardCaseItem(buffer.copy(alloc), colon, parseGenerateBlock()));
         }
@@ -846,7 +846,7 @@ ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Tok
         TokenKind::Comma,
         semi,
         DiagCode::ExpectedInterfaceClassName,
-        [this](bool) -> decltype(auto) { return parseName(); }
+        [this](bool) { return &parseName(); }
     );
 
     return &factory.implementsClause(implements, buffer.copy(alloc));
@@ -987,7 +987,7 @@ ContinuousAssignSyntax& Parser::parseContinuousAssign(span<AttributeInstanceSynt
         TokenKind::Comma,
         semi,
         DiagCode::ExpectedVariableAssignment,
-        [this](bool) -> decltype(auto) { return parseExpression(); }
+        [this](bool) { return &parseExpression(); }
     );
 
     return factory.continuousAssign(attributes, assign, buffer.copy(alloc), semi);
@@ -1015,7 +1015,7 @@ DefParamSyntax& Parser::parseDefParam(span<AttributeInstanceSyntax* const> attri
         TokenKind::Comma,
         semi,
         DiagCode::ExpectedVariableAssignment,
-        [this](bool) -> decltype(auto) { return parseDefParamAssignment(); }
+        [this](bool) { return &parseDefParamAssignment(); }
     );
 
     return factory.defParam(attributes, defparam, buffer.copy(alloc), semi);
@@ -1256,7 +1256,7 @@ TransSetSyntax& Parser::parseTransSet() {
         list,
         closeParen,
         DiagCode::ExpectedExpression,
-        [this](bool) -> decltype(auto) { return parseTransRange(); }
+        [this](bool) { return &parseTransRange(); }
     );
 
     return factory.transSet(openParen, list, closeParen);
@@ -1385,7 +1385,7 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
                 TokenKind::Comma,
                 before,
                 DiagCode::ExpectedExpression,
-                [this](bool) -> decltype(auto) { return parsePrimaryExpression(); }
+                [this](bool) { return &parsePrimaryExpression(); }
             );
             Token semi;
             SmallVectorSized<TokenOrSyntax, 4> afterBuffer;
@@ -1395,7 +1395,7 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
                 TokenKind::Comma,
                 semi,
                 DiagCode::ExpectedExpression,
-                [this](bool) -> decltype(auto) { return parsePrimaryExpression(); }
+                [this](bool) { return &parsePrimaryExpression(); }
             );
             return factory.solveBeforeConstraint(solve, beforeBuffer.copy(alloc), before, afterBuffer.copy(alloc), semi);
         }
@@ -1480,7 +1480,7 @@ DistConstraintListSyntax& Parser::parseDistConstraintList() {
         list,
         closeBrace,
         DiagCode::ExpectedDistItem,
-        [this](bool) -> decltype(auto) { return parseDistItem(); }
+        [this](bool) { return &parseDistItem(); }
     );
 
     return factory.distConstraintList(dist, openBrace, list, closeBrace);
@@ -1843,7 +1843,7 @@ span<TokenOrSyntax const> Parser::parseVariableDeclarators(TokenKind endKind, To
         TokenKind::Comma,
         end,
         DiagCode::ExpectedVariableDeclarator,
-        [this](bool first) -> decltype(auto) { return parseVariableDeclarator(first); }
+        [this](bool first) { return &parseVariableDeclarator(first); }
     );
 
     return buffer.copy(alloc);
@@ -1868,7 +1868,7 @@ span<AttributeInstanceSyntax* const> Parser::parseAttributes() {
             list,
             closeParen,
             DiagCode::ExpectedAttribute,
-            [this](bool) -> decltype(auto) { return parseAttributeSpec(); }
+            [this](bool) { return &parseAttributeSpec(); }
         );
 
         buffer.append(&factory.attributeInstance(openParen, list, closeParen));
@@ -1906,7 +1906,7 @@ PackageImportDeclarationSyntax& Parser::parseImportDeclaration(span<AttributeIns
         TokenKind::Comma,
         semi,
         DiagCode::ExpectedPackageImport,
-        [this](bool) -> decltype(auto) { return parsePackageImportItem(); }
+        [this](bool) { return &parsePackageImportItem(); }
     );
 
     return factory.packageImportDeclaration(attributes, keyword, items.copy(alloc), semi);
@@ -1957,7 +1957,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedAssertionItemPort,
-        [this, declarationKind](bool) -> decltype(auto) {
+        [this, declarationKind](bool) {
             auto attributes = parseAttributes();
             Token local;
             Token direction;
@@ -1992,7 +1992,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declar
             }
             ASSERT(type);
             auto& declarator = parseVariableDeclarator(true);
-            return factory.assertionItemPort(attributes, local, direction, *type, declarator);
+            return &factory.assertionItemPort(attributes, local, direction, *type, declarator);
         }
     );
 
@@ -2162,7 +2162,7 @@ ClockingDeclarationSyntax& Parser::parseClockingDeclaration(span<AttributeInstan
                     TokenKind::Comma,
                     innerSemi,
                     DiagCode::ExpectedIdentifier,
-                    [this](bool) -> decltype(auto) { return parseAttributeSpec(); }
+                    [this](bool) { return &parseAttributeSpec(); }
                 );
             }
             else if (!declaration) {
@@ -2191,7 +2191,7 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(span<Attribute
         TokenKind::Comma,
         semi,
         DiagCode::ExpectedHierarchicalInstantiation,
-        [this](bool) -> decltype(auto) { return parseHierarchicalInstance(); }
+        [this](bool) { return &parseHierarchicalInstance(); }
     );
 
     return factory.hierarchyInstantiation(attributes, type, parameters, items.copy(alloc), semi);
@@ -2213,7 +2213,7 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
         items,
         closeParen,
         DiagCode::ExpectedPortConnection,
-        [this](bool) -> decltype(auto) { return parsePortConnection(); }
+        [this](bool) { return &parsePortConnection(); }
     );
 
     return factory.hierarchicalInstance(name, dimensions, openParen, items, closeParen);

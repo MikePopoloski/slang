@@ -203,7 +203,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, span<At
                         TokenKind::Comma,
                         colon,
                         DiagCode::ExpectedOpenRangeElement,
-                        [this](bool) -> decltype(auto) { return parseOpenRangeElement(); }
+                        [this](bool) { return &parseOpenRangeElement(); }
                     );
                     itemBuffer.append(&factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -230,7 +230,7 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, span<At
                         TokenKind::Comma,
                         colon,
                         DiagCode::ExpectedExpression,
-                        [this](bool) -> decltype(auto) { return parseExpression(); }
+                        [this](bool) { return &parseExpression(); }
                     );
                     itemBuffer.append(&factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement()));
                 }
@@ -307,7 +307,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label, s
         TokenKind::Comma,
         semi1,
         DiagCode::ExpectedForInitializer,
-        [this](bool) -> decltype(auto) { return parseForInitializer(); }
+        [this](bool) { return &parseForInitializer(); }
     );
 
     auto& stopExpr = parseExpression();
@@ -321,7 +321,7 @@ ForLoopStatementSyntax& Parser::parseForLoopStatement(NamedLabelSyntax* label, s
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedExpression,
-        [this](bool) -> decltype(auto) { return parseExpression(); }
+        [this](bool) { return &parseExpression(); }
     );
 
     return factory.forLoopStatement(
@@ -353,7 +353,7 @@ ForeachLoopListSyntax& Parser::parseForeachLoopVariables() {
         list,
         closeBracket,
         DiagCode::ExpectedIdentifier,
-        [this](bool) -> decltype(auto) { return parseName(true); }
+        [this](bool) { return &parseName(true); }
     );
     auto closeParen = expect(TokenKind::CloseParenthesis);
 
@@ -635,7 +635,7 @@ WaitOrderStatementSyntax& Parser::parseWaitOrderStatement(NamedLabelSyntax* labe
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedIdentifier,
-        [this](bool) -> decltype(auto) { return parseName(); }
+        [this](bool) { return &parseName(); }
     );
 
     return factory.waitOrderStatement(

@@ -338,7 +338,7 @@ OpenRangeListSyntax& Parser::parseOpenRangeList() {
         list,
         closeBrace,
         DiagCode::ExpectedOpenRangeElement,
-        [this](bool) -> decltype(auto) { return parseOpenRangeElement(); }
+        [this](bool) { return &parseOpenRangeElement(); }
     );
 
     return factory.openRangeList(openBrace, list, closeBrace);
@@ -368,7 +368,7 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace, Expre
         TokenKind::Comma,
         closeBrace,
         DiagCode::ExpectedExpression,
-        [this](bool) -> decltype(auto) { return parseExpression(); }
+        [this](bool) { return &parseExpression(); }
     );
     return factory.concatenationExpression(openBrace, buffer.copy(alloc), closeBrace);
 }
@@ -391,7 +391,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
         list,
         closeBraceInner,
         DiagCode::ExpectedStreamExpression,
-        [this](bool) -> decltype(auto) { return parseStreamExpression(); }
+        [this](bool) { return &parseStreamExpression(); }
     );
 
     auto closeBrace = expect(TokenKind::CloseBrace);
@@ -441,7 +441,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 TokenKind::Comma,
                 closeBrace,
                 DiagCode::ExpectedAssignmentKey,
-                [this](bool) -> decltype(auto) { return parseAssignmentPatternItem(nullptr); }
+                [this](bool) { return &parseAssignmentPatternItem(nullptr); }
             );
             pattern = &factory.structuredAssignmentPattern(
                 openBrace,
@@ -456,7 +456,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 TokenKind::Comma,
                 closeBrace,
                 DiagCode::ExpectedExpression,
-                [this](bool) -> decltype(auto) { return parseExpression(); }
+                [this](bool) { return &parseExpression(); }
             );
             pattern = &factory.replicatedAssignmentPattern(
                 openBrace,
@@ -477,7 +477,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 TokenKind::Comma,
                 closeBrace,
                 DiagCode::ExpectedExpression,
-                [this](bool) -> decltype(auto) { return parseExpression(); }
+                [this](bool) { return &parseExpression(); }
             );
             pattern = &factory.simpleAssignmentPattern(
                 openBrace,
@@ -492,7 +492,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
                 TokenKind::Comma,
                 closeBrace,
                 DiagCode::ExpectedExpression,
-                [this](bool) -> decltype(auto) { return parseExpression(); }
+                [this](bool) { return &parseExpression(); }
             );
             pattern = &factory.simpleAssignmentPattern(
                 openBrace,
@@ -694,7 +694,7 @@ ArgumentListSyntax& Parser::parseArgumentList() {
         list,
         closeParen,
         DiagCode::ExpectedArgument,
-        [this](bool) -> decltype(auto) { return parseArgument(); }
+        [this](bool) { return &parseArgument(); }
     );
 
     return factory.argumentList(openParen, list, closeParen);
@@ -764,7 +764,7 @@ ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& 
         TokenKind::TripleAnd,
         end,
         DiagCode::ExpectedConditionalPattern,
-        [this](bool) -> decltype(auto) { return parseConditionalPattern(); }
+        [this](bool) { return &parseConditionalPattern(); }
     );
 
     return factory.conditionalPredicate(buffer.copy(alloc));
@@ -917,7 +917,7 @@ ExpressionSyntax& Parser::parseArrayOrRandomizeWithClause() {
         TokenKind::Comma,
         closeParen,
         DiagCode::ExpectedIdentifier,
-        [this](bool) -> decltype(auto) { return factory.identifierName(consume()); }
+        [this](bool) { return &factory.identifierName(consume()); }
     );
 
     auto& idList = factory.identifierList(openParen, buffer.copy(alloc), closeParen);
