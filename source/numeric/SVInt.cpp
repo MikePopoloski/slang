@@ -41,7 +41,7 @@ bool literalBaseFromChar(char base, LiteralBase& result) {
     }
 }
 
-SVInt::SVInt(StringRef str) {
+SVInt::SVInt(string_view str) {
     ASSERT(!str.empty());
 
     const char* c = str.data();

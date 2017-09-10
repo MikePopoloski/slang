@@ -70,14 +70,14 @@ inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_
     return result;
 }
 
-SyntaxKind getDirectiveKind(StringRef directive);
+SyntaxKind getDirectiveKind(string_view directive);
 
 Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics) :
     Lexer(buffer.id, buffer.data, alloc, diagnostics)
 {
 }
 
-Lexer::Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics) :
+Lexer::Lexer(BufferID bufferId, string_view source, BumpAllocator& alloc, Diagnostics& diagnostics) :
     alloc(alloc),
     diagnostics(diagnostics),
     bufferId(bufferId),
@@ -125,7 +125,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     leftText.copy(mem, leftText.length());
     rightText.copy(mem + leftText.length(), rightText.length());
     mem[newLength - 1] = '\0';
-    StringRef combined { mem, newLength };
+    string_view combined { mem, newLength };
 
     Diagnostics unused;
     Lexer lexer { BufferID(), combined, alloc, unused };
@@ -172,7 +172,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     text.append('"');
     text.append('\0');
 
-    StringRef raw(text.copy(alloc));
+    string_view raw(text.copy(alloc));
 
     Diagnostics unused;
     Lexer lexer { BufferID(), raw, alloc, unused };
@@ -214,7 +214,7 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
         addError(DiagCode::TooManyLexerErrors, currentOffset());
 
         // consume the rest of the file and turn it into trivia
-        triviaBuffer.append(Trivia(TriviaKind::DisabledText, StringRef(marker, (uint32_t)(sourceEnd - marker))));
+        triviaBuffer.append(Trivia(TriviaKind::DisabledText, string_view(marker, (uint32_t)(sourceEnd - marker))));
         sourceBuffer = sourceEnd - 1;
         kind = TokenKind::EndOfFile;
     }
@@ -606,7 +606,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
         }
     }
 
-    info->extra = StringRef(stringBuffer.copy(alloc));
+    info->extra = string_view(stringBuffer.copy(alloc));
 }
 
 TokenKind Lexer::lexEscapeSequence(Token::Info* info) {
@@ -702,7 +702,7 @@ Token Lexer::lexIncludeFileName() {
         advance();
     } while (c != delim);
 
-    StringRef rawText = lexeme();
+    string_view rawText = lexeme();
     auto info = alloc.emplace<Token::Info>(trivia, rawText, location, TokenFlags::None);
     info->extra = rawText;
 

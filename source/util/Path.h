@@ -28,8 +28,6 @@
 # include <limits.h>
 #endif
 
-#include "StringRef.h"
-
 namespace slang {
 
 /// Path - Cross platform file path manipulation routines.
@@ -61,7 +59,7 @@ public:
 
     Path(const char* str) { set(str); }
     Path(const std::string& str) { set(str); }
-    Path(StringRef str) { set(string(str)); }
+    Path(string_view str) { set(string(str)); }
 
     // Paths in Win32 typically need UTF-16 characters
 #if defined(_WIN32)
@@ -224,6 +222,6 @@ private:
 /// returning any that have the given extension (which should include the leading period).
 /// If the extension provided is empty, all files will be returned. If @a recurse is set
 /// to true, this will also look in subdirectories recursively.
-vector<Path> findFiles(const Path& path, StringRef extension = "", bool recurse = false);
+vector<Path> findFiles(const Path& path, string_view extension = "", bool recurse = false);
 
 }

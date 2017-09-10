@@ -125,7 +125,7 @@ a1: assert property (@(posedge clk) a |-> p3);
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
-    preprocessor.pushSource(StringRef(text));
+    preprocessor.pushSource(string_view(text));
 
     Parser parser(preprocessor);
 

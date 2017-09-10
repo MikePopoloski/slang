@@ -16,64 +16,64 @@ using namespace slang;
 class DependencyMapper : public SyntaxVisitor<DependencyMapper> {
 public:
     void addIncludeDir(const string& dir) {
-        sourceManager.addUserDirectory(StringRef(dir));
+        sourceManager.addUserDirectory(string_view(dir));
     }
 
     void parseFile(const string& path) {
-        currentFile = StringRef(path);
+        currentFile = path;
         SyntaxTree tree = SyntaxTree::fromFile(currentFile, sourceManager);
-        visitNode(&tree.root());
+        //visitNode(&tree.root());
 
-        //printf("%s", tree.reportDiagnostics().c_str());
+        printf("%s", tree.reportDiagnostics().c_str());
         //printf("%s", tree.root().toString(SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia).c_str());
     }
 
     void visit(const ModuleHeaderSyntax& header) {
-        StringRef name = header.name.valueText();
+        string name { header.name.valueText() };
         if (!name.empty()) {
             auto pair = declToFile.try_emplace(name, currentFile);
             if (!pair.second) {
                 printf("Duplicate declaration: %s (%s, %s)\n",
-                       string(name).c_str(), string(currentFile).c_str(),
-                       string(pair.first->second).c_str());
+                       name.c_str(), currentFile.c_str(),
+                       pair.first->second.c_str());
             }
         }
     }
 
     void visit(const HierarchyInstantiationSyntax& instantiation) {
-        StringRef name = instantiation.type.valueText();
+        string name { instantiation.type.valueText() };
         if (!name.empty())
             fileToDeps[currentFile].insert(name);
     }
 
     void visit(const PackageImportItemSyntax& packageImport) {
-        StringRef name = packageImport.package.valueText();
+        string name { packageImport.package.valueText() };
         if (!name.empty())
             fileToDeps[currentFile].insert(name);
     }
 
     void printDeps() {
         for (const auto& fileAndSet : fileToDeps) {
-            StringRef file = fileAndSet.first;
+            const string& file = fileAndSet.first;
             for (const auto& dep : fileAndSet.second) {
                 auto it = declToFile.find(dep);
                 if (it == declToFile.end())
-                    printf("Couldn't find decl: %s\n", string(dep).c_str());
+                    printf("Couldn't find decl: %s\n", dep.c_str());
                 else if (it->second != file)
-                    printf("%s: %s\n", string(file).c_str(), string(it->second).c_str());
+                    printf("%s: %s\n", file.c_str(), it->second.c_str());
             }
         }
     }
 
 private:
     SourceManager sourceManager;
-    StringRef currentFile;
+    string currentFile;
 
     // Map from source element (module declaration, package declaration) to file.
-    std::unordered_map<StringRef, StringRef> declToFile;
+    std::unordered_map<string, string> declToFile;
 
     // Map from file to a dependency (via a module instantiation or package reference).
-    std::unordered_map<StringRef, std::unordered_set<StringRef>> fileToDeps;
+    std::unordered_map<string, std::unordered_set<string>> fileToDeps;
 };
 
 int main(int argc, char* argv[]) {

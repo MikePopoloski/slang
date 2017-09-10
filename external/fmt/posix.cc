@@ -72,7 +72,7 @@ fmt::BufferedFile::~BufferedFile() FMT_NOEXCEPT {
 }
 
 fmt::BufferedFile::BufferedFile(
-    fmt::CStringRef filename, fmt::CStringRef mode) {
+    fmt::Cstring_view filename, fmt::Cstring_view mode) {
   FMT_RETRY_VAL(file_, FMT_SYSTEM(fopen(filename.c_str(), mode.c_str())), 0);
   if (!file_)
     FMT_THROW(SystemError(errno, "cannot open file {}", filename));
@@ -97,7 +97,7 @@ int fmt::BufferedFile::fileno() const {
   return fd;
 }
 
-fmt::File::File(fmt::CStringRef path, int oflag) {
+fmt::File::File(fmt::Cstring_view path, int oflag) {
   int mode = S_IRUSR | S_IWUSR;
 #if defined(_WIN32) && !defined(__MINGW32__)
   fd_ = -1;

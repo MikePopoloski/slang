@@ -11,7 +11,6 @@
 #include <string>
 
 #include "util/SmallVector.h"
-#include "util/StringRef.h"
 
 #include "MathUtils.h"
 
@@ -177,7 +176,7 @@ public:
 
     /// Constructs from a string (in SystemVerilog syntax). This is mostly for convenience;
     /// any errors will assert instead of being handled gracefully.
-    explicit SVInt(StringRef str);
+    explicit SVInt(string_view str);
 
     SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, span<logic_t const> digits);
 

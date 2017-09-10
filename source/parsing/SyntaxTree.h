@@ -10,7 +10,6 @@
 #include "lexing/Preprocessor.h"
 #include "text/SourceManager.h"
 #include "util/BumpAllocator.h"
-#include "util/StringRef.h"
 
 #include "Parser.h"
 
@@ -31,20 +30,20 @@ public:
     SyntaxTree& operator=(const SyntaxTree&) = delete;
 
     /// Creates a syntax tree from a full compilation unit.
-    static SyntaxTree fromFile(StringRef path) {
+    static SyntaxTree fromFile(string_view path) {
         return fromFile(path, getDefaultSourceManager());
     }
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
-    static SyntaxTree fromText(StringRef text, BufferID existingBuffer = BufferID()) {
+    static SyntaxTree fromText(string_view text, BufferID existingBuffer = BufferID()) {
         return fromText(text, getDefaultSourceManager(), existingBuffer);
     }
 
-    static SyntaxTree fromFile(StringRef path, SourceManager& sourceManager) {
+    static SyntaxTree fromFile(string_view path, SourceManager& sourceManager) {
         return create(sourceManager, sourceManager.readSource(path), false);
     }
 
-    static SyntaxTree fromText(StringRef text, SourceManager& sourceManager,
+    static SyntaxTree fromText(string_view text, SourceManager& sourceManager,
                                BufferID existingBuffer = BufferID()) {
         SourceBuffer buffer = existingBuffer ?
             sourceManager.appendText(existingBuffer, text) : sourceManager.assignText(text);

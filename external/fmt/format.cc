@@ -99,7 +99,7 @@ inline int fmt_snprintf(char *buffer, size_t size, const char *format, ...) {
 
 const char RESET_COLOR[] = "\x1b[0m";
 
-typedef void (*FormatFunc)(Writer &, int, StringRef);
+typedef void (*FormatFunc)(Writer &, int, string_view);
 
 // Portable thread-safe version of strerror.
 // Sets buffer to point to a string describing the error code.
@@ -171,7 +171,7 @@ int safe_strerror(
 }
 
 void format_error_code(Writer &out, int error_code,
-                       StringRef message) FMT_NOEXCEPT {
+                       string_view message) FMT_NOEXCEPT {
   // Report error code making sure that the output fits into
   // INLINE_BUFFER_SIZE to avoid dynamic memory allocation and potential
   // bad_alloc.
@@ -194,7 +194,7 @@ void format_error_code(Writer &out, int error_code,
 }
 
 void report_error(FormatFunc func, int error_code,
-                  StringRef message) FMT_NOEXCEPT {
+                  string_view message) FMT_NOEXCEPT {
   MemoryWriter full_message;
   func(full_message, error_code, message);
   // Use Writer::data instead of Writer::c_str to avoid potential memory
@@ -205,7 +205,7 @@ void report_error(FormatFunc func, int error_code,
 }  // namespace
 
 FMT_FUNC void SystemError::init(
-    int err_code, CStringRef format_str, ArgList args) {
+    int err_code, Cstring_view format_str, ArgList args) {
   error_code_ = err_code;
   MemoryWriter w;
   format_system_error(w, err_code, format(format_str, args));
@@ -288,7 +288,7 @@ FMT_FUNC void internal::report_unknown_type(char code, const char *type) {
 
 #if FMT_USE_WINDOWS_H
 
-FMT_FUNC internal::UTF8ToUTF16::UTF8ToUTF16(StringRef s) {
+FMT_FUNC internal::UTF8ToUTF16::UTF8ToUTF16(string_view s) {
   static const char ERROR_MSG[] = "cannot convert string from UTF-8 to UTF-16";
   if (s.size() > INT_MAX)
     FMT_THROW(WindowsError(ERROR_INVALID_PARAMETER, ERROR_MSG));
@@ -305,14 +305,14 @@ FMT_FUNC internal::UTF8ToUTF16::UTF8ToUTF16(StringRef s) {
   buffer_[length] = 0;
 }
 
-FMT_FUNC internal::UTF16ToUTF8::UTF16ToUTF8(WStringRef s) {
+FMT_FUNC internal::UTF16ToUTF8::UTF16ToUTF8(Wstring_view s) {
   if (int error_code = convert(s)) {
     FMT_THROW(WindowsError(error_code,
         "cannot convert string from UTF-16 to UTF-8"));
   }
 }
 
-FMT_FUNC int internal::UTF16ToUTF8::convert(WStringRef s) {
+FMT_FUNC int internal::UTF16ToUTF8::convert(Wstring_view s) {
   if (s.size() > INT_MAX)
     return ERROR_INVALID_PARAMETER;
   int s_size = static_cast<int>(s.size());
@@ -330,7 +330,7 @@ FMT_FUNC int internal::UTF16ToUTF8::convert(WStringRef s) {
 }
 
 FMT_FUNC void WindowsError::init(
-    int err_code, CStringRef format_str, ArgList args) {
+    int err_code, Cstring_view format_str, ArgList args) {
   error_code_ = err_code;
   MemoryWriter w;
   internal::format_windows_error(w, err_code, format(format_str, args));
@@ -339,7 +339,7 @@ FMT_FUNC void WindowsError::init(
 }
 
 FMT_FUNC void internal::format_windows_error(
-    Writer &out, int error_code, StringRef message) FMT_NOEXCEPT {
+    Writer &out, int error_code, string_view message) FMT_NOEXCEPT {
   FMT_TRY {
     MemoryBuffer<wchar_t, INLINE_BUFFER_SIZE> buffer;
     buffer.resize(INLINE_BUFFER_SIZE);
@@ -368,7 +368,7 @@ FMT_FUNC void internal::format_windows_error(
 #endif  // FMT_USE_WINDOWS_H
 
 FMT_FUNC void format_system_error(
-    Writer &out, int error_code, StringRef message) FMT_NOEXCEPT {
+    Writer &out, int error_code, string_view message) FMT_NOEXCEPT {
   FMT_TRY {
     internal::MemoryBuffer<char, internal::INLINE_BUFFER_SIZE> buffer;
     buffer.resize(internal::INLINE_BUFFER_SIZE);
@@ -454,30 +454,30 @@ FMT_FUNC internal::Arg internal::FormatterBase::do_get_arg(
 }
 
 FMT_FUNC void report_system_error(
-    int error_code, fmt::StringRef message) FMT_NOEXCEPT {
+    int error_code, fmt::string_view message) FMT_NOEXCEPT {
   // 'fmt::' is for bcc32.
   report_error(format_system_error, error_code, message);
 }
 
 #if FMT_USE_WINDOWS_H
 FMT_FUNC void report_windows_error(
-    int error_code, fmt::StringRef message) FMT_NOEXCEPT {
+    int error_code, fmt::string_view message) FMT_NOEXCEPT {
   // 'fmt::' is for bcc32.
   report_error(internal::format_windows_error, error_code, message);
 }
 #endif
 
-FMT_FUNC void print(std::FILE *f, CStringRef format_str, ArgList args) {
+FMT_FUNC void print(std::FILE *f, Cstring_view format_str, ArgList args) {
   MemoryWriter w;
   w.write(format_str, args);
   std::fwrite(w.data(), 1, w.size(), f);
 }
 
-FMT_FUNC void print(CStringRef format_str, ArgList args) {
+FMT_FUNC void print(Cstring_view format_str, ArgList args) {
   print(stdout, format_str, args);
 }
 
-FMT_FUNC void print_colored(Color c, CStringRef format, ArgList args) {
+FMT_FUNC void print_colored(Color c, Cstring_view format, ArgList args) {
   char escape[] = "\x1b[30m";
   escape[3] = static_cast<char>('0' + c);
   std::fputs(escape, stdout);

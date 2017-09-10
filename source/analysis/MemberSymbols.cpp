@@ -146,7 +146,7 @@ void ProceduralBlockSymbol::initMembers() const {
     body = &bindStatement(syntax.statement);
 }
 
-ExplicitImportSymbol::ExplicitImportSymbol(StringRef packageName, StringRef importName,
+ExplicitImportSymbol::ExplicitImportSymbol(string_view packageName, string_view importName,
                                            SourceLocation location, const Symbol& parent) :
     Symbol(SymbolKind::ExplicitImport, parent, importName, location),
     packageName(packageName), importName(importName)
@@ -181,7 +181,7 @@ const PackageSymbol* ImplicitImportSymbol::package() const {
     return wildcard_.package();
 }
 
-WildcardImportSymbol::WildcardImportSymbol(StringRef packageName, SourceLocation location, const Symbol& parent) :
+WildcardImportSymbol::WildcardImportSymbol(string_view packageName, SourceLocation location, const Symbol& parent) :
     Symbol(SymbolKind::WildcardImport, parent, /* no name */ "", location),
     packageName(packageName)
 {
@@ -195,7 +195,7 @@ const PackageSymbol* WildcardImportSymbol::package() const {
     return package_;
 }
 
-const ImplicitImportSymbol* WildcardImportSymbol::resolve(StringRef lookupName, SourceLocation lookupLocation) const {
+const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName, SourceLocation lookupLocation) const {
     if (!package())
         return nullptr;
 
@@ -207,11 +207,11 @@ const ImplicitImportSymbol* WildcardImportSymbol::resolve(StringRef lookupName, 
     return &allocate<ImplicitImportSymbol>(*this, *symbol, containingSymbol);
 }
 
-ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol&type,
+ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol&type,
                                  const ConstantValue& value, const Symbol& parent) :
     Symbol(SymbolKind::Parameter, parent, name, location), type_(&type), value_(value) {}
 
-ParameterSymbol::ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol&type,
+ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol&type,
                                  ConstantValue&& value, const Symbol& parent) :
     Symbol(SymbolKind::Parameter, parent, name, location), type_(&type), value_(std::move(value)) {}
 
@@ -222,14 +222,14 @@ VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const Sym
 {
 }
 
-VariableSymbol::VariableSymbol(StringRef name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+VariableSymbol::VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
                                VariableLifetime lifetime, bool isConst, const BoundExpression* initializer) :
     Symbol(SymbolKind::Variable, parent, name, location),
     lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer)
 {
 }
 
-VariableSymbol::VariableSymbol(SymbolKind kind, StringRef name, SourceLocation location, const TypeSymbol& type,
+VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, SourceLocation location, const TypeSymbol& type,
                                const Symbol& parent, VariableLifetime lifetime, bool isConst, const BoundExpression* initializer) :
     Symbol(kind, parent, name, location),
     lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer)
@@ -272,7 +272,7 @@ FormalArgumentSymbol::FormalArgumentSymbol(const TypeSymbol& type, const Symbol&
 {
 }
 
-FormalArgumentSymbol::FormalArgumentSymbol(StringRef name, SourceLocation location, const TypeSymbol& type,
+FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
                                            const Symbol& parent, const BoundExpression* initializer,
                                            FormalArgumentDirection direction) :
     VariableSymbol(SymbolKind::FormalArgument, name, location, type, parent, VariableLifetime::Automatic,
@@ -290,7 +290,7 @@ SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, cons
     isTask = syntax.kind == SyntaxKind::TaskDeclaration;
 }
 
-SubroutineSymbol::SubroutineSymbol(StringRef name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
+SubroutineSymbol::SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
                                    SystemFunction systemFunction, const Symbol& parent) :
     StatementBlockSymbol(SymbolKind::Subroutine, parent, name),
     systemFunctionKind(systemFunction), returnType_(&returnType), arguments_(arguments)

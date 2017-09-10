@@ -13,7 +13,6 @@
 #include "numeric/Time.h"
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"
-#include "util/StringRef.h"
 #include "util/StringTable.h"
 
 #include "Trivia.h"
@@ -88,30 +87,30 @@ public:
         span<slang::Trivia const> trivia;
 
         /// The raw source span.
-        StringRef rawText;
+        string_view rawText;
 
         /// The original location in the source text (or a macro location
         /// if the token was generated during macro expansion).
         SourceLocation location;
 
         /// Extra kind-specific data associated with the token.
-        /// StringRef: The nice text of a string literal.
+        /// string_view: The nice text of a string literal.
         /// SyntaxKind: The kind of a directive token.
         /// IdentifierType: The kind of an identifer token.
         /// NumericLiteralInfo: Info for numeric tokens.
-        std::variant<StringRef, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
+        std::variant<string_view, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
 
         /// Various token flags.
         uint8_t flags;
 
         Info();
-        Info(span<Trivia const> trivia, StringRef rawText, SourceLocation location, int flags);
+        Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, int flags);
 
         void setNumInfo(NumericTokenValue&& value);
         void setNumFlags(LiteralBase base, bool isSigned);
         void setTimeUnit(TimeUnit unit);
 
-        const StringRef& stringText() const { return std::get<StringRef>(extra); }
+        const string_view& stringText() const { return std::get<string_view>(extra); }
         const SyntaxKind& directiveKind() const { return std::get<SyntaxKind>(extra); }
         const IdentifierType& idType() const { return std::get<IdentifierType>(extra); }
         const NumericLiteralInfo& numInfo() const { return std::get<NumericLiteralInfo>(extra); }
@@ -136,10 +135,10 @@ public:
 
     /// Value text is the "nice" lexed version of certain tokens;
     /// for example, in string literals, escape sequences are converted appropriately.
-    StringRef valueText() const;
+    string_view valueText() const;
 
     /// Gets the original lexeme that led to the creation of this token.
-    StringRef rawText() const;
+    string_view rawText() const;
 
     /// Convenience method that wraps writeTo and builds an std::string.
     std::string toString(uint8_t flags = 0) const;
@@ -186,9 +185,9 @@ enum class KeywordVersion : uint8_t {
     v1800_2012 = 6,
 };
 
-TokenKind getSystemKeywordKind(StringRef text);
-StringRef getTokenKindText(TokenKind kind);
-std::optional<KeywordVersion> getKeywordVersion(StringRef text);
+TokenKind getSystemKeywordKind(string_view text);
+string_view getTokenKindText(TokenKind kind);
+std::optional<KeywordVersion> getKeywordVersion(string_view text);
 const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 
 /// This checks all keywords, regardless of the current keyword table.  Should

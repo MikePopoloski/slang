@@ -12,7 +12,7 @@
 
 namespace slang {
 
-SyntaxKind getDirectiveKind(StringRef directive);
+SyntaxKind getDirectiveKind(string_view directive);
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics) :
     sourceManager(sourceManager),
@@ -24,7 +24,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, D
     undefineAll();
 }
 
-void Preprocessor::pushSource(StringRef source) {
+void Preprocessor::pushSource(string_view source) {
     auto buffer = sourceManager.assignText(source);
     pushSource(buffer);
 }
@@ -37,11 +37,11 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
     lexerStack.push_back(lexer);
 }
 
-void Preprocessor::predefine(StringRef definition, StringRef fileName) {
+void Preprocessor::predefine(string_view definition, string_view fileName) {
     std::string text = "`define " + string(definition) + "\n";
 
     Preprocessor pp(sourceManager, alloc, diagnostics);
-    pp.pushSource(sourceManager.assignText(fileName, StringRef(text)));
+    pp.pushSource(sourceManager.assignText(fileName, string_view(text)));
     pp.undefineAll();
 
     // Consume all of the definition text.
@@ -56,7 +56,7 @@ void Preprocessor::predefine(StringRef definition, StringRef fileName) {
     }
 }
 
-bool Preprocessor::undefine(StringRef name) {
+bool Preprocessor::undefine(string_view name) {
     auto it = macros.find(name);
     if (it != macros.end() && !it->second.isIntrinsic()) {
         macros.erase(it);
@@ -71,7 +71,7 @@ void Preprocessor::undefineAll() {
     macros["__LINE__"] = MacroIntrinsic::Line;
 }
 
-bool Preprocessor::isDefined(StringRef name) {
+bool Preprocessor::isDefined(string_view name) {
     return !name.empty() && macros.find(name) != macros.end();
 }
 
@@ -306,7 +306,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
             auto fileNameInfo = alloc.emplace<Token::Info>(fileName.trivia(),
                 fileName.rawText(), fileName.location(), fileName.getInfo()->flags);
 
-            fileNameInfo->extra = StringRef(stringBuffer, len + 2);
+            fileNameInfo->extra = string_view(stringBuffer, len + 2);
             fileName = Token(TokenKind::IncludeFileName, fileNameInfo);
         }
         else {
@@ -317,7 +317,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     Token end = parseEndOfDirective(suppressEODError);
 
     // path should be at least three chars: "a" or <a>
-    StringRef path = fileName.valueText();
+    string_view path = fileName.valueText();
     if (path.length() < 3)
         addError(DiagCode::ExpectedIncludeFileName, fileName.location());
     else {
@@ -405,7 +405,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     );
 
     if (noErrors)
-        macros[intern(alloc, name.valueText())] = result;
+        macros[name.valueText()] = result;
     return Trivia(TriviaKind::Directive, result);
 }
 
@@ -447,7 +447,7 @@ Trivia Preprocessor::handleElseDirective(Token directive) {
     return parseBranchDirective(directive, Token(), take);
 }
 
-bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName) {
+bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf, string_view macroName) {
     // empty stack is an error
     if (branchStack.empty()) {
         addError(DiagCode::UnexpectedConditionalDirective, location);
@@ -572,7 +572,7 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
         SVInt dummy(16, 0, true);
         const SVInt* val = std::get_if<SVInt>(&token.numericValue());
 
-        StringRef numText;
+        string_view numText;
         if (!val) {
             // create a dummy value to place in the generated token
             val = &dummy;
@@ -600,7 +600,7 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
         value = *alloc.emplace<Token>(TokenKind::IntegerLiteral, valueInfo);
         valueInfo->setNumInfo(*val);
 
-        StringRef timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit());
+        string_view timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit());
         Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
             timeUnitSuffix, token.location() + numText.length(), token.getInfo()->flags);
 
@@ -719,7 +719,7 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
 
     // TODO: additional checks for undefining other builtin directives
     if (!nameToken.isMissing()) {
-        StringRef name = nameToken.valueText();
+        string_view name = nameToken.valueText();
         auto it = macros.find(name);
         if (it != macros.end()) {
             if (name != "__LINE__" && name != "__FILE__")
@@ -1120,10 +1120,10 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, Sm
 
     switch (intrinsic) {
         case MacroIntrinsic::File: {
-            StringRef fileName = sourceManager.getFileName(usageSite.location());
+            string_view fileName = sourceManager.getFileName(usageSite.location());
             text.appendRange(fileName);
             info->extra = fileName;
-            info->rawText = StringRef(text.copy(alloc));
+            info->rawText = string_view(text.copy(alloc));
 
             dest.append(Token(TokenKind::StringLiteral, info));
             break;
@@ -1132,7 +1132,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, Sm
             uint32_t lineNum = sourceManager.getLineNumber(usageSite.location());
             text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
             info->setNumInfo(SVInt(lineNum));
-            info->rawText = StringRef(text.copy(alloc));
+            info->rawText = string_view(text.copy(alloc));
 
             // Use appendBodyToken so that implicit concatenation will occur if something else
             // was already in the destination buffer.

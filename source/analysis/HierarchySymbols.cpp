@@ -53,7 +53,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
     bool hasParamAssignments = false;
     bool orderedAssignments = true;
     SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
-    SmallHashMap<StringRef, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
+    SmallHashMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
 
     if (assignments) {
         for (auto paramBase : assignments->parameters.parameters) {
@@ -81,7 +81,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
     }
 
     // For each parameter assignment we have, match it up to a real parameter and evaluate its initializer.
-    SmallHashMap<StringRef, ConstantValue, 8> paramMap;
+    SmallHashMap<string_view, ConstantValue, 8> paramMap;
     if (orderedAssignments) {
         // We take this branch if we had ordered parameter assignments,
         // or if we didn't have any parameter assignments at all.
@@ -116,7 +116,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
             if (info.local) {
                 // Can't assign to localparams, so this is an error.
                 addError(info.bodyParam ? DiagCode::AssignedToLocalBodyParam : DiagCode::AssignedToLocalPortParam, arg->name.location());
-                addError(DiagCode::NoteDeclarationHere, info.location) << StringRef("parameter");
+                addError(DiagCode::NoteDeclarationHere, info.location) << string_view("parameter");
                 continue;
             }
 
@@ -159,7 +159,7 @@ const std::vector<ModuleSymbol::ParameterInfo>& ModuleSymbol::getDeclaredParams(
         // publicly visible parameters are the ones in that list. Otherwise, parameters declared
         // in the module body are publicly visible.
         const ModuleHeaderSyntax& header = syntax.header;
-        SmallHashMap<StringRef, SourceLocation, 16> nameDupMap;
+        SmallHashMap<string_view, SourceLocation, 16> nameDupMap;
         std::vector<ParameterInfo> buffer;
 
         bool overrideLocal = false;
@@ -183,7 +183,7 @@ const std::vector<ModuleSymbol::ParameterInfo>& ModuleSymbol::getDeclaredParams(
 }
 
 bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, std::vector<ParameterInfo>& buffer,
-                                 HashMapBase<StringRef, SourceLocation>& nameDupMap,
+                                 HashMapBase<string_view, SourceLocation>& nameDupMap,
                                  bool lastLocal, bool overrideLocal, bool bodyParam) const {
     // It's legal to leave off the parameter keyword in the parameter port list.
     // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
@@ -198,7 +198,7 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, st
     }
 
     for (const VariableDeclaratorSyntax* declarator : paramDecl.declarators) {
-        StringRef declName = declarator->name.valueText();
+        string_view declName = declarator->name.valueText();
         if (declName.empty())
             continue;
 
@@ -223,7 +223,7 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, st
 }
 
 ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
-                                                     const HashMapBase<StringRef, ConstantValue>& parameterAssignments) :
+                                                     const HashMapBase<string_view, ConstantValue>& parameterAssignments) :
     ScopeSymbol(SymbolKind::ParameterizedModule, parent, module.name, module.location), module(module)
 {
     for (const auto& element : parameterAssignments)
@@ -273,14 +273,14 @@ void ParameterizedModuleSymbol::initMembers() const {
     }
 }
 
-ModuleInstanceSymbol::ModuleInstanceSymbol(StringRef name, SourceLocation location,
+ModuleInstanceSymbol::ModuleInstanceSymbol(string_view name, SourceLocation location,
                                            const ParameterizedModuleSymbol& module, const Symbol& parent) :
     Symbol(SymbolKind::ModuleInstance, parent, name, location),
     module(module)
 {
 }
 
-GenerateBlockSymbol::GenerateBlockSymbol(StringRef name, SourceLocation location, const Symbol& parent) :
+GenerateBlockSymbol::GenerateBlockSymbol(string_view name, SourceLocation location, const Symbol& parent) :
     ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location)
 {
 }

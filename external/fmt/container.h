@@ -52,13 +52,13 @@ class ContainerBuffer : public Buffer<typename Container::value_type> {
 
   **Example**::
 
-    void vecformat(std::vector<char>& dest, fmt::BasicCStringRef<char> format,
+    void vecformat(std::vector<char>& dest, fmt::BasicCstring_view<char> format,
                    fmt::ArgList args) {
       fmt::BasicContainerWriter<std::vector<char> > appender(dest);
       appender.write(format, args);
     }
     FMT_VARIADIC(void, vecformat, std::vector<char>&,
-                 fmt::BasicCStringRef<char>);
+                 fmt::BasicCstring_view<char>);
   \endrst
  */
 template <class Container>

@@ -1,6 +1,6 @@
 #include "Test.h"
 
-std::string preprocess(StringRef text) {
+std::string preprocess(string_view text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -27,7 +27,7 @@ TEST_CASE("Include File", "[preprocessor]") {
 }
 
 void testDirective(SyntaxKind kind) {
-    StringRef text = getDirectiveText(kind);
+    string_view text = getDirectiveText(kind);
 
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);

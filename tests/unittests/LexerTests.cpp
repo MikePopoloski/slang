@@ -37,7 +37,7 @@ TEST_CASE("Unicode BOMs", "[lexer]") {
 TEST_CASE("Embedded null", "[lexer]") {
     const char text[] = "\0\0";
     auto str = std::string(text, text + sizeof(text) - 1);
-    Token token = lexToken(StringRef(str));
+    Token token = lexToken(string_view(str));
 
     CHECK(token.kind == TokenKind::Unknown);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == str.substr(0, str.length() - 1));
@@ -339,7 +339,7 @@ TEST_CASE("Integer literal", "[lexer]") {
 }
 
 void checkVectorBase(const std::string& s, LiteralBase base, bool isSigned) {
-    Token token = lexToken(StringRef(s));
+    Token token = lexToken(string_view(s));
 
     CHECK(token.kind == TokenKind::IntegerBase);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
@@ -458,7 +458,7 @@ TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
 
 TEST_CASE("Real literal (digit overflow)", "[lexer]") {
     std::string text = std::string(400, '9') + ".0";
-    Token token = lexToken(StringRef(text));
+    Token token = lexToken(string_view(text));
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
@@ -478,7 +478,7 @@ TEST_CASE("Integer literal (not an exponent)", "[lexer]") {
 }
 
 void checkTimeLiteral(const std::string& s, TimeUnit flagCheck, double num) {
-    Token token = lexToken(StringRef(s));
+    Token token = lexToken(string_view(s));
 
     CHECK(token.kind == TokenKind::TimeLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
@@ -528,7 +528,7 @@ TEST_CASE("Directive not on own line", "[lexer]") {
     auto& text = "foo `include <sdf.svh>";
 
     diagnostics.clear();
-    auto buffer = getSourceManager().assignText(StringRef(text));
+    auto buffer = getSourceManager().assignText(string_view(text));
     Lexer lexer(buffer, alloc, diagnostics);
 
     Token token = lexer.lex();
@@ -556,7 +556,7 @@ TEST_CASE("Too many errors", "[lexer]") {
         memcpy(buf + 8*i, "\x01\x02\x03\x04\x05\x06\x07\x08", 8);
     }
     diagnostics.clear();
-    auto buffer = getSourceManager().assignText(StringRef((const char *)buf, 1024));
+    auto buffer = getSourceManager().assignText(string_view((const char *)buf, 1024));
     Lexer lexer(buffer, alloc, diagnostics);
     Token token;
     for (size_t i = 0; i < 1024; ++i) {
@@ -830,7 +830,7 @@ TEST_CASE("All Keywords", "[preprocessor]") {
 }
 
 void testPunctuation(TokenKind kind) {
-    StringRef text = getTokenKindText(kind);
+    string_view text = getTokenKindText(kind);
     Token token = lexToken(text);
 
     CHECK(token.kind == kind);
@@ -928,7 +928,7 @@ TEST_CASE("All Punctuation", "[lexer]") {
 }
 
 void testDirectivePunctuation(TokenKind kind) {
-    StringRef text = getTokenKindText(kind);
+    string_view text = getTokenKindText(kind);
 
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);

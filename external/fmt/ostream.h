@@ -80,7 +80,7 @@ void format_arg(BasicFormatter<Char, ArgFormatter_> &f,
   std::basic_ostream<Char> output(&format_buf);
   output << value;
 
-  BasicStringRef<Char> str(&buffer[0], buffer.size());
+  Basicstring_view<Char> str(&buffer[0], buffer.size());
   typedef internal::MakeArg< BasicFormatter<Char> > MakeArg;
   format_str = f.format(format_str, MakeArg(str));
 }
@@ -94,8 +94,8 @@ void format_arg(BasicFormatter<Char, ArgFormatter_> &f,
     print(cerr, "Don't {}!", "panic");
   \endrst
  */
-FMT_API void print(std::ostream &os, CStringRef format_str, ArgList args);
-FMT_VARIADIC(void, print, std::ostream &, CStringRef)
+FMT_API void print(std::ostream &os, Cstring_view format_str, ArgList args);
+FMT_VARIADIC(void, print, std::ostream &, Cstring_view)
 }  // namespace fmt
 
 #ifdef FMT_HEADER_ONLY

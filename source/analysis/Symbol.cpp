@@ -19,7 +19,7 @@ TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
     return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
 }
 
-bool containsName(const std::vector<std::unordered_set<StringRef>>& scopeStack, StringRef name) {
+bool containsName(const std::vector<std::unordered_set<string_view>>& scopeStack, string_view name) {
     for (const auto& set : scopeStack) {
         if (set.find(name) != set.end())
             return true;
@@ -183,7 +183,7 @@ Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
     return getRoot().addError(code, location_);
 }
 
-const Symbol* ScopeSymbol::lookup(StringRef searchName, SourceLocation lookupLocation,
+const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupLocation,
                                   LookupKind lookupKind) const {
     init();
 
@@ -377,7 +377,7 @@ DesignRootSymbol::DesignRootSymbol(span<const SyntaxTree* const> trees) :
     }
 }
 
-const PackageSymbol* DesignRootSymbol::findPackage(StringRef lookupName) const {
+const PackageSymbol* DesignRootSymbol::findPackage(string_view lookupName) const {
     init();
 
     auto it = packageMap.find(lookupName);
@@ -619,7 +619,7 @@ void DesignRootSymbol::findInstantiations(const ModuleDeclarationSyntax& module,
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ProgramDeclaration: {
                 // ignore empty names
-                StringRef name = member->as<ModuleDeclarationSyntax>().header.name.valueText();
+                string_view name = member->as<ModuleDeclarationSyntax>().header.name.valueText();
                 if (!name.empty()) {
                     // create new scope entry lazily
                     if (!localDefs) {
@@ -650,7 +650,7 @@ void DesignRootSymbol::findInstantiations(const MemberSyntax& node, std::vector<
             // Determine whether this is a local or global module we're instantiating;
             // don't worry about local instantiations right now, they can't be root.
             const auto& his = node.as<HierarchyInstantiationSyntax>();
-            StringRef name = his.type.valueText();
+            string_view name = his.type.valueText();
             if (!name.empty() && !containsName(scopeStack, name))
                 found.insert(name);
             break;

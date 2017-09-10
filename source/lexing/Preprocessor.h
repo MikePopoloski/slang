@@ -14,7 +14,6 @@
 #include "parsing/SyntaxNode.h"
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"
-#include "util/StringRef.h"
 #include "Lexer.h"
 #include "Token.h"
 
@@ -26,7 +25,7 @@ struct MacroFormalArgumentListSyntax;
 struct MacroActualArgumentSyntax;
 struct MacroFormalArgumentSyntax;
 
-StringRef getDirectiveText(SyntaxKind kind);
+string_view getDirectiveText(SyntaxKind kind);
 
 /// Preprocessor - Interface between lexer and parser
 ///
@@ -38,26 +37,26 @@ public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     /// Push a new source file onto the stack.
-    void pushSource(StringRef source);
+    void pushSource(string_view source);
     void pushSource(SourceBuffer buffer);
 
     /// Predefines the given macro definition. The given definition string is lexed
     /// as if it were source text immediately following a `define directive.
     /// If any diagnostics are printed for the created text, they will be marked
     /// as coming from @a fileName.
-    void predefine(StringRef definition, StringRef fileName = "<api>");
+    void predefine(string_view definition, string_view fileName = "<api>");
 
     /// Undefines a previously defined macro. If the macro is not defined, or
     /// if you pass the name of an intrinsic macro, this call returns false and
     /// does not undefine anything.
-    bool undefine(StringRef name);
+    bool undefine(string_view name);
 
     /// Undefines all currently defined macros.
     void undefineAll();
 
     /// Checks whether the given macro is defined. This does not check built-in
     /// directives except for the intrinsic macros (__LINE__, etc).
-    bool isDefined(StringRef name);
+    bool isDefined(string_view name);
 
     /// Sets the base keyword version for the current compilation unit. Note that this does not
     /// affect the keyword version if the user has explicitly requested a different
@@ -113,7 +112,7 @@ private:
     Trivia createSimpleDirective(Token directive, bool suppressError = false);
 
     // Determines whether the else branch of a conditional directive should be taken
-    bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, StringRef macroName);
+    bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, string_view macroName);
 
     // Handle parsing a branch of a conditional directive
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
@@ -231,10 +230,10 @@ private:
     std::deque<BranchEntry> branchStack;
 
     // map from macro name to macro definition
-    std::unordered_map<StringRef, MacroDef> macros;
+    std::unordered_map<string_view, MacroDef> macros;
 
     // scratch space for mapping macro formal parameters to argument values
-    std::unordered_map<StringRef, const TokenList*> argumentMap;
+    std::unordered_map<string_view, const TokenList*> argumentMap;
 
     // list of expanded macro tokens to drain before continuing with active lexer
     SmallVectorSized<Token, 16> expandedTokens;

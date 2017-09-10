@@ -14,7 +14,7 @@ static const char RelativeTestPath[] = "tests/file_tests/corpus/include";
 int main() {
     // run through all external files in our corpus and make sure they parse without error
     SourceManager sourceManager;
-    sourceManager.addUserDirectory(StringRef(RelativeTestPath));
+    sourceManager.addUserDirectory(string_view(RelativeTestPath));
 
     DiagnosticWriter diagWriter(sourceManager);
     std::vector<SyntaxTree> trees;
@@ -26,7 +26,7 @@ int main() {
     int errors = 0;
     int files = 0;
     for (auto& p : findFiles(RelativeTestPath)) {
-        SyntaxTree tree = SyntaxTree::fromFile(StringRef(p.str()), sourceManager);
+        SyntaxTree tree = SyntaxTree::fromFile(string_view(p.str()), sourceManager);
         if (!tree.diagnostics().empty()) {
             printf("Parsing '%s'\n", p.str().c_str());
             printf("%s\n\n", diagWriter.report(tree.diagnostics()).c_str());

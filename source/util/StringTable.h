@@ -9,8 +9,6 @@
 #include <cstdint>
 #include <initializer_list>
 
-#include "StringRef.h"
-
 namespace slang {
 
 /// This class is a lookup table from string to value. It's optimized for
@@ -20,7 +18,7 @@ namespace slang {
 template<typename T>
 class StringTable {
 public:
-    StringTable(std::initializer_list<std::pair<StringRef, T>> entries) {
+    StringTable(std::initializer_list<std::pair<string_view, T>> entries) {
         // Give ourselves a bunch of room for entries to hash by using double
         // the required number of entries. Also round up to power of two so that
         // we can use bitwise AND instead of mod for wraparound.
@@ -29,7 +27,7 @@ public:
         table = new Entry[capacity];
 
         for (auto& entry : entries) {
-            size_t hc = std::hash<StringRef>()(entry.first);
+            size_t hc = std::hash<string_view>()(entry.first);
             uint32_t index = hc & (capacity - 1);
             while (table[index].hashCode != 0)
                 index = (index + 1) & (capacity - 1);
@@ -40,8 +38,8 @@ public:
         }
     }
 
-    bool lookup(StringRef key, T& value) const {
-        size_t hc = std::hash<StringRef>()(key);
+    bool lookup(string_view key, T& value) const {
+        size_t hc = std::hash<string_view>()(key);
         uint32_t index = hc & (capacity - 1);
         do {
             if (table[index].hashCode == hc &&
@@ -57,7 +55,7 @@ public:
 
 private:
     struct Entry {
-        StringRef key;
+        string_view key;
         size_t hashCode = 0;
         T value;
     };

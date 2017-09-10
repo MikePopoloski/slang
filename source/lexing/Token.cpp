@@ -25,7 +25,7 @@ Token::Info::Info() :
 {
 }
 
-Token::Info::Info(span<Trivia const> trivia, StringRef rawText, SourceLocation location, int flags) :
+Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, int flags) :
     trivia(trivia), rawText(rawText), location(location), flags((uint8_t)flags)
 {
 }
@@ -74,7 +74,7 @@ Token::Token(TokenKind kind, const Info* info) :
     ASSERT(info);
 }
 
-StringRef Token::valueText() const {
+string_view Token::valueText() const {
     switch (kind) {
         case TokenKind::Identifier:
             switch (identifierType()) {
@@ -101,8 +101,8 @@ StringRef Token::valueText() const {
     }
 }
 
-StringRef Token::rawText() const {
-    StringRef text = getTokenKindText(kind);
+string_view Token::rawText() const {
+    string_view text = getTokenKindText(kind);
     if (!text.empty())
         return text;
     else {

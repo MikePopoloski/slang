@@ -38,7 +38,7 @@ void Trivia::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
     }
 }
 
-StringRef Trivia::getRawText() const {
+string_view Trivia::getRawText() const {
     switch (kind) {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:

@@ -158,7 +158,7 @@ TEST_CASE(descr, "[eval]") { \
 TEST_CASE(descr, "[eval]") { \
     ScriptSession session; \
     auto value = session.eval(expr).integer(); \
-    auto res = SVInt(StringRef(result)); \
+    auto res = SVInt(string_view(result)); \
     /* uncomment for diagonstics: */ \
     /* printf("%s = %s\n", value.toString(LiteralBase::Binary).c_str(), res.toString(LiteralBase::Binary).c_str()); */ \
     CHECK(exactlyEqual(value, res)); \
@@ -216,19 +216,19 @@ TEST_CASE("bit select weird indexes", "[eval]") {
     session.eval("logic [0 : 15] up_vect = 5'b10111;");
 
     auto value = session.eval("up_vect[12:14]").integer();
-    CHECK(exactlyEqual(value, SVInt(StringRef("3'b011"))));
+    CHECK(exactlyEqual(value, SVInt(string_view("3'b011"))));
 
     value = session.eval("up_vect[12 -: 2]").integer();
-    CHECK(exactlyEqual(value, SVInt(StringRef("3'b011"))));
+    CHECK(exactlyEqual(value, SVInt(string_view("3'b011"))));
 
     value = session.eval("up_vect[14 +: 2]").integer();
-    CHECK(exactlyEqual(value, SVInt(StringRef("3'b011"))));
+    CHECK(exactlyEqual(value, SVInt(string_view("3'b011"))));
 
     session.eval("logic [20 : 5] down_vect = 5'd25");
 
     value = session.eval("down_vect[8:5]").integer();
 
-    CHECK(exactlyEqual(value, SVInt(StringRef("4'd9"))));
+    CHECK(exactlyEqual(value, SVInt(string_view("4'd9"))));
 
     value = session.eval("down_vect[5 +: 3]").integer();
     CHECK(value == 9);

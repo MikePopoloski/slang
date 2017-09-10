@@ -11,7 +11,6 @@
 #include "diagnostics/Diagnostics.h"
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"
-#include "util/StringRef.h"
 #include "Token.h"
 
 namespace slang {
@@ -70,7 +69,7 @@ public:
     // chosen number.
     static constexpr size_t MAX_LEXER_ERRORS = 50;
 private:
-    Lexer(BufferID bufferId, StringRef source, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(BufferID bufferId, string_view source, BumpAllocator& alloc, Diagnostics& diagnostics);
 
     TokenKind lexToken(Token::Info* info, bool directiveMode, KeywordVersion keywordVersion);
     TokenKind lexNumericLiteral(Token::Info* info);
@@ -110,7 +109,7 @@ private:
     bool reallyAtEnd() { return sourceBuffer >= sourceEnd - 1; }
 
     uint32_t lexemeLength() { return (uint32_t)(sourceBuffer - marker); }
-    StringRef lexeme() { return StringRef(marker, lexemeLength()); }
+    string_view lexeme() { return string_view(marker, lexemeLength()); }
 
     bool consume(char c) {
         if (peek() == c) {

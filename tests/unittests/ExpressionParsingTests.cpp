@@ -208,7 +208,7 @@ TEST_CASE("Binary operators", "[parser:expression]") {
     testBinaryOperator(TokenKind::TripleRightShiftEqual);
 }
 
-void testScopedName(StringRef text) {
+void testScopedName(string_view text) {
     auto& expr = parseExpression(string(text));
 
     REQUIRE(expr.kind == SyntaxKind::ScopedName);
@@ -288,7 +288,7 @@ TEST_CASE("Element Access", "[parser:expressions]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-void testElementRange(StringRef text, SyntaxKind kind) {
+void testElementRange(string_view text, SyntaxKind kind) {
     auto& expr = parseExpression(string(text));
     REQUIRE(expr.kind == SyntaxKind::ElementSelectExpression);
     CHECK(expr.as<ElementSelectExpressionSyntax>().select.selector->kind == kind);

@@ -477,30 +477,30 @@ class BasicFormatter;
   +------------+-------------------------+
   | Type       | Definition              |
   +============+=========================+
-  | StringRef  | BasicStringRef<char>    |
+  | string_view  | Basicstring_view<char>    |
   +------------+-------------------------+
-  | WStringRef | BasicStringRef<wchar_t> |
+  | Wstring_view | Basicstring_view<wchar_t> |
   +------------+-------------------------+
 
   This class is most useful as a parameter type to allow passing
   different types of strings to a function, for example::
 
     template <typename... Args>
-    std::string format(StringRef format_str, const Args & ... args);
+    std::string format(string_view format_str, const Args & ... args);
 
     format("{}", 42);
     format(std::string("{}"), 42);
   \endrst
  */
 template <typename Char>
-class BasicStringRef {
+class Basicstring_view {
  private:
   const Char *data_;
   std::size_t size_;
 
  public:
   /** Constructs a string reference object from a C string and a size. */
-  BasicStringRef(const Char *s, std::size_t size) : data_(s), size_(size) {}
+  Basicstring_view(const Char *s, std::size_t size) : data_(s), size_(size) {}
 
   /**
     \rst
@@ -508,7 +508,7 @@ class BasicStringRef {
     the size with ``std::char_traits<Char>::length``.
     \endrst
    */
-  BasicStringRef(const Char *s)
+  Basicstring_view(const Char *s)
     : data_(s), size_(std::char_traits<Char>::length(s)) {}
 
   /**
@@ -517,7 +517,7 @@ class BasicStringRef {
     \endrst
    */
   template <typename Allocator>
-  BasicStringRef(
+  Basicstring_view(
       const std::basic_string<Char, std::char_traits<Char>, Allocator> &s)
   : data_(s.c_str()), size_(s.size()) {}
 
@@ -537,7 +537,7 @@ class BasicStringRef {
   std::size_t size() const { return size_; }
 
   // Lexicographically compare this string reference to other.
-  int compare(BasicStringRef other) const {
+  int compare(Basicstring_view other) const {
     std::size_t size = size_ < other.size_ ? size_ : other.size_;
     int result = std::char_traits<Char>::compare(data_, other.data_, size);
     if (result == 0)
@@ -545,28 +545,28 @@ class BasicStringRef {
     return result;
   }
 
-  friend bool operator==(BasicStringRef lhs, BasicStringRef rhs) {
+  friend bool operator==(Basicstring_view lhs, Basicstring_view rhs) {
     return lhs.compare(rhs) == 0;
   }
-  friend bool operator!=(BasicStringRef lhs, BasicStringRef rhs) {
+  friend bool operator!=(Basicstring_view lhs, Basicstring_view rhs) {
     return lhs.compare(rhs) != 0;
   }
-  friend bool operator<(BasicStringRef lhs, BasicStringRef rhs) {
+  friend bool operator<(Basicstring_view lhs, Basicstring_view rhs) {
     return lhs.compare(rhs) < 0;
   }
-  friend bool operator<=(BasicStringRef lhs, BasicStringRef rhs) {
+  friend bool operator<=(Basicstring_view lhs, Basicstring_view rhs) {
     return lhs.compare(rhs) <= 0;
   }
-  friend bool operator>(BasicStringRef lhs, BasicStringRef rhs) {
+  friend bool operator>(Basicstring_view lhs, Basicstring_view rhs) {
     return lhs.compare(rhs) > 0;
   }
-  friend bool operator>=(BasicStringRef lhs, BasicStringRef rhs) {
+  friend bool operator>=(Basicstring_view lhs, Basicstring_view rhs) {
     return lhs.compare(rhs) >= 0;
   }
 };
 
-typedef BasicStringRef<char> StringRef;
-typedef BasicStringRef<wchar_t> WStringRef;
+typedef Basicstring_view<char> string_view;
+typedef Basicstring_view<wchar_t> Wstring_view;
 
 /**
   \rst
@@ -578,29 +578,29 @@ typedef BasicStringRef<wchar_t> WStringRef;
   +-------------+--------------------------+
   | Type        | Definition               |
   +=============+==========================+
-  | CStringRef  | BasicCStringRef<char>    |
+  | Cstring_view  | BasicCstring_view<char>    |
   +-------------+--------------------------+
-  | WCStringRef | BasicCStringRef<wchar_t> |
+  | WCstring_view | BasicCstring_view<wchar_t> |
   +-------------+--------------------------+
 
   This class is most useful as a parameter type to allow passing
   different types of strings to a function, for example::
 
     template <typename... Args>
-    std::string format(CStringRef format_str, const Args & ... args);
+    std::string format(Cstring_view format_str, const Args & ... args);
 
     format("{}", 42);
     format(std::string("{}"), 42);
   \endrst
  */
 template <typename Char>
-class BasicCStringRef {
+class BasicCstring_view {
  private:
   const Char *data_;
 
  public:
   /** Constructs a string reference object from a C string. */
-  BasicCStringRef(const Char *s) : data_(s) {}
+  BasicCstring_view(const Char *s) : data_(s) {}
 
   /**
     \rst
@@ -608,7 +608,7 @@ class BasicCStringRef {
     \endrst
    */
   template <typename Allocator>
-  BasicCStringRef(
+  BasicCstring_view(
       const std::basic_string<Char, std::char_traits<Char>, Allocator> &s)
   : data_(s.c_str()) {}
 
@@ -616,13 +616,13 @@ class BasicCStringRef {
   const Char *c_str() const { return data_; }
 };
 
-typedef BasicCStringRef<char> CStringRef;
-typedef BasicCStringRef<wchar_t> WCStringRef;
+typedef BasicCstring_view<char> Cstring_view;
+typedef BasicCstring_view<wchar_t> WCstring_view;
 
 /** A formatting error such as invalid format string. */
 class FormatError : public std::runtime_error {
  public:
-  explicit FormatError(CStringRef message)
+  explicit FormatError(Cstring_view message)
   : std::runtime_error(message.c_str()) {}
   FormatError(const FormatError &ferr) : std::runtime_error(ferr) {}
   FMT_API ~FormatError() FMT_DTOR_NOEXCEPT;
@@ -993,13 +993,13 @@ struct NoThousandsSep {
 // A functor that adds a thousands separator.
 class ThousandsSep {
  private:
-  fmt::StringRef sep_;
+  fmt::string_view sep_;
 
   // Index of a decimal digit with the least significant digit having index 0.
   unsigned digit_index_;
 
  public:
-  explicit ThousandsSep(fmt::StringRef sep) : sep_(sep), digit_index_(0) {}
+  explicit ThousandsSep(fmt::string_view sep) : sep_(sep), digit_index_(0) {}
 
   template <typename Char>
   void operator()(Char *&buffer) {
@@ -1061,8 +1061,8 @@ class UTF8ToUTF16 {
   MemoryBuffer<wchar_t, INLINE_BUFFER_SIZE> buffer_;
 
  public:
-  FMT_API explicit UTF8ToUTF16(StringRef s);
-  operator WStringRef() const { return WStringRef(&buffer_[0], size()); }
+  FMT_API explicit UTF8ToUTF16(string_view s);
+  operator Wstring_view() const { return Wstring_view(&buffer_[0], size()); }
   size_t size() const { return buffer_.size() - 1; }
   const wchar_t *c_str() const { return &buffer_[0]; }
   std::wstring str() const { return std::wstring(&buffer_[0], size()); }
@@ -1076,8 +1076,8 @@ class UTF16ToUTF8 {
 
  public:
   UTF16ToUTF8() {}
-  FMT_API explicit UTF16ToUTF8(WStringRef s);
-  operator StringRef() const { return StringRef(&buffer_[0], size()); }
+  FMT_API explicit UTF16ToUTF8(Wstring_view s);
+  operator string_view() const { return string_view(&buffer_[0], size()); }
   size_t size() const { return buffer_.size() - 1; }
   const char *c_str() const { return &buffer_[0]; }
   std::string str() const { return std::string(&buffer_[0], size()); }
@@ -1085,11 +1085,11 @@ class UTF16ToUTF8 {
   // Performs conversion returning a system error code instead of
   // throwing exception on conversion error. This method may still throw
   // in case of memory allocation error.
-  FMT_API int convert(WStringRef s);
+  FMT_API int convert(Wstring_view s);
 };
 
 FMT_API void format_windows_error(fmt::Writer &out, int error_code,
-                                  fmt::StringRef message) FMT_NOEXCEPT;
+                                  fmt::string_view message) FMT_NOEXCEPT;
 #endif
 
 // A formatting argument value.
@@ -1236,12 +1236,12 @@ template <typename T, T> struct LConvCheck {
 // We check if ``lconv`` contains ``thousands_sep`` because on Android
 // ``lconv`` is stubbed as an empty struct.
 template <typename LConv>
-inline StringRef thousands_sep(
+inline string_view thousands_sep(
     LConv *lc, LConvCheck<char *LConv::*, &LConv::thousands_sep> = 0) {
   return lc->thousands_sep;
 }
 
-inline fmt::StringRef thousands_sep(...) { return ""; }
+inline fmt::string_view thousands_sep(...) { return ""; }
 
 #define FMT_CONCAT(a, b) a##b
 
@@ -1299,14 +1299,14 @@ class MakeValue : public Arg {
   MakeValue(typename WCharHelper<wchar_t *, Char>::Unsupported);
   MakeValue(typename WCharHelper<const wchar_t *, Char>::Unsupported);
   MakeValue(typename WCharHelper<const std::wstring &, Char>::Unsupported);
-  MakeValue(typename WCharHelper<WStringRef, Char>::Unsupported);
+  MakeValue(typename WCharHelper<Wstring_view, Char>::Unsupported);
 
-  void set_string(StringRef str) {
+  void set_string(string_view str) {
     string.value = str.data();
     string.size = str.size();
   }
 
-  void set_string(WStringRef str) {
+  void set_string(Wstring_view str) {
     wstring.value = str.data();
     wstring.size = str.size();
   }
@@ -1386,8 +1386,8 @@ class MakeValue : public Arg {
   FMT_MAKE_VALUE(unsigned char *, ustring.value, CSTRING)
   FMT_MAKE_VALUE(const unsigned char *, ustring.value, CSTRING)
   FMT_MAKE_STR_VALUE(const std::string &, STRING)
-  FMT_MAKE_STR_VALUE(StringRef, STRING)
-  FMT_MAKE_VALUE_(CStringRef, string.value, CSTRING, value.c_str())
+  FMT_MAKE_STR_VALUE(string_view, STRING)
+  FMT_MAKE_VALUE_(Cstring_view, string.value, CSTRING, value.c_str())
 
 #define FMT_MAKE_WSTR_VALUE(Type, TYPE) \
   MakeValue(typename WCharHelper<Type, Char>::Supported value) { \
@@ -1398,7 +1398,7 @@ class MakeValue : public Arg {
   FMT_MAKE_WSTR_VALUE(wchar_t *, WSTRING)
   FMT_MAKE_WSTR_VALUE(const wchar_t *, WSTRING)
   FMT_MAKE_WSTR_VALUE(const std::wstring &, WSTRING)
-  FMT_MAKE_WSTR_VALUE(WStringRef, WSTRING)
+  FMT_MAKE_WSTR_VALUE(Wstring_view, WSTRING)
 
   FMT_MAKE_VALUE(void *, pointer, POINTER)
   FMT_MAKE_VALUE(const void *, pointer, POINTER)
@@ -1446,16 +1446,16 @@ public:
 
 template <typename Char>
 struct NamedArg : Arg {
-  BasicStringRef<Char> name;
+  Basicstring_view<Char> name;
 
   template <typename T>
-  NamedArg(BasicStringRef<Char> argname, const T &value)
+  NamedArg(Basicstring_view<Char> argname, const T &value)
   : Arg(MakeArg< BasicFormatter<Char> >(value)), name(argname) {}
 };
 
 template <typename Char, typename T>
 struct NamedArgWithType : NamedArg<Char> {
-  NamedArgWithType(BasicStringRef<Char> argname, const T &value)
+  NamedArgWithType(Basicstring_view<Char> argname, const T &value)
   : NamedArg<Char>(argname, value) {}
 };
 
@@ -1931,7 +1931,7 @@ template <typename Char>
 class ArgMap {
  private:
   typedef std::vector<
-    std::pair<fmt::BasicStringRef<Char>, internal::Arg> > MapType;
+    std::pair<fmt::Basicstring_view<Char>, internal::Arg> > MapType;
   typedef typename MapType::value_type Pair;
 
   MapType map_;
@@ -1939,7 +1939,7 @@ class ArgMap {
  public:
   FMT_API void init(const ArgList &args);
 
-  const internal::Arg *find(const fmt::BasicStringRef<Char> &name) const {
+  const internal::Arg *find(const fmt::Basicstring_view<Char> &name) const {
     // The list is unsorted, so just return the first matching name.
     for (typename MapType::const_iterator it = map_.begin(), end = map_.end();
          it != end; ++it) {
@@ -2098,7 +2098,7 @@ class FormatterBase {
   template <typename Char>
   void write(BasicWriter<Char> &w, const Char *start, const Char *end) {
     if (start != end)
-      w << BasicStringRef<Char>(start, internal::to_unsigned(end - start));
+      w << Basicstring_view<Char>(start, internal::to_unsigned(end - start));
   }
 };
 }  // namespace internal
@@ -2175,7 +2175,7 @@ class BasicFormatter : private internal::FormatterBase {
 
   // Checks if manual indexing is used and returns the argument with
   // specified name.
-  internal::Arg get_arg(BasicStringRef<Char> arg_name, const char *&error);
+  internal::Arg get_arg(Basicstring_view<Char> arg_name, const char *&error);
 
   // Parses argument index and returns corresponding argument.
   internal::Arg parse_arg_index(const Char *&s);
@@ -2198,7 +2198,7 @@ class BasicFormatter : private internal::FormatterBase {
   BasicWriter<Char> &writer() { return writer_; }
 
   /** Formats stored arguments and writes the output to the writer. */
-  void format(BasicCStringRef<Char> format_str);
+  void format(BasicCstring_view<Char> format_str);
 
   // Formats a single argument and advances format_str, a format string pointer.
   const Char *format(const Char *&format_str, const internal::Arg &arg);
@@ -2392,7 +2392,7 @@ inline uint64_t make_type(FMT_GEN15(FMT_ARG_TYPE_DEFAULT)) {
 */
 class SystemError : public internal::RuntimeError {
  private:
-  FMT_API void init(int err_code, CStringRef format_str, ArgList args);
+  FMT_API void init(int err_code, Cstring_view format_str, ArgList args);
 
  protected:
   int error_code_;
@@ -2420,11 +2420,11 @@ class SystemError : public internal::RuntimeError {
        throw fmt::SystemError(errno, "cannot open file '{}'", filename);
    \endrst
   */
-  SystemError(int error_code, CStringRef message) {
+  SystemError(int error_code, Cstring_view message) {
     init(error_code, message, ArgList());
   }
   FMT_DEFAULTED_COPY_CTOR(SystemError)
-  FMT_VARIADIC_CTOR(SystemError, init, int, CStringRef)
+  FMT_VARIADIC_CTOR(SystemError, init, int, Cstring_view)
 
   FMT_API ~SystemError() FMT_DTOR_NOEXCEPT;
 
@@ -2448,7 +2448,7 @@ class SystemError : public internal::RuntimeError {
   \endrst
  */
 FMT_API void format_system_error(fmt::Writer &out, int error_code,
-                                 fmt::StringRef message) FMT_NOEXCEPT;
+                                 fmt::string_view message) FMT_NOEXCEPT;
 
 /**
   \rst
@@ -2642,10 +2642,10 @@ class BasicWriter {
     See also :ref:`syntax`.
     \endrst
    */
-  void write(BasicCStringRef<Char> format, ArgList args) {
+  void write(BasicCstring_view<Char> format, ArgList args) {
     BasicFormatter<Char>(args, *this).format(format);
   }
-  FMT_VARIADIC_VOID(write, BasicCStringRef<Char>)
+  FMT_VARIADIC_VOID(write, BasicCstring_view<Char>)
 
   BasicWriter &operator<<(int value) {
     write_decimal(value);
@@ -2710,14 +2710,14 @@ class BasicWriter {
     Writes *value* to the stream.
     \endrst
    */
-  BasicWriter &operator<<(fmt::BasicStringRef<Char> value) {
+  BasicWriter &operator<<(fmt::Basicstring_view<Char> value) {
     const Char *str = value.data();
     buffer_.append(str, str + value.size());
     return *this;
   }
 
   BasicWriter &operator<<(
-      typename internal::WCharHelper<StringRef, Char>::Supported value) {
+      typename internal::WCharHelper<string_view, Char>::Supported value) {
     const char *str = value.data();
     buffer_.append(str, str + value.size());
     return *this;
@@ -2942,7 +2942,7 @@ void BasicWriter<Char>::write_int(T value, Spec spec) {
   }
   case 'n': {
     unsigned num_digits = internal::count_digits(abs_value);
-    fmt::StringRef sep = "";
+    fmt::string_view sep = "";
 #if !(defined(ANDROID) || defined(__ANDROID__))
     sep = internal::thousands_sep(std::localeconv());
 #endif
@@ -3235,14 +3235,14 @@ typedef BasicArrayWriter<wchar_t> WArrayWriter;
 // Reports a system error without throwing an exception.
 // Can be used to report errors from destructors.
 FMT_API void report_system_error(int error_code,
-                                 StringRef message) FMT_NOEXCEPT;
+                                 string_view message) FMT_NOEXCEPT;
 
 #if FMT_USE_WINDOWS_H
 
 /** A Windows error. */
 class WindowsError : public SystemError {
  private:
-  FMT_API void init(int error_code, CStringRef format_str, ArgList args);
+  FMT_API void init(int error_code, Cstring_view format_str, ArgList args);
 
  public:
   /**
@@ -3273,16 +3273,16 @@ class WindowsError : public SystemError {
      }
    \endrst
   */
-  WindowsError(int error_code, CStringRef message) {
+  WindowsError(int error_code, Cstring_view message) {
     init(error_code, message, ArgList());
   }
-  FMT_VARIADIC_CTOR(WindowsError, init, int, CStringRef)
+  FMT_VARIADIC_CTOR(WindowsError, init, int, Cstring_view)
 };
 
 // Reports a Windows error without throwing an exception.
 // Can be used to report errors from destructors.
 FMT_API void report_windows_error(int error_code,
-                                  StringRef message) FMT_NOEXCEPT;
+                                  string_view message) FMT_NOEXCEPT;
 
 #endif
 
@@ -3294,7 +3294,7 @@ enum Color { BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE };
   Example:
     print_colored(fmt::RED, "Elapsed time: {0:.2f} seconds", 1.23);
  */
-FMT_API void print_colored(Color c, CStringRef format, ArgList args);
+FMT_API void print_colored(Color c, Cstring_view format, ArgList args);
 
 /**
   \rst
@@ -3305,13 +3305,13 @@ FMT_API void print_colored(Color c, CStringRef format, ArgList args);
     std::string message = format("The answer is {}", 42);
   \endrst
 */
-inline std::string format(CStringRef format_str, ArgList args) {
+inline std::string format(Cstring_view format_str, ArgList args) {
   MemoryWriter w;
   w.write(format_str, args);
   return w.str();
 }
 
-inline std::wstring format(WCStringRef format_str, ArgList args) {
+inline std::wstring format(WCstring_view format_str, ArgList args) {
   WMemoryWriter w;
   w.write(format_str, args);
   return w.str();
@@ -3326,7 +3326,7 @@ inline std::wstring format(WCStringRef format_str, ArgList args) {
     print(stderr, "Don't {}!", "panic");
   \endrst
  */
-FMT_API void print(std::FILE *f, CStringRef format_str, ArgList args);
+FMT_API void print(std::FILE *f, Cstring_view format_str, ArgList args);
 
 /**
   \rst
@@ -3337,7 +3337,7 @@ FMT_API void print(std::FILE *f, CStringRef format_str, ArgList args);
     print("Elapsed time: {0:.2f} seconds", 1.23);
   \endrst
  */
-FMT_API void print(CStringRef format_str, ArgList args);
+FMT_API void print(Cstring_view format_str, ArgList args);
 
 /**
   Fast integer formatter.
@@ -3455,21 +3455,21 @@ inline void format_decimal(char *&buffer, T value) {
   \endrst
  */
 template <typename T>
-inline internal::NamedArgWithType<char, T> arg(StringRef name, const T &arg) {
+inline internal::NamedArgWithType<char, T> arg(string_view name, const T &arg) {
   return internal::NamedArgWithType<char, T>(name, arg);
 }
 
 template <typename T>
-inline internal::NamedArgWithType<wchar_t, T> arg(WStringRef name, const T &arg) {
+inline internal::NamedArgWithType<wchar_t, T> arg(Wstring_view name, const T &arg) {
   return internal::NamedArgWithType<wchar_t, T>(name, arg);
 }
 
 // The following two functions are deleted intentionally to disable
 // nested named arguments as in ``format("{}", arg("a", arg("b", 42)))``.
 template <typename Char>
-void arg(StringRef, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
+void arg(string_view, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
 template <typename Char>
-void arg(WStringRef, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
+void arg(Wstring_view, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
 }
 
 #if FMT_GCC_VERSION
@@ -3599,11 +3599,11 @@ void arg(WStringRef, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
 #define FMT_CAPTURE_W(...) FMT_FOR_EACH(FMT_CAPTURE_ARG_W_, __VA_ARGS__)
 
 namespace fmt {
-FMT_VARIADIC(std::string, format, CStringRef)
-FMT_VARIADIC_W(std::wstring, format, WCStringRef)
-FMT_VARIADIC(void, print, CStringRef)
-FMT_VARIADIC(void, print, std::FILE *, CStringRef)
-FMT_VARIADIC(void, print_colored, Color, CStringRef)
+FMT_VARIADIC(std::string, format, Cstring_view)
+FMT_VARIADIC_W(std::wstring, format, WCstring_view)
+FMT_VARIADIC(void, print, Cstring_view)
+FMT_VARIADIC(void, print, std::FILE *, Cstring_view)
+FMT_VARIADIC(void, print_colored, Color, Cstring_view)
 
 namespace internal {
 template <typename Char>
@@ -3655,7 +3655,7 @@ void check_sign(const Char *&s, const Arg &arg) {
 
 template <typename Char, typename AF>
 inline internal::Arg BasicFormatter<Char, AF>::get_arg(
-    BasicStringRef<Char> arg_name, const char *&error) {
+    Basicstring_view<Char> arg_name, const char *&error) {
   if (check_no_auto_index(error)) {
     map_.init(args());
     const internal::Arg *arg = map_.find(arg_name);
@@ -3687,7 +3687,7 @@ inline internal::Arg BasicFormatter<Char, AF>::parse_arg_name(const Char *&s) {
     c = *++s;
   } while (internal::is_name_start(c) || ('0' <= c && c <= '9'));
   const char *error = FMT_NULL;
-  internal::Arg arg = get_arg(BasicStringRef<Char>(start, s - start), error);
+  internal::Arg arg = get_arg(Basicstring_view<Char>(start, s - start), error);
   if (error)
     FMT_THROW(FormatError(error));
   return arg;
@@ -3864,7 +3864,7 @@ const Char *BasicFormatter<Char, ArgFormatter>::format(
 }
 
 template <typename Char, typename AF>
-void BasicFormatter<Char, AF>::format(BasicCStringRef<Char> format_str) {
+void BasicFormatter<Char, AF>::format(BasicCstring_view<Char> format_str) {
   const Char *s = format_str.c_str();
   const Char *start = s;
   while (*s) {
@@ -3889,33 +3889,33 @@ template <typename Char, typename It>
 struct ArgJoin {
   It first;
   It last;
-  BasicCStringRef<Char> sep;
+  BasicCstring_view<Char> sep;
 
-  ArgJoin(It first, It last, const BasicCStringRef<Char>& sep) :
+  ArgJoin(It first, It last, const BasicCstring_view<Char>& sep) :
     first(first),
     last(last),
     sep(sep) {}
 };
 
 template <typename It>
-ArgJoin<char, It> join(It first, It last, const BasicCStringRef<char>& sep) {
+ArgJoin<char, It> join(It first, It last, const BasicCstring_view<char>& sep) {
   return ArgJoin<char, It>(first, last, sep);
 }
 
 template <typename It>
-ArgJoin<wchar_t, It> join(It first, It last, const BasicCStringRef<wchar_t>& sep) {
+ArgJoin<wchar_t, It> join(It first, It last, const BasicCstring_view<wchar_t>& sep) {
   return ArgJoin<wchar_t, It>(first, last, sep);
 }
 
 #if FMT_HAS_GXX_CXX11
 template <typename Range>
-auto join(const Range& range, const BasicCStringRef<char>& sep)
+auto join(const Range& range, const BasicCstring_view<char>& sep)
     -> ArgJoin<char, decltype(std::begin(range))> {
   return join(std::begin(range), std::end(range), sep);
 }
 
 template <typename Range>
-auto join(const Range& range, const BasicCStringRef<wchar_t>& sep)
+auto join(const Range& range, const BasicCstring_view<wchar_t>& sep)
     -> ArgJoin<wchar_t, decltype(std::begin(range))> {
   return join(std::begin(range), std::end(range), sep);
 }

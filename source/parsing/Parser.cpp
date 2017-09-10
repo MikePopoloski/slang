@@ -2392,7 +2392,7 @@ bool Parser::scanQualifiedName(int& index) {
 
 void Parser::errorIfAttributes(span<AttributeInstanceSyntax* const> attributes, const char* msg) {
     if (!attributes.empty())
-        addError(DiagCode::AttributesNotSupported, peek().location()) << StringRef(msg, (uint32_t)strlen(msg));
+        addError(DiagCode::AttributesNotSupported, peek().location()) << string_view(msg, (uint32_t)strlen(msg));
 }
 
 void Parser::throwIfTooDeep() {

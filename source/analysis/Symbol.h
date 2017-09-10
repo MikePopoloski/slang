@@ -16,7 +16,6 @@
 #include "parsing/AllSyntax.h"
 #include "text/SourceLocation.h"
 #include "util/HashMap.h"
-#include "util/StringRef.h"
 
 #include "ConstantValue.h"
 
@@ -35,7 +34,7 @@ class WildcardImportSymbol;
 class PackageSymbol;
 
 using SymbolList = span<const Symbol* const>;
-using SymbolMap = std::unordered_map<StringRef, const Symbol*>;
+using SymbolMap = std::unordered_map<string_view, const Symbol*>;
 
 using Dimensions = span<ConstantRange const>;
 
@@ -155,7 +154,7 @@ public:
 
     /// The name of the symbol; if the symbol does not have a name,
     /// this will be an empty string.
-    StringRef name;
+    string_view name;
 
     /// The declared location of the symbol in the source code, or an empty location
     /// if it was not explicitly declared in the source text. This is mainly used
@@ -185,7 +184,7 @@ public:
     Symbol& operator=(const Symbol&) = delete;
 
 protected:
-    explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, StringRef name = "",
+    explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, string_view name = "",
                     SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location),
         containingSymbol(containingSymbol) {}
@@ -213,12 +212,12 @@ public:
     ///        symbols are accessible, whether package imports are considered, and
     ///        whether parent scopes should be included.
     ///
-    const Symbol* lookup(StringRef searchName, SourceLocation lookupLocation, LookupKind lookupKind) const;
+    const Symbol* lookup(string_view searchName, SourceLocation lookupLocation, LookupKind lookupKind) const;
 
     /// Looks up a symbol in the current scope, expecting it to exist and be of the
     /// given type. If those conditions do not hold, this will assert.
     template<typename T>
-    const T& lookup(StringRef name, SourceLocation lookupLocation = SourceLocation(),
+    const T& lookup(string_view name, SourceLocation lookupLocation = SourceLocation(),
                     LookupKind lookupKind = LookupKind::Direct) const {
         const Symbol* sym = lookup(name, lookupLocation, lookupKind);
         ASSERT(sym);
@@ -258,7 +257,7 @@ private:
     // For now, there is one hash table here for the normal members namespace. The other
     // namespaces are specific to certain symbol types so I don't want to have extra overhead
     // on every kind of scope symbol.
-    mutable std::unordered_map<StringRef, const Symbol*> memberMap;
+    mutable std::unordered_map<string_view, const Symbol*> memberMap;
 
     // In addition to the hash, also maintain an ordered list of members for easier access.
     mutable std::vector<const Symbol*> memberList;
@@ -287,7 +286,7 @@ public:
 /// Base class for all data types.
 class TypeSymbol : public Symbol {
 public:
-    TypeSymbol(SymbolKind kind, StringRef name, const Symbol& parent) : Symbol(kind, parent, name) {}
+    TypeSymbol(SymbolKind kind, string_view name, const Symbol& parent) : Symbol(kind, parent, name) {}
 
     // SystemVerilog defines various levels of type compatibility, which are used
     // in different scenarios. See the spec, section 6.22.
@@ -345,7 +344,7 @@ public:
 
 //class EnumValueSymbol : public ConstValueSymbol {
 //public:
-//    EnumValueSymbol(StringRef name, SourceLocation location, const TypeSymbol *type, ConstantValue val) :
+//    EnumValueSymbol(string_view name, SourceLocation location, const TypeSymbol *type, ConstantValue val) :
 //        ConstValueSymbol(SymbolKind::EnumValue, name, location, type, val) {}
 //};
 //
@@ -377,7 +376,7 @@ public:
     const SyntaxNode& syntax;
     const TypeSymbol* underlying;
 
-    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, StringRef alias, const Symbol& parent) :
+    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, string_view alias, const Symbol& parent) :
         TypeSymbol(SymbolKind::TypeAlias, parent, alias, location),
         syntax(syntax), underlying(underlying) {}
 };
@@ -404,7 +403,7 @@ public:
     span<const ModuleInstanceSymbol* const> topInstances() const { init(); return topList; }
 
     /// Finds a package in the design with the given name, or returns null if none is found.
-    const PackageSymbol* findPackage(StringRef name) const;
+    const PackageSymbol* findPackage(string_view name) const;
 
     /// Methods for getting various type symbols.
     const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
@@ -443,7 +442,7 @@ private:
     void addCompilationUnit(const CompilationUnitSymbol& unit);
 
     // These functions are used for traversing the syntax hierarchy and finding all instantiations.
-    using NameSet = std::unordered_set<StringRef>;
+    using NameSet = std::unordered_set<string_view>;
     static void findInstantiations(const ModuleDeclarationSyntax& module, std::vector<NameSet>& scopeStack,
                                    NameSet& found);
     static void findInstantiations(const MemberSyntax& node, std::vector<NameSet>& scopeStack, NameSet& found);
@@ -506,7 +505,7 @@ private:
     struct ParameterInfo {
         const ParameterDeclarationSyntax& paramDecl;
         const VariableDeclaratorSyntax& declarator;
-        StringRef name;
+        string_view name;
         SourceLocation location;
         ExpressionSyntax* initializer;
         bool local;
@@ -520,7 +519,7 @@ private:
     // Helper function used by getModuleParams to convert a single parameter declaration into
     // one or more ParameterInfo instances.
     bool getParamDecls(const ParameterDeclarationSyntax& syntax, std::vector<ParameterInfo>& buffer,
-                       HashMapBase<StringRef, SourceLocation>& nameDupMap,
+                       HashMapBase<string_view, SourceLocation>& nameDupMap,
                        bool lastLocal, bool overrideLocal, bool bodyParam) const;
 
     mutable std::optional<std::vector<ParameterInfo>> paramInfoCache;
@@ -530,20 +529,20 @@ private:
 class ParameterizedModuleSymbol : public ScopeSymbol {
 public:
     ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
-                              const HashMapBase<StringRef, ConstantValue>& parameterAssignments);
+                              const HashMapBase<string_view, ConstantValue>& parameterAssignments);
 
 private:
     void initMembers() const final;
 
     const ModuleSymbol& module;
-    std::unordered_map<StringRef, ConstantValue> paramAssignments;
+    std::unordered_map<string_view, ConstantValue> paramAssignments;
 };
 
 class ModuleInstanceSymbol : public Symbol {
 public:
     const ParameterizedModuleSymbol& module;
 
-    ModuleInstanceSymbol(StringRef name, SourceLocation location, const ParameterizedModuleSymbol& module,
+    ModuleInstanceSymbol(string_view name, SourceLocation location, const ParameterizedModuleSymbol& module,
                          const Symbol& parent);
 
     /// A helper method to access a specific member of the module (of which this is an instance).
@@ -553,7 +552,7 @@ public:
 
 //class GenvarSymbol : public Symbol {
 //public:
-//    GenvarSymbol(StringRef name, SourceLocation location, ) :
+//    GenvarSymbol(string_view name, SourceLocation location, ) :
 //        Symbol(SymbolKind::Genvar, nullptr, name, location) {}
 //};
 
@@ -616,7 +615,7 @@ private:
 /// the loop iteration value.
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
-    GenerateBlockSymbol(StringRef name, SourceLocation location, const Symbol& parent);
+    GenerateBlockSymbol(string_view name, SourceLocation location, const Symbol& parent);
 
     static void fromSyntax(const ScopeSymbol& parent, const IfGenerateSyntax& syntax,
                            SmallVector<const GenerateBlockSymbol*>& results);
@@ -635,10 +634,10 @@ private:
 /// it will be unwrapped into the imported symbol.
 class ExplicitImportSymbol : public Symbol {
 public:
-    StringRef packageName;
-    StringRef importName;
+    string_view packageName;
+    string_view importName;
 
-    ExplicitImportSymbol(StringRef packageName, StringRef importName,
+    ExplicitImportSymbol(string_view packageName, string_view importName,
                          SourceLocation location, const Symbol& parent);
 
     const PackageSymbol* package() const;
@@ -674,12 +673,12 @@ private:
 /// resolve names via wildcard.
 class WildcardImportSymbol : public Symbol {
 public:
-    StringRef packageName;
+    string_view packageName;
 
-    WildcardImportSymbol(StringRef packageName, SourceLocation location, const Symbol& parent);
+    WildcardImportSymbol(string_view packageName, SourceLocation location, const Symbol& parent);
 
     const PackageSymbol* package() const;
-    const ImplicitImportSymbol* resolve(StringRef lookupName, SourceLocation lookupLocation) const;
+    const ImplicitImportSymbol* resolve(string_view lookupName, SourceLocation lookupLocation) const;
 
 private:
     mutable const PackageSymbol* package_ = nullptr;
@@ -688,10 +687,10 @@ private:
 
 class ParameterSymbol : public Symbol {
 public:
-    ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol& type,
+    ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
                     const ConstantValue& value, const Symbol& parent);
 
-    ParameterSymbol(StringRef name, SourceLocation location, const TypeSymbol& type,
+    ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
                     ConstantValue&& value, const Symbol& parent);
 
     const TypeSymbol& type() const { return *type_; }
@@ -711,7 +710,7 @@ public:
     VariableSymbol(Token name, const DataTypeSyntax& type, const Symbol& parent, VariableLifetime lifetime,
                    bool isConst, const ExpressionSyntax* initializer);
 
-    VariableSymbol(StringRef name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+    VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
                    const BoundExpression* initializer = nullptr);
 
@@ -723,7 +722,7 @@ public:
     const BoundExpression* initializer() const;
 
 protected:
-    VariableSymbol(SymbolKind childKind, StringRef name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+    VariableSymbol(SymbolKind childKind, string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
                    const BoundExpression* initializer = nullptr);
 
@@ -744,7 +743,7 @@ public:
 
     FormalArgumentSymbol(const TypeSymbol& type, const Symbol& parent);
 
-    FormalArgumentSymbol(StringRef name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+    FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
                          const BoundExpression* initializer = nullptr,
                          FormalArgumentDirection direction = FormalArgumentDirection::In);
 };
@@ -758,7 +757,7 @@ public:
     bool isTask = false;
 
     SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const Symbol& parent);
-    SubroutineSymbol(StringRef name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
+    SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
                      SystemFunction systemFunction, const Symbol& parent);
 
     const TypeSymbol& returnType() const { init(); return *returnType_; }

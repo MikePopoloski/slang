@@ -14,8 +14,8 @@ using namespace std;
 BumpAllocator alloc;
 
 Token identifier(const std::string& name, span<Trivia const> trivia) {
-    StringRef text{ name };
-    auto info = alloc.emplace<Token::Info>(trivia, intern(alloc, text), SourceLocation(), 0);
+    string_view text{ name };
+    auto info = alloc.emplace<Token::Info>(trivia, alloc.makeCopy(text), SourceLocation(), 0);
     info->extra = IdentifierType::Normal;
     return Token(TokenKind::Identifier, info);
 }
@@ -36,7 +36,7 @@ public:
         auto location = syntax.getFirstToken().location();
         bool visited = !visitedFiles.insert(location.buffer()).second;
 
-        StringRef fileName = tree.sourceManager().getFileName(location);
+        string_view fileName = tree.sourceManager().getFileName(location);
         FILE* fp = fopen((string(fileName) + "_rewrite").c_str(), visited ? "ab" : "wb");
         ASSERT(fp);
 
@@ -96,7 +96,7 @@ public:
         newDecl.initializer = nullptr;
         visitDefault(newDecl);*/
 
-        buffer.appendRange(StringRef(" = "));
+        buffer.appendRange(string_view(" = "));
 //        buffer.appendRange(param->value.integer().toString(LiteralBase::Decimal));
     }
 
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
 
     vector<SyntaxTree> syntaxTrees;
     for (int i = 1; i < argc; i++) {
-        StringRef fileName{ argv[i], (uint32_t)strlen(argv[i]) };
+        string_view fileName{ argv[i], (uint32_t)strlen(argv[i]) };
         syntaxTrees.emplace_back(SyntaxTree::fromFile(fileName));
 
         auto& tree = syntaxTrees.back();

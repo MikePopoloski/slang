@@ -167,7 +167,7 @@ static void findFilesImpl(const Path& path, vector<Path>& results, const CharTyp
     }
 }
 
-vector<Path> findFiles(const Path& path, StringRef extension, bool recurse) {
+vector<Path> findFiles(const Path& path, string_view extension, bool recurse) {
 #if defined(_WIN32)
     std::wstring extensionCheck;
     if (!extension.empty()) {

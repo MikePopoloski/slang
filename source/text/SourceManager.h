@@ -17,7 +17,6 @@
 #include "util/BumpAllocator.h"
 #include "util/Path.h"
 #include "util/SmallVector.h"
-#include "util/StringRef.h"
 
 #include "SourceLocation.h"
 
@@ -27,7 +26,7 @@ namespace slang {
 /// code along with an identifier for the buffer which potentially
 /// encodes its include stack.
 struct SourceBuffer {
-    StringRef data;
+    string_view data;
     BufferID id;
 
     explicit operator bool() const { return id.valid(); }
@@ -47,19 +46,19 @@ public:
     SourceManager& operator=(const SourceManager&) = delete;
 
     /// Convert the given relative path into an absolute path.
-    std::string makeAbsolutePath(StringRef path) const;
+    std::string makeAbsolutePath(string_view path) const;
 
     /// Adds a system include directory.
-    void addSystemDirectory(StringRef path);
+    void addSystemDirectory(string_view path);
 
     /// Adds a user include directory.
-    void addUserDirectory(StringRef path);
+    void addUserDirectory(string_view path);
 
     /// Gets the source line number for a given source location.
     uint32_t getLineNumber(SourceLocation location) const;
 
     /// Gets the source file name for a given source location
-    StringRef getFileName(SourceLocation location) const;
+    string_view getFileName(SourceLocation location) const;
 
     /// Gets the column line number for a given source location.
     /// @a location must be a file location.
@@ -97,35 +96,35 @@ public:
     SourceLocation getFullyExpandedLoc(SourceLocation location) const;
 
     /// Gets the actual source text for a given file buffer.
-    StringRef getSourceText(BufferID buffer) const;
+    string_view getSourceText(BufferID buffer) const;
 
     /// Creates a macro expansion location; used by the preprocessor.
     SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
                                       SourceLocation expansionEnd);
 
     /// Instead of loading source from a file, copy it from text already in memory.
-    SourceBuffer assignText(StringRef text, SourceLocation includedFrom = SourceLocation());
+    SourceBuffer assignText(string_view text, SourceLocation includedFrom = SourceLocation());
 
     /// Instead of loading source from a file, copy it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignText(StringRef path, StringRef text, SourceLocation includedFrom = SourceLocation());
+    SourceBuffer assignText(string_view path, string_view text, SourceLocation includedFrom = SourceLocation());
 
     /// Pretend that the given text has been appended to the specified buffer.
     /// This is mostly for testing purposes.
-    SourceBuffer appendText(BufferID buffer, StringRef text);
+    SourceBuffer appendText(BufferID buffer, string_view text);
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignBuffer(StringRef path, Vector<char>&& buffer, SourceLocation includedFrom = SourceLocation());
+    SourceBuffer assignBuffer(string_view path, Vector<char>&& buffer, SourceLocation includedFrom = SourceLocation());
 
     /// Read in a source file from disk.
-    SourceBuffer readSource(StringRef path);
+    SourceBuffer readSource(string_view path);
 
     /// Read in a header file from disk.
-    SourceBuffer readHeader(StringRef path, SourceLocation includedFrom, bool isSystemPath);
+    SourceBuffer readHeader(string_view path, SourceLocation includedFrom, bool isSystemPath);
 
     /// Adds a line directive at the given location.
-    void addLineDirective(SourceLocation location, uint32_t lineNum, StringRef name, uint8_t level);
+    void addLineDirective(SourceLocation location, uint32_t lineNum, string_view name, uint8_t level);
 
 private:
     BumpAllocator alloc;
@@ -143,7 +142,7 @@ private:
             std::string name;           // File name set by directive
             uint8_t level;              // level of directive
 
-            LineDirectiveInfo(uint32_t lif, uint32_t lod, StringRef fname, uint8_t _level) :
+            LineDirectiveInfo(uint32_t lif, uint32_t lod, string_view fname, uint8_t _level) :
                 lineInFile(lif), lineOfDirective(lod), name(fname.begin(), fname.end()),
                 level(_level) {}
         };

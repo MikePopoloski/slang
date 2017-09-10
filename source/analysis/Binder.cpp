@@ -200,7 +200,7 @@ BoundExpression& Binder::bindName(const NameSyntax& syntax) {
 }
 
 BoundExpression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
-    StringRef identifier = syntax.identifier.valueText();
+    string_view identifier = syntax.identifier.valueText();
     const Symbol* symbol = scope.lookup(identifier, syntax.identifier.location(), lookupKind);
     if (!symbol) {
         root.addError(DiagCode::UndeclaredIdentifier, syntax.identifier.location()) << identifier;
@@ -239,7 +239,7 @@ BoundExpression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
     if (syntax.separator.kind != TokenKind::DoubleColon || syntax.left.kind != SyntaxKind::IdentifierName)
         return badExpr(nullptr);
 
-    StringRef identifier = syntax.left.as<IdentifierNameSyntax>().identifier.valueText();
+    string_view identifier = syntax.left.as<IdentifierNameSyntax>().identifier.valueText();
     if (identifier.empty())
         return badExpr(nullptr);
 

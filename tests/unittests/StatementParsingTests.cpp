@@ -104,7 +104,7 @@ TEST_CASE("Disable fork statement", "[parser:statements]") {
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
 }
 
-void testTimingControl(StringRef text, SyntaxKind kind) {
+void testTimingControl(string_view text, SyntaxKind kind) {
     auto& stmt = parseStatement(string(text));
 
     REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
@@ -125,7 +125,7 @@ TEST_CASE("Timing control statements", "[parser:statements]") {
     testTimingControl("@(posedge foo iff foo+92 == 76 or negedge clk, (edge clk)) ;", SyntaxKind::EventControlWithExpression);
 }
 
-void testStatement(StringRef text, SyntaxKind kind) {
+void testStatement(string_view text, SyntaxKind kind) {
     auto& stmt = parseStatement(string(text));
 
     REQUIRE(stmt.kind == kind);

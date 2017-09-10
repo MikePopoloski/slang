@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "util/StringRef.h"
-
 namespace slang {
 
 /// Scale unit for a time value.
@@ -20,8 +18,8 @@ enum class TimeUnit : uint8_t {
     Femtoseconds
 };
 
-bool suffixToTimeUnit(StringRef timeSuffix, TimeUnit& unit);
-StringRef timeUnitToSuffix(TimeUnit unit);
+bool suffixToTimeUnit(string_view timeSuffix, TimeUnit& unit);
+string_view timeUnitToSuffix(TimeUnit unit);
 
 /// As allowed by SystemVerilog, time scales can be expressed
 /// in one of only a few magnitudes.

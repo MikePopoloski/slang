@@ -50,6 +50,16 @@ public:
     /// Allocate @a size bytes of memory.
     uint8_t* allocate(uint32_t size);
 
+    // TODO: move this someplace more appropriate
+    string_view makeCopy(string_view str) {
+        if (str.empty())
+            return str;
+
+        char* data = (char*)allocate((uint32_t)str.length());
+        str.copy(data, str.length());
+        return string_view(data, str.length());
+    }
+
 private:
     struct Segment {
         Segment* prev;

@@ -9,7 +9,6 @@
 #include <cstdint>
 
 #include "util/SmallVector.h"
-#include "util/StringRef.h"
 
 namespace slang {
 
@@ -38,7 +37,7 @@ public:
     TriviaKind kind;
 
     Trivia() : kind(TriviaKind::Unknown), rawText("") {}
-    Trivia(TriviaKind kind, StringRef rawText) : kind(kind), rawText(rawText) {}
+    Trivia(TriviaKind kind, string_view rawText) : kind(kind), rawText(rawText) {}
     Trivia(TriviaKind kind, span<Token const> tokens) : kind(kind), tokens(tokens) {}
     Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
 
@@ -50,11 +49,11 @@ public:
 
     /// Get the raw text of the trivia. Asserts that the trivia type
     /// has raw text.
-    StringRef getRawText() const;
+    string_view getRawText() const;
 
 private:
     union {
-        StringRef rawText;
+        string_view rawText;
         span<Token const> tokens;
         SyntaxNode* syntaxNode;
     };

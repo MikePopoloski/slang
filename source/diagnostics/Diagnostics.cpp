@@ -277,8 +277,8 @@ bool DiagnosticWriter::sortDiagnostics(const Diagnostic& x, const Diagnostic& y)
     return xl.buffer() < yl.buffer();
 }
 
-StringRef DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {
-    StringRef text = sourceManager.getSourceText(location.buffer());
+string_view DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {
+    string_view text = sourceManager.getSourceText(location.buffer());
     if (text.empty())
         return nullptr;
 
@@ -287,7 +287,7 @@ StringRef DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col)
     while (*curr != '\n' && *curr != '\r' && *curr != '\0')
         curr++;
 
-    return StringRef(start, (uint32_t)(curr - start));
+    return string_view(start, (uint32_t)(curr - start));
 }
 
 void DiagnosticWriter::getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack) {
@@ -303,7 +303,7 @@ void DiagnosticWriter::getIncludeStack(BufferID buffer, std::deque<SourceLocatio
 }
 
 void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col,
-                                      StringRef sourceLine, std::string& buffer) {
+                                      string_view sourceLine, std::string& buffer) {
     // If the end location is within a macro, we want to push it out to the
     // end of the expanded location so that it encompasses the entire macro usage
     SourceLocation startLoc = sourceManager.getFullyExpandedLoc(range.start());
@@ -364,7 +364,7 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
         msg
     );
 
-    StringRef line = getBufferLine(loc, col);
+    string_view line = getBufferLine(loc, col);
     if (!line.empty()) {
         writer.write("\n{}\n", line);
 

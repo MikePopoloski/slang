@@ -310,7 +310,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         next = peek();
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
-    StringRef rawText(first.rawText().data(), length);
+    string_view rawText(first.rawText().data(), length);
     NumericTokenValue value = vectorBuilder.finish();
 
     auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location(), 0);

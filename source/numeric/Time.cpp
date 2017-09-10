@@ -19,11 +19,11 @@ const static StringTable<TimeUnit> strToUnit = {
     { "fs", TimeUnit::Femtoseconds }
 };
 
-bool suffixToTimeUnit(StringRef timeSuffix, TimeUnit& unit) {
+bool suffixToTimeUnit(string_view timeSuffix, TimeUnit& unit) {
     return strToUnit.lookup(timeSuffix, unit);
 }
 
-StringRef timeUnitToSuffix(TimeUnit unit) {
+string_view timeUnitToSuffix(TimeUnit unit) {
     switch (unit) {
         case TimeUnit::Seconds: return "s";
         case TimeUnit::Milliseconds: return "ms";

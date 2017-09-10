@@ -39,7 +39,7 @@ void VectorBuilder::append(Token token) {
     valid = false;
 
     // underscore as the first char is not allowed
-    StringRef text = token.rawText();
+    string_view text = token.rawText();
     if (text.length() == 0)
         return;
 

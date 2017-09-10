@@ -6,29 +6,29 @@ std::string getTestInclude() {
 
 TEST_CASE("Read source", "[files]") {
     SourceManager manager;
-    std::string testPath = manager.makeAbsolutePath(StringRef(getTestInclude()));
+    std::string testPath = manager.makeAbsolutePath(string_view(getTestInclude()));
 
     CHECK(!manager.readSource("X:\\nonsense.txt"));
 
-    auto file = manager.readSource(StringRef(testPath));
+    auto file = manager.readSource(string_view(testPath));
     REQUIRE(file);
     CHECK(file.data.length() > 0);
 }
 
 TEST_CASE("Read header (absolute)", "[files]") {
     SourceManager manager;
-    std::string testPath = manager.makeAbsolutePath(StringRef(getTestInclude()));
+    std::string testPath = manager.makeAbsolutePath(string_view(getTestInclude()));
 
     // check load failure
     CHECK(!manager.readHeader("X:\\nonsense.txt", SourceLocation(), false));
 
     // successful load
-    SourceBuffer buffer = manager.readHeader(StringRef(testPath), SourceLocation(), false);
+    SourceBuffer buffer = manager.readHeader(string_view(testPath), SourceLocation(), false);
     REQUIRE(buffer);
     CHECK(!buffer.data.empty());
 
     // next load should be cached
-    buffer = manager.readHeader(StringRef(testPath), SourceLocation(), false);
+    buffer = manager.readHeader(string_view(testPath), SourceLocation(), false);
     CHECK(!buffer.data.empty());
 }
 
@@ -39,7 +39,7 @@ TEST_CASE("Read header (relative)", "[files]") {
     CHECK(!manager.readHeader("relative", SourceLocation(), false));
 
     // get a file ID to load relative to
-    SourceBuffer buffer1 = manager.readHeader(StringRef(manager.makeAbsolutePath(StringRef(getTestInclude()))), SourceLocation(), false);
+    SourceBuffer buffer1 = manager.readHeader(string_view(manager.makeAbsolutePath(string_view(getTestInclude()))), SourceLocation(), false);
     REQUIRE(buffer1);
 
     // reading the same header by name should return the same ID
@@ -56,12 +56,12 @@ TEST_CASE("Read header (relative)", "[files]") {
 
 TEST_CASE("Read header (include dirs)", "[files]") {
     SourceManager manager;
-    manager.addSystemDirectory(StringRef(manager.makeAbsolutePath(StringRef(findTestDir()))));
+    manager.addSystemDirectory(string_view(manager.makeAbsolutePath(string_view(findTestDir()))));
 
     SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), true);
     REQUIRE(buffer);
 
-    manager.addUserDirectory(StringRef(manager.makeAbsolutePath(StringRef(findTestDir() + "/nested"))));
+    manager.addUserDirectory(string_view(manager.makeAbsolutePath(string_view(findTestDir() + "/nested"))));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
 }

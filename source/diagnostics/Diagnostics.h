@@ -15,7 +15,6 @@
 
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"
-#include "util/StringRef.h"
 
 namespace slang {
 
@@ -224,10 +223,10 @@ public:
     std::string report(Diagnostics& diagnostics);
 
 private:
-    StringRef getBufferLine(SourceLocation location, uint32_t col);
+    string_view getBufferLine(SourceLocation location, uint32_t col);
     bool sortDiagnostics(const Diagnostic& x, const Diagnostic& y);
     void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);
-    void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col, StringRef sourceLine, std::string& buffer);
+    void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col, string_view sourceLine, std::string& buffer);
 
     template<typename T>
     void formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,

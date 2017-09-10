@@ -6,7 +6,7 @@
 
 SVInt testParameter(const std::string& text, int index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
-    auto tree = SyntaxTree::fromText(StringRef(fullText));
+    auto tree = SyntaxTree::fromText(string_view(fullText));
 
 	DesignRootSymbol root(&tree);
 	const auto& module = root.lookup<ModuleSymbol>("Top");
