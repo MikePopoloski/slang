@@ -11,20 +11,25 @@
 
 namespace slang {
 
-CompilationUnitSymbol::CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent) :
-    ScopeSymbol(SymbolKind::CompilationUnit, parent)
+CompilationUnitSymbol::CompilationUnitSymbol(const SyntaxNode& rootNode, const Symbol& parent) :
+    ScopeSymbol(SymbolKind::CompilationUnit, parent),
+    rootNode(rootNode)
 {
-    for (auto member : syntax.members) {
-        for (auto symbol : createSymbols(*member, *this))
-            addMember(*symbol);
-    }
 }
 
-CompilationUnitSymbol::CompilationUnitSymbol(SymbolList symbols, const Symbol& parent) :
-    ScopeSymbol(SymbolKind::CompilationUnit, parent)
-{
-    for (auto symbol : symbols)
-        addMember(*symbol);
+void CompilationUnitSymbol::fillMembers(MemberBuilder& builder) const {
+    // If the root node is a compilation unit, unwrap it into individual members.
+    // Otherwise just take the members as they are.
+    if (rootNode.kind == SyntaxKind::CompilationUnit) {
+        for (auto member : rootNode.as<CompilationUnitSyntax>().members) {
+            for (auto symbol : createSymbols(*member, *this))
+                builder.add(*symbol);
+        }
+    }
+    else {
+        for (auto symbol : createSymbols(rootNode, *this))
+            builder.add(*symbol);
+    }
 }
 
 PackageSymbol::PackageSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& parent) :
@@ -32,10 +37,10 @@ PackageSymbol::PackageSymbol(const ModuleDeclarationSyntax& syntax, const Symbol
 {
 }
 
-void PackageSymbol::initMembers() const {
+void PackageSymbol::fillMembers(MemberBuilder& builder) const {
     for (auto member : syntax.members) {
         for (auto symbol : createSymbols(*member, *this))
-            addMember(*symbol);
+            builder.add(*symbol);
     }
 }
 
@@ -44,8 +49,11 @@ ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& 
 {
 }
 
-const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValueAssignmentSyntax* assignments, const ScopeSymbol* instanceScope) const {
+const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValueAssignmentSyntax* assignments,
+                                                            const ScopeSymbol* instanceScope) const {
     ASSERT(!assignments || instanceScope);
+
+    // TODO: at this point we don't need to handle anything if there are no assignments
 
     // If we were given a set of parameter assignments, build up some data structures to
     // allow us to easily index them. We need to handle both ordered assignment as well as
@@ -81,7 +89,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
     }
 
     // For each parameter assignment we have, match it up to a real parameter and evaluate its initializer.
-    SmallHashMap<string_view, ConstantValue, 8> paramMap;
+    SmallHashMap<string_view, const ExpressionSyntax*, 8> paramMap;
     if (orderedAssignments) {
         // We take this branch if we had ordered parameter assignments,
         // or if we didn't have any parameter assignments at all.
@@ -93,7 +101,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
             if (info.local)
                 continue;
 
-            paramMap[info.name] = evaluate(info.paramDecl, *instanceScope, orderedParams[orderedIndex++]->expr, info.location);
+            paramMap[info.name] = &orderedParams[orderedIndex++]->expr;
         }
 
         // Make sure there aren't extra param assignments for non-existent params.
@@ -124,7 +132,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
             if (!arg->expr)
                 continue;
 
-            paramMap[info.name] = evaluate(info.paramDecl, *instanceScope, *arg->expr, info.location);
+            paramMap[info.name] = arg->expr;
         }
 
         for (const auto& pair : namedParams) {
@@ -139,18 +147,7 @@ const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValue
     }
 
     // TODO: containing symbol is wrong
-    return allocate<ParameterizedModuleSymbol>(*this, *this, paramMap);
-}
-
-ConstantValue ModuleSymbol::evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope,
-                                     const ExpressionSyntax& expr, SourceLocation declLocation) const {
-    // If no type is given, infer the type from the initializer
-    if (paramDecl.type.kind == SyntaxKind::ImplicitType)
-        return scope.evaluateConstant(expr);
-    else {
-        const TypeSymbol& type = scope.getType(paramDecl.type);
-        return scope.evaluateConstantAndConvert(expr, type, declLocation);
-    }
+    return allocate<ParameterizedModuleSymbol>(*this, *this, instanceScope, paramMap);
 }
 
 const std::vector<ModuleSymbol::ParameterInfo>& ModuleSymbol::getDeclaredParams() const {
@@ -223,26 +220,30 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, st
 }
 
 ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
-                                                     const HashMapBase<string_view, ConstantValue>& parameterAssignments) :
-    ScopeSymbol(SymbolKind::ParameterizedModule, parent, module.name, module.location), module(module)
+                                                     const ScopeSymbol* instanceScope,
+                                                     const HashMapBase<string_view, const ExpressionSyntax*>& parameterAssignments) :
+    ScopeSymbol(SymbolKind::ParameterizedModule, parent, module.name, module.location),
+    module(module), instanceScope(instanceScope)
 {
     for (const auto& element : parameterAssignments)
         paramAssignments.emplace(element.first, element.second);
+
+    ASSERT(instanceScope || paramAssignments.empty());
 }
 
-void ParameterizedModuleSymbol::initMembers() const {
+void ParameterizedModuleSymbol::fillMembers(MemberBuilder& builder) const {
     ParameterPortListSyntax* parameterList = module.syntax.header.parameters;
     if (parameterList) {
         for (const ParameterDeclarationSyntax* declaration : parameterList->declarations) {
             for (const VariableDeclaratorSyntax* decl : declaration->declarators) {
                 // TODO: hack to get param values working
-                auto it = paramAssignments.find(decl->name.valueText());
-                const ConstantValue& cv = it != paramAssignments.end() ?
-                    it->second :
-                    evaluateConstant(decl->initializer->expr);
 
-                addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
-                                                    getRoot().getKnownType(SyntaxKind::IntType), cv, *this));
+                auto it = paramAssignments.find(decl->name.valueText());
+                builder.add(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
+                                                      declaration->type,
+                                                      decl->initializer ? &decl->initializer->expr : nullptr,
+                                                      it != paramAssignments.end() ? it->second : nullptr,
+                                                      instanceScope, false, false, *this));
             }
         }
     }
@@ -253,20 +254,18 @@ void ParameterizedModuleSymbol::initMembers() const {
                 const ParameterDeclarationSyntax& declaration = node->as<ParameterDeclarationStatementSyntax>().parameter;
                 for (const VariableDeclaratorSyntax* decl : declaration.declarators) {
 
-                    // TODO: hack to get param values working
                     auto it = paramAssignments.find(decl->name.valueText());
-                    const ConstantValue& cv = it != paramAssignments.end() ?
-                        it->second :
-                        evaluateConstant(decl->initializer->expr);
-
-                    addMember(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
-                                                        getRoot().getKnownType(SyntaxKind::IntType), cv, *this));
+                    builder.add(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
+                                                          declaration.type,
+                                                          decl->initializer ? &decl->initializer->expr : nullptr,
+                                                          it != paramAssignments.end() ? it->second : nullptr,
+                                                          instanceScope, false, false, *this));
                 }
                 break;
             }
             default: {
                 for (auto symbol : createSymbols(*node, *this))
-                    addMember(*symbol);
+                    builder.add(*symbol);
                 break;
             }
         }
@@ -276,91 +275,95 @@ void ParameterizedModuleSymbol::initMembers() const {
 ModuleInstanceSymbol::ModuleInstanceSymbol(string_view name, SourceLocation location,
                                            const ParameterizedModuleSymbol& module, const Symbol& parent) :
     Symbol(SymbolKind::ModuleInstance, parent, name, location),
-    module(module)
-{
-}
+    module(module) {}
 
-GenerateBlockSymbol::GenerateBlockSymbol(string_view name, SourceLocation location, const Symbol& parent) :
-    ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location)
-{
-}
+IfGenerateSymbol::IfGenerateSymbol(const IfGenerateSyntax& syntax, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::IfGenerate, parent),
+    syntax(syntax) {}
 
-void GenerateBlockSymbol::initMembers() const {
-    if (syntax) {
-        for (auto member : syntax->members) {
-            for (auto symbol : createSymbols(*member, *this))
-                addMember(*symbol);
-        }
-    }
-}
-
-void GenerateBlockSymbol::fromSyntax(const ScopeSymbol& parent, const IfGenerateSyntax& syntax,
-                                     SmallVector<const GenerateBlockSymbol*>& results) {
+void IfGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     // TODO: better error checking
-    const auto& cv = parent.evaluateConstant(syntax.condition);
+    const auto& cv = containingScope().evaluateConstant(syntax.condition);
     if (!cv)
         return;
 
-    const DesignRootSymbol& root = parent.getRoot();
-    auto& block = root.allocate<GenerateBlockSymbol>("", SourceLocation(), parent);
-    results.append(&block);
-
     const SVInt& value = cv.integer();
     if ((logic_t)value)
-        block.handleBlock(syntax.block);
+        builder.add(allocate<GenerateBlockSymbol>("", SourceLocation(), syntax.block, *this));
     else if (syntax.elseClause)
-        block.handleBlock(syntax.elseClause->clause);
+        builder.add(allocate<GenerateBlockSymbol>("", SourceLocation(), syntax.elseClause->clause, *this));
 }
 
-void GenerateBlockSymbol::fromSyntax(const ScopeSymbol& parent, const LoopGenerateSyntax& syntax,
-                                     SmallVector<const GenerateBlockSymbol*>& results) {
+LoopGenerateSymbol::LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::LoopGenerate, parent),
+    syntax(syntax) {}
+
+void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
     // we need to do a lookup to make sure we have the actual genvar.
     // TODO: do the actual lookup
-    
+
     // Initialize the genvar
+    const ScopeSymbol& parent = containingScope();
     const auto& initial = parent.evaluateConstant(syntax.initialExpr);
     if (!initial)
         return;
-    
+
     // Fabricate a local variable that will serve as the loop iteration variable.
     const DesignRootSymbol& root = parent.getRoot();
     DynamicScopeSymbol iterScope(parent);
     VariableSymbol local(syntax.identifier.valueText(), syntax.identifier.location(),
                          root.getKnownType(SyntaxKind::IntType), iterScope);
     iterScope.addSymbol(local);
-    
+
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
     Binder binder(iterScope);
     const auto& stopExpr = binder.bindConstantExpression(syntax.stopExpr);
     const auto& iterExpr = binder.bindConstantExpression(syntax.iterationExpr);
-    
+
     // Create storage for the iteration variable.
     ConstantEvaluator ce;
     auto& genvar = ce.createTemporary(local);
-    
+
     // Generate blocks!
     for (genvar = initial; ce.evaluateBool(stopExpr); ce.evaluateExpr(iterExpr)) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
 
-        auto& block = root.allocate<GenerateBlockSymbol>("", SourceLocation(), parent);
-        block.addMember(root.allocate<ParameterSymbol>(syntax.identifier.valueText(),
-                                                       syntax.identifier.location(),
-                                                       root.getKnownType(SyntaxKind::IntType),
-                                                       genvar, block));
-        block.handleBlock(syntax.block);
-        results.append(&block);
+        const auto& implicitParam = root.allocate<ParameterSymbol>(syntax.identifier.valueText(),
+                                                                   syntax.identifier.location(),
+                                                                   root.getKnownType(SyntaxKind::IntType),
+                                                                   genvar, *this);
+
+        builder.add(root.allocate<GenerateBlockSymbol>("", SourceLocation(),
+                                                       syntax.block, implicitParam, parent));
     }
 }
 
-void GenerateBlockSymbol::handleBlock(const SyntaxNode& node) {
-    if (node.kind == SyntaxKind::GenerateBlock)
-        syntax = &node.as<GenerateBlockSyntax>();
+GenerateBlockSymbol::GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
+                                         const Symbol& parent) :
+    ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location),
+    body(body) {}
+
+GenerateBlockSymbol::GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
+                                         const ParameterSymbol& implicitParam, const Symbol& parent) :
+    ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location),
+    body(body), implicitParam(&implicitParam) {}
+
+void GenerateBlockSymbol::fillMembers(MemberBuilder& builder) const {
+    if (implicitParam)
+        builder.add(*implicitParam);
+
+    if (body.kind == SyntaxKind::GenerateBlock) {
+        for (auto member : body.as<GenerateBlockSyntax>().members) {
+            for (auto symbol : createSymbols(*member, *this))
+                builder.add(*symbol);
+        }
+    }
     else {
-        for (auto symbol : createSymbols(node, *this))
-            addMember(*symbol);
+        for (auto symbol : createSymbols(body, *this))
+            builder.add(*symbol);
     }
 }
 

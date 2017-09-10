@@ -578,6 +578,7 @@ public:
     }
 
     template<typename T>
+
     const T& as() const {
         // TODO: assert kind
         return *static_cast<const T*>(this);

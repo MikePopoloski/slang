@@ -32,6 +32,7 @@ class TypeSymbol;
 class ModuleSymbol;
 class WildcardImportSymbol;
 class PackageSymbol;
+class ParameterSymbol;
 
 using SymbolList = span<const Symbol* const>;
 using SymbolMap = std::unordered_map<string_view, const Symbol*>;
@@ -65,6 +66,8 @@ enum class SymbolKind {
     Program,
     Attribute,
     Genvar,
+    IfGenerate,
+    LoopGenerate,
     GenerateBlock,
     ProceduralBlock,
     SequentialBlock,
@@ -244,27 +247,55 @@ public:
     /// A helper method to get a type symbol, using the current scope as context.
     const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
 
+    /// Overrides the members of the symbol to be the given list.
+    /// Note that if the scope gets explicitly marked dirty and its
+    /// members regenerated, this list will be lost.
+    void setMembers(span<const Symbol* const> members);
+    void setMember(const Symbol& member);
+
 protected:
     using Symbol::Symbol;
 
-    void init() const;
-    void addMember(const Symbol& symbol) const;
+    /// A simple wrapper around mutable buffers used to build up the
+    /// list of members in a symbol.
+    struct MemberBuilder {
+        SmallHashMap<string_view, const Symbol*, 16> memberMap;
+        SmallVectorSized<const Symbol*, 16> memberList;
+        SmallVectorSized<const WildcardImportSymbol*, 8> wildcardImports;
 
-    // Derived classes override this to fill in members.
-    virtual void initMembers() const {}
+        void add(const Symbol& symbol);
+    };
+
+    /// Called to ensure that the list of members has been initialized.
+    void ensureInit() const {
+        // Most of the work of initialization is deferred to doInit() so that
+        // this function will be easy inlined.
+        if (!membersInitialized)
+            doInit();
+    }
+
+    /// Called in a few rare cases to mark the symbol's members as dirty, which
+    /// means they will be recomputed the next time they are requested.
+    void markDirty() { membersInitialized = false; }
+
+    /// Overriden by derived classes to fill in the list of members for the symbol.
+    virtual void fillMembers(MemberBuilder&) const {}
 
 private:
+    void doInit() const;
+    void copyMembers(MemberBuilder& builder) const;
+
     // For now, there is one hash table here for the normal members namespace. The other
     // namespaces are specific to certain symbol types so I don't want to have extra overhead
     // on every kind of scope symbol.
-    mutable std::unordered_map<string_view, const Symbol*> memberMap;
+    mutable HashMapRef<string_view, const Symbol*> memberMap;
 
     // In addition to the hash, also maintain an ordered list of members for easier access.
-    mutable std::vector<const Symbol*> memberList;
+    mutable span<const Symbol* const> memberList;
 
     // Also, maintain a separate list containing just wildcard imports.
     // Every time we fail to look up a symbol name, we'll fall back to looking at imports.
-    mutable std::vector<const WildcardImportSymbol*> wildcardImports;
+    mutable span<const WildcardImportSymbol* const> wildcardImports;
 
     mutable bool membersInitialized = false;
 };
@@ -281,6 +312,11 @@ public:
     /// Creates one or more symbols for the given syntax node and adds them to the scope.
     /// Also returns the set of created symbols.
     SymbolList createAndAddSymbols(const SyntaxNode& node);
+
+private:
+    void fillMembers(MemberBuilder& builder) const final;
+
+    std::vector<const Symbol*> members;
 };
 
 /// Base class for all data types.
@@ -400,7 +436,7 @@ public:
 
     /// Finds all of the top-level module instances in the design. These form the roots of the
     /// actual design hierarchy.
-    span<const ModuleInstanceSymbol* const> topInstances() const { init(); return topList; }
+    span<const ModuleInstanceSymbol* const> topInstances() const { ensureInit(); return topList; }
 
     /// Finds a package in the design with the given name, or returns null if none is found.
     const PackageSymbol* findPackage(string_view name) const;
@@ -428,7 +464,7 @@ public:
     const SourceManager& sourceManager() const { return sourceMan; }
 
 private:
-    void initMembers() const final;
+    void fillMembers(MemberBuilder& builder) const final;
 
     // Gets a type symbol for the given integer type syntax node.
     const TypeSymbol& getIntegralType(const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) const;
@@ -474,8 +510,12 @@ private:
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public ScopeSymbol {
 public:
-    CompilationUnitSymbol(const CompilationUnitSyntax& syntax, const Symbol& parent);
-    CompilationUnitSymbol(SymbolList symbols, const Symbol& parent);
+    CompilationUnitSymbol(const SyntaxNode& rootNode, const Symbol& parent);
+
+private:
+    void fillMembers(MemberBuilder& builder) const final;
+
+    const SyntaxNode& rootNode;
 };
 
 /// A SystemVerilog package construct.
@@ -484,7 +524,7 @@ public:
     PackageSymbol(const ModuleDeclarationSyntax& package, const Symbol& parent);
 
 private:
-    void initMembers() const final;
+    void fillMembers(MemberBuilder& builder) const final;
 
     const ModuleDeclarationSyntax& syntax;
 };
@@ -513,8 +553,6 @@ private:
     };
 
     const std::vector<ParameterInfo>& getDeclaredParams() const;
-    ConstantValue evaluate(const ParameterDeclarationSyntax& paramDecl, const ScopeSymbol& scope,
-                           const ExpressionSyntax& expr, SourceLocation declLocation) const;
 
     // Helper function used by getModuleParams to convert a single parameter declaration into
     // one or more ParameterInfo instances.
@@ -529,13 +567,15 @@ private:
 class ParameterizedModuleSymbol : public ScopeSymbol {
 public:
     ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
-                              const HashMapBase<string_view, ConstantValue>& parameterAssignments);
+                              const ScopeSymbol* instanceScope,
+                              const HashMapBase<string_view, const ExpressionSyntax*>& parameterAssignments);
 
 private:
-    void initMembers() const final;
+    void fillMembers(MemberBuilder& builder) const final;
 
     const ModuleSymbol& module;
-    std::unordered_map<string_view, ConstantValue> paramAssignments;
+    const ScopeSymbol* instanceScope;
+    std::unordered_map<string_view, const ExpressionSyntax*> paramAssignments;
 };
 
 class ModuleInstanceSymbol : public Symbol {
@@ -561,10 +601,10 @@ public:
 class StatementBlockSymbol : public ScopeSymbol {
 public:
     /// Binds a single statement.
-    const BoundStatement& bindStatement(const StatementSyntax& syntax);
+    //const BoundStatement& bindStatement(const StatementSyntax& syntax);
 
     /// Binds a list of statements, such as in a function body.
-    const BoundStatementList& bindStatementList(const SyntaxList<SyntaxNode>& items);
+    //const BoundStatementList& bindStatementList(const SyntaxList<SyntaxNode>& items);
 
 protected:
     using ScopeSymbol::ScopeSymbol;
@@ -572,26 +612,31 @@ protected:
     const BoundStatement& bindStatement(const StatementSyntax& syntax) const;
     const BoundStatementList& bindStatementList(const SyntaxList<SyntaxNode>& items) const;
 
+    void findChildSymbols(MemberBuilder& builder, const StatementSyntax& syntax) const;
+    void findChildSymbols(MemberBuilder& builder, const SyntaxList<SyntaxNode>& items) const;
+
 private:
-    BoundStatement& bindReturnStatement(const ReturnStatementSyntax& syntax) const;
     BoundStatement& bindConditionalStatement(const ConditionalStatementSyntax& syntax) const;
     BoundStatement& bindForLoopStatement(const ForLoopStatementSyntax& syntax) const;
+    BoundStatement& bindReturnStatement(const ReturnStatementSyntax& syntax) const;
     BoundStatement& bindExpressionStatement(const ExpressionStatementSyntax& syntax) const;
-
     BoundStatement& badStmt(const BoundStatement* stmt) const;
-
-    void bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const BoundStatement*>& results) const;
 };
 
 class SequentialBlockSymbol : public StatementBlockSymbol {
 public:
     SequentialBlockSymbol(const Symbol& parent);
+    SequentialBlockSymbol(const BlockStatementSyntax& block, const Symbol& parent);
 
-    const BoundStatement& getBody() const { ASSERT(body); return *body; }
-    void setBody(const BoundStatement& statement) { body = &statement; }
+    static SequentialBlockSymbol& createImplicitBlock(const ForLoopStatementSyntax& forLoop, const Symbol& parent);
+
+    const BoundStatement& getBody() const;
 
 private:
-    const BoundStatement* body = nullptr;
+    void fillMembers(MemberBuilder& builder) const final;
+
+    const BlockStatementSyntax* syntax = nullptr;
+    mutable const BoundStatement* body = nullptr;
 };
 
 class ProceduralBlockSymbol : public StatementBlockSymbol {
@@ -600,13 +645,37 @@ public:
 
     ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const Symbol& parent);
 
-    const BoundStatement& getBody() const { init(); ASSERT(body); return *body; }
+    const BoundStatement& getBody() const;
 
 private:
-    void initMembers() const final;
+    void fillMembers(MemberBuilder& builder) const final;
 
     const ProceduralBlockSyntax& syntax;
     mutable const BoundStatement* body = nullptr;
+};
+
+/// Represents a conditional if-generate construct; the results of evaluating
+/// the condition become child members of this symbol.
+class IfGenerateSymbol : public ScopeSymbol {
+public:
+    IfGenerateSymbol(const IfGenerateSyntax& syntax, const ScopeSymbol& parent);
+
+private:
+    void fillMembers(MemberBuilder& builder) const final;
+
+    const IfGenerateSyntax& syntax;
+};
+
+/// Represents a loop generate construct; the results of evaluating
+/// the loop become child members of this symbol.
+class LoopGenerateSymbol : public ScopeSymbol {
+public:
+    LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const ScopeSymbol& parent);
+
+private:
+    void fillMembers(MemberBuilder& builder) const final;
+
+    const LoopGenerateSyntax& syntax;
 };
 
 /// Represents blocks that are instantiated by a loop generate or conditional
@@ -615,18 +684,15 @@ private:
 /// the loop iteration value.
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
-    GenerateBlockSymbol(string_view name, SourceLocation location, const Symbol& parent);
-
-    static void fromSyntax(const ScopeSymbol& parent, const IfGenerateSyntax& syntax,
-                           SmallVector<const GenerateBlockSymbol*>& results);
-    static void fromSyntax(const ScopeSymbol& parent, const LoopGenerateSyntax& syntax,
-                           SmallVector<const GenerateBlockSymbol*>& results);
+    GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body, const Symbol& parent);
+    GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
+                        const ParameterSymbol& implicitParam, const Symbol& parent);
 
 private:
-    void initMembers() const final;
-    void handleBlock(const SyntaxNode& syntax);
+    void fillMembers(MemberBuilder& builder) const final;
 
-    const GenerateBlockSyntax* syntax = nullptr;
+    const SyntaxNode& body;
+    const ParameterSymbol* implicitParam = nullptr;
 };
 
 /// Represents an explicit import from a package. This symbol type is
@@ -687,18 +753,49 @@ private:
 
 class ParameterSymbol : public Symbol {
 public:
+    /// Creates a new parameter symbol with the given value.
     ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                    const ConstantValue& value, const Symbol& parent);
+                    ConstantValue value, const Symbol& parent);
 
-    ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                    ConstantValue&& value, const Symbol& parent);
+    /// Creates a new parameter symbol from the given syntax info.
+    ParameterSymbol(string_view name, SourceLocation location, const DataTypeSyntax& typeSyntax,
+                    const ExpressionSyntax* defaultInitializer, const ExpressionSyntax* assignedValue,
+                    const ScopeSymbol* instanceScope, bool isLocalParam, bool isPortParam, const Symbol& parent);
+        
+    /// Indicates whether the parameter is a "localparam".
+    bool isLocalParam() const { return isLocal; }
 
-    const TypeSymbol& type() const { return *type_; }
-    const ConstantValue& value() const { return value_; }
+    /// Indicates whether the parameter was declared in the element's parameter port list.
+    /// Otherwise, it was found declared in the design element itself as a member.
+    bool isPortParam() const { return isPort; }
+
+    /// Indicates whether the parameter was given a default value in its initializer.
+    bool hasDefault() const { return defaultInitializer != nullptr; }
+
+    // Methods for getting information about the default value for the parameter.
+    // Parameters are not required to have a default so you must check if you care.
+    const ConstantValue* defaultValue() const;
+    const TypeSymbol* defaultType() const;
+
+    const TypeSymbol& type() const;
+    const ConstantValue& value() const;
 
 private:
-    mutable const TypeSymbol* type_;
+    void evaluate(const ExpressionSyntax* expr, const TypeSymbol*& determinedType,
+                  ConstantValue& determinedValue, const ScopeSymbol& scope) const;
+
+    mutable const TypeSymbol* type_ = nullptr;
+    mutable const TypeSymbol* defaultType_ = nullptr;
     mutable ConstantValue value_;
+    mutable ConstantValue defaultValue_;
+
+    const ScopeSymbol* instanceScope = nullptr;
+    const DataTypeSyntax* typeSyntax = nullptr;
+    const ExpressionSyntax* defaultInitializer = nullptr;
+    const ExpressionSyntax* assignedValue = nullptr;
+
+    bool isLocal = false;
+    bool isPort = false;
 };
 
 /// Represents a variable declaration (which does not include nets).
@@ -760,17 +857,17 @@ public:
     SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
                      SystemFunction systemFunction, const Symbol& parent);
 
-    const TypeSymbol& returnType() const { init(); return *returnType_; }
-    const BoundStatementList& body() const { init(); return *body_; }
-    span<const FormalArgumentSymbol* const> arguments() const { init(); return arguments_; }
+    const BoundStatementList& body() const;
+    const TypeSymbol& returnType() const { ensureInit(); return *returnType_; }
+    span<const FormalArgumentSymbol* const> arguments() const { ensureInit(); return arguments_; }
 
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
 
 private:
-    void initMembers() const final;
+    void fillMembers(MemberBuilder& builder) const final;
 
-    mutable const TypeSymbol* returnType_ = nullptr;
     mutable const BoundStatementList* body_ = nullptr;
+    mutable const TypeSymbol* returnType_ = nullptr;
     mutable span<const FormalArgumentSymbol* const> arguments_;
 };
 

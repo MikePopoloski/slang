@@ -14,18 +14,11 @@
 
 namespace slang {
 
-/// HashMapBase - Base class for hash map implementations
-///
-/// There are two derivations of this class; one that is a normal heap
-/// allocated hash map and another that tries to keep it all on the stack
-/// for small numbers of elements before spilling to the heap.
-///
-/// In both cases we use open addressing with robin hood hashing.
-/// As you'll notice this class lacks *many* features since I'm
-/// only adding what I need as I need it.
+/// A read-only view of a hash map. It does not own the memory, so you must ensure that
+/// the provided memory remains valid for the lifetime of this class.
 ///
 template<typename TKey, typename TValue>
-class HashMapBase {
+class HashMapRef {
 public:
     template<typename TElement, bool IsConst>
     class iterator_templ {
@@ -82,26 +75,23 @@ public:
 
         template<typename... Args>
         Element(size_t hash, const TKey& key, Args&&... args) :
-            pair(std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(std::forward<Args>(args)...)),
-            hash(hash),
-            valid(true)
-        {
-        }
+            pair(std::piecewise_construct, std::forward_as_tuple(key),
+                 std::forward_as_tuple(std::forward<Args>(args)...)),
+            hash(hash), valid(true) {}
 
         template<typename... Args>
         Element(size_t hash, TKey&& key, Args&&... args) :
-            pair(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(std::forward<Args>(args)...)),
-            hash(hash),
-            valid(true)
-        {
-        }
+            pair(std::piecewise_construct, std::forward_as_tuple(std::move(key)),
+                 std::forward_as_tuple(std::forward<Args>(args)...)),
+            hash(hash), valid(true) {}
     };
 
     using iterator = iterator_templ<Element, false>;
     using const_iterator = iterator_templ<const Element, true>;
 
-    iterator begin() { return empty() ? end() : iterator(data, dataEnd()); }
-    iterator end() { return iterator(dataEnd(), dataEnd()); }
+    HashMapRef() : data(getScratchSpace()), capacity(4) {}
+    HashMapRef(Element* data, uint32_t len, uint32_t capacity) : data(data), len(len), capacity(capacity) {}
+
     const_iterator begin() const { return empty() ? end() : const_iterator(data, dataEnd()); }
     const_iterator end() const { return const_iterator(dataEnd(), dataEnd()); }
     const_iterator cbegin() const { return begin(); }
@@ -109,59 +99,21 @@ public:
     uint32_t size() const { return len; }
     bool empty() const { return len == 0; }
 
-    void clear() {
-        destructElements();
-        len = 0;
-    }
-
-    template<typename... Args>
-    std::pair<iterator, bool> emplace(const TKey& key, Args&&... args) {
-        checkResize();
-        size_t hash = std::hash<TKey>{}(key);
-        auto pair = findOrInsert(hash, key);
-        if (!pair.second)
-            return std::make_pair(iterator(pair.first, dataEnd()), pair.second);
-
-        new (pair.first) Element(hash, key, std::forward<Args>(args)...);
-        return std::make_pair(iterator(pair.first, dataEnd()), pair.second);
-    }
-
-    template<typename... Args>
-    std::pair<iterator, bool> emplace(TKey&& key, Args&&... args) {
-        checkResize();
-        size_t hash = std::hash<TKey>{}(key);
-        auto pair = findOrInsert(hash, key);
-        if (!pair.second)
-            return std::make_pair(iterator(pair.first, dataEnd()), pair.second);
-
-        new (pair.first) Element(hash, std::move(key), std::forward<Args>(args)...);
-        return std::make_pair(iterator(pair.first, dataEnd()), pair.second);
-    }
-
-    iterator find(const TKey& key) {
-        Element* slot = findSlot(key);
-        return slot ? iterator(slot, dataEnd()) : end();
-    }
-
     const_iterator find(const TKey& key) const {
         Element* slot = findSlot(key);
         return slot ? const_iterator(slot, dataEnd()) : end();
     }
 
-    TValue& operator[](const TKey& key) { return emplace(key).first->second; }
-    TValue& operator[](TKey&& key) { return emplace(std::move(key)).first->second; }
-
 protected:
-    template<typename TKey_, typename TValue_, uint32_t N>
-    friend class SmallHashMap;
-
-    Element* data;
+    Element* data = nullptr;
     uint32_t len = 0;
-    uint32_t capacity;
-    bool isSmall = false;
+    uint32_t capacity = 0;
 
-    explicit HashMapBase(uint32_t capacity = 0) : capacity(capacity) {}
-    ~HashMapBase() { cleanup(); }
+    HashMapRef(uint32_t capacity) : capacity(capacity) {}
+
+    int probeDistance(size_t hash, uint32_t slotIndex) const {
+        return (slotIndex + capacity - (hash & (capacity - 1))) & (capacity - 1);
+    }
 
     Element* dataEnd() { return data + capacity; }
     const Element* dataEnd() const { return data + capacity; }
@@ -185,8 +137,88 @@ protected:
         }
     }
 
+    static Element* getScratchSpace() {
+        static char empty[sizeof(Element) * 4] = {};
+        return (Element*)empty;
+    }
+};
+
+/// HashMapBase - Base class for hash map implementations
+///
+/// There are two derivations of this class; one that is a normal heap
+/// allocated hash map and another that tries to keep it all on the stack
+/// for small numbers of elements before spilling to the heap.
+///
+/// In both cases we use open addressing with robin hood hashing.
+/// As you'll notice this class lacks *many* features since I'm
+/// only adding what I need as I need it.
+///
+template<typename TKey, typename TValue>
+class HashMapBase : public HashMapRef<TKey, TValue> {
+public:
+    using HashMapRef<TKey, TValue>::iterator;
+    using HashMapRef<TKey, TValue>::Element;
+    using HashMapRef<TKey, TValue>::begin;
+    using HashMapRef<TKey, TValue>::end;
+    using HashMapRef<TKey, TValue>::find;
+
+    iterator begin() { return this->empty() ? this->end() : iterator(this->data, this->dataEnd()); }
+    iterator end() { return iterator(this->dataEnd(), this->dataEnd()); }
+    
+    void clear() {
+        destructElements();
+        this->len = 0;
+    }
+
+    template<typename... Args>
+    std::pair<iterator, bool> emplace(const TKey& key, Args&&... args) {
+        checkResize();
+        size_t hash = std::hash<TKey>{}(key);
+        auto pair = findOrInsert(hash, key);
+        if (!pair.second)
+            return std::make_pair(iterator(pair.first, this->dataEnd()), pair.second);
+
+        new (pair.first) Element(hash, key, std::forward<Args>(args)...);
+        return std::make_pair(iterator(pair.first, this->dataEnd()), pair.second);
+    }
+
+    template<typename... Args>
+    std::pair<iterator, bool> emplace(TKey&& key, Args&&... args) {
+        checkResize();
+        size_t hash = std::hash<TKey>{}(key);
+        auto pair = findOrInsert(hash, key);
+        if (!pair.second)
+            return std::make_pair(iterator(pair.first, this->dataEnd()), pair.second);
+
+        new (pair.first) Element(hash, std::move(key), std::forward<Args>(args)...);
+        return std::make_pair(iterator(pair.first, this->dataEnd()), pair.second);
+    }
+
+    iterator find(const TKey& key) {
+        Element* slot = this->findSlot(key);
+        return slot ? iterator(slot, this->dataEnd()) : end();
+    }
+
+    TValue& operator[](const TKey& key) { return emplace(key).first->second; }
+    TValue& operator[](TKey&& key) { return emplace(std::move(key)).first->second; }
+
+    HashMapRef<TKey, TValue> copy(BumpAllocator& alloc) const {
+        uint8_t* newData = alloc.allocate(sizeof(Element) * this->capacity);
+        memcpy(newData, this->data, this->capacity * sizeof(Element));
+        return HashMapRef<TKey, TValue>((Element*)newData, this->len, this->capacity);
+    }
+
+protected:
+    template<typename TKey_, typename TValue_, uint32_t N>
+    friend class SmallHashMap;
+
+    bool isSmall = false;
+
+    explicit HashMapBase(uint32_t capacity = 0) : HashMapRef<TKey, TValue>(capacity) {}
+    ~HashMapBase() { cleanup(); }
+
     std::pair<Element*, bool> findOrInsert(size_t hash, const TKey& key) {
-        uint32_t index = hash & (capacity - 1);
+        uint32_t index = hash & (this->capacity - 1);
         int dist = 0;
 
         // We'll swap elements as we go along to get better lookup characteristics;
@@ -199,48 +231,44 @@ protected:
             // If the existing element has probed less than us, steal their spot
             // and keep going with the existing element to find a better spot for it.
             // If elemHash is zero, the slot is empty and we can just take it.
-            size_t elemHash = data[index].hash;
-            int existingDist = probeDistance(elemHash, index);
-            if (!data[index].valid || existingDist < dist) {
-                std::swap(hash, data[index].hash);
-                std::swap(swapPair, data[index].pair);
+            size_t elemHash = this->data[index].hash;
+            int existingDist = this->probeDistance(elemHash, index);
+            if (!this->data[index].valid || existingDist < dist) {
+                std::swap(hash, this->data[index].hash);
+                std::swap(swapPair, this->data[index].pair);
                 dist = existingDist;
                 if (!result)
-                    result = data + index;
+                    result = this->data + index;
 
-                if (!data[index].valid) {
-                    len++;
+                if (!this->data[index].valid) {
+                    this->len++;
                     return std::make_pair(result, true);
                 }
             }
             // Check if the element is already in the table (only on the first insertion)
-            else if (!result && data[index].valid && elemHash == hash && data[index].pair.first == key)
-                return std::make_pair(data + index, false);
+            else if (!result && this->data[index].valid && elemHash == hash && this->data[index].pair.first == key)
+                return std::make_pair(this->data + index, false);
 
-            index = (index + 1) & (capacity - 1);
+            index = (index + 1) & (this->capacity - 1);
             dist++;
         }
-    }
-
-    int probeDistance(size_t hash, uint32_t slotIndex) const {
-        return (slotIndex + capacity - (hash & (capacity - 1))) & (capacity - 1);
     }
 
     void checkResize() {
         // Resize if we get too full; robin hood hashing lets us get pretty
         // high load factors, relative to more traditional methods
         const float loadFactor = 0.9f;
-        if (len == (uint32_t)(capacity * loadFactor))
+        if (this->len == (uint32_t)(this->capacity * loadFactor))
             resize();
     }
 
     void resize() {
-        Element* oldData = data;
-        Element* oldEnd = oldData + capacity;
+        Element* oldData = this->data;
+        Element* oldEnd = oldData + this->capacity;
 
-        capacity *= 2;
-        data = (Element*)malloc(capacity * sizeof(Element));
-        memset(data, 0, capacity * sizeof(Element));
+        this->capacity *= 2;
+        this->data = (Element*)malloc(this->capacity * sizeof(Element));
+        memset(this->data, 0, this->capacity * sizeof(Element));
 
         // Reinsert old elements; we have a different capacity now so they
         // will probably end up in different spots.
@@ -258,10 +286,10 @@ protected:
     }
 
     void destructElements() {
-        if (!std::is_trivially_destructible<TKey>() || !std::is_trivially_destructible<TValue>()) {
-            for (uint32_t i = 0; i < capacity; i++) {
-                if (data[i].valid)
-                    data[i].~Element();
+        if constexpr (!std::is_trivially_destructible<TKey>() || !std::is_trivially_destructible<TValue>()) {
+            for (uint32_t i = 0; i < this->capacity; i++) {
+                if (this->data[i].valid)
+                    this->data[i].~Element();
             }
         }
     }
@@ -269,7 +297,7 @@ protected:
     void cleanup() {
         destructElements();
         if (!isSmall)
-            free(data);
+            free(this->data);
     }
 };
 

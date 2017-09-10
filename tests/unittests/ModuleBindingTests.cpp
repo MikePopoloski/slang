@@ -118,7 +118,8 @@ endmodule
     const auto& instance = evalModule(tree);
     const auto& leaf = instance
         .member<ModuleInstanceSymbol>(0)
-        .member<GenerateBlockSymbol>(1)
+        .member<IfGenerateSymbol>(1)
+        .member<GenerateBlockSymbol>(0)
         .member<ModuleInstanceSymbol>(0);
 
     const auto& foo = leaf.module.lookup<ParameterSymbol>("foo");
@@ -137,8 +138,8 @@ module Leaf #(parameter int foo)();
 endmodule
 )");
 
-    const auto& instance = evalModule(tree);
-    REQUIRE(instance.module.members().size() == 10);
+    const auto& instance = evalModule(tree).member<LoopGenerateSymbol>(0);
+    REQUIRE(instance.members().size() == 10);
 
     for (uint32_t i = 0; i < 10; i++) {
         const auto& leaf = instance.member<GenerateBlockSymbol>(i).member<ModuleInstanceSymbol>(1);

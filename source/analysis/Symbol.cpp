@@ -85,23 +85,13 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
             }
             break;
         }
-        case SyntaxKind::IfGenerate: {
+        case SyntaxKind::IfGenerate:
             // TODO: add special name conflict checks for generate blocks
-            SmallVectorSized<const GenerateBlockSymbol*, 2> blocks;
-            GenerateBlockSymbol::fromSyntax(parent, node.as<IfGenerateSyntax>(), blocks);
-
-            for (auto block : blocks)
-                results.append(block);
+            results.append(&root.allocate<IfGenerateSymbol>(node.as<IfGenerateSyntax>(), parent));
             break;
-        }
-        case SyntaxKind::LoopGenerate: {
-            SmallVectorSized<const GenerateBlockSymbol*, 4> blocks;
-            GenerateBlockSymbol::fromSyntax(parent, node.as<LoopGenerateSyntax>(), blocks);
-
-            for (auto block : blocks)
-                results.append(block);
+        case SyntaxKind::LoopGenerate:
+            results.append(&root.allocate<LoopGenerateSymbol>(node.as<LoopGenerateSyntax>(), parent));
             break;
-        }
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
             results.append(&root.allocate<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), parent));
@@ -163,6 +153,8 @@ const ScopeSymbol& Symbol::containingScope() const {
             case SymbolKind::ParameterizedModule:
             case SymbolKind::SequentialBlock:
             case SymbolKind::ProceduralBlock:
+            case SymbolKind::IfGenerate:
+            case SymbolKind::LoopGenerate:
             case SymbolKind::GenerateBlock:
             case SymbolKind::DynamicScope:
             case SymbolKind::Subroutine:
@@ -185,7 +177,7 @@ Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
 
 const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupLocation,
                                   LookupKind lookupKind) const {
-    init();
+    ensureInit();
 
     // If the parser added a missing identifier token, it already issued an
     // appropriate error. This check here makes it easier to silently continue
@@ -240,7 +232,7 @@ const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupL
                 auto result = wildcard->resolve(searchName, lookupLocation);
                 if (result) {
                     // TODO: this can cause other errors for this particular scope
-                    addMember(*result);
+                    //addMember(*result);
                     return result->importedSymbol();
                 }
             }
@@ -252,7 +244,7 @@ const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupL
 }
 
 SymbolList ScopeSymbol::members() const {
-    init();
+    ensureInit();
     return memberList;
 }
 
@@ -263,8 +255,10 @@ ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const 
     return ConstantEvaluator().evaluateExpr(bound);
 }
 
-ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType, SourceLocation errorLocation) const {
-    const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errorLocation ? errorLocation : expr.getFirstToken().location(), targetType);
+ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
+                                                      SourceLocation errorLocation) const {
+    SourceLocation errLoc = errorLocation ? errorLocation : expr.getFirstToken().location();
+    const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errLoc, targetType);
     if (bound.bad())
         return nullptr;
     return ConstantEvaluator().evaluateExpr(bound);
@@ -274,35 +268,64 @@ const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
     return getRoot().getType(syntax, *this);
 }
 
-void ScopeSymbol::addMember(const Symbol& symbol) const {
+void ScopeSymbol::MemberBuilder::add(const Symbol& symbol) {
     // TODO: check for duplicate names
     // TODO: packages and definition namespaces
-    memberList.push_back(&symbol);
+    memberList.append(&symbol);
     if (!symbol.name.empty())
-        memberMap.try_emplace(symbol.name, &symbol);
+        memberMap.emplace(symbol.name, &symbol);
 
     if (symbol.kind == SymbolKind::WildcardImport)
-        wildcardImports.push_back(&symbol.as<WildcardImportSymbol>());
+        wildcardImports.append(&symbol.as<WildcardImportSymbol>());
 }
 
-void ScopeSymbol::init() const {
-    if (!membersInitialized) {
-        membersInitialized = true;
-        initMembers();
-    }
+void ScopeSymbol::setMember(const Symbol& member) {
+    const Symbol* ptr = &member;
+    setMembers(span<const Symbol* const>(&ptr, 1));
+}
+
+void ScopeSymbol::setMembers(span<const Symbol* const> members) {
+    membersInitialized = true;
+
+    MemberBuilder builder;
+    for (auto member : members)
+        builder.add(*member);
+
+    copyMembers(builder);
+}
+
+void ScopeSymbol::doInit() const {
+    membersInitialized = true;
+
+    MemberBuilder builder;
+    fillMembers(builder);
+    copyMembers(builder);
+}
+
+void ScopeSymbol::copyMembers(MemberBuilder& builder) const {
+    BumpAllocator& alloc = getRoot().allocator();
+    memberMap = builder.memberMap.copy(alloc);
+    memberList = builder.memberList.copy(alloc);
+    wildcardImports = builder.wildcardImports.copy(alloc);
 }
 
 DynamicScopeSymbol::DynamicScopeSymbol(const Symbol& parent) : ScopeSymbol(SymbolKind::DynamicScope, parent) {}
 
 void DynamicScopeSymbol::addSymbol(const Symbol& symbol) {
-    ScopeSymbol::addMember(symbol);
+    members.push_back(&symbol);
+    markDirty();
 }
 
 SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
     SymbolList symbols = createSymbols(node, *this);
     for (auto symbol : symbols)
-        addMember(*symbol);
+        addSymbol(*symbol);
     return symbols;
+}
+
+void DynamicScopeSymbol::fillMembers(MemberBuilder& builder) const {
+    for (auto member : members)
+        builder.add(*member);
 }
 
 DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager) :
@@ -327,28 +350,6 @@ DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager) :
     knownTypes[SyntaxKind::VoidType]      = alloc.emplace<TypeSymbol>(SymbolKind::VoidType,     "void", *this);
     knownTypes[SyntaxKind::EventType]     = alloc.emplace<TypeSymbol>(SymbolKind::EventType,    "event", *this);
     knownTypes[SyntaxKind::Unknown]       = alloc.emplace<ErrorTypeSymbol>(*this);
-
-    // Register built-in system functions
-    const auto& intType = getKnownType(SyntaxKind::IntType);
-    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
-
-    args.append(alloc.emplace<FormalArgumentSymbol>(intType, *this));
-    addMember(allocate<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2, *this));
-
-    // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
-    // assignment like context
-    // TODO: add support for all these operands on data_types, not just expressions,
-    // and add support for things like unpacked arrays
-    const auto& trivialIntType = getIntegralType(1, false, true);
-    args.clear();
-    args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType, *this));
-    addMember(allocate<SubroutineSymbol>("$bits", intType, args.copy(alloc), SystemFunction::bits, *this));
-    addMember(allocate<SubroutineSymbol>("$left", intType, args.copy(alloc), SystemFunction::left, *this));
-    addMember(allocate<SubroutineSymbol>("$right", intType, args.copy(alloc), SystemFunction::right, *this));
-    addMember(allocate<SubroutineSymbol>("$low", intType, args.copy(alloc), SystemFunction::low, *this));
-    addMember(allocate<SubroutineSymbol>("$high", intType, args.copy(alloc), SystemFunction::high, *this));
-    addMember(allocate<SubroutineSymbol>("$size", intType, args.copy(alloc), SystemFunction::size, *this));
-    addMember(allocate<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment, *this));
 }
 
 DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units) :
@@ -366,19 +367,12 @@ DesignRootSymbol::DesignRootSymbol(span<const SyntaxTree* const> trees) :
 {
     for (auto tree : trees) {
         ASSERT(&tree->sourceManager() == &sourceMan);
-
-        if (tree->root().kind == SyntaxKind::CompilationUnit)
-            addCompilationUnit(allocate<CompilationUnitSymbol>(tree->root().as<CompilationUnitSyntax>(), *this));
-        else {
-            SymbolList symbols = createSymbols(tree->root(), *this);
-            // TODO: fix parent pointer to be the compilation unit
-            addCompilationUnit(allocate<CompilationUnitSymbol>(symbols, *this));
-        }
+        addCompilationUnit(allocate<CompilationUnitSymbol>(tree->root(), *this));
     }
 }
 
 const PackageSymbol* DesignRootSymbol::findPackage(string_view lookupName) const {
-    init();
+    ensureInit();
 
     auto it = packageMap.find(lookupName);
     if (it == packageMap.end())
@@ -560,23 +554,36 @@ bool DesignRootSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSy
 void DesignRootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
     unitList.push_back(&unit);
 
-    // Add all modules to the root scope; we can look up modules anywhere in the design.
-    // Also keep track of packages separately; they live in their own namespace.
+    // Track packages separately; they live in their own namespace.
     for (auto symbol : unit.members()) {
-        switch (symbol->kind) {
-            case SymbolKind::Module:
-                addMember(*symbol);
-                break;
-            case SymbolKind::Package:
-                packageMap.emplace(symbol->name, symbol);
-                break;
-            default:
-                break;
-        }
+        if (symbol->kind == SymbolKind::Package)
+            packageMap.emplace(symbol->name, symbol);
     }
 }
 
-void DesignRootSymbol::initMembers() const {
+void DesignRootSymbol::fillMembers(MemberBuilder& builder) const {
+    // Register built-in system functions.
+    const auto& intType = getKnownType(SyntaxKind::IntType);
+    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+
+    args.append(alloc.emplace<FormalArgumentSymbol>(intType, *this));
+    builder.add(allocate<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2, *this));
+
+    // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
+    // assignment like context
+    // TODO: add support for all these operands on data_types, not just expressions,
+    // and add support for things like unpacked arrays
+    const auto& trivialIntType = getIntegralType(1, false, true);
+    args.clear();
+    args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType, *this));
+    builder.add(allocate<SubroutineSymbol>("$bits", intType, args.copy(alloc), SystemFunction::bits, *this));
+    builder.add(allocate<SubroutineSymbol>("$left", intType, args.copy(alloc), SystemFunction::left, *this));
+    builder.add(allocate<SubroutineSymbol>("$right", intType, args.copy(alloc), SystemFunction::right, *this));
+    builder.add(allocate<SubroutineSymbol>("$low", intType, args.copy(alloc), SystemFunction::low, *this));
+    builder.add(allocate<SubroutineSymbol>("$high", intType, args.copy(alloc), SystemFunction::high, *this));
+    builder.add(allocate<SubroutineSymbol>("$size", intType, args.copy(alloc), SystemFunction::size, *this));
+    builder.add(allocate<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment, *this));
+
     // Compute which modules should be automatically instantiated; this is the set of modules that are:
     // 1) declared at the root level
     // 2) never instantiated anywhere in the design (even inside generate blocks that are not selected)
@@ -588,6 +595,8 @@ void DesignRootSymbol::initMembers() const {
     for (auto symbol : unitList) {
         for (auto member : symbol->members()) {
             if (member->kind == SymbolKind::Module) {
+                builder.add(*member);
+
                 std::vector<NameSet> scopeStack;
                 findInstantiations(member->as<ModuleSymbol>().syntax, scopeStack, instances);
             }
@@ -601,7 +610,7 @@ void DesignRootSymbol::initMembers() const {
                 // TODO: check for no parameters here
                 const auto& pms = member->as<ModuleSymbol>().parameterize();
                 const auto& instance = allocate<ModuleInstanceSymbol>(member->name, SourceLocation(), pms, *this);
-                addMember(instance);
+                builder.add(instance);
                 topList.push_back(&instance);
             }
         }
