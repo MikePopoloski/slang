@@ -23,10 +23,11 @@ install:
   - ln -s /usr/bin/clang-5.0 latest-symlinks/clang
   - ln -s /usr/bin/g++-7 latest-symlinks/g++
   - ln -s /usr/bin/gcc-7 latest-symlinks/gcc
+  - ln -s /usr/bin/gcov-7 latest-symlinks/gcov
   - export PATH=$PWD/latest-symlinks:$PATH
   - clang++ --version
   - g++ --version
-  - tools/bin/linux/genie --gcc=$BUILD_TARGET gmake
+  - tools/bin/linux/genie --gcc=$BUILD_TARGET --with-coverage gmake
 
 script:
   - if [ "$BUILD_TARGET" == "linux-clang" ]; then make -C build/projects/gmake-linux-clang -j 8; build/linux64_clang/bin/unittestsDebug; fi
@@ -38,3 +39,6 @@ branches:
 
 git:
   depth: 3
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'

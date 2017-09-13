@@ -34,6 +34,11 @@ function toolchain(_buildDir, _libDir)
 		description = "Use AVX extension.",
 	}
 
+	newoption {
+		trigger     = "with-coverage",
+		description = "Compile with code coverage support",
+	}
+
 	-- Avoid error when invoking genie --help.
 	if (_ACTION == nil) then return false end
 
@@ -106,7 +111,6 @@ function toolchain(_buildDir, _libDir)
 		"NoPCH",
 		"NativeWChar",
 		"NoEditAndContinue",
-		"NoFramePointer",
 		"Symbols",
 		"ExtraWarnings"
 	}
@@ -126,6 +130,7 @@ function toolchain(_buildDir, _libDir)
 	configuration { "Release" }
 		flags {
 			"NoBufferSecurityCheck",
+			"NoFramePointer",
 			"OptimizeSpeed",
 		}
 		defines {
@@ -179,6 +184,16 @@ function toolchain(_buildDir, _libDir)
 		buildoptions {
 			"-mfpmath=sse",
 		}
+
+	if _OPTIONS["with-coverage"] then
+		configuration { "linux-gcc" }
+			buildoptions {
+				"--coverage"
+			}
+			linkoptions {
+				"--coverage"
+			}
+	end
 
 	configuration { "linux-gcc* or linux-clang*" }
 		buildoptions {
