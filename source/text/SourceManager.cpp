@@ -6,9 +6,6 @@
 //------------------------------------------------------------------------------
 #include "SourceManager.h"
 
-#include <algorithm>
-#include <fstream>
-
 #include "util/HashMap.h"
 
 namespace slang {
@@ -19,7 +16,7 @@ SourceManager::SourceManager() {
     bufferEntries.emplace_back(file);
 }
 
-std::string SourceManager::makeAbsolutePath(string_view path) const {
+string SourceManager::makeAbsolutePath(string_view path) const {
     if (path.empty())
         return "";
 
@@ -190,7 +187,7 @@ string_view SourceManager::getSourceText(BufferID buffer) const {
     if (!fd)
         return "";
 
-    return string_view(fd->mem.begin(), fd->mem.size());
+    return string_view(fd->mem.data(), fd->mem.size());
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, SourceLocation expansionStart,
@@ -205,10 +202,10 @@ SourceBuffer SourceManager::assignText(string_view text, SourceLocation included
 }
 
 SourceBuffer SourceManager::assignText(string_view path, string_view text, SourceLocation includedFrom) {
-    SmallVectorSized<char, 2> buffer;
-    buffer.appendRange(text);
+    vector<char> buffer;
+    buffer.insert(buffer.end(), text.begin(), text.end());
     if (buffer.empty() || buffer.back() != '\0')
-        buffer.append('\0');
+        buffer.push_back('\0');
 
     return assignBuffer(path, std::move(buffer), includedFrom);
 }
@@ -216,13 +213,13 @@ SourceBuffer SourceManager::assignText(string_view path, string_view text, Sourc
 SourceBuffer SourceManager::appendText(BufferID buffer, string_view text) {
     ASSERT(buffer);
     FileInfo& fi = std::get<FileInfo>(bufferEntries[buffer.id]);
-    SourceLocation includeLoc = SourceLocation(buffer, fi.data->mem.size());
+    SourceLocation includeLoc = SourceLocation(buffer, (uint32_t)fi.data->mem.size());
     return assignText(text, includeLoc);
 }
 
-SourceBuffer SourceManager::assignBuffer(string_view path, Vector<char>&& buffer, SourceLocation includedFrom) {
+SourceBuffer SourceManager::assignBuffer(string_view path, vector<char>&& buffer, SourceLocation includedFrom) {
     Path fullPath = path;
-    std::string canonicalStr = fullPath.str();
+    string canonicalStr = fullPath.str();
     auto it = lookupCache.find(canonicalStr);
     ASSERT(it == lookupCache.end());
 
@@ -277,7 +274,7 @@ void SourceManager::addLineDirective(SourceLocation location, uint32_t lineNum,
         return;
 
     uint32_t sourceLineNum = getRawLineNumber(fileLocation);
-    fd->lineDirectives.emplace_back(sourceLineNum, lineNum, name, level);
+    fd->lineDirectives.emplace_back(name, sourceLineNum, lineNum, level);
 }
 
 SourceManager::FileData* SourceManager::getFileData(BufferID buffer) const {
@@ -292,7 +289,7 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
     return SourceBuffer {
-        string_view(fd->mem.begin(), fd->mem.size()),
+        string_view(fd->mem.data(), fd->mem.size()),
         BufferID::get((uint32_t)(bufferEntries.size() - 1))
     };
 }
@@ -307,7 +304,7 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
     }
 
     // first see if we have this file cached
-    std::string canonicalStr = absPath.str();
+    string canonicalStr = absPath.str();
     auto it = lookupCache.find(canonicalStr);
     if (it != lookupCache.end()) {
         FileData* fd = it->second.get();
@@ -317,8 +314,8 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
     }
 
     // do the read
-    Vector<char> buffer;
-    if (!readFile(absPath, buffer)) {
+    vector<char> buffer;
+    if (!absPath.readFile(buffer)) {
         lookupCache.emplace(std::move(canonicalStr), nullptr);
         return SourceBuffer();
     }
@@ -326,11 +323,11 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
     return cacheBuffer(std::move(canonicalStr), absPath, includedFrom, std::move(buffer));
 }
 
-SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Vector<char>&& buffer) {
-    std::string name = path.filename();
+SourceBuffer SourceManager::cacheBuffer(string&& canonicalPath, const Path& path, SourceLocation includedFrom, vector<char>&& buffer) {
+    string name = path.filename();
     auto fd = std::make_unique<FileData>(
         &*directories.insert(path.parentPath()).first,
-        name,
+        std::move(name),
         std::move(buffer)
     );
 
@@ -338,39 +335,19 @@ SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, const Path&
     return createBufferEntry(fdPtr, includedFrom);
 }
 
-bool SourceManager::readFile(const Path& path, Vector<char>& buffer) {
-    size_t size;
-    try {
-        size = path.fileSize();
-    }
-    catch (std::runtime_error&) {
-        return false;
-    }
-
-    // + 1 for null terminator
-    buffer.extend((uint32_t)size + 1);
-    std::ifstream stream(path.str(), std::ios::binary);
-    stream.read(buffer.begin(), size);
-
-    // null-terminate the buffer while we're at it
-    buffer.begin()[(uint32_t)size] = '\0';
-
-    return stream.good();
-}
-
-void SourceManager::computeLineOffsets(const Vector<char>& buffer, std::vector<uint32_t>& offsets) {
+void SourceManager::computeLineOffsets(const vector<char>& buffer, vector<uint32_t>& offsets) {
     // first line always starts at offset 0
     offsets.push_back(0);
 
-    const char* ptr = buffer.begin();
-    const char* end = buffer.end();
+    const char* ptr = buffer.data();
+    const char* end = buffer.data() + buffer.size();
     while (ptr != end) {
         if (ptr[0] == '\n' || ptr[0] == '\r') {
             // if we see \r\n or \n\r skip both chars
             if ((ptr[1] == '\n' || ptr[1] == '\r') && ptr[0] != ptr[1])
                 ptr++;
             ptr++;
-            offsets.push_back((uint32_t)(ptr - buffer.begin()));
+            offsets.push_back((uint32_t)(ptr - buffer.data()));
         }
         else {
             ptr++;
@@ -378,10 +355,13 @@ void SourceManager::computeLineOffsets(const Vector<char>& buffer, std::vector<u
     }
 }
 
-const SourceManager::FileData::LineDirectiveInfo*
+const SourceManager::LineDirectiveInfo*
 SourceManager::FileData::getPreviousLineDirective(uint32_t rawLineNumber) const {
     auto it = std::lower_bound(lineDirectives.begin(), lineDirectives.end(),
-        LineDirectiveInfo(rawLineNumber, 0, "", 0), LineDirectiveComparator());
+                               LineDirectiveInfo("", rawLineNumber, 0, 0),
+                               [](const auto& a, const auto& b) {
+                                    return a.lineInFile < b.lineInFile;
+                               });
 
     if (it != lineDirectives.begin()) {
         // lower_bound will give us an iterator to the first directive after the command
@@ -394,9 +374,8 @@ SourceManager::FileData::getPreviousLineDirective(uint32_t rawLineNumber) const 
         }
         return &*(it - 1);
     }
-    else {
-        return nullptr;
-    }
+
+    return nullptr;
 }
 
 uint32_t SourceManager::getRawLineNumber(SourceLocation location) const {
@@ -413,7 +392,7 @@ uint32_t SourceManager::getRawLineNumber(SourceLocation location) const {
     auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset());
 
     // We want to ensure the line we return is strictly greater than the given location offset.
-    // So if it is equal, add one to the lower bound we got
+    // So if it is equal, add one to the lower bound we got.
     uint32_t line = uint32_t(it - fd->lineOffsets.begin());
     if (it != fd->lineOffsets.end() && *it == location.offset())
         line++;

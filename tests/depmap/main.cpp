@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
             }
         }
         else {
-            verilogFiles = findFiles(argv[i], ".sv", true);
+            verilogFiles = Path::findFiles(argv[i], ".sv", true);
         }
     }
 

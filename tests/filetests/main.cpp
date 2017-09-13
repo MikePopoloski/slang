@@ -20,12 +20,12 @@ int main() {
     std::vector<SyntaxTree> trees;
     Diagnostics diags;
     BumpAllocator alloc {4096};
-    
+
     //definitions.addParentScope(model.getSystemScope());
 
     int errors = 0;
     int files = 0;
-    for (auto& p : findFiles(RelativeTestPath)) {
+    for (auto& p : Path::findFiles(RelativeTestPath)) {
         SyntaxTree tree = SyntaxTree::fromFile(string_view(p.str()), sourceManager);
         if (!tree.diagnostics().empty()) {
             printf("Parsing '%s'\n", p.str().c_str());

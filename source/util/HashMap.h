@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include "numeric/MathUtils.h"
+#include "util/BumpAllocator.h"
 
 namespace slang {
 
@@ -164,7 +165,7 @@ public:
 
     iterator begin() { return this->empty() ? this->end() : iterator(this->data, this->dataEnd()); }
     iterator end() { return iterator(this->dataEnd(), this->dataEnd()); }
-    
+
     void clear() {
         destructElements();
         this->len = 0;

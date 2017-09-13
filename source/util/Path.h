@@ -6,28 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <string>
-#include <vector>
-#include <stdexcept>
-#include <sstream>
-#include <cctype>
-#include <cstdlib>
-#include <cerrno>
-#include <cstring>
-
-#if defined(_WIN32)
-#else
-# include <unistd.h>
-# include <dirent.h>
-#endif
-#include <sys/stat.h>
-
-#if defined(__linux)
-# include <linux/limits.h>
-#else
-# include <limits.h>
-#endif
-
 namespace slang {
 
 /// Path - Cross platform file path manipulation routines.
@@ -49,13 +27,11 @@ public:
 
     Path(const Path& path) :
         elements(path.elements), pathType(path.pathType), absolute(path.absolute)
-    {
-    }
+    {}
 
     Path(Path&& path) noexcept :
         elements(std::move(path.elements)), pathType(path.pathType), absolute(path.absolute)
-    {
-    }
+    {}
 
     Path(const char* str) { set(str); }
     Path(const std::string& str) { set(str); }
@@ -80,6 +56,10 @@ public:
     size_t fileSize() const;
     bool isDirectory() const;
     bool isFile() const;
+
+    /// Attempts to read the file at the current path into the given buffer.
+    /// Returns true if successful and false otherwise.
+    bool readFile(vector<char>& buffer) const;
 
     std::string extension() const {
         const std::string& name = filename();
@@ -128,35 +108,8 @@ public:
         return result;
     }
 
-    std::string str(PathType type = NativePath) const {
-        std::ostringstream oss;
-
-        if (type == PosixPath && absolute)
-            oss << "/";
-
-        for (size_t i = 0; i < elements.size(); ++i) {
-            oss << elements[i];
-            if (i + 1 < elements.size()) {
-                if (type == PosixPath)
-                    oss << '/';
-                else
-                    oss << '\\';
-            }
-        }
-        return oss.str();
-    }
-
-    void set(const std::string& str, PathType type = NativePath) {
-        pathType = type;
-        if (type == WindowsPath) {
-            elements = tokenize(str, "/\\");
-            absolute = str.size() >= 2 && std::isalpha(str[0]) && str[1] == ':';
-        }
-        else {
-            elements = tokenize(str, "/");
-            absolute = !str.empty() && str[0] == '/';
-        }
-    }
+    std::string str(PathType type = NativePath) const;
+    void set(const std::string& str, PathType type = NativePath);
 
     Path& operator=(const Path& path) {
         pathType = path.pathType;
@@ -189,6 +142,13 @@ public:
     /// Gets the process's current working directory.
     static Path getCurrentDirectory();
 
+    /// Simple utility method to iterate all of the files in a given directory,
+    /// returning any that have the given extension (which should include the leading period).
+    /// If the extension provided is empty, all files will be returned. If @a recurse is set
+    /// to true, this will also look in subdirectories recursively.
+    static vector<Path> findFiles(const Path& path, string_view extension = "",
+                                  bool recurse = false);
+
 #if defined(_WIN32)
     std::wstring wstr(PathType type = NativePath) const;
     void set(const std::wstring& wstring, PathType type = NativePath);
@@ -217,11 +177,5 @@ private:
     PathType pathType = NativePath;
     bool absolute = false;
 };
-
-/// Simple utility method to iterate all of the files in a given directory,
-/// returning any that have the given extension (which should include the leading period).
-/// If the extension provided is empty, all files will be returned. If @a recurse is set
-/// to true, this will also look in subdirectories recursively.
-vector<Path> findFiles(const Path& path, string_view extension = "", bool recurse = false);
 
 }

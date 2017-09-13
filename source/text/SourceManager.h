@@ -9,14 +9,9 @@
 #include <deque>
 #include <memory>
 #include <set>
-#include <string>
 #include <unordered_map>
-#include <variant>
-#include <vector>
 
-#include "util/BumpAllocator.h"
 #include "util/Path.h"
-#include "util/SmallVector.h"
 
 #include "SourceLocation.h"
 
@@ -46,7 +41,7 @@ public:
     SourceManager& operator=(const SourceManager&) = delete;
 
     /// Convert the given relative path into an absolute path.
-    std::string makeAbsolutePath(string_view path) const;
+    string makeAbsolutePath(string_view path) const;
 
     /// Adds a system include directory.
     void addSystemDirectory(string_view path);
@@ -115,7 +110,7 @@ public:
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignBuffer(string_view path, Vector<char>&& buffer, SourceLocation includedFrom = SourceLocation());
+    SourceBuffer assignBuffer(string_view path, vector<char>&& buffer, SourceLocation includedFrom = SourceLocation());
 
     /// Read in a source file from disk.
     SourceBuffer readSource(string_view path);
@@ -127,49 +122,43 @@ public:
     void addLineDirective(SourceLocation location, uint32_t lineNum, string_view name, uint8_t level);
 
 private:
-    BumpAllocator alloc;
     uint32_t unnamedBufferCount = 0;
 
+    // Stores information specified in a `line directive, which alters the
+    // line number and file name that we report in diagnostics.
+    struct LineDirectiveInfo {
+        string name;                // File name set by directive
+        uint32_t lineInFile;        // Actual file line where directive occurred
+        uint32_t lineOfDirective;   // Line number set by directive
+        uint8_t level;              // Level of directive. Either 0, 1, or 2.
+
+        LineDirectiveInfo(string_view fname, uint32_t lif, uint32_t lod, uint8_t level) :
+            name(fname), lineInFile(lif), lineOfDirective(lod), level(level) {}
+    };
+
     // Stores actual file contents and metadata; only one per loaded file
-    struct FileData {
-        Vector<char> mem;                   // file contents
-        std::string name;                   // name of the file
-        std::vector<uint32_t> lineOffsets;  // char offset for each line
+    class FileData {
+    public:
+        string name;           // name of the file
+        vector<char> mem;      // file contents
+        vector<uint32_t> lineOffsets;
+        vector<LineDirectiveInfo> lineDirectives;
+        const Path* directory; // directory in which the file exists
 
-        struct LineDirectiveInfo {
-            uint32_t lineInFile;        // Actual file line where directive occurred
-            uint32_t lineOfDirective;   // Line number set by directive
-            std::string name;           // File name set by directive
-            uint8_t level;              // level of directive
-
-            LineDirectiveInfo(uint32_t lif, uint32_t lod, string_view fname, uint8_t _level) :
-                lineInFile(lif), lineOfDirective(lod), name(fname.begin(), fname.end()),
-                level(_level) {}
-        };
+        FileData(const Path* directory, string name, vector<char>&& data) :
+            name(std::move(name)),
+            mem(std::move(data)),
+            directory(directory) {}
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none
         const LineDirectiveInfo* getPreviousLineDirective(uint32_t rawLineNumber) const;
-
-        struct LineDirectiveComparator {
-            bool operator()(const LineDirectiveInfo& info1, const LineDirectiveInfo& info2) {
-                return info1.lineInFile < info2.lineInFile;
-            }
-        };
-
-        std::vector<LineDirectiveInfo> lineDirectives; // info about `line in file
-        const Path* directory;                         // directory that the file exists in
-
-        FileData(const Path* directory, const std::string& name, SmallVector<char>&& data) :
-            mem(std::move(data)),
-            name(name),
-            directory(directory) {}
     };
 
     // Stores a pointer to file data along with information about where we included it.
     // There can potentially be many of these for a given file.
     struct FileInfo {
-        FileData* data;
+        FileData* data = nullptr;
         SourceLocation includedFrom;
 
         FileInfo() {}
@@ -195,14 +184,14 @@ private:
     };
 
     // index from BufferID to buffer metadata
-    std::deque<std::variant<FileInfo, ExpansionInfo>> bufferEntries;
+    std::deque<variant<FileInfo, ExpansionInfo>> bufferEntries;
 
     // cache for file lookups; this holds on to the actual file data
-    std::unordered_map<std::string, std::unique_ptr<FileData>> lookupCache;
+    std::unordered_map<string, std::unique_ptr<FileData>> lookupCache;
 
     // directories for system and user includes
-    std::vector<Path> systemDirectories;
-    std::vector<Path> userDirectories;
+    vector<Path> systemDirectories;
+    vector<Path> userDirectories;
 
     // uniquified backing memory for directories
     std::set<Path> directories;
@@ -211,13 +200,12 @@ private:
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom);
 
     SourceBuffer openCached(const Path& fullPath, SourceLocation includedFrom);
-    SourceBuffer cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, Vector<char>&& buffer);
-
-    static void computeLineOffsets(const Vector<char>& buffer, std::vector<uint32_t>& offsets);
-    static bool readFile(const Path& path, Vector<char>& buffer);
+    SourceBuffer cacheBuffer(string&& canonicalPath, const Path& path, SourceLocation includedFrom, vector<char>&& buffer);
 
     // Get raw line number of a file location, ignoring any line directives
     uint32_t getRawLineNumber(SourceLocation location) const;
+
+    static void computeLineOffsets(const vector<char>& buffer, vector<uint32_t>& offsets);
 };
 
 }

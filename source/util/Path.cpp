@@ -6,8 +6,25 @@
 //------------------------------------------------------------------------------
 #include "Path.h"
 
+#include <cctype>
+#include <cerrno>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+
 #if defined(_WIN32)
 #include "compat/windows.h"
+#else
+# include <unistd.h>
+# include <dirent.h>
+# include <fcntl.h>
+#endif
+#include <sys/stat.h>
+
+#if defined(__linux)
+# include <linux/limits.h>
+#else
+# include <limits.h>
 #endif
 
 namespace slang {
@@ -58,6 +75,93 @@ bool Path::isFile() const {
         return false;
     return S_ISREG(sb.st_mode);
 #endif
+}
+
+bool Path::readFile(vector<char>& buffer) const {
+#if defined(_WIN32)
+    size_t size;
+    try {
+        size = fileSize();
+    }
+    catch (std::runtime_error&) {
+        return false;
+    }
+
+    // + 1 for null terminator
+    buffer.resize((uint32_t)size + 1);
+    std::ifstream stream(str(), std::ios::binary);
+    stream.read(buffer.data(), size);
+
+    // null-terminate the buffer while we're at it
+    buffer[(uint32_t)size] = '\0';
+
+    return stream.good();
+#else
+
+    // TODO: report error
+    int fd = open(str().c_str(), O_RDONLY | O_CLOEXEC);
+    if (fd == -1)
+        return false;
+
+    struct stat sb;
+    if (fstat(fd, &sb) != 0)
+        return false;
+
+    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+
+    // TODO: vector does initialization always, which is dumb
+    size_t remaining = sb.st_size;
+    buffer.resize(remaining + 1);
+    char* buf = buffer.data();
+
+    while (remaining) {
+        ssize_t r = ::read(fd, buf, remaining);
+        if (r == -1)
+            return false;
+        else if (r == 0) {
+            buffer.resize((buf - buffer.data()) + 1);
+            break;
+        }
+        else {
+            buf += r;
+            remaining -= r;
+        }
+    }
+
+    buffer.back() = '\0';
+    return true;
+
+#endif
+}
+
+string Path::str(PathType type) const {
+    std::ostringstream oss;
+
+    if (type == PosixPath && absolute)
+        oss << "/";
+
+    for (size_t i = 0; i < elements.size(); ++i) {
+        oss << elements[i];
+        if (i + 1 < elements.size()) {
+            if (type == PosixPath)
+                oss << '/';
+            else
+                oss << '\\';
+        }
+    }
+    return oss.str();
+}
+
+void Path::set(const string& str, PathType type) {
+    pathType = type;
+    if (type == WindowsPath) {
+        elements = tokenize(str, "/\\");
+        absolute = str.size() >= 2 && std::isalpha(str[0]) && str[1] == ':';
+    }
+    else {
+        elements = tokenize(str, "/");
+        absolute = !str.empty() && str[0] == '/';
+    }
 }
 
 Path Path::makeAbsolute(const Path& path) {
@@ -167,7 +271,7 @@ static void findFilesImpl(const Path& path, vector<Path>& results, const CharTyp
     }
 }
 
-vector<Path> findFiles(const Path& path, string_view extension, bool recurse) {
+vector<Path> Path::findFiles(const Path& path, string_view extension, bool recurse) {
 #if defined(_WIN32)
     std::wstring extensionCheck;
     if (!extension.empty()) {
