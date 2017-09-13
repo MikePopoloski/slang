@@ -376,19 +376,9 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
             needEod = false;
         }
 
-        if (t.kind == TokenKind::Directive) {
-            switch (t.directiveKind()) {
-                case SyntaxKind::IfDefDirective:
-                case SyntaxKind::ElseDirective:
-                case SyntaxKind::IfNDefDirective:
-                case SyntaxKind::ElsIfDirective:
-                case SyntaxKind::EndIfDirective:
-                    needEod = true;
-                    break;
-                default:
-                    break;
-            }
-        }
+        if (t.kind == TokenKind::Directive && t.directiveKind() != SyntaxKind::MacroUsage)
+            needEod = true;
+
         scratchTokenBuffer.append(consume());
     }
     inMacroBody = false;
