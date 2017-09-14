@@ -2,6 +2,7 @@ slang - SystemVerilog Language Services
 =======================================
 [![Build Status](https://travis-ci.org/MikePopoloski/slang.svg?branch=master)](https://travis-ci.org/MikePopoloski/slang)
 [![Build status](https://ci.appveyor.com/api/projects/status/n86l5nuq5nw9on0u/branch/master?svg=true)](https://ci.appveyor.com/project/MikePopoloski/slang/branch/master)
+[![codecov](https://codecov.io/gh/MikePopoloski/slang/branch/master/graph/badge.svg)](https://codecov.io/gh/MikePopoloski/slang)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/MikePopoloski/slang/blob/master/LICENSE)
 
 Parser and compiler library for SystemVerilog.
