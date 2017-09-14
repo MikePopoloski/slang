@@ -191,7 +191,9 @@ function toolchain(_buildDir, _libDir)
 				"--coverage",
 				"-fno-inline",
 				"-fno-inline-small-functions",
-				"-fno-default-inline"
+				"-fno-default-inline",
+				"-fno-omit-frame-pointer",
+				"-fno-optimize-sibling-calls"
 			}
 			linkoptions {
 				"--coverage"
