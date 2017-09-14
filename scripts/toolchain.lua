@@ -226,6 +226,11 @@ function toolchain(_buildDir, _libDir)
 			}
 		end
 
+	configuration { "linux-gcc* or linux-clang*", "Debug" }
+		buildoptions {
+			"-g"
+		}
+
 	configuration { "linux-gcc*", "x64" }
 		targetdir (path.join(_buildDir, "linux64_gcc/bin"))
 		objdir (path.join(_buildDir, "linux64_gcc/obj"))
