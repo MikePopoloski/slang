@@ -188,10 +188,19 @@ function toolchain(_buildDir, _libDir)
 	if _OPTIONS["with-coverage"] then
 		configuration { "linux-gcc" }
 			buildoptions {
-				"--coverage"
+				"--coverage",
+				"-fno-inline",
+				"-fno-inline-small-functions",
+				"-fno-default-inline"
 			}
 			linkoptions {
 				"--coverage"
+			}
+	else
+		configuration { "linux-gcc* or linux-clang*" }
+			linkoptions {
+				"-Wl,--gc-sections",
+				"-Wl,--as-needed",
 			}
 	end
 
@@ -214,10 +223,6 @@ function toolchain(_buildDir, _libDir)
 			links {
 				"rt",
 				"dl",
-			}
-			linkoptions {
-				"-Wl,--gc-sections",
-				"-Wl,--as-needed",
 			}
 		end
 
