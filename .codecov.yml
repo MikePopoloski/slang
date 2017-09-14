@@ -12,9 +12,9 @@ coverage:
     patch: yes
     changes: no
 
-ignore:
-  - "external/"
-  - "tests/"
+  ignore:
+    - "external/*"
+    - "tests/*"
 
 parsers:
   gcov:
