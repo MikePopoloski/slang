@@ -215,8 +215,6 @@ function toolchain(_buildDir, _libDir)
 			"-Wimplicit-fallthrough=5",
 --			"-Wsuggest-override",
 			"-Walloc-zero",
-			"-Wduplicated-branches",
-			"-Wduplicated-cond",
 --			"-Wshadow",
 --			"-Wconversion",
 			"-Wlogical-op",

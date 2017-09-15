@@ -6,6 +6,10 @@
 //------------------------------------------------------------------------------
 #include "SVInt.h"
 
+#include <stdexcept>
+
+#include "fmt/format.h"
+
 #include "text/CharInfo.h"
 #include "util/Hash.h"
 
@@ -43,14 +47,16 @@ bool literalBaseFromChar(char base, LiteralBase& result) {
 }
 
 SVInt SVInt::fromString(string_view str) {
-    ASSERT(!str.empty());
+    if (str.empty())
+        throw std::invalid_argument("String is empty");
 
     const char* c = str.data();
     const char* end = c + str.length();
     bool negative = *c == '-';
     if (*c == '-' || *c == '+') {
         c++;    // heh
-        ASSERT(c != end, "String only has a sign?");
+        if (c == end)
+            throw std::invalid_argument("String only has a sign?");
     }
 
     // look for a base specifier (optional)
@@ -88,30 +94,33 @@ SVInt SVInt::fromString(string_view str) {
     LiteralBase base = LiteralBase::Decimal;
 
     if (apostrophe) {
-        ASSERT(!sizeBad && !sizeOverflow && possibleSize > 0,
-               "Size is invalid (bad chars or overflow 16 bits)");
+        if (sizeBad || sizeOverflow || possibleSize == 0)
+            throw std::invalid_argument("Size is invalid (bad chars or overflow 16 bits)");
         bitWidth = (uint16_t)possibleSize;
 
         c = apostrophe + 1;
-        ASSERT(c != end, "Nothing after size specifier");
+        if (c == end)
+            throw std::invalid_argument("Nothing after size specifier");
 
         if (*c == 's' || *c == 'S') {
             signFlag = true;
             c++;
-            ASSERT(c != end, "Nothing after sign specifier");
+            if (c == end)
+                throw std::invalid_argument("Nothing after sign specifier");
         }
         else {
             signFlag = false;
         }
 
-        bool validBase = literalBaseFromChar(*c, base);
-        ASSERT(validBase, "Unknown base specifier '%c'", *c);
+        if (!literalBaseFromChar(*c, base))
+            throw std::invalid_argument(fmt::format("Unknown base specifier '{}'", *c));
 
         c++;
-        ASSERT(c != end, "Nothing after base specifier");
+        if (c == end)
+            throw std::invalid_argument("Nothing after base specifier");
     }
-    else {
-        ASSERT(!sizeBad);
+    else if (sizeBad) {
+        throw std::invalid_argument("Not an integer or sized literal");
     }
 
     // convert the remaining chars to an array of digits to pass to the other
@@ -187,7 +196,8 @@ SVInt SVInt::fromDigits(uint16_t bits, LiteralBase base, bool isSigned,
             else
                 val *= radix;
             val += d.value;
-            ASSERT(d.value < radix, "Digit %d too large for radix %d", d.value, radix);
+            if (d.value >= radix)
+                throw std::invalid_argument(fmt::format("Digit {} too large for radix {}", d.value, radix));
         }
         return SVInt(bits, val, isSigned);
     }
@@ -209,11 +219,12 @@ SVInt SVInt::fromDigits(uint16_t bits, LiteralBase base, bool isSigned,
                 else if (exactlyEqual(d, logic_t::z))
                     return createFillZ(bits, isSigned);
                 else
-                    ASSERT(false, "Expected unknown digit here");
+                    throw std::invalid_argument("Expected unknown digit");
             }
 
             int value = d.value;
-            ASSERT(value < radix, "Digit %d too large for radix %d", value, radix);
+            if (value >= radix)
+                throw std::invalid_argument(fmt::format("Digit {} too large for radix {}", value, radix));
 
             result *= radixSv;
             digit.pVal[0] = value;
@@ -221,7 +232,7 @@ SVInt SVInt::fromDigits(uint16_t bits, LiteralBase base, bool isSigned,
         }
         return result;
     }
-    
+
     uint32_t numWords = getNumWords(bits, false);
     int ones = (1 << shift) - 1;
     for (const logic_t& d : digits) {
@@ -236,8 +247,8 @@ SVInt SVInt::fromDigits(uint16_t bits, LiteralBase base, bool isSigned,
             value = ones;
             unknown = ones;
         }
-        else {
-            ASSERT(value < radix, "Digit %d too large for radix %d", value, radix);
+        else if (value >= radix) {
+            throw std::invalid_argument(fmt::format("Digit {} too large for radix {}", value, radix));
         }
 
         if (shift >= bits) {
