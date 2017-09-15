@@ -210,6 +210,20 @@ function toolchain(_buildDir, _libDir)
 		buildoptions {
 			"-msse2",
 			"-Wunused-value",
+			"-Wformat=2",
+			"-Wnull-dereference",
+			"-Wimplicit-fallthrough=5",
+--			"-Wsuggest-override",
+			"-Walloc-zero",
+			"-Wduplicated-branches",
+			"-Wduplicated-cond",
+--			"-Wshadow",
+--			"-Wconversion",
+			"-Wlogical-op",
+			"-Wlogical-not-parentheses",
+			"-Wvla",
+			"-Wnoexcept",
+--			"-Wnon-virtual-dtor"
 		}
 		buildoptions_cpp {
 			"-std=c++1z",
