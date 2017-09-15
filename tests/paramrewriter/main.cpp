@@ -137,7 +137,7 @@ private:
     unordered_map<const ModuleDeclarationSyntax*, vector<const ModuleSymbol*>> syntaxToModules;
     unordered_map<const ModuleDeclarationSyntax*, unordered_map<string, size_t>> moduleMap;
     unordered_set<BufferID> visitedFiles;
-    Vector<char> buffer;
+    SmallVectorSized<char, 4> buffer;
 };
 
 int main(int argc, char* argv[]) {

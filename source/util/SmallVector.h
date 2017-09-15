@@ -24,33 +24,40 @@ namespace slang {
 template<typename T>
 class SmallVector {
 public:
-    T* begin() { return data; }
-    T* end() { return data + len; }
-    const T* begin() const { return data; }
-    const T* end() const { return data + len; }
-    const T* cbegin() const { return data; }
-    const T* cend() const { return data + len; }
+    using value_type = T;
+    using index_type = int;
+    using pointer = T*;
+    using reference = T&;
+    using size_type = size_t;
+
+    T* begin() { return data_; }
+    T* end() { return data_ + len; }
+    const T* begin() const { return data_; }
+    const T* end() const { return data_ + len; }
+    const T* cbegin() const { return data_; }
+    const T* cend() const { return data_ + len; }
 
     const T& front() const {
         ASSERT(len);
-        return data[0];
+        return data_[0];
     }
 
     const T& back() const {
         ASSERT(len);
-        return data[len - 1];
+        return data_[len - 1];
     }
 
     T& front() {
         ASSERT(len);
-        return data[0];
+        return data_[0];
     }
 
     T& back() {
         ASSERT(len);
-        return data[len - 1];
+        return data_[len - 1];
     }
 
+    const T* data() const { return data_; }
     uint32_t size() const { return len; }
     bool empty() const { return len == 0; }
 
@@ -64,13 +71,13 @@ public:
     void pop() {
         ASSERT(len);
         len--;
-        data[len].~T();
+        data_[len].~T();
     }
 
     /// Add an element to the end of the array.
     void append(const T& item) {
         amortizeCapacity();
-        new (&data[len++]) T(item);
+        new (&data_[len++]) T(item);
     }
 
     /// Add a range of elements to the end of the array.
@@ -86,7 +93,7 @@ public:
             uint32_t newLen = len + count;
             ensureSize(newLen);
 
-            T* ptr = data + len;
+            T* ptr = data_ + len;
             memcpy(ptr, begin, count * sizeof(T));
             len = newLen;
         }
@@ -103,7 +110,7 @@ public:
         uint32_t newLen = len + count;
         ensureSize(newLen);
 
-        T* ptr = data + len;
+        T* ptr = data_ + len;
         while (begin != end)
             new (ptr++) T(*begin++);
 
@@ -114,7 +121,7 @@ public:
     template<typename... Args>
     void emplace(Args&&... args) {
         amortizeCapacity();
-        new (&data[len++]) T(std::forward<Args>(args)...);
+        new (&data_[len++]) T(std::forward<Args>(args)...);
     }
 
     /// Adds @a size elements to the array (default constructed).
@@ -128,18 +135,18 @@ public:
         if (len == 0)
             return nullptr;
 
-        const T* source = data;
+        const T* source = data_;
         T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T)));
         for (uint32_t i = 0; i < len; i++)
             new (&dest[i]) T(*source++);
         return span<T const>(dest, len);
     }
 
-    T& operator[](int index) { return data[index]; }
-    const T& operator[](int index) const { return data[index]; }
+    T& operator[](int index) { return data_[index]; }
+    const T& operator[](int index) const { return data_[index]; }
 
     /// Indicates whether we are still "small", which means we are still on the stack.
-    bool isSmall() const { return (void*)data == (void*)firstElement; }
+    bool isSmall() const { return (void*)data_ == (void*)firstElement; }
 
 protected:
     // Protected to disallow construction or deletion via base class.
@@ -151,7 +158,7 @@ protected:
     template<typename TType, uint32_t N>
     friend class SmallVectorSized;
 
-    T* data = reinterpret_cast<T*>(&firstElement[0]);
+    T* data_ = reinterpret_cast<T*>(&firstElement[0]);
     uint32_t len = 0;
     uint32_t capacity;
 
@@ -165,16 +172,16 @@ protected:
     void resize() {
         T* newData = (T*)malloc(capacity * sizeof(T));
         if (std::is_trivially_copyable<T>())
-            memcpy(newData, data, len * sizeof(T));
+            memcpy(newData, data_, len * sizeof(T));
         else {
             // We assume we can trivially std::move elements here. Don't do anything dumb like
             // putting throwing move types into this container.
             for (uint32_t i = 0; i < len; i++)
-                new (&newData[i]) T(std::move(data[i]));
+                new (&newData[i]) T(std::move(data_[i]));
         }
 
         cleanup();
-        data = newData;
+        data_ = newData;
     }
 
     void amortizeCapacity() {
@@ -196,14 +203,14 @@ protected:
     void destructElements() {
         if (!std::is_trivially_destructible<T>()) {
             for (uint32_t i = 0; i < len; i++)
-                data[i].~T();
+                data_[i].~T();
         }
     }
 
     void cleanup() {
         destructElements();
         if (!isSmall())
-            free(data);
+            free(data_);
     }
 };
 
@@ -222,15 +229,15 @@ public:
         if (other.isSmall()) {
             this->len = 0;
             this->capacity = sizeof(T) * N;
-            this->data = reinterpret_cast<T*>(&this->firstElement[0]);
+            this->data_ = reinterpret_cast<T*>(&this->firstElement[0]);
             this->appendRange(other.begin(), other.end());
         }
         else {
-            this->data = other.data;
+            this->data_ = other.data_;
             this->len = other.len;
             this->capacity = other.capacity;
 
-            other.data = nullptr;
+            other.data_ = nullptr;
             other.len = 0;
             other.capacity = 0;
         }
@@ -251,10 +258,5 @@ public:
 private:
     char stackBase[(N - 1) * sizeof(T)];
 };
-
-/// Vector is a specific alias of SmallVectorSized for cases where
-/// we don't really care about the stack allocation aspects of SmallVector.
-template<typename T>
-using Vector = SmallVectorSized<T, 4>;
 
 }

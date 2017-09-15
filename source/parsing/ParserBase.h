@@ -207,7 +207,7 @@ private:
     void prependSkippedTokens(Token& node);
 
     Window window;
-    Vector<Token> skippedTokens;
+    SmallVectorSized<Token, 4> skippedTokens;
 };
 
 }

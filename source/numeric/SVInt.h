@@ -6,9 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <optional>
 #include <ostream>
-#include <string>
 
 #include "util/SmallVector.h"
 
@@ -109,7 +107,7 @@ struct logic_t {
 /// SystemVerilog arbitrary precision integer type.
 /// This type is designed to implement all of the operations supported by SystemVerilog
 /// expressions involving integer vectors. Each value has an arbitrary (but constant) size in bits,
-/// up to a maximum of 2**16.
+/// up to a maximum of 2**16-1.
 ///
 /// Additionally, SVInt can represent a 4-state value, where each bit can take on additional
 /// states of X and Z.
@@ -122,7 +120,7 @@ struct logic_t {
 class SVInt {
 public:
     /// Simple default constructor for convenience, results in a 1 bit zero value.
-    SVInt() : val(0), bitWidth(1), signFlag(false), unknownFlag(false) {}
+    constexpr SVInt() : val(0), bitWidth(1), signFlag(false), unknownFlag(false) {}
 
     /// Construct from a single bit that can be unknown.
     explicit SVInt(logic_t bit) :
@@ -163,8 +161,9 @@ public:
     SVInt(uint16_t bits, uint64_t value, bool isSigned) :
         bitWidth(bits), signFlag(isSigned), unknownFlag(false)
     {
+        // TODO: clean this up
         // 0-bit SVInts are valid only as the result of a zero-width concatenation, which is only
-        // valid within another concatenation. For nwo we drop this check altogehter, but it
+        // valid within another concatenation. For now we drop this check altogehter, but it
         // might be a good check to have in general
         //ASSERT(bitWidth);
         if (isSingleWord())
@@ -174,17 +173,12 @@ public:
         clearUnusedBits();
     }
 
-    /// Constructs from a string (in SystemVerilog syntax). This is mostly for convenience;
-    /// any errors will assert instead of being handled gracefully.
-    explicit SVInt(string_view str);
-
-    SVInt(uint16_t bits, LiteralBase base, bool isSigned, bool anyUnknown, span<logic_t const> digits);
-
     ~SVInt() {
         if (!isSingleWord())
             delete[] pVal;
     }
 
+    /// Copy construct.
     SVInt(const SVInt& other) :
         bitWidth(other.bitWidth), signFlag(other.signFlag), unknownFlag(other.unknownFlag)
     {
@@ -194,6 +188,7 @@ public:
             initSlowCase(other);
     }
 
+    /// Move construct.
     SVInt(SVInt&& other) noexcept :
         val(other.val), bitWidth(other.bitWidth),
         signFlag(other.signFlag), unknownFlag(other.unknownFlag)
@@ -216,9 +211,9 @@ public:
     /// Checks whether it's possible to convert the value to a simple built-in
     /// integer type and if so returns it.
     template<typename T>
-    std::optional<T> as() const {
-        if (unknownFlag || getMinRepresentedBits() > std::numeric_limits<T>::digits)
-            return std::nullopt;
+    optional<T> as() const {
+        if (unknownFlag || getMinRepresentedBits() > numeric_limits<T>::digits)
+            return nullopt;
 
         uint64_t word = getRawData()[0];
         if (signFlag && isNegative()) {
@@ -251,13 +246,13 @@ public:
     void setAllX();
     void setAllZ();
 
-    // Create an integer of the given bit width filled with X's.
+    // Create an integer of the given bit width filled with X's or Z's.
     static SVInt createFillX(uint16_t bitWidth, bool isSigned);
     static SVInt createFillZ(uint16_t bitWidth, bool isSigned);
 
     size_t hash(size_t seed = Seed) const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
-    std::string toString(LiteralBase base) const;
+    string toString(LiteralBase base) const;
 
     /// Power function. Note that the result will have the same bitwidth
     /// as this object. The value will be modulo the bit width.
@@ -284,10 +279,11 @@ public:
     /// Multiple concatenation/replication
     SVInt replicate(const SVInt& times) const;
 
-    /// Returns the bit-selected range from lsb to msb, inclusive both ends
-    /// indexes based on SVInts having lsb = 0. Must have msb >= lsb.
+    /// Returns the bit-selected range from lsb to msb, inclusive both ends.
+    /// Indexes based on SVInts having lsb = 0. Must have msb >= lsb.
     SVInt bitSelect(int16_t lsb, int16_t msb) const;
 
+    /// Reduces all of the bits in the integer to one by applying OR, AND, or XOR.
     logic_t reductionOr() const;
     logic_t reductionAnd() const;
     logic_t reductionXor() const;
@@ -298,6 +294,7 @@ public:
 
     /// Get the minimum number of bits required to hold this value, taking into account
     /// the sign flag and whether or not the value would be considered positive.
+    /// Note that this ignores unknown bits.
     uint32_t getMinRepresentedBits() const {
         if (!signFlag)
             return getActiveBits();
@@ -411,6 +408,14 @@ public:
 
     explicit operator logic_t() const { return *this != 0; }
 
+    /// Constructs from a string (in SystemVerilog syntax). This is mostly for convenience;
+    /// any errors will assert instead of being handled gracefully.
+    static SVInt fromString(string_view str);
+
+    /// Construct from an array of digits.
+    static SVInt fromDigits(uint16_t bits, LiteralBase base, bool isSigned,
+                            bool anyUnknown, span<logic_t const> digits);
+
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
     friend std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {
@@ -470,8 +475,8 @@ public:
         WORD_SIZE = sizeof(uint64_t)
     };
 
-    static SVInt Zero;
-    static SVInt One;
+    static const SVInt Zero;
+    static const SVInt One;
 
 private:
     // fast internal constructors to just set fields on new values
@@ -548,7 +553,7 @@ private:
     // Unsigned modular exponentiation algorithm.
     static SVInt modPow(const SVInt& base, const SVInt& exponent, bool bothSigned);
 
-    static int getNumWords(uint16_t bitWidth, bool unknown) {
+    static constexpr int getNumWords(uint16_t bitWidth, bool unknown) {
         uint32_t value = ((uint64_t)bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;
         return unknown ? value * 2 : value;
     }
@@ -591,7 +596,15 @@ inline logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs) {
 inline uint32_t clog2(const SVInt& v) {
     if (v == 0)
         return 0;
-    return v.getBitWidth() - (v - SVInt(1)).countLeadingZeros();
+    return v.getBitWidth() - (v - SVInt::One).countLeadingZeros();
+}
+
+inline namespace literals {
+
+inline SVInt operator ""_si(const char* str, size_t size) {
+    return SVInt::fromString(string_view(str, size));
+}
+
 }
 
 }
