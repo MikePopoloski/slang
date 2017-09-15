@@ -286,7 +286,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
             addError(DiagCode::LiteralSizeTooLarge, token.location()) << SVInt::MAX_BITS;
         }
         else {
-            sizeBits = tokenValue.getAssertUInt16();
+            sizeBits = tokenValue.as<uint16_t>().value();
         }
     }
 

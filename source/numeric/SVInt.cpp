@@ -417,7 +417,7 @@ SVInt SVInt::shl(const SVInt& rhs) const {
     // if the shift amount is too large, we end up with zero anyway
     if (rhs >= bitWidth)
         return SVInt(bitWidth, 0, signFlag);
-    return shl((uint32_t)rhs.getAssertUInt64());
+    return shl(rhs.as<uint32_t>().value());
 }
 
 SVInt SVInt::shl(uint32_t amount) const {
@@ -464,7 +464,7 @@ SVInt SVInt::lshr(const SVInt& rhs) const {
     // if the shift amount is too large, we end up with zero anyway
     if (rhs >= bitWidth)
         return SVInt(bitWidth, 0, signFlag);
-    return lshr((uint32_t)rhs.getAssertUInt64());
+    return lshr(rhs.as<uint32_t>().value());
 }
 
 SVInt SVInt::lshr(uint32_t amount) const {
@@ -505,7 +505,7 @@ SVInt SVInt::ashr(const SVInt& rhs) const {
     if (rhs >= bitWidth)
         return SVInt(bitWidth, *this >= 0 ? 0 : -1, signFlag);
 
-    return ashr((uint32_t)rhs.getAssertUInt64());
+    return ashr(rhs.as<uint32_t>().value());
 }
 
 SVInt SVInt::ashr(uint32_t amount) const {
@@ -575,7 +575,7 @@ SVInt SVInt::ambiguousConditionalCombination(const SVInt& rhs) const {
 
 SVInt SVInt::replicate(const SVInt& times) const {
     // TODO: optimize to avoid all the copies?
-    uint32_t n = times.getAssertUInt32();
+    uint32_t n = times.as<uint32_t>().value();
     SmallVectorSized<SVInt, 8> buffer;
     for (size_t i = 0; i < n; ++i)
         buffer.append(*this);
@@ -711,7 +711,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
                 SVInt remainder;
                 SVInt quotient;
                 divide(tmp, tmp.getNumWords(), divisor, divisor.getNumWords(), &quotient, &remainder);
-                uint64_t digit = remainder.getAssertUInt64();
+                uint64_t digit = remainder.as<uint64_t>().value();
                 ASSERT(digit < 10);
                 buffer.append(Digits[digit]);
                 tmp = quotient;
@@ -1240,7 +1240,7 @@ logic_t SVInt::operator[](uint32_t index) const {
 
 SVInt SVInt::operator()(const SVInt& msb, const SVInt& lsb) const {
     // TODO:
-    return (*this)((uint16_t)msb.getAssertUInt64(), (uint16_t)lsb.getAssertUInt64());
+    return (*this)((uint16_t)msb.as<uint64_t>().value(), (uint16_t)lsb.as<uint64_t>().value());
 }
 
 SVInt SVInt::operator()(uint16_t msb, uint16_t lsb) const {
@@ -1350,34 +1350,6 @@ void SVInt::getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const {
         mask = UINT64_MAX;
         bitsInMsw = BITS_PER_WORD;
     }
-}
-
-uint16_t SVInt::getAssertUInt16() const {
-    // assert that this value fits within a uint64
-    ASSERT(getActiveBits() <= 16);
-    return (uint16_t)getRawData()[0];
-}
-
-uint32_t SVInt::getAssertUInt32() const {
-    // assert that this value fits within a uint64
-    ASSERT(getActiveBits() <= 32);
-    return (uint32_t)getRawData()[0];
-}
-
-uint64_t SVInt::getAssertUInt64() const {
-    // assert that this value fits within a uint64
-    if (isSingleWord())
-        return val;
-    ASSERT(getActiveBits() <= 64);
-    return pVal[0];
-}
-
-int64_t SVInt::getAssertInt64() const {
-    // assert that this value fits within a int64
-    if (isSingleWord())
-        return val;
-    ASSERT(getActiveBits() <= 64);
-    return pVal[0];
 }
 
 uint32_t SVInt::countLeadingZerosSlowCase() const {

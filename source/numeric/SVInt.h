@@ -193,13 +193,6 @@ public:
     bool hasUnknown() const { return unknownFlag; }
     uint16_t getBitWidth() const { return bitWidth; }
 
-    /// Assert that the integer value can fit into a single integer and return it.
-    uint16_t getAssertUInt16() const;
-    uint32_t getAssertUInt32() const;
-    uint64_t getAssertUInt64() const;
-
-    int64_t getAssertInt64() const;
-
     /// Checks whether it's possible to convert the value to a simple built-in
     /// integer type and if so returns it.
     template<typename T>

@@ -489,7 +489,7 @@ void checkTimeLiteral(const std::string& s, TimeUnit flagCheck, double num) {
     const double* doubValue = std::get_if<double>(&token.numericValue());
 
     if (svIntValue)
-        value = (double)svIntValue->getAssertUInt16();
+        value = (double)svIntValue->as<uint16_t>().value();
     else if (doubValue)
         value = *doubValue;
     else

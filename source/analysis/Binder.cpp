@@ -426,7 +426,7 @@ BoundExpression& Binder::bindMultipleConcatenationExpression(const MultipleConca
     // TODO: in cases like these, should we bother storing the bound expression? should we at least cache the result
     // so we don't have to compute it again elsewhere?
     ConstantEvaluator evaluator;
-    uint16_t replicationTimes = evaluator.evaluateExpr(left).integer().getAssertUInt16();
+    uint16_t replicationTimes = evaluator.evaluateExpr(left).integer().as<uint16_t>().value();
     return root.allocate<BoundBinaryExpression>(syntax, root.getIntegralType(right.type->width() * replicationTimes, false), left, right);
 }
 
@@ -459,14 +459,14 @@ BoundExpression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, co
         case SyntaxKind::SimpleRangeSelect:
             left = &bindAndPropagate(selector.as<RangeSelectSyntax>().left); // msb
             right = &bindAndPropagate(selector.as<RangeSelectSyntax>().right); // lsb
-            width = (down ? 1 : -1) * (int)(evaluator.evaluateExpr(*left).integer().getAssertInt64() -
-                    evaluator.evaluateExpr(*right).integer().getAssertInt64());
+            width = (down ? 1 : -1) * (int)(evaluator.evaluateExpr(*left).integer().as<int64_t>().value() -
+                    evaluator.evaluateExpr(*right).integer().as<int64_t>().value());
             break;
         case SyntaxKind::AscendingRangeSelect:
         case SyntaxKind::DescendingRangeSelect:
             left = &bindAndPropagate(selector.as<RangeSelectSyntax>().left); // msb/lsb
             right = &bindAndPropagate(selector.as<RangeSelectSyntax>().right); // width
-            width = int(evaluator.evaluateExpr(*right).integer().getAssertInt64());
+            width = int(evaluator.evaluateExpr(*right).integer().as<int64_t>().value());
             break;
 
         DEFAULT_UNREACHABLE;

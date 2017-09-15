@@ -23,6 +23,8 @@ inline uint32_t clog2(uint64_t value) {
         return 0;
     return index + (value & (value - 1) ? 1 : 0);
 #else
+    if (value == 0)
+        return 0;
     uint32_t log = sizeof(value) * CHAR_BIT - 1 - __builtin_clzll(value);
     return (value - (1 << log)) ? log + 1 : log;
 #endif
