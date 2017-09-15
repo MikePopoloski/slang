@@ -123,3 +123,43 @@ inline const ExpressionSyntax& parseExpression(const std::string& text) {
     Parser parser(preprocessor);
     return parser.parseExpression();
 }
+
+class LogicExactlyEqualMatcher : public Catch::MatcherBase<logic_t> {
+public:
+    explicit LogicExactlyEqualMatcher(logic_t v) : value(v) {}
+
+    bool match(const logic_t& t) const final { return exactlyEqual(t, value); }
+
+    std::string describe() const final {
+        std::ostringstream ss;
+        ss << "equals " << value;
+        return ss.str();
+    }
+
+private:
+    logic_t value;
+};
+
+inline LogicExactlyEqualMatcher exactlyEquals(logic_t v) {
+    return LogicExactlyEqualMatcher(v);
+}
+
+class SVIntExactlyEqualMatcher : public Catch::MatcherBase<SVInt> {
+public:
+    explicit SVIntExactlyEqualMatcher(SVInt v) : value(v) {}
+
+    bool match(const SVInt& t) const final { return exactlyEqual(t, value); }
+
+    std::string describe() const final {
+        std::ostringstream ss;
+        ss << "equals " << value;
+        return ss.str();
+    }
+
+private:
+    SVInt value;
+};
+
+inline SVIntExactlyEqualMatcher exactlyEquals(SVInt v) {
+    return SVIntExactlyEqualMatcher(v);
+}

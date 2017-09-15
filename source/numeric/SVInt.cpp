@@ -17,8 +17,8 @@ namespace slang {
 
 #include "SVIntHelpers.h"
 
-const logic_t logic_t::x = logic_t(logic_t::X_VALUE);
-const logic_t logic_t::z = logic_t(logic_t::Z_VALUE);
+const logic_t logic_t::x {logic_t::X_VALUE};
+const logic_t logic_t::z {logic_t::Z_VALUE};
 
 const SVInt SVInt::Zero {0};
 const SVInt SVInt::One {1};
@@ -44,6 +44,16 @@ bool literalBaseFromChar(char base, LiteralBase& result) {
         default:
             return false;
     }
+}
+
+std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
+    if (rhs.value == logic_t::x.value)
+        os << "x";
+    else if (rhs.value == logic_t::z.value)
+        os << "z";
+    else
+        os << (uint32_t)rhs.value;
+    return os;
 }
 
 SVInt SVInt::fromString(string_view str) {
@@ -163,7 +173,9 @@ SVInt SVInt::fromString(string_view str) {
 
 SVInt SVInt::fromDigits(uint16_t bits, LiteralBase base, bool isSigned,
                         bool anyUnknown, span<logic_t const> digits) {
-    ASSERT(!digits.empty());
+    if (digits.empty())
+        throw std::invalid_argument("No digits provided");
+
     int radix = 0;
     int shift = 0;
     switch (base) {
@@ -213,13 +225,13 @@ SVInt SVInt::fromDigits(uint16_t bits, LiteralBase base, bool isSigned,
         for (const logic_t& d : digits) {
             // In base ten we can't have individual bits be X or Z, it's all or nothing
             if (anyUnknown) {
-                ASSERT(digits.size() == 1);
-                if (exactlyEqual(d, logic_t::x))
-                    return createFillX(bits, isSigned);
-                else if (exactlyEqual(d, logic_t::z))
+                if (digits.size() != 1)
+                    throw std::invalid_argument("If a decimal number is unknown, it must have exactly one digit.");
+
+                if (exactlyEqual(d, logic_t::z))
                     return createFillZ(bits, isSigned);
                 else
-                    throw std::invalid_argument("Expected unknown digit");
+                    return createFillX(bits, isSigned);
             }
 
             int value = d.value;
@@ -409,10 +421,6 @@ SVInt SVInt::shl(const SVInt& rhs) const {
 }
 
 SVInt SVInt::shl(uint32_t amount) const {
-    return shl(amount, true);
-}
-
-SVInt SVInt::shl(uint32_t amount, bool doCheckUnknown) const {
     // handle trivial cases
     if (amount == 0)
         return *this;
@@ -444,11 +452,7 @@ SVInt SVInt::shl(uint32_t amount, bool doCheckUnknown) const {
 
     SVInt result(newVal, bitWidth, signFlag, unknownFlag);
     result.clearUnusedBits();
-
-    // our fromString() routine uses shl() on newly constructed unknown values
-    // which we don't want to remove here
-    if (doCheckUnknown)
-        result.checkUnknown();
+    result.checkUnknown();
     return result;
 }
 
@@ -643,6 +647,24 @@ size_t SVInt::hash(size_t seed) const {
     return xxhash(getRawData(), getNumWords() * WORD_SIZE, seed);
 }
 
+std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {
+    os << rhs.toString();
+    return os;
+}
+
+std::string SVInt::toString() const {
+    // guess the base to use
+    LiteralBase base;
+    if (bitWidth < 8)
+        base = LiteralBase::Binary;
+    else if (!unknownFlag && (bitWidth == 32 || signFlag))
+        base = LiteralBase::Decimal;
+    else
+        base = LiteralBase::Hex;
+
+    return toString(base);
+}
+
 std::string SVInt::toString(LiteralBase base) const {
     SmallVectorSized<char, 32> buffer;
     writeTo(buffer, base);
@@ -668,7 +690,6 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
             case LiteralBase::Octal: buffer.append('o'); break;
             case LiteralBase::Decimal: buffer.append('d'); break;
             case LiteralBase::Hex: buffer.append('h'); break;
-            default: ASSERT(false, "Unknown base"); break;
         }
     }
 
@@ -704,7 +725,6 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
             case LiteralBase::Binary: shiftAmount = 1; maskAmount = 1; break;
             case LiteralBase::Octal: shiftAmount = 3; maskAmount = 7; break;
             case LiteralBase::Hex: shiftAmount = 4; maskAmount = 15; break;
-            default: ASSERT(false, "Impossible"); break;
         }
 
         // if we have unknown values here, the comparison will return X
@@ -1433,11 +1453,11 @@ void SVInt::setUnknownBit(int index, logic_t bit) {
             pVal[whichWord(index)] |= maskBit(index);
             pVal[whichUnknownWord(index)] &= ~maskBit(index);
             break;
-        case 1 << 7: // TODO
+        case logic_t::X_VALUE:
             pVal[whichWord(index)] &= ~maskBit(index);
             pVal[whichUnknownWord(index)] |= maskBit(index);
             break;
-        case 1 << 6: // TODO
+        case logic_t::Z_VALUE:
             pVal[whichWord(index)] |= maskBit(index);
             pVal[whichUnknownWord(index)] |= maskBit(index);
             break;

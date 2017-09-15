@@ -76,22 +76,14 @@ struct logic_t {
 
     logic_t operator~() const { return !(*this); }
     logic_t operator!=(const logic_t& rhs) const { return !((*this) == rhs); }
-    logic_t operator&&(const logic_t& rhs) const { return logic_t((bool)*this && (bool)rhs); }
-    logic_t operator||(const logic_t& rhs) const { return logic_t((bool)*this != 0 || (bool)rhs); }
+    logic_t operator&&(const logic_t& rhs) const { return *this & rhs; }
+    logic_t operator||(const logic_t& rhs) const { return *this | rhs; }
 
     explicit operator bool() const { return !isUnknown() && value != 0; }
 
     friend bool exactlyEqual(logic_t lhs, logic_t rhs) { return lhs.value == rhs.value; }
 
-    friend std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
-        if (rhs.value == x.value)
-            os << "x";
-        else if (rhs.value == z.value)
-            os << "z";
-        else
-            os << rhs.value;
-        return os;
-    }
+    friend std::ostream& operator<<(std::ostream& os, const logic_t& rhs);
 
     static constexpr uint8_t X_VALUE = 1 << 7;
     static constexpr uint8_t Z_VALUE = 1 << 6;
@@ -120,7 +112,7 @@ struct logic_t {
 class SVInt {
 public:
     /// Simple default constructor for convenience, results in a 1 bit zero value.
-    constexpr SVInt() : val(0), bitWidth(1), signFlag(false), unknownFlag(false) {}
+    SVInt() : val(0), bitWidth(1), signFlag(false), unknownFlag(false) {}
 
     /// Construct from a single bit that can be unknown.
     explicit SVInt(logic_t bit) :
@@ -252,6 +244,7 @@ public:
 
     size_t hash(size_t seed = Seed) const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
+    string toString() const;
     string toString(LiteralBase base) const;
 
     /// Power function. Note that the result will have the same bitwidth
@@ -418,19 +411,7 @@ public:
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
-    friend std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {
-        // guess the base to use
-        LiteralBase base;
-        if (rhs.bitWidth < 8)
-            base = LiteralBase::Binary;
-        else if (!rhs.unknownFlag && (rhs.bitWidth == 32 || rhs.signFlag))
-            base = LiteralBase::Decimal;
-        else
-            base = LiteralBase::Hex;
-
-        os << rhs.toString(base);
-        return os;
-    }
+    friend std::ostream& operator<<(std::ostream& os, const SVInt& rhs);
 
     friend SVInt signExtend(const SVInt& value, uint16_t bits);
     friend SVInt zeroExtend(const SVInt& value, uint16_t bits);
@@ -496,9 +477,6 @@ private:
     uint32_t countLeadingZerosSlowCase() const;
     uint32_t countLeadingOnesSlowCase() const;
     uint32_t countPopulation() const;
-
-    // Specialized shift left routine that doesn't remove the unknown flag.
-    SVInt shl(uint32_t amount, bool doCheckUnknown) const;
 
     // Check if we can fit the integer into a single word.
     bool isSingleWord() const { return bitWidth <= BITS_PER_WORD && !unknownFlag; }
