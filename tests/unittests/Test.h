@@ -8,10 +8,15 @@
 #include "text/SourceManager.h"
 #include "util/BumpAllocator.h"
 
-using namespace slang;
+namespace slang {
 
 extern BumpAllocator alloc;
 extern Diagnostics diagnostics;
+
+}
+
+using namespace slang;
+using ppk::assert::AssertionException;
 
 #define CHECK_DIAGNOSTICS_EMPTY do {\
     if (!diagnostics.empty()) FAIL_CHECK(DiagnosticWriter(getSourceManager()).report(diagnostics)); \
