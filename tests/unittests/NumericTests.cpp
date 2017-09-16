@@ -52,6 +52,12 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(value5 == 0);
     CHECK(value5.getBitWidth() == 69);
 
+    SVInt value8 = SVInt::createFillX(878, false);
+    value8.setAllOnes();
+    CHECK_THAT(value8[877], exactlyEquals(logic_t(1)));
+    value8.setAllZ();
+    CHECK_THAT(value8[877], exactlyEquals(logic_t::z));
+
     value1 = std::move(value1);
     value1 = value5;
     CHECK(value1 == value5);
@@ -66,8 +72,8 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK_THAT("100'bx10"_si[1], exactlyEquals(logic_t(1)));
 
     // Make sure to check unknown extension with multiple of 64-bit words also.
-    CHECK_THAT("128'hx10"_si[99], exactlyEquals(logic_t::x));
-    CHECK_THAT("128'bx10"_si[1], exactlyEquals(logic_t(1)));
+    CHECK_THAT("100'hxabcdef987654310"_si[99], exactlyEquals(logic_t::x));
+    CHECK_THAT("100'hxabcdef98765431f"_si[1], exactlyEquals(logic_t(1)));
 
     CHECK_THROWS(""_si);
     CHECK_THROWS("'"_si);
@@ -82,8 +88,9 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK_THROWS("asdf"_si);
     CHECK_THROWS("3'b8"_si);
     CHECK_THROWS("3'dxxx"_si);
-    CHECK_THROWS("3'df"_si);
-    CHECK_THROWS("3'of"_si);
+    CHECK_THROWS("300'df"_si);
+    CHECK_THROWS("300'of"_si);
+    CHECK_THROWS(SVInt::fromDigits(1, LiteralBase::Decimal, false, false, nullptr));
 }
 
 TEST_CASE("logic_t operators", "[numeric]") {
@@ -94,6 +101,7 @@ TEST_CASE("logic_t operators", "[numeric]") {
     CHECK(v2 != logic_t(1));
     CHECK((v1 | v2) == logic_t(1));
     CHECK((v1 & v2) == logic_t(0));
+    CHECK((v1 & v1) == logic_t(1));
     CHECK((v1 ^ v2) == logic_t(1));
     CHECK((v1 && v2) == logic_t(0));
     CHECK((v1 || v2) == logic_t(1));
@@ -146,7 +154,12 @@ TEST_CASE("SVInt to string (and back)", "[numeric]") {
     CHECK("96'd192834"_si.toString(LiteralBase::Binary) == "96'b101111000101000010");
 
     CHECK("1'dz"_si.toString(LiteralBase::Decimal) == "1'dz");
+    CHECK("1'b1"_si.toString() == "1'b1");
     CHECK(SVInt(32, 0, true).toString() == "0");
+
+    ss.str(""); ss << logic_t::x; CHECK(ss.str() == "x");
+    ss.str(""); ss << logic_t::z; CHECK(ss.str() == "z");
+    ss.str(""); ss << logic_t(1); CHECK(ss.str() == "1");
 }
 
 TEST_CASE("Comparison", "[numeric]") {
@@ -156,6 +169,8 @@ TEST_CASE("Comparison", "[numeric]") {
     CHECK(SVInt(-4) == SVInt(9999, (uint64_t)-4, true));
     CHECK("12'b101"_si == 5);
     CHECK("12'b101"_si != 10);
+    CHECK(!bool(!SVInt(4)));
+    CHECK(bool(!SVInt(0)));
 
     CHECK("999'd37"_si < 39);
     CHECK("100'd999999999999999999999999"_si <= "120'd999999999999999999999999"_si);
@@ -172,6 +187,9 @@ TEST_CASE("Comparison", "[numeric]") {
     CHECK_THAT(v, exactlyEquals("6'bxxxxxx"_si));
     v.setAllZ();
     CHECK_THAT(v, exactlyEquals("6'bzz??ZZ"_si));
+    CHECK_THAT("1'bx"_si > 4, exactlyEquals(logic_t::x));
+
+    CHECK_THAT(SVInt(logic_t::x) > SVInt(logic_t::z), exactlyEquals(logic_t::x));
 }
 
 TEST_CASE("Arithmetic", "[numeric]") {
@@ -191,14 +209,51 @@ TEST_CASE("Arithmetic", "[numeric]") {
     --v1;
     CHECK(v2 == v1);
 
+    SVInt v3 = "10'bx"_si;
+    ++v3;
+    CHECK_THAT(v3, exactlyEquals("10'bx"_si));
+    v3 = SVInt(4, 1, false);
+    ++v3;
+    CHECK(v3 == 2);
+
+    SVInt v4 = "10'bx"_si;
+    --v4;
+    CHECK_THAT(v4, exactlyEquals("10'bx"_si));
+    v4 = SVInt(4, 1, false);
+    --v4;
+    CHECK(v4 == 0);
+
     CHECK(SVInt(64, 3, false).pow(SVInt(918245)) == "64'd12951281834385883507"_si);
+
+    CHECK(clog2("900'd982134098123403498298103"_si) == 80);
+    CHECK(clog2(SVInt::Zero) == 0);
+
+    CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
 }
 
 TEST_CASE("Shifting", "[numeric]") {
     CHECK("100'b11110000111"_si.lshr(5) == 60);
-    CHECK_THAT("100'b11xxxZ00101"_si.lshr(7), exactlyEquals("20'b11xx"_si));
     CHECK("64"_si.shl(3) == 512);
+
+    CHECK("129'd12341234"_si.shl(SVInt(129)) == 0);
+    CHECK("129'd12341234"_si.shl(129) == 0);
+    CHECK("129'd12341234"_si.shl(0) == "129'd12341234"_si);
+
+    CHECK("129'd12341234"_si.lshr(SVInt(129)) == 0);
+    CHECK("129'd12341234"_si.lshr(129) == 0);
+    CHECK("129'd12341234"_si.lshr(0) == "129'd12341234"_si);
+
+    CHECK("129'd12341234"_si.ashr(SVInt(129)) == 0);
+    CHECK("-129'sd12341234"_si.ashr(SVInt(129)) == -1);
+    CHECK("129'd12341234"_si.ashr(129) == 0);
+    CHECK("-129'sd12341234"_si.ashr(129) == -1);
+    CHECK("129'd12341234"_si.ashr(0) == "129'd12341234"_si);
+
     CHECK_THAT("52'hffxx"_si.shl(4), exactlyEquals("52'hffxx0"_si));
+    CHECK_THAT("100'b11xxxZ00101"_si.lshr(7), exactlyEquals("20'b11xx"_si));
+    CHECK_THAT("100'b1x"_si.shl(SVInt(logic_t::x)), exactlyEquals("100'bx"_si));
+    CHECK_THAT("100'b1x"_si.lshr(SVInt(logic_t::x)), exactlyEquals("100'bx"_si));
+    CHECK_THAT("100'sb1x"_si.ashr(SVInt(logic_t::x)), exactlyEquals("100'bx"_si));
 }
 
 TEST_CASE("Bitwise", "[numeric]") {
@@ -207,9 +262,17 @@ TEST_CASE("Bitwise", "[numeric]") {
     CHECK_THAT("100'b11xx1Z00x10"_si ^ "90'b10101xzx01z"_si, exactlyEquals("90'b01xx0xxxx0x"_si));
     CHECK_THAT("11'b11xx1Z00x10"_si.xnor("11'b10101xzx01z"_si), exactlyEquals("11'b10xx1xxxx1x"_si));
     CHECK_THAT(~"11'b11xx1Z00x10"_si, exactlyEquals("12'b00xx0x11x01"_si));
+    CHECK_THAT(~"6'b101011"_si, exactlyEquals("6'b010100"_si));
+
+    CHECK_THAT("65'b110"_si.xnor("12'b101"_si), exactlyEquals("65'h1fffffffffffffffc"_si));
+    CHECK_THAT("5'b110"_si.xnor("10'b101"_si), exactlyEquals("10'b1111111100"_si));
 
     CHECK("100'h1000000000000000"_si.reductionOr() == logic_t(1));
     CHECK("100'h10111111111111111111111111111111111"_si.reductionAnd() == logic_t(0));
     CHECK("35'b11111111111111111111111111111111111"_si.reductionAnd() == logic_t(1));
     CHECK("35'b11111100000011111111111111111101110"_si.reductionXor() == logic_t(1));
+
+    CHECK_THAT("1'bx"_si.reductionAnd(), exactlyEquals(logic_t::x));
+    CHECK_THAT("1'bx"_si.reductionOr(), exactlyEquals(logic_t::x));
+    CHECK_THAT("1'bx"_si.reductionXor(), exactlyEquals(logic_t::x));
 }

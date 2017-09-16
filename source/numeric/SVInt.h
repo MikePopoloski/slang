@@ -256,9 +256,6 @@ public:
     SVInt lshr(const SVInt& rhs) const;
     SVInt lshr(uint32_t amount) const;
 
-    /// Bitwise xnor.
-    SVInt xnor(const SVInt& rhs) const;
-
     /// The operation SV applies for 'x ? lhs : rhs
     SVInt ambiguousConditionalCombination(const SVInt& rhs) const;
 
@@ -333,6 +330,9 @@ public:
         rhs.pVal = 0;
         return *this;
     }
+
+    /// Bitwise xnor.
+    SVInt xnor(const SVInt& rhs) const;
 
     SVInt& operator&=(const SVInt& rhs);
     SVInt& operator|=(const SVInt& rhs);
@@ -455,9 +455,10 @@ public:
 private:
     // fast internal constructors to just set fields on new values
     SVInt(uint64_t* data, uint16_t bits, bool signFlag, bool unknownFlag) :
-        pVal(data), bitWidth(bits), signFlag(signFlag), unknownFlag(unknownFlag)
-    {
-    }
+        pVal(data), bitWidth(bits), signFlag(signFlag), unknownFlag(unknownFlag) {}
+
+    static SVInt allocUninitialized(uint16_t bits, bool signFlag, bool unknownFlag);
+    static SVInt allocZeroed(uint16_t bits, bool signFlag, bool unknownFlag);
 
     // Initialization routines for various cases.
     void initSlowCase(logic_t bit);
