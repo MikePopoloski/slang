@@ -205,7 +205,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
     // and v so that its high bits are shifted to the top of v's range without
     // overflow. Note that this can require an extra word in u so that u must
     // be of length m+n+1.
-    uint32_t shift = countLeadingZeros(v[n - 1]);
+    uint32_t shift = countLeadingZeros32(v[n - 1]);
     uint32_t v_carry = 0;
     uint32_t u_carry = 0;
     if (shift) {
@@ -290,7 +290,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
     if (r) {
         // The value d is expressed by the "shift" value above since we avoided
         // multiplication by d by using a shift left. So, all we have to do is
-        // shift right here. In order to mak
+        // shift right here.
         if (shift) {
             uint32_t carry = 0;
             for (int i = n - 1; i >= 0; i--) {

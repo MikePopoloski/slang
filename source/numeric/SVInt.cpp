@@ -1371,14 +1371,14 @@ uint32_t SVInt::countLeadingZerosSlowCase() const {
     uint32_t i = getNumWords();
     uint64_t part = pVal[i - 1] & mask;
     if (part)
-        return slang::countLeadingZeros(part) - (BITS_PER_WORD - bitsInMsw);
+        return slang::countLeadingZeros64(part) - (BITS_PER_WORD - bitsInMsw);
 
     int count = bitsInMsw;
     for (--i; i > 0; --i) {
         if (pVal[i - 1] == 0)
             count += BITS_PER_WORD;
         else {
-            count += slang::countLeadingZeros(pVal[i - 1]);
+            count += slang::countLeadingZeros64(pVal[i - 1]);
             break;
         }
     }
@@ -1394,13 +1394,13 @@ uint32_t SVInt::countLeadingOnesSlowCase() const {
         shift = BITS_PER_WORD - bitsInMsw;
 
     int i = getNumWords() - 1;
-    uint32_t count = slang::countLeadingOnes(pVal[i] << shift);
+    uint32_t count = slang::countLeadingOnes64(pVal[i] << shift);
     if (count == bitsInMsw) {
         for (i--; i >= 0; i--) {
             if (pVal[i] == (uint64_t)-1)
                 count += BITS_PER_WORD;
             else {
-                count += slang::countLeadingOnes(pVal[i]);
+                count += slang::countLeadingOnes64(pVal[i]);
                 break;
             }
         }
@@ -1412,11 +1412,11 @@ uint32_t SVInt::countLeadingOnesSlowCase() const {
 uint32_t SVInt::countPopulation() const {
     // don't worry about unknowns in this function; only use it if the number is all known
     if (isSingleWord())
-        return slang::countPopulation(val);
+        return slang::countPopulation64(val);
 
     uint32_t count = 0;
     for (uint32_t i = 0; i < getNumWords(); i++)
-        count += slang::countPopulation(pVal[i]);
+        count += slang::countPopulation64(pVal[i]);
     return count;
 }
 
@@ -1470,11 +1470,10 @@ SVInt SVInt::createFillZ(uint16_t bitWidth, bool isSigned) {
 }
 
 void SVInt::splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords) {
-    const uint64_t mask = ~0ull >> sizeof(uint32_t) * CHAR_BIT;
     for (uint32_t i = 0; i < numWords; i++) {
-        uint64_t val = value.getNumWords() == 1 ? value.val : value.pVal[i];
-        dest[i * 2] = uint32_t(val & mask);
-        dest[i * 2 + 1] = uint32_t(val >> (sizeof(uint32_t) * CHAR_BIT));
+        uint64_t val = value.getRawData()[i];
+        dest[i * 2] = uint32_t(val);
+        dest[i * 2 + 1] = uint32_t(val >> 32);
     }
 }
 
@@ -1526,7 +1525,10 @@ void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32
     }
 
     // Initialize the dividend and divisor
+    memset(u, 0, (dividendWords + 1) * sizeof(uint32_t));
     splitWords(lhs, u, lhsWords);
+
+    memset(v, 0, divisorWords * sizeof(uint32_t));
     splitWords(rhs, v, rhsWords);
 
     // Initialize quotient and remainder

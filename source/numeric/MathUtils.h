@@ -30,9 +30,23 @@ inline uint32_t clog2(uint64_t value) {
 #endif
 }
 
+/// If value is zero, returns 32. Otherwise, returns the number of zeros, starting
+/// from the MSB.
+inline uint32_t countLeadingZeros32(uint32_t value) {
+    if (value == 0)
+        return 32;
+#if defined (_MSC_VER)
+    unsigned long index;
+    _BitScanReverse(&index, value);
+    return index ^ 31;
+#else
+    return __builtin_clz(value);
+#endif
+}
+
 /// If value is zero, returns 64. Otherwise, returns the number of zeros, starting
 /// from the MSB.
-inline uint32_t countLeadingZeros(uint64_t value) {
+inline uint32_t countLeadingZeros64(uint64_t value) {
     if (value == 0)
         return 64;
 #if defined (_MSC_VER)
@@ -44,11 +58,11 @@ inline uint32_t countLeadingZeros(uint64_t value) {
 #endif
 }
 
-inline uint32_t countLeadingOnes(uint64_t value) {
-    return countLeadingZeros(~value);
+inline uint32_t countLeadingOnes64(uint64_t value) {
+    return countLeadingZeros64(~value);
 }
 
-inline int countPopulation(uint64_t value) {
+inline int countPopulation64(uint64_t value) {
 #if defined (_MSC_VER)
     return (int)__popcnt64(value);
 #else

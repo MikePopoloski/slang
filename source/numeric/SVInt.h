@@ -129,9 +129,9 @@ public:
         val(value), signFlag(true), unknownFlag(false)
     {
         if (value < 0)
-            bitWidth = uint16_t(64 - slang::countLeadingOnes(value) + 1);
+            bitWidth = uint16_t(64 - slang::countLeadingOnes64(value) + 1);
         else
-            bitWidth = uint16_t(64 - slang::countLeadingZeros(value) + 1);
+            bitWidth = uint16_t(64 - slang::countLeadingZeros64(value) + 1);
         clearUnusedBits();
     }
 
@@ -288,7 +288,7 @@ public:
     /// unknown values, so make sure you know what you're doing with it.
     uint32_t countLeadingZeros() const {
         if (isSingleWord())
-            return slang::countLeadingZeros(val) - (BITS_PER_WORD - bitWidth);
+            return slang::countLeadingZeros64(val) - (BITS_PER_WORD - bitWidth);
         return countLeadingZerosSlowCase();
     }
 
@@ -296,7 +296,7 @@ public:
     /// unknown values, so make sure you know what you're doing with it.
     uint32_t countLeadingOnes() const {
         if (isSingleWord())
-            return slang::countLeadingOnes(val << (BITS_PER_WORD - bitWidth));
+            return slang::countLeadingOnes64(val << (BITS_PER_WORD - bitWidth));
         return countLeadingOnesSlowCase();
     }
 

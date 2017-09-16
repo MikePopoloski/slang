@@ -227,34 +227,12 @@ TEST_CASE("Arithmetic", "[numeric]") {
     CHECK("32'sd32"_si - "100'sd32"_si == 0);
     CHECK("100'sd99999999999"_si * "-120'sd999987654321"_si == "-137'sd99998765431100012345679"_si);
     CHECK("-120'sd999987654321"_si * "0"_si == 0);
-    CHECK("100'sd99999999999"_si / "-120'sd987654321"_si == SVInt(-101));
-    CHECK("100'sd99999999999"_si % "120'sd987654321"_si == SVInt(246913578));
-    CHECK((SVInt(64, (uint64_t)-7, true) % SVInt(64, 3, true)) == (uint64_t)-1);
-
+    
     CHECK_THAT("100'bx"_si + "98'bx"_si, exactlyEquals("100'bx"_si));
     CHECK_THAT("100'bx"_si - "98'bx"_si, exactlyEquals("100'bx"_si));
     CHECK_THAT("100'bx"_si * "98'bx"_si, exactlyEquals("100'bx"_si));
     CHECK_THAT("100'bx"_si / "98'bx"_si, exactlyEquals("100'bx"_si));
     CHECK_THAT("100'bx"_si % "98'bx"_si, exactlyEquals("100'bx"_si));
-
-    CHECK_THAT("100"_si / "0"_si, exactlyEquals("32'dx"_si));
-    CHECK_THAT("100"_si % "0"_si, exactlyEquals("32'dx"_si));
-
-    CHECK("-50"_si / "-50"_si == 1);
-    CHECK("-50"_si / "25"_si == -2);
-    CHECK("-50"_si % "-40"_si == -10);
-    CHECK("-50"_si % "40"_si == -10);
-
-    SVInt v7 = "19823'd234098234098234098234"_si;
-    CHECK("300'd0"_si / "10"_si == 0);
-    CHECK(v7 / v7 == 1);
-    CHECK(v7 / "19823'd234098234098234098235"_si == 0);
-    CHECK(v7 / "19823'd11109832458345098"_si == 21071);
-
-    CHECK("300'd0"_si % "10"_si == 0);
-    CHECK(v7 % v7 == 0);
-    CHECK(v7 % "19823'd234098234098234098235"_si == v7);
-    CHECK(v7 % "19823'd11109832458345098"_si == "100'd2954368444538276"_si);
 
     SVInt v1 = "99'd99999999"_si;
     SVInt v2 = v1++;
@@ -287,6 +265,72 @@ TEST_CASE("Arithmetic", "[numeric]") {
     CHECK(v6 == -2);
 
     CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
+}
+
+void testDiv(SVInt a, SVInt b, SVInt c) {
+    // Test division and remainder using: (a * b + c) / a
+    REQUIRE(a >= b);
+    REQUIRE(a > c);
+
+    auto p = a * b + c;
+    auto q = p / a;
+    auto r = p % a;
+    CHECK(b == q);
+    CHECK(c == r);
+
+    if (b > c) {
+        q = p / b;
+        r = p % b;
+        CHECK(a == q);
+        CHECK(c == r);
+    }
+}
+
+TEST_CASE("Division", "[numeric]") {
+    // Division / remainder are very complicated, so split out there tests here.
+    CHECK("100'sd99999999999"_si / "-120'sd987654321"_si == SVInt(-101));
+    CHECK("100'sd99999999999"_si % "120'sd987654321"_si == SVInt(246913578));
+    CHECK((SVInt(64, (uint64_t)-7, true) % SVInt(64, 3, true)) == (uint64_t)-1);
+
+    CHECK_THAT("100"_si / "0"_si, exactlyEquals("32'dx"_si));
+    CHECK_THAT("100"_si % "0"_si, exactlyEquals("32'dx"_si));
+
+    CHECK("-50"_si / "-50"_si == 1);
+    CHECK("-50"_si / "25"_si == -2);
+    CHECK("-50"_si % "-40"_si == -10);
+    CHECK("-50"_si % "40"_si == -10);
+
+    SVInt v7 = "19823'd234098234098234098234"_si;
+    CHECK("300'd0"_si / "10"_si == 0);
+    CHECK(v7 / v7 == 1);
+    CHECK(v7 / "19823'd234098234098234098235"_si == 0);
+    CHECK(v7 / "19823'd11109832458345098"_si == 21071);
+
+    CHECK("300'd0"_si % "10"_si == 0);
+    CHECK(v7 % v7 == 0);
+    CHECK(v7 % "19823'd234098234098234098235"_si == v7);
+    CHECK(v7 % "19823'd11109832458345098"_si == "100'd2954368444538276"_si);
+
+    // Test corner cases of the Knuth division algorithm that are rarely executed.
+    testDiv("256'h1ffffffffffffffff"_si, "256'h1ffffffffffffffff"_si, "256'h0"_si);
+    testDiv("1024'h112233ceffcecece000000fffffffffffffffffffffffffff"
+            "fffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            "ffffffffffffffffffffffffffffffff33"_si,
+
+            "1024'h111111fffffffffffffffffffffffffffffffffffffffffff"
+            "ffffffffffffffffffffffffffffffffffccfffffffffffffffffff"
+            "ffffffffffff00"_si,
+
+            "1024'd7919"_si);
+
+    testDiv("512'hffffffffffffffff00000000000000000000000001"_si,
+            "512'h10000000000000001000000000000001"_si,
+            "512'h10000000000000000000000000000000"_si);
+
+    testDiv("224'h800000008000000200000005"_si, "224'hfffffffd"_si, "224'h80000000800000010000000f"_si);
+    testDiv("256'h80000001ffffffffffffffff"_si, "256'hffffffffffffff0000000"_si, "256'd4219"_si);
+    testDiv("4096'd5"_si.shl(2001), "4096'd1"_si.shl(2000), "4096'd54847"_si);
+    testDiv("1024'd19"_si.shl(811), "1024'd4356013"_si, "1024'd1"_si);
 }
 
 TEST_CASE("Power", "[numeric]") {
