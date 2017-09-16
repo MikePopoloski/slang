@@ -666,29 +666,55 @@ TEST_CASE("begin_keywords (nested)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+std::optional<Timescale> lexTimescale(string_view text) {
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token);
+    return preprocessor.getTimescale();
+}
+
 TEST_CASE("timescale directive", "[preprocessor]") {
-    lexToken("`timescale 10 ns / 1 fs");
+    auto ts = lexTimescale("`timescale 10 ns / 1 fs");
     CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(ts.has_value());
+    CHECK(ts->base.magnitude == TimescaleMagnitude::Ten);
+    CHECK(ts->base.unit == TimeUnit::Nanoseconds);
+    CHECK(ts->precision.magnitude == TimescaleMagnitude::One);
+    CHECK(ts->precision.unit == TimeUnit::Femtoseconds);
 
-    lexToken("`timescale 100 s / 10fs");
+    ts = lexTimescale("`timescale 100 s / 10ms");
     CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(ts.has_value());
+    CHECK(ts->base.magnitude == TimescaleMagnitude::Hundred);
+    CHECK(ts->base.unit == TimeUnit::Seconds);
+    CHECK(ts->precision.magnitude == TimescaleMagnitude::Ten);
+    CHECK(ts->precision.unit == TimeUnit::Milliseconds);
 
-    lexToken("`timescale 1s/1fs");
+    ts = lexTimescale("`timescale 1us/1ps");
     CHECK_DIAGNOSTICS_EMPTY;
+    REQUIRE(ts.has_value());
+    CHECK(ts->base.magnitude == TimescaleMagnitude::One);
+    CHECK(ts->base.unit == TimeUnit::Microseconds);
+    CHECK(ts->precision.magnitude == TimescaleMagnitude::One);
+    CHECK(ts->precision.unit == TimeUnit::Picoseconds);
 
-    lexToken("`timescale 10fs / 100fs");
+    lexTimescale("`timescale 10fs / 100fs");
     CHECK(!diagnostics.empty());
 
-    lexToken("`timescale 10fs 100ns");
+    lexTimescale("`timescale 10fs 100ns");
     CHECK(!diagnostics.empty());
 
-    lexToken("`timescale 1fs / 10us");
+    lexTimescale("`timescale 1fs / 10us");
     CHECK(!diagnostics.empty());
 
-    lexToken("`timescale 1 bs / 2fs");
+    lexTimescale("`timescale 1 bs / 2fs");
     CHECK(!diagnostics.empty());
 
-    lexToken("`timescale 1.2fs / 1fs");
+    lexTimescale("`timescale 1.2fs / 1fs");
     CHECK(!diagnostics.empty());
 }
 

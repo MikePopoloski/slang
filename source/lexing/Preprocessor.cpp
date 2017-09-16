@@ -10,6 +10,34 @@
 #include "text/SourceManager.h"
 #include "util/BumpAllocator.h"
 
+namespace {
+
+using namespace slang;
+
+bool checkTimeMagnitude(Token t, string_view& text, TimescaleMagnitude& magnitude) {
+    const SVInt* val = std::get_if<SVInt>(&t.numericValue());
+    if (!val)
+        return false;
+    else if (*val == 1) {
+        text = "1";
+        magnitude = TimescaleMagnitude::One;
+    }
+    else if (*val == 10) {
+        text = "10";
+        magnitude = TimescaleMagnitude::Ten;
+    }
+    else if (*val == 100) {
+        text = "100";
+        magnitude = TimescaleMagnitude::Hundred;
+    }
+    else {
+        return false;
+    }
+    return true;
+}
+
+}
+
 namespace slang {
 
 SyntaxKind getDirectiveKind(string_view directive);
@@ -548,7 +576,9 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
     if (token.kind == TokenKind::IntegerLiteral) {
         value = consume();
         unit = expect(TokenKind::Identifier);
-        return true;
+
+        string_view unused;
+        return checkTimeMagnitude(value, unused, magnitude);
     }
 
     if (token.kind == TokenKind::TimeLiteral) {
@@ -556,36 +586,17 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
         // output the split tokens, even though those split tokens might be
         // invalid if the data is poorly formated, i.e with a number other than
         // 1,10,100
+        string_view numText;
+        bool success = checkTimeMagnitude(token, numText, magnitude);
 
         // get_if necessary to check for the case where there is a double TimeLiteral
-        bool success = true;
         SVInt dummy(16, 0, true);
         const SVInt* val = std::get_if<SVInt>(&token.numericValue());
-
-        string_view numText;
-        if (!val) {
-            // create a dummy value to place in the generated token
+        if (!val)
             val = &dummy;
-            success = false;
-        }
-        else if (*val == 1) {
-            numText = "1";
-            magnitude = TimescaleMagnitude::One;
-        }
-        else if (*val == 10) {
-            numText = "10";
-            magnitude = TimescaleMagnitude::Ten;
-        }
-        else if (*val == 100) {
-            numText = "100";
-            magnitude = TimescaleMagnitude::Hundred;
-        }
-        else {
-            success = false;
-        }
 
         // generate the tokens that come from splitting the TimeLiteral
-        Token::Info* valueInfo = alloc.emplace<Token::Info>(token.trivia(),
+        auto valueInfo = alloc.emplace<Token::Info>(token.trivia(),
             numText, token.location(), token.getInfo()->flags);
         value = *alloc.emplace<Token>(TokenKind::IntegerLiteral, valueInfo);
         valueInfo->setNumInfo(*val);
