@@ -300,6 +300,10 @@ public:
         return countLeadingOnesSlowCase();
     }
 
+    /// Count the number of set bits in the number. This doesn't do anything special for
+    /// unknown values, so make sure you know what you're doing with it.
+    uint32_t countPopulation() const;
+
     SVInt& operator=(const SVInt& rhs) {
         if (isSingleWord() && rhs.isSingleWord()) {
             val = rhs.val;
@@ -402,6 +406,12 @@ public:
     /// Evaluates a conditional expression; i.e. condition ? left : right
     static SVInt conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs);
 
+    /// Implements logical implication: lhs -> rhs. This is equivalent to (!lhs || rhs).
+    static logic_t logicalImplication(const SVInt& lhs, const SVInt& rhs);
+
+    /// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs -> lhs)).
+    static logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs) ;
+
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
     friend std::ostream& operator<<(std::ostream& os, const SVInt& rhs);
@@ -470,7 +480,6 @@ private:
     logic_t equalsSlowCase(const SVInt& rhs) const;
     uint32_t countLeadingZerosSlowCase() const;
     uint32_t countLeadingOnesSlowCase() const;
-    uint32_t countPopulation() const;
 
     // Check if we can fit the integer into a single word.
     bool isSingleWord() const { return bitWidth <= BITS_PER_WORD && !unknownFlag; }
@@ -481,17 +490,11 @@ private:
     // Get a specific word holding the given bit index.
     uint64_t getWord(int bitIndex) const { return isSingleWord() ? val : pVal[whichWord(bitIndex)]; }
 
-    // Get a specific unknown control word holding the given bit index.
-    int whichUnknownWord(int bitIndex) const { return whichWord(bitIndex) + getNumWords(bitWidth, false); }
-
     // Get the number of bits that are useful in the top word
     void getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const;
 
     // Get a pointer to the data, either pVal or val depending on whether we have a single word.
     const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
-
-    // Set a specific bit to be a specific 4-state value.
-    void setUnknownBit(int index, logic_t bit);
 
     // Clear out any unused bits in the topmost word if our bit width
     // is not an even multiple of the word size.
@@ -557,10 +560,10 @@ inline bool operator&&(bool lhs, logic_t rhs) { return lhs && (bool)rhs; }
 inline bool operator&&(logic_t lhs, bool rhs) { return (bool)lhs && rhs; }
 
 /// Implements logical implication: lhs -> rhs. This is equivalent to (!lhs || rhs).
-inline logic_t logicalImplication(const SVInt& lhs, const SVInt& rhs) { return !lhs || rhs; }
+inline logic_t SVInt::logicalImplication(const SVInt& lhs, const SVInt& rhs) { return !lhs || rhs; }
 
 /// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs -> lhs)).
-inline logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs) {
+inline logic_t SVInt::logicalEquivalence(const SVInt& lhs, const SVInt& rhs) {
     return logicalImplication(lhs, rhs) && logicalImplication(rhs, lhs);
 }
 

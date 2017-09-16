@@ -1268,7 +1268,9 @@ SVInt SVInt::allocZeroed(uint16_t bits, bool signFlag, bool unknownFlag) {
 
 void SVInt::initSlowCase(logic_t bit) {
     pVal = new uint64_t[getNumWords()]();   // allocation is zero cleared
-    setUnknownBit(0, bit);
+    pVal[1] = 1;
+    if (bit == logic_t::z)
+        pVal[0] = 1;
 }
 
 void SVInt::initSlowCase(uint64_t value) {
@@ -1308,6 +1310,8 @@ SVInt& SVInt::assignSlowCase(const SVInt& rhs) {
         memcpy(pVal, rhs.pVal, rhs.getNumWords() * WORD_SIZE);
     }
     bitWidth = rhs.bitWidth;
+    signFlag = rhs.signFlag;
+    unknownFlag = rhs.unknownFlag;
     return *this;
 }
 
@@ -1414,35 +1418,6 @@ uint32_t SVInt::countPopulation() const {
     for (uint32_t i = 0; i < getNumWords(); i++)
         count += slang::countPopulation(pVal[i]);
     return count;
-}
-
-void SVInt::setUnknownBit(int index, logic_t bit) {
-    // the encoding is:
-    //   - If the bit is known, the trailing array word has a 0 bit set.
-    //   - If the bit is unknown, the trailing array word has a 1 bit set at the right index.
-    //     The primary word has a 0 or 1 to mean X or Z, respectively.
-    ASSERT(unknownFlag);
-    switch (bit.value) {
-        case 0:
-            pVal[whichWord(index)] &= ~maskBit(index);
-            pVal[whichUnknownWord(index)] &= ~maskBit(index);
-            break;
-        case 1:
-            pVal[whichWord(index)] |= maskBit(index);
-            pVal[whichUnknownWord(index)] &= ~maskBit(index);
-            break;
-        case logic_t::X_VALUE:
-            pVal[whichWord(index)] &= ~maskBit(index);
-            pVal[whichUnknownWord(index)] |= maskBit(index);
-            break;
-        case logic_t::Z_VALUE:
-            pVal[whichWord(index)] |= maskBit(index);
-            pVal[whichUnknownWord(index)] |= maskBit(index);
-            break;
-        default:
-            ASSERT(false, "Bad bit value");
-            break;
-    }
 }
 
 void SVInt::clearUnusedBits() {

@@ -36,6 +36,8 @@ TEST_CASE("Construction", "[numeric]") {
 
     value1 = value2;
     CHECK(value1 == value2);
+    value5 = value5;
+    CHECK(value5 == value5);
 
     CHECK(value6.as<uint8_t>() == nullopt);
     CHECK(value6.as<uint16_t>() == uint16_t(-924));
@@ -61,6 +63,19 @@ TEST_CASE("Construction", "[numeric]") {
     value1 = std::move(value1);
     value1 = value5;
     CHECK(value1 == value5);
+
+    // Check copy assignment.
+    SVInt value9 = "124'd123"_si;
+    SVInt two(2);
+    value9 = two;
+    CHECK(value9 == 2);
+
+    SVInt value10 = "124'd123"_si;
+    value9 = value10;
+    CHECK(value9 == 123);
+    SVInt value11 = "10'sbzxzxzz"_si;
+    value9 = value11;
+    CHECK_THAT(value9, exactlyEquals(value11));
 
     CHECK_THAT("13'b1100xZ?01"_si[2], exactlyEquals(logic_t::z));
 
@@ -174,9 +189,16 @@ TEST_CASE("Comparison", "[numeric]") {
 
     CHECK("999'd37"_si < 39);
     CHECK("100'd999999999999999999999999"_si <= "120'd999999999999999999999999"_si);
+    CHECK("100'd999999999999999999999999"_si > "120'd999989999999999999999999"_si);
+    CHECK("100'd999989999999999999999999"_si < "120'd999999999999999999999999"_si);
     CHECK("100'sd99999999999999999999999999"_si >= "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si < "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si >= (uint64_t)-50);
+
+    CHECK(!("-58"_si < "-59"_si));
+    CHECK(!("-58"_si < "-58"_si));
+    CHECK("-58"_si < "-57"_si);
+    CHECK("-58"_si < "57"_si);
 
     SVInt v(6, 0, false);
     v.setAllOnes();
@@ -199,12 +221,40 @@ TEST_CASE("Comparison", "[numeric]") {
 
 TEST_CASE("Arithmetic", "[numeric]") {
     CHECK("100'd99999999999"_si + "120'd987654321"_si == "137'd100987654320"_si);
+    CHECK("120'd99999999999"_si + "100'd987654321"_si == "137'd100987654320"_si);
     CHECK("100'sd99999999999"_si + "-120'sd999987654321"_si == "-137'sd899987654322"_si);
     CHECK("100'sd32"_si - SVInt(32) == 0);
+    CHECK("32'sd32"_si - "100'sd32"_si == 0);
     CHECK("100'sd99999999999"_si * "-120'sd999987654321"_si == "-137'sd99998765431100012345679"_si);
+    CHECK("-120'sd999987654321"_si * "0"_si == 0);
     CHECK("100'sd99999999999"_si / "-120'sd987654321"_si == SVInt(-101));
     CHECK("100'sd99999999999"_si % "120'sd987654321"_si == SVInt(246913578));
     CHECK((SVInt(64, (uint64_t)-7, true) % SVInt(64, 3, true)) == (uint64_t)-1);
+
+    CHECK_THAT("100'bx"_si + "98'bx"_si, exactlyEquals("100'bx"_si));
+    CHECK_THAT("100'bx"_si - "98'bx"_si, exactlyEquals("100'bx"_si));
+    CHECK_THAT("100'bx"_si * "98'bx"_si, exactlyEquals("100'bx"_si));
+    CHECK_THAT("100'bx"_si / "98'bx"_si, exactlyEquals("100'bx"_si));
+    CHECK_THAT("100'bx"_si % "98'bx"_si, exactlyEquals("100'bx"_si));
+
+    CHECK_THAT("100"_si / "0"_si, exactlyEquals("32'dx"_si));
+    CHECK_THAT("100"_si % "0"_si, exactlyEquals("32'dx"_si));
+
+    CHECK("-50"_si / "-50"_si == 1);
+    CHECK("-50"_si / "25"_si == -2);
+    CHECK("-50"_si % "-40"_si == -10);
+    CHECK("-50"_si % "40"_si == -10);
+
+    SVInt v7 = "19823'd234098234098234098234"_si;
+    CHECK("300'd0"_si / "10"_si == 0);
+    CHECK(v7 / v7 == 1);
+    CHECK(v7 / "19823'd234098234098234098235"_si == 0);
+    CHECK(v7 / "19823'd11109832458345098"_si == 21071);
+
+    CHECK("300'd0"_si % "10"_si == 0);
+    CHECK(v7 % v7 == 0);
+    CHECK(v7 % "19823'd234098234098234098235"_si == v7);
+    CHECK(v7 % "19823'd11109832458345098"_si == "100'd2954368444538276"_si);
 
     SVInt v1 = "99'd99999999"_si;
     SVInt v2 = v1++;
@@ -228,9 +278,13 @@ TEST_CASE("Arithmetic", "[numeric]") {
     --v4;
     CHECK(v4 == 0);
 
+    SVInt v5 = "-87'sd38"_si;
+    v5 /= "3"_si;
+    CHECK(v5 == -12);
 
-    CHECK(clog2("900'd982134098123403498298103"_si) == 80);
-    CHECK(clog2(SVInt::Zero) == 0);
+    SVInt v6 = "-87'sd38"_si;
+    v6 %= "3"_si;
+    CHECK(v6 == -2);
 
     CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
 }
@@ -249,7 +303,7 @@ TEST_CASE("Power", "[numeric]") {
     CHECK_THAT(SVInt::One.pow(SVInt(logic_t::z)), exactlyEquals("1'bx"_si));
 
     // -1**y
-    SVInt neg1(16, -1, true);
+    SVInt neg1(16, (uint64_t)-1, true);
     CHECK(neg1.pow(SVInt::Zero) == 1);
     CHECK(neg1.pow("23'sd1333"_si) == -1);
     CHECK(neg1.pow("23'sd1334"_si) == 1);
@@ -257,10 +311,11 @@ TEST_CASE("Power", "[numeric]") {
     CHECK(neg1.pow("-23'sd1334"_si) == 1);
 
     // -x**y
-    SVInt negX(27, -91835, true);
+    SVInt negX(27, (uint64_t)-91835, true);
     CHECK(negX.pow(SVInt::Zero) == 1);
     CHECK(negX.pow("-23'sd1333"_si) == 0);
     CHECK(negX.pow("23'sd33"_si) == 10669765);
+    CHECK(negX.pow("23'sd34"_si) == 65763353);
 
     // x**y
     SVInt posX(27, 901865, true);
@@ -268,6 +323,8 @@ TEST_CASE("Power", "[numeric]") {
     CHECK(posX.pow("-23'sd1333"_si) == 0);
     CHECK(posX.pow("23'sd33"_si) == 5792745);
     
+    CHECK("-3"_si.pow("3"_si) == "-27"_si);
+    CHECK("-3"_si.pow("4"_si) == "81"_si);
     CHECK(SVInt(64, 3, false).pow(SVInt(918245)) == "64'd12951281834385883507"_si);
     CHECK(SVInt(99, 3, false).pow("123'd786578657865786587657658765"_si) == "99'd179325900022335079144376663507"_si);
 }
@@ -302,10 +359,16 @@ TEST_CASE("Shifting", "[numeric]") {
 TEST_CASE("Bitwise", "[numeric]") {
     CHECK_THAT("100'b11xx1Z00x10"_si | "90'b10101xzx01z"_si, exactlyEquals("90'b111x1xxxx1x"_si));
     CHECK_THAT("100'b11xx1Z00x10"_si & "90'b10101xzx01z"_si, exactlyEquals("90'b10x01x00010"_si));
+    CHECK_THAT("90'b11xx1Z00x10"_si & "100'b10101xzx01z"_si, exactlyEquals("90'b10x01x00010"_si));
     CHECK_THAT("100'b11xx1Z00x10"_si ^ "90'b10101xzx01z"_si, exactlyEquals("90'b01xx0xxxx0x"_si));
     CHECK_THAT("11'b11xx1Z00x10"_si.xnor("11'b10101xzx01z"_si), exactlyEquals("11'b10xx1xxxx1x"_si));
     CHECK_THAT(~"11'b11xx1Z00x10"_si, exactlyEquals("12'b00xx0x11x01"_si));
     CHECK_THAT(~"6'b101011"_si, exactlyEquals("6'b010100"_si));
+
+    CHECK(("100'b101"_si | "120'b001"_si) == "120'b101"_si);
+    CHECK(("100'b101"_si ^ "120'b001"_si) == "120'b100"_si);
+    CHECK(("8"_si | "4"_si) == 12);
+    CHECK(("8"_si ^ "4"_si) == "32'b1100"_si);
 
     CHECK_THAT("65'b110"_si.xnor("12'b101"_si), exactlyEquals("65'h1fffffffffffffffc"_si));
     CHECK_THAT("5'b110"_si.xnor("10'b101"_si), exactlyEquals("10'b1111111100"_si));
@@ -314,8 +377,20 @@ TEST_CASE("Bitwise", "[numeric]") {
     CHECK("100'h10111111111111111111111111111111111"_si.reductionAnd() == logic_t(0));
     CHECK("35'b11111111111111111111111111111111111"_si.reductionAnd() == logic_t(1));
     CHECK("35'b11111100000011111111111111111101110"_si.reductionXor() == logic_t(1));
+    CHECK("35'b11111100000011111111111011111101110"_si.reductionXor() == logic_t(0));
+    CHECK("66'hfffffffffffffffff"_si.reductionAnd() == logic_t(1));
+    CHECK("0"_si.reductionOr() == logic_t(0));
+    CHECK("100'd0"_si.reductionOr() == logic_t(0));
 
     CHECK_THAT("1'bx"_si.reductionAnd(), exactlyEquals(logic_t::x));
     CHECK_THAT("1'bx"_si.reductionOr(), exactlyEquals(logic_t::x));
     CHECK_THAT("1'bx"_si.reductionXor(), exactlyEquals(logic_t::x));
+}
+
+TEST_CASE("SVInt misc functions", "[numeric]") {
+    CHECK("100'b111"_si.countLeadingZeros() == 97);
+    CHECK("128'hffff000000000000ffff000000000000"_si.countLeadingOnes() == 16);
+    CHECK("128'hffff000000000000ffff000000000000"_si.countPopulation() == 32);
+    CHECK(clog2("900'd982134098123403498298103"_si) == 80);
+    CHECK(clog2(SVInt::Zero) == 0);
 }
