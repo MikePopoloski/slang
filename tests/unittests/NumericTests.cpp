@@ -190,6 +190,11 @@ TEST_CASE("Comparison", "[numeric]") {
     CHECK_THAT("1'bx"_si > 4, exactlyEquals(logic_t::x));
 
     CHECK_THAT(SVInt(logic_t::x) > SVInt(logic_t::z), exactlyEquals(logic_t::x));
+
+    CHECK(SVInt::conditional(SVInt(1), SVInt(10, 2, false), SVInt(8, 3, false)) == SVInt(2));
+    CHECK(SVInt::conditional(SVInt(0), SVInt(7, 2, false), SVInt(12, 3, false)) == SVInt(3));
+    CHECK_THAT(SVInt::conditional(SVInt(logic_t::x), "4'bx1z0"_si, "4'bz1x0"_si), exactlyEquals("4'bx1x0"_si));
+    CHECK_THAT(SVInt::conditional(SVInt(logic_t::x), "4'b1111"_si, "4'bz1x0"_si), exactlyEquals("4'bx1xx"_si));
 }
 
 TEST_CASE("Arithmetic", "[numeric]") {
@@ -223,12 +228,48 @@ TEST_CASE("Arithmetic", "[numeric]") {
     --v4;
     CHECK(v4 == 0);
 
-    CHECK(SVInt(64, 3, false).pow(SVInt(918245)) == "64'd12951281834385883507"_si);
 
     CHECK(clog2("900'd982134098123403498298103"_si) == 80);
     CHECK(clog2(SVInt::Zero) == 0);
 
     CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
+}
+
+TEST_CASE("Power", "[numeric]") {
+    // 0**y
+    CHECK(SVInt::Zero.pow(SVInt::Zero) == 1);
+    CHECK(SVInt::Zero.pow("20'sb1"_si) == 0);
+    CHECK_THAT(SVInt(logic_t::z).pow(SVInt(10)), exactlyEquals("1'bx"_si));
+    CHECK_THAT(SVInt::Zero.pow("-2'sb1"_si), exactlyEquals("1'bx"_si));
+
+    // 1**y
+    CHECK(SVInt::One.pow(SVInt::Zero) == 1);
+    CHECK(SVInt::One.pow("20'sb100"_si) == 1);
+    CHECK(SVInt::One.pow("-2'sb1"_si) == 1);
+    CHECK_THAT(SVInt::One.pow(SVInt(logic_t::z)), exactlyEquals("1'bx"_si));
+
+    // -1**y
+    SVInt neg1(16, -1, true);
+    CHECK(neg1.pow(SVInt::Zero) == 1);
+    CHECK(neg1.pow("23'sd1333"_si) == -1);
+    CHECK(neg1.pow("23'sd1334"_si) == 1);
+    CHECK(neg1.pow("-23'sd1333"_si) == -1);
+    CHECK(neg1.pow("-23'sd1334"_si) == 1);
+
+    // -x**y
+    SVInt negX(27, -91835, true);
+    CHECK(negX.pow(SVInt::Zero) == 1);
+    CHECK(negX.pow("-23'sd1333"_si) == 0);
+    CHECK(negX.pow("23'sd33"_si) == 10669765);
+
+    // x**y
+    SVInt posX(27, 901865, true);
+    CHECK(posX.pow(SVInt::Zero) == 1);
+    CHECK(posX.pow("-23'sd1333"_si) == 0);
+    CHECK(posX.pow("23'sd33"_si) == 5792745);
+    
+    CHECK(SVInt(64, 3, false).pow(SVInt(918245)) == "64'd12951281834385883507"_si);
+    CHECK(SVInt(99, 3, false).pow("123'd786578657865786587657658765"_si) == "99'd179325900022335079144376663507"_si);
 }
 
 TEST_CASE("Shifting", "[numeric]") {
@@ -238,6 +279,7 @@ TEST_CASE("Shifting", "[numeric]") {
     CHECK("129'd12341234"_si.shl(SVInt(129)) == 0);
     CHECK("129'd12341234"_si.shl(129) == 0);
     CHECK("129'd12341234"_si.shl(0) == "129'd12341234"_si);
+    CHECK("129'b1"_si.shl(1) == "129'b10"_si);
 
     CHECK("129'd12341234"_si.lshr(SVInt(129)) == 0);
     CHECK("129'd12341234"_si.lshr(129) == 0);
@@ -248,6 +290,7 @@ TEST_CASE("Shifting", "[numeric]") {
     CHECK("129'd12341234"_si.ashr(129) == 0);
     CHECK("-129'sd12341234"_si.ashr(129) == -1);
     CHECK("129'd12341234"_si.ashr(0) == "129'd12341234"_si);
+    CHECK("129'sd12341234"_si.ashr(0) == "129'd12341234"_si);
 
     CHECK_THAT("52'hffxx"_si.shl(4), exactlyEquals("52'hffxx0"_si));
     CHECK_THAT("100'b11xxxZ00101"_si.lshr(7), exactlyEquals("20'b11xx"_si));

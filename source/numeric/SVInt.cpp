@@ -20,8 +20,8 @@ namespace slang {
 const logic_t logic_t::x {logic_t::X_VALUE};
 const logic_t logic_t::z {logic_t::Z_VALUE};
 
-const SVInt SVInt::Zero {0};
-const SVInt SVInt::One {1};
+const SVInt SVInt::Zero {0, false};
+const SVInt SVInt::One {1, false};
 
 bool literalBaseFromChar(char base, LiteralBase& result) {
     switch (base) {
@@ -507,38 +507,6 @@ SVInt SVInt::ashr(uint32_t amount) const {
     // Pretend our width is just the width we shifted to, then signExtend
     tmp.bitWidth = (uint16_t)contractedWidth;
     return signExtend(tmp, bitWidth);
-}
-
-SVInt SVInt::ambiguousConditionalCombination(const SVInt& rhs) const {
-    if (exactlyEqual(*this, rhs)) {
-        return rhs;
-    }
-    bool bothSigned = signFlag && rhs.signFlag;
-
-    if (bitWidth != rhs.bitWidth) {
-        if (bitWidth < rhs.bitWidth)
-            return extend(*this, rhs.bitWidth, bothSigned).ambiguousConditionalCombination(rhs);
-        else
-            return this->ambiguousConditionalCombination(extend(rhs, bitWidth, bothSigned));
-    }
-
-    if (isSingleWord()) {
-        // If the inputs are single word, as the inputs are unequal, we need to
-        // combine into a 2-word output with a word for unknowns
-        SVInt tmp = createFillX(bitWidth, bothSigned);
-        tmp.pVal[1] = val ^ rhs.val;
-        tmp.pVal[0] = ~tmp.pVal[1] & val & rhs.val;
-        return tmp;
-    }
-    uint32_t words = getNumWords(bitWidth, false);
-    uint64_t* data = new uint64_t[words * 2]();
-
-    // Unkown if either bit is unknown or bits differ
-    for (uint32_t i = 0; i < words; i++) {
-        data[i + words] = (unknownFlag ? pVal[i + words] : 0) | (rhs.unknownFlag ? rhs.pVal[i + words] : 0) | (pVal[i] ^ rhs.pVal[i]);
-        data[i] = ~data[i + words] & pVal[i] & rhs.pVal[i];
-    }
-    return SVInt(data, bitWidth, bothSigned, true);
 }
 
 SVInt SVInt::replicate(const SVInt& times) const {
@@ -1253,6 +1221,39 @@ SVInt SVInt::operator()(uint16_t msb, uint16_t lsb) const {
         for (uint32_t i = 0; i < result.getNumWords(); i++)
             result.pVal[i] = pVal[i];
     }
+    result.clearUnusedBits();
+    return result;
+}
+
+SVInt SVInt::conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs) {
+    bool bothSigned = lhs.signFlag && rhs.signFlag;
+    if (lhs.bitWidth != rhs.bitWidth) {
+        if (lhs.bitWidth < rhs.bitWidth)
+            return conditional(condition, extend(lhs, rhs.bitWidth, bothSigned), rhs);
+        else
+            return conditional(condition, lhs, extend(rhs, lhs.bitWidth, bothSigned));
+    }
+
+    logic_t c = (logic_t)condition;
+    if (!c.isUnknown())
+        return c ? lhs : rhs;
+
+    if (exactlyEqual(lhs, rhs))
+        return rhs;
+
+    SVInt result = SVInt::allocUninitialized(lhs.bitWidth, bothSigned, true);
+    uint32_t words = getNumWords(lhs.bitWidth, false);
+
+    for (uint32_t i = 0; i < words; i++) {
+        // Unknown if either bit is unknown or bits differ.
+        const uint64_t* lp = lhs.getRawData();
+        const uint64_t* rp = rhs.getRawData();
+        result.pVal[i + words] = (lhs.unknownFlag ? lp[i + words] : 0) |
+                                 (rhs.unknownFlag ? rp[i + words] : 0) | 
+                                 (lp[i] ^ rp[i]);
+        result.pVal[i] = ~result.pVal[i + words] & lp[i] & rp[i];
+    }
+
     result.clearUnusedBits();
     return result;
 }

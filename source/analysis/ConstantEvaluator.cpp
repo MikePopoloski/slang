@@ -173,13 +173,14 @@ ConstantValue ConstantEvaluator::evaluateBinary(const BoundBinaryExpression& exp
 }
 
 ConstantValue ConstantEvaluator::evaluateConditional(const BoundTernaryExpression& expr) {
-    const auto pred = (logic_t)evaluateExpr(expr.pred).integer();
+    const auto cond = evaluateExpr(expr.pred).integer();
+    const auto pred = (logic_t)cond;
 
     if (pred.isUnknown()) {
         // do strange combination operation
         const auto l = evaluateExpr(expr.left).integer();
         const auto r = evaluateExpr(expr.right).integer();
-        return l.ambiguousConditionalCombination(r);
+        return SVInt::conditional(cond, l, r);
     }
     else if (bool(pred)) {
         // Only one side gets evaluate if true or false

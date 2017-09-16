@@ -256,9 +256,6 @@ public:
     SVInt lshr(const SVInt& rhs) const;
     SVInt lshr(uint32_t amount) const;
 
-    /// The operation SV applies for 'x ? lhs : rhs
-    SVInt ambiguousConditionalCombination(const SVInt& rhs) const;
-
     /// Multiple concatenation/replication
     SVInt replicate(const SVInt& times) const;
 
@@ -401,6 +398,9 @@ public:
     /// Construct from an array of digits.
     static SVInt fromDigits(uint16_t bits, LiteralBase base, bool isSigned,
                             bool anyUnknown, span<logic_t const> digits);
+
+    /// Evaluates a conditional expression; i.e. condition ? left : right
+    static SVInt conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs);
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
