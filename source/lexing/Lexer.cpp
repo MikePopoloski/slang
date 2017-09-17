@@ -686,9 +686,13 @@ Token Lexer::lexIncludeFileName() {
         info->rawText = lexeme();
         info->location = location;
         return token;
-    } else if (delim != '"' && delim != '<') {
+    }
+    else if (delim != '"' && delim != '<') {
         addError(DiagCode::ExpectedIncludeFileName, offset);
-        return Token(TokenKind::IncludeFileName, alloc.emplace<Token::Info>(trivia, nullptr, location, TokenFlags::Missing));
+        return Token(TokenKind::IncludeFileName, alloc.emplace<Token::Info>(trivia, "", location, TokenFlags::Missing));
+    }
+    else if (delim == '<') {
+        delim = '>';
     }
 
     advance();
@@ -994,6 +998,8 @@ void Lexer::scanLineComment(SmallVector<Trivia>& triviaBuffer, bool directiveMod
         if (isNewline(c))
             break;
 
+        // If we're in a directive, we want the continuation character to continue
+        // the directive on to the next line, so don't consume it as part of the comment.
         if (c == '\\' && directiveMode) {
             if (isNewline(peek(1)))
                 break;

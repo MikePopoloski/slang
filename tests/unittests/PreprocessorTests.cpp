@@ -63,6 +63,8 @@ TEST_CASE("Directives", "[preprocessor]") {
     testDirective(SyntaxKind::UnconnectedDriveDirective);
     testDirective(SyntaxKind::UndefDirective);
     testDirective(SyntaxKind::UndefineAllDirective);
+
+    CHECK(getDirectiveText(SyntaxKind::Unknown) == "");
 }
 
 TEST_CASE("Macro define (simple)", "[preprocessor]") {
@@ -379,7 +381,7 @@ $display("left side: \"right side\"");
 }
 
 TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
-    auto& text = "`define FOO 8\n`define BAR 9\n1`FOO`BAR";
+    auto& text = "`define FOO 8\r\n`define BAR 9\n1`FOO`BAR";
 
     diagnostics.clear();
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);

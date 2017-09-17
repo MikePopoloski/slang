@@ -56,6 +56,30 @@ TEST_CASE("Line Comment", "[lexer]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Line Comment (directive continuation)", "[lexer]") {
+    auto& text = "`define FOO // comment\\\n  bar";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
+    CHECK(token.trivia().size() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::Directive);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Line Comment (embedded null)", "[lexer]") {
+    const char text[] = "// foo \0 bar";
+    auto str = std::string(text, text + sizeof(text) - 1);
+    Token token = lexToken(string_view(str));
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == str);
+    CHECK(token.trivia().size() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
+}
+
 TEST_CASE("Block Comment (one line)", "[lexer]") {
     auto& text = "/* comment */";
     Token token = lexToken(text);
@@ -92,6 +116,30 @@ TEST_CASE("Block Comment (unterminated)", "[lexer]") {
     CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::UnterminatedBlockComment);
+}
+
+TEST_CASE("Block comment (embedded null)", "[lexer]") {
+    const char text[] = "/* foo\0 */";
+    auto str = std::string(text, text + sizeof(text) - 1);
+    Token token = lexToken(string_view(str));
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == str);
+    CHECK(token.trivia().size() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::BlockComment);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == DiagCode::EmbeddedNull);
+}
+
+TEST_CASE("Block comment (directive with newline)", "[lexer]") {
+    auto& text = "`resetall /* comment\n asdf */";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    CHECK(token.trivia().size() == 1);
+    CHECK(token.trivia()[0].kind == TriviaKind::Directive);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == DiagCode::SplitBlockCommentInDirective);
 }
 
 TEST_CASE("Block Comment (nested)", "[lexer]") {
@@ -182,6 +230,14 @@ TEST_CASE("Escaped Identifiers", "[lexer]") {
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(token.valueText() == "98\\#$%)(*lkjsd__09...asdf345");
+    CHECK(token.identifierType() == IdentifierType::Escaped);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    auto& text2 = "\\98\\#$%)(*lkjsd__09...a sdf345";
+    token = lexToken(text2);
+
+    CHECK(token.kind == TokenKind::Identifier);
+    CHECK(token.valueText() == "98\\#$%)(*lkjsd__09...a");
     CHECK(token.identifierType() == IdentifierType::Escaped);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -359,6 +415,15 @@ TEST_CASE("Vector bases", "[lexer]") {
     checkVectorBase("'SH", LiteralBase::Hex, true);
 }
 
+TEST_CASE("Vector base (bad)", "[lexer]") {
+    Token token = lexToken(string_view("'sf"));
+
+    CHECK(token.kind == TokenKind::IntegerBase);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "'s");
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics.back().code == DiagCode::ExpectedIntegerBaseAfterSigned);
+}
+
 TEST_CASE("Unbased unsized literal", "[lexer]") {
     auto& text = "'1";
     Token token = lexToken(text);
@@ -456,6 +521,16 @@ TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
     CHECK(std::isinf(std::get<double>(value)));
 }
 
+TEST_CASE("Real literal (bad exponent)", "[lexer]") {
+    auto& text = "32.234e";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::RealLiteral);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == "32.234");
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics.back().code == DiagCode::MissingExponentDigits);
+}
+
 TEST_CASE("Real literal (digit overflow)", "[lexer]") {
     std::string text = std::string(400, '9') + ".0";
     Token token = lexToken(string_view(text));
@@ -522,6 +597,24 @@ TEST_CASE("Misplaced directive char", "[lexer]") {
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::MisplacedDirectiveChar);
+}
+
+TEST_CASE("Directive continuation", "[lexer]") {
+    auto& text = "`define FOO asdf\\\nbar\\\r\nbaz";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    REQUIRE(token.trivia().size() == 1);
+
+    Trivia t = token.trivia()[0];
+    CHECK(t.kind == TriviaKind::Directive);
+    REQUIRE(t.syntax()->kind == SyntaxKind::DefineDirective);
+
+    const DefineDirectiveSyntax& define = t.syntax()->as<DefineDirectiveSyntax>();
+    REQUIRE(define.body.count() == 3);
+    CHECK(define.body[2].valueText() == "baz");
+    
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Directive not on own line", "[lexer]") {
@@ -946,4 +1039,56 @@ TEST_CASE("Directive Punctuation", "[lexer]") {
     testDirectivePunctuation(TokenKind::MacroQuote);
     testDirectivePunctuation(TokenKind::MacroEscapedQuote);
     testDirectivePunctuation(TokenKind::MacroPaste);
+}
+
+TEST_CASE("Punctuation corner cases", "[lexer]") {
+    // These look like the start of a longer token but are not, so the
+    // lexer needs to properly fallback to the original character.
+    Token token = lexToken("#-");
+    CHECK(token.kind == TokenKind::Hash);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    token = lexToken("#=");
+    CHECK(token.kind == TokenKind::Hash);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    token = lexToken("*::");
+    CHECK(token.kind == TokenKind::Star);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    token = lexToken("<-");
+    CHECK(token.kind == TokenKind::LessThan);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    token = lexToken("|-");
+    CHECK(token.kind == TokenKind::Or);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Include file name", "[lexer]") {
+    auto& text = "  <asdf>";
+    Token token = lexRawToken(text, LexerMode::IncludeFileName);
+
+    CHECK(token.kind == TokenKind::IncludeFileName);
+    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(token.valueText() == "<asdf>");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Include file name (bad)", "[lexer]") {
+    auto& text = "  asdf";
+    Token token = lexRawToken(text, LexerMode::IncludeFileName);
+
+    CHECK(token.kind == TokenKind::IncludeFileName);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics.back().code == DiagCode::ExpectedIncludeFileName);
+}
+
+TEST_CASE("Include file name (unterminated)", "[lexer]") {
+    auto& text = "  \"asdf";
+    Token token = lexRawToken(text, LexerMode::IncludeFileName);
+
+    CHECK(token.kind == TokenKind::IncludeFileName);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics.back().code == DiagCode::ExpectedIncludeFileName);
 }
