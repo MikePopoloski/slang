@@ -8,7 +8,6 @@
 
 #include "analysis/Binder.h"
 #include "parsing/SyntaxTree.h"
-#include "ConstantEvaluator.h"
 
 namespace slang {
 
@@ -34,13 +33,14 @@ public:
 
             case SyntaxKind::DataDeclaration: {
                 for (auto symbol : scope.createAndAddSymbols(syntaxTrees.back().root())) {
-                    ConstantValue& cv = evaluator.createTemporary(*symbol);
-
-                    const BoundExpression* init = symbol->as<VariableSymbol>().initializer();
+                    ConstantValue initial;
+                    const Expression* init = symbol->as<VariableSymbol>().initializer();
                     if (init)
-                        cv = evaluator.evaluateExpr(*init);
+                        initial = init->eval(evalContext);
                     else
-                        cv = SVInt(0);
+                        initial = SVInt(0);
+
+                    evalContext.createLocal(symbol, initial);
                 }
                 return true;
             }
@@ -58,10 +58,7 @@ public:
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
         const auto& bound = Binder(scope, LookupKind::Direct).bindConstantExpression(expr);
-        if (bound.bad())
-            return nullptr;
-
-        return evaluator.evaluateExpr(bound);
+        return bound.eval(evalContext);
     }
 
     ConstantValue evalStatement(const StatementSyntax&) {
@@ -82,7 +79,7 @@ private:
     Diagnostics diagnostics;
     DesignRootSymbol root;
     DynamicScopeSymbol scope;
-    ConstantEvaluator evaluator;
+    EvalContext evalContext;
 };
 
 }

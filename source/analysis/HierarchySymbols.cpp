@@ -7,7 +7,6 @@
 #include "Symbol.h"
 
 #include "Binder.h"
-#include "ConstantEvaluator.h"
 
 namespace slang {
 
@@ -322,11 +321,11 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     const auto& iterExpr = binder.bindConstantExpression(syntax.iterationExpr);
 
     // Create storage for the iteration variable.
-    ConstantEvaluator ce;
-    auto& genvar = ce.createTemporary(local);
+    EvalContext context;
+    auto genvar = context.createLocal(&local, initial);
 
     // Generate blocks!
-    for (genvar = initial; ce.evaluateBool(stopExpr); ce.evaluateExpr(iterExpr)) {
+    for (; stopExpr.evalBool(context); iterExpr.eval(context)) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
@@ -334,7 +333,7 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
         const auto& implicitParam = root.allocate<ParameterSymbol>(syntax.identifier.valueText(),
                                                                    syntax.identifier.location(),
                                                                    root.getKnownType(SyntaxKind::IntType),
-                                                                   genvar, *this);
+                                                                   *genvar, *this);
 
         builder.add(root.allocate<GenerateBlockSymbol>("", SourceLocation(),
                                                        syntax.block, implicitParam, parent));

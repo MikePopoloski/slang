@@ -640,6 +640,13 @@ public:
         childCount = (uint32_t)elements.size();
     }
 
+    SyntaxList(span<T*> elements) :
+        SyntaxNode(SyntaxKind::List),
+        elements(elements)
+    {
+        childCount = (uint32_t)elements.size();
+    }
+
     uint32_t count() const { return (uint32_t)elements.size(); }
 
     typename span<T* const>::const_iterator begin() const { return elements.begin(); }
@@ -657,6 +664,13 @@ class TokenList : public SyntaxNode {
 public:
     TokenList(std::nullptr_t) : TokenList(span<Token const>(nullptr)) {}
     TokenList(span<Token const> elements) :
+        SyntaxNode(SyntaxKind::List),
+        elements(elements)
+    {
+        childCount = (uint32_t)elements.size();
+    }
+
+    TokenList(span<Token> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {
@@ -712,6 +726,13 @@ public:
 
     SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>(nullptr)) {}
     SeparatedSyntaxList(span<TokenOrSyntax const> elements) :
+        SyntaxNode(SyntaxKind::List),
+        elements(elements)
+    {
+        childCount = (uint32_t)elements.size();
+    }
+
+    SeparatedSyntaxList(span<TokenOrSyntax> elements) :
         SyntaxNode(SyntaxKind::List),
         elements(elements)
     {

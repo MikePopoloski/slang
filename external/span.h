@@ -506,7 +506,7 @@ public:
     const_reverse_iterator crend() const GSL_NOEXCEPT { return const_reverse_iterator{cbegin()}; }
 
     template<typename U = ElementType,
-             typename = typename std::enable_if_t<std::is_same_v<U, const char>>>
+             typename = typename std::enable_if_t<std::is_same_v<std::remove_const_t<U>, char>>>
     operator std::string_view() const { return std::string_view(data(), length()); }
 
 private:

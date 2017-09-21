@@ -21,9 +21,9 @@
 
 namespace slang {
 
-class BoundExpression;
-class BoundStatement;
-class BoundStatementList;
+class Statement;
+class StatementList;
+class Expression;
 class SyntaxTree;
 class Symbol;
 class ScopeSymbol;
@@ -601,26 +601,26 @@ public:
 class StatementBlockSymbol : public ScopeSymbol {
 public:
     /// Binds a single statement.
-    //const BoundStatement& bindStatement(const StatementSyntax& syntax);
+    //const Statement& bindStatement(const StatementSyntax& syntax);
 
     /// Binds a list of statements, such as in a function body.
-    //const BoundStatementList& bindStatementList(const SyntaxList<SyntaxNode>& items);
+    //const StatementList& bindStatementList(const SyntaxList<SyntaxNode>& items);
 
 protected:
     using ScopeSymbol::ScopeSymbol;
 
-    const BoundStatement& bindStatement(const StatementSyntax& syntax) const;
-    const BoundStatementList& bindStatementList(const SyntaxList<SyntaxNode>& items) const;
+    const Statement& bindStatement(const StatementSyntax& syntax) const;
+    const StatementList& bindStatementList(const SyntaxList<SyntaxNode>& items) const;
 
     void findChildSymbols(MemberBuilder& builder, const StatementSyntax& syntax) const;
     void findChildSymbols(MemberBuilder& builder, const SyntaxList<SyntaxNode>& items) const;
 
 private:
-    BoundStatement& bindConditionalStatement(const ConditionalStatementSyntax& syntax) const;
-    BoundStatement& bindForLoopStatement(const ForLoopStatementSyntax& syntax) const;
-    BoundStatement& bindReturnStatement(const ReturnStatementSyntax& syntax) const;
-    BoundStatement& bindExpressionStatement(const ExpressionStatementSyntax& syntax) const;
-    BoundStatement& badStmt(const BoundStatement* stmt) const;
+    Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax) const;
+    Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax) const;
+    Statement& bindReturnStatement(const ReturnStatementSyntax& syntax) const;
+    Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax) const;
+    Statement& badStmt(const Statement* stmt) const;
 };
 
 class SequentialBlockSymbol : public StatementBlockSymbol {
@@ -630,13 +630,13 @@ public:
 
     static SequentialBlockSymbol& createImplicitBlock(const ForLoopStatementSyntax& forLoop, const Symbol& parent);
 
-    const BoundStatement& getBody() const;
+    const Statement& getBody() const;
 
 private:
     void fillMembers(MemberBuilder& builder) const final;
 
     const BlockStatementSyntax* syntax = nullptr;
-    mutable const BoundStatement* body = nullptr;
+    mutable const Statement* body = nullptr;
 };
 
 class ProceduralBlockSymbol : public StatementBlockSymbol {
@@ -645,13 +645,13 @@ public:
 
     ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const Symbol& parent);
 
-    const BoundStatement& getBody() const;
+    const Statement& getBody() const;
 
 private:
     void fillMembers(MemberBuilder& builder) const final;
 
     const ProceduralBlockSyntax& syntax;
-    mutable const BoundStatement* body = nullptr;
+    mutable const Statement* body = nullptr;
 };
 
 /// Represents a conditional if-generate construct; the results of evaluating
@@ -809,19 +809,19 @@ public:
 
     VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
-                   const BoundExpression* initializer = nullptr);
+                   const Expression* initializer = nullptr);
 
     /// Constructs all variable symbols specified by the given syntax node.
     static void fromSyntax(const Symbol& parent, const DataDeclarationSyntax& syntax,
                            SmallVector<const VariableSymbol*>& results);
 
     const TypeSymbol& type() const;
-    const BoundExpression* initializer() const;
+    const Expression* initializer() const;
 
 protected:
     VariableSymbol(SymbolKind childKind, string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
-                   const BoundExpression* initializer = nullptr);
+                   const Expression* initializer = nullptr);
 
 private:
     // To allow lazy binding, save pointers to the raw syntax nodes. When we eventually bind,
@@ -830,7 +830,7 @@ private:
     const DataTypeSyntax* typeSyntax = nullptr;
     const ExpressionSyntax* initializerSyntax = nullptr;
     mutable const TypeSymbol* typeSymbol = nullptr;
-    mutable const BoundExpression* initializerBound = nullptr;
+    mutable const Expression* initializerBound = nullptr;
 };
 
 /// Represents a formal argument in subroutine (task or function).
@@ -841,7 +841,7 @@ public:
     FormalArgumentSymbol(const TypeSymbol& type, const Symbol& parent);
 
     FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
-                         const BoundExpression* initializer = nullptr,
+                         const Expression* initializer = nullptr,
                          FormalArgumentDirection direction = FormalArgumentDirection::In);
 };
 
@@ -857,7 +857,7 @@ public:
     SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
                      SystemFunction systemFunction, const Symbol& parent);
 
-    const BoundStatementList& body() const;
+    const StatementList& body() const;
     const TypeSymbol& returnType() const { ensureInit(); return *returnType_; }
     span<const FormalArgumentSymbol* const> arguments() const { ensureInit(); return arguments_; }
 
@@ -866,7 +866,7 @@ public:
 private:
     void fillMembers(MemberBuilder& builder) const final;
 
-    mutable const BoundStatementList* body_ = nullptr;
+    mutable const StatementList* body_ = nullptr;
     mutable const TypeSymbol* returnType_ = nullptr;
     mutable span<const FormalArgumentSymbol* const> arguments_;
 };

@@ -7,15 +7,14 @@
 #include "Symbol.h"
 
 #include "Binder.h"
-#include "ConstantEvaluator.h"
 
 namespace slang {
 
-//const BoundStatement& StatementBlockSymbol::bindStatement(const StatementSyntax& syntax) {
+//const Statement& StatementBlockSymbol::bindStatement(const StatementSyntax& syntax) {
 //    return static_cast<const StatementBlockSymbol*>(this)->bindStatement(syntax);
 //}
 //
-//const BoundStatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<SyntaxNode>& items) {
+//const StatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<SyntaxNode>& items) {
 //    return static_cast<const StatementBlockSymbol*>(this)->bindStatementList(items);
 //}
 
@@ -68,7 +67,7 @@ void StatementBlockSymbol::findChildSymbols(MemberBuilder& builder, const Statem
     }
 }
 
-const BoundStatement& StatementBlockSymbol::bindStatement(const StatementSyntax& syntax) const {
+const Statement& StatementBlockSymbol::bindStatement(const StatementSyntax& syntax) const {
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
             return bindReturnStatement((const ReturnStatementSyntax&)syntax);
@@ -81,14 +80,13 @@ const BoundStatement& StatementBlockSymbol::bindStatement(const StatementSyntax&
 
             DEFAULT_UNREACHABLE;
     }
-    return badStmt(nullptr);
 }
 
-const BoundStatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<SyntaxNode>& items) const {
-    SmallVectorSized<const BoundStatement*, 8> buffer;
+const StatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<SyntaxNode>& items) const {
+    SmallVectorSized<const Statement*, 8> buffer;
     for (auto member : members()) {
         if (member->kind == SymbolKind::Variable)
-            buffer.append(&allocate<BoundVariableDecl>(member->as<VariableSymbol>()));
+            buffer.append(&allocate<VariableDeclStatement>(member->as<VariableSymbol>()));
     }
 
     for (const auto& item : items) {
@@ -97,10 +95,10 @@ const BoundStatementList& StatementBlockSymbol::bindStatementList(const SyntaxLi
     }
 
     const DesignRootSymbol& root = getRoot();
-    return root.allocate<BoundStatementList>(buffer.copy(root.allocator()));
+    return root.allocate<StatementList>(buffer.copy(root.allocator()));
 }
 
-BoundStatement& StatementBlockSymbol::bindReturnStatement(const ReturnStatementSyntax& syntax) const {
+Statement& StatementBlockSymbol::bindReturnStatement(const ReturnStatementSyntax& syntax) const {
     auto stmtLoc = syntax.returnKeyword.location();
     const Symbol* subroutine = findAncestor(SymbolKind::Subroutine);
     if (!subroutine) {
@@ -110,10 +108,10 @@ BoundStatement& StatementBlockSymbol::bindReturnStatement(const ReturnStatementS
 
     const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, stmtLoc,
                                                                subroutine->as<SubroutineSymbol>().returnType());
-    return allocate<BoundReturnStatement>(syntax, &expr);
+    return allocate<ReturnStatement>(syntax, &expr);
 }
 
-BoundStatement& StatementBlockSymbol::bindConditionalStatement(const ConditionalStatementSyntax& syntax) const {
+Statement& StatementBlockSymbol::bindConditionalStatement(const ConditionalStatementSyntax& syntax) const {
     ASSERT(syntax.predicate.conditions.count() == 1,
            "The &&& operator in if condition is not yet supported");
     ASSERT(!syntax.predicate.conditions[0]->matchesClause,
@@ -121,14 +119,14 @@ BoundStatement& StatementBlockSymbol::bindConditionalStatement(const Conditional
 
     const auto& cond = Binder(*this).bindSelfDeterminedExpression(syntax.predicate.conditions[0]->expr);
     const auto& ifTrue = bindStatement(syntax.statement);
-    const BoundStatement* ifFalse = nullptr;
+    const Statement* ifFalse = nullptr;
     if (syntax.elseClause)
         ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>());
 
-    return allocate<BoundConditionalStatement>(syntax, cond, ifTrue, ifFalse);
+    return allocate<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
-BoundStatement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSyntax& syntax) const {
+Statement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSyntax& syntax) const {
     // TODO: initializers need better handling
 
     // If the initializers here involve doing variable declarations, then the spec says we create
@@ -154,23 +152,23 @@ BoundStatement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatemen
     const auto& statement = implicitInitBlock.bindStatement(syntax.statement);
     const auto& loop = allocate<BoundForLoopStatement>(syntax, stopExpr, steps.copy(getRoot().allocator()), statement);
 
-    SmallVectorSized<const BoundStatement*, 2> blockList;
+    SmallVectorSized<const Statement*, 2> blockList;
     blockList.append(&allocate<BoundVariableDecl>(loopVar));
     blockList.append(&loop);
 
-    implicitInitBlock.setBody(allocate<BoundStatementList>(blockList.copy(getRoot().allocator())));
+    implicitInitBlock.setBody(allocate<StatementList>(blockList.copy(getRoot().allocator())));
     return allocate<BoundSequentialBlock>(implicitInitBlock);*/
 
     return badStmt(nullptr);
 }
 
-BoundStatement& StatementBlockSymbol::bindExpressionStatement(const ExpressionStatementSyntax& syntax) const {
+Statement& StatementBlockSymbol::bindExpressionStatement(const ExpressionStatementSyntax& syntax) const {
     const auto& expr = Binder(*this).bindSelfDeterminedExpression(syntax.expr);
-    return allocate<BoundExpressionStatement>(syntax, expr);
+    return allocate<ExpressionStatement>(syntax, expr);
 }
 
-BoundStatement& StatementBlockSymbol::badStmt(const BoundStatement* stmt) const {
-    return allocate<BadBoundStatement>(stmt);
+Statement& StatementBlockSymbol::badStmt(const Statement* stmt) const {
+    return allocate<InvalidStatement>(stmt);
 }
 
 SequentialBlockSymbol::SequentialBlockSymbol(const Symbol& parent) :
@@ -180,7 +178,7 @@ SequentialBlockSymbol::SequentialBlockSymbol(const BlockStatementSyntax& syntax,
     StatementBlockSymbol(SymbolKind::SequentialBlock, parent),
     syntax(&syntax) {}
 
-const BoundStatement& SequentialBlockSymbol::getBody() const {
+const Statement& SequentialBlockSymbol::getBody() const {
     if (!body)
         body = &bindStatementList(syntax ? syntax->items : nullptr);
     return *body;
@@ -348,7 +346,7 @@ void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& 
         const auto& bound = Binder(scope).bindConstantExpression(*expr);
         determinedType = bound.type;
         if (!bound.bad())
-            determinedValue = ConstantEvaluator().evaluateExpr(bound);
+            determinedValue = bound.eval();
     }
     else {
         determinedType = &scope.getType(*typeSyntax);
@@ -362,12 +360,12 @@ VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const Sym
     lifetime(lifetime), isConst(isConst), typeSyntax(&type), initializerSyntax(initializer) {}
 
 VariableSymbol::VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
-                               VariableLifetime lifetime, bool isConst, const BoundExpression* initializer) :
+                               VariableLifetime lifetime, bool isConst, const Expression* initializer) :
     Symbol(SymbolKind::Variable, parent, name, location),
     lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer) {}
 
 VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, SourceLocation location, const TypeSymbol& type,
-                               const Symbol& parent, VariableLifetime lifetime, bool isConst, const BoundExpression* initializer) :
+                               const Symbol& parent, VariableLifetime lifetime, bool isConst, const Expression* initializer) :
     Symbol(kind, parent, name, location),
     lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer) {}
 
@@ -392,7 +390,7 @@ const TypeSymbol& VariableSymbol::type() const {
     return *typeSymbol;
 }
 
-const BoundExpression* VariableSymbol::initializer() const {
+const Expression* VariableSymbol::initializer() const {
     if (initializerBound)
         return initializerBound;
 
@@ -406,7 +404,7 @@ FormalArgumentSymbol::FormalArgumentSymbol(const TypeSymbol& type, const Symbol&
     VariableSymbol(SymbolKind::FormalArgument, "", SourceLocation(), type, parent) {}
 
 FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                                           const Symbol& parent, const BoundExpression* initializer,
+                                           const Symbol& parent, const Expression* initializer,
                                            FormalArgumentDirection direction) :
     VariableSymbol(SymbolKind::FormalArgument, name, location, type, parent, VariableLifetime::Automatic,
                    direction == FormalArgumentDirection::ConstRef, initializer),
@@ -426,7 +424,7 @@ SubroutineSymbol::SubroutineSymbol(string_view name, const TypeSymbol& returnTyp
     StatementBlockSymbol(SymbolKind::Subroutine, parent, name),
     systemFunctionKind(systemFunction), returnType_(&returnType), arguments_(arguments) {}
 
-const BoundStatementList& SubroutineSymbol::body() const {
+const StatementList& SubroutineSymbol::body() const {
     if (!body_)
         body_ = &bindStatementList(syntax ? syntax->items : nullptr);
     return *body_;
@@ -478,7 +476,7 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
                 type = lastType;
 
             const auto& declarator = portSyntax->declarator;
-            const BoundExpression* initializer = nullptr;
+            const Expression* initializer = nullptr;
             if (declarator.initializer) {
                 initializer = &Binder(parentScope).bindAssignmentLikeContext(declarator.initializer->expr,
                                                                              declarator.name.location(), *type);

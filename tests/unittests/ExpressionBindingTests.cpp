@@ -1,7 +1,6 @@
 #include "Test.h"
 
 #include "analysis/Binder.h"
-#include "analysis/ConstantEvaluator.h"
 #include "parsing/SyntaxTree.h"
 
 SVInt testParameter(const std::string& text, int index = 0) {
@@ -45,17 +44,16 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     REQUIRE(syntax.diagnostics().empty());
 
     // Initialize `i` to 1.
-    ConstantEvaluator ce;
-    auto& i = ce.createTemporary(local);
-    i = SVInt(1);
+    EvalContext context;
+    auto i = context.createLocal(&local, SVInt(1));
 
     // Evaluate the expression tree.
-    ce.evaluateExpr(bound);
-    CHECK(i.integer() == 4);
+    bound.eval(context);
+    CHECK(i->integer() == 4);
 
     // Run it again, results should be as you'd expect
-    ce.evaluateExpr(bound);
-    CHECK(i.integer() == 7);
+    bound.eval(context);
+    CHECK(i->integer() == 7);
 }
 
 TEST_CASE("Check type propagation", "[binding:expressions]") {
@@ -78,11 +76,11 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
-    const BoundExpression& rhs = ((const BoundAssignmentExpression&)bound).right;
+    const Expression& rhs = bound.as<BinaryExpression>().right();
     CHECK(rhs.type->width() == 20);
-    const BoundExpression& op1 = ((const BoundBinaryExpression&)rhs).left;
+    const Expression& op1 = rhs.as<BinaryExpression>().left();
     CHECK(op1.type->width() == 20);
-    const BoundExpression& op2 = ((const BoundBinaryExpression&)rhs).right;
+    const Expression& op2 = rhs.as<BinaryExpression>().right();
     CHECK(op2.type->width() == 20);
 }
 
@@ -106,15 +104,15 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
-    const BoundExpression& rhs = ((const BoundAssignmentExpression&)bound).right;
+    const Expression& rhs = bound.as<BinaryExpression>().right();
     CHECK(rhs.type->width() == 20);
-    const BoundExpression& rrhs = ((const BoundAssignmentExpression&)rhs).right;
+    const Expression& rrhs = rhs.as<BinaryExpression>().right();
     CHECK(rrhs.type->width() == 1);
-    const BoundExpression& op1 = ((const BoundBinaryExpression&)rrhs).left;
-    const BoundExpression& shiftExpr = ((const BoundBinaryExpression&)op1).left;
+    const Expression& op1 = rrhs.as<BinaryExpression>().left();
+    const Expression& shiftExpr = op1.as<BinaryExpression>().left();
     CHECK(shiftExpr.type->width() == 17);
     CHECK(op1.type->width() == 17);
-    const BoundExpression& op2 = ((const BoundBinaryExpression&)rrhs).right;
+    const Expression& op2 = rrhs.as<BinaryExpression>().right();
     CHECK(op2.type->width() == 21);
 }
 
@@ -138,20 +136,20 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
-    const BoundExpression& rhs = ((const BoundAssignmentExpression&)bound).right;
+    const Expression& rhs = bound.as<BinaryExpression>().right();
     CHECK(rhs.type->width() == 20);
-    const BoundExpression& rrhs = ((const BoundAssignmentExpression&)rhs).right;
+    const Expression& rrhs = rhs.as<BinaryExpression>().right();
     CHECK(rrhs.type->width() == 1);
-    const BoundExpression& op1 = ((const BoundBinaryExpression&)rrhs).left;
-    const BoundExpression& shiftExpr = ((const BoundBinaryExpression&)op1).left;
+    const Expression& op1 = rrhs.as<BinaryExpression>().left();
+    const Expression& shiftExpr = op1.as<BinaryExpression>().left();
     CHECK(shiftExpr.type->width() == 64);
     CHECK(shiftExpr.type->isReal());
-    const BoundExpression& rshiftOp = ((const BoundBinaryExpression&)shiftExpr).right;
+    const Expression& rshiftOp = shiftExpr.as<BinaryExpression>().right();
     CHECK(rshiftOp.type->width() == 1);
-    const BoundExpression& lshiftOp = ((const BoundBinaryExpression&)shiftExpr).left;
+    const Expression& lshiftOp = shiftExpr.as<BinaryExpression>().left();
     CHECK(lshiftOp.type->width() == 17);
     CHECK(op1.type->width() == 64);
     CHECK(op1.type->isReal());
-    const BoundExpression& op2 = ((const BoundBinaryExpression&)rrhs).right;
+    const Expression& op2 = rrhs.as<BinaryExpression>().right();
     CHECK(op2.type->width() == 21);
 }

@@ -2,8 +2,9 @@
 
 #include <array>
 
+#include "analysis/Expressions.h"
+#include "analysis/Statements.h"
 #include "analysis/Symbol.h"
-#include "analysis/BoundNodes.h"
 #include "parsing/SyntaxTree.h"
 
 const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax) {
@@ -242,8 +243,8 @@ endmodule
     CHECK(foo.arguments()[4]->type().as<IntegralTypeSymbol>().width == 1);
     CHECK(foo.arguments()[4]->direction == FormalArgumentDirection::InOut);
 
-    const auto& returnStmt = *(const BoundReturnStatement*)foo.body().list[0];
-    REQUIRE(returnStmt.kind == BoundNodeKind::ReturnStatement);
+    const auto& returnStmt = foo.body().list[0]->as<ReturnStatement>();
+    REQUIRE(returnStmt.kind == StatementKind::Return);
     CHECK(!returnStmt.expr->bad());
     CHECK(returnStmt.expr->type->as<IntegralTypeSymbol>().width == 32);
 }

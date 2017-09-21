@@ -7,7 +7,6 @@
 #include "Symbol.h"
 
 #include "analysis/Binder.h"
-#include "analysis/ConstantEvaluator.h"
 #include "diagnostics/Diagnostics.h"
 #include "parsing/SyntaxTree.h"
 
@@ -250,18 +249,14 @@ SymbolList ScopeSymbol::members() const {
 
 ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
     const auto& bound = Binder(*this).bindConstantExpression(expr);
-    if (bound.bad())
-        return nullptr;
-    return ConstantEvaluator().evaluateExpr(bound);
+    return bound.eval();
 }
 
 ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
                                                       SourceLocation errorLocation) const {
     SourceLocation errLoc = errorLocation ? errorLocation : expr.getFirstToken().location();
     const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errLoc, targetType);
-    if (bound.bad())
-        return nullptr;
-    return ConstantEvaluator().evaluateExpr(bound);
+    return bound.eval();
 }
 
 const TypeSymbol& ScopeSymbol::getType(const DataTypeSyntax& syntax) const {
