@@ -437,8 +437,7 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, span<A
                 return parseConcurrentAssertion(label, attributes);
             assertionKind = SyntaxKind::ImmediateCoverStatement;
             break;
-        default:
-            ASSERT(false, "Shouldn't ever get here");
+        default: THROW_UNREACHABLE;
     }
 
     Token keyword = consume();
@@ -492,8 +491,7 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
         case TokenKind::ExpectKeyword:
             kind = SyntaxKind::ExpectPropertyStatement;
             break;
-
-            DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 
     auto openParen = expect(TokenKind::OpenParenthesis);

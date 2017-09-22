@@ -19,10 +19,8 @@ bool Expression::evalBool(EvalContext& context) const {
 }
 
 ConstantValue Expression::eval(EvalContext& context) const {
-    if (bad())
-        return nullptr;
-
     switch (kind) {
+        case ExpressionKind::Invalid: return nullptr;
         case ExpressionKind::Literal: return as<LiteralExpression>().eval(context);
         case ExpressionKind::VariableRef: return as<VariableRefExpression>().eval(context);
         case ExpressionKind::ParameterRef: return as<ParameterRefExpression>().eval(context);
@@ -32,9 +30,8 @@ ConstantValue Expression::eval(EvalContext& context) const {
         case ExpressionKind::Select: return as<SelectExpression>().eval(context);
         case ExpressionKind::NaryOp: return as<NaryExpression>().eval(context);
         case ExpressionKind::Call: return as<CallExpression>().eval(context);
-
-            DEFAULT_UNREACHABLE;
     }
+    THROW_UNREACHABLE;
 }
 
 ConstantValue LiteralExpression::eval(EvalContext&) const {
@@ -65,8 +62,8 @@ ConstantValue UnaryExpression::eval(EvalContext& context) const {
         case UnaryOperator::BitwiseNor: return SVInt(!v.reductionOr());
         case UnaryOperator::BitwiseXnor: return SVInt(!v.reductionXor());
         case UnaryOperator::LogicalNot: return SVInt(!v);
-            DEFAULT_UNREACHABLE;
     }
+    THROW_UNREACHABLE;
 }
 
 bool BinaryExpression::isAssignment() const {
@@ -125,6 +122,10 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
         case BinaryOperator::GreaterThan: return SVInt(l > r);
         case BinaryOperator::LessThanEqual: return SVInt(l <= r);
         case BinaryOperator::LessThan: return SVInt(l < r);
+        case BinaryOperator::LogicalAnd: return SVInt(l && r);
+        case BinaryOperator::LogicalOr: return SVInt(l || r);
+        case BinaryOperator::LogicalImplication: return SVInt(SVInt::logicalImplication(l, r));
+        case BinaryOperator::LogicalEquivalence: return SVInt(SVInt::logicalEquivalence(l, r));
         case BinaryOperator::Power: return l.pow(r);
         case BinaryOperator::Replication: return r.replicate(l);
         case BinaryOperator::Assignment: *lvalue = r; return *lvalue;
@@ -140,8 +141,8 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
         case BinaryOperator::LogicalRightShiftAssignment: *lvalue = l.lshr(r); return *lvalue;
         case BinaryOperator::ArithmeticLeftShiftAssignment: *lvalue = l.shl(r); return *lvalue;
         case BinaryOperator::ArithmeticRightShiftAssignment: *lvalue = l.ashr(r); return *lvalue;
-            DEFAULT_UNREACHABLE;
     }
+    THROW_UNREACHABLE;
 }
 
 ConstantValue TernaryExpression::eval(EvalContext& context) const {
@@ -195,7 +196,7 @@ ConstantValue SelectExpression::eval(EvalContext& context) const {
             int16_t width = int16_t(lsbOrWidth.as<int64_t>().value());
             return first.bitSelect(actualMsb - width, actualMsb);
         }
-        DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 
@@ -207,7 +208,6 @@ ConstantValue NaryExpression::eval(EvalContext& context) const {
     // TODO: add support for other Nary Expressions, like stream concatenation
     //switch (expr.syntax.kind) {
       //  case SyntaxKind::ConcatenationExpression: return concatenate(values);
-        //    DEFAULT_UNREACHABLE;
     //}
 
     return concatenate(values);
@@ -222,6 +222,7 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
     // If this is a system function we will just evaluate it directly
     if (subroutine.systemFunctionKind != SystemFunction::Unknown) {
         switch (subroutine.systemFunctionKind) {
+            case SystemFunction::Unknown: break;
             case SystemFunction::clog2: return SVInt(clog2(args[0].integer()));
             case SystemFunction::bits:
             case SystemFunction::low:
@@ -241,11 +242,10 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
                     case SystemFunction::right: return SVInt(down ? type.lowerBounds[0] : -type.lowerBounds[0]);
                     case SystemFunction::size:  return SVInt(type.width);
                     case SystemFunction::increment: return SVInt(down ? -1 : 1, true);
-                        DEFAULT_UNREACHABLE;
+                    default: THROW_UNREACHABLE;
                 }
                 break;
             }
-            DEFAULT_UNREACHABLE;
         }
     }
 
@@ -265,13 +265,12 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
 }
 
 void Expression::propagateType(const TypeSymbol& newType) {
-    if (bad())
-        return;
-
     // SystemVerilog rules for width propagation are subtle and very specific
     // to each individual operator type. They also mainly only apply to
     // expressions of integral type (which will be the majority in most designs).
     switch (kind) {
+        case ExpressionKind::Invalid:
+            return;
         case ExpressionKind::Literal:
             as<LiteralExpression>().propagateType(newType);
             break;
@@ -320,8 +319,7 @@ void LiteralExpression::propagateType(const TypeSymbol& newType) {
             case logic_t::Z_VALUE:
                 value = SVInt::createFillZ(width, isSigned);
                 break;
-
-                DEFAULT_UNREACHABLE;
+            default: THROW_UNREACHABLE;
         }
     }
 }
@@ -417,6 +415,10 @@ void BinaryExpression::propagateType(const TypeSymbol& newType) {
         case BinaryOperator::ArithmeticRightShiftAssignment:
             // Essentially self determined, logic handled at creation time.
             break;
+        case BinaryOperator::Replication:
+            // all operands are self determined
+            type = &newType;
+            break;
     }
 }
 
@@ -454,8 +456,7 @@ UnaryOperator getUnaryOperator(const ExpressionSyntax& syntax) {
         case SyntaxKind::UnaryBitwiseNorExpression: return UnaryOperator::BitwiseNor;
         case SyntaxKind::UnaryBitwiseXnorExpression: return UnaryOperator::BitwiseXnor;
         case SyntaxKind::UnaryLogicalNotExpression: return UnaryOperator::LogicalNot;
-
-            DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 
@@ -503,8 +504,7 @@ BinaryOperator getBinaryOperator(const ExpressionSyntax& syntax) {
         case SyntaxKind::LogicalRightShiftAssignmentExpression: return BinaryOperator::LogicalRightShiftAssignment;
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression: return BinaryOperator::ArithmeticLeftShiftAssignment;
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression: return BinaryOperator::ArithmeticRightShiftAssignment;
-
-            DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 

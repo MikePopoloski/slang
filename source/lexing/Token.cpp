@@ -78,14 +78,15 @@ string_view Token::valueText() const {
     switch (kind) {
         case TokenKind::Identifier:
             switch (identifierType()) {
+                case IdentifierType::Normal:
+                case IdentifierType::System:
+                    return info->rawText;
                 case IdentifierType::Escaped:
                     // strip off leading backslash
                     return info->rawText.substr(1);
                 case IdentifierType::Unknown:
                     // unknown tokens don't have value text
                     return "";
-                default:
-                    return info->rawText;
             }
             break;
         case TokenKind::SystemIdentifier:
@@ -99,6 +100,7 @@ string_view Token::valueText() const {
         default:
             return getTokenKindText(kind);
     }
+    THROW_UNREACHABLE;
 }
 
 string_view Token::rawText() const {
@@ -124,12 +126,10 @@ string_view Token::rawText() const {
                 return info->rawText;
             case TokenKind::EndOfDirective:
             case TokenKind::EndOfFile:
-                break;
-            default:
-                ASSERT(false, "Unknown token kind: %u", (uint32_t)kind);
+                return "";
+            default: THROW_UNREACHABLE;
         }
     }
-    return "";
 }
 
 void Token::writeTo(SmallVector<char>& buffer, uint8_t writeFlags) const {

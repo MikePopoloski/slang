@@ -11,10 +11,8 @@
 namespace slang {
 
 void Statement::eval(EvalContext& context) const {
-    if (bad())
-        return;
-
     switch (kind) {
+        case StatementKind::Invalid: break;
         case StatementKind::List: as<StatementList>().eval(context); break;
         case StatementKind::SequentialBlock: as<SequentialBlockStatement>().eval(context); break;
         case StatementKind::ExpressionStatement: as<ExpressionStatement>().eval(context); break;
@@ -22,8 +20,6 @@ void Statement::eval(EvalContext& context) const {
         case StatementKind::Return: as<ReturnStatement>().eval(context); break;
         case StatementKind::Conditional: as<ConditionalStatement>().eval(context); break;
         case StatementKind::ForLoop: as<ForLoopStatement>().eval(context); break;
-
-            DEFAULT_UNREACHABLE;
     }
 }
 

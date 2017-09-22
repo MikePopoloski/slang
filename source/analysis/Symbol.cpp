@@ -34,7 +34,8 @@ VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUns
     switch (token.kind) {
         case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
         case TokenKind::StaticKeyword: return VariableLifetime::Static;
-        default: return defaultIfUnset;
+        case TokenKind::Unknown: return defaultIfUnset;
+        default: THROW_UNREACHABLE;
     }
 }
 
@@ -124,7 +125,7 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
         case SyntaxKind::FinalBlock:
             results.append(&root.allocate<ProceduralBlockSymbol>(node.as<ProceduralBlockSyntax>(), parent));
             break;
-        DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 
     return results.copy(root.allocator());

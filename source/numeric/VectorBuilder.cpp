@@ -111,8 +111,7 @@ void VectorBuilder::append(Token token) {
                 index++;
             }
             break;
-        default:
-            ASSERT(false, "Impossible");
+        default: THROW_UNREACHABLE;
     }
 
     first = false;
@@ -150,7 +149,7 @@ SVInt VectorBuilder::finish() {
             case LiteralBase::Hex:
                 multiplier = 4;
                 break;
-            DEFAULT_UNREACHABLE;
+            default: THROW_UNREACHABLE;
         }
         // All of the digits in the number require `multiplier` bits, except for
         // possibly the first (leading) digit. This one has leading zeros in it,

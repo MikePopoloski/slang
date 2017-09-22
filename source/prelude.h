@@ -62,4 +62,4 @@ using gsl::make_span;
 
 // Just delegate our assert handling to the 3rd part lib
 #define ASSERT PPK_ASSERT
-#define DEFAULT_UNREACHABLE default: throw std::logic_error("Default case should be unreachable!");
+#define THROW_UNREACHABLE throw std::logic_error("Default case should be unreachable!")

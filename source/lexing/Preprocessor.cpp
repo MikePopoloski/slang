@@ -181,6 +181,7 @@ Token Preprocessor::handleDirectives(LexerMode mode, Token token) {
             case SyntaxKind::CellDefineDirective:
             case SyntaxKind::EndCellDefineDirective:
             default:
+                // TODO:
                 // default can be reached in certain error cases
                 trivia.append(createSimpleDirective(token));
                 break;
@@ -1142,7 +1143,8 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, Sm
                             usageSite.location(), usageSite, isFirst);
             break;
         }
-        DEFAULT_UNREACHABLE;
+        case MacroIntrinsic::None:
+            THROW_UNREACHABLE;
     }
 
     return true;

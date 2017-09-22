@@ -104,8 +104,7 @@ Expression& Binder::bindExpression(const ExpressionSyntax& syntax) {
             return bindMultipleConcatenationExpression(syntax.as<MultipleConcatenationExpressionSyntax>());
         case SyntaxKind::ElementSelectExpression:
             return bindSelectExpression(syntax.as<ElementSelectExpressionSyntax>());
-
-            DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
     return badExpr(nullptr);
 }
@@ -167,8 +166,7 @@ Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
                 syntax
             );
         }
-
-        DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 
@@ -189,7 +187,7 @@ Expression& Binder::bindName(const NameSyntax& syntax) {
             return bindSelectName(syntax.as<IdentifierSelectNameSyntax>());
         case SyntaxKind::ScopedName:
             return bindScopedName(syntax.as<ScopedNameSyntax>());
-        DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 
@@ -209,7 +207,7 @@ Expression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
         case SymbolKind::Parameter:
             return root.allocate<ParameterRefExpression>(symbol->as<ParameterSymbol>(), syntax);
 
-        DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 
@@ -335,7 +333,7 @@ Expression& Binder::bindAssignmentOperator(const BinaryExpressionSyntax& syntax)
         case SyntaxKind::LogicalRightShiftAssignmentExpression: binopKind = SyntaxKind::LogicalShiftRightExpression; break;
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression: binopKind = SyntaxKind::ArithmeticShiftLeftExpression; break;
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression: binopKind = SyntaxKind::ArithmeticShiftRightExpression; break;
-        DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
     // TODO: the LHS has to be assignable (i.e not a general expression)
     if (!checkOperatorApplicability(binopKind, syntax.operatorToken.location(), &lhs, &rhs))
@@ -459,8 +457,7 @@ Expression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, Express
             right = &bindAndPropagate(selector.as<RangeSelectSyntax>().right); // width
             width = int(right->eval().integer().as<int64_t>().value());
             break;
-
-        DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
     return root.allocate<SelectExpression>(
         root.getIntegralType(width, expr.type->isSigned(), expr.type->isFourState()),

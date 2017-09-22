@@ -661,6 +661,7 @@ void SVInt::writeTo(SmallVector<char>& buffer, LiteralBase base) const {
             case LiteralBase::Binary: shiftAmount = 1; maskAmount = 1; break;
             case LiteralBase::Octal: shiftAmount = 3; maskAmount = 7; break;
             case LiteralBase::Hex: shiftAmount = 4; maskAmount = 15; break;
+            case LiteralBase::Decimal: THROW_UNREACHABLE;
         }
 
         // if we have unknown values here, the comparison will return X
@@ -1249,7 +1250,7 @@ SVInt SVInt::conditional(const SVInt& condition, const SVInt& lhs, const SVInt& 
         const uint64_t* lp = lhs.getRawData();
         const uint64_t* rp = rhs.getRawData();
         result.pVal[i + words] = (lhs.unknownFlag ? lp[i + words] : 0) |
-                                 (rhs.unknownFlag ? rp[i + words] : 0) | 
+                                 (rhs.unknownFlag ? rp[i + words] : 0) |
                                  (lp[i] ^ rp[i]);
         result.pVal[i] = ~result.pVal[i + words] & lp[i] & rp[i];
     }

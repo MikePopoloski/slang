@@ -77,8 +77,7 @@ const Statement& StatementBlockSymbol::bindStatement(const StatementSyntax& synt
             return bindForLoopStatement((const ForLoopStatementSyntax&)syntax);
         case SyntaxKind::ExpressionStatement:
             return bindExpressionStatement((const ExpressionStatementSyntax&)syntax);
-
-            DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 
@@ -126,7 +125,7 @@ Statement& StatementBlockSymbol::bindConditionalStatement(const ConditionalState
     return allocate<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
-Statement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSyntax& syntax) const {
+Statement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSyntax&) const {
     // TODO: initializers need better handling
 
     // If the initializers here involve doing variable declarations, then the spec says we create
@@ -213,11 +212,11 @@ ProceduralBlockSymbol::ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax
         case SyntaxKind::AlwaysFFBlock: procedureKind = ProceduralBlockKind::AlwaysFF; break;
         case SyntaxKind::InitialBlock: procedureKind = ProceduralBlockKind::Initial; break;
         case SyntaxKind::FinalBlock: procedureKind = ProceduralBlockKind::Final; break;
-        DEFAULT_UNREACHABLE;
+        default: THROW_UNREACHABLE;
     }
 }
 
-void ProceduralBlockSymbol::fillMembers(MemberBuilder& builder) const {
+void ProceduralBlockSymbol::fillMembers(MemberBuilder&) const {
     body = &bindStatement(syntax.statement);
 }
 
@@ -458,11 +457,12 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
                     else
                         direction = FormalArgumentDirection::Ref;
                     break;
-                default:
+                case TokenKind::Unknown:
                     // Otherwise, we "inherit" the previous argument
                     direction = lastDirection;
                     directionSpecified = false;
                     break;
+                default: THROW_UNREACHABLE;
             }
 
             // If we're given a type, use that. Otherwise, if we were given a

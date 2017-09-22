@@ -32,6 +32,7 @@ string_view timeUnitToSuffix(TimeUnit unit) {
         case TimeUnit::Picoseconds: return "ps";
         case TimeUnit::Femtoseconds: return "fs";
     }
+    THROW_UNREACHABLE;
 }
 
 }
