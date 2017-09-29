@@ -50,7 +50,7 @@ function toolchain(_buildDir, _libDir)
 		os.exit(1)
 	end
 
-	local windowsPlatform = "10.0.14393.0"
+	local windowsPlatform = "10.0.15063.0"
 	local compiler32bit = false
 	if _OPTIONS["with-32bit-compiler"] then
 		compiler32bit = true
