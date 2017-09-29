@@ -5,12 +5,14 @@ import os
 
 class TypeInfo:
 	def __init__(self, processedMembers, members, pointerMembers, final,
-				 constructorArgs):
+				 constructorArgs, base, memberCount):
 		self.processedMembers = processedMembers
 		self.members = members
 		self.pointerMembers = pointerMembers
 		self.final = final
 		self.constructorArgs = constructorArgs
+		self.base = base
+		self.memberCount = memberCount
 
 def main():
 	ourdir = os.path.dirname(os.path.realpath(__file__))
@@ -59,7 +61,7 @@ namespace slang {
 	alltypes = {}
 	kindmap = {}
 
-	alltypes['SyntaxNode'] = TypeInfo(None, None, None, '', None)
+	alltypes['SyntaxNode'] = TypeInfo(None, None, None, '', None, None, 0)
 
 	for line in [x.strip('\n') for x in inf]:
 		if line.startswith('//'):
@@ -92,6 +94,59 @@ namespace slang {
 
 	if currtype:
 		generate(outf, currtype_name, tags, currtype, alltypes, kindmap)
+
+	cppf.write('uint32_t SyntaxNode::getChildCount() const {\n')
+	cppf.write('    switch (kind) {\n')
+	cppf.write('        case SyntaxKind::Unknown: return 0;\n')
+	cppf.write('        case SyntaxKind::List: return ((SyntaxListBase*)this)->getChildCount();\n')
+
+	for k,v in kindmap.items():
+		count = alltypes[v].memberCount
+		cppf.write('        case SyntaxKind::{}: return {};\n'.format(k, count))
+
+	cppf.write('    }\n')
+	cppf.write('    THROW_UNREACHABLE;\n')
+	cppf.write('}\n\n')
+
+	reverseKindmap = {}
+	for k,v in kindmap.items():
+		if v in reverseKindmap:
+			reverseKindmap[v].append(k)
+		else:
+			reverseKindmap[v] = [k]
+
+	for k,v in alltypes.items():
+		if not v.final:
+			continue
+
+		while v.base != 'SyntaxNode':
+			kinds = reverseKindmap[k]
+			if v.base in reverseKindmap:
+				reverseKindmap[v.base].extend(kinds)
+			else:
+				reverseKindmap[v.base] = kinds[:]
+			k = v.base
+			v = alltypes[k]
+
+	# Write out isKind static methods for each derived type
+	for k,v in alltypes.items():
+		if v.base is None:
+			continue
+
+		cppf.write('bool {}::isKind(SyntaxKind kind) {{\n'.format(k))
+		kinds = set(reverseKindmap[k])
+		if len(kinds) == 1:
+			cppf.write('    return kind == SyntaxKind::{};\n'.format(list(kinds)[0]))
+		else:
+			cppf.write('    switch (kind) {\n')
+			for kind in kinds:
+				cppf.write('        case SyntaxKind::{}:\n'.format(kind))
+			cppf.write('            return true;\n')
+			cppf.write('        default:\n')
+			cppf.write('            return false;\n')
+			cppf.write('    }\n')
+
+		cppf.write('}\n\n')
 
 	# Write out syntax factory methods
 	outf.write('class SyntaxFactory {\n')
@@ -221,21 +276,21 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		final = ''
 
 	constructorArgs = '{}{}'.format(kindArg, ', '.join(processed_members))
-	alltypes[name] = TypeInfo(processed_members, members, pointerMembers, final, constructorArgs)
+	alltypes[name] = TypeInfo(processed_members, members, pointerMembers, final,
+							  constructorArgs, base, len(combined))
 
 	outf.write('\n')
 	outf.write('    {}({}) :\n'.format(name, constructorArgs))
 	outf.write('        {}({}{}){}\n'.format(base, kindValue, baseInitializers, initializers))
-	outf.write('    {\n')
+	outf.write('    {}\n\n')
 
 	if len(members) == 0 and final == '':
-		outf.write('    }\n')
+		outf.write('    static bool isKind(SyntaxKind kind);\n')
 	else:
-		outf.write('        childCount += {};\n'.format(len(members)))
-		outf.write('    }\n\n')
-
 		outf.write('    {}(const {}&) = delete;\n'.format(name, name))
 		outf.write('    {}& operator=(const {}&) = delete;\n\n'.format(name, name))
+
+		outf.write('    static bool isKind(SyntaxKind kind);\n\n')
 
 		outf.write('protected:\n')
 		outf.write('    TokenOrSyntax getChild(uint32_t index) const override{} {{\n'.format(final))

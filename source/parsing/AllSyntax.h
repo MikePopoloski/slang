@@ -19,16 +19,18 @@ struct ExpressionSyntax : public SyntaxNode {
 
     ExpressionSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct DataTypeSyntax : public ExpressionSyntax {
 
     DataTypeSyntax(SyntaxKind kind) :
         ExpressionSyntax(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 // ----- ATTRIBUTES -----
@@ -39,12 +41,12 @@ struct EqualsValueClauseSyntax : public SyntaxNode {
 
     EqualsValueClauseSyntax(Token equals, ExpressionSyntax& expr) :
         SyntaxNode(SyntaxKind::EqualsValueClause), equals(equals), expr(expr)
-    {
-        childCount += 2;
-    }
+    {}
 
     EqualsValueClauseSyntax(const EqualsValueClauseSyntax&) = delete;
     EqualsValueClauseSyntax& operator=(const EqualsValueClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -62,12 +64,12 @@ struct AttributeSpecSyntax : public SyntaxNode {
 
     AttributeSpecSyntax(Token name, EqualsValueClauseSyntax* value) :
         SyntaxNode(SyntaxKind::AttributeSpec), name(name), value(value)
-    {
-        childCount += 2;
-    }
+    {}
 
     AttributeSpecSyntax(const AttributeSpecSyntax&) = delete;
     AttributeSpecSyntax& operator=(const AttributeSpecSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -86,12 +88,12 @@ struct AttributeInstanceSyntax : public SyntaxNode {
 
     AttributeInstanceSyntax(Token openParen, SeparatedSyntaxList<AttributeSpecSyntax> specs, Token closeParen) :
         SyntaxNode(SyntaxKind::AttributeInstance), openParen(openParen), specs(specs), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     AttributeInstanceSyntax(const AttributeInstanceSyntax&) = delete;
     AttributeInstanceSyntax& operator=(const AttributeInstanceSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -110,12 +112,12 @@ struct NamedLabelSyntax : public SyntaxNode {
 
     NamedLabelSyntax(Token name, Token colon) :
         SyntaxNode(SyntaxKind::NamedLabel), name(name), colon(colon)
-    {
-        childCount += 2;
-    }
+    {}
 
     NamedLabelSyntax(const NamedLabelSyntax&) = delete;
     NamedLabelSyntax& operator=(const NamedLabelSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -133,12 +135,12 @@ struct StatementSyntax : public SyntaxNode {
 
     StatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes) :
         SyntaxNode(kind), label(label), attributes(attributes)
-    {
-        childCount += 2;
-    }
+    {}
 
     StatementSyntax(const StatementSyntax&) = delete;
     StatementSyntax& operator=(const StatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override {
@@ -155,12 +157,12 @@ struct MemberSyntax : public SyntaxNode {
 
     MemberSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
         SyntaxNode(kind), attributes(attributes)
-    {
-        childCount += 1;
-    }
+    {}
 
     MemberSyntax(const MemberSyntax&) = delete;
     MemberSyntax& operator=(const MemberSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override {
@@ -177,20 +179,21 @@ struct ArgumentSyntax : public SyntaxNode {
 
     ArgumentSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct EmptyArgumentSyntax : public ArgumentSyntax {
 
     EmptyArgumentSyntax() :
         ArgumentSyntax(SyntaxKind::EmptyArgument)
-    {
-        childCount += 0;
-    }
+    {}
 
     EmptyArgumentSyntax(const EmptyArgumentSyntax&) = delete;
     EmptyArgumentSyntax& operator=(const EmptyArgumentSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -204,12 +207,12 @@ struct OrderedArgumentSyntax : public ArgumentSyntax {
 
     OrderedArgumentSyntax(ExpressionSyntax& expr) :
         ArgumentSyntax(SyntaxKind::OrderedArgument), expr(expr)
-    {
-        childCount += 1;
-    }
+    {}
 
     OrderedArgumentSyntax(const OrderedArgumentSyntax&) = delete;
     OrderedArgumentSyntax& operator=(const OrderedArgumentSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -229,12 +232,12 @@ struct NamedArgumentSyntax : public ArgumentSyntax {
 
     NamedArgumentSyntax(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
         ArgumentSyntax(SyntaxKind::NamedArgument), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 5;
-    }
+    {}
 
     NamedArgumentSyntax(const NamedArgumentSyntax&) = delete;
     NamedArgumentSyntax& operator=(const NamedArgumentSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -256,12 +259,12 @@ struct ArgumentListSyntax : public SyntaxNode {
 
     ArgumentListSyntax(Token openParen, SeparatedSyntaxList<ArgumentSyntax> parameters, Token closeParen) :
         SyntaxNode(SyntaxKind::ArgumentList), openParen(openParen), parameters(parameters), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     ArgumentListSyntax(const ArgumentListSyntax&) = delete;
     ArgumentListSyntax& operator=(const ArgumentListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -280,12 +283,12 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
 
     ParameterValueAssignmentSyntax(Token hash, ArgumentListSyntax& parameters) :
         SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), parameters(parameters)
-    {
-        childCount += 2;
-    }
+    {}
 
     ParameterValueAssignmentSyntax(const ParameterValueAssignmentSyntax&) = delete;
     ParameterValueAssignmentSyntax& operator=(const ParameterValueAssignmentSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -303,8 +306,9 @@ struct PatternSyntax : public SyntaxNode {
 
     PatternSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct VariablePatternSyntax : public PatternSyntax {
@@ -313,12 +317,12 @@ struct VariablePatternSyntax : public PatternSyntax {
 
     VariablePatternSyntax(Token dot, Token variableName) :
         PatternSyntax(SyntaxKind::VariablePattern), dot(dot), variableName(variableName)
-    {
-        childCount += 2;
-    }
+    {}
 
     VariablePatternSyntax(const VariablePatternSyntax&) = delete;
     VariablePatternSyntax& operator=(const VariablePatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -335,12 +339,12 @@ struct WildcardPatternSyntax : public PatternSyntax {
 
     WildcardPatternSyntax(Token dotStar) :
         PatternSyntax(SyntaxKind::WildcardPattern), dotStar(dotStar)
-    {
-        childCount += 1;
-    }
+    {}
 
     WildcardPatternSyntax(const WildcardPatternSyntax&) = delete;
     WildcardPatternSyntax& operator=(const WildcardPatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -356,12 +360,12 @@ struct ExpressionPatternSyntax : public PatternSyntax {
 
     ExpressionPatternSyntax(ExpressionSyntax& expr) :
         PatternSyntax(SyntaxKind::ExpressionPattern), expr(expr)
-    {
-        childCount += 1;
-    }
+    {}
 
     ExpressionPatternSyntax(const ExpressionPatternSyntax&) = delete;
     ExpressionPatternSyntax& operator=(const ExpressionPatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -379,12 +383,12 @@ struct TaggedPatternSyntax : public PatternSyntax {
 
     TaggedPatternSyntax(Token tagged, Token memberName, PatternSyntax* pattern) :
         PatternSyntax(SyntaxKind::TaggedPattern), tagged(tagged), memberName(memberName), pattern(pattern)
-    {
-        childCount += 3;
-    }
+    {}
 
     TaggedPatternSyntax(const TaggedPatternSyntax&) = delete;
     TaggedPatternSyntax& operator=(const TaggedPatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -401,8 +405,9 @@ struct StructurePatternMemberSyntax : public SyntaxNode {
 
     StructurePatternMemberSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
@@ -410,12 +415,12 @@ struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax
 
     OrderedStructurePatternMemberSyntax(PatternSyntax& pattern) :
         StructurePatternMemberSyntax(SyntaxKind::OrderedStructurePatternMember), pattern(pattern)
-    {
-        childCount += 1;
-    }
+    {}
 
     OrderedStructurePatternMemberSyntax(const OrderedStructurePatternMemberSyntax&) = delete;
     OrderedStructurePatternMemberSyntax& operator=(const OrderedStructurePatternMemberSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -433,12 +438,12 @@ struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
 
     NamedStructurePatternMemberSyntax(Token name, Token colon, PatternSyntax& pattern) :
         StructurePatternMemberSyntax(SyntaxKind::NamedStructurePatternMember), name(name), colon(colon), pattern(pattern)
-    {
-        childCount += 3;
-    }
+    {}
 
     NamedStructurePatternMemberSyntax(const NamedStructurePatternMemberSyntax&) = delete;
     NamedStructurePatternMemberSyntax& operator=(const NamedStructurePatternMemberSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -458,12 +463,12 @@ struct StructurePatternSyntax : public PatternSyntax {
 
     StructurePatternSyntax(Token openBrace, SeparatedSyntaxList<StructurePatternMemberSyntax> members, Token closeBrace) :
         PatternSyntax(SyntaxKind::StructurePattern), openBrace(openBrace), members(members), closeBrace(closeBrace)
-    {
-        childCount += 3;
-    }
+    {}
 
     StructurePatternSyntax(const StructurePatternSyntax&) = delete;
     StructurePatternSyntax& operator=(const StructurePatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -482,12 +487,12 @@ struct MatchesClauseSyntax : public SyntaxNode {
 
     MatchesClauseSyntax(Token matchesKeyword, PatternSyntax& pattern) :
         SyntaxNode(SyntaxKind::MatchesClause), matchesKeyword(matchesKeyword), pattern(pattern)
-    {
-        childCount += 2;
-    }
+    {}
 
     MatchesClauseSyntax(const MatchesClauseSyntax&) = delete;
     MatchesClauseSyntax& operator=(const MatchesClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -505,12 +510,12 @@ struct ConditionalPatternSyntax : public SyntaxNode {
 
     ConditionalPatternSyntax(ExpressionSyntax& expr, MatchesClauseSyntax* matchesClause) :
         SyntaxNode(SyntaxKind::ConditionalPattern), expr(expr), matchesClause(matchesClause)
-    {
-        childCount += 2;
-    }
+    {}
 
     ConditionalPatternSyntax(const ConditionalPatternSyntax&) = delete;
     ConditionalPatternSyntax& operator=(const ConditionalPatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -527,12 +532,12 @@ struct ConditionalPredicateSyntax : public SyntaxNode {
 
     ConditionalPredicateSyntax(SeparatedSyntaxList<ConditionalPatternSyntax> conditions) :
         SyntaxNode(SyntaxKind::ConditionalPredicate), conditions(conditions)
-    {
-        childCount += 1;
-    }
+    {}
 
     ConditionalPredicateSyntax(const ConditionalPredicateSyntax&) = delete;
     ConditionalPredicateSyntax& operator=(const ConditionalPredicateSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -547,8 +552,9 @@ struct AssignmentPatternSyntax : public SyntaxNode {
 
     AssignmentPatternSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
@@ -558,12 +564,12 @@ struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     SimpleAssignmentPatternSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token closeBrace) :
         AssignmentPatternSyntax(SyntaxKind::SimpleAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
-    {
-        childCount += 3;
-    }
+    {}
 
     SimpleAssignmentPatternSyntax(const SimpleAssignmentPatternSyntax&) = delete;
     SimpleAssignmentPatternSyntax& operator=(const SimpleAssignmentPatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -583,12 +589,12 @@ struct AssignmentPatternItemSyntax : public SyntaxNode {
 
     AssignmentPatternItemSyntax(ExpressionSyntax& key, Token colon, ExpressionSyntax& expr) :
         SyntaxNode(SyntaxKind::AssignmentPatternItem), key(key), colon(colon), expr(expr)
-    {
-        childCount += 3;
-    }
+    {}
 
     AssignmentPatternItemSyntax(const AssignmentPatternItemSyntax&) = delete;
     AssignmentPatternItemSyntax& operator=(const AssignmentPatternItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -608,12 +614,12 @@ struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     StructuredAssignmentPatternSyntax(Token openBrace, SeparatedSyntaxList<AssignmentPatternItemSyntax> items, Token closeBrace) :
         AssignmentPatternSyntax(SyntaxKind::StructuredAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
-    {
-        childCount += 3;
-    }
+    {}
 
     StructuredAssignmentPatternSyntax(const StructuredAssignmentPatternSyntax&) = delete;
     StructuredAssignmentPatternSyntax& operator=(const StructuredAssignmentPatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -636,12 +642,12 @@ struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     ReplicatedAssignmentPatternSyntax(Token openBrace, ExpressionSyntax& countExpr, Token innerOpenBrace, SeparatedSyntaxList<ExpressionSyntax> items, Token innerCloseBrace, Token closeBrace) :
         AssignmentPatternSyntax(SyntaxKind::ReplicatedAssignmentPattern), openBrace(openBrace), countExpr(countExpr), innerOpenBrace(innerOpenBrace), items(items), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
-    {
-        childCount += 6;
-    }
+    {}
 
     ReplicatedAssignmentPatternSyntax(const ReplicatedAssignmentPatternSyntax&) = delete;
     ReplicatedAssignmentPatternSyntax& operator=(const ReplicatedAssignmentPatternSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -664,12 +670,12 @@ struct BadExpressionSyntax : public ExpressionSyntax {
 
     BadExpressionSyntax(ExpressionSyntax& expr) :
         ExpressionSyntax(SyntaxKind::BadExpression), expr(expr)
-    {
-        childCount += 1;
-    }
+    {}
 
     BadExpressionSyntax(const BadExpressionSyntax&) = delete;
     BadExpressionSyntax& operator=(const BadExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -684,8 +690,9 @@ struct PrimaryExpressionSyntax : public ExpressionSyntax {
 
     PrimaryExpressionSyntax(SyntaxKind kind) :
         ExpressionSyntax(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
@@ -695,12 +702,12 @@ struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
 
     PrefixUnaryExpressionSyntax(SyntaxKind kind, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& operand) :
         ExpressionSyntax(kind), operatorToken(operatorToken), attributes(attributes), operand(operand)
-    {
-        childCount += 3;
-    }
+    {}
 
     PrefixUnaryExpressionSyntax(const PrefixUnaryExpressionSyntax&) = delete;
     PrefixUnaryExpressionSyntax& operator=(const PrefixUnaryExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -720,12 +727,12 @@ struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
 
     PostfixUnaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax& operand, SyntaxList<AttributeInstanceSyntax> attributes, Token operatorToken) :
         ExpressionSyntax(kind), operand(operand), attributes(attributes), operatorToken(operatorToken)
-    {
-        childCount += 3;
-    }
+    {}
 
     PostfixUnaryExpressionSyntax(const PostfixUnaryExpressionSyntax&) = delete;
     PostfixUnaryExpressionSyntax& operator=(const PostfixUnaryExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -746,12 +753,12 @@ struct BinaryExpressionSyntax : public ExpressionSyntax {
 
     BinaryExpressionSyntax(SyntaxKind kind, ExpressionSyntax& left, Token operatorToken, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& right) :
         ExpressionSyntax(kind), left(left), operatorToken(operatorToken), attributes(attributes), right(right)
-    {
-        childCount += 4;
-    }
+    {}
 
     BinaryExpressionSyntax(const BinaryExpressionSyntax&) = delete;
     BinaryExpressionSyntax& operator=(const BinaryExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -774,12 +781,12 @@ struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
 
     MinTypMaxExpressionSyntax(ExpressionSyntax& min, Token colon1, ExpressionSyntax& typ, Token colon2, ExpressionSyntax& max) :
         ExpressionSyntax(SyntaxKind::MinTypMaxExpression), min(min), colon1(colon1), typ(typ), colon2(colon2), max(max)
-    {
-        childCount += 5;
-    }
+    {}
 
     MinTypMaxExpressionSyntax(const MinTypMaxExpressionSyntax&) = delete;
     MinTypMaxExpressionSyntax& operator=(const MinTypMaxExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -801,12 +808,12 @@ struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
 
     TaggedUnionExpressionSyntax(Token tagged, Token member, ExpressionSyntax* expr) :
         ExpressionSyntax(SyntaxKind::TaggedUnionExpression), tagged(tagged), member(member), expr(expr)
-    {
-        childCount += 3;
-    }
+    {}
 
     TaggedUnionExpressionSyntax(const TaggedUnionExpressionSyntax&) = delete;
     TaggedUnionExpressionSyntax& operator=(const TaggedUnionExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -826,12 +833,12 @@ struct OpenRangeListSyntax : public SyntaxNode {
 
     OpenRangeListSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> valueRanges, Token closeBrace) :
         SyntaxNode(SyntaxKind::OpenRangeList), openBrace(openBrace), valueRanges(valueRanges), closeBrace(closeBrace)
-    {
-        childCount += 3;
-    }
+    {}
 
     OpenRangeListSyntax(const OpenRangeListSyntax&) = delete;
     OpenRangeListSyntax& operator=(const OpenRangeListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -851,12 +858,12 @@ struct InsideExpressionSyntax : public ExpressionSyntax {
 
     InsideExpressionSyntax(ExpressionSyntax& expr, Token inside, OpenRangeListSyntax& ranges) :
         ExpressionSyntax(SyntaxKind::InsideExpression), expr(expr), inside(inside), ranges(ranges)
-    {
-        childCount += 3;
-    }
+    {}
 
     InsideExpressionSyntax(const InsideExpressionSyntax&) = delete;
     InsideExpressionSyntax& operator=(const InsideExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -879,12 +886,12 @@ struct ConditionalExpressionSyntax : public ExpressionSyntax {
 
     ConditionalExpressionSyntax(ConditionalPredicateSyntax& predicate, Token question, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& left, Token colon, ExpressionSyntax& right) :
         ExpressionSyntax(SyntaxKind::ConditionalExpression), predicate(predicate), question(question), attributes(attributes), left(left), colon(colon), right(right)
-    {
-        childCount += 6;
-    }
+    {}
 
     ConditionalExpressionSyntax(const ConditionalExpressionSyntax&) = delete;
     ConditionalExpressionSyntax& operator=(const ConditionalExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -906,12 +913,12 @@ struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
 
     AssignmentPatternExpressionSyntax(DataTypeSyntax* type, AssignmentPatternSyntax& pattern) :
         PrimaryExpressionSyntax(SyntaxKind::AssignmentPatternExpression), type(type), pattern(pattern)
-    {
-        childCount += 2;
-    }
+    {}
 
     AssignmentPatternExpressionSyntax(const AssignmentPatternExpressionSyntax&) = delete;
     AssignmentPatternExpressionSyntax& operator=(const AssignmentPatternExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -929,8 +936,9 @@ struct SelectorSyntax : public SyntaxNode {
 
     SelectorSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct BitSelectSyntax : public SelectorSyntax {
@@ -938,12 +946,12 @@ struct BitSelectSyntax : public SelectorSyntax {
 
     BitSelectSyntax(ExpressionSyntax& expr) :
         SelectorSyntax(SyntaxKind::BitSelect), expr(expr)
-    {
-        childCount += 1;
-    }
+    {}
 
     BitSelectSyntax(const BitSelectSyntax&) = delete;
     BitSelectSyntax& operator=(const BitSelectSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -961,12 +969,12 @@ struct RangeSelectSyntax : public SelectorSyntax {
 
     RangeSelectSyntax(SyntaxKind kind, ExpressionSyntax& left, Token range, ExpressionSyntax& right) :
         SelectorSyntax(kind), left(left), range(range), right(right)
-    {
-        childCount += 3;
-    }
+    {}
 
     RangeSelectSyntax(const RangeSelectSyntax&) = delete;
     RangeSelectSyntax& operator=(const RangeSelectSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -986,12 +994,12 @@ struct ElementSelectSyntax : public ExpressionSyntax {
 
     ElementSelectSyntax(Token openBracket, SelectorSyntax* selector, Token closeBracket) :
         ExpressionSyntax(SyntaxKind::ElementSelect), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
-    {
-        childCount += 3;
-    }
+    {}
 
     ElementSelectSyntax(const ElementSelectSyntax&) = delete;
     ElementSelectSyntax& operator=(const ElementSelectSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1010,8 +1018,9 @@ struct NameSyntax : public ExpressionSyntax {
 
     NameSyntax(SyntaxKind kind) :
         ExpressionSyntax(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct IdentifierNameSyntax : public NameSyntax {
@@ -1019,12 +1028,12 @@ struct IdentifierNameSyntax : public NameSyntax {
 
     IdentifierNameSyntax(Token identifier) :
         NameSyntax(SyntaxKind::IdentifierName), identifier(identifier)
-    {
-        childCount += 1;
-    }
+    {}
 
     IdentifierNameSyntax(const IdentifierNameSyntax&) = delete;
     IdentifierNameSyntax& operator=(const IdentifierNameSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1041,12 +1050,12 @@ struct IdentifierSelectNameSyntax : public NameSyntax {
 
     IdentifierSelectNameSyntax(Token identifier, SyntaxList<ElementSelectSyntax> selectors) :
         NameSyntax(SyntaxKind::IdentifierSelectName), identifier(identifier), selectors(selectors)
-    {
-        childCount += 2;
-    }
+    {}
 
     IdentifierSelectNameSyntax(const IdentifierSelectNameSyntax&) = delete;
     IdentifierSelectNameSyntax& operator=(const IdentifierSelectNameSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1062,12 +1071,12 @@ struct EmptyIdentifierNameSyntax : public NameSyntax {
 
     EmptyIdentifierNameSyntax() :
         NameSyntax(SyntaxKind::EmptyIdentifierName)
-    {
-        childCount += 0;
-    }
+    {}
 
     EmptyIdentifierNameSyntax(const EmptyIdentifierNameSyntax&) = delete;
     EmptyIdentifierNameSyntax& operator=(const EmptyIdentifierNameSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1081,12 +1090,12 @@ struct KeywordNameSyntax : public NameSyntax {
 
     KeywordNameSyntax(SyntaxKind kind, Token keyword) :
         NameSyntax(kind), keyword(keyword)
-    {
-        childCount += 1;
-    }
+    {}
 
     KeywordNameSyntax(const KeywordNameSyntax&) = delete;
     KeywordNameSyntax& operator=(const KeywordNameSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1103,12 +1112,12 @@ struct ClassNameSyntax : public NameSyntax {
 
     ClassNameSyntax(Token identifier, ParameterValueAssignmentSyntax& parameters) :
         NameSyntax(SyntaxKind::ClassName), identifier(identifier), parameters(parameters)
-    {
-        childCount += 2;
-    }
+    {}
 
     ClassNameSyntax(const ClassNameSyntax&) = delete;
     ClassNameSyntax& operator=(const ClassNameSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1127,12 +1136,12 @@ struct ScopedNameSyntax : public NameSyntax {
 
     ScopedNameSyntax(NameSyntax& left, Token separator, NameSyntax& right) :
         NameSyntax(SyntaxKind::ScopedName), left(left), separator(separator), right(right)
-    {
-        childCount += 3;
-    }
+    {}
 
     ScopedNameSyntax(const ScopedNameSyntax&) = delete;
     ScopedNameSyntax& operator=(const ScopedNameSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1151,12 +1160,12 @@ struct ClassScopeSyntax : public NameSyntax {
 
     ClassScopeSyntax(NameSyntax& left, Token separator) :
         NameSyntax(SyntaxKind::ClassScope), left(left), separator(separator)
-    {
-        childCount += 2;
-    }
+    {}
 
     ClassScopeSyntax(const ClassScopeSyntax&) = delete;
     ClassScopeSyntax& operator=(const ClassScopeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1175,12 +1184,12 @@ struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
 
     LiteralExpressionSyntax(SyntaxKind kind, Token literal) :
         PrimaryExpressionSyntax(kind), literal(literal)
-    {
-        childCount += 1;
-    }
+    {}
 
     LiteralExpressionSyntax(const LiteralExpressionSyntax&) = delete;
     LiteralExpressionSyntax& operator=(const LiteralExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1198,12 +1207,12 @@ struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
 
     IntegerVectorExpressionSyntax(Token size, Token base, Token value) :
         PrimaryExpressionSyntax(SyntaxKind::IntegerVectorExpression), size(size), base(base), value(value)
-    {
-        childCount += 3;
-    }
+    {}
 
     IntegerVectorExpressionSyntax(const IntegerVectorExpressionSyntax&) = delete;
     IntegerVectorExpressionSyntax& operator=(const IntegerVectorExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1222,12 +1231,12 @@ struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
 
     EmptyQueueExpressionSyntax(Token openBrace, Token closeBrace) :
         PrimaryExpressionSyntax(SyntaxKind::EmptyQueueExpression), openBrace(openBrace), closeBrace(closeBrace)
-    {
-        childCount += 2;
-    }
+    {}
 
     EmptyQueueExpressionSyntax(const EmptyQueueExpressionSyntax&) = delete;
     EmptyQueueExpressionSyntax& operator=(const EmptyQueueExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1246,12 +1255,12 @@ struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     ConcatenationExpressionSyntax(Token openBrace, SeparatedSyntaxList<ExpressionSyntax> expressions, Token closeBrace) :
         PrimaryExpressionSyntax(SyntaxKind::ConcatenationExpression), openBrace(openBrace), expressions(expressions), closeBrace(closeBrace)
-    {
-        childCount += 3;
-    }
+    {}
 
     ConcatenationExpressionSyntax(const ConcatenationExpressionSyntax&) = delete;
     ConcatenationExpressionSyntax& operator=(const ConcatenationExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1272,12 +1281,12 @@ struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     MultipleConcatenationExpressionSyntax(Token openBrace, ExpressionSyntax& expression, ConcatenationExpressionSyntax& concatenation, Token closeBrace) :
         PrimaryExpressionSyntax(SyntaxKind::MultipleConcatenationExpression), openBrace(openBrace), expression(expression), concatenation(concatenation), closeBrace(closeBrace)
-    {
-        childCount += 4;
-    }
+    {}
 
     MultipleConcatenationExpressionSyntax(const MultipleConcatenationExpressionSyntax&) = delete;
     MultipleConcatenationExpressionSyntax& operator=(const MultipleConcatenationExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1297,12 +1306,12 @@ struct StreamExpressionWithRange : public SyntaxNode {
 
     StreamExpressionWithRange(Token withKeyword, ElementSelectSyntax& range) :
         SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), range(range)
-    {
-        childCount += 2;
-    }
+    {}
 
     StreamExpressionWithRange(const StreamExpressionWithRange&) = delete;
     StreamExpressionWithRange& operator=(const StreamExpressionWithRange&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1320,12 +1329,12 @@ struct StreamExpressionSyntax : public SyntaxNode {
 
     StreamExpressionSyntax(ExpressionSyntax& expression, StreamExpressionWithRange* withRange) :
         SyntaxNode(SyntaxKind::StreamExpression), expression(expression), withRange(withRange)
-    {
-        childCount += 2;
-    }
+    {}
 
     StreamExpressionSyntax(const StreamExpressionSyntax&) = delete;
     StreamExpressionSyntax& operator=(const StreamExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1348,12 +1357,12 @@ struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     StreamingConcatenationExpressionSyntax(Token openBrace, Token operatorToken, ExpressionSyntax* sliceSize, Token innerOpenBrace, SeparatedSyntaxList<StreamExpressionSyntax> expressions, Token innerCloseBrace, Token closeBrace) :
         PrimaryExpressionSyntax(SyntaxKind::StreamingConcatenationExpression), openBrace(openBrace), operatorToken(operatorToken), sliceSize(sliceSize), innerOpenBrace(innerOpenBrace), expressions(expressions), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
-    {
-        childCount += 7;
-    }
+    {}
 
     StreamingConcatenationExpressionSyntax(const StreamingConcatenationExpressionSyntax&) = delete;
     StreamingConcatenationExpressionSyntax& operator=(const StreamingConcatenationExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1377,12 +1386,12 @@ struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
 
     ParenthesizedExpressionSyntax(Token openParen, ExpressionSyntax& expression, Token closeParen) :
         PrimaryExpressionSyntax(SyntaxKind::ParenthesizedExpression), openParen(openParen), expression(expression), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     ParenthesizedExpressionSyntax(const ParenthesizedExpressionSyntax&) = delete;
     ParenthesizedExpressionSyntax& operator=(const ParenthesizedExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1402,12 +1411,12 @@ struct NewClassExpressionSyntax : public ExpressionSyntax {
 
     NewClassExpressionSyntax(ClassScopeSyntax& classScope, Token newKeyword, ArgumentListSyntax* arguments) :
         ExpressionSyntax(SyntaxKind::NewClassExpression), classScope(classScope), newKeyword(newKeyword), arguments(arguments)
-    {
-        childCount += 3;
-    }
+    {}
 
     NewClassExpressionSyntax(const NewClassExpressionSyntax&) = delete;
     NewClassExpressionSyntax& operator=(const NewClassExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1429,12 +1438,12 @@ struct NewArrayExpressionSyntax : public ExpressionSyntax {
 
     NewArrayExpressionSyntax(Token newKeyword, Token openBracket, ExpressionSyntax& sizeExpr, Token closeBracket, ParenthesizedExpressionSyntax* initializer) :
         ExpressionSyntax(SyntaxKind::NewArrayExpression), newKeyword(newKeyword), openBracket(openBracket), sizeExpr(sizeExpr), closeBracket(closeBracket), initializer(initializer)
-    {
-        childCount += 5;
-    }
+    {}
 
     NewArrayExpressionSyntax(const NewArrayExpressionSyntax&) = delete;
     NewArrayExpressionSyntax& operator=(const NewArrayExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1455,12 +1464,12 @@ struct NewExpressionSyntax : public ExpressionSyntax {
 
     NewExpressionSyntax(Token newKeyword, ExpressionSyntax& expr) :
         ExpressionSyntax(SyntaxKind::NewExpression), newKeyword(newKeyword), expr(expr)
-    {
-        childCount += 2;
-    }
+    {}
 
     NewExpressionSyntax(const NewExpressionSyntax&) = delete;
     NewExpressionSyntax& operator=(const NewExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1480,12 +1489,12 @@ struct ElementSelectExpressionSyntax : public ExpressionSyntax {
 
     ElementSelectExpressionSyntax(ExpressionSyntax& left, ElementSelectSyntax& select) :
         ExpressionSyntax(SyntaxKind::ElementSelectExpression), left(left), select(select)
-    {
-        childCount += 2;
-    }
+    {}
 
     ElementSelectExpressionSyntax(const ElementSelectExpressionSyntax&) = delete;
     ElementSelectExpressionSyntax& operator=(const ElementSelectExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1504,12 +1513,12 @@ struct MemberAccessExpressionSyntax : public ExpressionSyntax {
 
     MemberAccessExpressionSyntax(ExpressionSyntax& left, Token dot, Token name) :
         ExpressionSyntax(SyntaxKind::MemberAccessExpression), left(left), dot(dot), name(name)
-    {
-        childCount += 3;
-    }
+    {}
 
     MemberAccessExpressionSyntax(const MemberAccessExpressionSyntax&) = delete;
     MemberAccessExpressionSyntax& operator=(const MemberAccessExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1529,12 +1538,12 @@ struct InvocationExpressionSyntax : public ExpressionSyntax {
 
     InvocationExpressionSyntax(ExpressionSyntax& left, SyntaxList<AttributeInstanceSyntax> attributes, ArgumentListSyntax* arguments) :
         ExpressionSyntax(SyntaxKind::InvocationExpression), left(left), attributes(attributes), arguments(arguments)
-    {
-        childCount += 3;
-    }
+    {}
 
     InvocationExpressionSyntax(const InvocationExpressionSyntax&) = delete;
     InvocationExpressionSyntax& operator=(const InvocationExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1554,12 +1563,12 @@ struct CastExpressionSyntax : public ExpressionSyntax {
 
     CastExpressionSyntax(ExpressionSyntax& left, Token apostrophe, ParenthesizedExpressionSyntax& right) :
         ExpressionSyntax(SyntaxKind::CastExpression), left(left), apostrophe(apostrophe), right(right)
-    {
-        childCount += 3;
-    }
+    {}
 
     CastExpressionSyntax(const CastExpressionSyntax&) = delete;
     CastExpressionSyntax& operator=(const CastExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1579,12 +1588,12 @@ struct SignedCastExpressionSyntax : public ExpressionSyntax {
 
     SignedCastExpressionSyntax(Token signing, Token apostrophe, ParenthesizedExpressionSyntax& inner) :
         ExpressionSyntax(SyntaxKind::SignedCastExpression), signing(signing), apostrophe(apostrophe), inner(inner)
-    {
-        childCount += 3;
-    }
+    {}
 
     SignedCastExpressionSyntax(const SignedCastExpressionSyntax&) = delete;
     SignedCastExpressionSyntax& operator=(const SignedCastExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1603,8 +1612,9 @@ struct TimingControlSyntax : public SyntaxNode {
 
     TimingControlSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct DelaySyntax : public TimingControlSyntax {
@@ -1613,12 +1623,12 @@ struct DelaySyntax : public TimingControlSyntax {
 
     DelaySyntax(SyntaxKind kind, Token hash, ExpressionSyntax& delayValue) :
         TimingControlSyntax(kind), hash(hash), delayValue(delayValue)
-    {
-        childCount += 2;
-    }
+    {}
 
     DelaySyntax(const DelaySyntax&) = delete;
     DelaySyntax& operator=(const DelaySyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1636,12 +1646,12 @@ struct EventControlSyntax : public TimingControlSyntax {
 
     EventControlSyntax(Token at, NameSyntax& eventName) :
         TimingControlSyntax(SyntaxKind::EventControl), at(at), eventName(eventName)
-    {
-        childCount += 2;
-    }
+    {}
 
     EventControlSyntax(const EventControlSyntax&) = delete;
     EventControlSyntax& operator=(const EventControlSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1657,8 +1667,9 @@ struct EventExpressionSyntax : public SyntaxNode {
 
     EventExpressionSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct SignalEventExpressionSyntax : public EventExpressionSyntax {
@@ -1667,12 +1678,12 @@ struct SignalEventExpressionSyntax : public EventExpressionSyntax {
 
     SignalEventExpressionSyntax(Token edge, ExpressionSyntax& expr) :
         EventExpressionSyntax(SyntaxKind::SignalEventExpression), edge(edge), expr(expr)
-    {
-        childCount += 2;
-    }
+    {}
 
     SignalEventExpressionSyntax(const SignalEventExpressionSyntax&) = delete;
     SignalEventExpressionSyntax& operator=(const SignalEventExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1691,12 +1702,12 @@ struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
 
     BinaryEventExpressionSyntax(EventExpressionSyntax& left, Token operatorToken, EventExpressionSyntax& right) :
         EventExpressionSyntax(SyntaxKind::BinaryEventExpression), left(left), operatorToken(operatorToken), right(right)
-    {
-        childCount += 3;
-    }
+    {}
 
     BinaryEventExpressionSyntax(const BinaryEventExpressionSyntax&) = delete;
     BinaryEventExpressionSyntax& operator=(const BinaryEventExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1716,12 +1727,12 @@ struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
 
     ParenthesizedEventExpressionSyntax(Token openParen, EventExpressionSyntax& expr, Token closeParen) :
         EventExpressionSyntax(SyntaxKind::ParenthesizedEventExpression), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     ParenthesizedEventExpressionSyntax(const ParenthesizedEventExpressionSyntax&) = delete;
     ParenthesizedEventExpressionSyntax& operator=(const ParenthesizedEventExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1739,12 +1750,12 @@ struct ImplicitEventControlSyntax : public TimingControlSyntax {
 
     ImplicitEventControlSyntax(Token atStar) :
         TimingControlSyntax(SyntaxKind::ImplicitEventControl), atStar(atStar)
-    {
-        childCount += 1;
-    }
+    {}
 
     ImplicitEventControlSyntax(const ImplicitEventControlSyntax&) = delete;
     ImplicitEventControlSyntax& operator=(const ImplicitEventControlSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1761,12 +1772,12 @@ struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
 
     ParenImplicitEventControlSyntax(Token at, Token openParenStarCloseParen) :
         TimingControlSyntax(SyntaxKind::ParenImplicitEventControl), at(at), openParenStarCloseParen(openParenStarCloseParen)
-    {
-        childCount += 2;
-    }
+    {}
 
     ParenImplicitEventControlSyntax(const ParenImplicitEventControlSyntax&) = delete;
     ParenImplicitEventControlSyntax& operator=(const ParenImplicitEventControlSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1784,12 +1795,12 @@ struct EventControlWithExpressionSyntax : public TimingControlSyntax {
 
     EventControlWithExpressionSyntax(Token at, EventExpressionSyntax& expr) :
         TimingControlSyntax(SyntaxKind::EventControlWithExpression), at(at), expr(expr)
-    {
-        childCount += 2;
-    }
+    {}
 
     EventControlWithExpressionSyntax(const EventControlWithExpressionSyntax&) = delete;
     EventControlWithExpressionSyntax& operator=(const EventControlWithExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1810,12 +1821,12 @@ struct RepeatedEventControlSyntax : public TimingControlSyntax {
 
     RepeatedEventControlSyntax(Token repeat, Token openParen, ExpressionSyntax& expr, Token closeParen, TimingControlSyntax* eventControl) :
         TimingControlSyntax(SyntaxKind::RepeatedEventControl), repeat(repeat), openParen(openParen), expr(expr), closeParen(closeParen), eventControl(eventControl)
-    {
-        childCount += 5;
-    }
+    {}
 
     RepeatedEventControlSyntax(const RepeatedEventControlSyntax&) = delete;
     RepeatedEventControlSyntax& operator=(const RepeatedEventControlSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1836,12 +1847,12 @@ struct TimingControlExpressionSyntax : public ExpressionSyntax {
 
     TimingControlExpressionSyntax(TimingControlSyntax& timing, ExpressionSyntax& expr) :
         ExpressionSyntax(SyntaxKind::TimingControlExpression), timing(timing), expr(expr)
-    {
-        childCount += 2;
-    }
+    {}
 
     TimingControlExpressionSyntax(const TimingControlExpressionSyntax&) = delete;
     TimingControlExpressionSyntax& operator=(const TimingControlExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1860,12 +1871,12 @@ struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
 
     TimingControlExpressionConcatenationSyntax(ExpressionSyntax& left, TimingControlSyntax& timing, ExpressionSyntax& right) :
         ExpressionSyntax(SyntaxKind::TimingControlExpressionConcatenation), left(left), timing(timing), right(right)
-    {
-        childCount += 3;
-    }
+    {}
 
     TimingControlExpressionConcatenationSyntax(const TimingControlExpressionConcatenationSyntax&) = delete;
     TimingControlExpressionConcatenationSyntax& operator=(const TimingControlExpressionConcatenationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1886,12 +1897,12 @@ struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
 
     ShortcutCycleDelayRangeSyntax(Token doubleHash, Token openBracket, Token op, Token closeBracket) :
         TimingControlSyntax(SyntaxKind::ShortcutCycleDelayRange), doubleHash(doubleHash), openBracket(openBracket), op(op), closeBracket(closeBracket)
-    {
-        childCount += 4;
-    }
+    {}
 
     ShortcutCycleDelayRangeSyntax(const ShortcutCycleDelayRangeSyntax&) = delete;
     ShortcutCycleDelayRangeSyntax& operator=(const ShortcutCycleDelayRangeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1911,8 +1922,9 @@ struct DimensionSpecifierSyntax : public SyntaxNode {
 
     DimensionSpecifierSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
@@ -1920,12 +1932,12 @@ struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     RangeDimensionSpecifierSyntax(SelectorSyntax& selector) :
         DimensionSpecifierSyntax(SyntaxKind::RangeDimensionSpecifier), selector(selector)
-    {
-        childCount += 1;
-    }
+    {}
 
     RangeDimensionSpecifierSyntax(const RangeDimensionSpecifierSyntax&) = delete;
     RangeDimensionSpecifierSyntax& operator=(const RangeDimensionSpecifierSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1941,12 +1953,12 @@ struct DataTypeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     DataTypeDimensionSpecifierSyntax(DataTypeSyntax& type) :
         DimensionSpecifierSyntax(SyntaxKind::DataTypeDimensionSpecifier), type(type)
-    {
-        childCount += 1;
-    }
+    {}
 
     DataTypeDimensionSpecifierSyntax(const DataTypeDimensionSpecifierSyntax&) = delete;
     DataTypeDimensionSpecifierSyntax& operator=(const DataTypeDimensionSpecifierSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1962,12 +1974,12 @@ struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     WildcardDimensionSpecifierSyntax(Token star) :
         DimensionSpecifierSyntax(SyntaxKind::WildcardDimensionSpecifier), star(star)
-    {
-        childCount += 1;
-    }
+    {}
 
     WildcardDimensionSpecifierSyntax(const WildcardDimensionSpecifierSyntax&) = delete;
     WildcardDimensionSpecifierSyntax& operator=(const WildcardDimensionSpecifierSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -1984,12 +1996,12 @@ struct ColonExpressionClauseSyntax : public SyntaxNode {
 
     ColonExpressionClauseSyntax(Token colon, ExpressionSyntax& expr) :
         SyntaxNode(SyntaxKind::ColonExpressionClause), colon(colon), expr(expr)
-    {
-        childCount += 2;
-    }
+    {}
 
     ColonExpressionClauseSyntax(const ColonExpressionClauseSyntax&) = delete;
     ColonExpressionClauseSyntax& operator=(const ColonExpressionClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2007,12 +2019,12 @@ struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     QueueDimensionSpecifierSyntax(Token dollar, ColonExpressionClauseSyntax* maxSizeClause) :
         DimensionSpecifierSyntax(SyntaxKind::QueueDimensionSpecifier), dollar(dollar), maxSizeClause(maxSizeClause)
-    {
-        childCount += 2;
-    }
+    {}
 
     QueueDimensionSpecifierSyntax(const QueueDimensionSpecifierSyntax&) = delete;
     QueueDimensionSpecifierSyntax& operator=(const QueueDimensionSpecifierSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2031,12 +2043,12 @@ struct VariableDimensionSyntax : public SyntaxNode {
 
     VariableDimensionSyntax(Token openBracket, DimensionSpecifierSyntax* specifier, Token closeBracket) :
         SyntaxNode(SyntaxKind::VariableDimension), openBracket(openBracket), specifier(specifier), closeBracket(closeBracket)
-    {
-        childCount += 3;
-    }
+    {}
 
     VariableDimensionSyntax(const VariableDimensionSyntax&) = delete;
     VariableDimensionSyntax& operator=(const VariableDimensionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2056,12 +2068,12 @@ struct VariableDeclaratorSyntax : public SyntaxNode {
 
     VariableDeclaratorSyntax(Token name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer) :
         SyntaxNode(SyntaxKind::VariableDeclarator), name(name), dimensions(dimensions), initializer(initializer)
-    {
-        childCount += 3;
-    }
+    {}
 
     VariableDeclaratorSyntax(const VariableDeclaratorSyntax&) = delete;
     VariableDeclaratorSyntax& operator=(const VariableDeclaratorSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2082,12 +2094,12 @@ struct DataDeclarationSyntax : public MemberSyntax {
 
     DataDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
         MemberSyntax(SyntaxKind::DataDeclaration, attributes), modifiers(modifiers), type(type), declarators(declarators), semi(semi)
-    {
-        childCount += 4;
-    }
+    {}
 
     DataDeclarationSyntax(const DataDeclarationSyntax&) = delete;
     DataDeclarationSyntax& operator=(const DataDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2111,12 +2123,12 @@ struct TypedefDeclarationSyntax : public MemberSyntax {
 
     TypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, DataTypeSyntax& type, Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token semi) :
         MemberSyntax(SyntaxKind::TypedefDeclaration, attributes), typedefKeyword(typedefKeyword), type(type), name(name), dimensions(dimensions), semi(semi)
-    {
-        childCount += 5;
-    }
+    {}
 
     TypedefDeclarationSyntax(const TypedefDeclarationSyntax&) = delete;
     TypedefDeclarationSyntax& operator=(const TypedefDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2140,12 +2152,12 @@ struct TypedefKeywordDeclarationSyntax : public MemberSyntax {
 
     TypedefKeywordDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi) :
         MemberSyntax(SyntaxKind::TypedefKeywordDeclaration, attributes), typedefKeyword(typedefKeyword), keyword(keyword), name(name), semi(semi)
-    {
-        childCount += 4;
-    }
+    {}
 
     TypedefKeywordDeclarationSyntax(const TypedefKeywordDeclarationSyntax&) = delete;
     TypedefKeywordDeclarationSyntax& operator=(const TypedefKeywordDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2169,12 +2181,12 @@ struct TypedefInterfaceClassDeclarationSyntax : public MemberSyntax {
 
     TypedefInterfaceClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi) :
         MemberSyntax(SyntaxKind::TypedefInterfaceClassDeclaration, attributes), typedefKeyword(typedefKeyword), interfaceKeyword(interfaceKeyword), classKeyword(classKeyword), name(name), semi(semi)
-    {
-        childCount += 5;
-    }
+    {}
 
     TypedefInterfaceClassDeclarationSyntax(const TypedefInterfaceClassDeclarationSyntax&) = delete;
     TypedefInterfaceClassDeclarationSyntax& operator=(const TypedefInterfaceClassDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2194,8 +2206,9 @@ struct NetStrengthSyntax : public SyntaxNode {
 
     NetStrengthSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct ChargeStrengthSyntax : public NetStrengthSyntax {
@@ -2205,12 +2218,12 @@ struct ChargeStrengthSyntax : public NetStrengthSyntax {
 
     ChargeStrengthSyntax(Token openParen, Token strength, Token closeParen) :
         NetStrengthSyntax(SyntaxKind::ChargeStrength), openParen(openParen), strength(strength), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     ChargeStrengthSyntax(const ChargeStrengthSyntax&) = delete;
     ChargeStrengthSyntax& operator=(const ChargeStrengthSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2232,12 +2245,12 @@ struct DriveStrengthSyntax : public NetStrengthSyntax {
 
     DriveStrengthSyntax(Token openParen, Token strength0, Token comma, Token strength1, Token closeParen) :
         NetStrengthSyntax(SyntaxKind::DriveStrength), openParen(openParen), strength0(strength0), comma(comma), strength1(strength1), closeParen(closeParen)
-    {
-        childCount += 5;
-    }
+    {}
 
     DriveStrengthSyntax(const DriveStrengthSyntax&) = delete;
     DriveStrengthSyntax& operator=(const DriveStrengthSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2262,12 +2275,12 @@ struct NetDeclarationSyntax : public MemberSyntax {
 
     NetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token netType, NetStrengthSyntax* strength, Token expansionHint, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
         MemberSyntax(SyntaxKind::NetDeclaration, attributes), netType(netType), strength(strength), expansionHint(expansionHint), type(type), declarators(declarators), semi(semi)
-    {
-        childCount += 6;
-    }
+    {}
 
     NetDeclarationSyntax(const NetDeclarationSyntax&) = delete;
     NetDeclarationSyntax& operator=(const NetDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2291,12 +2304,12 @@ struct PackageImportItemSyntax : public SyntaxNode {
 
     PackageImportItemSyntax(Token package, Token doubleColon, Token item) :
         SyntaxNode(SyntaxKind::PackageImportItem), package(package), doubleColon(doubleColon), item(item)
-    {
-        childCount += 3;
-    }
+    {}
 
     PackageImportItemSyntax(const PackageImportItemSyntax&) = delete;
     PackageImportItemSyntax& operator=(const PackageImportItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2316,12 +2329,12 @@ struct PackageImportDeclarationSyntax : public MemberSyntax {
 
     PackageImportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<PackageImportItemSyntax> items, Token semi) :
         MemberSyntax(SyntaxKind::PackageImportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     PackageImportDeclarationSyntax(const PackageImportDeclarationSyntax&) = delete;
     PackageImportDeclarationSyntax& operator=(const PackageImportDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2342,12 +2355,12 @@ struct ParameterDeclarationSyntax : public SyntaxNode {
 
     ParameterDeclarationSyntax(Token keyword, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators) :
         SyntaxNode(SyntaxKind::ParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
-    {
-        childCount += 3;
-    }
+    {}
 
     ParameterDeclarationSyntax(const ParameterDeclarationSyntax&) = delete;
     ParameterDeclarationSyntax& operator=(const ParameterDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2366,12 +2379,12 @@ struct ParameterDeclarationStatementSyntax : public MemberSyntax {
 
     ParameterDeclarationStatementSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ParameterDeclarationSyntax& parameter, Token semi) :
         MemberSyntax(SyntaxKind::ParameterDeclarationStatement, attributes), parameter(parameter), semi(semi)
-    {
-        childCount += 2;
-    }
+    {}
 
     ParameterDeclarationStatementSyntax(const ParameterDeclarationStatementSyntax&) = delete;
     ParameterDeclarationStatementSyntax& operator=(const ParameterDeclarationStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2388,8 +2401,9 @@ struct PortHeaderSyntax : public SyntaxNode {
 
     PortHeaderSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct PortDeclarationSyntax : public MemberSyntax {
@@ -2399,12 +2413,12 @@ struct PortDeclarationSyntax : public MemberSyntax {
 
     PortDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
         MemberSyntax(SyntaxKind::PortDeclaration, attributes), header(header), declarators(declarators), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     PortDeclarationSyntax(const PortDeclarationSyntax&) = delete;
     PortDeclarationSyntax& operator=(const PortDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2425,12 +2439,12 @@ struct GenvarDeclarationSyntax : public MemberSyntax {
 
     GenvarDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token semi) :
         MemberSyntax(SyntaxKind::GenvarDeclaration, attributes), keyword(keyword), identifiers(identifiers), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     GenvarDeclarationSyntax(const GenvarDeclarationSyntax&) = delete;
     GenvarDeclarationSyntax& operator=(const GenvarDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2453,12 +2467,12 @@ struct IntegerTypeSyntax : public DataTypeSyntax {
 
     IntegerTypeSyntax(SyntaxKind kind, Token keyword, Token signing, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(kind), keyword(keyword), signing(signing), dimensions(dimensions)
-    {
-        childCount += 3;
-    }
+    {}
 
     IntegerTypeSyntax(const IntegerTypeSyntax&) = delete;
     IntegerTypeSyntax& operator=(const IntegerTypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2476,12 +2490,12 @@ struct KeywordTypeSyntax : public DataTypeSyntax {
 
     KeywordTypeSyntax(SyntaxKind kind, Token keyword) :
         DataTypeSyntax(kind), keyword(keyword)
-    {
-        childCount += 1;
-    }
+    {}
 
     KeywordTypeSyntax(const KeywordTypeSyntax&) = delete;
     KeywordTypeSyntax& operator=(const KeywordTypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2497,12 +2511,12 @@ struct NamedTypeSyntax : public DataTypeSyntax {
 
     NamedTypeSyntax(NameSyntax& name) :
         DataTypeSyntax(SyntaxKind::NamedType), name(name)
-    {
-        childCount += 1;
-    }
+    {}
 
     NamedTypeSyntax(const NamedTypeSyntax&) = delete;
     NamedTypeSyntax& operator=(const NamedTypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2522,12 +2536,12 @@ struct StructUnionMemberSyntax : public SyntaxNode {
 
     StructUnionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token randomQualifier, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) :
         SyntaxNode(SyntaxKind::StructUnionMember), attributes(attributes), randomQualifier(randomQualifier), type(type), declarators(declarators), semi(semi)
-    {
-        childCount += 5;
-    }
+    {}
 
     StructUnionMemberSyntax(const StructUnionMemberSyntax&) = delete;
     StructUnionMemberSyntax& operator=(const StructUnionMemberSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2554,12 +2568,12 @@ struct StructUnionTypeSyntax : public DataTypeSyntax {
 
     StructUnionTypeSyntax(SyntaxKind kind, Token keyword, Token tagged, Token packed, Token signing, Token openBrace, SyntaxList<StructUnionMemberSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(kind), keyword(keyword), tagged(tagged), packed(packed), signing(signing), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
-    {
-        childCount += 8;
-    }
+    {}
 
     StructUnionTypeSyntax(const StructUnionTypeSyntax&) = delete;
     StructUnionTypeSyntax& operator=(const StructUnionTypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2587,12 +2601,12 @@ struct EnumTypeSyntax : public DataTypeSyntax {
 
     EnumTypeSyntax(Token keyword, DataTypeSyntax* baseType, Token openBrace, SeparatedSyntaxList<VariableDeclaratorSyntax> members, Token closeBrace, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(SyntaxKind::EnumType), keyword(keyword), baseType(baseType), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
-    {
-        childCount += 6;
-    }
+    {}
 
     EnumTypeSyntax(const EnumTypeSyntax&) = delete;
     EnumTypeSyntax& operator=(const EnumTypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2616,12 +2630,12 @@ struct TypeReferenceSyntax : public DataTypeSyntax {
 
     TypeReferenceSyntax(Token typeKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen) :
         DataTypeSyntax(SyntaxKind::TypeReference), typeKeyword(typeKeyword), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 4;
-    }
+    {}
 
     TypeReferenceSyntax(const TypeReferenceSyntax&) = delete;
     TypeReferenceSyntax& operator=(const TypeReferenceSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2641,12 +2655,12 @@ struct DotMemberClauseSyntax : public SyntaxNode {
 
     DotMemberClauseSyntax(Token dot, Token member) :
         SyntaxNode(SyntaxKind::DotMemberClause), dot(dot), member(member)
-    {
-        childCount += 2;
-    }
+    {}
 
     DotMemberClauseSyntax(const DotMemberClauseSyntax&) = delete;
     DotMemberClauseSyntax& operator=(const DotMemberClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2667,12 +2681,12 @@ struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
 
     VirtualInterfaceTypeSyntax(Token virtualKeyword, Token interfaceKeyword, Token name, ParameterValueAssignmentSyntax* parameters, DotMemberClauseSyntax* modport) :
         DataTypeSyntax(SyntaxKind::VirtualInterfaceType), virtualKeyword(virtualKeyword), interfaceKeyword(interfaceKeyword), name(name), parameters(parameters), modport(modport)
-    {
-        childCount += 5;
-    }
+    {}
 
     VirtualInterfaceTypeSyntax(const VirtualInterfaceTypeSyntax&) = delete;
     VirtualInterfaceTypeSyntax& operator=(const VirtualInterfaceTypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2693,12 +2707,12 @@ struct ImplicitTypeSyntax : public DataTypeSyntax {
 
     ImplicitTypeSyntax(Token signing, SyntaxList<VariableDimensionSyntax> dimensions) :
         DataTypeSyntax(SyntaxKind::ImplicitType), signing(signing), dimensions(dimensions)
-    {
-        childCount += 2;
-    }
+    {}
 
     ImplicitTypeSyntax(const ImplicitTypeSyntax&) = delete;
     ImplicitTypeSyntax& operator=(const ImplicitTypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2716,12 +2730,12 @@ struct VarDataTypeSyntax : public DataTypeSyntax {
 
     VarDataTypeSyntax(Token var, DataTypeSyntax& type) :
         DataTypeSyntax(SyntaxKind::VarDataType), var(var), type(type)
-    {
-        childCount += 2;
-    }
+    {}
 
     VarDataTypeSyntax(const VarDataTypeSyntax&) = delete;
     VarDataTypeSyntax& operator=(const VarDataTypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2742,12 +2756,12 @@ struct DeferredAssertionSyntax : public SyntaxNode {
 
     DeferredAssertionSyntax(Token hash, Token zero, Token finalKeyword) :
         SyntaxNode(SyntaxKind::DeferredAssertion), hash(hash), zero(zero), finalKeyword(finalKeyword)
-    {
-        childCount += 3;
-    }
+    {}
 
     DeferredAssertionSyntax(const DeferredAssertionSyntax&) = delete;
     DeferredAssertionSyntax& operator=(const DeferredAssertionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2766,12 +2780,12 @@ struct ElseClauseSyntax : public SyntaxNode {
 
     ElseClauseSyntax(Token elseKeyword, SyntaxNode& clause) :
         SyntaxNode(SyntaxKind::ElseClause), elseKeyword(elseKeyword), clause(clause)
-    {
-        childCount += 2;
-    }
+    {}
 
     ElseClauseSyntax(const ElseClauseSyntax&) = delete;
     ElseClauseSyntax& operator=(const ElseClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2789,12 +2803,12 @@ struct ActionBlockSyntax : public SyntaxNode {
 
     ActionBlockSyntax(StatementSyntax* statement, ElseClauseSyntax* elseClause) :
         SyntaxNode(SyntaxKind::ActionBlock), statement(statement), elseClause(elseClause)
-    {
-        childCount += 2;
-    }
+    {}
 
     ActionBlockSyntax(const ActionBlockSyntax&) = delete;
     ActionBlockSyntax& operator=(const ActionBlockSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2814,12 +2828,12 @@ struct ImmediateAssertionStatementSyntax : public StatementSyntax {
 
     ImmediateAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, DeferredAssertionSyntax* delay, ParenthesizedExpressionSyntax& expr, ActionBlockSyntax& action) :
         StatementSyntax(kind, label, attributes), keyword(keyword), delay(delay), expr(expr), action(action)
-    {
-        childCount += 4;
-    }
+    {}
 
     ImmediateAssertionStatementSyntax(const ImmediateAssertionStatementSyntax&) = delete;
     ImmediateAssertionStatementSyntax& operator=(const ImmediateAssertionStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2844,12 +2858,12 @@ struct DisableIffSyntax : public SyntaxNode {
 
     DisableIffSyntax(Token disable, Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) :
         SyntaxNode(SyntaxKind::DisableIff), disable(disable), iff(iff), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 5;
-    }
+    {}
 
     DisableIffSyntax(const DisableIffSyntax&) = delete;
     DisableIffSyntax& operator=(const DisableIffSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2871,12 +2885,12 @@ struct PropertySpecSyntax : public SyntaxNode {
 
     PropertySpecSyntax(TimingControlSyntax* clocking, DisableIffSyntax* disable, ExpressionSyntax& expr) :
         SyntaxNode(SyntaxKind::PropertySpec), clocking(clocking), disable(disable), expr(expr)
-    {
-        childCount += 3;
-    }
+    {}
 
     PropertySpecSyntax(const PropertySpecSyntax&) = delete;
     PropertySpecSyntax& operator=(const PropertySpecSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2899,12 +2913,12 @@ struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
 
     ConcurrentAssertionStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token propertyOrSequence, Token openParen, PropertySpecSyntax& propertySpec, Token closeParen, ActionBlockSyntax& action) :
         StatementSyntax(kind, label, attributes), keyword(keyword), propertyOrSequence(propertyOrSequence), openParen(openParen), propertySpec(propertySpec), closeParen(closeParen), action(action)
-    {
-        childCount += 6;
-    }
+    {}
 
     ConcurrentAssertionStatementSyntax(const ConcurrentAssertionStatementSyntax&) = delete;
     ConcurrentAssertionStatementSyntax& operator=(const ConcurrentAssertionStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2927,12 +2941,12 @@ struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
 
     ConcurrentAssertionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ConcurrentAssertionStatementSyntax& statement) :
         MemberSyntax(SyntaxKind::ConcurrentAssertionMember, attributes), statement(statement)
-    {
-        childCount += 1;
-    }
+    {}
 
     ConcurrentAssertionMemberSyntax(const ConcurrentAssertionMemberSyntax&) = delete;
     ConcurrentAssertionMemberSyntax& operator=(const ConcurrentAssertionMemberSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2949,12 +2963,12 @@ struct ImmediateAssertionMemberSyntax : public MemberSyntax {
 
     ImmediateAssertionMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ImmediateAssertionStatementSyntax& statement) :
         MemberSyntax(SyntaxKind::ImmediateAssertionMember, attributes), statement(statement)
-    {
-        childCount += 1;
-    }
+    {}
 
     ImmediateAssertionMemberSyntax(const ImmediateAssertionMemberSyntax&) = delete;
     ImmediateAssertionMemberSyntax& operator=(const ImmediateAssertionMemberSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -2973,12 +2987,12 @@ struct EmptyStatementSyntax : public StatementSyntax {
 
     EmptyStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token semicolon) :
         StatementSyntax(SyntaxKind::EmptyStatement, label, attributes), semicolon(semicolon)
-    {
-        childCount += 1;
-    }
+    {}
 
     EmptyStatementSyntax(const EmptyStatementSyntax&) = delete;
     EmptyStatementSyntax& operator=(const EmptyStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3002,12 +3016,12 @@ struct ConditionalStatementSyntax : public StatementSyntax {
 
     ConditionalStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token ifKeyword, Token openParen, ConditionalPredicateSyntax& predicate, Token closeParen, StatementSyntax& statement, ElseClauseSyntax* elseClause) :
         StatementSyntax(SyntaxKind::ConditionalStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(predicate), closeParen(closeParen), statement(statement), elseClause(elseClause)
-    {
-        childCount += 7;
-    }
+    {}
 
     ConditionalStatementSyntax(const ConditionalStatementSyntax&) = delete;
     ConditionalStatementSyntax& operator=(const ConditionalStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3030,8 +3044,9 @@ struct CaseItemSyntax : public SyntaxNode {
 
     CaseItemSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct DefaultCaseItemSyntax : public CaseItemSyntax {
@@ -3041,12 +3056,12 @@ struct DefaultCaseItemSyntax : public CaseItemSyntax {
 
     DefaultCaseItemSyntax(Token defaultKeyword, Token colon, SyntaxNode& clause) :
         CaseItemSyntax(SyntaxKind::DefaultCaseItem), defaultKeyword(defaultKeyword), colon(colon), clause(clause)
-    {
-        childCount += 3;
-    }
+    {}
 
     DefaultCaseItemSyntax(const DefaultCaseItemSyntax&) = delete;
     DefaultCaseItemSyntax& operator=(const DefaultCaseItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3068,12 +3083,12 @@ struct PatternCaseItemSyntax : public CaseItemSyntax {
 
     PatternCaseItemSyntax(PatternSyntax& pattern, Token tripleAnd, ExpressionSyntax* expr, Token colon, StatementSyntax& statement) :
         CaseItemSyntax(SyntaxKind::PatternCaseItem), pattern(pattern), tripleAnd(tripleAnd), expr(expr), colon(colon), statement(statement)
-    {
-        childCount += 5;
-    }
+    {}
 
     PatternCaseItemSyntax(const PatternCaseItemSyntax&) = delete;
     PatternCaseItemSyntax& operator=(const PatternCaseItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3095,12 +3110,12 @@ struct StandardCaseItemSyntax : public CaseItemSyntax {
 
     StandardCaseItemSyntax(SeparatedSyntaxList<ExpressionSyntax> expressions, Token colon, SyntaxNode& clause) :
         CaseItemSyntax(SyntaxKind::StandardCaseItem), expressions(expressions), colon(colon), clause(clause)
-    {
-        childCount += 3;
-    }
+    {}
 
     StandardCaseItemSyntax(const StandardCaseItemSyntax&) = delete;
     StandardCaseItemSyntax& operator=(const StandardCaseItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3125,12 +3140,12 @@ struct CaseStatementSyntax : public StatementSyntax {
 
     CaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token uniqueOrPriority, Token caseKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen, Token matchesOrInside, SyntaxList<CaseItemSyntax> items, Token endcase) :
         StatementSyntax(SyntaxKind::CaseStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), caseKeyword(caseKeyword), openParen(openParen), expr(expr), closeParen(closeParen), matchesOrInside(matchesOrInside), items(items), endcase(endcase)
-    {
-        childCount += 8;
-    }
+    {}
 
     CaseStatementSyntax(const CaseStatementSyntax&) = delete;
     CaseStatementSyntax& operator=(const CaseStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3156,12 +3171,12 @@ struct ForeverStatementSyntax : public StatementSyntax {
 
     ForeverStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token foreverKeyword, StatementSyntax& statement) :
         StatementSyntax(SyntaxKind::ForeverStatement, label, attributes), foreverKeyword(foreverKeyword), statement(statement)
-    {
-        childCount += 2;
-    }
+    {}
 
     ForeverStatementSyntax(const ForeverStatementSyntax&) = delete;
     ForeverStatementSyntax& operator=(const ForeverStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3184,12 +3199,12 @@ struct LoopStatementSyntax : public StatementSyntax {
 
     LoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token repeatOrWhile, Token openParen, ExpressionSyntax& expr, Token closeParen, StatementSyntax& statement) :
         StatementSyntax(SyntaxKind::LoopStatement, label, attributes), repeatOrWhile(repeatOrWhile), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
-    {
-        childCount += 5;
-    }
+    {}
 
     LoopStatementSyntax(const LoopStatementSyntax&) = delete;
     LoopStatementSyntax& operator=(const LoopStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3217,12 +3232,12 @@ struct DoWhileStatementSyntax : public StatementSyntax {
 
     DoWhileStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token doKeyword, StatementSyntax& statement, Token whileKeyword, Token openParen, ExpressionSyntax& expr, Token closeParen, Token semi) :
         StatementSyntax(SyntaxKind::DoWhileStatement, label, attributes), doKeyword(doKeyword), statement(statement), whileKeyword(whileKeyword), openParen(openParen), expr(expr), closeParen(closeParen), semi(semi)
-    {
-        childCount += 7;
-    }
+    {}
 
     DoWhileStatementSyntax(const DoWhileStatementSyntax&) = delete;
     DoWhileStatementSyntax& operator=(const DoWhileStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3248,12 +3263,12 @@ struct ForVariableDeclarationSyntax : public SyntaxNode {
 
     ForVariableDeclarationSyntax(Token varKeyword, DataTypeSyntax& type, VariableDeclaratorSyntax& declarator) :
         SyntaxNode(SyntaxKind::ForVariableDeclaration), varKeyword(varKeyword), type(type), declarator(declarator)
-    {
-        childCount += 3;
-    }
+    {}
 
     ForVariableDeclarationSyntax(const ForVariableDeclarationSyntax&) = delete;
     ForVariableDeclarationSyntax& operator=(const ForVariableDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3279,12 +3294,12 @@ struct ForLoopStatementSyntax : public StatementSyntax {
 
     ForLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token forKeyword, Token openParen, SeparatedSyntaxList<SyntaxNode> initializers, Token semi1, ExpressionSyntax& stopExpr, Token semi2, SeparatedSyntaxList<ExpressionSyntax> steps, Token closeParen, StatementSyntax& statement) :
         StatementSyntax(SyntaxKind::ForLoopStatement, label, attributes), forKeyword(forKeyword), openParen(openParen), initializers(initializers), semi1(semi1), stopExpr(stopExpr), semi2(semi2), steps(steps), closeParen(closeParen), statement(statement)
-    {
-        childCount += 9;
-    }
+    {}
 
     ForLoopStatementSyntax(const ForLoopStatementSyntax&) = delete;
     ForLoopStatementSyntax& operator=(const ForLoopStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3315,12 +3330,12 @@ struct ForeachLoopListSyntax : public SyntaxNode {
 
     ForeachLoopListSyntax(Token openParen, NameSyntax& arrayName, Token openBracket, SeparatedSyntaxList<NameSyntax> loopVariables, Token closeBracket, Token closeParen) :
         SyntaxNode(SyntaxKind::ForeachLoopList), openParen(openParen), arrayName(arrayName), openBracket(openBracket), loopVariables(loopVariables), closeBracket(closeBracket), closeParen(closeParen)
-    {
-        childCount += 6;
-    }
+    {}
 
     ForeachLoopListSyntax(const ForeachLoopListSyntax&) = delete;
     ForeachLoopListSyntax& operator=(const ForeachLoopListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3343,12 +3358,12 @@ struct ForeachLoopStatementSyntax : public StatementSyntax {
 
     ForeachLoopStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ForeachLoopListSyntax& loopList, StatementSyntax& statement) :
         StatementSyntax(SyntaxKind::ForeachLoopStatement, label, attributes), keyword(keyword), loopList(loopList), statement(statement)
-    {
-        childCount += 3;
-    }
+    {}
 
     ForeachLoopStatementSyntax(const ForeachLoopStatementSyntax&) = delete;
     ForeachLoopStatementSyntax& operator=(const ForeachLoopStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3370,12 +3385,12 @@ struct ReturnStatementSyntax : public StatementSyntax {
 
     ReturnStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token returnKeyword, ExpressionSyntax* returnValue, Token semi) :
         StatementSyntax(SyntaxKind::ReturnStatement, label, attributes), returnKeyword(returnKeyword), returnValue(returnValue), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     ReturnStatementSyntax(const ReturnStatementSyntax&) = delete;
     ReturnStatementSyntax& operator=(const ReturnStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3396,12 +3411,12 @@ struct JumpStatementSyntax : public StatementSyntax {
 
     JumpStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token breakOrContinue, Token semi) :
         StatementSyntax(SyntaxKind::JumpStatement, label, attributes), breakOrContinue(breakOrContinue), semi(semi)
-    {
-        childCount += 2;
-    }
+    {}
 
     JumpStatementSyntax(const JumpStatementSyntax&) = delete;
     JumpStatementSyntax& operator=(const JumpStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3421,12 +3436,12 @@ struct TimingControlStatementSyntax : public StatementSyntax {
 
     TimingControlStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, TimingControlSyntax& timingControl, StatementSyntax& statement) :
         StatementSyntax(SyntaxKind::TimingControlStatement, label, attributes), timingControl(timingControl), statement(statement)
-    {
-        childCount += 2;
-    }
+    {}
 
     TimingControlStatementSyntax(const TimingControlStatementSyntax&) = delete;
     TimingControlStatementSyntax& operator=(const TimingControlStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3446,12 +3461,12 @@ struct ExpressionStatementSyntax : public StatementSyntax {
 
     ExpressionStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr, Token semi) :
         StatementSyntax(SyntaxKind::ExpressionStatement, label, attributes), expr(expr), semi(semi)
-    {
-        childCount += 2;
-    }
+    {}
 
     ExpressionStatementSyntax(const ExpressionStatementSyntax&) = delete;
     ExpressionStatementSyntax& operator=(const ExpressionStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3474,12 +3489,12 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
 
     ProceduralAssignStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax& lvalue, Token equals, ExpressionSyntax& value, Token semi) :
         StatementSyntax(kind, label, attributes), keyword(keyword), lvalue(lvalue), equals(equals), value(value), semi(semi)
-    {
-        childCount += 5;
-    }
+    {}
 
     ProceduralAssignStatementSyntax(const ProceduralAssignStatementSyntax&) = delete;
     ProceduralAssignStatementSyntax& operator=(const ProceduralAssignStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3503,12 +3518,12 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
 
     ProceduralDeassignStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, ExpressionSyntax& variable, Token semi) :
         StatementSyntax(kind, label, attributes), keyword(keyword), variable(variable), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     ProceduralDeassignStatementSyntax(const ProceduralDeassignStatementSyntax&) = delete;
     ProceduralDeassignStatementSyntax& operator=(const ProceduralDeassignStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3530,12 +3545,12 @@ struct DisableStatementSyntax : public StatementSyntax {
 
     DisableStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, NameSyntax& name, Token semi) :
         StatementSyntax(SyntaxKind::DisableStatement, label, attributes), disable(disable), name(name), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     DisableStatementSyntax(const DisableStatementSyntax&) = delete;
     DisableStatementSyntax& operator=(const DisableStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3557,12 +3572,12 @@ struct DisableForkStatementSyntax : public StatementSyntax {
 
     DisableForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token disable, Token fork, Token semi) :
         StatementSyntax(SyntaxKind::DisableForkStatement, label, attributes), disable(disable), fork(fork), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     DisableForkStatementSyntax(const DisableForkStatementSyntax&) = delete;
     DisableForkStatementSyntax& operator=(const DisableForkStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3583,12 +3598,12 @@ struct NamedBlockClauseSyntax : public SyntaxNode {
 
     NamedBlockClauseSyntax(Token colon, Token name) :
         SyntaxNode(SyntaxKind::NamedBlockClause), colon(colon), name(name)
-    {
-        childCount += 2;
-    }
+    {}
 
     NamedBlockClauseSyntax(const NamedBlockClauseSyntax&) = delete;
     NamedBlockClauseSyntax& operator=(const NamedBlockClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3609,12 +3624,12 @@ struct BlockStatementSyntax : public StatementSyntax {
 
     BlockStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token begin, NamedBlockClauseSyntax* blockName, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) :
         StatementSyntax(kind, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
-    {
-        childCount += 5;
-    }
+    {}
 
     BlockStatementSyntax(const BlockStatementSyntax&) = delete;
     BlockStatementSyntax& operator=(const BlockStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3640,12 +3655,12 @@ struct WaitStatementSyntax : public StatementSyntax {
 
     WaitStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait, Token openParen, ExpressionSyntax& expr, Token closeParen, StatementSyntax& statement) :
         StatementSyntax(SyntaxKind::WaitStatement, label, attributes), wait(wait), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
-    {
-        childCount += 5;
-    }
+    {}
 
     WaitStatementSyntax(const WaitStatementSyntax&) = delete;
     WaitStatementSyntax& operator=(const WaitStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3669,12 +3684,12 @@ struct WaitForkStatementSyntax : public StatementSyntax {
 
     WaitForkStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait, Token fork, Token semi) :
         StatementSyntax(SyntaxKind::WaitForkStatement, label, attributes), wait(wait), fork(fork), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     WaitForkStatementSyntax(const WaitForkStatementSyntax&) = delete;
     WaitForkStatementSyntax& operator=(const WaitForkStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3698,12 +3713,12 @@ struct WaitOrderStatementSyntax : public StatementSyntax {
 
     WaitOrderStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token wait_order, Token openParen, SeparatedSyntaxList<NameSyntax> names, Token closeParen, ActionBlockSyntax& action) :
         StatementSyntax(SyntaxKind::WaitOrderStatement, label, attributes), wait_order(wait_order), openParen(openParen), names(names), closeParen(closeParen), action(action)
-    {
-        childCount += 5;
-    }
+    {}
 
     WaitOrderStatementSyntax(const WaitOrderStatementSyntax&) = delete;
     WaitOrderStatementSyntax& operator=(const WaitOrderStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3727,12 +3742,12 @@ struct RandCaseItemSyntax : public SyntaxNode {
 
     RandCaseItemSyntax(ExpressionSyntax& expr, Token colon, StatementSyntax& statement) :
         SyntaxNode(SyntaxKind::RandCaseItem), expr(expr), colon(colon), statement(statement)
-    {
-        childCount += 3;
-    }
+    {}
 
     RandCaseItemSyntax(const RandCaseItemSyntax&) = delete;
     RandCaseItemSyntax& operator=(const RandCaseItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3752,12 +3767,12 @@ struct RandCaseStatementSyntax : public StatementSyntax {
 
     RandCaseStatementSyntax(NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token randCase, SyntaxList<RandCaseItemSyntax> items, Token endCase) :
         StatementSyntax(SyntaxKind::RandCaseStatement, label, attributes), randCase(randCase), items(items), endCase(endCase)
-    {
-        childCount += 3;
-    }
+    {}
 
     RandCaseStatementSyntax(const RandCaseStatementSyntax&) = delete;
     RandCaseStatementSyntax& operator=(const RandCaseStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3779,12 +3794,12 @@ struct EventTriggerStatementSyntax : public StatementSyntax {
 
     EventTriggerStatementSyntax(SyntaxKind kind, NamedLabelSyntax* label, SyntaxList<AttributeInstanceSyntax> attributes, Token trigger, TimingControlSyntax* timing, NameSyntax& name) :
         StatementSyntax(kind, label, attributes), trigger(trigger), timing(timing), name(name)
-    {
-        childCount += 3;
-    }
+    {}
 
     EventTriggerStatementSyntax(const EventTriggerStatementSyntax&) = delete;
     EventTriggerStatementSyntax& operator=(const EventTriggerStatementSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3805,16 +3820,18 @@ struct PortListSyntax : public SyntaxNode {
 
     PortListSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct NonAnsiPortSyntax : public SyntaxNode {
 
     NonAnsiPortSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
@@ -3822,12 +3839,12 @@ struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
 
     ImplicitNonAnsiPortSyntax(ExpressionSyntax& expr) :
         NonAnsiPortSyntax(SyntaxKind::ImplicitNonAnsiPort), expr(expr)
-    {
-        childCount += 1;
-    }
+    {}
 
     ImplicitNonAnsiPortSyntax(const ImplicitNonAnsiPortSyntax&) = delete;
     ImplicitNonAnsiPortSyntax& operator=(const ImplicitNonAnsiPortSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3847,12 +3864,12 @@ struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
 
     ExplicitNonAnsiPortSyntax(Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
         NonAnsiPortSyntax(SyntaxKind::ExplicitNonAnsiPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 5;
-    }
+    {}
 
     ExplicitNonAnsiPortSyntax(const ExplicitNonAnsiPortSyntax&) = delete;
     ExplicitNonAnsiPortSyntax& operator=(const ExplicitNonAnsiPortSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3874,12 +3891,12 @@ struct NonAnsiPortListSyntax : public PortListSyntax {
 
     NonAnsiPortListSyntax(Token openParen, SeparatedSyntaxList<NonAnsiPortSyntax> ports, Token closeParen) :
         PortListSyntax(SyntaxKind::NonAnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     NonAnsiPortListSyntax(const NonAnsiPortListSyntax&) = delete;
     NonAnsiPortListSyntax& operator=(const NonAnsiPortListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3897,12 +3914,12 @@ struct AnsiPortSyntax : public SyntaxNode {
 
     AnsiPortSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
         SyntaxNode(kind), attributes(attributes)
-    {
-        childCount += 1;
-    }
+    {}
 
     AnsiPortSyntax(const AnsiPortSyntax&) = delete;
     AnsiPortSyntax& operator=(const AnsiPortSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override {
@@ -3919,12 +3936,12 @@ struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
 
     InterfacePortHeaderSyntax(Token nameOrKeyword, DotMemberClauseSyntax* modport) :
         PortHeaderSyntax(SyntaxKind::InterfacePortHeader), nameOrKeyword(nameOrKeyword), modport(modport)
-    {
-        childCount += 2;
-    }
+    {}
 
     InterfacePortHeaderSyntax(const InterfacePortHeaderSyntax&) = delete;
     InterfacePortHeaderSyntax& operator=(const InterfacePortHeaderSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3943,12 +3960,12 @@ struct VariablePortHeaderSyntax : public PortHeaderSyntax {
 
     VariablePortHeaderSyntax(Token direction, Token varKeyword, DataTypeSyntax* type) :
         PortHeaderSyntax(SyntaxKind::VariablePortHeader), direction(direction), varKeyword(varKeyword), type(type)
-    {
-        childCount += 3;
-    }
+    {}
 
     VariablePortHeaderSyntax(const VariablePortHeaderSyntax&) = delete;
     VariablePortHeaderSyntax& operator=(const VariablePortHeaderSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3968,12 +3985,12 @@ struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
 
     InterconnectPortHeaderSyntax(Token direction, Token interconnect, DataTypeSyntax* type) :
         PortHeaderSyntax(SyntaxKind::InterconnectPortHeader), direction(direction), interconnect(interconnect), type(type)
-    {
-        childCount += 3;
-    }
+    {}
 
     InterconnectPortHeaderSyntax(const InterconnectPortHeaderSyntax&) = delete;
     InterconnectPortHeaderSyntax& operator=(const InterconnectPortHeaderSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -3993,12 +4010,12 @@ struct NetPortHeaderSyntax : public PortHeaderSyntax {
 
     NetPortHeaderSyntax(Token direction, Token netType, DataTypeSyntax& dataType) :
         PortHeaderSyntax(SyntaxKind::NetPortHeader), direction(direction), netType(netType), dataType(dataType)
-    {
-        childCount += 3;
-    }
+    {}
 
     NetPortHeaderSyntax(const NetPortHeaderSyntax&) = delete;
     NetPortHeaderSyntax& operator=(const NetPortHeaderSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4017,12 +4034,12 @@ struct ImplicitAnsiPortSyntax : public AnsiPortSyntax {
 
     ImplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, VariableDeclaratorSyntax& declarator) :
         AnsiPortSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(header), declarator(declarator)
-    {
-        childCount += 2;
-    }
+    {}
 
     ImplicitAnsiPortSyntax(const ImplicitAnsiPortSyntax&) = delete;
     ImplicitAnsiPortSyntax& operator=(const ImplicitAnsiPortSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4045,12 +4062,12 @@ struct ExplicitAnsiPortSyntax : public AnsiPortSyntax {
 
     ExplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token direction, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
         AnsiPortSyntax(SyntaxKind::ExplicitAnsiPort, attributes), direction(direction), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 6;
-    }
+    {}
 
     ExplicitAnsiPortSyntax(const ExplicitAnsiPortSyntax&) = delete;
     ExplicitAnsiPortSyntax& operator=(const ExplicitAnsiPortSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4074,12 +4091,12 @@ struct AnsiPortListSyntax : public PortListSyntax {
 
     AnsiPortListSyntax(Token openParen, SeparatedSyntaxList<MemberSyntax> ports, Token closeParen) :
         PortListSyntax(SyntaxKind::AnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     AnsiPortListSyntax(const AnsiPortListSyntax&) = delete;
     AnsiPortListSyntax& operator=(const AnsiPortListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4099,12 +4116,12 @@ struct WildcardPortListSyntax : public PortListSyntax {
 
     WildcardPortListSyntax(Token openParen, Token dotStar, Token closeParen) :
         PortListSyntax(SyntaxKind::WildcardPortList), openParen(openParen), dotStar(dotStar), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     WildcardPortListSyntax(const WildcardPortListSyntax&) = delete;
     WildcardPortListSyntax& operator=(const WildcardPortListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4125,12 +4142,12 @@ struct ParameterPortListSyntax : public SyntaxNode {
 
     ParameterPortListSyntax(Token hash, Token openParen, SeparatedSyntaxList<ParameterDeclarationSyntax> declarations, Token closeParen) :
         SyntaxNode(SyntaxKind::ParameterPortList), hash(hash), openParen(openParen), declarations(declarations), closeParen(closeParen)
-    {
-        childCount += 4;
-    }
+    {}
 
     ParameterPortListSyntax(const ParameterPortListSyntax&) = delete;
     ParameterPortListSyntax& operator=(const ParameterPortListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4155,12 +4172,12 @@ struct ModuleHeaderSyntax : public SyntaxNode {
 
     ModuleHeaderSyntax(SyntaxKind kind, Token moduleKeyword, Token lifetime, Token name, SyntaxList<PackageImportDeclarationSyntax> imports, ParameterPortListSyntax* parameters, PortListSyntax* ports, Token semi) :
         SyntaxNode(kind), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), imports(imports), parameters(parameters), ports(ports), semi(semi)
-    {
-        childCount += 7;
-    }
+    {}
 
     ModuleHeaderSyntax(const ModuleHeaderSyntax&) = delete;
     ModuleHeaderSyntax& operator=(const ModuleHeaderSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4185,12 +4202,12 @@ struct ModuleDeclarationSyntax : public MemberSyntax {
 
     ModuleDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, ModuleHeaderSyntax& header, SyntaxList<MemberSyntax> members, Token endmodule, NamedBlockClauseSyntax* blockName) :
         MemberSyntax(kind, attributes), header(header), members(members), endmodule(endmodule), blockName(blockName)
-    {
-        childCount += 4;
-    }
+    {}
 
     ModuleDeclarationSyntax(const ModuleDeclarationSyntax&) = delete;
     ModuleDeclarationSyntax& operator=(const ModuleDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4211,12 +4228,12 @@ struct ExternModuleSyntax : public SyntaxNode {
 
     ExternModuleSyntax(Token externKeyword, ModuleHeaderSyntax& header) :
         SyntaxNode(SyntaxKind::ExternModule), externKeyword(externKeyword), header(header)
-    {
-        childCount += 2;
-    }
+    {}
 
     ExternModuleSyntax(const ExternModuleSyntax&) = delete;
     ExternModuleSyntax& operator=(const ExternModuleSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4236,12 +4253,12 @@ struct EmptyMemberSyntax : public MemberSyntax {
 
     EmptyMemberSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token semi) :
         MemberSyntax(SyntaxKind::EmptyMember, attributes), qualifiers(qualifiers), semi(semi)
-    {
-        childCount += 2;
-    }
+    {}
 
     EmptyMemberSyntax(const EmptyMemberSyntax&) = delete;
     EmptyMemberSyntax& operator=(const EmptyMemberSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4260,12 +4277,12 @@ struct ProceduralBlockSyntax : public MemberSyntax {
 
     ProceduralBlockSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, StatementSyntax& statement) :
         MemberSyntax(kind, attributes), keyword(keyword), statement(statement)
-    {
-        childCount += 2;
-    }
+    {}
 
     ProceduralBlockSyntax(const ProceduralBlockSyntax&) = delete;
     ProceduralBlockSyntax& operator=(const ProceduralBlockSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4285,12 +4302,12 @@ struct GenerateRegionSyntax : public MemberSyntax {
 
     GenerateRegionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SyntaxList<MemberSyntax> members, Token endgenerate) :
         MemberSyntax(SyntaxKind::GenerateRegion, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
-    {
-        childCount += 3;
-    }
+    {}
 
     GenerateRegionSyntax(const GenerateRegionSyntax&) = delete;
     GenerateRegionSyntax& operator=(const GenerateRegionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4320,12 +4337,12 @@ struct LoopGenerateSyntax : public MemberSyntax {
 
     LoopGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, Token genvar, Token identifier, Token equals, ExpressionSyntax& initialExpr, Token semi1, ExpressionSyntax& stopExpr, Token semi2, ExpressionSyntax& iterationExpr, Token closeParen, MemberSyntax& block) :
         MemberSyntax(SyntaxKind::LoopGenerate, attributes), keyword(keyword), openParen(openParen), genvar(genvar), identifier(identifier), equals(equals), initialExpr(initialExpr), semi1(semi1), stopExpr(stopExpr), semi2(semi2), iterationExpr(iterationExpr), closeParen(closeParen), block(block)
-    {
-        childCount += 12;
-    }
+    {}
 
     LoopGenerateSyntax(const LoopGenerateSyntax&) = delete;
     LoopGenerateSyntax& operator=(const LoopGenerateSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4358,12 +4375,12 @@ struct IfGenerateSyntax : public MemberSyntax {
 
     IfGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax& condition, Token closeParen, MemberSyntax& block, ElseClauseSyntax* elseClause) :
         MemberSyntax(SyntaxKind::IfGenerate, attributes), keyword(keyword), openParen(openParen), condition(condition), closeParen(closeParen), block(block), elseClause(elseClause)
-    {
-        childCount += 6;
-    }
+    {}
 
     IfGenerateSyntax(const IfGenerateSyntax&) = delete;
     IfGenerateSyntax& operator=(const IfGenerateSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4390,12 +4407,12 @@ struct CaseGenerateSyntax : public MemberSyntax {
 
     CaseGenerateSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token openParen, ExpressionSyntax& condition, Token closeParen, SyntaxList<CaseItemSyntax> items, Token endCase) :
         MemberSyntax(SyntaxKind::CaseGenerate, attributes), keyword(keyword), openParen(openParen), condition(condition), closeParen(closeParen), items(items), endCase(endCase)
-    {
-        childCount += 6;
-    }
+    {}
 
     CaseGenerateSyntax(const CaseGenerateSyntax&) = delete;
     CaseGenerateSyntax& operator=(const CaseGenerateSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4422,12 +4439,12 @@ struct GenerateBlockSyntax : public MemberSyntax {
 
     GenerateBlockSyntax(SyntaxList<AttributeInstanceSyntax> attributes, NamedLabelSyntax* label, Token begin, NamedBlockClauseSyntax* beginName, SyntaxList<MemberSyntax> members, Token end, NamedBlockClauseSyntax* endName) :
         MemberSyntax(SyntaxKind::GenerateBlock, attributes), label(label), begin(begin), beginName(beginName), members(members), end(end), endName(endName)
-    {
-        childCount += 6;
-    }
+    {}
 
     GenerateBlockSyntax(const GenerateBlockSyntax&) = delete;
     GenerateBlockSyntax& operator=(const GenerateBlockSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4450,12 +4467,12 @@ struct DividerClauseSyntax : public SyntaxNode {
 
     DividerClauseSyntax(Token divide, Token value) :
         SyntaxNode(SyntaxKind::DividerClause), divide(divide), value(value)
-    {
-        childCount += 2;
-    }
+    {}
 
     DividerClauseSyntax(const DividerClauseSyntax&) = delete;
     DividerClauseSyntax& operator=(const DividerClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4475,12 +4492,12 @@ struct TimeUnitsDeclarationSyntax : public MemberSyntax {
 
     TimeUnitsDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token time, DividerClauseSyntax* divider, Token semi) :
         MemberSyntax(SyntaxKind::TimeUnitsDeclaration, attributes), keyword(keyword), time(time), divider(divider), semi(semi)
-    {
-        childCount += 4;
-    }
+    {}
 
     TimeUnitsDeclarationSyntax(const TimeUnitsDeclarationSyntax&) = delete;
     TimeUnitsDeclarationSyntax& operator=(const TimeUnitsDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4500,12 +4517,12 @@ struct PortConnectionSyntax : public SyntaxNode {
 
     PortConnectionSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
         SyntaxNode(kind), attributes(attributes)
-    {
-        childCount += 1;
-    }
+    {}
 
     PortConnectionSyntax(const PortConnectionSyntax&) = delete;
     PortConnectionSyntax& operator=(const PortConnectionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override {
@@ -4521,12 +4538,12 @@ struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
 
     OrderedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, ExpressionSyntax& expr) :
         PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(expr)
-    {
-        childCount += 1;
-    }
+    {}
 
     OrderedPortConnectionSyntax(const OrderedPortConnectionSyntax&) = delete;
     OrderedPortConnectionSyntax& operator=(const OrderedPortConnectionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4547,12 +4564,12 @@ struct NamedPortConnectionSyntax : public PortConnectionSyntax {
 
     NamedPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
         PortConnectionSyntax(SyntaxKind::NamedPortConnection, attributes), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 5;
-    }
+    {}
 
     NamedPortConnectionSyntax(const NamedPortConnectionSyntax&) = delete;
     NamedPortConnectionSyntax& operator=(const NamedPortConnectionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4573,12 +4590,12 @@ struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
 
     WildcardPortConnectionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token dotStar) :
         PortConnectionSyntax(SyntaxKind::WildcardPortConnection, attributes), dotStar(dotStar)
-    {
-        childCount += 1;
-    }
+    {}
 
     WildcardPortConnectionSyntax(const WildcardPortConnectionSyntax&) = delete;
     WildcardPortConnectionSyntax& operator=(const WildcardPortConnectionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4599,12 +4616,12 @@ struct HierarchicalInstanceSyntax : public SyntaxNode {
 
     HierarchicalInstanceSyntax(Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token openParen, SeparatedSyntaxList<PortConnectionSyntax> connections, Token closeParen) :
         SyntaxNode(SyntaxKind::HierarchicalInstance), name(name), dimensions(dimensions), openParen(openParen), connections(connections), closeParen(closeParen)
-    {
-        childCount += 5;
-    }
+    {}
 
     HierarchicalInstanceSyntax(const HierarchicalInstanceSyntax&) = delete;
     HierarchicalInstanceSyntax& operator=(const HierarchicalInstanceSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4627,12 +4644,12 @@ struct HierarchyInstantiationSyntax : public MemberSyntax {
 
     HierarchyInstantiationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token type, ParameterValueAssignmentSyntax* parameters, SeparatedSyntaxList<HierarchicalInstanceSyntax> instances, Token semi) :
         MemberSyntax(SyntaxKind::HierarchyInstantiation, attributes), type(type), parameters(parameters), instances(instances), semi(semi)
-    {
-        childCount += 4;
-    }
+    {}
 
     HierarchyInstantiationSyntax(const HierarchyInstantiationSyntax&) = delete;
     HierarchyInstantiationSyntax& operator=(const HierarchyInstantiationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4657,12 +4674,12 @@ struct FunctionPortSyntax : public SyntaxNode {
 
     FunctionPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token constKeyword, Token direction, Token varKeyword, DataTypeSyntax* dataType, VariableDeclaratorSyntax& declarator) :
         SyntaxNode(SyntaxKind::FunctionPort), attributes(attributes), constKeyword(constKeyword), direction(direction), varKeyword(varKeyword), dataType(dataType), declarator(declarator)
-    {
-        childCount += 6;
-    }
+    {}
 
     FunctionPortSyntax(const FunctionPortSyntax&) = delete;
     FunctionPortSyntax& operator=(const FunctionPortSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4685,12 +4702,12 @@ struct FunctionPortListSyntax : public SyntaxNode {
 
     FunctionPortListSyntax(Token openParen, SeparatedSyntaxList<FunctionPortSyntax> ports, Token closeParen) :
         SyntaxNode(SyntaxKind::FunctionPortList), openParen(openParen), ports(ports), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     FunctionPortListSyntax(const FunctionPortListSyntax&) = delete;
     FunctionPortListSyntax& operator=(const FunctionPortListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4713,12 +4730,12 @@ struct FunctionPrototypeSyntax : public SyntaxNode {
 
     FunctionPrototypeSyntax(Token keyword, Token lifetime, DataTypeSyntax* returnType, NameSyntax& name, FunctionPortListSyntax* portList, Token semi) :
         SyntaxNode(SyntaxKind::FunctionPrototype), keyword(keyword), lifetime(lifetime), returnType(returnType), name(name), portList(portList), semi(semi)
-    {
-        childCount += 6;
-    }
+    {}
 
     FunctionPrototypeSyntax(const FunctionPrototypeSyntax&) = delete;
     FunctionPrototypeSyntax& operator=(const FunctionPrototypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4742,12 +4759,12 @@ struct FunctionDeclarationSyntax : public MemberSyntax {
 
     FunctionDeclarationSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes, FunctionPrototypeSyntax& prototype, SyntaxList<SyntaxNode> items, Token end, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(kind, attributes), prototype(prototype), items(items), end(end), endBlockName(endBlockName)
-    {
-        childCount += 4;
-    }
+    {}
 
     FunctionDeclarationSyntax(const FunctionDeclarationSyntax&) = delete;
     FunctionDeclarationSyntax& operator=(const FunctionDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4771,12 +4788,12 @@ struct AssertionItemPortSyntax : public SyntaxNode {
 
     AssertionItemPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token local, Token direction, DataTypeSyntax& type, VariableDeclaratorSyntax& declarator) :
         SyntaxNode(SyntaxKind::AssertionItemPort), attributes(attributes), local(local), direction(direction), type(type), declarator(declarator)
-    {
-        childCount += 5;
-    }
+    {}
 
     AssertionItemPortSyntax(const AssertionItemPortSyntax&) = delete;
     AssertionItemPortSyntax& operator=(const AssertionItemPortSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4798,12 +4815,12 @@ struct AssertionItemPortListSyntax : public SyntaxNode {
 
     AssertionItemPortListSyntax(Token openParen, SeparatedSyntaxList<AssertionItemPortSyntax> ports, Token closeParen) :
         SyntaxNode(SyntaxKind::AssertionItemPortList), openParen(openParen), ports(ports), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     AssertionItemPortListSyntax(const AssertionItemPortListSyntax&) = delete;
     AssertionItemPortListSyntax& operator=(const AssertionItemPortListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4825,12 +4842,12 @@ struct LetDeclarationSyntax : public MemberSyntax {
 
     LetDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token let, Token identifier, AssertionItemPortListSyntax* portList, EqualsValueClauseSyntax& initializer, Token semi) :
         MemberSyntax(SyntaxKind::LetDeclaration, attributes), let(let), identifier(identifier), portList(portList), initializer(initializer), semi(semi)
-    {
-        childCount += 5;
-    }
+    {}
 
     LetDeclarationSyntax(const LetDeclarationSyntax&) = delete;
     LetDeclarationSyntax& operator=(const LetDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4859,12 +4876,12 @@ struct PropertyDeclarationSyntax : public MemberSyntax {
 
     PropertyDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token name, AssertionItemPortListSyntax* portList, Token semi, SyntaxList<MemberSyntax> assertionVariables, PropertySpecSyntax& propertySpec, Token optionalSemi, Token end, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(SyntaxKind::PropertyDeclaration, attributes), keyword(keyword), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), propertySpec(propertySpec), optionalSemi(optionalSemi), end(end), endBlockName(endBlockName)
-    {
-        childCount += 9;
-    }
+    {}
 
     PropertyDeclarationSyntax(const PropertyDeclarationSyntax&) = delete;
     PropertyDeclarationSyntax& operator=(const PropertyDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4897,12 +4914,12 @@ struct SequenceDeclarationSyntax : public MemberSyntax {
 
     SequenceDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token name, AssertionItemPortListSyntax* portList, Token semi, SyntaxList<MemberSyntax> assertionVariables, ExpressionSyntax& seqExpr, Token optionalSemi, Token end, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(SyntaxKind::SequenceDeclaration, attributes), keyword(keyword), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), seqExpr(seqExpr), optionalSemi(optionalSemi), end(end), endBlockName(endBlockName)
-    {
-        childCount += 9;
-    }
+    {}
 
     SequenceDeclarationSyntax(const SequenceDeclarationSyntax&) = delete;
     SequenceDeclarationSyntax& operator=(const SequenceDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4929,12 +4946,12 @@ struct ExtendsClauseSyntax : public SyntaxNode {
 
     ExtendsClauseSyntax(Token keyword, NameSyntax& baseName, ArgumentListSyntax* arguments) :
         SyntaxNode(SyntaxKind::ExtendsClause), keyword(keyword), baseName(baseName), arguments(arguments)
-    {
-        childCount += 3;
-    }
+    {}
 
     ExtendsClauseSyntax(const ExtendsClauseSyntax&) = delete;
     ExtendsClauseSyntax& operator=(const ExtendsClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4953,12 +4970,12 @@ struct ImplementsClauseSyntax : public SyntaxNode {
 
     ImplementsClauseSyntax(Token keyword, SeparatedSyntaxList<NameSyntax> interfaces) :
         SyntaxNode(SyntaxKind::ImplementsClause), keyword(keyword), interfaces(interfaces)
-    {
-        childCount += 2;
-    }
+    {}
 
     ImplementsClauseSyntax(const ImplementsClauseSyntax&) = delete;
     ImplementsClauseSyntax& operator=(const ImplementsClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -4985,12 +5002,12 @@ struct ClassDeclarationSyntax : public MemberSyntax {
 
     ClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token virtualOrInterface, Token classKeyword, Token lifetime, Token name, ParameterPortListSyntax* parameters, ExtendsClauseSyntax* extendsClause, ImplementsClauseSyntax* implementsClause, Token semi, SyntaxList<MemberSyntax> items, Token endClass, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(SyntaxKind::ClassDeclaration, attributes), virtualOrInterface(virtualOrInterface), classKeyword(classKeyword), lifetime(lifetime), name(name), parameters(parameters), extendsClause(extendsClause), implementsClause(implementsClause), semi(semi), items(items), endClass(endClass), endBlockName(endBlockName)
-    {
-        childCount += 11;
-    }
+    {}
 
     ClassDeclarationSyntax(const ClassDeclarationSyntax&) = delete;
     ClassDeclarationSyntax& operator=(const ClassDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5018,12 +5035,12 @@ struct ClassPropertyDeclarationSyntax : public MemberSyntax {
 
     ClassPropertyDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, MemberSyntax& declaration) :
         MemberSyntax(SyntaxKind::ClassPropertyDeclaration, attributes), qualifiers(qualifiers), declaration(declaration)
-    {
-        childCount += 2;
-    }
+    {}
 
     ClassPropertyDeclarationSyntax(const ClassPropertyDeclarationSyntax&) = delete;
     ClassPropertyDeclarationSyntax& operator=(const ClassPropertyDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5042,12 +5059,12 @@ struct ClassMethodDeclarationSyntax : public MemberSyntax {
 
     ClassMethodDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionDeclarationSyntax& declaration) :
         MemberSyntax(SyntaxKind::ClassMethodDeclaration, attributes), qualifiers(qualifiers), declaration(declaration)
-    {
-        childCount += 2;
-    }
+    {}
 
     ClassMethodDeclarationSyntax(const ClassMethodDeclarationSyntax&) = delete;
     ClassMethodDeclarationSyntax& operator=(const ClassMethodDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5066,12 +5083,12 @@ struct ClassMethodPrototypeSyntax : public MemberSyntax {
 
     ClassMethodPrototypeSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, FunctionPrototypeSyntax& prototype) :
         MemberSyntax(SyntaxKind::ClassMethodPrototype, attributes), qualifiers(qualifiers), prototype(prototype)
-    {
-        childCount += 2;
-    }
+    {}
 
     ClassMethodPrototypeSyntax(const ClassMethodPrototypeSyntax&) = delete;
     ClassMethodPrototypeSyntax& operator=(const ClassMethodPrototypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5091,12 +5108,12 @@ struct ContinuousAssignSyntax : public MemberSyntax {
 
     ContinuousAssignSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token assign, SeparatedSyntaxList<ExpressionSyntax> assignments, Token semi) :
         MemberSyntax(SyntaxKind::ContinuousAssign, attributes), assign(assign), assignments(assignments), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     ContinuousAssignSyntax(const ContinuousAssignSyntax&) = delete;
     ContinuousAssignSyntax& operator=(const ContinuousAssignSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5116,12 +5133,12 @@ struct DefParamAssignmentSyntax : public SyntaxNode {
 
     DefParamAssignmentSyntax(NameSyntax& name, EqualsValueClauseSyntax* setter) :
         SyntaxNode(SyntaxKind::DefParamAssignment), name(name), setter(setter)
-    {
-        childCount += 2;
-    }
+    {}
 
     DefParamAssignmentSyntax(const DefParamAssignmentSyntax&) = delete;
     DefParamAssignmentSyntax& operator=(const DefParamAssignmentSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5140,12 +5157,12 @@ struct DefParamSyntax : public MemberSyntax {
 
     DefParamSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token defparam, SeparatedSyntaxList<DefParamAssignmentSyntax> assignments, Token semi) :
         MemberSyntax(SyntaxKind::DefParam, attributes), defparam(defparam), assignments(assignments), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     DefParamSyntax(const DefParamSyntax&) = delete;
     DefParamSyntax& operator=(const DefParamSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5165,12 +5182,12 @@ struct ModportItemSyntax : public SyntaxNode {
 
     ModportItemSyntax(Token name, AnsiPortListSyntax& ports) :
         SyntaxNode(SyntaxKind::ModportItem), name(name), ports(ports)
-    {
-        childCount += 2;
-    }
+    {}
 
     ModportItemSyntax(const ModportItemSyntax&) = delete;
     ModportItemSyntax& operator=(const ModportItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5189,12 +5206,12 @@ struct ModportDeclarationSyntax : public MemberSyntax {
 
     ModportDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, SeparatedSyntaxList<ModportItemSyntax> items, Token semi) :
         MemberSyntax(SyntaxKind::ModportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     ModportDeclarationSyntax(const ModportDeclarationSyntax&) = delete;
     ModportDeclarationSyntax& operator=(const ModportDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5215,12 +5232,12 @@ struct ClockingSkewSyntax : public SyntaxNode {
 
     ClockingSkewSyntax(Token edge, Token hash, ExpressionSyntax* value) :
         SyntaxNode(SyntaxKind::ClockingSkew), edge(edge), hash(hash), value(value)
-    {
-        childCount += 3;
-    }
+    {}
 
     ClockingSkewSyntax(const ClockingSkewSyntax&) = delete;
     ClockingSkewSyntax& operator=(const ClockingSkewSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5242,12 +5259,12 @@ struct ClockingDirectionSyntax : public SyntaxNode {
 
     ClockingDirectionSyntax(Token input, ClockingSkewSyntax* inputSkew, Token output, ClockingSkewSyntax* ouputSkew, Token inout) :
         SyntaxNode(SyntaxKind::ClockingDirection), input(input), inputSkew(inputSkew), output(output), ouputSkew(ouputSkew), inout(inout)
-    {
-        childCount += 5;
-    }
+    {}
 
     ClockingDirectionSyntax(const ClockingDirectionSyntax&) = delete;
     ClockingDirectionSyntax& operator=(const ClockingDirectionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5271,12 +5288,12 @@ struct ClockingItemSyntax : public SyntaxNode {
 
     ClockingItemSyntax(Token defaultKeyword, ClockingDirectionSyntax* direction, SeparatedSyntaxList<AttributeSpecSyntax> assignments, Token semi, MemberSyntax* declaration) :
         SyntaxNode(SyntaxKind::ClockingItem), defaultKeyword(defaultKeyword), direction(direction), assignments(assignments), semi(semi), declaration(declaration)
-    {
-        childCount += 5;
-    }
+    {}
 
     ClockingItemSyntax(const ClockingItemSyntax&) = delete;
     ClockingItemSyntax& operator=(const ClockingItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5305,12 +5322,12 @@ struct ClockingDeclarationSyntax : public MemberSyntax {
 
     ClockingDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token globalOrDefault, Token clocking, Token blockName, Token at, ParenthesizedEventExpressionSyntax* event, Token eventIdentifier, Token semi, SyntaxList<ClockingItemSyntax> items, Token endClocking, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(SyntaxKind::ClockingDeclaration, attributes), globalOrDefault(globalOrDefault), clocking(clocking), blockName(blockName), at(at), event(event), eventIdentifier(eventIdentifier), semi(semi), items(items), endClocking(endClocking), endBlockName(endBlockName)
-    {
-        childCount += 10;
-    }
+    {}
 
     ClockingDeclarationSyntax(const ClockingDeclarationSyntax&) = delete;
     ClockingDeclarationSyntax& operator=(const ClockingDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5341,12 +5358,12 @@ struct DPIImportExportSyntax : public MemberSyntax {
 
     DPIImportExportSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token stringLiteral, Token property, Token name, Token equals, FunctionPrototypeSyntax& method) :
         MemberSyntax(SyntaxKind::DPIImportExport, attributes), keyword(keyword), stringLiteral(stringLiteral), property(property), name(name), equals(equals), method(method)
-    {
-        childCount += 6;
-    }
+    {}
 
     DPIImportExportSyntax(const DPIImportExportSyntax&) = delete;
     DPIImportExportSyntax& operator=(const DPIImportExportSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5369,8 +5386,9 @@ struct ConstraintItemSyntax : public SyntaxNode {
 
     ConstraintItemSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct DistWeightSyntax : public SyntaxNode {
@@ -5379,12 +5397,12 @@ struct DistWeightSyntax : public SyntaxNode {
 
     DistWeightSyntax(Token op, ExpressionSyntax& expr) :
         SyntaxNode(SyntaxKind::DistWeight), op(op), expr(expr)
-    {
-        childCount += 2;
-    }
+    {}
 
     DistWeightSyntax(const DistWeightSyntax&) = delete;
     DistWeightSyntax& operator=(const DistWeightSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5402,12 +5420,12 @@ struct DistItemSyntax : public SyntaxNode {
 
     DistItemSyntax(ExpressionSyntax& range, DistWeightSyntax* weight) :
         SyntaxNode(SyntaxKind::DistItem), range(range), weight(weight)
-    {
-        childCount += 2;
-    }
+    {}
 
     DistItemSyntax(const DistItemSyntax&) = delete;
     DistItemSyntax& operator=(const DistItemSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5427,12 +5445,12 @@ struct DistConstraintListSyntax : public SyntaxNode {
 
     DistConstraintListSyntax(Token dist, Token openBrace, SeparatedSyntaxList<DistItemSyntax> items, Token closeBrace) :
         SyntaxNode(SyntaxKind::DistConstraintList), dist(dist), openBrace(openBrace), items(items), closeBrace(closeBrace)
-    {
-        childCount += 4;
-    }
+    {}
 
     DistConstraintListSyntax(const DistConstraintListSyntax&) = delete;
     DistConstraintListSyntax& operator=(const DistConstraintListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5452,12 +5470,12 @@ struct ExpressionOrDistSyntax : public ExpressionSyntax {
 
     ExpressionOrDistSyntax(ExpressionSyntax& expr, DistConstraintListSyntax& distribution) :
         ExpressionSyntax(SyntaxKind::ExpressionOrDist), expr(expr), distribution(distribution)
-    {
-        childCount += 2;
-    }
+    {}
 
     ExpressionOrDistSyntax(const ExpressionOrDistSyntax&) = delete;
     ExpressionOrDistSyntax& operator=(const ExpressionOrDistSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5476,12 +5494,12 @@ struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
 
     ExpressionConstraintSyntax(Token soft, ExpressionSyntax& expr, Token semi) :
         ConstraintItemSyntax(SyntaxKind::ExpressionConstraint), soft(soft), expr(expr), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     ExpressionConstraintSyntax(const ExpressionConstraintSyntax&) = delete;
     ExpressionConstraintSyntax& operator=(const ExpressionConstraintSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5501,12 +5519,12 @@ struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
 
     UniquenessConstraintSyntax(Token unique, OpenRangeListSyntax& ranges, Token semi) :
         ConstraintItemSyntax(SyntaxKind::UniquenessConstraint), unique(unique), ranges(ranges), semi(semi)
-    {
-        childCount += 3;
-    }
+    {}
 
     UniquenessConstraintSyntax(const UniquenessConstraintSyntax&) = delete;
     UniquenessConstraintSyntax& operator=(const UniquenessConstraintSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5526,12 +5544,12 @@ struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
 
     ImplicationConstraintSyntax(ExpressionSyntax& left, Token arrow, ConstraintItemSyntax& constraints) :
         ConstraintItemSyntax(SyntaxKind::ImplicationConstraint), left(left), arrow(arrow), constraints(constraints)
-    {
-        childCount += 3;
-    }
+    {}
 
     ImplicationConstraintSyntax(const ImplicationConstraintSyntax&) = delete;
     ImplicationConstraintSyntax& operator=(const ImplicationConstraintSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5550,12 +5568,12 @@ struct ElseConstraintClauseSyntax : public SyntaxNode {
 
     ElseConstraintClauseSyntax(Token elseKeyword, ConstraintItemSyntax& constraints) :
         SyntaxNode(SyntaxKind::ElseConstraintClause), elseKeyword(elseKeyword), constraints(constraints)
-    {
-        childCount += 2;
-    }
+    {}
 
     ElseConstraintClauseSyntax(const ElseConstraintClauseSyntax&) = delete;
     ElseConstraintClauseSyntax& operator=(const ElseConstraintClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5577,12 +5595,12 @@ struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
 
     ConditionalConstraintSyntax(Token ifKeyword, Token openParen, ExpressionSyntax& condition, Token closeParen, ConstraintItemSyntax& constraints, ElseConstraintClauseSyntax* elseClause) :
         ConstraintItemSyntax(SyntaxKind::ConditionalConstraint), ifKeyword(ifKeyword), openParen(openParen), condition(condition), closeParen(closeParen), constraints(constraints), elseClause(elseClause)
-    {
-        childCount += 6;
-    }
+    {}
 
     ConditionalConstraintSyntax(const ConditionalConstraintSyntax&) = delete;
     ConditionalConstraintSyntax& operator=(const ConditionalConstraintSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5605,12 +5623,12 @@ struct LoopConstraintSyntax : public ConstraintItemSyntax {
 
     LoopConstraintSyntax(Token foreachKeyword, ForeachLoopListSyntax& loopList, ConstraintItemSyntax& constraints) :
         ConstraintItemSyntax(SyntaxKind::LoopConstraint), foreachKeyword(foreachKeyword), loopList(loopList), constraints(constraints)
-    {
-        childCount += 3;
-    }
+    {}
 
     LoopConstraintSyntax(const LoopConstraintSyntax&) = delete;
     LoopConstraintSyntax& operator=(const LoopConstraintSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5631,12 +5649,12 @@ struct DisableConstraintSyntax : public ConstraintItemSyntax {
 
     DisableConstraintSyntax(Token disable, Token soft, NameSyntax& name, Token semi) :
         ConstraintItemSyntax(SyntaxKind::DisableConstraint), disable(disable), soft(soft), name(name), semi(semi)
-    {
-        childCount += 4;
-    }
+    {}
 
     DisableConstraintSyntax(const DisableConstraintSyntax&) = delete;
     DisableConstraintSyntax& operator=(const DisableConstraintSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5659,12 +5677,12 @@ struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
 
     SolveBeforeConstraintSyntax(Token solve, SeparatedSyntaxList<ExpressionSyntax> beforeExpr, Token before, SeparatedSyntaxList<ExpressionSyntax> afterExpr, Token semi) :
         ConstraintItemSyntax(SyntaxKind::SolveBeforeConstraint), solve(solve), beforeExpr(beforeExpr), before(before), afterExpr(afterExpr), semi(semi)
-    {
-        childCount += 5;
-    }
+    {}
 
     SolveBeforeConstraintSyntax(const SolveBeforeConstraintSyntax&) = delete;
     SolveBeforeConstraintSyntax& operator=(const SolveBeforeConstraintSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5686,12 +5704,12 @@ struct ConstraintBlockSyntax : public ConstraintItemSyntax {
 
     ConstraintBlockSyntax(Token openBrace, SyntaxList<ConstraintItemSyntax> items, Token closeBrace) :
         ConstraintItemSyntax(SyntaxKind::ConstraintBlock), openBrace(openBrace), items(items), closeBrace(closeBrace)
-    {
-        childCount += 3;
-    }
+    {}
 
     ConstraintBlockSyntax(const ConstraintBlockSyntax&) = delete;
     ConstraintBlockSyntax& operator=(const ConstraintBlockSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5712,12 +5730,12 @@ struct ConstraintPrototypeSyntax : public MemberSyntax {
 
     ConstraintPrototypeSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, Token semi) :
         MemberSyntax(SyntaxKind::ConstraintPrototype, attributes), qualifiers(qualifiers), keyword(keyword), name(name), semi(semi)
-    {
-        childCount += 4;
-    }
+    {}
 
     ConstraintPrototypeSyntax(const ConstraintPrototypeSyntax&) = delete;
     ConstraintPrototypeSyntax& operator=(const ConstraintPrototypeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5740,12 +5758,12 @@ struct ConstraintDeclarationSyntax : public MemberSyntax {
 
     ConstraintDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, TokenList qualifiers, Token keyword, Token name, ConstraintBlockSyntax& block) :
         MemberSyntax(SyntaxKind::ConstraintDeclaration, attributes), qualifiers(qualifiers), keyword(keyword), name(name), block(block)
-    {
-        childCount += 4;
-    }
+    {}
 
     ConstraintDeclarationSyntax(const ConstraintDeclarationSyntax&) = delete;
     ConstraintDeclarationSyntax& operator=(const ConstraintDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5768,12 +5786,12 @@ struct WithClauseSyntax : public ExpressionSyntax {
 
     WithClauseSyntax(Token with, Token openParen, ExpressionSyntax& expr, Token closeParen) :
         ExpressionSyntax(SyntaxKind::WithClause), with(with), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 4;
-    }
+    {}
 
     WithClauseSyntax(const WithClauseSyntax&) = delete;
     WithClauseSyntax& operator=(const WithClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5794,12 +5812,12 @@ struct IdentifierListSyntax : public SyntaxNode {
 
     IdentifierListSyntax(Token openParen, SeparatedSyntaxList<IdentifierNameSyntax> identifiers, Token closeParen) :
         SyntaxNode(SyntaxKind::IdentifierList), openParen(openParen), identifiers(identifiers), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     IdentifierListSyntax(const IdentifierListSyntax&) = delete;
     IdentifierListSyntax& operator=(const IdentifierListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5819,12 +5837,12 @@ struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
 
     RandomizeMethodWithClauseSyntax(Token with, IdentifierListSyntax* names, ConstraintBlockSyntax& constraints) :
         ExpressionSyntax(SyntaxKind::RandomizeMethodWithClause), with(with), names(names), constraints(constraints)
-    {
-        childCount += 3;
-    }
+    {}
 
     RandomizeMethodWithClauseSyntax(const RandomizeMethodWithClauseSyntax&) = delete;
     RandomizeMethodWithClauseSyntax& operator=(const RandomizeMethodWithClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5847,12 +5865,12 @@ struct WithFunctionSampleSyntax : public SyntaxNode {
 
     WithFunctionSampleSyntax(Token with, Token function, Token sample, AnsiPortListSyntax& portList) :
         SyntaxNode(SyntaxKind::WithFunctionSample), with(with), function(function), sample(sample), portList(portList)
-    {
-        childCount += 4;
-    }
+    {}
 
     WithFunctionSampleSyntax(const WithFunctionSampleSyntax&) = delete;
     WithFunctionSampleSyntax& operator=(const WithFunctionSampleSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5870,8 +5888,9 @@ struct BlockEventExpressionSyntax : public SyntaxNode {
 
     BlockEventExpressionSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
@@ -5881,12 +5900,12 @@ struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
 
     BinaryBlockEventExpressionSyntax(BlockEventExpressionSyntax& left, Token orKeyword, BlockEventExpressionSyntax& right) :
         BlockEventExpressionSyntax(SyntaxKind::BinaryBlockEventExpression), left(left), orKeyword(orKeyword), right(right)
-    {
-        childCount += 3;
-    }
+    {}
 
     BinaryBlockEventExpressionSyntax(const BinaryBlockEventExpressionSyntax&) = delete;
     BinaryBlockEventExpressionSyntax& operator=(const BinaryBlockEventExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5905,12 +5924,12 @@ struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
 
     PrimaryBlockEventExpressionSyntax(Token keyword, NameSyntax& name) :
         BlockEventExpressionSyntax(SyntaxKind::PrimaryBlockEventExpression), keyword(keyword), name(name)
-    {
-        childCount += 2;
-    }
+    {}
 
     PrimaryBlockEventExpressionSyntax(const PrimaryBlockEventExpressionSyntax&) = delete;
     PrimaryBlockEventExpressionSyntax& operator=(const PrimaryBlockEventExpressionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5930,12 +5949,12 @@ struct BlockCoverageEventSyntax : public SyntaxNode {
 
     BlockCoverageEventSyntax(Token atat, Token openParen, BlockEventExpressionSyntax& expr, Token closeParen) :
         SyntaxNode(SyntaxKind::BlockCoverageEvent), atat(atat), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 4;
-    }
+    {}
 
     BlockCoverageEventSyntax(const BlockCoverageEventSyntax&) = delete;
     BlockCoverageEventSyntax& operator=(const BlockCoverageEventSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5961,12 +5980,12 @@ struct CovergroupDeclarationSyntax : public MemberSyntax {
 
     CovergroupDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token covergroup, Token name, AnsiPortListSyntax* portList, SyntaxNode* event, Token semi, SyntaxList<MemberSyntax> members, Token endgroup, NamedBlockClauseSyntax* endBlockName) :
         MemberSyntax(SyntaxKind::CovergroupDeclaration, attributes), covergroup(covergroup), name(name), portList(portList), event(event), semi(semi), members(members), endgroup(endgroup), endBlockName(endBlockName)
-    {
-        childCount += 8;
-    }
+    {}
 
     CovergroupDeclarationSyntax(const CovergroupDeclarationSyntax&) = delete;
     CovergroupDeclarationSyntax& operator=(const CovergroupDeclarationSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -5995,12 +6014,12 @@ struct CoverageOptionSyntax : public MemberSyntax {
 
     CoverageOptionSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token option, Token dot, Token name, Token equals, ExpressionSyntax& expr, Token semi) :
         MemberSyntax(SyntaxKind::CoverageOption, attributes), option(option), dot(dot), name(name), equals(equals), expr(expr), semi(semi)
-    {
-        childCount += 6;
-    }
+    {}
 
     CoverageOptionSyntax(const CoverageOptionSyntax&) = delete;
     CoverageOptionSyntax& operator=(const CoverageOptionSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6029,12 +6048,12 @@ struct CoverpointSyntax : public MemberSyntax {
 
     CoverpointSyntax(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, NamedLabelSyntax* label, Token coverpoint, ExpressionSyntax& expr, Token openBrace, SyntaxList<MemberSyntax> members, Token closeBrace, Token emptySemi) :
         MemberSyntax(SyntaxKind::Coverpoint, attributes), type(type), label(label), coverpoint(coverpoint), expr(expr), openBrace(openBrace), members(members), closeBrace(closeBrace), emptySemi(emptySemi)
-    {
-        childCount += 8;
-    }
+    {}
 
     CoverpointSyntax(const CoverpointSyntax&) = delete;
     CoverpointSyntax& operator=(const CoverpointSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6057,8 +6076,9 @@ struct CoverageBinInitializerSyntax : public SyntaxNode {
 
     CoverageBinInitializerSyntax(SyntaxKind kind) :
         SyntaxNode(kind)
-    {
-    }
+    {}
+
+    static bool isKind(SyntaxKind kind);
 };
 
 struct DefaultCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -6067,12 +6087,12 @@ struct DefaultCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax
 
     DefaultCoverageBinInitializerSyntax(Token defaultKeyword, Token sequenceKeyword) :
         CoverageBinInitializerSyntax(SyntaxKind::DefaultCoverageBinInitializer), defaultKeyword(defaultKeyword), sequenceKeyword(sequenceKeyword)
-    {
-        childCount += 2;
-    }
+    {}
 
     DefaultCoverageBinInitializerSyntax(const DefaultCoverageBinInitializerSyntax&) = delete;
     DefaultCoverageBinInitializerSyntax& operator=(const DefaultCoverageBinInitializerSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6090,12 +6110,12 @@ struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyn
 
     ExpressionCoverageBinInitializerSyntax(ExpressionSyntax& expr, WithClauseSyntax* withClause) :
         CoverageBinInitializerSyntax(SyntaxKind::ExpressionCoverageBinInitializer), expr(expr), withClause(withClause)
-    {
-        childCount += 2;
-    }
+    {}
 
     ExpressionCoverageBinInitializerSyntax(const ExpressionCoverageBinInitializerSyntax&) = delete;
     ExpressionCoverageBinInitializerSyntax& operator=(const ExpressionCoverageBinInitializerSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6113,12 +6133,12 @@ struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
 
     RangeCoverageBinInitializerSyntax(OpenRangeListSyntax& ranges, WithClauseSyntax* withClause) :
         CoverageBinInitializerSyntax(SyntaxKind::RangeCoverageBinInitializer), ranges(ranges), withClause(withClause)
-    {
-        childCount += 2;
-    }
+    {}
 
     RangeCoverageBinInitializerSyntax(const RangeCoverageBinInitializerSyntax&) = delete;
     RangeCoverageBinInitializerSyntax& operator=(const RangeCoverageBinInitializerSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6138,12 +6158,12 @@ struct TransRepeatRangeSyntax : public SyntaxNode {
 
     TransRepeatRangeSyntax(Token openBracket, Token specifier, SelectorSyntax* selector, Token closeBracket) :
         SyntaxNode(SyntaxKind::TransRepeatRange), openBracket(openBracket), specifier(specifier), selector(selector), closeBracket(closeBracket)
-    {
-        childCount += 4;
-    }
+    {}
 
     TransRepeatRangeSyntax(const TransRepeatRangeSyntax&) = delete;
     TransRepeatRangeSyntax& operator=(const TransRepeatRangeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6163,12 +6183,12 @@ struct TransRangeSyntax : public SyntaxNode {
 
     TransRangeSyntax(SeparatedSyntaxList<ExpressionSyntax> items, TransRepeatRangeSyntax* repeat) :
         SyntaxNode(SyntaxKind::TransRange), items(items), repeat(repeat)
-    {
-        childCount += 2;
-    }
+    {}
 
     TransRangeSyntax(const TransRangeSyntax&) = delete;
     TransRangeSyntax& operator=(const TransRangeSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6187,12 +6207,12 @@ struct TransSetSyntax : public SyntaxNode {
 
     TransSetSyntax(Token openParen, SeparatedSyntaxList<TransRangeSyntax> ranges, Token closeParen) :
         SyntaxNode(SyntaxKind::TransSet), openParen(openParen), ranges(ranges), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     TransSetSyntax(const TransSetSyntax&) = delete;
     TransSetSyntax& operator=(const TransSetSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6211,12 +6231,12 @@ struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSynt
 
     TransListCoverageBinInitializerSyntax(SeparatedSyntaxList<TransSetSyntax> sets, WithClauseSyntax* withClause) :
         CoverageBinInitializerSyntax(SyntaxKind::TransListCoverageBinInitializer), sets(sets), withClause(withClause)
-    {
-        childCount += 2;
-    }
+    {}
 
     TransListCoverageBinInitializerSyntax(const TransListCoverageBinInitializerSyntax&) = delete;
     TransListCoverageBinInitializerSyntax& operator=(const TransListCoverageBinInitializerSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6236,12 +6256,12 @@ struct IffClauseSyntax : public SyntaxNode {
 
     IffClauseSyntax(Token iff, Token openParen, ExpressionSyntax& expr, Token closeParen) :
         SyntaxNode(SyntaxKind::IffClause), iff(iff), openParen(openParen), expr(expr), closeParen(closeParen)
-    {
-        childCount += 4;
-    }
+    {}
 
     IffClauseSyntax(const IffClauseSyntax&) = delete;
     IffClauseSyntax& operator=(const IffClauseSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6267,12 +6287,12 @@ struct CoverageBinsSyntax : public MemberSyntax {
 
     CoverageBinsSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token wildcard, Token keyword, Token name, ElementSelectSyntax* selector, Token equals, CoverageBinInitializerSyntax& initializer, IffClauseSyntax* iff, Token semi) :
         MemberSyntax(SyntaxKind::CoverageBins, attributes), wildcard(wildcard), keyword(keyword), name(name), selector(selector), equals(equals), initializer(initializer), iff(iff), semi(semi)
-    {
-        childCount += 8;
-    }
+    {}
 
     CoverageBinsSyntax(const CoverageBinsSyntax&) = delete;
     CoverageBinsSyntax& operator=(const CoverageBinsSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6299,12 +6319,12 @@ struct CompilationUnitSyntax : public SyntaxNode {
 
     CompilationUnitSyntax(SyntaxList<MemberSyntax> members, Token endOfFile) :
         SyntaxNode(SyntaxKind::CompilationUnit), members(members), endOfFile(endOfFile)
-    {
-        childCount += 2;
-    }
+    {}
 
     CompilationUnitSyntax(const CompilationUnitSyntax&) = delete;
     CompilationUnitSyntax& operator=(const CompilationUnitSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6323,12 +6343,12 @@ struct DirectiveSyntax : public SyntaxNode {
 
     DirectiveSyntax(SyntaxKind kind, Token directive) :
         SyntaxNode(kind), directive(directive)
-    {
-        childCount += 1;
-    }
+    {}
 
     DirectiveSyntax(const DirectiveSyntax&) = delete;
     DirectiveSyntax& operator=(const DirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override {
@@ -6344,12 +6364,12 @@ struct SimpleDirectiveSyntax : public DirectiveSyntax {
 
     SimpleDirectiveSyntax(SyntaxKind kind, Token directive, Token endOfDirective) :
         DirectiveSyntax(kind, directive), endOfDirective(endOfDirective)
-    {
-        childCount += 1;
-    }
+    {}
 
     SimpleDirectiveSyntax(const SimpleDirectiveSyntax&) = delete;
     SimpleDirectiveSyntax& operator=(const SimpleDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6367,12 +6387,12 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
 
     IncludeDirectiveSyntax(Token directive, Token fileName, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::IncludeDirective, directive), fileName(fileName), endOfDirective(endOfDirective)
-    {
-        childCount += 2;
-    }
+    {}
 
     IncludeDirectiveSyntax(const IncludeDirectiveSyntax&) = delete;
     IncludeDirectiveSyntax& operator=(const IncludeDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6392,12 +6412,12 @@ struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
 
     ConditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token name, Token endOfDirective, TokenList disabledTokens) :
         DirectiveSyntax(kind, directive), name(name), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
-    {
-        childCount += 3;
-    }
+    {}
 
     ConditionalBranchDirectiveSyntax(const ConditionalBranchDirectiveSyntax&) = delete;
     ConditionalBranchDirectiveSyntax& operator=(const ConditionalBranchDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6417,12 +6437,12 @@ struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
 
     UnconditionalBranchDirectiveSyntax(SyntaxKind kind, Token directive, Token endOfDirective, TokenList disabledTokens) :
         DirectiveSyntax(kind, directive), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
-    {
-        childCount += 2;
-    }
+    {}
 
     UnconditionalBranchDirectiveSyntax(const UnconditionalBranchDirectiveSyntax&) = delete;
     UnconditionalBranchDirectiveSyntax& operator=(const UnconditionalBranchDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6441,12 +6461,12 @@ struct MacroArgumentDefaultSyntax : public SyntaxNode {
 
     MacroArgumentDefaultSyntax(Token equals, TokenList tokens) :
         SyntaxNode(SyntaxKind::MacroArgumentDefault), equals(equals), tokens(tokens)
-    {
-        childCount += 2;
-    }
+    {}
 
     MacroArgumentDefaultSyntax(const MacroArgumentDefaultSyntax&) = delete;
     MacroArgumentDefaultSyntax& operator=(const MacroArgumentDefaultSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6464,12 +6484,12 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
 
     MacroFormalArgumentSyntax(Token name, MacroArgumentDefaultSyntax* defaultValue) :
         SyntaxNode(SyntaxKind::MacroFormalArgument), name(name), defaultValue(defaultValue)
-    {
-        childCount += 2;
-    }
+    {}
 
     MacroFormalArgumentSyntax(const MacroFormalArgumentSyntax&) = delete;
     MacroFormalArgumentSyntax& operator=(const MacroFormalArgumentSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6488,12 +6508,12 @@ struct MacroFormalArgumentListSyntax : public SyntaxNode {
 
     MacroFormalArgumentListSyntax(Token openParen, SeparatedSyntaxList<MacroFormalArgumentSyntax> args, Token closeParen) :
         SyntaxNode(SyntaxKind::MacroFormalArgumentList), openParen(openParen), args(args), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     MacroFormalArgumentListSyntax(const MacroFormalArgumentListSyntax&) = delete;
     MacroFormalArgumentListSyntax& operator=(const MacroFormalArgumentListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6514,12 +6534,12 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
 
     DefineDirectiveSyntax(Token directive, Token name, MacroFormalArgumentListSyntax* formalArguments, TokenList body, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::DefineDirective, directive), name(name), formalArguments(formalArguments), body(body), endOfDirective(endOfDirective)
-    {
-        childCount += 4;
-    }
+    {}
 
     DefineDirectiveSyntax(const DefineDirectiveSyntax&) = delete;
     DefineDirectiveSyntax& operator=(const DefineDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6539,12 +6559,12 @@ struct MacroActualArgumentSyntax : public SyntaxNode {
 
     MacroActualArgumentSyntax(TokenList tokens) :
         SyntaxNode(SyntaxKind::MacroActualArgument), tokens(tokens)
-    {
-        childCount += 1;
-    }
+    {}
 
     MacroActualArgumentSyntax(const MacroActualArgumentSyntax&) = delete;
     MacroActualArgumentSyntax& operator=(const MacroActualArgumentSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6562,12 +6582,12 @@ struct MacroActualArgumentListSyntax : public SyntaxNode {
 
     MacroActualArgumentListSyntax(Token openParen, SeparatedSyntaxList<MacroActualArgumentSyntax> args, Token closeParen) :
         SyntaxNode(SyntaxKind::MacroActualArgumentList), openParen(openParen), args(args), closeParen(closeParen)
-    {
-        childCount += 3;
-    }
+    {}
 
     MacroActualArgumentListSyntax(const MacroActualArgumentListSyntax&) = delete;
     MacroActualArgumentListSyntax& operator=(const MacroActualArgumentListSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6585,12 +6605,12 @@ struct MacroUsageSyntax : public DirectiveSyntax {
 
     MacroUsageSyntax(Token directive, MacroActualArgumentListSyntax* args) :
         DirectiveSyntax(SyntaxKind::MacroUsage, directive), args(args)
-    {
-        childCount += 1;
-    }
+    {}
 
     MacroUsageSyntax(const MacroUsageSyntax&) = delete;
     MacroUsageSyntax& operator=(const MacroUsageSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6612,12 +6632,12 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
 
     TimescaleDirectiveSyntax(Token directive, Token timeUnit, Token timeUnitUnit, Token slash, Token timePrecision, Token timePrecisionUnit, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::TimescaleDirective, directive), timeUnit(timeUnit), timeUnitUnit(timeUnitUnit), slash(slash), timePrecision(timePrecision), timePrecisionUnit(timePrecisionUnit), endOfDirective(endOfDirective)
-    {
-        childCount += 6;
-    }
+    {}
 
     TimescaleDirectiveSyntax(const TimescaleDirectiveSyntax&) = delete;
     TimescaleDirectiveSyntax& operator=(const TimescaleDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6640,12 +6660,12 @@ struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
 
     DefaultNetTypeDirectiveSyntax(Token directive, Token netType, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::DefaultNetTypeDirective, directive), netType(netType), endOfDirective(endOfDirective)
-    {
-        childCount += 2;
-    }
+    {}
 
     DefaultNetTypeDirectiveSyntax(const DefaultNetTypeDirectiveSyntax&) = delete;
     DefaultNetTypeDirectiveSyntax& operator=(const DefaultNetTypeDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6666,12 +6686,12 @@ struct LineDirectiveSyntax : public DirectiveSyntax {
 
     LineDirectiveSyntax(Token directive, Token lineNumber, Token fileName, Token level, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::LineDirective, directive), lineNumber(lineNumber), fileName(fileName), level(level), endOfDirective(endOfDirective)
-    {
-        childCount += 4;
-    }
+    {}
 
     LineDirectiveSyntax(const LineDirectiveSyntax&) = delete;
     LineDirectiveSyntax& operator=(const LineDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6692,12 +6712,12 @@ struct UndefDirectiveSyntax : public DirectiveSyntax {
 
     UndefDirectiveSyntax(Token directive, Token name, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::UndefDirective, directive), name(name), endOfDirective(endOfDirective)
-    {
-        childCount += 2;
-    }
+    {}
 
     UndefDirectiveSyntax(const UndefDirectiveSyntax&) = delete;
     UndefDirectiveSyntax& operator=(const UndefDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
@@ -6716,12 +6736,12 @@ struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
 
     BeginKeywordsDirectiveSyntax(Token directive, Token versionSpecifier, Token endOfDirective) :
         DirectiveSyntax(SyntaxKind::BeginKeywordsDirective, directive), versionSpecifier(versionSpecifier), endOfDirective(endOfDirective)
-    {
-        childCount += 2;
-    }
+    {}
 
     BeginKeywordsDirectiveSyntax(const BeginKeywordsDirectiveSyntax&) = delete;
     BeginKeywordsDirectiveSyntax& operator=(const BeginKeywordsDirectiveSyntax&) = delete;
+
+    static bool isKind(SyntaxKind kind);
 
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {

@@ -569,18 +569,18 @@ public:
     /// the given index is not a node (probably a token) then this returns null.
     const SyntaxNode* childNode(uint32_t index) const;
     Token childToken(uint32_t index) const;
-    uint32_t getChildCount() const { return childCount; }
+
+    uint32_t getChildCount() const; // Note: implemented in AllSyntax.cpp
 
     template<typename T>
     T& as() {
-        // TODO: assert kind
+        ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
     template<typename T>
-
     const T& as() const {
-        // TODO: assert kind
+        ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 
@@ -624,28 +624,32 @@ public:
     }
 
 protected:
-    uint32_t childCount = 0;
-
     virtual TokenOrSyntax getChild(uint32_t) const = 0;
 };
 
+class SyntaxListBase : public SyntaxNode {
+public:
+    uint32_t getChildCount() const { return childCount; }
+
+protected:
+    SyntaxListBase(uint32_t childCount) :
+        SyntaxNode(SyntaxKind::List),
+        childCount(childCount) {}
+
+    uint32_t childCount;
+};
+
 template<typename T>
-class SyntaxList : public SyntaxNode {
+class SyntaxList : public SyntaxListBase {
 public:
     SyntaxList(std::nullptr_t) : SyntaxList(span<T* const>(nullptr)) {}
     SyntaxList(span<T* const> elements) :
-        SyntaxNode(SyntaxKind::List),
-        elements(elements)
-    {
-        childCount = (uint32_t)elements.size();
-    }
+        SyntaxListBase((uint32_t)elements.size()),
+        elements(elements) {}
 
     SyntaxList(span<T*> elements) :
-        SyntaxNode(SyntaxKind::List),
-        elements(elements)
-    {
-        childCount = (uint32_t)elements.size();
-    }
+        SyntaxListBase((uint32_t)elements.size()),
+        elements(elements) {}
 
     uint32_t count() const { return (uint32_t)elements.size(); }
 
@@ -660,22 +664,16 @@ private:
     span<T* const> elements;
 };
 
-class TokenList : public SyntaxNode {
+class TokenList : public SyntaxListBase {
 public:
     TokenList(std::nullptr_t) : TokenList(span<Token const>(nullptr)) {}
     TokenList(span<Token const> elements) :
-        SyntaxNode(SyntaxKind::List),
-        elements(elements)
-    {
-        childCount = (uint32_t)elements.size();
-    }
+        SyntaxListBase((uint32_t)elements.size()),
+        elements(elements) {}
 
     TokenList(span<Token> elements) :
-        SyntaxNode(SyntaxKind::List),
-        elements(elements)
-    {
-        childCount = (uint32_t)elements.size();
-    }
+        SyntaxListBase((uint32_t)elements.size()),
+        elements(elements) {}
 
     uint32_t count() const { return (uint32_t)elements.size(); }
 
@@ -691,7 +689,7 @@ private:
 };
 
 template<typename T>
-class SeparatedSyntaxList : public SyntaxNode {
+class SeparatedSyntaxList : public SyntaxListBase {
 public:
     class const_iterator {
     public:
@@ -726,18 +724,12 @@ public:
 
     SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>(nullptr)) {}
     SeparatedSyntaxList(span<TokenOrSyntax const> elements) :
-        SyntaxNode(SyntaxKind::List),
-        elements(elements)
-    {
-        childCount = (uint32_t)elements.size();
-    }
+        SyntaxListBase((uint32_t)elements.size()),
+        elements(elements) {}
 
     SeparatedSyntaxList(span<TokenOrSyntax> elements) :
-        SyntaxNode(SyntaxKind::List),
-        elements(elements)
-    {
-        childCount = (uint32_t)elements.size();
-    }
+        SyntaxListBase((uint32_t)elements.size()),
+        elements(elements) {}
 
     bool empty() const { return count() == 0; }
     uint32_t count() const { return (uint32_t)std::ceil(elements.size() / 2.0); }

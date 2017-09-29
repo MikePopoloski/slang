@@ -11,6 +11,2265 @@
 
 namespace slang {
 
+uint32_t SyntaxNode::getChildCount() const {
+    switch (kind) {
+        case SyntaxKind::Unknown: return 0;
+        case SyntaxKind::List: return ((SyntaxListBase*)this)->getChildCount();
+        case SyntaxKind::EqualsValueClause: return 2;
+        case SyntaxKind::AttributeSpec: return 2;
+        case SyntaxKind::AttributeInstance: return 3;
+        case SyntaxKind::NamedLabel: return 2;
+        case SyntaxKind::EmptyArgument: return 0;
+        case SyntaxKind::OrderedArgument: return 1;
+        case SyntaxKind::NamedArgument: return 5;
+        case SyntaxKind::ArgumentList: return 3;
+        case SyntaxKind::ParameterValueAssignment: return 2;
+        case SyntaxKind::VariablePattern: return 2;
+        case SyntaxKind::WildcardPattern: return 1;
+        case SyntaxKind::ExpressionPattern: return 1;
+        case SyntaxKind::TaggedPattern: return 3;
+        case SyntaxKind::OrderedStructurePatternMember: return 1;
+        case SyntaxKind::NamedStructurePatternMember: return 3;
+        case SyntaxKind::StructurePattern: return 3;
+        case SyntaxKind::MatchesClause: return 2;
+        case SyntaxKind::ConditionalPattern: return 2;
+        case SyntaxKind::ConditionalPredicate: return 1;
+        case SyntaxKind::SimpleAssignmentPattern: return 3;
+        case SyntaxKind::AssignmentPatternItem: return 3;
+        case SyntaxKind::StructuredAssignmentPattern: return 3;
+        case SyntaxKind::ReplicatedAssignmentPattern: return 6;
+        case SyntaxKind::BadExpression: return 1;
+        case SyntaxKind::UnaryPlusExpression: return 3;
+        case SyntaxKind::UnaryMinusExpression: return 3;
+        case SyntaxKind::UnaryBitwiseAndExpression: return 3;
+        case SyntaxKind::UnaryBitwiseNandExpression: return 3;
+        case SyntaxKind::UnaryBitwiseOrExpression: return 3;
+        case SyntaxKind::UnaryBitwiseNorExpression: return 3;
+        case SyntaxKind::UnaryBitwiseXorExpression: return 3;
+        case SyntaxKind::UnaryBitwiseXnorExpression: return 3;
+        case SyntaxKind::UnaryPreincrementExpression: return 3;
+        case SyntaxKind::UnaryPredecrementExpression: return 3;
+        case SyntaxKind::UnaryLogicalNotExpression: return 3;
+        case SyntaxKind::UnaryBitwiseNotExpression: return 3;
+        case SyntaxKind::UnarySequenceDelayExpression: return 3;
+        case SyntaxKind::UnarySequenceEventExpression: return 3;
+        case SyntaxKind::UnaryNotPropertyExpression: return 3;
+        case SyntaxKind::AcceptOnPropertyExpression: return 3;
+        case SyntaxKind::RejectOnPropertyExpression: return 3;
+        case SyntaxKind::SyncAcceptOnPropertyExpression: return 3;
+        case SyntaxKind::SyncRejectOnPropertyExpression: return 3;
+        case SyntaxKind::NextTimePropertyExpression: return 3;
+        case SyntaxKind::SNextTimePropertyExpression: return 3;
+        case SyntaxKind::AlwaysPropertyExpression: return 3;
+        case SyntaxKind::SAlwaysPropertyExpression: return 3;
+        case SyntaxKind::EventuallyPropertyExpression: return 3;
+        case SyntaxKind::SEventuallyPropertyExpression: return 3;
+        case SyntaxKind::PostincrementExpression: return 3;
+        case SyntaxKind::PostdecrementExpression: return 3;
+        case SyntaxKind::AddExpression: return 4;
+        case SyntaxKind::SubtractExpression: return 4;
+        case SyntaxKind::MultiplyExpression: return 4;
+        case SyntaxKind::DivideExpression: return 4;
+        case SyntaxKind::PowerExpression: return 4;
+        case SyntaxKind::ModExpression: return 4;
+        case SyntaxKind::EqualityExpression: return 4;
+        case SyntaxKind::InequalityExpression: return 4;
+        case SyntaxKind::CaseEqualityExpression: return 4;
+        case SyntaxKind::CaseInequalityExpression: return 4;
+        case SyntaxKind::WildcardEqualityExpression: return 4;
+        case SyntaxKind::WildcardInequalityExpression: return 4;
+        case SyntaxKind::LessThanExpression: return 4;
+        case SyntaxKind::LessThanEqualExpression: return 4;
+        case SyntaxKind::GreaterThanExpression: return 4;
+        case SyntaxKind::GreaterThanEqualExpression: return 4;
+        case SyntaxKind::LogicalAndExpression: return 4;
+        case SyntaxKind::LogicalOrExpression: return 4;
+        case SyntaxKind::BinaryAndExpression: return 4;
+        case SyntaxKind::BinaryOrExpression: return 4;
+        case SyntaxKind::BinaryXorExpression: return 4;
+        case SyntaxKind::BinaryXnorExpression: return 4;
+        case SyntaxKind::LogicalImplicationExpression: return 4;
+        case SyntaxKind::LogicalEquivalenceExpression: return 4;
+        case SyntaxKind::LogicalShiftLeftExpression: return 4;
+        case SyntaxKind::LogicalShiftRightExpression: return 4;
+        case SyntaxKind::ArithmeticShiftLeftExpression: return 4;
+        case SyntaxKind::ArithmeticShiftRightExpression: return 4;
+        case SyntaxKind::BinarySequenceDelayExpression: return 4;
+        case SyntaxKind::OrSequenceExpression: return 4;
+        case SyntaxKind::AndSequenceExpression: return 4;
+        case SyntaxKind::IntersectSequenceExpression: return 4;
+        case SyntaxKind::WithinSequenceExpression: return 4;
+        case SyntaxKind::ThroughoutSequenceExpression: return 4;
+        case SyntaxKind::IffPropertyExpression: return 4;
+        case SyntaxKind::UntilPropertyExpression: return 4;
+        case SyntaxKind::SUntilPropertyExpression: return 4;
+        case SyntaxKind::UntilWithPropertyExpression: return 4;
+        case SyntaxKind::SUntilWithPropertyExpression: return 4;
+        case SyntaxKind::ImpliesPropertyExpression: return 4;
+        case SyntaxKind::OverlappedImplicationPropertyExpression: return 4;
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression: return 4;
+        case SyntaxKind::OverlappedFollowedByPropertyExpression: return 4;
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression: return 4;
+        case SyntaxKind::AssignmentExpression: return 4;
+        case SyntaxKind::AddAssignmentExpression: return 4;
+        case SyntaxKind::SubtractAssignmentExpression: return 4;
+        case SyntaxKind::MultiplyAssignmentExpression: return 4;
+        case SyntaxKind::DivideAssignmentExpression: return 4;
+        case SyntaxKind::ModAssignmentExpression: return 4;
+        case SyntaxKind::AndAssignmentExpression: return 4;
+        case SyntaxKind::OrAssignmentExpression: return 4;
+        case SyntaxKind::XorAssignmentExpression: return 4;
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression: return 4;
+        case SyntaxKind::LogicalRightShiftAssignmentExpression: return 4;
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression: return 4;
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression: return 4;
+        case SyntaxKind::NonblockingAssignmentExpression: return 4;
+        case SyntaxKind::MinTypMaxExpression: return 5;
+        case SyntaxKind::TaggedUnionExpression: return 3;
+        case SyntaxKind::OpenRangeList: return 3;
+        case SyntaxKind::InsideExpression: return 3;
+        case SyntaxKind::ConditionalExpression: return 6;
+        case SyntaxKind::AssignmentPatternExpression: return 2;
+        case SyntaxKind::BitSelect: return 1;
+        case SyntaxKind::SimpleRangeSelect: return 3;
+        case SyntaxKind::AscendingRangeSelect: return 3;
+        case SyntaxKind::DescendingRangeSelect: return 3;
+        case SyntaxKind::ElementSelect: return 3;
+        case SyntaxKind::IdentifierName: return 1;
+        case SyntaxKind::IdentifierSelectName: return 2;
+        case SyntaxKind::EmptyIdentifierName: return 0;
+        case SyntaxKind::LocalScope: return 1;
+        case SyntaxKind::UnitScope: return 1;
+        case SyntaxKind::RootScope: return 1;
+        case SyntaxKind::ThisHandle: return 1;
+        case SyntaxKind::SuperHandle: return 1;
+        case SyntaxKind::ArrayUniqueMethod: return 1;
+        case SyntaxKind::ArrayAndMethod: return 1;
+        case SyntaxKind::ArrayOrMethod: return 1;
+        case SyntaxKind::ArrayXorMethod: return 1;
+        case SyntaxKind::ConstructorName: return 1;
+        case SyntaxKind::SystemName: return 1;
+        case SyntaxKind::ClassName: return 2;
+        case SyntaxKind::ScopedName: return 3;
+        case SyntaxKind::ClassScope: return 2;
+        case SyntaxKind::NullLiteralExpression: return 1;
+        case SyntaxKind::StringLiteralExpression: return 1;
+        case SyntaxKind::IntegerLiteralExpression: return 1;
+        case SyntaxKind::UnbasedUnsizedLiteralExpression: return 1;
+        case SyntaxKind::RealLiteralExpression: return 1;
+        case SyntaxKind::TimeLiteralExpression: return 1;
+        case SyntaxKind::WildcardLiteralExpression: return 1;
+        case SyntaxKind::OneStepLiteralExpression: return 1;
+        case SyntaxKind::DefaultPatternKeyExpression: return 1;
+        case SyntaxKind::IntegerVectorExpression: return 3;
+        case SyntaxKind::EmptyQueueExpression: return 2;
+        case SyntaxKind::ConcatenationExpression: return 3;
+        case SyntaxKind::MultipleConcatenationExpression: return 4;
+        case SyntaxKind::StreamExpressionWithRange: return 2;
+        case SyntaxKind::StreamExpression: return 2;
+        case SyntaxKind::StreamingConcatenationExpression: return 7;
+        case SyntaxKind::ParenthesizedExpression: return 3;
+        case SyntaxKind::NewClassExpression: return 3;
+        case SyntaxKind::NewArrayExpression: return 5;
+        case SyntaxKind::NewExpression: return 2;
+        case SyntaxKind::ElementSelectExpression: return 2;
+        case SyntaxKind::MemberAccessExpression: return 3;
+        case SyntaxKind::InvocationExpression: return 3;
+        case SyntaxKind::CastExpression: return 3;
+        case SyntaxKind::SignedCastExpression: return 3;
+        case SyntaxKind::DelayControl: return 2;
+        case SyntaxKind::CycleDelay: return 2;
+        case SyntaxKind::EventControl: return 2;
+        case SyntaxKind::SignalEventExpression: return 2;
+        case SyntaxKind::BinaryEventExpression: return 3;
+        case SyntaxKind::ParenthesizedEventExpression: return 3;
+        case SyntaxKind::ImplicitEventControl: return 1;
+        case SyntaxKind::ParenImplicitEventControl: return 2;
+        case SyntaxKind::EventControlWithExpression: return 2;
+        case SyntaxKind::RepeatedEventControl: return 5;
+        case SyntaxKind::TimingControlExpression: return 2;
+        case SyntaxKind::TimingControlExpressionConcatenation: return 3;
+        case SyntaxKind::ShortcutCycleDelayRange: return 4;
+        case SyntaxKind::RangeDimensionSpecifier: return 1;
+        case SyntaxKind::DataTypeDimensionSpecifier: return 1;
+        case SyntaxKind::WildcardDimensionSpecifier: return 1;
+        case SyntaxKind::ColonExpressionClause: return 2;
+        case SyntaxKind::QueueDimensionSpecifier: return 2;
+        case SyntaxKind::VariableDimension: return 3;
+        case SyntaxKind::VariableDeclarator: return 3;
+        case SyntaxKind::DataDeclaration: return 5;
+        case SyntaxKind::TypedefDeclaration: return 6;
+        case SyntaxKind::TypedefKeywordDeclaration: return 5;
+        case SyntaxKind::TypedefInterfaceClassDeclaration: return 6;
+        case SyntaxKind::ChargeStrength: return 3;
+        case SyntaxKind::DriveStrength: return 5;
+        case SyntaxKind::NetDeclaration: return 7;
+        case SyntaxKind::PackageImportItem: return 3;
+        case SyntaxKind::PackageImportDeclaration: return 4;
+        case SyntaxKind::ParameterDeclaration: return 3;
+        case SyntaxKind::ParameterDeclarationStatement: return 3;
+        case SyntaxKind::PortDeclaration: return 4;
+        case SyntaxKind::GenvarDeclaration: return 4;
+        case SyntaxKind::BitType: return 3;
+        case SyntaxKind::LogicType: return 3;
+        case SyntaxKind::RegType: return 3;
+        case SyntaxKind::ByteType: return 3;
+        case SyntaxKind::ShortIntType: return 3;
+        case SyntaxKind::IntType: return 3;
+        case SyntaxKind::LongIntType: return 3;
+        case SyntaxKind::IntegerType: return 3;
+        case SyntaxKind::TimeType: return 3;
+        case SyntaxKind::ShortRealType: return 1;
+        case SyntaxKind::RealType: return 1;
+        case SyntaxKind::RealTimeType: return 1;
+        case SyntaxKind::StringType: return 1;
+        case SyntaxKind::CHandleType: return 1;
+        case SyntaxKind::EventType: return 1;
+        case SyntaxKind::VoidType: return 1;
+        case SyntaxKind::TypeType: return 1;
+        case SyntaxKind::Untyped: return 1;
+        case SyntaxKind::PropertyType: return 1;
+        case SyntaxKind::SequenceType: return 1;
+        case SyntaxKind::NamedType: return 1;
+        case SyntaxKind::StructUnionMember: return 5;
+        case SyntaxKind::StructType: return 8;
+        case SyntaxKind::UnionType: return 8;
+        case SyntaxKind::EnumType: return 6;
+        case SyntaxKind::TypeReference: return 4;
+        case SyntaxKind::DotMemberClause: return 2;
+        case SyntaxKind::VirtualInterfaceType: return 5;
+        case SyntaxKind::ImplicitType: return 2;
+        case SyntaxKind::VarDataType: return 2;
+        case SyntaxKind::DeferredAssertion: return 3;
+        case SyntaxKind::ElseClause: return 2;
+        case SyntaxKind::ActionBlock: return 2;
+        case SyntaxKind::ImmediateAssertStatement: return 6;
+        case SyntaxKind::ImmediateAssumeStatement: return 6;
+        case SyntaxKind::ImmediateCoverStatement: return 6;
+        case SyntaxKind::DisableIff: return 5;
+        case SyntaxKind::PropertySpec: return 3;
+        case SyntaxKind::AssertPropertyStatement: return 8;
+        case SyntaxKind::AssumePropertyStatement: return 8;
+        case SyntaxKind::CoverSequenceStatement: return 8;
+        case SyntaxKind::CoverPropertyStatement: return 8;
+        case SyntaxKind::RestrictPropertyStatement: return 8;
+        case SyntaxKind::ExpectPropertyStatement: return 8;
+        case SyntaxKind::ConcurrentAssertionMember: return 2;
+        case SyntaxKind::ImmediateAssertionMember: return 2;
+        case SyntaxKind::EmptyStatement: return 3;
+        case SyntaxKind::ConditionalStatement: return 9;
+        case SyntaxKind::DefaultCaseItem: return 3;
+        case SyntaxKind::PatternCaseItem: return 5;
+        case SyntaxKind::StandardCaseItem: return 3;
+        case SyntaxKind::CaseStatement: return 10;
+        case SyntaxKind::ForeverStatement: return 4;
+        case SyntaxKind::LoopStatement: return 7;
+        case SyntaxKind::DoWhileStatement: return 9;
+        case SyntaxKind::ForVariableDeclaration: return 3;
+        case SyntaxKind::ForLoopStatement: return 11;
+        case SyntaxKind::ForeachLoopList: return 6;
+        case SyntaxKind::ForeachLoopStatement: return 5;
+        case SyntaxKind::ReturnStatement: return 5;
+        case SyntaxKind::JumpStatement: return 4;
+        case SyntaxKind::TimingControlStatement: return 4;
+        case SyntaxKind::ExpressionStatement: return 4;
+        case SyntaxKind::ProceduralAssignStatement: return 7;
+        case SyntaxKind::ProceduralForceStatement: return 7;
+        case SyntaxKind::ProceduralDeassignStatement: return 5;
+        case SyntaxKind::ProceduralReleaseStatement: return 5;
+        case SyntaxKind::DisableStatement: return 5;
+        case SyntaxKind::DisableForkStatement: return 5;
+        case SyntaxKind::NamedBlockClause: return 2;
+        case SyntaxKind::SequentialBlockStatement: return 7;
+        case SyntaxKind::ParallelBlockStatement: return 7;
+        case SyntaxKind::WaitStatement: return 7;
+        case SyntaxKind::WaitForkStatement: return 5;
+        case SyntaxKind::WaitOrderStatement: return 7;
+        case SyntaxKind::RandCaseItem: return 3;
+        case SyntaxKind::RandCaseStatement: return 5;
+        case SyntaxKind::BlockingEventTriggerStatement: return 5;
+        case SyntaxKind::NonblockingEventTriggerStatement: return 5;
+        case SyntaxKind::ImplicitNonAnsiPort: return 1;
+        case SyntaxKind::ExplicitNonAnsiPort: return 5;
+        case SyntaxKind::NonAnsiPortList: return 3;
+        case SyntaxKind::InterfacePortHeader: return 2;
+        case SyntaxKind::VariablePortHeader: return 3;
+        case SyntaxKind::InterconnectPortHeader: return 3;
+        case SyntaxKind::NetPortHeader: return 3;
+        case SyntaxKind::ImplicitAnsiPort: return 3;
+        case SyntaxKind::ExplicitAnsiPort: return 7;
+        case SyntaxKind::AnsiPortList: return 3;
+        case SyntaxKind::WildcardPortList: return 3;
+        case SyntaxKind::ParameterPortList: return 4;
+        case SyntaxKind::ModuleHeader: return 7;
+        case SyntaxKind::ProgramHeader: return 7;
+        case SyntaxKind::InterfaceHeader: return 7;
+        case SyntaxKind::PackageHeader: return 7;
+        case SyntaxKind::ModuleDeclaration: return 5;
+        case SyntaxKind::InterfaceDeclaration: return 5;
+        case SyntaxKind::ProgramDeclaration: return 5;
+        case SyntaxKind::PackageDeclaration: return 5;
+        case SyntaxKind::ExternModule: return 2;
+        case SyntaxKind::EmptyMember: return 3;
+        case SyntaxKind::InitialBlock: return 3;
+        case SyntaxKind::FinalBlock: return 3;
+        case SyntaxKind::AlwaysBlock: return 3;
+        case SyntaxKind::AlwaysCombBlock: return 3;
+        case SyntaxKind::AlwaysFFBlock: return 3;
+        case SyntaxKind::AlwaysLatchBlock: return 3;
+        case SyntaxKind::GenerateRegion: return 4;
+        case SyntaxKind::LoopGenerate: return 13;
+        case SyntaxKind::IfGenerate: return 7;
+        case SyntaxKind::CaseGenerate: return 7;
+        case SyntaxKind::GenerateBlock: return 7;
+        case SyntaxKind::DividerClause: return 2;
+        case SyntaxKind::TimeUnitsDeclaration: return 5;
+        case SyntaxKind::OrderedPortConnection: return 2;
+        case SyntaxKind::NamedPortConnection: return 6;
+        case SyntaxKind::WildcardPortConnection: return 2;
+        case SyntaxKind::HierarchicalInstance: return 5;
+        case SyntaxKind::HierarchyInstantiation: return 5;
+        case SyntaxKind::FunctionPort: return 6;
+        case SyntaxKind::FunctionPortList: return 3;
+        case SyntaxKind::FunctionPrototype: return 6;
+        case SyntaxKind::FunctionDeclaration: return 5;
+        case SyntaxKind::TaskDeclaration: return 5;
+        case SyntaxKind::AssertionItemPort: return 5;
+        case SyntaxKind::AssertionItemPortList: return 3;
+        case SyntaxKind::LetDeclaration: return 6;
+        case SyntaxKind::PropertyDeclaration: return 10;
+        case SyntaxKind::SequenceDeclaration: return 10;
+        case SyntaxKind::ExtendsClause: return 3;
+        case SyntaxKind::ImplementsClause: return 2;
+        case SyntaxKind::ClassDeclaration: return 12;
+        case SyntaxKind::ClassPropertyDeclaration: return 3;
+        case SyntaxKind::ClassMethodDeclaration: return 3;
+        case SyntaxKind::ClassMethodPrototype: return 3;
+        case SyntaxKind::ContinuousAssign: return 4;
+        case SyntaxKind::DefParamAssignment: return 2;
+        case SyntaxKind::DefParam: return 4;
+        case SyntaxKind::ModportItem: return 2;
+        case SyntaxKind::ModportDeclaration: return 4;
+        case SyntaxKind::ClockingSkew: return 3;
+        case SyntaxKind::ClockingDirection: return 5;
+        case SyntaxKind::ClockingItem: return 5;
+        case SyntaxKind::ClockingDeclaration: return 11;
+        case SyntaxKind::DPIImportExport: return 7;
+        case SyntaxKind::DistWeight: return 2;
+        case SyntaxKind::DistItem: return 2;
+        case SyntaxKind::DistConstraintList: return 4;
+        case SyntaxKind::ExpressionOrDist: return 2;
+        case SyntaxKind::ExpressionConstraint: return 3;
+        case SyntaxKind::UniquenessConstraint: return 3;
+        case SyntaxKind::ImplicationConstraint: return 3;
+        case SyntaxKind::ElseConstraintClause: return 2;
+        case SyntaxKind::ConditionalConstraint: return 6;
+        case SyntaxKind::LoopConstraint: return 3;
+        case SyntaxKind::DisableConstraint: return 4;
+        case SyntaxKind::SolveBeforeConstraint: return 5;
+        case SyntaxKind::ConstraintBlock: return 3;
+        case SyntaxKind::ConstraintPrototype: return 5;
+        case SyntaxKind::ConstraintDeclaration: return 5;
+        case SyntaxKind::WithClause: return 4;
+        case SyntaxKind::IdentifierList: return 3;
+        case SyntaxKind::RandomizeMethodWithClause: return 3;
+        case SyntaxKind::WithFunctionSample: return 4;
+        case SyntaxKind::BinaryBlockEventExpression: return 3;
+        case SyntaxKind::PrimaryBlockEventExpression: return 2;
+        case SyntaxKind::BlockCoverageEvent: return 4;
+        case SyntaxKind::CovergroupDeclaration: return 9;
+        case SyntaxKind::CoverageOption: return 7;
+        case SyntaxKind::Coverpoint: return 9;
+        case SyntaxKind::DefaultCoverageBinInitializer: return 2;
+        case SyntaxKind::ExpressionCoverageBinInitializer: return 2;
+        case SyntaxKind::RangeCoverageBinInitializer: return 2;
+        case SyntaxKind::TransRepeatRange: return 4;
+        case SyntaxKind::TransRange: return 2;
+        case SyntaxKind::TransSet: return 3;
+        case SyntaxKind::TransListCoverageBinInitializer: return 2;
+        case SyntaxKind::IffClause: return 4;
+        case SyntaxKind::CoverageBins: return 9;
+        case SyntaxKind::CompilationUnit: return 2;
+        case SyntaxKind::CellDefineDirective: return 2;
+        case SyntaxKind::PragmaDirective: return 2;
+        case SyntaxKind::UnconnectedDriveDirective: return 2;
+        case SyntaxKind::NoUnconnectedDriveDirective: return 2;
+        case SyntaxKind::EndCellDefineDirective: return 2;
+        case SyntaxKind::EndKeywordsDirective: return 2;
+        case SyntaxKind::ResetAllDirective: return 2;
+        case SyntaxKind::UndefineAllDirective: return 2;
+        case SyntaxKind::IncludeDirective: return 3;
+        case SyntaxKind::ElsIfDirective: return 4;
+        case SyntaxKind::IfDefDirective: return 4;
+        case SyntaxKind::IfNDefDirective: return 4;
+        case SyntaxKind::EndIfDirective: return 3;
+        case SyntaxKind::ElseDirective: return 3;
+        case SyntaxKind::MacroArgumentDefault: return 2;
+        case SyntaxKind::MacroFormalArgument: return 2;
+        case SyntaxKind::MacroFormalArgumentList: return 3;
+        case SyntaxKind::DefineDirective: return 5;
+        case SyntaxKind::MacroActualArgument: return 1;
+        case SyntaxKind::MacroActualArgumentList: return 3;
+        case SyntaxKind::MacroUsage: return 2;
+        case SyntaxKind::TimescaleDirective: return 7;
+        case SyntaxKind::DefaultNetTypeDirective: return 3;
+        case SyntaxKind::LineDirective: return 5;
+        case SyntaxKind::UndefDirective: return 3;
+        case SyntaxKind::BeginKeywordsDirective: return 3;
+    }
+    THROW_UNREACHABLE;
+}
+
+bool ExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::IdentifierSelectName:
+        case SyntaxKind::ScopedName:
+        case SyntaxKind::GreaterThanExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::ImplicitType:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::RealType:
+        case SyntaxKind::IntegerType:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+        case SyntaxKind::XorAssignmentExpression:
+        case SyntaxKind::GreaterThanEqualExpression:
+        case SyntaxKind::EventType:
+        case SyntaxKind::InequalityExpression:
+        case SyntaxKind::CaseInequalityExpression:
+        case SyntaxKind::DefaultPatternKeyExpression:
+        case SyntaxKind::EmptyQueueExpression:
+        case SyntaxKind::NullLiteralExpression:
+        case SyntaxKind::NewArrayExpression:
+        case SyntaxKind::CHandleType:
+        case SyntaxKind::RootScope:
+        case SyntaxKind::ConditionalExpression:
+        case SyntaxKind::SignedCastExpression:
+        case SyntaxKind::ArithmeticShiftRightExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::MinTypMaxExpression:
+        case SyntaxKind::ClassScope:
+        case SyntaxKind::ArrayAndMethod:
+        case SyntaxKind::ElementSelectExpression:
+        case SyntaxKind::BinaryOrExpression:
+        case SyntaxKind::UnarySequenceEventExpression:
+        case SyntaxKind::NamedType:
+        case SyntaxKind::WildcardInequalityExpression:
+        case SyntaxKind::IntegerVectorExpression:
+        case SyntaxKind::TypeType:
+        case SyntaxKind::UnaryNotPropertyExpression:
+        case SyntaxKind::AndSequenceExpression:
+        case SyntaxKind::StringType:
+        case SyntaxKind::EqualityExpression:
+        case SyntaxKind::ConstructorName:
+        case SyntaxKind::SystemName:
+        case SyntaxKind::UnaryBitwiseOrExpression:
+        case SyntaxKind::AlwaysPropertyExpression:
+        case SyntaxKind::UnaryPreincrementExpression:
+        case SyntaxKind::UnbasedUnsizedLiteralExpression:
+        case SyntaxKind::BadExpression:
+        case SyntaxKind::NextTimePropertyExpression:
+        case SyntaxKind::IntegerLiteralExpression:
+        case SyntaxKind::WildcardEqualityExpression:
+        case SyntaxKind::UnaryPredecrementExpression:
+        case SyntaxKind::TimeLiteralExpression:
+        case SyntaxKind::BinarySequenceDelayExpression:
+        case SyntaxKind::TimingControlExpressionConcatenation:
+        case SyntaxKind::AddExpression:
+        case SyntaxKind::UnaryBitwiseAndExpression:
+        case SyntaxKind::IntersectSequenceExpression:
+        case SyntaxKind::StructType:
+        case SyntaxKind::CaseEqualityExpression:
+        case SyntaxKind::LogicalOrExpression:
+        case SyntaxKind::VarDataType:
+        case SyntaxKind::ConcatenationExpression:
+        case SyntaxKind::CastExpression:
+        case SyntaxKind::UnarySequenceDelayExpression:
+        case SyntaxKind::ArrayXorMethod:
+        case SyntaxKind::ArrayUniqueMethod:
+        case SyntaxKind::RegType:
+        case SyntaxKind::AssignmentPatternExpression:
+        case SyntaxKind::MultiplyAssignmentExpression:
+        case SyntaxKind::AssignmentExpression:
+        case SyntaxKind::PostdecrementExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::SyncAcceptOnPropertyExpression:
+        case SyntaxKind::OneStepLiteralExpression:
+        case SyntaxKind::UnaryBitwiseXorExpression:
+        case SyntaxKind::LogicalShiftRightExpression:
+        case SyntaxKind::WildcardLiteralExpression:
+        case SyntaxKind::NewClassExpression:
+        case SyntaxKind::LogicalImplicationExpression:
+        case SyntaxKind::SUntilPropertyExpression:
+        case SyntaxKind::RealLiteralExpression:
+        case SyntaxKind::StringLiteralExpression:
+        case SyntaxKind::ElementSelect:
+        case SyntaxKind::BinaryAndExpression:
+        case SyntaxKind::TaggedUnionExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::ByteType:
+        case SyntaxKind::ExpressionOrDist:
+        case SyntaxKind::OrSequenceExpression:
+        case SyntaxKind::SUntilWithPropertyExpression:
+        case SyntaxKind::DivideExpression:
+        case SyntaxKind::StreamingConcatenationExpression:
+        case SyntaxKind::SNextTimePropertyExpression:
+        case SyntaxKind::RealTimeType:
+        case SyntaxKind::InvocationExpression:
+        case SyntaxKind::LogicType:
+        case SyntaxKind::UntilWithPropertyExpression:
+        case SyntaxKind::SEventuallyPropertyExpression:
+        case SyntaxKind::BinaryXnorExpression:
+        case SyntaxKind::OverlappedImplicationPropertyExpression:
+        case SyntaxKind::OverlappedFollowedByPropertyExpression:
+        case SyntaxKind::IffPropertyExpression:
+        case SyntaxKind::ArithmeticShiftLeftExpression:
+        case SyntaxKind::UnionType:
+        case SyntaxKind::ParenthesizedExpression:
+        case SyntaxKind::UnaryBitwiseNandExpression:
+        case SyntaxKind::EventuallyPropertyExpression:
+        case SyntaxKind::UnaryBitwiseNotExpression:
+        case SyntaxKind::ModAssignmentExpression:
+        case SyntaxKind::ThroughoutSequenceExpression:
+        case SyntaxKind::Untyped:
+        case SyntaxKind::IdentifierName:
+        case SyntaxKind::SyncRejectOnPropertyExpression:
+        case SyntaxKind::BinaryXorExpression:
+        case SyntaxKind::SuperHandle:
+        case SyntaxKind::SequenceType:
+        case SyntaxKind::UnaryLogicalNotExpression:
+        case SyntaxKind::MultipleConcatenationExpression:
+        case SyntaxKind::TimingControlExpression:
+        case SyntaxKind::TimeType:
+        case SyntaxKind::ArrayOrMethod:
+        case SyntaxKind::UnaryMinusExpression:
+        case SyntaxKind::LessThanEqualExpression:
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
+        case SyntaxKind::IntType:
+        case SyntaxKind::UnaryPlusExpression:
+        case SyntaxKind::SubtractAssignmentExpression:
+        case SyntaxKind::ThisHandle:
+        case SyntaxKind::SAlwaysPropertyExpression:
+        case SyntaxKind::ShortRealType:
+        case SyntaxKind::DivideAssignmentExpression:
+        case SyntaxKind::VoidType:
+        case SyntaxKind::UnaryBitwiseNorExpression:
+        case SyntaxKind::LogicalShiftLeftExpression:
+        case SyntaxKind::AddAssignmentExpression:
+        case SyntaxKind::LogicalEquivalenceExpression:
+        case SyntaxKind::PostincrementExpression:
+        case SyntaxKind::EnumType:
+        case SyntaxKind::EmptyIdentifierName:
+        case SyntaxKind::UntilPropertyExpression:
+        case SyntaxKind::MemberAccessExpression:
+        case SyntaxKind::InsideExpression:
+        case SyntaxKind::PropertyType:
+        case SyntaxKind::UnitScope:
+        case SyntaxKind::ClassName:
+        case SyntaxKind::LessThanExpression:
+        case SyntaxKind::RandomizeMethodWithClause:
+        case SyntaxKind::ModExpression:
+        case SyntaxKind::ImpliesPropertyExpression:
+        case SyntaxKind::NonblockingAssignmentExpression:
+        case SyntaxKind::WithinSequenceExpression:
+        case SyntaxKind::NewExpression:
+        case SyntaxKind::AcceptOnPropertyExpression:
+        case SyntaxKind::LocalScope:
+        case SyntaxKind::UnaryBitwiseXnorExpression:
+        case SyntaxKind::TypeReference:
+        case SyntaxKind::MultiplyExpression:
+        case SyntaxKind::ShortIntType:
+        case SyntaxKind::BitType:
+        case SyntaxKind::SubtractExpression:
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
+        case SyntaxKind::RejectOnPropertyExpression:
+        case SyntaxKind::LongIntType:
+        case SyntaxKind::WithClause:
+        case SyntaxKind::LogicalAndExpression:
+        case SyntaxKind::PowerExpression:
+        case SyntaxKind::VirtualInterfaceType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool DataTypeSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ShortRealType:
+        case SyntaxKind::TypeType:
+        case SyntaxKind::VoidType:
+        case SyntaxKind::StringType:
+        case SyntaxKind::ByteType:
+        case SyntaxKind::ImplicitType:
+        case SyntaxKind::RealType:
+        case SyntaxKind::IntegerType:
+        case SyntaxKind::EnumType:
+        case SyntaxKind::RealTimeType:
+        case SyntaxKind::LogicType:
+        case SyntaxKind::PropertyType:
+        case SyntaxKind::EventType:
+        case SyntaxKind::UnionType:
+        case SyntaxKind::StructType:
+        case SyntaxKind::Untyped:
+        case SyntaxKind::VarDataType:
+        case SyntaxKind::TypeReference:
+        case SyntaxKind::CHandleType:
+        case SyntaxKind::SequenceType:
+        case SyntaxKind::ShortIntType:
+        case SyntaxKind::BitType:
+        case SyntaxKind::RegType:
+        case SyntaxKind::TimeType:
+        case SyntaxKind::LongIntType:
+        case SyntaxKind::IntType:
+        case SyntaxKind::NamedType:
+        case SyntaxKind::VirtualInterfaceType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool EqualsValueClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EqualsValueClause;
+}
+
+bool AttributeSpecSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::AttributeSpec;
+}
+
+bool AttributeInstanceSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::AttributeInstance;
+}
+
+bool NamedLabelSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NamedLabel;
+}
+
+bool StatementSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::SequentialBlockStatement:
+        case SyntaxKind::DisableForkStatement:
+        case SyntaxKind::NonblockingEventTriggerStatement:
+        case SyntaxKind::DisableStatement:
+        case SyntaxKind::DoWhileStatement:
+        case SyntaxKind::RandCaseStatement:
+        case SyntaxKind::ImmediateAssertStatement:
+        case SyntaxKind::ImmediateCoverStatement:
+        case SyntaxKind::ExpectPropertyStatement:
+        case SyntaxKind::CoverPropertyStatement:
+        case SyntaxKind::ForeachLoopStatement:
+        case SyntaxKind::WaitOrderStatement:
+        case SyntaxKind::ImmediateAssumeStatement:
+        case SyntaxKind::WaitForkStatement:
+        case SyntaxKind::ProceduralDeassignStatement:
+        case SyntaxKind::ExpressionStatement:
+        case SyntaxKind::EmptyStatement:
+        case SyntaxKind::ForeverStatement:
+        case SyntaxKind::ProceduralReleaseStatement:
+        case SyntaxKind::ProceduralForceStatement:
+        case SyntaxKind::ConditionalStatement:
+        case SyntaxKind::CoverSequenceStatement:
+        case SyntaxKind::ProceduralAssignStatement:
+        case SyntaxKind::WaitStatement:
+        case SyntaxKind::RestrictPropertyStatement:
+        case SyntaxKind::TimingControlStatement:
+        case SyntaxKind::ForLoopStatement:
+        case SyntaxKind::ReturnStatement:
+        case SyntaxKind::AssertPropertyStatement:
+        case SyntaxKind::LoopStatement:
+        case SyntaxKind::CaseStatement:
+        case SyntaxKind::AssumePropertyStatement:
+        case SyntaxKind::BlockingEventTriggerStatement:
+        case SyntaxKind::ParallelBlockStatement:
+        case SyntaxKind::JumpStatement:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool MemberSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::TypedefKeywordDeclaration:
+        case SyntaxKind::ModportDeclaration:
+        case SyntaxKind::CovergroupDeclaration:
+        case SyntaxKind::GenerateBlock:
+        case SyntaxKind::ContinuousAssign:
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::ClassMethodDeclaration:
+        case SyntaxKind::PackageDeclaration:
+        case SyntaxKind::TypedefDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ClockingDeclaration:
+        case SyntaxKind::PackageImportDeclaration:
+        case SyntaxKind::ClassDeclaration:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::EmptyMember:
+        case SyntaxKind::ConstraintPrototype:
+        case SyntaxKind::PortDeclaration:
+        case SyntaxKind::ParameterDeclarationStatement:
+        case SyntaxKind::AlwaysLatchBlock:
+        case SyntaxKind::DPIImportExport:
+        case SyntaxKind::CoverageBins:
+        case SyntaxKind::GenerateRegion:
+        case SyntaxKind::SequenceDeclaration:
+        case SyntaxKind::ImmediateAssertionMember:
+        case SyntaxKind::CaseGenerate:
+        case SyntaxKind::LetDeclaration:
+        case SyntaxKind::PropertyDeclaration:
+        case SyntaxKind::ConstraintDeclaration:
+        case SyntaxKind::NetDeclaration:
+        case SyntaxKind::CoverageOption:
+        case SyntaxKind::TypedefInterfaceClassDeclaration:
+        case SyntaxKind::HierarchyInstantiation:
+        case SyntaxKind::TaskDeclaration:
+        case SyntaxKind::FinalBlock:
+        case SyntaxKind::ClassPropertyDeclaration:
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::LoopGenerate:
+        case SyntaxKind::DefParam:
+        case SyntaxKind::GenvarDeclaration:
+        case SyntaxKind::IfGenerate:
+        case SyntaxKind::ConcurrentAssertionMember:
+        case SyntaxKind::ClassMethodPrototype:
+        case SyntaxKind::Coverpoint:
+        case SyntaxKind::TimeUnitsDeclaration:
+        case SyntaxKind::DataDeclaration:
+        case SyntaxKind::AlwaysCombBlock:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ArgumentSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::NamedArgument:
+        case SyntaxKind::OrderedArgument:
+        case SyntaxKind::EmptyArgument:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool EmptyArgumentSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EmptyArgument;
+}
+
+bool OrderedArgumentSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::OrderedArgument;
+}
+
+bool NamedArgumentSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NamedArgument;
+}
+
+bool ArgumentListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ArgumentList;
+}
+
+bool ParameterValueAssignmentSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ParameterValueAssignment;
+}
+
+bool PatternSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ExpressionPattern:
+        case SyntaxKind::StructurePattern:
+        case SyntaxKind::WildcardPattern:
+        case SyntaxKind::VariablePattern:
+        case SyntaxKind::TaggedPattern:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool VariablePatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::VariablePattern;
+}
+
+bool WildcardPatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WildcardPattern;
+}
+
+bool ExpressionPatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExpressionPattern;
+}
+
+bool TaggedPatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TaggedPattern;
+}
+
+bool StructurePatternMemberSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::NamedStructurePatternMember:
+        case SyntaxKind::OrderedStructurePatternMember:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool OrderedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::OrderedStructurePatternMember;
+}
+
+bool NamedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NamedStructurePatternMember;
+}
+
+bool StructurePatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::StructurePattern;
+}
+
+bool MatchesClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MatchesClause;
+}
+
+bool ConditionalPatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConditionalPattern;
+}
+
+bool ConditionalPredicateSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConditionalPredicate;
+}
+
+bool AssignmentPatternSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::StructuredAssignmentPattern:
+        case SyntaxKind::ReplicatedAssignmentPattern:
+        case SyntaxKind::SimpleAssignmentPattern:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SimpleAssignmentPatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::SimpleAssignmentPattern;
+}
+
+bool AssignmentPatternItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::AssignmentPatternItem;
+}
+
+bool StructuredAssignmentPatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::StructuredAssignmentPattern;
+}
+
+bool ReplicatedAssignmentPatternSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ReplicatedAssignmentPattern;
+}
+
+bool BadExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::BadExpression;
+}
+
+bool PrimaryExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::StreamingConcatenationExpression:
+        case SyntaxKind::RealLiteralExpression:
+        case SyntaxKind::StringLiteralExpression:
+        case SyntaxKind::AssignmentPatternExpression:
+        case SyntaxKind::IntegerVectorExpression:
+        case SyntaxKind::MultipleConcatenationExpression:
+        case SyntaxKind::ParenthesizedExpression:
+        case SyntaxKind::IntegerLiteralExpression:
+        case SyntaxKind::DefaultPatternKeyExpression:
+        case SyntaxKind::EmptyQueueExpression:
+        case SyntaxKind::NullLiteralExpression:
+        case SyntaxKind::OneStepLiteralExpression:
+        case SyntaxKind::ConcatenationExpression:
+        case SyntaxKind::WildcardLiteralExpression:
+        case SyntaxKind::TimeLiteralExpression:
+        case SyntaxKind::UnbasedUnsizedLiteralExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool PrefixUnaryExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::SAlwaysPropertyExpression:
+        case SyntaxKind::UnaryNotPropertyExpression:
+        case SyntaxKind::UnaryBitwiseNorExpression:
+        case SyntaxKind::UnaryBitwiseOrExpression:
+        case SyntaxKind::AlwaysPropertyExpression:
+        case SyntaxKind::UnaryPreincrementExpression:
+        case SyntaxKind::SNextTimePropertyExpression:
+        case SyntaxKind::NextTimePropertyExpression:
+        case SyntaxKind::UnaryPredecrementExpression:
+        case SyntaxKind::SEventuallyPropertyExpression:
+        case SyntaxKind::UnaryBitwiseAndExpression:
+        case SyntaxKind::UnaryBitwiseNandExpression:
+        case SyntaxKind::EventuallyPropertyExpression:
+        case SyntaxKind::UnaryBitwiseNotExpression:
+        case SyntaxKind::UnaryBitwiseXnorExpression:
+        case SyntaxKind::UnarySequenceDelayExpression:
+        case SyntaxKind::SyncRejectOnPropertyExpression:
+        case SyntaxKind::UnaryLogicalNotExpression:
+        case SyntaxKind::RejectOnPropertyExpression:
+        case SyntaxKind::SyncAcceptOnPropertyExpression:
+        case SyntaxKind::UnaryMinusExpression:
+        case SyntaxKind::UnarySequenceEventExpression:
+        case SyntaxKind::UnaryBitwiseXorExpression:
+        case SyntaxKind::UnaryPlusExpression:
+        case SyntaxKind::AcceptOnPropertyExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool PostfixUnaryExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::PostdecrementExpression:
+        case SyntaxKind::PostincrementExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool BinaryExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::WildcardInequalityExpression:
+        case SyntaxKind::DivideAssignmentExpression:
+        case SyntaxKind::AndSequenceExpression:
+        case SyntaxKind::GreaterThanExpression:
+        case SyntaxKind::BinaryAndExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::EqualityExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::LogicalShiftLeftExpression:
+        case SyntaxKind::OrSequenceExpression:
+        case SyntaxKind::AddAssignmentExpression:
+        case SyntaxKind::LogicalEquivalenceExpression:
+        case SyntaxKind::SUntilWithPropertyExpression:
+        case SyntaxKind::DivideExpression:
+        case SyntaxKind::UntilPropertyExpression:
+        case SyntaxKind::WildcardEqualityExpression:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+        case SyntaxKind::UntilWithPropertyExpression:
+        case SyntaxKind::XorAssignmentExpression:
+        case SyntaxKind::BinaryXnorExpression:
+        case SyntaxKind::OverlappedImplicationPropertyExpression:
+        case SyntaxKind::OverlappedFollowedByPropertyExpression:
+        case SyntaxKind::GreaterThanEqualExpression:
+        case SyntaxKind::IffPropertyExpression:
+        case SyntaxKind::BinarySequenceDelayExpression:
+        case SyntaxKind::LessThanExpression:
+        case SyntaxKind::ArithmeticShiftLeftExpression:
+        case SyntaxKind::AddExpression:
+        case SyntaxKind::ModExpression:
+        case SyntaxKind::ImpliesPropertyExpression:
+        case SyntaxKind::IntersectSequenceExpression:
+        case SyntaxKind::NonblockingAssignmentExpression:
+        case SyntaxKind::InequalityExpression:
+        case SyntaxKind::CaseEqualityExpression:
+        case SyntaxKind::CaseInequalityExpression:
+        case SyntaxKind::LogicalOrExpression:
+        case SyntaxKind::WithinSequenceExpression:
+        case SyntaxKind::ThroughoutSequenceExpression:
+        case SyntaxKind::ModAssignmentExpression:
+        case SyntaxKind::MultiplyExpression:
+        case SyntaxKind::BinaryXorExpression:
+        case SyntaxKind::ArithmeticShiftRightExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::MultiplyAssignmentExpression:
+        case SyntaxKind::SubtractExpression:
+        case SyntaxKind::NonOverlappedFollowedByPropertyExpression:
+        case SyntaxKind::AssignmentExpression:
+        case SyntaxKind::BinaryOrExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::LessThanEqualExpression:
+        case SyntaxKind::NonOverlappedImplicationPropertyExpression:
+        case SyntaxKind::LogicalAndExpression:
+        case SyntaxKind::LogicalShiftRightExpression:
+        case SyntaxKind::SubtractAssignmentExpression:
+        case SyntaxKind::PowerExpression:
+        case SyntaxKind::LogicalImplicationExpression:
+        case SyntaxKind::SUntilPropertyExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool MinTypMaxExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MinTypMaxExpression;
+}
+
+bool TaggedUnionExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TaggedUnionExpression;
+}
+
+bool OpenRangeListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::OpenRangeList;
+}
+
+bool InsideExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::InsideExpression;
+}
+
+bool ConditionalExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConditionalExpression;
+}
+
+bool AssignmentPatternExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::AssignmentPatternExpression;
+}
+
+bool SelectorSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::BitSelect:
+        case SyntaxKind::AscendingRangeSelect:
+        case SyntaxKind::DescendingRangeSelect:
+        case SyntaxKind::SimpleRangeSelect:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool BitSelectSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::BitSelect;
+}
+
+bool RangeSelectSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::SimpleRangeSelect:
+        case SyntaxKind::AscendingRangeSelect:
+        case SyntaxKind::DescendingRangeSelect:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ElementSelectSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ElementSelect;
+}
+
+bool NameSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::EmptyIdentifierName:
+        case SyntaxKind::IdentifierSelectName:
+        case SyntaxKind::SuperHandle:
+        case SyntaxKind::ArrayAndMethod:
+        case SyntaxKind::ClassScope:
+        case SyntaxKind::ScopedName:
+        case SyntaxKind::ConstructorName:
+        case SyntaxKind::ArrayOrMethod:
+        case SyntaxKind::LocalScope:
+        case SyntaxKind::RootScope:
+        case SyntaxKind::IdentifierName:
+        case SyntaxKind::SystemName:
+        case SyntaxKind::ArrayXorMethod:
+        case SyntaxKind::UnitScope:
+        case SyntaxKind::ClassName:
+        case SyntaxKind::ThisHandle:
+        case SyntaxKind::ArrayUniqueMethod:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool IdentifierNameSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::IdentifierName;
+}
+
+bool IdentifierSelectNameSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::IdentifierSelectName;
+}
+
+bool EmptyIdentifierNameSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EmptyIdentifierName;
+}
+
+bool KeywordNameSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::SuperHandle:
+        case SyntaxKind::ArrayAndMethod:
+        case SyntaxKind::ConstructorName:
+        case SyntaxKind::ArrayOrMethod:
+        case SyntaxKind::LocalScope:
+        case SyntaxKind::RootScope:
+        case SyntaxKind::SystemName:
+        case SyntaxKind::ArrayXorMethod:
+        case SyntaxKind::UnitScope:
+        case SyntaxKind::ThisHandle:
+        case SyntaxKind::ArrayUniqueMethod:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ClassNameSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClassName;
+}
+
+bool ScopedNameSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ScopedName;
+}
+
+bool ClassScopeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClassScope;
+}
+
+bool LiteralExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::RealLiteralExpression:
+        case SyntaxKind::StringLiteralExpression:
+        case SyntaxKind::IntegerLiteralExpression:
+        case SyntaxKind::DefaultPatternKeyExpression:
+        case SyntaxKind::NullLiteralExpression:
+        case SyntaxKind::OneStepLiteralExpression:
+        case SyntaxKind::WildcardLiteralExpression:
+        case SyntaxKind::TimeLiteralExpression:
+        case SyntaxKind::UnbasedUnsizedLiteralExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool IntegerVectorExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::IntegerVectorExpression;
+}
+
+bool EmptyQueueExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EmptyQueueExpression;
+}
+
+bool ConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConcatenationExpression;
+}
+
+bool MultipleConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MultipleConcatenationExpression;
+}
+
+bool StreamExpressionWithRange::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::StreamExpressionWithRange;
+}
+
+bool StreamExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::StreamExpression;
+}
+
+bool StreamingConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::StreamingConcatenationExpression;
+}
+
+bool ParenthesizedExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ParenthesizedExpression;
+}
+
+bool NewClassExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NewClassExpression;
+}
+
+bool NewArrayExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NewArrayExpression;
+}
+
+bool NewExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NewExpression;
+}
+
+bool ElementSelectExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ElementSelectExpression;
+}
+
+bool MemberAccessExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MemberAccessExpression;
+}
+
+bool InvocationExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::InvocationExpression;
+}
+
+bool CastExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::CastExpression;
+}
+
+bool SignedCastExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::SignedCastExpression;
+}
+
+bool TimingControlSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::CycleDelay:
+        case SyntaxKind::EventControlWithExpression:
+        case SyntaxKind::DelayControl:
+        case SyntaxKind::RepeatedEventControl:
+        case SyntaxKind::EventControl:
+        case SyntaxKind::ParenImplicitEventControl:
+        case SyntaxKind::ShortcutCycleDelayRange:
+        case SyntaxKind::ImplicitEventControl:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool DelaySyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::CycleDelay:
+        case SyntaxKind::DelayControl:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool EventControlSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EventControl;
+}
+
+bool EventExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::SignalEventExpression:
+        case SyntaxKind::ParenthesizedEventExpression:
+        case SyntaxKind::BinaryEventExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SignalEventExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::SignalEventExpression;
+}
+
+bool BinaryEventExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::BinaryEventExpression;
+}
+
+bool ParenthesizedEventExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ParenthesizedEventExpression;
+}
+
+bool ImplicitEventControlSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ImplicitEventControl;
+}
+
+bool ParenImplicitEventControlSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ParenImplicitEventControl;
+}
+
+bool EventControlWithExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EventControlWithExpression;
+}
+
+bool RepeatedEventControlSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::RepeatedEventControl;
+}
+
+bool TimingControlExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TimingControlExpression;
+}
+
+bool TimingControlExpressionConcatenationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TimingControlExpressionConcatenation;
+}
+
+bool ShortcutCycleDelayRangeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ShortcutCycleDelayRange;
+}
+
+bool DimensionSpecifierSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::DataTypeDimensionSpecifier:
+        case SyntaxKind::QueueDimensionSpecifier:
+        case SyntaxKind::RangeDimensionSpecifier:
+        case SyntaxKind::WildcardDimensionSpecifier:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool RangeDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::RangeDimensionSpecifier;
+}
+
+bool DataTypeDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DataTypeDimensionSpecifier;
+}
+
+bool WildcardDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WildcardDimensionSpecifier;
+}
+
+bool ColonExpressionClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ColonExpressionClause;
+}
+
+bool QueueDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::QueueDimensionSpecifier;
+}
+
+bool VariableDimensionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::VariableDimension;
+}
+
+bool VariableDeclaratorSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::VariableDeclarator;
+}
+
+bool DataDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DataDeclaration;
+}
+
+bool TypedefDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TypedefDeclaration;
+}
+
+bool TypedefKeywordDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TypedefKeywordDeclaration;
+}
+
+bool TypedefInterfaceClassDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TypedefInterfaceClassDeclaration;
+}
+
+bool NetStrengthSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::DriveStrength:
+        case SyntaxKind::ChargeStrength:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ChargeStrengthSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ChargeStrength;
+}
+
+bool DriveStrengthSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DriveStrength;
+}
+
+bool NetDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NetDeclaration;
+}
+
+bool PackageImportItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PackageImportItem;
+}
+
+bool PackageImportDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PackageImportDeclaration;
+}
+
+bool ParameterDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ParameterDeclaration;
+}
+
+bool ParameterDeclarationStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ParameterDeclarationStatement;
+}
+
+bool PortHeaderSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::InterconnectPortHeader:
+        case SyntaxKind::VariablePortHeader:
+        case SyntaxKind::InterfacePortHeader:
+        case SyntaxKind::NetPortHeader:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool PortDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PortDeclaration;
+}
+
+bool GenvarDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::GenvarDeclaration;
+}
+
+bool IntegerTypeSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ShortIntType:
+        case SyntaxKind::BitType:
+        case SyntaxKind::RegType:
+        case SyntaxKind::LogicType:
+        case SyntaxKind::TimeType:
+        case SyntaxKind::ByteType:
+        case SyntaxKind::LongIntType:
+        case SyntaxKind::IntType:
+        case SyntaxKind::IntegerType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool KeywordTypeSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ShortRealType:
+        case SyntaxKind::TypeType:
+        case SyntaxKind::RealTimeType:
+        case SyntaxKind::VoidType:
+        case SyntaxKind::StringType:
+        case SyntaxKind::PropertyType:
+        case SyntaxKind::Untyped:
+        case SyntaxKind::RealType:
+        case SyntaxKind::CHandleType:
+        case SyntaxKind::EventType:
+        case SyntaxKind::SequenceType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool NamedTypeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NamedType;
+}
+
+bool StructUnionMemberSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::StructUnionMember;
+}
+
+bool StructUnionTypeSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::UnionType:
+        case SyntaxKind::StructType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool EnumTypeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EnumType;
+}
+
+bool TypeReferenceSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TypeReference;
+}
+
+bool DotMemberClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DotMemberClause;
+}
+
+bool VirtualInterfaceTypeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::VirtualInterfaceType;
+}
+
+bool ImplicitTypeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ImplicitType;
+}
+
+bool VarDataTypeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::VarDataType;
+}
+
+bool DeferredAssertionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DeferredAssertion;
+}
+
+bool ElseClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ElseClause;
+}
+
+bool ActionBlockSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ActionBlock;
+}
+
+bool ImmediateAssertionStatementSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ImmediateAssertStatement:
+        case SyntaxKind::ImmediateCoverStatement:
+        case SyntaxKind::ImmediateAssumeStatement:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool DisableIffSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DisableIff;
+}
+
+bool PropertySpecSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PropertySpec;
+}
+
+bool ConcurrentAssertionStatementSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::AssertPropertyStatement:
+        case SyntaxKind::AssumePropertyStatement:
+        case SyntaxKind::ExpectPropertyStatement:
+        case SyntaxKind::CoverPropertyStatement:
+        case SyntaxKind::CoverSequenceStatement:
+        case SyntaxKind::RestrictPropertyStatement:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ConcurrentAssertionMemberSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConcurrentAssertionMember;
+}
+
+bool ImmediateAssertionMemberSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ImmediateAssertionMember;
+}
+
+bool EmptyStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EmptyStatement;
+}
+
+bool ConditionalStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConditionalStatement;
+}
+
+bool CaseItemSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::DefaultCaseItem:
+        case SyntaxKind::StandardCaseItem:
+        case SyntaxKind::PatternCaseItem:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool DefaultCaseItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DefaultCaseItem;
+}
+
+bool PatternCaseItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PatternCaseItem;
+}
+
+bool StandardCaseItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::StandardCaseItem;
+}
+
+bool CaseStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::CaseStatement;
+}
+
+bool ForeverStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ForeverStatement;
+}
+
+bool LoopStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::LoopStatement;
+}
+
+bool DoWhileStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DoWhileStatement;
+}
+
+bool ForVariableDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ForVariableDeclaration;
+}
+
+bool ForLoopStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ForLoopStatement;
+}
+
+bool ForeachLoopListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ForeachLoopList;
+}
+
+bool ForeachLoopStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ForeachLoopStatement;
+}
+
+bool ReturnStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ReturnStatement;
+}
+
+bool JumpStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::JumpStatement;
+}
+
+bool TimingControlStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TimingControlStatement;
+}
+
+bool ExpressionStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExpressionStatement;
+}
+
+bool ProceduralAssignStatementSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ProceduralForceStatement:
+        case SyntaxKind::ProceduralAssignStatement:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ProceduralDeassignStatementSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ProceduralDeassignStatement:
+        case SyntaxKind::ProceduralReleaseStatement:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool DisableStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DisableStatement;
+}
+
+bool DisableForkStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DisableForkStatement;
+}
+
+bool NamedBlockClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NamedBlockClause;
+}
+
+bool BlockStatementSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::SequentialBlockStatement:
+        case SyntaxKind::ParallelBlockStatement:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool WaitStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WaitStatement;
+}
+
+bool WaitForkStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WaitForkStatement;
+}
+
+bool WaitOrderStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WaitOrderStatement;
+}
+
+bool RandCaseItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::RandCaseItem;
+}
+
+bool RandCaseStatementSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::RandCaseStatement;
+}
+
+bool EventTriggerStatementSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::BlockingEventTriggerStatement:
+        case SyntaxKind::NonblockingEventTriggerStatement:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool PortListSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::WildcardPortList:
+        case SyntaxKind::NonAnsiPortList:
+        case SyntaxKind::AnsiPortList:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool NonAnsiPortSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ExplicitNonAnsiPort:
+        case SyntaxKind::ImplicitNonAnsiPort:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ImplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ImplicitNonAnsiPort;
+}
+
+bool ExplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExplicitNonAnsiPort;
+}
+
+bool NonAnsiPortListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NonAnsiPortList;
+}
+
+bool AnsiPortSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ImplicitAnsiPort:
+        case SyntaxKind::ExplicitAnsiPort:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool InterfacePortHeaderSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::InterfacePortHeader;
+}
+
+bool VariablePortHeaderSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::VariablePortHeader;
+}
+
+bool InterconnectPortHeaderSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::InterconnectPortHeader;
+}
+
+bool NetPortHeaderSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NetPortHeader;
+}
+
+bool ImplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ImplicitAnsiPort;
+}
+
+bool ExplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExplicitAnsiPort;
+}
+
+bool AnsiPortListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::AnsiPortList;
+}
+
+bool WildcardPortListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WildcardPortList;
+}
+
+bool ParameterPortListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ParameterPortList;
+}
+
+bool ModuleHeaderSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ProgramHeader:
+        case SyntaxKind::InterfaceHeader:
+        case SyntaxKind::ModuleHeader:
+        case SyntaxKind::PackageHeader:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ModuleDeclarationSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::PackageDeclaration:
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool ExternModuleSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExternModule;
+}
+
+bool EmptyMemberSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::EmptyMember;
+}
+
+bool ProceduralBlockSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::AlwaysLatchBlock:
+        case SyntaxKind::FinalBlock:
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::AlwaysCombBlock:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool GenerateRegionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::GenerateRegion;
+}
+
+bool LoopGenerateSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::LoopGenerate;
+}
+
+bool IfGenerateSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::IfGenerate;
+}
+
+bool CaseGenerateSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::CaseGenerate;
+}
+
+bool GenerateBlockSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::GenerateBlock;
+}
+
+bool DividerClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DividerClause;
+}
+
+bool TimeUnitsDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TimeUnitsDeclaration;
+}
+
+bool PortConnectionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::OrderedPortConnection:
+        case SyntaxKind::WildcardPortConnection:
+        case SyntaxKind::NamedPortConnection:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool OrderedPortConnectionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::OrderedPortConnection;
+}
+
+bool NamedPortConnectionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::NamedPortConnection;
+}
+
+bool WildcardPortConnectionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WildcardPortConnection;
+}
+
+bool HierarchicalInstanceSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::HierarchicalInstance;
+}
+
+bool HierarchyInstantiationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::HierarchyInstantiation;
+}
+
+bool FunctionPortSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::FunctionPort;
+}
+
+bool FunctionPortListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::FunctionPortList;
+}
+
+bool FunctionPrototypeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::FunctionPrototype;
+}
+
+bool FunctionDeclarationSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::TaskDeclaration:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool AssertionItemPortSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::AssertionItemPort;
+}
+
+bool AssertionItemPortListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::AssertionItemPortList;
+}
+
+bool LetDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::LetDeclaration;
+}
+
+bool PropertyDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PropertyDeclaration;
+}
+
+bool SequenceDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::SequenceDeclaration;
+}
+
+bool ExtendsClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExtendsClause;
+}
+
+bool ImplementsClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ImplementsClause;
+}
+
+bool ClassDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClassDeclaration;
+}
+
+bool ClassPropertyDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClassPropertyDeclaration;
+}
+
+bool ClassMethodDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClassMethodDeclaration;
+}
+
+bool ClassMethodPrototypeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClassMethodPrototype;
+}
+
+bool ContinuousAssignSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ContinuousAssign;
+}
+
+bool DefParamAssignmentSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DefParamAssignment;
+}
+
+bool DefParamSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DefParam;
+}
+
+bool ModportItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ModportItem;
+}
+
+bool ModportDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ModportDeclaration;
+}
+
+bool ClockingSkewSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClockingSkew;
+}
+
+bool ClockingDirectionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClockingDirection;
+}
+
+bool ClockingItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClockingItem;
+}
+
+bool ClockingDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ClockingDeclaration;
+}
+
+bool DPIImportExportSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DPIImportExport;
+}
+
+bool ConstraintItemSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::ConditionalConstraint:
+        case SyntaxKind::LoopConstraint:
+        case SyntaxKind::ExpressionConstraint:
+        case SyntaxKind::UniquenessConstraint:
+        case SyntaxKind::DisableConstraint:
+        case SyntaxKind::ImplicationConstraint:
+        case SyntaxKind::ConstraintBlock:
+        case SyntaxKind::SolveBeforeConstraint:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool DistWeightSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DistWeight;
+}
+
+bool DistItemSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DistItem;
+}
+
+bool DistConstraintListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DistConstraintList;
+}
+
+bool ExpressionOrDistSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExpressionOrDist;
+}
+
+bool ExpressionConstraintSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExpressionConstraint;
+}
+
+bool UniquenessConstraintSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::UniquenessConstraint;
+}
+
+bool ImplicationConstraintSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ImplicationConstraint;
+}
+
+bool ElseConstraintClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ElseConstraintClause;
+}
+
+bool ConditionalConstraintSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConditionalConstraint;
+}
+
+bool LoopConstraintSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::LoopConstraint;
+}
+
+bool DisableConstraintSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DisableConstraint;
+}
+
+bool SolveBeforeConstraintSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::SolveBeforeConstraint;
+}
+
+bool ConstraintBlockSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConstraintBlock;
+}
+
+bool ConstraintPrototypeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConstraintPrototype;
+}
+
+bool ConstraintDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ConstraintDeclaration;
+}
+
+bool WithClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WithClause;
+}
+
+bool IdentifierListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::IdentifierList;
+}
+
+bool RandomizeMethodWithClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::RandomizeMethodWithClause;
+}
+
+bool WithFunctionSampleSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::WithFunctionSample;
+}
+
+bool BlockEventExpressionSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::PrimaryBlockEventExpression:
+        case SyntaxKind::BinaryBlockEventExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool BinaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::BinaryBlockEventExpression;
+}
+
+bool PrimaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::PrimaryBlockEventExpression;
+}
+
+bool BlockCoverageEventSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::BlockCoverageEvent;
+}
+
+bool CovergroupDeclarationSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::CovergroupDeclaration;
+}
+
+bool CoverageOptionSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::CoverageOption;
+}
+
+bool CoverpointSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::Coverpoint;
+}
+
+bool CoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::RangeCoverageBinInitializer:
+        case SyntaxKind::DefaultCoverageBinInitializer:
+        case SyntaxKind::TransListCoverageBinInitializer:
+        case SyntaxKind::ExpressionCoverageBinInitializer:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool DefaultCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DefaultCoverageBinInitializer;
+}
+
+bool ExpressionCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::ExpressionCoverageBinInitializer;
+}
+
+bool RangeCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::RangeCoverageBinInitializer;
+}
+
+bool TransRepeatRangeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TransRepeatRange;
+}
+
+bool TransRangeSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TransRange;
+}
+
+bool TransSetSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TransSet;
+}
+
+bool TransListCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TransListCoverageBinInitializer;
+}
+
+bool IffClauseSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::IffClause;
+}
+
+bool CoverageBinsSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::CoverageBins;
+}
+
+bool CompilationUnitSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::CompilationUnit;
+}
+
+bool DirectiveSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::UndefineAllDirective:
+        case SyntaxKind::EndCellDefineDirective:
+        case SyntaxKind::IncludeDirective:
+        case SyntaxKind::MacroUsage:
+        case SyntaxKind::ElsIfDirective:
+        case SyntaxKind::EndIfDirective:
+        case SyntaxKind::UndefDirective:
+        case SyntaxKind::BeginKeywordsDirective:
+        case SyntaxKind::ResetAllDirective:
+        case SyntaxKind::PragmaDirective:
+        case SyntaxKind::IfNDefDirective:
+        case SyntaxKind::EndKeywordsDirective:
+        case SyntaxKind::IfDefDirective:
+        case SyntaxKind::DefaultNetTypeDirective:
+        case SyntaxKind::CellDefineDirective:
+        case SyntaxKind::LineDirective:
+        case SyntaxKind::TimescaleDirective:
+        case SyntaxKind::DefineDirective:
+        case SyntaxKind::UnconnectedDriveDirective:
+        case SyntaxKind::NoUnconnectedDriveDirective:
+        case SyntaxKind::ElseDirective:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SimpleDirectiveSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::NoUnconnectedDriveDirective:
+        case SyntaxKind::UndefineAllDirective:
+        case SyntaxKind::EndCellDefineDirective:
+        case SyntaxKind::ResetAllDirective:
+        case SyntaxKind::PragmaDirective:
+        case SyntaxKind::CellDefineDirective:
+        case SyntaxKind::EndKeywordsDirective:
+        case SyntaxKind::UnconnectedDriveDirective:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool IncludeDirectiveSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::IncludeDirective;
+}
+
+bool ConditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::IfNDefDirective:
+        case SyntaxKind::IfDefDirective:
+        case SyntaxKind::ElsIfDirective:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool UnconditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::EndIfDirective:
+        case SyntaxKind::ElseDirective:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool MacroArgumentDefaultSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MacroArgumentDefault;
+}
+
+bool MacroFormalArgumentSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MacroFormalArgument;
+}
+
+bool MacroFormalArgumentListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MacroFormalArgumentList;
+}
+
+bool DefineDirectiveSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DefineDirective;
+}
+
+bool MacroActualArgumentSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MacroActualArgument;
+}
+
+bool MacroActualArgumentListSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MacroActualArgumentList;
+}
+
+bool MacroUsageSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::MacroUsage;
+}
+
+bool TimescaleDirectiveSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::TimescaleDirective;
+}
+
+bool DefaultNetTypeDirectiveSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::DefaultNetTypeDirective;
+}
+
+bool LineDirectiveSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::LineDirective;
+}
+
+bool UndefDirectiveSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::UndefDirective;
+}
+
+bool BeginKeywordsDirectiveSyntax::isKind(SyntaxKind kind) {
+    return kind == SyntaxKind::BeginKeywordsDirective;
+}
+
 EqualsValueClauseSyntax& SyntaxFactory::equalsValueClause(Token equals, ExpressionSyntax& expr) {
     return *alloc.emplace<EqualsValueClauseSyntax>(equals, expr);
 }

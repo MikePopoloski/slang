@@ -9,6 +9,7 @@
 namespace slang {
 
 void SyntaxNode::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
+    uint32_t childCount = getChildCount();
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
         if (child.isToken) {
@@ -28,6 +29,7 @@ std::string SyntaxNode::toString(uint8_t flags) const {
 }
 
 Token SyntaxNode::getFirstToken() const {
+    uint32_t childCount = getChildCount();
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
         if (child.isToken) {
@@ -44,6 +46,7 @@ Token SyntaxNode::getFirstToken() const {
 }
 
 Token SyntaxNode::getLastToken() const {
+    uint32_t childCount = getChildCount();
     for (int i = childCount - 1; i >= 0; i--) {
         auto child = getChild(i);
         if (child.isToken) {
