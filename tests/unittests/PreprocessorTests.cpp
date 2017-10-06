@@ -380,6 +380,100 @@ $display("left side: \"right side\"");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Macro meta repetition", "[preprocessor]") {
+    auto& text = R"(
+`define REPEAT(n, d) `REPEAT_``n(d)
+`define REPEAT_0(d)
+`define REPEAT_1(d) d
+`define REPEAT_2(d) `REPEAT_1(d) d
+`define REPEAT_3(d) `REPEAT_2(d) d
+`define REPEAT_4(d) `REPEAT_3(d) d
+
+`define FUNC(n) n
+
+`REPEAT(`FUNC(4), "hello")
+)";
+
+    auto& expected = R"(
+"hello" "hello" "hello" "hello"
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro nested stringification", "[preprocessor]") {
+    auto& text = R"(
+`define THRU(d) d
+`define MSG(m) `"m`"
+
+$display(`MSG(`THRU(hello)))
+)";
+
+    auto& expected = R"(
+$display("hello")
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro nested multiline stringification", "[preprocessor]") {
+    auto& text = R"(
+`define MULTILINE line1 \
+line2
+
+`define MSG(m) `"m`"
+
+$display(`MSG(`MULTILINE))
+)";
+
+    auto& expected = R"(
+$display("line1 line2")
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro indirect ifdef branch", "[preprocessor]") {
+    auto& text = R"(
+`define DEFINED
+`define INDIRECT(d) d
+`ifdef `INDIRECT(DEFINED)
+a
+`else
+b
+`endif
+)";
+
+    auto& expected = "a";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro directive token substitution via arg", "[preprocessor]") {
+    auto& text = R"(
+`define FOO 1
+`define FROB(asdf) `asdf
+
+`FROB(FOO)
+)";
+
+    auto& expected = R"(
+1
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
     auto& text = "`define FOO 8\r\n`define BAR 9\n1`FOO`BAR";
 

@@ -795,21 +795,19 @@ Trivia Preprocessor::createSimpleDirective(Token directive, bool suppressError) 
 
 Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
     auto it = macros.find(directive.valueText().substr(1));
-    if (it == macros.end()) {
-        addError(DiagCode::UnknownDirective, directive.location()) << directive.valueText();
+    if (it == macros.end())
         return nullptr;
-    }
     return it->second;
 }
 
 MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive) {
     // if this assert fires, we failed to fully expand nested macros at a previous point
-    ASSERT(expandedTokens.empty());
+    ASSERT(!currentMacroToken);
 
-    // lookup the macro definition; findMacro will report an error for us if
-    // the directive is not found
     auto macro = findMacro(directive);
     if (!macro.valid()) {
+        addError(DiagCode::UnknownDirective, directive.location()) << directive.valueText();
+
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.
         if (peek(TokenKind::OpenParenthesis, LexerMode::Normal))
@@ -830,92 +828,120 @@ MacroActualArgumentListSyntax* Preprocessor::handleTopLevelMacro(Token directive
     if (!expandMacro(macro, directive, actualArgs, buffer))
         return actualArgs;
 
-    // Recursively expand macros in the replacement list
+    // The macro is now expanded out into tokens, but some of those tokens might
+    // be more macros that need to be expanded, or special characters that
+    // perform stringification or concatenation of tokens. It's possible that
+    // after concatentation is performed we will have formed new valid macro
+    // names that need to be expanded, which is why we loop here.
     span<Token const> tokens = buffer.copy(alloc);
-    if (!expandReplacementList(tokens))
-        return actualArgs;
+    while (true) {
+        // Start by recursively expanding out all valid macro usages.
+        if (!expandReplacementList(tokens))
+            return actualArgs;
 
-    // Now that all macros have been expanded, handle token concatenation and stringification.
-    // TODO: do we have to worry about non-macros being concatenated into real macros?
-    SmallVectorSized<Trivia, 16> emptyArgTrivia;
-    Token stringify;
-    buffer.clear();
-    expandedTokens.clear();
-    for (uint32_t i = 0; i < tokens.size(); i++) {
-        Token newToken;
+        // Now that all macros have been expanded, handle token concatenation and stringification.
+        SmallVectorSized<Trivia, 16> emptyArgTrivia;
+        Token stringify;
+        buffer.clear();
+        expandedTokens.clear();
+        bool anyNewMacros = false;
 
-        // Once we see a `" token, we start collecting tokens into their own
-        // buffer for stringification. Otherwise, just add them to the final
-        // expansion buffer.
-        Token token = tokens[i];
-        switch (token.kind) {
-            case TokenKind::MacroQuote:
-                if (!stringify)
-                    stringify = token;
-                else {
-                    // all done stringifying; convert saved tokens to string
-                    newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
-                                                buffer.begin(), buffer.end());
-                    stringify = Token();
-                }
-                break;
-            case TokenKind::MacroPaste:
-                // Paste together previous token and next token; a macro paste on either end
-                // of the buffer or one that borders whitespace should be ignored.
-                // This isn't specified in the standard so I'm just guessing.
-                if (i == 0 || i == tokens.size() - 1 || !token.trivia().empty() ||
-                    !tokens[i + 1].trivia().empty()) {
+        for (uint32_t i = 0; i < tokens.size(); i++) {
+            Token newToken;
 
-                    addError(DiagCode::IgnoredMacroPaste, token.location());
-                }
-                else if (stringify) {
-                    // if this is right after the opening quote or right before the closing quote, we're
-                    // trying to concatenate something with nothing, so assume an error
-                    if (buffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
-                        addError(DiagCode::IgnoredMacroPaste, token.location());
+            // Once we see a `" token, we start collecting tokens into their own
+            // buffer for stringification. Otherwise, just add them to the final
+            // expansion buffer.
+            Token token = tokens[i];
+            switch (token.kind) {
+                case TokenKind::MacroQuote:
+                    if (!stringify)
+                        stringify = token;
                     else {
-                        newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[i + 1]);
-                        if (newToken) {
-                            buffer.pop();
-                            ++i;
+                        // all done stringifying; convert saved tokens to string
+                        newToken = Lexer::stringify(alloc, stringify.location(),
+                                                    stringify.trivia(),
+                                                    buffer.begin(), buffer.end());
+                        stringify = Token();
+                    }
+                    break;
+                case TokenKind::MacroPaste:
+                    // Paste together previous token and next token; a macro paste on either end
+                    // of the buffer or one that borders whitespace should be ignored.
+                    // This isn't specified in the standard so I'm just guessing.
+                    if (i == 0 || i == tokens.size() - 1 || !token.trivia().empty() ||
+                        !tokens[i + 1].trivia().empty()) {
+
+                        addError(DiagCode::IgnoredMacroPaste, token.location());
+                    }
+                    else if (stringify) {
+                        // if this is right after the opening quote or right before the closing quote, we're
+                        // trying to concatenate something with nothing, so assume an error
+                        if (buffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
+                            addError(DiagCode::IgnoredMacroPaste, token.location());
+                        else {
+                            newToken = Lexer::concatenateTokens(alloc, buffer.back(), tokens[i + 1]);
+                            if (newToken) {
+                                buffer.pop();
+                                ++i;
+                            }
                         }
                     }
-                }
-                else {
-                    newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[i + 1]);
-                    if (newToken) {
-                        expandedTokens.pop();
-                        ++i;
+                    else {
+                        newToken = Lexer::concatenateTokens(alloc, expandedTokens.back(), tokens[i + 1]);
+                        if (newToken) {
+                            expandedTokens.pop();
+                            ++i;
+
+                            anyNewMacros |= newToken.kind == TokenKind::Directive &&
+                                            newToken.directiveKind() == SyntaxKind::MacroUsage;
+                        }
                     }
-                }
-                break;
-            default:
-                newToken = token;
-                break;
-        }
+                    break;
+                default:
+                    newToken = token;
+                    break;
+            }
 
-        if (newToken) {
-            // If we have an empty macro argument just collect its trivia and use it on the next token we find.
-            if (newToken.kind == TokenKind::EmptyMacroArgument)
-                emptyArgTrivia.appendRange(newToken.trivia());
-            else {
-                if (!emptyArgTrivia.empty()) {
+            if (newToken) {
+                // If we have an empty macro argument just collect its trivia and use it on the next token we find.
+                if (newToken.kind == TokenKind::EmptyMacroArgument)
                     emptyArgTrivia.appendRange(newToken.trivia());
-                    newToken = newToken.withTrivia(alloc, emptyArgTrivia.copy(alloc));
-                    emptyArgTrivia.clear();
-                }
+                else {
+                    if (!emptyArgTrivia.empty()) {
+                        emptyArgTrivia.appendRange(newToken.trivia());
+                        newToken = newToken.withTrivia(alloc, emptyArgTrivia.copy(alloc));
+                        emptyArgTrivia.clear();
+                    }
 
-                if (stringify)
-                    buffer.append(newToken);
-                else
-                    expandedTokens.append(newToken);
+                    // TODO: error if no closing quote
+                    if (stringify)
+                        buffer.append(newToken);
+                    else
+                        expandedTokens.append(newToken);
+                }
             }
         }
+
+        if (!anyNewMacros)
+            break;
+
+        tokens = expandedTokens;
     }
 
-    // if the macro expanded into any tokens at all, set the pointer so that we'll pull from them next
-    if (!expandedTokens.empty())
+    if (!expandedTokens.empty()) {
+        // Verify that we haven't failed to expand any nested macros.
+        for (Token token : expandedTokens) {
+            if (token.kind == TokenKind::Directive && token.directiveKind() == SyntaxKind::MacroUsage) {
+                addError(DiagCode::UnknownDirective, token.location()) << token.valueText();
+                return actualArgs;
+            }
+        }
+
+        // if the macro expanded into any tokens at all, set the pointer
+        // so that we'll pull from them next
         currentMacroToken = expandedTokens.begin();
+    }
 
     return actualArgs;
 }
@@ -1081,8 +1107,12 @@ bool Preprocessor::expandReplacementList(span<Token const>& tokens) {
             else {
                 // lookup the macro definition
                 auto macro = findMacro(token);
-                if (!macro.valid())
-                    return false;
+                if (!macro.valid()) {
+                    // If we couldn't find the macro, just keep trucking.
+                    // It's possible that a future expansion will make this valid.
+                    currentBuffer->append(token);
+                    continue;
+                }
 
                 // parse arguments if necessary
                 MacroActualArgumentListSyntax* actualArgs = nullptr;
