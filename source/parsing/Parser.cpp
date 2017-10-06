@@ -768,7 +768,7 @@ CaseGenerateSyntax& Parser::parseCaseGenerateConstruct(span<AttributeInstanceSyn
         else if (isPossibleExpression(kind)) {
             Token colon;
             SmallVectorSized<TokenOrSyntax, 8> buffer;
-            parseSeparatedList<isPossibleExpression, isEndOfCaseItem>(
+            parseSeparatedList<isPossibleExpressionOrComma, isEndOfCaseItem>(
                 buffer,
                 TokenKind::Colon,
                 TokenKind::Comma,
