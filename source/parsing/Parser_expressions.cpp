@@ -810,6 +810,7 @@ EventExpressionSyntax& Parser::parseEventExpression() {
 
 ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
     if (scope && scope->kind != SyntaxKind::ClassScope) {
+        // TODO: verify this error message makes sense
         addError(DiagCode::ExpectedClassScope, scope->getFirstToken().location());
         return *scope;
     }
@@ -838,7 +839,7 @@ ExpressionSyntax& Parser::parseNewExpression(ExpressionSyntax* scope) {
     else if (!scope && isPossibleExpression(kind))
         return factory.newExpression(newKeyword, parseExpression());
 
-    return factory.newClassExpression(scope->as<ClassScopeSyntax>(), newKeyword, arguments);
+    return factory.newClassExpression(scope ? &scope->as<ClassScopeSyntax>() : nullptr, newKeyword, arguments);
 }
 
 TimingControlSyntax* Parser::parseTimingControl() {

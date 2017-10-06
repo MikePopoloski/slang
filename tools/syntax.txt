@@ -334,7 +334,7 @@ ExpressionSyntax expression
 token closeParen
 
 NewClassExpressionSyntax base=ExpressionSyntax kind=NewClassExpression
-ClassScopeSyntax classScope
+ClassScopeSyntax? classScope
 token newKeyword
 ArgumentListSyntax? arguments
 

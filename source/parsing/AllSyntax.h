@@ -1405,11 +1405,11 @@ protected:
 };
 
 struct NewClassExpressionSyntax : public ExpressionSyntax {
-    ClassScopeSyntax& classScope;
+    ClassScopeSyntax* classScope;
     Token newKeyword;
     ArgumentListSyntax* arguments;
 
-    NewClassExpressionSyntax(ClassScopeSyntax& classScope, Token newKeyword, ArgumentListSyntax* arguments) :
+    NewClassExpressionSyntax(ClassScopeSyntax* classScope, Token newKeyword, ArgumentListSyntax* arguments) :
         ExpressionSyntax(SyntaxKind::NewClassExpression), classScope(classScope), newKeyword(newKeyword), arguments(arguments)
     {}
 
@@ -1421,7 +1421,7 @@ struct NewClassExpressionSyntax : public ExpressionSyntax {
 protected:
     TokenOrSyntax getChild(uint32_t index) const override final {
         switch (index) {
-            case 0: return &classScope;
+            case 0: return classScope;
             case 1: return newKeyword;
             case 2: return arguments;
             default: return nullptr;
@@ -6810,7 +6810,7 @@ public:
     StreamExpressionSyntax& streamExpression(ExpressionSyntax& expression, StreamExpressionWithRange* withRange);
     StreamingConcatenationExpressionSyntax& streamingConcatenationExpression(Token openBrace, Token operatorToken, ExpressionSyntax* sliceSize, Token innerOpenBrace, SeparatedSyntaxList<StreamExpressionSyntax> expressions, Token innerCloseBrace, Token closeBrace);
     ParenthesizedExpressionSyntax& parenthesizedExpression(Token openParen, ExpressionSyntax& expression, Token closeParen);
-    NewClassExpressionSyntax& newClassExpression(ClassScopeSyntax& classScope, Token newKeyword, ArgumentListSyntax* arguments);
+    NewClassExpressionSyntax& newClassExpression(ClassScopeSyntax* classScope, Token newKeyword, ArgumentListSyntax* arguments);
     NewArrayExpressionSyntax& newArrayExpression(Token newKeyword, Token openBracket, ExpressionSyntax& sizeExpr, Token closeBracket, ParenthesizedExpressionSyntax* initializer);
     NewExpressionSyntax& newExpression(Token newKeyword, ExpressionSyntax& expr);
     ElementSelectExpressionSyntax& elementSelectExpression(ExpressionSyntax& left, ElementSelectSyntax& select);
