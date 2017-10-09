@@ -474,6 +474,23 @@ TEST_CASE("Macro directive token substitution via arg", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
+TEST_CASE("Macro bonkers arg substitution", "[preprocessor]") {
+    auto& text = R"(
+`define FROB(asdf) `asdf STUFF 1
+`FROB(define)
+
+`STUFF
+)";
+
+    auto& expected = R"(
+1
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Macro implicit concatenate", "[preprocessor]") {
     auto& text = "`define FOO 8\r\n`define BAR 9\n1`FOO`BAR";
 

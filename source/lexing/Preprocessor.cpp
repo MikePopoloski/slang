@@ -1029,11 +1029,21 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
     // now add each body token, substituting arguments as necessary
     bool isFirst = true;
     for (auto& token : body) {
-        if (token.kind != TokenKind::Identifier && !isKeyword(token.kind))
+        if (token.kind != TokenKind::Identifier && !isKeyword(token.kind) &&
+            (token.kind != TokenKind::Directive || token.directiveKind() != SyntaxKind::MacroUsage)) {
             appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
+        }
         else {
+            // Other tools allow arguments to replace matching directive names, e.g.:
+            // `define FOO(bar) `bar
+            // `define ONE 1
+            // `FOO(ONE)   // expands to 1
+            string_view text = token.valueText();
+            if (token.kind == TokenKind::Directive)
+                text = text.substr(1);
+
             // check for formal param
-            auto it = argumentMap.find(token.valueText());
+            auto it = argumentMap.find(text);
             if (it == argumentMap.end())
                 appendBodyToken(dest, token, start, expansionLoc, usageSite, isFirst);
             else {
@@ -1043,9 +1053,17 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
                 auto begin = it->second->begin();
                 auto end = it->second->end();
                 if (begin != end) {
-                    appendBodyToken(dest, begin->withTrivia(alloc, token.trivia()),
-                                    begin->location(), begin->location(), usageSite, isFirst);
+                    // See note above about weird macro usage being argument replaced.
+                    // In that case we want to fabricate the correct directive token here.
+                    Token first = begin->withTrivia(alloc, token.trivia());
+                    if (token.kind == TokenKind::Directive) {
+                        Token grave { TokenKind::Directive, alloc.emplace<Token::Info>(
+                            first.trivia(), "`", first.location(), 0) };
 
+                        first = Lexer::concatenateTokens(alloc, grave, first);
+                    }
+
+                    appendBodyToken(dest, first, first.location(), first.location(), usageSite, isFirst);
                     for (++begin; begin != end; begin++)
                         appendBodyToken(dest, *begin, begin->location(), begin->location(), usageSite, isFirst);
                 }
