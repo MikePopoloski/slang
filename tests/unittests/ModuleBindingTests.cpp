@@ -92,7 +92,7 @@ endmodule
 
     const auto& instance = evalModule(tree);
     const auto& leaf = instance.member<ModuleInstanceSymbol>(0).member<ModuleInstanceSymbol>(0);
-    const auto& foo = leaf.module.lookup<ParameterSymbol>("foo");
+    const auto& foo = leaf.lookup<ParameterSymbol>("foo");
     CHECK(foo.value().integer() == 4);
 }
 
@@ -123,7 +123,7 @@ endmodule
         .member<GenerateBlockSymbol>(0)
         .member<ModuleInstanceSymbol>(0);
 
-    const auto& foo = leaf.module.lookup<ParameterSymbol>("foo");
+    const auto& foo = leaf.lookup<ParameterSymbol>("foo");
     CHECK(foo.value().integer() == 1);
 }
 
@@ -144,7 +144,7 @@ endmodule
 
     for (uint32_t i = 0; i < 10; i++) {
         const auto& leaf = instance.member<GenerateBlockSymbol>(i).member<ModuleInstanceSymbol>(1);
-        const auto& foo = leaf.module.lookup<ParameterSymbol>("foo");
+        const auto& foo = leaf.lookup<ParameterSymbol>("foo");
         CHECK(foo.value().integer() == i);
     }
 }

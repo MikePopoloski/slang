@@ -45,10 +45,9 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
 
     switch (node.kind) {
         case SyntaxKind::ModuleDeclaration:
-            results.append(&root.allocate<ModuleSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
-            break;
         case SyntaxKind::InterfaceDeclaration:
-            // TODO:
+        case SyntaxKind::ProgramDeclaration:
+            results.append(&root.allocate<DefinitionSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
             break;
         case SyntaxKind::PackageDeclaration:
             results.append(&root.allocate<PackageSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
@@ -70,21 +69,9 @@ SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent) {
                 }
             }
             break;
-        case SyntaxKind::HierarchyInstantiation: {
-            const auto& his = node.as<HierarchyInstantiationSyntax>();
-            // TODO: module namespacing
-            auto symbol = parent.lookup(his.type.valueText(), his.type.location(), LookupKind::Definition);
-            if (symbol) {
-                const auto& pms = symbol->as<ModuleSymbol>().parameterize(his.parameters, &parent);
-                for (auto instance : his.instances) {
-                    // TODO: handle arrays
-                    results.append(&root.allocate<ModuleInstanceSymbol>(instance->name.valueText(),
-                                                                        instance->name.location(),
-                                                                        pms, parent));
-                }
-            }
+        case SyntaxKind::HierarchyInstantiation:
+            InstanceSymbol::fromSyntax(parent, node.as<HierarchyInstantiationSyntax>(), results);
             break;
-        }
         case SyntaxKind::IfGenerate:
             // TODO: add special name conflict checks for generate blocks
             results.append(&root.allocate<IfGenerateSymbol>(node.as<IfGenerateSyntax>(), parent));
@@ -150,7 +137,8 @@ const ScopeSymbol& Symbol::containingScope() const {
             case SymbolKind::Root:
             case SymbolKind::CompilationUnit:
             case SymbolKind::Package:
-            case SymbolKind::ParameterizedModule:
+            case SymbolKind::ModuleInstance:
+            case SymbolKind::InterfaceInstance:
             case SymbolKind::SequentialBlock:
             case SymbolKind::ProceduralBlock:
             case SymbolKind::IfGenerate:
@@ -594,7 +582,7 @@ void DesignRootSymbol::fillMembers(MemberBuilder& builder) const {
                 builder.add(*member);
 
                 std::vector<NameSet> scopeStack;
-                findInstantiations(member->as<ModuleSymbol>().syntax, scopeStack, instances);
+                findInstantiations(member->as<DefinitionSymbol>().syntax, scopeStack, instances);
             }
         }
     }
@@ -604,8 +592,7 @@ void DesignRootSymbol::fillMembers(MemberBuilder& builder) const {
         for (auto member : symbol->members()) {
             if (member->kind == SymbolKind::Module && instances.count(member->name) == 0) {
                 // TODO: check for no parameters here
-                const auto& pms = member->as<ModuleSymbol>().parameterize();
-                const auto& instance = allocate<ModuleInstanceSymbol>(member->name, SourceLocation(), pms, *this);
+                const auto& instance = allocate<ModuleInstanceSymbol>(member->as<DefinitionSymbol>(), *this);
                 builder.add(instance);
                 topList.push_back(&instance);
             }

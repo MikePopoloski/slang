@@ -43,120 +43,19 @@ void PackageSymbol::fillMembers(MemberBuilder& builder) const {
     }
 }
 
-ModuleSymbol::ModuleSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& parent) :
+DefinitionSymbol::DefinitionSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& parent) :
     Symbol(SymbolKind::Module, syntax.header.name, parent), syntax(syntax)
 {
 }
 
-const ParameterizedModuleSymbol& ModuleSymbol::parameterize(const ParameterValueAssignmentSyntax* assignments,
-                                                            const ScopeSymbol* instanceScope) const {
-    ASSERT(!assignments || instanceScope);
-
-    // TODO: at this point we don't need to handle anything if there are no assignments
-
-    // If we were given a set of parameter assignments, build up some data structures to
-    // allow us to easily index them. We need to handle both ordered assignment as well as
-    // named assignment (though a specific instance can only use one method or the other).
-    bool hasParamAssignments = false;
-    bool orderedAssignments = true;
-    SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
-    SmallHashMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
-
-    if (assignments) {
-        for (auto paramBase : assignments->parameters.parameters) {
-            bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
-            if (!hasParamAssignments) {
-                hasParamAssignments = true;
-                orderedAssignments = isOrdered;
-            }
-            else if (isOrdered != orderedAssignments) {
-                addError(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
-                break;
-            }
-
-            if (isOrdered)
-                orderedParams.append(&paramBase->as<OrderedArgumentSyntax>());
-            else {
-                const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
-                auto pair = namedParams.emplace(nas.name.valueText(), std::make_pair(&nas, false));
-                if (!pair.second) {
-                    addError(DiagCode::DuplicateParamAssignment, nas.name.location()) << nas.name.valueText();
-                    addError(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
-                }
-            }
-        }
-    }
-
-    // For each parameter assignment we have, match it up to a real parameter and evaluate its initializer.
-    SmallHashMap<string_view, const ExpressionSyntax*, 8> paramMap;
-    if (orderedAssignments) {
-        // We take this branch if we had ordered parameter assignments,
-        // or if we didn't have any parameter assignments at all.
-        uint32_t orderedIndex = 0;
-        for (const auto& info : getDeclaredParams()) {
-            if (orderedIndex >= orderedParams.size())
-                break;
-
-            if (info.local)
-                continue;
-
-            paramMap[info.name] = &orderedParams[orderedIndex++]->expr;
-        }
-
-        // Make sure there aren't extra param assignments for non-existent params.
-        if (orderedIndex < orderedParams.size()) {
-            auto& diag = addError(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
-            diag << syntax.header.name.valueText();
-            diag << orderedParams.size();
-            diag << orderedIndex;
-        }
-    }
-    else {
-        // Otherwise handle named assignments.
-        for (const auto& info : getDeclaredParams()) {
-            auto it = namedParams.find(info.name);
-            if (it == namedParams.end())
-                continue;
-
-            const NamedArgumentSyntax* arg = it->second.first;
-            it->second.second = true;
-            if (info.local) {
-                // Can't assign to localparams, so this is an error.
-                addError(info.bodyParam ? DiagCode::AssignedToLocalBodyParam : DiagCode::AssignedToLocalPortParam, arg->name.location());
-                addError(DiagCode::NoteDeclarationHere, info.location) << string_view("parameter");
-                continue;
-            }
-
-            // It's allowed to have no initializer in the assignment; it means to just use the default
-            if (!arg->expr)
-                continue;
-
-            paramMap[info.name] = arg->expr;
-        }
-
-        for (const auto& pair : namedParams) {
-            // We marked all the args that we used, so anything left over is a param assignment
-            // for a non-existent parameter.
-            if (!pair.second.second) {
-                auto& diag = addError(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
-                diag << pair.second.first->name.valueText();
-                diag << syntax.header.name.valueText();
-            }
-        }
-    }
-
-    // TODO: containing symbol is wrong
-    return allocate<ParameterizedModuleSymbol>(*this, *this, instanceScope, paramMap);
-}
-
-const std::vector<ModuleSymbol::ParameterInfo>& ModuleSymbol::getDeclaredParams() const {
+span<DefinitionSymbol::ParameterInfo> DefinitionSymbol::getDeclaredParams() const {
     if (!paramInfoCache) {
         // Discover all of the element's parameters. If we have a parameter port list, the only
         // publicly visible parameters are the ones in that list. Otherwise, parameters declared
         // in the module body are publicly visible.
         const ModuleHeaderSyntax& header = syntax.header;
         SmallHashMap<string_view, SourceLocation, 16> nameDupMap;
-        std::vector<ParameterInfo> buffer;
+        SmallVectorSized<ParameterInfo, 8> buffer;
 
         bool overrideLocal = false;
         if (header.parameters) {
@@ -173,14 +72,14 @@ const std::vector<ModuleSymbol::ParameterInfo>& ModuleSymbol::getDeclaredParams(
                               nameDupMap, false, overrideLocal, true);
         }
 
-        paramInfoCache = std::move(buffer);
+        paramInfoCache = buffer.copy(getRoot().allocator());
     }
     return *paramInfoCache;
 }
 
-bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, std::vector<ParameterInfo>& buffer,
-                                 HashMapBase<string_view, SourceLocation>& nameDupMap,
-                                 bool lastLocal, bool overrideLocal, bool bodyParam) const {
+bool DefinitionSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, SmallVector<ParameterInfo>& buffer,
+                                     HashMapBase<string_view, SourceLocation>& nameDupMap,
+                                     bool lastLocal, bool overrideLocal, bool bodyParam) const {
     // It's legal to leave off the parameter keyword in the parameter port list.
     // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
     // This isn't allowed in a module body, but the parser will take care of the error for us.
@@ -212,26 +111,142 @@ bool ModuleSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, st
                 addError(DiagCode::LocalParamNoInitializer, declLocation);
             else if (bodyParam)
                 addError(DiagCode::BodyParamNoInitializer, declLocation);
-            buffer.push_back({ paramDecl, *declarator, declName, declLocation, init, local, bodyParam });
+            buffer.append({ paramDecl, *declarator, declName, declLocation, init, local, bodyParam });
         }
     }
     return local;
 }
 
-ParameterizedModuleSymbol::ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
-                                                     const ScopeSymbol* instanceScope,
-                                                     const HashMapBase<string_view, const ExpressionSyntax*>& parameterAssignments) :
-    ScopeSymbol(SymbolKind::ParameterizedModule, parent, module.name, module.location),
-    module(module), instanceScope(instanceScope)
-{
-    for (const auto& element : parameterAssignments)
-        paramAssignments.emplace(element.first, element.second);
+InstanceSymbol::InstanceSymbol(SymbolKind kind, const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
+                               HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent) :
+    ScopeSymbol(kind, parent, getName(definition, syntax), getLocation(definition, syntax)),
+    definition(definition), syntax(syntax), paramAssignments(parameters) {}
 
-    ASSERT(instanceScope || paramAssignments.empty());
+SourceLocation InstanceSymbol::getLocation(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax) {
+    if (syntax)
+        return syntax->name.location();
+    return definition.syntax.header.name.location();
 }
 
-void ParameterizedModuleSymbol::fillMembers(MemberBuilder& builder) const {
-    ParameterPortListSyntax* parameterList = module.syntax.header.parameters;
+string_view InstanceSymbol::getName(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax) {
+    if (syntax)
+        return syntax->name.valueText();
+    return definition.syntax.header.name.valueText();
+}
+
+void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstantiationSyntax& syntax,
+                                SmallVector<const Symbol*>& results) {
+    // TODO: module namespacing
+    Token typeName = syntax.type;
+    auto foundSymbol = parent.lookup(typeName.valueText(), typeName.location(), LookupKind::Definition);
+    if (!foundSymbol)
+        return;
+
+    // TODO: check symbol kind?
+    const DefinitionSymbol& definition = foundSymbol->as<DefinitionSymbol>();
+    const DesignRootSymbol& root = parent.getRoot();
+
+    // Evaluate all parameters now so that we can reuse them for all instances below.
+    // If we were given a set of parameter assignments, build up some data structures to
+    // allow us to easily index them. We need to handle both ordered assignment as well as
+    // named assignment (though a specific instance can only use one method or the other).
+    SmallHashMap<string_view, const ExpressionSyntax*, 8> paramMap;
+    if (syntax.parameters) {
+        bool hasParamAssignments = false;
+        bool orderedAssignments = true;
+        SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
+        SmallHashMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
+
+        // TODO: the name of the syntax elements here is ridiculous
+        for (auto paramBase : syntax.parameters->parameters.parameters) {
+            bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
+            if (!hasParamAssignments) {
+                hasParamAssignments = true;
+                orderedAssignments = isOrdered;
+            }
+            else if (isOrdered != orderedAssignments) {
+                root.addError(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
+                break;
+            }
+
+            if (isOrdered)
+                orderedParams.append(&paramBase->as<OrderedArgumentSyntax>());
+            else {
+                const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
+                auto pair = namedParams.emplace(nas.name.valueText(), std::make_pair(&nas, false));
+                if (!pair.second) {
+                    root.addError(DiagCode::DuplicateParamAssignment, nas.name.location()) << nas.name.valueText();
+                    root.addError(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
+                }
+            }
+        }
+
+        // For each parameter assignment we have, match it up to a real parameter
+        if (orderedAssignments) {
+            uint32_t orderedIndex = 0;
+            for (const auto& info : definition.getDeclaredParams()) {
+                if (orderedIndex >= orderedParams.size())
+                    break;
+
+                if (info.local)
+                    continue;
+
+                paramMap[info.name] = &orderedParams[orderedIndex++]->expr;
+            }
+
+            // Make sure there aren't extra param assignments for non-existent params.
+            if (orderedIndex < orderedParams.size()) {
+                auto& diag = root.addError(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
+                diag << definition.name;
+                diag << orderedParams.size();
+                diag << orderedIndex;
+            }
+        }
+        else {
+            // Otherwise handle named assignments.
+            for (const auto& info : definition.getDeclaredParams()) {
+                auto it = namedParams.find(info.name);
+                if (it == namedParams.end())
+                    continue;
+
+                const NamedArgumentSyntax* arg = it->second.first;
+                it->second.second = true;
+                if (info.local) {
+                    // Can't assign to localparams, so this is an error.
+                    root.addError(info.bodyParam ? DiagCode::AssignedToLocalBodyParam : DiagCode::AssignedToLocalPortParam, arg->name.location());
+                    root.addError(DiagCode::NoteDeclarationHere, info.location) << string_view("parameter");
+                    continue;
+                }
+
+                // It's allowed to have no initializer in the assignment; it means to just use the default
+                if (!arg->expr)
+                    continue;
+
+                paramMap[info.name] = arg->expr;
+            }
+
+            for (const auto& pair : namedParams) {
+                // We marked all the args that we used, so anything left over is a param assignment
+                // for a non-existent parameter.
+                if (!pair.second.second) {
+                    auto& diag = root.addError(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
+                    diag << pair.second.first->name.valueText();
+                    diag << definition.name;
+                }
+            }
+        }
+    }
+
+    HashMapRef<string_view, const ExpressionSyntax*> parameters = paramMap.copy(root.allocator());
+
+    for (auto instance : syntax.instances) {
+        // TODO: handle arrays
+        results.append(&root.allocate<ModuleInstanceSymbol>(definition, instance, parameters, parent));
+    }
+}
+
+void InstanceSymbol::fillMembers(MemberBuilder& builder) const {
+    ParameterPortListSyntax* parameterList = definition.syntax.header.parameters;
     if (parameterList) {
         for (const ParameterDeclarationSyntax* declaration : parameterList->declarations) {
             for (const VariableDeclaratorSyntax* decl : declaration->declarators) {
@@ -242,12 +257,12 @@ void ParameterizedModuleSymbol::fillMembers(MemberBuilder& builder) const {
                                                       declaration->type,
                                                       decl->initializer ? &decl->initializer->expr : nullptr,
                                                       it != paramAssignments.end() ? it->second : nullptr,
-                                                      instanceScope, false, false, *this));
+                                                      &containingScope(), false, false, *this));
             }
         }
     }
 
-    for (const MemberSyntax* node : module.syntax.members) {
+    for (const MemberSyntax* node : definition.syntax.members) {
         switch (node->kind) {
             case SyntaxKind::ParameterDeclarationStatement: {
                 const ParameterDeclarationSyntax& declaration = node->as<ParameterDeclarationStatementSyntax>().parameter;
@@ -258,7 +273,7 @@ void ParameterizedModuleSymbol::fillMembers(MemberBuilder& builder) const {
                                                           declaration.type,
                                                           decl->initializer ? &decl->initializer->expr : nullptr,
                                                           it != paramAssignments.end() ? it->second : nullptr,
-                                                          instanceScope, false, false, *this));
+                                                          &containingScope(), false, false, *this));
                 }
                 break;
             }
@@ -271,10 +286,12 @@ void ParameterizedModuleSymbol::fillMembers(MemberBuilder& builder) const {
     }
 }
 
-ModuleInstanceSymbol::ModuleInstanceSymbol(string_view name, SourceLocation location,
-                                           const ParameterizedModuleSymbol& module, const Symbol& parent) :
-    Symbol(SymbolKind::ModuleInstance, parent, name, location),
-    module(module) {}
+ModuleInstanceSymbol::ModuleInstanceSymbol(const DefinitionSymbol& definition, const ScopeSymbol& parent) :
+    InstanceSymbol(SymbolKind::ModuleInstance, definition, nullptr, HashMapRef<string_view, const ExpressionSyntax*>(), parent) {}
+
+ModuleInstanceSymbol::ModuleInstanceSymbol(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
+                                           HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent) :
+    InstanceSymbol(SymbolKind::ModuleInstance, definition, syntax, parameters, parent) {}
 
 IfGenerateSymbol::IfGenerateSymbol(const IfGenerateSyntax& syntax, const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::IfGenerate, parent),

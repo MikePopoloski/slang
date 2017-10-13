@@ -8,11 +8,11 @@ SVInt testParameter(const std::string& text, int index = 0) {
     auto tree = SyntaxTree::fromText(string_view(fullText));
 
 	DesignRootSymbol root(&tree);
-	const auto& module = root.lookup<ModuleSymbol>("Top");
+	const auto& module = *root.topInstances()[0];
 	if (!tree.diagnostics().empty())
 		WARN(tree.reportDiagnostics());
 
-    const ParameterSymbol& param = module.parameterize().member<ParameterSymbol>(index);
+    const ParameterSymbol& param = module.member<ParameterSymbol>(index);
     return param.value().integer();
 }
 

@@ -29,7 +29,6 @@ class Symbol;
 class ScopeSymbol;
 class DesignRootSymbol;
 class TypeSymbol;
-class ModuleSymbol;
 class WildcardImportSymbol;
 class PackageSymbol;
 class ParameterSymbol;
@@ -55,10 +54,10 @@ enum class SymbolKind {
     Parameter,
     EnumValue,
     Module,
-    ParameterizedModule,
-    Interface, // TODO: decouple interfaces from modules
-    Modport,   // TODO: decouple interfaces from modules
+    Interface,
+    Modport,
     ModuleInstance,
+    InterfaceInstance,
     Package,
     ExplicitImport,
     ImplicitImport,
@@ -419,7 +418,6 @@ public:
 
 class CompilationUnitSymbol;
 class PackageSymbol;
-class ParameterizedModuleSymbol;
 class ModuleInstanceSymbol;
 
 /// Represents the entirety of a design, along with all contained compilation units.
@@ -529,19 +527,14 @@ private:
     const ModuleDeclarationSyntax& syntax;
 };
 
-/// Represents a module declaration, with its parameters still unresolved.
-class ModuleSymbol : public Symbol {
+/// Represents a module, interface, or program declaration.
+class DefinitionSymbol : public Symbol {
 public:
     const ModuleDeclarationSyntax& syntax;
 
-    ModuleSymbol(const ModuleDeclarationSyntax& decl, const Symbol& container);
+    DefinitionSymbol(const ModuleDeclarationSyntax& decl, const Symbol& container);
 
-    /// Parameterizes the module with the given set of parameter assignments.
-    const ParameterizedModuleSymbol& parameterize(const ParameterValueAssignmentSyntax* assignments = nullptr,
-                                                  const ScopeSymbol* instanceScope = nullptr) const;
-
-private:
-    // Small collection of info extracted from a parameter definition
+    /// Small collection of info extracted from a parameter definition
     struct ParameterInfo {
         const ParameterDeclarationSyntax& paramDecl;
         const VariableDeclaratorSyntax& declarator;
@@ -552,42 +545,44 @@ private:
         bool bodyParam;
     };
 
-    const std::vector<ParameterInfo>& getDeclaredParams() const;
+    span<ParameterInfo> getDeclaredParams() const;
 
-    // Helper function used by getModuleParams to convert a single parameter declaration into
+private:
+    // Helper function used by getDeclaredParams to convert a single parameter declaration into
     // one or more ParameterInfo instances.
-    bool getParamDecls(const ParameterDeclarationSyntax& syntax, std::vector<ParameterInfo>& buffer,
+    bool getParamDecls(const ParameterDeclarationSyntax& syntax, SmallVector<ParameterInfo>& buffer,
                        HashMapBase<string_view, SourceLocation>& nameDupMap,
                        bool lastLocal, bool overrideLocal, bool bodyParam) const;
 
-    mutable std::optional<std::vector<ParameterInfo>> paramInfoCache;
+    mutable optional<span<ParameterInfo>> paramInfoCache;
 };
 
-/// Represents a module that has had its parameters resolved to a specific set of values.
-class ParameterizedModuleSymbol : public ScopeSymbol {
+/// Base class for module, interface, and program instance symbols.
+class InstanceSymbol : public ScopeSymbol {
 public:
-    ParameterizedModuleSymbol(const ModuleSymbol& module, const Symbol& parent,
-                              const ScopeSymbol* instanceScope,
-                              const HashMapBase<string_view, const ExpressionSyntax*>& parameterAssignments);
+    const DefinitionSymbol& definition;
+    const HierarchicalInstanceSyntax* syntax;
 
-private:
+    static void fromSyntax(const ScopeSymbol& parent, const HierarchyInstantiationSyntax& syntax,
+                           SmallVector<const Symbol*>& results);
+
+protected:
+	InstanceSymbol(SymbolKind kind, const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
+				   HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent);
+
     void fillMembers(MemberBuilder& builder) const final;
 
-    const ModuleSymbol& module;
-    const ScopeSymbol* instanceScope;
-    std::unordered_map<string_view, const ExpressionSyntax*> paramAssignments;
+    static SourceLocation getLocation(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax);
+    static string_view getName(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax);
+
+    HashMapRef<string_view, const ExpressionSyntax*> paramAssignments;
 };
 
-class ModuleInstanceSymbol : public Symbol {
+class ModuleInstanceSymbol : public InstanceSymbol {
 public:
-    const ParameterizedModuleSymbol& module;
-
-    ModuleInstanceSymbol(string_view name, SourceLocation location, const ParameterizedModuleSymbol& module,
-                         const Symbol& parent);
-
-    /// A helper method to access a specific member of the module (of which this is an instance).
-    template<typename T>
-    const T& member(uint32_t index) const { return module.members()[index]->as<T>(); }
+    ModuleInstanceSymbol(const DefinitionSymbol& definition, const ScopeSymbol& parent);
+    ModuleInstanceSymbol(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
+                         HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent);
 };
 
 //class GenvarSymbol : public Symbol {
@@ -761,7 +756,7 @@ public:
     ParameterSymbol(string_view name, SourceLocation location, const DataTypeSyntax& typeSyntax,
                     const ExpressionSyntax* defaultInitializer, const ExpressionSyntax* assignedValue,
                     const ScopeSymbol* instanceScope, bool isLocalParam, bool isPortParam, const Symbol& parent);
-        
+
     /// Indicates whether the parameter is a "localparam".
     bool isLocalParam() const { return isLocal; }
 

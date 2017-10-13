@@ -123,18 +123,18 @@ public:
     }
 
 private:
-    static string getParamString(const ParameterizedModuleSymbol*) {
+   /* static string getParamString(const ParameterizedModuleSymbol*) {
         string result;
-        /*for (auto child : module->members()) {
+        for (auto child : module->members()) {
             if (child->kind == SymbolKind::Parameter)
                 result += child->as<ParameterSymbol>().value.integer().toString(LiteralBase::Decimal);
-        }*/
+        }
         return result;
-    }
+    }*/
 
-    unordered_map<const HierarchyInstantiationSyntax*, const ModuleSymbol*> instanceToModule;
+    unordered_map<const HierarchyInstantiationSyntax*, const DefinitionSymbol*> instanceToModule;
     unordered_map<const VariableDeclaratorSyntax*, const ParameterSymbol*> declToParam;
-    unordered_map<const ModuleDeclarationSyntax*, vector<const ModuleSymbol*>> syntaxToModules;
+    unordered_map<const ModuleDeclarationSyntax*, vector<const DefinitionSymbol*>> syntaxToModules;
     unordered_map<const ModuleDeclarationSyntax*, unordered_map<string, size_t>> moduleMap;
     unordered_set<BufferID> visitedFiles;
     SmallVectorSized<char, 4> buffer;
