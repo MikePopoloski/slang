@@ -14,7 +14,9 @@ struct ExpressionSyntax;
 
 enum class ExpressionKind {
     Invalid,
-    Literal,
+    IntegerLiteral,
+    RealLiteral,
+    UnbasedUnsizedIntegerLiteral,
     VariableRef,
     ParameterRef,
     UnaryOp,
@@ -23,11 +25,6 @@ enum class ExpressionKind {
     NaryOp,
     Select,
     Call
-};
-
-enum class LiteralKind {
-    UnbasedUnsizedInteger,
-    Other
 };
 
 enum class UnaryOperator {
@@ -88,7 +85,6 @@ enum class BinaryOperator {
     ArithmeticRightShiftAssignment,
 };
 
-LiteralKind getLiteralKind(const ExpressionSyntax& syntax);
 UnaryOperator getUnaryOperator(const ExpressionSyntax& syntax);
 BinaryOperator getBinaryOperator(const ExpressionSyntax& syntax);
 
@@ -147,18 +143,48 @@ public:
         Expression(ExpressionKind::Invalid, type), child(child) {}
 };
 
-/// Represents a literal expression.
-class LiteralExpression : public Expression {
+/// Represents an integer literal.
+class IntegerLiteral : public Expression {
 public:
-    LiteralKind literalKind;
-    ConstantValue value;
+    IntegerLiteral(BumpAllocator& alloc, const TypeSymbol& type, const SVInt& value, const ExpressionSyntax& syntax);
 
-    LiteralExpression(const TypeSymbol& type, const ConstantValue& value, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::Literal, type, syntax),
-        literalKind(getLiteralKind(syntax)), value(value) {}
-    
+    SVInt getValue() const { return valueStorage; }
+
     void propagateType(const TypeSymbol& newType);
     ConstantValue eval(EvalContext& context) const;
+
+private:
+    SVIntStorage valueStorage;
+};
+
+/// Represents a real number literal.
+class RealLiteral : public Expression {
+public:
+    RealLiteral(const TypeSymbol& type, double value, const ExpressionSyntax& syntax) :
+        Expression(ExpressionKind::RealLiteral, type, syntax), value(value) {}
+
+    double getValue() const { return value; }
+
+    void propagateType(const TypeSymbol& newType);
+    ConstantValue eval(EvalContext& context) const;
+
+private:
+    double value;
+};
+
+/// Represents an unbased unsized integer literal, which fills all bits in an expression.
+class UnbasedUnsizedIntegerLiteral : public Expression {
+public:
+    UnbasedUnsizedIntegerLiteral(const TypeSymbol& type, logic_t value, const ExpressionSyntax& syntax) :
+        Expression(ExpressionKind::UnbasedUnsizedIntegerLiteral, type, syntax), value(value) {}
+
+    logic_t getValue() const { return value; }
+
+    void propagateType(const TypeSymbol& newType);
+    ConstantValue eval(EvalContext& context) const;
+
+private:
+    logic_t value;
 };
 
 /// Represents an expression that references a variable.

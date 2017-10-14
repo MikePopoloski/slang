@@ -1286,7 +1286,7 @@ void SVInt::initSlowCase(uint64_t value) {
     }
 }
 
-void SVInt::initSlowCase(const SVInt& other) {
+void SVInt::initSlowCase(const SVIntStorage& other) {
     uint32_t words = getNumWords();
     pVal = new uint64_t[words];
     std::copy(other.pVal, other.pVal + words, pVal);

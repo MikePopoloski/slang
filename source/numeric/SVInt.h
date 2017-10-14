@@ -91,6 +91,31 @@ struct logic_t {
     static const logic_t z;
 };
 
+/// POD base class for SVInt that contains all data members. The purpose of this
+/// is so that other types can manage the backing memory for SVInts with really
+/// large bit widths.
+class SVIntStorage {
+public:
+    SVIntStorage() : val(0), bitWidth(1), signFlag(false), unknownFlag(false) {}
+    SVIntStorage(uint16_t bits, bool signFlag, bool unknownFlag) :
+        val(0), bitWidth(bits), signFlag(signFlag), unknownFlag(unknownFlag) {}
+    SVIntStorage(uint64_t* data, uint16_t bits, bool signFlag, bool unknownFlag) :
+        pVal(data), bitWidth(bits), signFlag(signFlag), unknownFlag(unknownFlag) {}
+
+    // 64 bits of value data; if bits > 64, we allocate words on the heap to hold
+    // the values. If we have unknown values (X or Z) we allocate double the number
+    // of data words, with the extra set indicating X or Z for each particular bit.
+    union {
+        uint64_t val;   // value used when bits <= 64
+        uint64_t* pVal; // value used when bits > 64
+    };
+
+    // 32-bits of control data
+    uint16_t bitWidth;  // number of bits in the integer
+    bool signFlag;      // whether the number should be treated as signed
+    bool unknownFlag;   // whether we have at least one X or Z value in the number
+};
+
 // TODO:
 // - Correct behavior when indexing outside the bounds of the value
 // - Use a 32-bit value for bitWidth to allow for full sized intermediaries
@@ -109,14 +134,14 @@ struct logic_t {
 /// words are allocated adjacent in memory. The bits in these extra words indicate whether the
 /// corresponding bits in the low words are unknown or normal.
 ///
-class SVInt {
+class SVInt : SVIntStorage {
 public:
     /// Simple default constructor for convenience, results in a 1 bit zero value.
-    SVInt() : val(0), bitWidth(1), signFlag(false), unknownFlag(false) {}
+    SVInt() {}
 
     /// Construct from a single bit that can be unknown.
     explicit SVInt(logic_t bit) :
-        bitWidth(1), signFlag(false), unknownFlag(bit.isUnknown())
+        SVIntStorage(1, false, bit.isUnknown())
     {
         if (isSingleWord())
             val = bit.value;
@@ -126,8 +151,9 @@ public:
 
     /// Construct from a given signed 64-bit value. Uses only the bits necessary to hold the value.
     explicit SVInt(int64_t value) :
-        val(value), signFlag(true), unknownFlag(false)
+        SVIntStorage(0, true, false)
     {
+        val = value;
         if (value < 0)
             bitWidth = uint16_t(64 - slang::countLeadingOnes64(value) + 1);
         else
@@ -137,8 +163,9 @@ public:
 
     /// Construct from a given 64-bit value. Uses only the bits necessary to hold the value.
     explicit SVInt(uint64_t value, bool isSigned) :
-        val(value), bitWidth((uint16_t)clog2(value+1)), signFlag(isSigned), unknownFlag(false)
+        SVIntStorage((uint16_t)clog2(value + 1), isSigned, false)
     {
+        val = value;
         if (bitWidth == 0) {
             if (value == 0)
                 bitWidth = 1;
@@ -151,7 +178,7 @@ public:
     /// Construct from a 64-bit value that can be given an arbitrarily large number of bits (sign
     /// extended if necessary).
     SVInt(uint16_t bits, uint64_t value, bool isSigned) :
-        bitWidth(bits), signFlag(isSigned), unknownFlag(false)
+        SVIntStorage(bits, isSigned, false)
     {
         // TODO: clean this up
         // 0-bit SVInts are valid only as the result of a zero-width concatenation, which is only
@@ -171,8 +198,9 @@ public:
     }
 
     /// Copy construct.
-    SVInt(const SVInt& other) :
-        bitWidth(other.bitWidth), signFlag(other.signFlag), unknownFlag(other.unknownFlag)
+    SVInt(const SVInt& other) : SVInt(static_cast<const SVIntStorage&>(other)) {}
+    SVInt(const SVIntStorage& other) :
+        SVIntStorage(other.bitWidth, other.signFlag, other.unknownFlag)
     {
         if (isSingleWord())
             val = other.val;
@@ -182,16 +210,26 @@ public:
 
     /// Move construct.
     SVInt(SVInt&& other) noexcept :
-        val(other.val), bitWidth(other.bitWidth),
-        signFlag(other.signFlag), unknownFlag(other.unknownFlag)
+        SVIntStorage(other.bitWidth, other.signFlag, other.unknownFlag)
     {
-        // prevent the other object from releasing memory
-        other.pVal = 0;
+        if (isSingleWord())
+            val = other.val;
+        else
+            pVal = std::exchange(other.pVal, nullptr);
     }
 
     bool isSigned() const { return signFlag; }
     bool hasUnknown() const { return unknownFlag; }
     uint16_t getBitWidth() const { return bitWidth; }
+
+    /// Check if the integer can fit into a single 64-bit word.
+    bool isSingleWord() const { return bitWidth <= BITS_PER_WORD && !unknownFlag; }
+
+    /// Gets the number of words required to hold the integer, including the unknown bits.
+    uint32_t getNumWords() const { return getNumWords(bitWidth, unknownFlag); }
+
+    /// Gets a pointer to the underlying numeric data.
+    const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
 
     /// Checks whether it's possible to convert the value to a simple built-in
     /// integer type and if so returns it.
@@ -465,7 +503,7 @@ public:
 private:
     // fast internal constructors to just set fields on new values
     SVInt(uint64_t* data, uint16_t bits, bool signFlag, bool unknownFlag) :
-        pVal(data), bitWidth(bits), signFlag(signFlag), unknownFlag(unknownFlag) {}
+        SVIntStorage(data, bits, signFlag, unknownFlag) {}
 
     static SVInt allocUninitialized(uint16_t bits, bool signFlag, bool unknownFlag);
     static SVInt allocZeroed(uint16_t bits, bool signFlag, bool unknownFlag);
@@ -473,7 +511,7 @@ private:
     // Initialization routines for various cases.
     void initSlowCase(logic_t bit);
     void initSlowCase(uint64_t value);
-    void initSlowCase(const SVInt& other);
+    void initSlowCase(const SVIntStorage& other);
 
     // Slow cases for assignment, equality checking, and counting leading zeros.
     SVInt& assignSlowCase(const SVInt& other);
@@ -481,20 +519,11 @@ private:
     uint32_t countLeadingZerosSlowCase() const;
     uint32_t countLeadingOnesSlowCase() const;
 
-    // Check if we can fit the integer into a single word.
-    bool isSingleWord() const { return bitWidth <= BITS_PER_WORD && !unknownFlag; }
-
-    // Get the number of words required to hold the integer, including the unknown bits.
-    uint32_t getNumWords() const { return getNumWords(bitWidth, unknownFlag); }
-
     // Get a specific word holding the given bit index.
     uint64_t getWord(int bitIndex) const { return isSingleWord() ? val : pVal[whichWord(bitIndex)]; }
 
     // Get the number of bits that are useful in the top word
     void getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const;
-
-    // Get a pointer to the data, either pVal or val depending on whether we have a single word.
-    const uint64_t* getRawData() const { return isSingleWord() ? &val : pVal; }
 
     // Clear out any unused bits in the topmost word if our bit width
     // is not an even multiple of the word size.
@@ -534,19 +563,6 @@ private:
     }
 
     static constexpr uint64_t Seed = 0x3765936aa9a6c480; // chosen by fair dice roll
-
-    // 64 bits of value data; if bits > 64, we allocate words on the heap to hold
-    // the values. If we have unknown values (X or Z) we allocate double the number
-    // of data words, with the extra set indicating X or Z for each particular bit.
-    union {
-        uint64_t val;   // value used when bits <= 64
-        uint64_t* pVal; // value used when bits > 64
-    };
-
-    // 32-bits of control data
-    uint16_t bitWidth;  // number of bits in the integer
-    bool signFlag;      // whether the number should be treated as signed
-    bool unknownFlag;   // whether we have at least one X or Z value in the number
 };
 
 inline logic_t operator||(const SVInt& lhs, logic_t rhs) { return lhs != 0 || rhs; }

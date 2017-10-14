@@ -21,7 +21,9 @@ bool Expression::evalBool(EvalContext& context) const {
 ConstantValue Expression::eval(EvalContext& context) const {
     switch (kind) {
         case ExpressionKind::Invalid: return nullptr;
-        case ExpressionKind::Literal: return as<LiteralExpression>().eval(context);
+        case ExpressionKind::IntegerLiteral: return as<IntegerLiteral>().eval(context);
+        case ExpressionKind::RealLiteral: return as<RealLiteral>().eval(context);
+        case ExpressionKind::UnbasedUnsizedIntegerLiteral: return as<UnbasedUnsizedIntegerLiteral>().eval(context);
         case ExpressionKind::VariableRef: return as<VariableRefExpression>().eval(context);
         case ExpressionKind::ParameterRef: return as<ParameterRefExpression>().eval(context);
         case ExpressionKind::UnaryOp: return as<UnaryExpression>().eval(context);
@@ -34,8 +36,48 @@ ConstantValue Expression::eval(EvalContext& context) const {
     THROW_UNREACHABLE;
 }
 
-ConstantValue LiteralExpression::eval(EvalContext&) const {
+IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const TypeSymbol& type, const SVInt& value,
+                               const ExpressionSyntax& syntax) :
+    Expression(ExpressionKind::IntegerLiteral, type, syntax),
+    valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown())
+{
+    if (value.isSingleWord())
+        valueStorage.val = *value.getRawData();
+    else {
+        valueStorage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords());
+        memcpy(valueStorage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
+    }
+}
+
+ConstantValue IntegerLiteral::eval(EvalContext&) const {
+    uint16_t width = (uint16_t)type->width();
+    SVInt result = getValue();
+
+    // TODO: truncation?
+    if (width > result.getBitWidth())
+        result = extend(result, width, type->isSigned());
+    return result;
+}
+
+ConstantValue RealLiteral::eval(EvalContext&) const {
     return value;
+}
+
+ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
+    uint16_t width = (uint16_t)type->width();
+    bool isSigned = type->isSigned();
+
+    switch (value.value) {
+        case 0: return SVInt(width, 0, isSigned);
+        case 1: {
+            SVInt tmp(width, 0, isSigned);
+            tmp.setAllOnes();
+            return tmp;
+        }
+        case logic_t::X_VALUE: return SVInt::createFillX(width, isSigned);
+        case logic_t::Z_VALUE: return SVInt::createFillZ(width, isSigned);
+        default: THROW_UNREACHABLE;
+    }
 }
 
 ConstantValue VariableRefExpression::eval(EvalContext& context) const {
@@ -271,8 +313,14 @@ void Expression::propagateType(const TypeSymbol& newType) {
     switch (kind) {
         case ExpressionKind::Invalid:
             return;
-        case ExpressionKind::Literal:
-            as<LiteralExpression>().propagateType(newType);
+        case ExpressionKind::IntegerLiteral:
+            as<IntegerLiteral>().propagateType(newType);
+            break;
+        case ExpressionKind::RealLiteral:
+            as<RealLiteral>().propagateType(newType);
+            break;
+        case ExpressionKind::UnbasedUnsizedIntegerLiteral:
+            as<UnbasedUnsizedIntegerLiteral>().propagateType(newType);
             break;
         case ExpressionKind::Call:
         case ExpressionKind::VariableRef:
@@ -294,34 +342,16 @@ void Expression::propagateType(const TypeSymbol& newType) {
     }
 }
 
-void LiteralExpression::propagateType(const TypeSymbol& newType) {
-    // TODO: other kinds of literals...
+void IntegerLiteral::propagateType(const TypeSymbol& newType) {
     type = &newType;
-    if (literalKind == LiteralKind::UnbasedUnsizedInteger) {
-        // In this case, the value depends on the final size, so we evaluate
-        // the right value here
-        logic_t digit = (logic_t)value.integer();
-        uint16_t width = (uint16_t)newType.width();
-        bool isSigned = newType.isSigned();
-        switch (digit.value) {
-            case 0:
-                value = SVInt(width, 0, isSigned);
-                break;
-            case 1: {
-                SVInt tmp(width, 0, isSigned);
-                tmp.setAllOnes();
-                value = tmp;
-                break;
-            }
-            case logic_t::X_VALUE:
-                value = SVInt::createFillX(width, isSigned);
-                break;
-            case logic_t::Z_VALUE:
-                value = SVInt::createFillZ(width, isSigned);
-                break;
-            default: THROW_UNREACHABLE;
-        }
-    }
+}
+
+void RealLiteral::propagateType(const TypeSymbol& newType) {
+    type = &newType;
+}
+
+void UnbasedUnsizedIntegerLiteral::propagateType(const TypeSymbol& newType) {
+    type = &newType;
 }
 
 void UnaryExpression::propagateType(const TypeSymbol& newType) {
@@ -432,15 +462,6 @@ void TernaryExpression::propagateType(const TypeSymbol& newType) {
     if (!doNotPropagateRealDownToNonReal) {
         left().propagateType(newType);
         right().propagateType(newType);
-    }
-}
-
-LiteralKind getLiteralKind(const ExpressionSyntax& syntax) {
-    switch (syntax.kind) {
-        case SyntaxKind::UnbasedUnsizedLiteralExpression:
-            return LiteralKind::UnbasedUnsizedInteger;
-        default:
-            return LiteralKind::Other;
     }
 }
 

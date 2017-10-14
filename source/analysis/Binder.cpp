@@ -145,13 +145,14 @@ const Expression& Binder::bindAssignmentLikeContext(const ExpressionSyntax& synt
 Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
     switch (syntax.kind) {
         case SyntaxKind::IntegerLiteralExpression:
-            return root.allocate<LiteralExpression>(
+            return root.allocate<IntegerLiteral>(
+                root.allocator(),
                 root.getKnownType(SyntaxKind::IntType),
                 std::get<SVInt>(syntax.literal.numericValue()),
                 syntax
             );
         case SyntaxKind::RealLiteralExpression:
-            return root.allocate<LiteralExpression>(
+            return root.allocate<RealLiteral>(
                 root.getKnownType(SyntaxKind::RealType),
                 std::get<double>(syntax.literal.numericValue()),
                 syntax
@@ -160,11 +161,7 @@ Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
             // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
             // context, but can grow
             logic_t val = std::get<logic_t>(syntax.literal.numericValue());
-            return root.allocate<LiteralExpression>(
-                root.getIntegralType(1, false, val.isUnknown()),
-                SVInt(val),
-                syntax
-            );
+            return root.allocate<UnbasedUnsizedIntegerLiteral>(root.getIntegralType(1, false, val.isUnknown()), val, syntax);
         }
         default: THROW_UNREACHABLE;
     }
@@ -172,11 +169,11 @@ Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
 
 Expression& Binder::bindLiteral(const IntegerVectorExpressionSyntax& syntax) {
     if (syntax.value.isMissing())
-        return badExpr(&root.allocate<LiteralExpression>(root.getErrorType(), nullptr, syntax));
+        return badExpr(&root.allocate<IntegerLiteral>(root.allocator(), root.getErrorType(), SVInt::Zero, syntax));
 
     const SVInt& value = std::get<SVInt>(syntax.value.numericValue());
     const TypeSymbol& type = root.getIntegralType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
-    return root.allocate<LiteralExpression>(type, value, syntax);
+    return root.allocate<IntegerLiteral>(root.allocator(), type, value, syntax);
 }
 
 Expression& Binder::bindName(const NameSyntax& syntax) {
