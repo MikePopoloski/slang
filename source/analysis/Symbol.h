@@ -461,6 +461,9 @@ public:
     Diagnostics& diagnostics() const { return diags; }
     const SourceManager& sourceManager() const { return sourceMan; }
 
+    // TODO: clean this up
+    mutable TypedBumpAllocator<ConstantValue> constantAllocator;
+
 private:
     void fillMembers(MemberBuilder& builder) const final;
 
@@ -777,12 +780,12 @@ public:
 
 private:
     void evaluate(const ExpressionSyntax* expr, const TypeSymbol*& determinedType,
-                  ConstantValue& determinedValue, const ScopeSymbol& scope) const;
+                  ConstantValue*& determinedValue, const ScopeSymbol& scope) const;
 
     mutable const TypeSymbol* type_ = nullptr;
     mutable const TypeSymbol* defaultType_ = nullptr;
-    mutable ConstantValue value_;
-    mutable ConstantValue defaultValue_;
+    mutable ConstantValue* value_;
+    mutable ConstantValue* defaultValue_;
 
     const ScopeSymbol* instanceScope = nullptr;
     const DataTypeSyntax* typeSyntax = nullptr;

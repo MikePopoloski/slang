@@ -60,7 +60,7 @@ public:
         return string_view(data, str.length());
     }
 
-private:
+protected:
     struct Segment {
         Segment* prev;
         uint8_t* current;
@@ -71,6 +71,27 @@ private:
     uint32_t segmentSize;
 
     static Segment* allocSegment(Segment* prev, uint32_t size);
+};
+
+template<typename T>
+class TypedBumpAllocator : public BumpAllocator {
+public:
+    TypedBumpAllocator() = default;
+    TypedBumpAllocator(TypedBumpAllocator&& other) noexcept : BumpAllocator(std::move(other)) {}
+    ~TypedBumpAllocator() {
+        Segment* seg = head;
+        while (seg) {
+            for (T* cur = (T*)(seg + 1); cur != (T*)seg->current; cur++)
+                cur->~T();
+            seg = seg->prev;
+        }
+    }
+
+    /// Construct a new item using the allocator.
+    template<typename... Args>
+    T* emplace(Args&&... args) {
+        return new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
+    }
 };
 
 }

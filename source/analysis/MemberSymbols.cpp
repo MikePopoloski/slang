@@ -284,7 +284,10 @@ const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
                                  ConstantValue value, const Symbol& parent) :
     Symbol(SymbolKind::Parameter, parent, name, location),
-    type_(&type), value_(std::move(value)) {}
+    type_(&type)
+{
+    value_ = getRoot().constantAllocator.emplace(std::move(value));
+}
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const DataTypeSyntax& typeSyntax,
                                  const ExpressionSyntax* defaultInitializer, const ExpressionSyntax* assignedValue,
@@ -304,7 +307,7 @@ const ConstantValue* ParameterSymbol::defaultValue() const {
         return nullptr;
 
     defaultType();
-    return &defaultValue_;
+    return defaultValue_;
 }
 
 const TypeSymbol* ParameterSymbol::defaultType() const {
@@ -320,7 +323,7 @@ const TypeSymbol* ParameterSymbol::defaultType() const {
 const ConstantValue& ParameterSymbol::value() const {
     if (!type_)
         type();
-    return value_;
+    return *value_;
 }
 
 const TypeSymbol& ParameterSymbol::type() const {
@@ -337,7 +340,7 @@ const TypeSymbol& ParameterSymbol::type() const {
 }
 
 void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& determinedType,
-                               ConstantValue& determinedValue, const ScopeSymbol& scope) const {
+                               ConstantValue*& determinedValue, const ScopeSymbol& scope) const {
     ASSERT(expr);
 
     // If no type is given, infer the type from the initializer
@@ -345,11 +348,11 @@ void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& 
         const auto& bound = Binder(scope).bindConstantExpression(*expr);
         determinedType = bound.type;
         if (!bound.bad())
-            determinedValue = bound.eval();
+            determinedValue = getRoot().constantAllocator.emplace(bound.eval());
     }
     else {
         determinedType = &scope.getType(*typeSyntax);
-        determinedValue = scope.evaluateConstantAndConvert(*expr, *determinedType, location);
+        determinedValue = getRoot().constantAllocator.emplace(scope.evaluateConstantAndConvert(*expr, *determinedType, location));
     }
 }
 
