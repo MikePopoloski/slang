@@ -7,9 +7,7 @@
 #include "analysis/Symbol.h"
 #include "parsing/SyntaxTree.h"
 
-const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax) {
-    DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(&syntax);
-
+const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, DesignRootSymbol& root) {
     REQUIRE(root.topInstances().size() > 0);
     if (!syntax.diagnostics().empty())
         WARN(syntax.reportDiagnostics());
@@ -40,7 +38,8 @@ module Leaf();
 endmodule
 )");
 
-    evalModule(tree);
+    DesignRootSymbol root(&tree);
+    evalModule(tree, root);
 }
 
 TEST_CASE("Module parameterization errors", "[binding:modules]") {
@@ -90,7 +89,8 @@ module Leaf #(parameter int foo = 4)();
 endmodule
 )");
 
-    const auto& instance = evalModule(tree);
+    DesignRootSymbol root(&tree);
+    const auto& instance = evalModule(tree, root);
     const auto& leaf = instance.member<ModuleInstanceSymbol>(0).member<ModuleInstanceSymbol>(0);
     const auto& foo = leaf.lookup<ParameterSymbol>("foo");
     CHECK(foo.value().integer() == 4);
@@ -116,7 +116,8 @@ module Leaf #(parameter int foo = 4)();
 endmodule
 )");
 
-    const auto& instance = evalModule(tree);
+    DesignRootSymbol root(&tree);
+    const auto& instance = evalModule(tree, root);
     const auto& leaf = instance
         .member<ModuleInstanceSymbol>(0)
         .member<IfGenerateSymbol>(1)
@@ -139,7 +140,8 @@ module Leaf #(parameter int foo)();
 endmodule
 )");
 
-    const auto& instance = evalModule(tree).member<LoopGenerateSymbol>(0);
+    DesignRootSymbol root(&tree);
+    const auto& instance = evalModule(tree, root).member<LoopGenerateSymbol>(0);
     REQUIRE(instance.members().size() == 10);
 
     for (uint32_t i = 0; i < 10; i++) {
@@ -173,7 +175,8 @@ module Top;
 endmodule
 )");
 
-    const auto& instance = evalModule(tree);
+    DesignRootSymbol root(&tree);
+    const auto& instance = evalModule(tree, root);
     const auto& bus = instance.member<ModuleInstanceSymbol>(0);
 }
 
@@ -206,7 +209,8 @@ module module1
 endmodule
 )");
 
-    const auto& instance = evalModule(tree);
+    DesignRootSymbol root(&tree);
+    const auto& instance = evalModule(tree, root);
     const auto& alwaysComb = instance.member<ProceduralBlockSymbol>(2);
 
     CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
@@ -225,7 +229,8 @@ module Top;
 endmodule
 )");
 
-    const auto& instance = evalModule(tree);
+    DesignRootSymbol root(&tree);
+    const auto& instance = evalModule(tree, root);
     const auto& foo = instance.member<SubroutineSymbol>(0);
     CHECK(!foo.isTask);
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
@@ -285,7 +290,7 @@ package Foo;
 endpackage
 )");
 
-    DesignRootSymbol& root = *alloc.emplace<DesignRootSymbol>(&tree);
+    DesignRootSymbol root(&tree);
     const auto& cv = root.topInstances()[0]->member<ParameterSymbol>(0).value();
     CHECK(cv.integer() == 4);
 }
