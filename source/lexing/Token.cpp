@@ -7,6 +7,7 @@
 #include "Token.h"
 
 #include "diagnostics/Diagnostics.h"
+#include "parsing/AllSyntax.h"
 #include "util/BumpAllocator.h"
 
 namespace slang {
@@ -18,6 +19,45 @@ void NumericTokenFlags::set(LiteralBase base_, bool isSigned_) {
 
 void NumericTokenFlags::set(TimeUnit unit_) {
     raw |= uint8_t(unit_) << 3;
+}
+
+SyntaxNode* Trivia::syntax() const {
+    ASSERT(kind == TriviaKind::Directive || kind == TriviaKind::SkippedSyntax);
+    return syntaxNode;
+}
+
+void Trivia::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
+    switch (kind) {
+        case TriviaKind::Directive:
+            if (flags & SyntaxToStringFlags::IncludeDirectives)
+                syntaxNode->writeTo(buffer, flags);
+            break;
+        case TriviaKind::SkippedSyntax:
+            if (flags & SyntaxToStringFlags::IncludeSkipped)
+                syntaxNode->writeTo(buffer, flags);
+            break;
+        case TriviaKind::SkippedTokens:
+            if (flags & SyntaxToStringFlags::IncludeSkipped) {
+                for (Token t : tokens)
+                    t.writeTo(buffer, flags);
+            }
+            break;
+        default:
+            buffer.appendRange(rawText);
+            break;
+    }
+}
+
+string_view Trivia::getRawText() const {
+    switch (kind) {
+        case TriviaKind::Directive:
+        case TriviaKind::SkippedSyntax:
+        case TriviaKind::SkippedTokens:
+            ASSERT(false, "Trivia does not have raw text.");
+            return "";
+        default:
+            return rawText;
+    }
 }
 
 Token::Info::Info() :

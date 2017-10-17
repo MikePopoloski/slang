@@ -15,14 +15,14 @@
 #include "util/SmallVector.h"
 #include "util/StringTable.h"
 
-#include "Trivia.h"
-
 namespace slang {
 
 enum class SyntaxKind : uint16_t;
 enum class TokenKind : uint16_t;
 
 class Diagnostics;
+class SyntaxNode;
+class Token;
 
 /// Various flags that we track on the token.
 struct TokenFlags {
@@ -63,6 +63,50 @@ enum class IdentifierType : uint8_t {
     Normal,
     Escaped,
     System
+};
+
+/// The kind of trivia we've stored.
+enum class TriviaKind : uint8_t {
+    Unknown,
+    Whitespace,
+    EndOfLine,
+    LineContinuation,
+    LineComment,
+    BlockComment,
+    DisabledText,
+    SkippedTokens,
+    SkippedSyntax,
+    Directive
+};
+
+/// The Trivia class holds on to a piece of source text that should otherwise
+/// not turn into a token; for example, a preprocessor directive, a line continuation
+/// character, or a comment.
+class Trivia {
+public:
+    TriviaKind kind;
+
+    Trivia() : kind(TriviaKind::Unknown), rawText("") {}
+    Trivia(TriviaKind kind, string_view rawText) : kind(kind), rawText(rawText) {}
+    Trivia(TriviaKind kind, span<Token const> tokens) : kind(kind), tokens(tokens) {}
+    Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
+
+    /// Writes the trivia's text to the given buffer.
+    void writeTo(SmallVector<char>& buffer, uint8_t flags = 0) const;
+
+    /// If this trivia is tracking a skipped syntax node, return that now.
+    SyntaxNode* syntax() const;
+
+    /// Get the raw text of the trivia. Asserts that the trivia type
+    /// has raw text.
+    string_view getRawText() const;
+
+private:
+    union {
+        string_view rawText;
+        span<Token const> tokens;
+        SyntaxNode* syntaxNode;
+    };
 };
 
 /// Represents a single lexed token, including leading trivia, original location, token kind,
