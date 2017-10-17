@@ -757,7 +757,7 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             else if (lexTimeLiteral(info))
                 result = TokenKind::TimeLiteral;
 
-            info->setNumInfo(computeRealValue(value, decPoint, digits, exp, neg));
+            info->setReal(computeRealValue(value, decPoint, digits, exp, neg));
             return result;
         }
         case 'e':
@@ -768,19 +768,21 @@ TokenKind Lexer::lexNumericLiteral(Token::Info* info) {
             uint64_t exp;
             bool neg;
             if (scanExponent(exp, neg)) {
-                info->setNumInfo(computeRealValue(value, digits, digits, exp, neg));
+                info->setReal(computeRealValue(value, digits, digits, exp, neg));
                 return TokenKind::RealLiteral;
             }
             break;
         }
     }
 
-    // normal signed numeric literal
-    info->setNumInfo(SVInt(32, value, true));
-
-    if (lexTimeLiteral(info))
+    if (lexTimeLiteral(info)) {
+        // TODO: overflow?
+        info->setReal((double)value);
         return TokenKind::TimeLiteral;
+    }
 
+    // normal signed numeric literal
+    info->setInt(alloc, SVInt(32, value, true));
     return TokenKind::IntegerLiteral;
 }
 
@@ -814,18 +816,18 @@ TokenKind Lexer::lexApostrophe(Token::Info* info) {
         case '0':
         case '1':
             advance();
-            info->setNumInfo((logic_t)(uint8_t)getDigitValue(c));
+            info->setBit((logic_t)(uint8_t)getDigitValue(c));
             return TokenKind::UnbasedUnsizedLiteral;
         case 'x':
         case 'X':
             advance();
-            info->setNumInfo(logic_t::x);
+            info->setBit(logic_t::x);
             return TokenKind::UnbasedUnsizedLiteral;
         case 'Z':
         case 'z':
         case '?':
             advance();
-            info->setNumInfo(logic_t::z);
+            info->setBit(logic_t::z);
             return TokenKind::UnbasedUnsizedLiteral;
 
         case 's':

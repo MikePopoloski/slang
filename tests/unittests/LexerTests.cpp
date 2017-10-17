@@ -388,10 +388,8 @@ TEST_CASE("Integer literal", "[lexer]") {
 
     CHECK(token.kind == TokenKind::IntegerLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(token.intValue() == 19248);
     CHECK_DIAGNOSTICS_EMPTY;
-
-    auto& value = token.numericValue();
-    CHECK(std::get<SVInt>(value) == 19248);
 }
 
 void checkVectorBase(const std::string& s, LiteralBase base, bool isSigned) {
@@ -430,10 +428,8 @@ TEST_CASE("Unbased unsized literal", "[lexer]") {
 
     CHECK(token.kind == TokenKind::UnbasedUnsizedLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(token.bitValue().value == 1);
     CHECK_DIAGNOSTICS_EMPTY;
-
-    auto& value = token.numericValue();
-    CHECK(std::get<logic_t>(value).value == 1);
 }
 
 TEST_CASE("Real literal (fraction)", "[lexer]") {
@@ -442,10 +438,8 @@ TEST_CASE("Real literal (fraction)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(withinUlp(token.realValue(), 32.57));
     CHECK_DIAGNOSTICS_EMPTY;
-
-    auto& value = token.numericValue();
-    CHECK(withinUlp(std::get<double>(value), 32.57));
 }
 
 TEST_CASE("Real literal (missing fraction)", "[lexer]") {
@@ -456,9 +450,7 @@ TEST_CASE("Real literal (missing fraction)", "[lexer]") {
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == DiagCode::MissingFractionalDigits);
-
-    auto& value = token.numericValue();
-    CHECK(std::get<double>(value) == 32);
+    CHECK(token.realValue() == 32);
 }
 
 TEST_CASE("Real literal (exponent)", "[lexer]") {
@@ -467,10 +459,8 @@ TEST_CASE("Real literal (exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(withinUlp(token.realValue(), 32e57));
     CHECK_DIAGNOSTICS_EMPTY;
-
-    auto& value = token.numericValue();
-    CHECK(withinUlp(std::get<double>(value), 32e57));
 }
 
 TEST_CASE("Real literal (plus exponent)", "[lexer]") {
@@ -479,10 +469,8 @@ TEST_CASE("Real literal (plus exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(withinUlp(token.realValue(), 32e57));
     CHECK_DIAGNOSTICS_EMPTY;
-
-    auto& value = token.numericValue();
-    CHECK(withinUlp(std::get<double>(value), 32e57));
 }
 
 TEST_CASE("Real literal (minus exponent)", "[lexer]") {
@@ -491,10 +479,8 @@ TEST_CASE("Real literal (minus exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(withinUlp(token.realValue(), 32e-57));
     CHECK_DIAGNOSTICS_EMPTY;
-
-    auto& value = token.numericValue();
-    CHECK(withinUlp(std::get<double>(value), 32e-57));
 }
 
 TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
@@ -503,10 +489,8 @@ TEST_CASE("Real literal (fraction exponent)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(withinUlp(token.realValue(), 32.3456e57));
     CHECK_DIAGNOSTICS_EMPTY;
-
-    auto& value = token.numericValue();
-    CHECK(withinUlp(std::get<double>(value), 32.3456e57));
 }
 
 TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
@@ -515,10 +499,8 @@ TEST_CASE("Real literal (exponent overflow)", "[lexer]") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(std::isinf(token.realValue()));
     CHECK_DIAGNOSTICS_EMPTY;
-
-    auto& value = token.numericValue();
-    CHECK(std::isinf(std::get<double>(value)));
 }
 
 TEST_CASE("Real literal (bad exponent)", "[lexer]") {
@@ -539,8 +521,7 @@ TEST_CASE("Real literal (digit overflow)", "[lexer]") {
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK_DIAGNOSTICS_EMPTY;
 
-    auto& value = token.numericValue();
-    CHECK(std::isinf(std::get<double>(value)));
+    CHECK(std::isinf(token.realValue()));
 }
 
 TEST_CASE("Integer literal (not an exponent)", "[lexer]") {
@@ -558,19 +539,7 @@ void checkTimeLiteral(const std::string& s, TimeUnit flagCheck, double num) {
     CHECK(token.kind == TokenKind::TimeLiteral);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == s);
     CHECK(token.numericFlags().unit() == flagCheck);
-
-    double value;
-    const SVInt* svIntValue = std::get_if<SVInt>(&token.numericValue());
-    const double* doubValue = std::get_if<double>(&token.numericValue());
-
-    if (svIntValue)
-        value = (double)svIntValue->as<uint16_t>().value();
-    else if (doubValue)
-        value = *doubValue;
-    else
-        value = 0.0; // will ensure check failure
-
-    CHECK(value == num);
+    CHECK(token.realValue() == num);
     CHECK_DIAGNOSTICS_EMPTY;
 }
 

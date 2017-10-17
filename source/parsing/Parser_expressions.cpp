@@ -162,7 +162,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
         case TokenKind::RealLiteral: {
             // have to check for overflow here, now that we know this is actually a real
             auto literal = consume();
-            if (!std::isfinite(std::get<double>(literal.numericValue())))
+            if (!std::isfinite(literal.realValue()))
                 addError(DiagCode::RealExponentOverflow, literal.location());
             expr = &factory.literalExpression(SyntaxKind::RealLiteralExpression, literal);
             break;
@@ -267,8 +267,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     if (token.kind == TokenKind::IntegerBase)
         baseToken = token;
     else {
-        const SVInt& tokenValue = std::get<SVInt>(token.numericValue());
-
+        const SVInt& tokenValue = token.intValue();
         if (!peek(TokenKind::IntegerBase)) {
             if (tokenValue > INT32_MAX)
                 addError(DiagCode::SignedIntegerOverflow, token.location());
@@ -311,10 +310,9 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
     } while (isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
     string_view rawText(first.rawText().data(), length);
-    NumericTokenValue value = vectorBuilder.finish();
 
     auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location(), 0);
-    info->setNumInfo(std::move(value));
+    info->setInt(alloc, vectorBuilder.finish());
 
     return factory.integerVectorExpression(sizeToken, baseToken, Token(TokenKind::IntegerLiteral, info));
 }

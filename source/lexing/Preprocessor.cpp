@@ -14,19 +14,16 @@ namespace {
 
 using namespace slang;
 
-bool checkTimeMagnitude(Token t, string_view& text, TimescaleMagnitude& magnitude) {
-    const SVInt* val = std::get_if<SVInt>(&t.numericValue());
-    if (!val)
-        return false;
-    else if (*val == 1) {
+bool checkTimeMagnitude(double value, string_view& text, TimescaleMagnitude& magnitude) {
+    if (value == 1) {
         text = "1";
         magnitude = TimescaleMagnitude::One;
     }
-    else if (*val == 10) {
+    else if (value == 10) {
         text = "10";
         magnitude = TimescaleMagnitude::Ten;
     }
-    else if (*val == 100) {
+    else if (value == 100) {
         text = "100";
         magnitude = TimescaleMagnitude::Hundred;
     }
@@ -579,34 +576,28 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
         unit = expect(TokenKind::Identifier);
 
         string_view unused;
-        return checkTimeMagnitude(value, unused, magnitude);
+        std::optional<uint32_t> v = value.intValue().as<uint32_t>();
+        return v && checkTimeMagnitude(*v, unused, magnitude);
     }
 
     if (token.kind == TokenKind::TimeLiteral) {
         // So long as we are dealing with a time literal, we should consume and
         // output the split tokens, even though those split tokens might be
-        // invalid if the data is poorly formated, i.e with a number other than
-        // 1,10,100
+        // invalid if the data is poorly formated, i.e with a number other than 1,10,100
         string_view numText;
-        bool success = checkTimeMagnitude(token, numText, magnitude);
-
-        // get_if necessary to check for the case where there is a double TimeLiteral
-        SVInt dummy(16, 0, true);
-        const SVInt* val = std::get_if<SVInt>(&token.numericValue());
-        if (!val)
-            val = &dummy;
+        bool success = checkTimeMagnitude(token.realValue(), numText, magnitude);
 
         // generate the tokens that come from splitting the TimeLiteral
         auto valueInfo = alloc.emplace<Token::Info>(token.trivia(),
             numText, token.location(), token.getInfo()->flags);
-        value = *alloc.emplace<Token>(TokenKind::IntegerLiteral, valueInfo);
-        valueInfo->setNumInfo(*val);
+        value = Token(TokenKind::IntegerLiteral, valueInfo);
+        valueInfo->setInt(alloc, SVInt(32, (int)token.realValue(), true));
 
         string_view timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit());
         Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
             timeUnitSuffix, token.location() + numText.length(), token.getInfo()->flags);
 
-        unit = *alloc.emplace<Token>(TokenKind::Identifier, unitInfo);
+        unit = Token(TokenKind::Identifier, unitInfo);
         unitInfo->extra = IdentifierType::Normal;
 
         consume();
@@ -640,7 +631,7 @@ Trivia Preprocessor::handleTimescaleDirective(Token directive) {
         // larger values of TimeUnit are more precise than smaller values
         if (!success1 || !success2 || unitPrecision < unitValue ||
                 (unitPrecision == unitValue &&
-                std::get<SVInt>(precision.numericValue()) > std::get<SVInt>(value.numericValue()))) {
+                precision.intValue() > value.intValue())) {
             addError(DiagCode::InvalidTimescaleSpecifier, directive.location());
         }
         else {
@@ -662,8 +653,8 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
                                                      level, parseEndOfDirective());
 
     if (!lineNumber.isMissing() && !fileName.isMissing() && !level.isMissing()) {
-        std::optional<uint8_t> levNum = std::get<SVInt>(level.numericValue()).as<uint8_t>();
-        std::optional<uint32_t> lineNum = std::get<SVInt>(lineNumber.numericValue()).as<uint32_t>();
+        std::optional<uint8_t> levNum = level.intValue().as<uint8_t>();
+        std::optional<uint32_t> lineNum = lineNumber.intValue().as<uint32_t>();
 
         if (!levNum || (levNum != 0 && levNum != 1 && levNum != 2)) {
             // We don't actually use the level for anything, but the spec allows
@@ -1181,7 +1172,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, Sm
         case MacroIntrinsic::Line: {
             uint32_t lineNum = sourceManager.getLineNumber(usageSite.location());
             text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
-            info->setNumInfo(SVInt(lineNum));
+            info->setInt(alloc, SVInt(lineNum));
             info->rawText = string_view(text.copy(alloc));
 
             // Use appendBodyToken so that implicit concatenation will occur if something else

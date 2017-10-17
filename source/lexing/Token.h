@@ -65,8 +65,6 @@ enum class IdentifierType : uint8_t {
     System
 };
 
-using NumericTokenValue = std::variant<logic_t, double, SVInt>;
-
 /// Represents a single lexed token, including leading trivia, original location, token kind,
 /// and any related information derived from the token itself (such as the lexeme).
 ///
@@ -79,7 +77,7 @@ public:
     struct Info {
         /// Numeric-related information.
         struct NumericLiteralInfo {
-            NumericTokenValue value;
+            std::variant<logic_t, double, SVIntStorage> value;
             NumericTokenFlags numericFlags;
         };
 
@@ -106,7 +104,9 @@ public:
         Info();
         Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, int flags);
 
-        void setNumInfo(NumericTokenValue&& value);
+        void setBit(logic_t value);
+        void setReal(double value);
+        void setInt(BumpAllocator& alloc, const SVInt& value);
         void setNumFlags(LiteralBase base, bool isSigned);
         void setTimeUnit(TimeUnit unit);
 
@@ -149,7 +149,9 @@ public:
 
     /// Data accessors for specific kinds of tokens.
     /// These will generally assert if the kind is wrong.
-    const NumericTokenValue& numericValue() const;
+    SVInt intValue() const;
+    double realValue() const;
+    logic_t bitValue() const;
     NumericTokenFlags numericFlags() const;
     IdentifierType identifierType() const;
     SyntaxKind directiveKind() const;

@@ -148,19 +148,19 @@ Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
             return root.allocate<IntegerLiteral>(
                 root.allocator(),
                 root.getKnownType(SyntaxKind::IntType),
-                std::get<SVInt>(syntax.literal.numericValue()),
+                syntax.literal.intValue(),
                 syntax
             );
         case SyntaxKind::RealLiteralExpression:
             return root.allocate<RealLiteral>(
                 root.getKnownType(SyntaxKind::RealType),
-                std::get<double>(syntax.literal.numericValue()),
+                syntax.literal.realValue(),
                 syntax
             );
         case SyntaxKind::UnbasedUnsizedLiteralExpression: {
             // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
             // context, but can grow
-            logic_t val = std::get<logic_t>(syntax.literal.numericValue());
+            logic_t val = syntax.literal.bitValue();
             return root.allocate<UnbasedUnsizedIntegerLiteral>(root.getIntegralType(1, false, val.isUnknown()), val, syntax);
         }
         default: THROW_UNREACHABLE;
@@ -171,7 +171,7 @@ Expression& Binder::bindLiteral(const IntegerVectorExpressionSyntax& syntax) {
     if (syntax.value.isMissing())
         return badExpr(&root.allocate<IntegerLiteral>(root.allocator(), root.getErrorType(), SVInt::Zero, syntax));
 
-    const SVInt& value = std::get<SVInt>(syntax.value.numericValue());
+    const SVInt& value = syntax.value.intValue();
     const TypeSymbol& type = root.getIntegralType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
     return root.allocate<IntegerLiteral>(root.allocator(), type, value, syntax);
 }

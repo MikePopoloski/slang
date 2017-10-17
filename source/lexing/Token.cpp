@@ -30,13 +30,43 @@ Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation
 {
 }
 
-void Token::Info::setNumInfo(NumericTokenValue&& value) {
+void Token::Info::setBit(logic_t value) {
     NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
     if (target)
-        target->value = std::move(value);
+        target->value = value;
     else {
         NumericLiteralInfo numInfo;
-        numInfo.value = std::move(value);
+        numInfo.value = value;
+        extra = std::move(numInfo);
+    }
+}
+
+void Token::Info::setReal(double value) {
+    NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
+    if (target)
+        target->value = value;
+    else {
+        NumericLiteralInfo numInfo;
+        numInfo.value = value;
+        extra = std::move(numInfo);
+    }
+}
+
+void Token::Info::setInt(BumpAllocator& alloc, const SVInt& value) {
+    SVIntStorage storage(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    if (value.isSingleWord())
+        storage.val = *value.getRawData();
+    else {
+        storage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords());
+        memcpy(storage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
+    }
+
+    NumericLiteralInfo* target = std::get_if<NumericLiteralInfo>(&extra);
+    if (target)
+        target->value = storage;
+    else {
+        NumericLiteralInfo numInfo;
+        numInfo.value = storage;
         extra = std::move(numInfo);
     }
 }
@@ -153,10 +183,19 @@ std::string Token::toString(uint8_t writeFlags) const {
     return std::string(buffer.begin(), buffer.end());
 }
 
-const NumericTokenValue& Token::numericValue() const {
-    ASSERT(kind == TokenKind::IntegerLiteral || kind == TokenKind::UnbasedUnsizedLiteral ||
-           kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
-    return info->numInfo().value;
+SVInt Token::intValue() const {
+    ASSERT(kind == TokenKind::IntegerLiteral);
+    return std::get<SVIntStorage>(info->numInfo().value);
+}
+
+double Token::realValue() const {
+    ASSERT(kind == TokenKind::RealLiteral || kind == TokenKind::TimeLiteral);
+    return std::get<double>(info->numInfo().value);
+}
+
+logic_t Token::bitValue() const {
+    ASSERT(kind == TokenKind::UnbasedUnsizedLiteral);
+    return std::get<logic_t>(info->numInfo().value);
 }
 
 NumericTokenFlags Token::numericFlags() const {

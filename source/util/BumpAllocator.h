@@ -44,6 +44,7 @@ public:
     /// Construct a new item using the allocator.
     template<typename T, typename... Args>
     T* emplace(Args&&... args) {
+        //static_assert(std::is_trivially_destructible_v<T>);
         return new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
     }
 

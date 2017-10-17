@@ -445,7 +445,7 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, span<A
     if (peek(TokenKind::Hash)) {
         auto hash = consume();
         auto zero = expect(TokenKind::IntegerLiteral);
-        if (!zero.isMissing() && std::get<SVInt>(zero.numericValue()) != 0)
+        if (!zero.isMissing() && zero.intValue() != 0)
             addError(DiagCode::DeferredDelayMustBeZero, zero.location());
         deferred = &factory.deferredAssertion(hash, zero, Token());
     }
