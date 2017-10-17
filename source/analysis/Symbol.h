@@ -570,8 +570,8 @@ public:
                            SmallVector<const Symbol*>& results);
 
 protected:
-	InstanceSymbol(SymbolKind kind, const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
-				   HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent);
+    InstanceSymbol(SymbolKind kind, const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
+                   HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent);
 
     void fillMembers(MemberBuilder& builder) const final;
 
