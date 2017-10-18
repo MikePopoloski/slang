@@ -104,8 +104,10 @@ bool Path::readFile(vector<char>& buffer) const {
         return false;
 
     struct stat sb;
-    if (fstat(fd, &sb) != 0)
+    if (fstat(fd, &sb) != 0) {
+        close(fd);
         return false;
+    }
 
     posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
 
@@ -116,8 +118,10 @@ bool Path::readFile(vector<char>& buffer) const {
 
     while (remaining) {
         ssize_t r = ::read(fd, buf, remaining);
-        if (r == -1)
+        if (r == -1) {
+            close(fd);
             return false;
+        }
         else if (r == 0) {
             buffer.resize((buf - buffer.data()) + 1);
             break;
@@ -128,6 +132,7 @@ bool Path::readFile(vector<char>& buffer) const {
         }
     }
 
+    close(fd);
     buffer.back() = '\0';
     return true;
 

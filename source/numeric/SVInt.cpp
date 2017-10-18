@@ -567,12 +567,12 @@ SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
         memset(xs, 0xFF, bufLen);
         copyBits((uint8_t*)(newData + words / 2), 0, xs, frontOOB);
         copyBits((uint8_t*)(newData + words / 2), validSelectWidth + frontOOB, xs, backOOB);
-        free(xs);
+        delete[] xs;
     }
     else if (words == 1) {
         // If the output is a single word and everything is valid, we need to return a single-word output
         uint64_t newVal = *newData;
-        free(newData);
+        delete[] newData;
         return SVInt(selectWidth, newVal, false);
     }
 
