@@ -1,5 +1,4 @@
 #!/bin/bash
-set -ev
 
 # Set symlinks for up to date compilers
 mkdir -p latest-symlinks
