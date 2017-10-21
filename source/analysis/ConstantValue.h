@@ -6,9 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <optional>
-#include <variant>
-
 #include "diagnostics/Diagnostics.h"
 #include "numeric/SVInt.h"
 
@@ -48,7 +45,7 @@ public:
                                      SourceLocation location = SourceLocation());
 
 private:
-    std::variant<std::monostate, SVInt, double> value;
+    variant<monostate, SVInt, double> value;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative

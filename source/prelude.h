@@ -51,12 +51,15 @@ using std::make_tuple;
 using std::make_optional;
 using std::nullopt;
 
+// Clang 5.0 and 6.0 fails to compile <variant> from libstdc++
 #ifdef __clang__
 #include "compat/variant.h"
 using mpark::variant;
+using mpark::monostate;
 #else
 #include <variant>
 using std::variant;
+using std::monostate;
 #endif
 
 #include "span.h"

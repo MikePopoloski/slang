@@ -10,7 +10,6 @@
 #include <deque>
 #include <string>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include "text/SourceLocation.h"

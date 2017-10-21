@@ -6,9 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cstdint>
-#include <variant>
-
 #include "numeric/SVInt.h"
 #include "numeric/Time.h"
 #include "text/SourceLocation.h"
@@ -121,7 +118,7 @@ public:
     struct Info {
         /// Numeric-related information.
         struct NumericLiteralInfo {
-            std::variant<logic_t, double, SVIntStorage> value;
+            variant<logic_t, double, SVIntStorage> value;
             NumericTokenFlags numericFlags;
         };
 
@@ -140,7 +137,7 @@ public:
         /// SyntaxKind: The kind of a directive token.
         /// IdentifierType: The kind of an identifer token.
         /// NumericLiteralInfo: Info for numeric tokens.
-        std::variant<string_view, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
+        variant<string_view, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
 
         /// Various token flags.
         uint8_t flags;
