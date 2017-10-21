@@ -274,15 +274,15 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
             case SystemFunction::size:
             case SystemFunction::increment: {
                 //TODO: add support for things other than integral types
-                const auto& type = arguments()[0]->type->as<IntegralTypeSymbol>();
-                bool down = type.lowerBounds[0] >= 0;
+                const auto& argType = arguments()[0]->type->as<IntegralTypeSymbol>();
+                bool down = argType.lowerBounds[0] >= 0;
                 switch (subroutine.systemFunctionKind) {
-                    case SystemFunction::bits:  return SVInt(type.width);
-                    case SystemFunction::low:   return SVInt(down ? type.lowerBounds[0] + type.width - 1 : -type.lowerBounds[0]);
-                    case SystemFunction::high:  return SVInt(down ? type.lowerBounds[0] : -type.lowerBounds[0] - type.width + 1);
-                    case SystemFunction::left:  return SVInt(down ? type.lowerBounds[0] + type.width - 1 : -type.lowerBounds[0] - type.width + 1);
-                    case SystemFunction::right: return SVInt(down ? type.lowerBounds[0] : -type.lowerBounds[0]);
-                    case SystemFunction::size:  return SVInt(type.width);
+                    case SystemFunction::bits:  return SVInt(argType.width);
+                    case SystemFunction::low:   return SVInt(down ? argType.lowerBounds[0] + argType.width - 1 : -argType.lowerBounds[0]);
+                    case SystemFunction::high:  return SVInt(down ? argType.lowerBounds[0] : -argType.lowerBounds[0] - argType.width + 1);
+                    case SystemFunction::left:  return SVInt(down ? argType.lowerBounds[0] + argType.width - 1 : -argType.lowerBounds[0] - argType.width + 1);
+                    case SystemFunction::right: return SVInt(down ? argType.lowerBounds[0] : -argType.lowerBounds[0]);
+                    case SystemFunction::size:  return SVInt(argType.width);
                     case SystemFunction::increment: return SVInt(down ? -1 : 1, true);
                     default: THROW_UNREACHABLE;
                 }

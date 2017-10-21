@@ -1573,12 +1573,17 @@ class ArgVisitor {
 
  public:
   void report_unhandled_arg() {}
-
+#if defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable:4702)
+#endif
   Result visit_unhandled_arg() {
     FMT_DISPATCH(report_unhandled_arg());
     return Result();
   }
-
+#if defined(_WIN32)
+#pragma warning(pop)
+#endif
   /** Visits an ``int`` argument. **/
   Result visit_int(int value) {
     return FMT_DISPATCH(visit_any_int(value));

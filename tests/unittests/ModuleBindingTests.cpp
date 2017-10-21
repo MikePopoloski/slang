@@ -177,7 +177,7 @@ endmodule
 
     DesignRootSymbol root(&tree);
     const auto& instance = evalModule(tree, root);
-    const auto& bus = instance.member<ModuleInstanceSymbol>(0);
+    instance.member<ModuleInstanceSymbol>(0);
 }
 
 TEST_CASE("always_comb", "[binding:modules]") {
