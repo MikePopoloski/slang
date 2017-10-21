@@ -59,6 +59,7 @@ using mpark::monostate;
 namespace std {
 using mpark::get;
 using mpark::get_if;
+using mpark::visit;
 }
 #else
 #include <variant>

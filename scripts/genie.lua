@@ -52,6 +52,7 @@ function testProject(_name)
 		includedirs {
 			path.join(ROOT_DIR, "source"),
 			path.join(ROOT_DIR, "external"),
+			ROOT_DIR,
 		}
 		files {
 			path.join(ROOT_DIR, "tests", _name, "**.cpp"),

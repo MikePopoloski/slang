@@ -64,21 +64,14 @@ function toolchain(_buildDir, _libDir)
 		end
 
 		if "linux-gcc" == _OPTIONS["gcc"] then
-
-			if os.is("macosx") then
-				premake.gcc.cc  = "gcc-7"
-				premake.gcc.cxx = "g++-7"
-			else
-				premake.gcc.cc  = "gcc"
-				premake.gcc.cxx = "g++"
-			end
-
+			premake.gcc.cc  = "gcc-7"
+			premake.gcc.cxx = "g++-7"
 			premake.gcc.ar  = "ar"
 			location (path.join(_buildDir, "projects", _ACTION .. "-linux"))
 
 		elseif "linux-clang" == _OPTIONS["gcc"] then
-			premake.gcc.cc  = "clang"
-			premake.gcc.cxx = "clang++"
+			premake.gcc.cc  = "clang-5.0"
+			premake.gcc.cxx = "clang++-5.0"
 			premake.gcc.ar  = "ar"
 			location (path.join(_buildDir, "projects", _ACTION .. "-linux-clang"))
 
