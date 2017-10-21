@@ -11,6 +11,7 @@ install:
 
 build:
   parallel: true
+  verbosity: minimal
   project: build/projects/vs2017/slang.sln
 
 test_script:
