@@ -56,6 +56,10 @@ using std::nullopt;
 #include "compat/variant.h"
 using mpark::variant;
 using mpark::monostate;
+namespace std {
+using mpark::get;
+using mpark::get_if;
+}
 #else
 #include <variant>
 using std::variant;
