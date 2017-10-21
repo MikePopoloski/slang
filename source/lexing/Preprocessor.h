@@ -118,7 +118,7 @@ private:
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
 
     // Timescale specifier parser
-    bool expectTimescaleSpecifier(Token& unit, Token& precision, TimescaleMagnitude& magnitude);
+    bool expectTimescaleSpecifier(Token& value, Token& unit, TimescaleMagnitude& magnitude);
 
     // Specifies possible macro intrinsics.
     enum class MacroIntrinsic {
@@ -216,7 +216,7 @@ private:
         // When we're parsing formal arguments, we're in directive mode since the macro needs to
         // end at the current line (unless there's a continuation character). For actual arguments,
         // we want to freely span multiple lines.
-        LexerMode currentMode;
+        LexerMode currentMode = LexerMode::Normal;
     };
 
     SourceManager& sourceManager;

@@ -38,12 +38,12 @@ private:
     Diagnostics& diagnostics;
     SmallVectorSized<logic_t, 16> digits;
     SourceLocation firstLocation;
-    uint16_t sizeBits;
-    LiteralBase literalBase;
-    bool signFlag;
-    bool hasUnknown;
-    bool valid;
-    bool first;
+    uint16_t sizeBits = 0;
+    LiteralBase literalBase = LiteralBase::Binary;
+    bool signFlag = false;
+    bool hasUnknown = false;
+    bool valid = false;
+    bool first = false;
 };
 
 }

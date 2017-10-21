@@ -160,7 +160,7 @@ protected:
 
     T* data_ = reinterpret_cast<T*>(&firstElement[0]);
     uint32_t len = 0;
-    uint32_t capacity;
+    uint32_t capacity = 0;
 
     // Always allocate room for one element, the first stack allocated element.
     // This way the base class can be generic with respect to how many elements
