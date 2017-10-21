@@ -5,7 +5,7 @@ dist: trusty
 matrix:
   include:
     - env: BUILD_TARGET=linux-gcc
-    #- env: BUILD_TARGET=linux-clang
+    - env: BUILD_TARGET=linux-clang
 
 addons:
   apt:

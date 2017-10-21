@@ -175,11 +175,6 @@ function toolchain(_buildDir, _libDir)
 			path.join(_libDir, "lib/win64_" .. _ACTION),
 		}
 
-	configuration { "linux-clang" }
-		buildoptions {
-			"-stdlib=libc++"
-		}
-
 	configuration { "linux-gcc" }
 		buildoptions {
 			"-mfpmath=sse",

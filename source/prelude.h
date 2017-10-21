@@ -20,7 +20,6 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
 
 using std::array;
@@ -45,13 +44,20 @@ using std::uint16_t;
 using std::uint32_t;
 using std::uint64_t;
 using std::uintptr_t;
-using std::variant;
 using std::vector;
 
 using std::make_pair;
 using std::make_tuple;
 using std::make_optional;
 using std::nullopt;
+
+#ifdef __clang__
+#include "compat/variant.h"
+using mpark::variant;
+#else
+#include <variant>
+using std::variant;
+#endif
 
 #include "span.h"
 
