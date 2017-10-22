@@ -172,7 +172,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     text.append('"');
     text.append('\0');
 
-    string_view raw(text.copy(alloc));
+    string_view raw = to_string_view(text.copy(alloc));
 
     Diagnostics unused;
     Lexer lexer { BufferID(), raw, alloc, unused };
@@ -606,7 +606,7 @@ void Lexer::lexStringLiteral(Token::Info* info) {
         }
     }
 
-    info->extra = string_view(stringBuffer.copy(alloc));
+    info->extra = to_string_view(stringBuffer.copy(alloc));
 }
 
 TokenKind Lexer::lexEscapeSequence(Token::Info* info) {

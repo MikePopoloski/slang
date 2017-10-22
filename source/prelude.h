@@ -67,7 +67,7 @@ using std::variant;
 using std::monostate;
 #endif
 
-#include "span.h"
+#include "gsl/gsl"
 
 using gsl::span;
 using gsl::make_span;

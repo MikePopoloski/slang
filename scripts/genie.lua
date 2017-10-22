@@ -33,6 +33,7 @@ project "slang"
 		path.join(ROOT_DIR, "external/**.h"),
 		path.join(ROOT_DIR, "external/**.cpp"),
 		path.join(ROOT_DIR, "external/**.cc"),
+		path.join(ROOT_DIR, "external/gsl/*"),
 		path.join(ROOT_DIR, "compat/**.h"),
 	}
 

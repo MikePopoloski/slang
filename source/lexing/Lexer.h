@@ -11,6 +11,7 @@
 #include "diagnostics/Diagnostics.h"
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"
+#include "util/Util.h"
 #include "Token.h"
 
 namespace slang {

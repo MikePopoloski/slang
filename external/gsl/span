@@ -19,16 +19,17 @@
 #ifndef GSL_SPAN_H
 #define GSL_SPAN_H
 
+#include <gsl/gsl_assert>
+#include <gsl/gsl_byte>
+#include <gsl/gsl_util>
+
 #include <array>
-#include <cstddef>
 #include <iterator>
 #include <limits>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
-
-#define Expects(cond)
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -42,18 +43,21 @@
 // more targeted suppressions will be added in a future update to the GSL
 #pragma warning(disable : 26481 26482 26483 26485 26490 26491 26492 26493 26495)
 
+#if _MSC_VER < 1910
+#pragma push_macro("constexpr")
+#define constexpr /*constexpr*/
+
+#endif                          // _MSC_VER < 1910
 #endif                          // _MSC_VER
 
+#ifdef GSL_THROW_ON_CONTRACT_VIOLATION
+#define GSL_NOEXCEPT /*noexcept*/
+#else
 #define GSL_NOEXCEPT noexcept
+#endif // GSL_THROW_ON_CONTRACT_VIOLATION
 
 namespace gsl
 {
-
-template <class T, class U>
-inline T narrow(U u)
-{
-    return static_cast<T>(std::forward<U>(u));
-}
 
 // [views.constants], constants
 constexpr const std::ptrdiff_t dynamic_extent = -1;
@@ -125,7 +129,7 @@ namespace details
         constexpr span_iterator(const Span* span, typename Span::index_type index) GSL_NOEXCEPT
             : span_(span), index_(index)
         {
-            Expects(span == nullptr || (index_ >= 0 && index <= span_->length()));
+            Expects(span == nullptr || (0 <= index_ && index <= span_->length()));
         }
 
         friend span_iterator<Span, true>;
@@ -137,19 +141,19 @@ namespace details
 
         constexpr reference operator*() const GSL_NOEXCEPT
         {
-            Expects(span_);
-            return (*span_)[index_];
+            Expects(index_ != span_->length());
+            return *(span_->data() + index_);
         }
 
         constexpr pointer operator->() const GSL_NOEXCEPT
         {
-            Expects(span_ && index_ >= 0 && index_ < span_->length());
+            Expects(index_ != span_->length());
             return span_->data() + index_;
         }
 
         constexpr span_iterator& operator++() GSL_NOEXCEPT
         {
-            Expects(span_ && index_ >= 0 && index_ < span_->length());
+            Expects(0 <= index_ && index_ != span_->length());
             ++index_;
             return *this;
         }
@@ -163,7 +167,7 @@ namespace details
 
         constexpr span_iterator& operator--() GSL_NOEXCEPT
         {
-            Expects(span_ && index_ > 0 && index_ <= span_->length());
+            Expects(index_ != 0 && index_ <= span_->length());
             --index_;
             return *this;
         }
@@ -183,7 +187,7 @@ namespace details
 
         constexpr span_iterator& operator+=(difference_type n) GSL_NOEXCEPT
         {
-            Expects(span_ && (index_ + n) >= 0 && (index_ + n) <= span_->length());
+            Expects((index_ + n) >= 0 && (index_ + n) <= span_->length());
             index_ += n;
             return *this;
         }
@@ -477,7 +481,7 @@ public:
     constexpr index_type length_bytes() const GSL_NOEXCEPT { return size_bytes(); }
     constexpr index_type size_bytes() const GSL_NOEXCEPT
     {
-        return size() * narrow<index_type>(sizeof(element_type));
+        return size() * narrow_cast<index_type>(sizeof(element_type));
     }
     constexpr bool empty() const GSL_NOEXCEPT { return size() == 0; }
 
@@ -504,10 +508,6 @@ public:
 
     const_reverse_iterator crbegin() const GSL_NOEXCEPT { return const_reverse_iterator{cend()}; }
     const_reverse_iterator crend() const GSL_NOEXCEPT { return const_reverse_iterator{cbegin()}; }
-
-    template<typename U = ElementType,
-             typename = typename std::enable_if_t<std::is_same_v<std::remove_const_t<U>, char>>>
-    operator std::string_view() const { return std::string_view(data(), length()); }
 
 private:
     // this implementation detail class lets us take advantage of the
@@ -600,18 +600,18 @@ namespace details
 
 // [span.objectrep], views of object representation
 template <class ElementType, std::ptrdiff_t Extent>
-span<const std::byte, details::calculate_byte_size<ElementType, Extent>::value>
+span<const byte, details::calculate_byte_size<ElementType, Extent>::value>
 as_bytes(span<ElementType, Extent> s) GSL_NOEXCEPT
 {
-    return {reinterpret_cast<const std::byte*>(s.data()), s.size_bytes()};
+    return {reinterpret_cast<const byte*>(s.data()), s.size_bytes()};
 }
 
 template <class ElementType, std::ptrdiff_t Extent,
           class = std::enable_if_t<!std::is_const<ElementType>::value>>
-span<std::byte, details::calculate_byte_size<ElementType, Extent>::value>
+span<byte, details::calculate_byte_size<ElementType, Extent>::value>
 as_writeable_bytes(span<ElementType, Extent> s) GSL_NOEXCEPT
 {
-    return {reinterpret_cast<std::byte*>(s.data()), s.size_bytes()};
+    return {reinterpret_cast<byte*>(s.data()), s.size_bytes()};
 }
 
 //
@@ -670,9 +670,13 @@ inline constexpr ElementType& at(const span<ElementType, Extent>& s, std::ptrdif
 } // namespace gsl
 
 #undef GSL_NOEXCEPT
-#undef Expects
 
 #ifdef _MSC_VER
+#if _MSC_VER < 1910
+#undef constexpr
+#pragma pop_macro("constexpr")
+
+#endif // _MSC_VER < 1910
 
 #pragma warning(pop)
 #endif // _MSC_VER
