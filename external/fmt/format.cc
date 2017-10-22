@@ -61,6 +61,10 @@
 # pragma warning(disable: 4996)
 #endif
 
+#ifdef __GNUC__
+# pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+
 // Dummy implementations of strerror_r and strerror_s called if corresponding
 // system functions are not available.
 static inline fmt::internal::Null<> strerror_r(int, char *, ...) {
