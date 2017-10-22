@@ -250,7 +250,7 @@ static void findFilesImpl(const Path& path, std::vector<Path>& results, const Ch
 #else
     DIR* d;
     struct dirent* dir;
-    string base = path.str();
+    std::string base = path.str();
     if (base.back() != '/')
         base += '/';
 
@@ -285,7 +285,7 @@ std::vector<Path> Path::findFiles(const Path& path, string_view extension, bool 
         MultiByteToWideChar(CP_UTF8, 0, extension.data(), (int)extension.length(), &extensionCheck[0], size);
     }
 #else
-    string extensionCheck { extension };
+    std::string extensionCheck { extension };
 #endif
 
     std::vector<Path> results;
