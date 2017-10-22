@@ -779,7 +779,7 @@ TEST_CASE("begin_keywords (nested)", "[preprocessor]") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-std::optional<Timescale> lexTimescale(string_view text) {
+optional<Timescale> lexTimescale(string_view text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);

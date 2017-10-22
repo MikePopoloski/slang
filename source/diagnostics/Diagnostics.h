@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cstdint>
 #include <deque>
 #include <string>
 #include <unordered_map>

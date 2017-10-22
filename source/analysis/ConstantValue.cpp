@@ -8,8 +8,8 @@
 
 namespace slang {
 
-std::optional<int> ConstantValue::coerceInteger(uint32_t maxBits, Diagnostics*,
-                                                SourceLocation) {
+optional<int> ConstantValue::coerceInteger(uint32_t maxBits, Diagnostics*,
+                                           SourceLocation) {
     // TODO: report errors
     if (isInteger()) {
         const SVInt& intVal = integer();

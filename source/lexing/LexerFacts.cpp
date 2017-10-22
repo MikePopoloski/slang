@@ -622,7 +622,7 @@ SyntaxKind getDirectiveKind(string_view directive) {
     return SyntaxKind::MacroUsage;
 }
 
-std::optional<KeywordVersion> getKeywordVersion(string_view text) {
+optional<KeywordVersion> getKeywordVersion(string_view text) {
     KeywordVersion version;
     if (keywordVersionTable.lookup(text, version))
         return version;

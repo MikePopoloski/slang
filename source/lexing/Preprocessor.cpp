@@ -576,7 +576,7 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
         unit = expect(TokenKind::Identifier);
 
         string_view unused;
-        std::optional<uint32_t> v = value.intValue().as<uint32_t>();
+        optional<uint32_t> v = value.intValue().as<uint32_t>();
         return v && checkTimeMagnitude(*v, unused, magnitude);
     }
 
@@ -653,8 +653,8 @@ Trivia Preprocessor::handleLineDirective(Token directive) {
                                                      level, parseEndOfDirective());
 
     if (!lineNumber.isMissing() && !fileName.isMissing() && !level.isMissing()) {
-        std::optional<uint8_t> levNum = level.intValue().as<uint8_t>();
-        std::optional<uint32_t> lineNum = lineNumber.intValue().as<uint32_t>();
+        optional<uint8_t> levNum = level.intValue().as<uint8_t>();
+        optional<uint32_t> lineNum = lineNumber.intValue().as<uint32_t>();
 
         if (!levNum || (levNum != 0 && levNum != 1 && levNum != 2)) {
             // We don't actually use the level for anything, but the spec allows

@@ -8,7 +8,6 @@
 
 #include <cmath>
 #include <climits>
-#include <cstdint>
 
 #if defined (_MSC_VER)
 #include <intrin.h>

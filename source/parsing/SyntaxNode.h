@@ -539,7 +539,7 @@ struct TokenOrSyntax {
 
     TokenOrSyntax(Token token) : token(token), isToken(true) {}
     TokenOrSyntax(const SyntaxNode* node) : node(node), isToken(false) {}
-    TokenOrSyntax(std::nullptr_t) : token(), isToken(true) {}
+    TokenOrSyntax(nullptr_t) : token(), isToken(true) {}
 };
 
 /// Base class for all syntax nodes.
@@ -642,7 +642,7 @@ protected:
 template<typename T>
 class SyntaxList : public SyntaxListBase {
 public:
-    SyntaxList(std::nullptr_t) : SyntaxList(span<T* const>(nullptr)) {}
+    SyntaxList(nullptr_t) : SyntaxList(span<T* const>(nullptr)) {}
     SyntaxList(span<T* const> elements) :
         SyntaxListBase((uint32_t)elements.size()),
         elements(elements) {}
@@ -666,7 +666,7 @@ private:
 
 class TokenList : public SyntaxListBase {
 public:
-    TokenList(std::nullptr_t) : TokenList(span<Token const>(nullptr)) {}
+    TokenList(nullptr_t) : TokenList(span<Token const>(nullptr)) {}
     TokenList(span<Token const> elements) :
         SyntaxListBase((uint32_t)elements.size()),
         elements(elements) {}
@@ -722,7 +722,7 @@ public:
         int index;
     };
 
-    SeparatedSyntaxList(std::nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>(nullptr)) {}
+    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>(nullptr)) {}
     SeparatedSyntaxList(span<TokenOrSyntax const> elements) :
         SyntaxListBase((uint32_t)elements.size()),
         elements(elements) {}

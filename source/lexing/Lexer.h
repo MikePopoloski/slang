@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cstdint>
-
 #include "diagnostics/Diagnostics.h"
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"

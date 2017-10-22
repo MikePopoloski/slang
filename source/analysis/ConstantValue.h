@@ -18,7 +18,7 @@ namespace slang {
 class ConstantValue {
 public:
     ConstantValue() {}
-    ConstantValue(std::nullptr_t) {}
+    ConstantValue(nullptr_t) {}
 
     ConstantValue(const SVInt& integer) : value(integer) {}
     ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
@@ -41,8 +41,8 @@ public:
     /// Tries to interpret the constant value as an integer, with no unknown bits,
     /// and which fits in the given number of bits. If it does, the value is returned.
     /// Otherwise, a diagnostic is issued.
-    std::optional<int> coerceInteger(uint32_t maxBits, Diagnostics* diagnostics = nullptr,
-                                     SourceLocation location = SourceLocation());
+    optional<int> coerceInteger(uint32_t maxBits, Diagnostics* diagnostics = nullptr,
+                                SourceLocation location = SourceLocation());
 
 private:
     std::variant<std::monostate, SVInt, double> value;

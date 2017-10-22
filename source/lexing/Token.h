@@ -230,7 +230,7 @@ enum class KeywordVersion : uint8_t {
 
 TokenKind getSystemKeywordKind(string_view text);
 string_view getTokenKindText(TokenKind kind);
-std::optional<KeywordVersion> getKeywordVersion(string_view text);
+optional<KeywordVersion> getKeywordVersion(string_view text);
 const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 
 /// This checks all keywords, regardless of the current keyword table.  Should

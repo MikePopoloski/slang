@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cstdint>
 #include <deque>
 #include <unordered_map>
 
@@ -69,7 +68,7 @@ public:
     void resetAllDirectives();
 
     /// Gets the currently active timescale value, if any has been set by the user.
-    const std::optional<Timescale>& getTimescale() const { return activeTimescale; }
+    const optional<Timescale>& getTimescale() const { return activeTimescale; }
 
     /// Gets the default net type to use if none is specified. This is set via
     /// the `default_nettype directive. If it is set to "none" by the user, this
@@ -258,7 +257,7 @@ private:
 
     /// Various state set by preprocessor directives.
     std::vector<KeywordVersion> keywordVersionStack;
-    std::optional<Timescale> activeTimescale;
+    optional<Timescale> activeTimescale;
     TokenKind defaultNetType;
 
     // maximum number of nested includes
