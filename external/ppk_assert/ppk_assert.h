@@ -346,7 +346,7 @@
 
       AssertionException& operator = (const AssertionException& rhs);
 
-      virtual const char* what() const PPK_ASSERT_EXCEPTION_NO_THROW;
+      const char* what() const PPK_ASSERT_EXCEPTION_NO_THROW override;
 
       const char* file() const;
       int line() const;

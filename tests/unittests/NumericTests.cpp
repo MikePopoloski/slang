@@ -60,7 +60,15 @@ TEST_CASE("Construction", "[numeric]") {
     value8.setAllZ();
     CHECK_THAT(value8[877], exactlyEquals(logic_t::z));
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+#endif
     value1 = std::move(value1);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
     value1 = value5;
     CHECK(value1 == value5);
 

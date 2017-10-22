@@ -313,7 +313,7 @@ public:
     SymbolList createAndAddSymbols(const SyntaxNode& node);
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     std::vector<const Symbol*> members;
 };
@@ -465,7 +465,7 @@ public:
     mutable TypedBumpAllocator<ConstantValue> constantAllocator;
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     // Gets a type symbol for the given integer type syntax node.
     const TypeSymbol& getIntegralType(const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) const;
@@ -514,7 +514,7 @@ public:
     CompilationUnitSymbol(const SyntaxNode& rootNode, const Symbol& parent);
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     const SyntaxNode& rootNode;
 };
@@ -525,7 +525,7 @@ public:
     PackageSymbol(const ModuleDeclarationSyntax& package, const Symbol& parent);
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     const ModuleDeclarationSyntax& syntax;
 };
@@ -573,7 +573,7 @@ protected:
     InstanceSymbol(SymbolKind kind, const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
                    HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent);
 
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     static SourceLocation getLocation(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax);
     static string_view getName(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax);
@@ -631,7 +631,7 @@ public:
     const Statement& getBody() const;
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     const BlockStatementSyntax* syntax = nullptr;
     mutable const Statement* body = nullptr;
@@ -646,7 +646,7 @@ public:
     const Statement& getBody() const;
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     const ProceduralBlockSyntax& syntax;
     mutable const Statement* body = nullptr;
@@ -659,7 +659,7 @@ public:
     IfGenerateSymbol(const IfGenerateSyntax& syntax, const ScopeSymbol& parent);
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     const IfGenerateSyntax& syntax;
 };
@@ -671,7 +671,7 @@ public:
     LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const ScopeSymbol& parent);
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     const LoopGenerateSyntax& syntax;
 };
@@ -687,7 +687,7 @@ public:
                         const ParameterSymbol& implicitParam, const Symbol& parent);
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     const SyntaxNode& body;
     const ParameterSymbol* implicitParam = nullptr;
@@ -862,7 +862,7 @@ public:
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
 
 private:
-    void fillMembers(MemberBuilder& builder) const final;
+    void fillMembers(MemberBuilder& builder) const override final;
 
     mutable const StatementList* body_ = nullptr;
     mutable const TypeSymbol* returnType_ = nullptr;

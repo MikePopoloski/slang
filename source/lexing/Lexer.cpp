@@ -816,7 +816,7 @@ TokenKind Lexer::lexApostrophe(Token::Info* info) {
         case '0':
         case '1':
             advance();
-            info->setBit((logic_t)(uint8_t)getDigitValue(c));
+            info->setBit((logic_t)getDigitValue(c));
             return TokenKind::UnbasedUnsizedLiteral;
         case 'x':
         case 'X':

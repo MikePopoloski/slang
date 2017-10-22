@@ -105,7 +105,8 @@ function toolchain(_buildDir, _libDir)
 		"NativeWChar",
 		"NoEditAndContinue",
 		"Symbols",
-		"ExtraWarnings"
+		"ExtraWarnings",
+		"FatalWarnings"
 	}
 
 	defines {
@@ -194,22 +195,36 @@ function toolchain(_buildDir, _libDir)
 			}
 	end
 
-	configuration { "linux-gcc* or linux-clang*" }
+	configuration { "linux-gcc*" }
 		buildoptions {
 			"-msse2",
 			"-Wunused-value",
 			"-Wformat=2",
 			"-Wnull-dereference",
 			"-Wimplicit-fallthrough=5",
---			"-Wsuggest-override",
+			"-Wsuggest-override",
 			"-Walloc-zero",
 --			"-Wshadow",
---			"-Wconversion",
+			"-Wconversion",
 			"-Wlogical-op",
 			"-Wlogical-not-parentheses",
 			"-Wvla",
 			"-Wnoexcept",
+--			"-Wuseless-cast",
 --			"-Wnon-virtual-dtor"
+		}
+		buildoptions_cpp {
+			"-std=c++1z",
+		}
+		links {
+			"rt",
+			"dl",
+		}
+
+	configuration { "linux-gcc* or linux-clang*" }
+		buildoptions {
+			"-msse2",
+			"-Wno-missing-braces"
 		}
 		buildoptions_cpp {
 			"-std=c++1z",

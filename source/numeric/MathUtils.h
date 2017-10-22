@@ -66,7 +66,7 @@ inline int countPopulation64(uint64_t value) {
 #if defined (_MSC_VER)
     return (int)__popcnt64(value);
 #else
-    return (int)__builtin_popcountll(value);
+    return __builtin_popcountll(value);
 #endif
 }
 

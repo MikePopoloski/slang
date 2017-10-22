@@ -128,9 +128,9 @@ class LogicExactlyEqualMatcher : public Catch::MatcherBase<logic_t> {
 public:
     explicit LogicExactlyEqualMatcher(logic_t v) : value(v) {}
 
-    bool match(const logic_t& t) const final { return exactlyEqual(t, value); }
+    bool match(const logic_t& t) const override final { return exactlyEqual(t, value); }
 
-    std::string describe() const final {
+    std::string describe() const override final {
         std::ostringstream ss;
         ss << "equals " << value;
         return ss.str();
@@ -148,9 +148,9 @@ class SVIntExactlyEqualMatcher : public Catch::MatcherBase<SVInt> {
 public:
     explicit SVIntExactlyEqualMatcher(SVInt v) : value(v) {}
 
-    bool match(const SVInt& t) const final { return exactlyEqual(t, value); }
+    bool match(const SVInt& t) const override final { return exactlyEqual(t, value); }
 
-    std::string describe() const final {
+    std::string describe() const override final {
         std::ostringstream ss;
         ss << "equals " << value;
         return ss.str();
