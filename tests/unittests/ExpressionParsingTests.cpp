@@ -39,7 +39,7 @@ TEST_CASE("MinTypMax expression", "[parser:expressions]") {
 
 void testImplicitClassHandle(TokenKind kind) {
     auto text = getTokenKindText(kind);
-    auto& expr = parseExpression(string(text));
+    auto& expr = parseExpression(std::string(text));
 
     REQUIRE(expr.kind == getKeywordNameExpression(kind));
     CHECK(expr.as<KeywordNameSyntax>().keyword.kind == kind);
@@ -106,7 +106,7 @@ TEST_CASE("Wildcard expression", "[parser:expressions]") {
 }
 
 void testPrefixUnary(TokenKind kind) {
-    auto text = string(getTokenKindText(kind)) + "a";
+    auto text = std::string(getTokenKindText(kind)) + "a";
     auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == getUnaryPrefixExpression(kind));
@@ -134,7 +134,7 @@ TEST_CASE("Unary prefix operators", "[parser:expressions]") {
 }
 
 void testPostfixUnary(TokenKind kind) {
-    auto text = "a" + string(getTokenKindText(kind));
+    auto text = "a" + std::string(getTokenKindText(kind));
     auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == getUnaryPostfixExpression(kind));
@@ -151,7 +151,7 @@ TEST_CASE("Unary postfix operators", "[parser:expressions]") {
 }
 
 void testBinaryOperator(TokenKind kind) {
-    auto text = "a " + string(getTokenKindText(kind)) + " 4";
+    auto text = "a " + std::string(getTokenKindText(kind)) + " 4";
     auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == getBinaryExpression(kind));
@@ -209,7 +209,7 @@ TEST_CASE("Binary operators", "[parser:expression]") {
 }
 
 void testScopedName(string_view text) {
-    auto& expr = parseExpression(string(text));
+    auto& expr = parseExpression(std::string(text));
 
     REQUIRE(expr.kind == SyntaxKind::ScopedName);
     CHECK(expr.toString() == text);
@@ -289,7 +289,7 @@ TEST_CASE("Element Access", "[parser:expressions]") {
 }
 
 void testElementRange(string_view text, SyntaxKind kind) {
-    auto& expr = parseExpression(string(text));
+    auto& expr = parseExpression(std::string(text));
     REQUIRE(expr.kind == SyntaxKind::ElementSelectExpression);
     CHECK(expr.as<ElementSelectExpressionSyntax>().select.selector->kind == kind);
     CHECK(expr.toString(SyntaxToStringFlags::IncludeTrivia) == text);

@@ -15,11 +15,11 @@ using namespace slang;
 
 class DependencyMapper : public SyntaxVisitor<DependencyMapper> {
 public:
-    void addIncludeDir(const string& dir) {
+    void addIncludeDir(const std::string& dir) {
         sourceManager.addUserDirectory(string_view(dir));
     }
 
-    void parseFile(const string& path) {
+    void parseFile(const std::string& path) {
         currentFile = path;
         SyntaxTree tree = SyntaxTree::fromFile(currentFile, sourceManager);
         //visitNode(&tree.root());
@@ -29,7 +29,7 @@ public:
     }
 
     void visit(const ModuleHeaderSyntax& header) {
-        string name { header.name.valueText() };
+        std::string name { header.name.valueText() };
         if (!name.empty()) {
             auto pair = declToFile.try_emplace(name, currentFile);
             if (!pair.second) {
@@ -41,20 +41,20 @@ public:
     }
 
     void visit(const HierarchyInstantiationSyntax& instantiation) {
-        string name { instantiation.type.valueText() };
+        std::string name { instantiation.type.valueText() };
         if (!name.empty())
             fileToDeps[currentFile].insert(name);
     }
 
     void visit(const PackageImportItemSyntax& packageImport) {
-        string name { packageImport.package.valueText() };
+        std::string name { packageImport.package.valueText() };
         if (!name.empty())
             fileToDeps[currentFile].insert(name);
     }
 
     void printDeps() {
         for (const auto& fileAndSet : fileToDeps) {
-            const string& file = fileAndSet.first;
+            const std::string& file = fileAndSet.first;
             for (const auto& dep : fileAndSet.second) {
                 auto it = declToFile.find(dep);
                 if (it == declToFile.end())
@@ -67,13 +67,13 @@ public:
 
 private:
     SourceManager sourceManager;
-    string currentFile;
+    std::string currentFile;
 
     // Map from source element (module declaration, package declaration) to file.
-    std::unordered_map<string, string> declToFile;
+    std::unordered_map<std::string, std::string> declToFile;
 
     // Map from file to a dependency (via a module instantiation or package reference).
-    std::unordered_map<string, std::unordered_set<string>> fileToDeps;
+    std::unordered_map<std::string, std::unordered_set<std::string>> fileToDeps;
 };
 
 int main(int argc, char* argv[]) {
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
 
     // Find all Verilog files in the given directories.
     DependencyMapper mapper;
-    vector<Path> verilogFiles;
+    std::vector<Path> verilogFiles;
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {

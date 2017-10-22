@@ -39,7 +39,7 @@ TEST_CASE("Construction", "[numeric]") {
     value5 = value5;
     CHECK(value5 == value5);
 
-    CHECK(value6.as<uint8_t>() == nullopt);
+    CHECK(value6.as<uint8_t>() == std::nullopt);
     CHECK(value6.as<uint16_t>() == uint16_t(-924));
     CHECK(value6.as<int16_t>() == -924);
     CHECK(value7.as<uint64_t>() == 9223372036854775807ULL);
@@ -150,7 +150,7 @@ TEST_CASE("logic_t operators", "[numeric]") {
     CHECK_THAT(v2 && logic_t::z, exactlyEquals(logic_t(0)));
 }
 
-void checkRoundTrip(string str, LiteralBase base) {
+void checkRoundTrip(std::string str, LiteralBase base) {
     SVInt sv = SVInt::fromString(string_view(str));
     str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
     CHECK(sv.toString(base) == str);

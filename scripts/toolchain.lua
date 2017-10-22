@@ -205,7 +205,7 @@ function toolchain(_buildDir, _libDir)
 			"-Wsuggest-override",
 			"-Walloc-zero",
 --			"-Wshadow",
-			"-Wconversion",
+--			"-Wconversion",
 			"-Wlogical-op",
 			"-Wlogical-not-parentheses",
 			"-Wvla",

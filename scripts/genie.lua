@@ -37,16 +37,6 @@ project "slang"
 		path.join(ROOT_DIR, "compat/**.h"),
 	}
 
-	configuration { "vs*" }
-		buildoptions {
-			"/FI prelude.h"
-		}
-
-	configuration { "linux-gcc* or linux-clang*" }
-		buildoptions {
-			"-include prelude.h"
-		}
-
 function testProject(_name)
 	project (_name)
 		kind "ConsoleApp"
@@ -61,16 +51,6 @@ function testProject(_name)
 		}
 		links {
 			"slang"
-		}
-
-	configuration { "vs*" }
-		buildoptions {
-			"/FI prelude.h"
-		}
-
-	configuration { "linux-gcc* or linux-clang*" }
-		buildoptions {
-			"-include prelude.h"
 		}
 end
 

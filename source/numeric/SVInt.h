@@ -235,8 +235,8 @@ public:
     /// integer type and if so returns it.
     template<typename T>
     optional<T> as() const {
-        if (unknownFlag || getMinRepresentedBits() > numeric_limits<T>::digits)
-            return nullopt;
+        if (unknownFlag || getMinRepresentedBits() > std::numeric_limits<T>::digits)
+            return std::nullopt;
 
         uint64_t word = getRawData()[0];
         if (signFlag && isNegative()) {
@@ -275,8 +275,8 @@ public:
 
     size_t hash(size_t seed = Seed) const;
     void writeTo(SmallVector<char>& buffer, LiteralBase base) const;
-    string toString() const;
-    string toString(LiteralBase base) const;
+    std::string toString() const;
+    std::string toString(LiteralBase base) const;
 
     /// Power function. Note that the result will have the same bitwidth
     /// as this object. The value will be modulo the bit width.

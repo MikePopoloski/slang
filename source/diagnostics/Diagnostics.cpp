@@ -28,11 +28,11 @@ Diagnostic& operator<<(Diagnostic& diag, int arg) {
 }
 
 Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
-    diag.args.emplace_back(string(arg));
+    diag.args.emplace_back(std::string(arg));
     return diag;
 }
 
-Diagnostic& operator<<(Diagnostic& diag, string&& arg) {
+Diagnostic& operator<<(Diagnostic& diag, std::string&& arg) {
     diag.args.emplace_back(std::move(arg));
     return diag;
 }
@@ -44,7 +44,7 @@ Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
     return std::visit([&](auto&& t) -> auto& { return os << t; },
-                      static_cast<const variant<string, int>&>(arg));
+                      static_cast<const std::variant<std::string, int>&>(arg));
 }
 
 Diagnostics::Diagnostics() {

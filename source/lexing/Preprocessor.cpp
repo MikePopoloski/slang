@@ -63,7 +63,7 @@ void Preprocessor::pushSource(SourceBuffer buffer) {
 }
 
 void Preprocessor::predefine(string_view definition, string_view fileName) {
-    std::string text = "`define " + string(definition) + "\n";
+    std::string text = "`define " + std::string(definition) + "\n";
 
     Preprocessor pp(sourceManager, alloc, diagnostics);
     pp.pushSource(sourceManager.assignText(fileName, string_view(text)));

@@ -100,7 +100,7 @@ bool DefinitionSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl
         auto declLocation = declarator->name.location();
         auto pair = nameDupMap.emplace(declName, declLocation);
         if (!pair.second) {
-            addError(DiagCode::DuplicateDefinition, declLocation) << string("parameter") << declName;
+            addError(DiagCode::DuplicateDefinition, declLocation) << std::string("parameter") << declName;
             addError(DiagCode::NotePreviousDefinition, pair.first->second);
         }
         else {

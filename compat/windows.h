@@ -3,6 +3,8 @@
 // macros that cause problems when compiled with the rest of the code.
 #pragma once
 
+#include <cstdarg>
+
 typedef char CHAR;
 typedef wchar_t WCHAR;
 typedef int BOOL;

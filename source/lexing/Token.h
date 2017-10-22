@@ -118,7 +118,7 @@ public:
     struct Info {
         /// Numeric-related information.
         struct NumericLiteralInfo {
-            variant<logic_t, double, SVIntStorage> value;
+            std::variant<logic_t, double, SVIntStorage> value;
             NumericTokenFlags numericFlags;
         };
 
@@ -137,7 +137,7 @@ public:
         /// SyntaxKind: The kind of a directive token.
         /// IdentifierType: The kind of an identifer token.
         /// NumericLiteralInfo: Info for numeric tokens.
-        variant<string_view, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
+        std::variant<string_view, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
 
         /// Various token flags.
         uint8_t flags;

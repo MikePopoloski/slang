@@ -25,9 +25,9 @@ ppk::assert::implementation::AssertAction::AssertAction
 assertionHandler(const char* file, int line, const char* function,
                  const char* expression, int, const char* message) {
 
-    string report = fmt::format("Assertion '{}' failed\n  in file {}, line {}\n"
-                                "  function: {}\n",
-                                expression, file, line, function);
+    std::string report = fmt::format("Assertion '{}' failed\n  in file {}, line {}\n"
+                                     "  function: {}\n",
+                                     expression, file, line, function);
     if (message)
         report += fmt::format("  with message: {}\n\n", message);
 

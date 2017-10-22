@@ -105,7 +105,7 @@ TEST_CASE("Disable fork statement", "[parser:statements]") {
 }
 
 void testTimingControl(string_view text, SyntaxKind kind) {
-    auto& stmt = parseStatement(string(text));
+    auto& stmt = parseStatement(std::string(text));
 
     REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
     CHECK(stmt.as<TimingControlStatementSyntax>().timingControl.kind == kind);
@@ -126,7 +126,7 @@ TEST_CASE("Timing control statements", "[parser:statements]") {
 }
 
 void testStatement(string_view text, SyntaxKind kind) {
-    auto& stmt = parseStatement(string(text));
+    auto& stmt = parseStatement(std::string(text));
 
     REQUIRE(stmt.kind == kind);
     CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);

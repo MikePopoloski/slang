@@ -45,7 +45,7 @@ public:
                                      SourceLocation location = SourceLocation());
 
 private:
-    variant<monostate, SVInt, double> value;
+    std::variant<std::monostate, SVInt, double> value;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative

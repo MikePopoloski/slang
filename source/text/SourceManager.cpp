@@ -16,7 +16,7 @@ SourceManager::SourceManager() {
     bufferEntries.emplace_back(file);
 }
 
-string SourceManager::makeAbsolutePath(string_view path) const {
+std::string SourceManager::makeAbsolutePath(string_view path) const {
     if (path.empty())
         return "";
 
@@ -202,7 +202,7 @@ SourceBuffer SourceManager::assignText(string_view text, SourceLocation included
 }
 
 SourceBuffer SourceManager::assignText(string_view path, string_view text, SourceLocation includedFrom) {
-    vector<char> buffer;
+    std::vector<char> buffer;
     buffer.insert(buffer.end(), text.begin(), text.end());
     if (buffer.empty() || buffer.back() != '\0')
         buffer.push_back('\0');
@@ -217,9 +217,9 @@ SourceBuffer SourceManager::appendText(BufferID buffer, string_view text) {
     return assignText(text, includeLoc);
 }
 
-SourceBuffer SourceManager::assignBuffer(string_view path, vector<char>&& buffer, SourceLocation includedFrom) {
+SourceBuffer SourceManager::assignBuffer(string_view path, std::vector<char>&& buffer, SourceLocation includedFrom) {
     Path fullPath = path;
-    string canonicalStr = fullPath.str();
+    std::string canonicalStr = fullPath.str();
     auto it = lookupCache.find(canonicalStr);
     ASSERT(it == lookupCache.end());
 
@@ -304,7 +304,7 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
     }
 
     // first see if we have this file cached
-    string canonicalStr = absPath.str();
+    std::string canonicalStr = absPath.str();
     auto it = lookupCache.find(canonicalStr);
     if (it != lookupCache.end()) {
         FileData* fd = it->second.get();
@@ -314,7 +314,7 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
     }
 
     // do the read
-    vector<char> buffer;
+    std::vector<char> buffer;
     if (!absPath.readFile(buffer)) {
         lookupCache.emplace(std::move(canonicalStr), nullptr);
         return SourceBuffer();
@@ -323,8 +323,8 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
     return cacheBuffer(std::move(canonicalStr), absPath, includedFrom, std::move(buffer));
 }
 
-SourceBuffer SourceManager::cacheBuffer(string&& canonicalPath, const Path& path, SourceLocation includedFrom, vector<char>&& buffer) {
-    string name = path.filename();
+SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, std::vector<char>&& buffer) {
+    std::string name = path.filename();
     auto fd = std::make_unique<FileData>(
         &*directories.insert(path.parentPath()).first,
         std::move(name),
@@ -335,7 +335,7 @@ SourceBuffer SourceManager::cacheBuffer(string&& canonicalPath, const Path& path
     return createBufferEntry(fdPtr, includedFrom);
 }
 
-void SourceManager::computeLineOffsets(const vector<char>& buffer, vector<uint32_t>& offsets) {
+void SourceManager::computeLineOffsets(const std::vector<char>& buffer, std::vector<uint32_t>& offsets) {
     // first line always starts at offset 0
     offsets.push_back(0);
 

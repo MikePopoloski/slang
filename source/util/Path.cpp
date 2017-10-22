@@ -77,7 +77,7 @@ bool Path::isFile() const {
 #endif
 }
 
-bool Path::readFile(vector<char>& buffer) const {
+bool Path::readFile(std::vector<char>& buffer) const {
 #if defined(_WIN32)
     size_t size;
     try {
@@ -139,7 +139,7 @@ bool Path::readFile(vector<char>& buffer) const {
 #endif
 }
 
-string Path::str(PathType type) const {
+std::string Path::str(PathType type) const {
     std::ostringstream oss;
 
     if (type == PosixPath && absolute)
@@ -157,7 +157,7 @@ string Path::str(PathType type) const {
     return oss.str();
 }
 
-void Path::set(const string& str, PathType type) {
+void Path::set(const std::string& str, PathType type) {
     pathType = type;
     if (type == WindowsPath) {
         elements = tokenize(str, "/\\");
@@ -222,8 +222,8 @@ void Path::set(const std::wstring& wstring, PathType type) {
 #endif
 
 template<typename CharType>
-static void findFilesImpl(const Path& path, vector<Path>& results, const CharType* extension, bool recurse) {
-    vector<Path> directories;
+static void findFilesImpl(const Path& path, std::vector<Path>& results, const CharType* extension, bool recurse) {
+    std::vector<Path> directories;
 
 #if defined(_WIN32)
     WIN32_FIND_DATAW ffd;
@@ -276,7 +276,7 @@ static void findFilesImpl(const Path& path, vector<Path>& results, const CharTyp
     }
 }
 
-vector<Path> Path::findFiles(const Path& path, string_view extension, bool recurse) {
+std::vector<Path> Path::findFiles(const Path& path, string_view extension, bool recurse) {
 #if defined(_WIN32)
     std::wstring extensionCheck;
     if (!extension.empty()) {
@@ -288,7 +288,7 @@ vector<Path> Path::findFiles(const Path& path, string_view extension, bool recur
     string extensionCheck { extension };
 #endif
 
-    vector<Path> results;
+    std::vector<Path> results;
     findFilesImpl(path, results, extensionCheck.c_str(), recurse);
     return results;
 }

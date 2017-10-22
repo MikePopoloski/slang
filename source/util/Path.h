@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "util/Util.h"
+
 namespace slang {
 
 /// Path - Cross platform file path manipulation routines.
@@ -35,7 +37,7 @@ public:
 
     Path(const char* str) { set(str); }
     Path(const std::string& str) { set(str); }
-    Path(string_view str) { set(string(str)); }
+    Path(string_view str) { set(std::string(str)); }
 
     // Paths in Win32 typically need UTF-16 characters
 #if defined(_WIN32)
@@ -59,7 +61,7 @@ public:
 
     /// Attempts to read the file at the current path into the given buffer.
     /// Returns true if successful and false otherwise.
-    bool readFile(vector<char>& buffer) const;
+    bool readFile(std::vector<char>& buffer) const;
 
     std::string extension() const {
         const std::string& name = filename();
@@ -146,8 +148,8 @@ public:
     /// returning any that have the given extension (which should include the leading period).
     /// If the extension provided is empty, all files will be returned. If @a recurse is set
     /// to true, this will also look in subdirectories recursively.
-    static vector<Path> findFiles(const Path& path, string_view extension = "",
-                                  bool recurse = false);
+    static std::vector<Path> findFiles(const Path& path, string_view extension = "",
+                                       bool recurse = false);
 
 #if defined(_WIN32)
     std::wstring wstr(PathType type = NativePath) const;

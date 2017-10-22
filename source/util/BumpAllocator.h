@@ -6,9 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cstdint>
-#include <new>
-#include <utility>
+#include "util/Util.h"
 
 namespace slang {
 
