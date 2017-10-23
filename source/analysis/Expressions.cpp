@@ -44,7 +44,7 @@ IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const TypeSymbol& type, con
     if (value.isSingleWord())
         valueStorage.val = *value.getRawData();
     else {
-        valueStorage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords());
+        valueStorage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
         memcpy(valueStorage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
     }
 }

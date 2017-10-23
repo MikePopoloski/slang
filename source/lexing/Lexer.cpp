@@ -121,7 +121,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
 
     // combine the text for both sides; make sure to include room for a null
     uint32_t newLength = (uint32_t)(leftText.length() + rightText.length() + 1);
-    char* mem = (char*)alloc.allocate(newLength);
+    char* mem = (char*)alloc.allocate(newLength, 1);
     leftText.copy(mem, leftText.length());
     rightText.copy(mem + leftText.length(), rightText.length());
     mem[newLength - 1] = '\0';

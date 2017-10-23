@@ -10,11 +10,9 @@
 
 namespace slang {
 
-BumpAllocator::BumpAllocator(uint32_t segmentSize) :
-    segmentSize(segmentSize + sizeof(Segment))
-{
-    head = allocSegment(nullptr, this->segmentSize);
-    endPtr = (uint8_t*)head + this->segmentSize;
+BumpAllocator::BumpAllocator() {
+    head = allocSegment(nullptr, INITIAL_SIZE);
+    endPtr = (std::byte*)head + INITIAL_SIZE;
 }
 
 BumpAllocator::~BumpAllocator() {
@@ -26,32 +24,37 @@ BumpAllocator::~BumpAllocator() {
     }
 }
 
-uint8_t* BumpAllocator::allocate(uint32_t size) {
-    // simple case: we have room in the current block
-    uint8_t* result = head->current;
-    uint8_t* next = head->current + size;
-    if (next <= endPtr) {
-        head->current = next;
-        return result;
-    }
-
-    // for really large allocations, give them their own segment
-    if (size > (segmentSize >> 1)) {
-        head->prev = allocSegment(head->prev, size + sizeof(Segment));
-        return head->prev->current;
-    }
-
-    // otherwise, allocate a new block
-    head = allocSegment(head, segmentSize);
-    endPtr = (uint8_t*)head + segmentSize;
-    return allocate(size);
+BumpAllocator::BumpAllocator(BumpAllocator&& other) noexcept :
+    head(std::exchange(other.head, nullptr)), endPtr(other.endPtr)
+{
 }
 
-BumpAllocator::Segment* BumpAllocator::allocSegment(Segment* prev, uint32_t size) {
+BumpAllocator& BumpAllocator::operator=(BumpAllocator&& other) noexcept {
+    if (this != &other) {
+        this->~BumpAllocator();
+        new (this) BumpAllocator(std::move(other));
+    }
+    return *this;
+}
+
+std::byte* BumpAllocator::allocateSlow(size_t size, size_t alignment) {
+    // for really large allocations, give them their own segment
+    if (size > (SEGMENT_SIZE >> 1)) {
+        size = (size + alignment - 1) & ~(alignment - 1);
+        head->prev = allocSegment(head->prev, size + sizeof(Segment));
+        return alignPtr(head->prev->current, alignment);
+    }
+
+    // otherwise, start a new block
+    head = allocSegment(head, SEGMENT_SIZE);
+    endPtr = (std::byte*)head + SEGMENT_SIZE;
+    return allocate(size, alignment);
+}
+
+BumpAllocator::Segment* BumpAllocator::allocSegment(Segment* prev, size_t size) {
     auto seg = (Segment*)malloc(size);
     seg->prev = prev;
-    seg->current = (uint8_t*)seg + sizeof(Segment);
-
+    seg->current = (std::byte*)seg + sizeof(Segment);
     return seg;
 }
 

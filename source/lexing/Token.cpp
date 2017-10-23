@@ -97,7 +97,7 @@ void Token::Info::setInt(BumpAllocator& alloc, const SVInt& value) {
     if (value.isSingleWord())
         storage.val = *value.getRawData();
     else {
-        storage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords());
+        storage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
         memcpy(storage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
     }
 

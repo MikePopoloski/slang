@@ -136,7 +136,7 @@ public:
             return nullptr;
 
         const T* source = data_;
-        T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T)));
+        T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T), alignof(T)));
         for (uint32_t i = 0; i < len; i++)
             new (&dest[i]) T(*source++);
         return span<T>(dest, len);
@@ -165,7 +165,7 @@ protected:
     // Always allocate room for one element, the first stack allocated element.
     // This way the base class can be generic with respect to how many elements
     // can actually fit onto the stack.
-    char firstElement[sizeof(T)];
+    alignas(T) char firstElement[sizeof(T)];
     // Don't put any variables after firstElement; we expect that the derived
     // class will fill in stack space here.
 
@@ -256,7 +256,7 @@ public:
     }
 
 private:
-    char stackBase[(N - 1) * sizeof(T)];
+    alignas(T) char stackBase[(N - 1) * sizeof(T)];
 };
 
 }

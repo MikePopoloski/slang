@@ -323,7 +323,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         }
         else if (fileName.kind == TokenKind::StringLiteral) {
             uint32_t len = (uint32_t)fileName.valueText().length();
-            char* stringBuffer = (char*)alloc.allocate(len + 3);
+            char* stringBuffer = (char*)alloc.allocate(len + 3, 1);
             stringBuffer[0] = '"';
             fileName.valueText().copy(stringBuffer + 1, len);
             stringBuffer[len + 1] = '"';

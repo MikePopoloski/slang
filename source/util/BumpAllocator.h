@@ -17,24 +17,11 @@ namespace slang {
 /// the entire thing must be destroyed to release the memory.
 class BumpAllocator {
 public:
-    /// Constructs a new allocator with the given segment size. It's probably a good idea
-    /// to make the segment size a multiple of the page size.
-    explicit BumpAllocator(uint32_t segmentSize = 8192);
+    BumpAllocator();
     ~BumpAllocator();
 
-    BumpAllocator(BumpAllocator&& other) noexcept :
-        head(other.head), endPtr(other.endPtr), segmentSize(other.segmentSize)
-    {
-        other.head = nullptr;
-    }
-
-    BumpAllocator& operator=(BumpAllocator&& other) noexcept {
-        if (this != &other) {
-            this->~BumpAllocator();
-            new (this) BumpAllocator(std::move(other));
-        }
-        return *this;
-    }
+    BumpAllocator(BumpAllocator&& other) noexcept;
+    BumpAllocator& operator=(BumpAllocator&& other) noexcept;
 
     BumpAllocator(const BumpAllocator&) = delete;
     BumpAllocator& operator=(const BumpAllocator&) = delete;
@@ -43,33 +30,54 @@ public:
     template<typename T, typename... Args>
     T* emplace(Args&&... args) {
         static_assert(std::is_trivially_destructible_v<T>);
-        return new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
+        return new (allocate(sizeof(T), alignof(T))) T(std::forward<Args>(args)...);
     }
 
-    /// Allocate @a size bytes of memory.
-    uint8_t* allocate(uint32_t size);
+    /// Allocate @a size bytes of memory with the given @a alignment.
+    std::byte* allocate(size_t size, size_t alignment) {
+        std::byte* base = alignPtr(head->current, alignment);
+        std::byte* next = base + size;
+        if (next > endPtr)
+            return allocateSlow(size, alignment);
+
+        head->current = next;
+        return base;
+    }
 
     // TODO: move this someplace more appropriate
     string_view makeCopy(string_view str) {
         if (str.empty())
             return str;
 
-        char* data = (char*)allocate((uint32_t)str.length());
+        char* data = (char*)allocate(str.length(), 1);
         str.copy(data, str.length());
         return string_view(data, str.length());
     }
 
 protected:
+    // Allocations are tracked as a linked list of segments.
     struct Segment {
         Segment* prev;
-        uint8_t* current;
+        std::byte* current;
     };
 
     Segment* head;
-    uint8_t* endPtr;
-    uint32_t segmentSize;
+    std::byte* endPtr;
 
-    static Segment* allocSegment(Segment* prev, uint32_t size);
+    enum {
+        INITIAL_SIZE = 512,
+        SEGMENT_SIZE = 4096
+    };
+
+    // Slow path handling of allocation.
+    std::byte* allocateSlow(size_t size, size_t alignment);
+
+    static std::byte* alignPtr(std::byte* ptr, size_t alignment) {
+        return reinterpret_cast<std::byte*>(
+            (reinterpret_cast<uintptr_t>(ptr) + alignment - 1) & ~(alignment - 1));
+    }
+
+    static Segment* allocSegment(Segment* prev, size_t size);
 };
 
 template<typename T>
@@ -89,7 +97,7 @@ public:
     /// Construct a new item using the allocator.
     template<typename... Args>
     T* emplace(Args&&... args) {
-        return new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
+        return new (allocate(sizeof(T), alignof(T))) T(std::forward<Args>(args)...);
     }
 };
 

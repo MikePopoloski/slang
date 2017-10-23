@@ -138,7 +138,7 @@ protected:
     }
 
     static Element* getScratchSpace() {
-        static char empty[sizeof(Element) * 4] = {};
+        alignas(Element) static char empty[sizeof(Element) * 4] = {};
         return (Element*)empty;
     }
 };
@@ -203,7 +203,7 @@ public:
     TValue& operator[](TKey&& key) { return emplace(std::move(key)).first->second; }
 
     HashMapRef<TKey, TValue> copy(BumpAllocator& alloc) const {
-        uint8_t* newData = alloc.allocate(sizeof(Element) * this->capacity);
+        uint8_t* newData = (uint8_t*)alloc.allocate(sizeof(Element) * this->capacity, alignof(Element));
         memcpy(newData, this->data, this->capacity * sizeof(Element));
         return HashMapRef<TKey, TValue>((Element*)newData, this->len, this->capacity);
     }
@@ -389,7 +389,7 @@ public:
     }
 
 private:
-    char stackData[sizeof(Element) * N];
+    alignas(Element) char stackData[sizeof(Element) * N];
 };
 
 }
