@@ -14,9 +14,15 @@ clang++ --version
 g++ --version
 
 # Generate project files
-tools/bin/linux/genie --gcc=$BUILD_TARGET --with-coverage gmake
+extraflags="--with-coverage"
+if [ "$BUILD_TARGET" == "linux-clang" ]; then
+	extraflags="$extraflags --sanitizer=undefined,address";
+fi
+tools/bin/linux/genie --gcc=$BUILD_TARGET $extraflags gmake
 
 # Download and build cppcheck
-wget http://github.com/danmar/cppcheck/releases/download/1.81/cppcheck-1.81.tar.gz
-tar xvzf cppcheck-1.81.tar.gz
-make -j 4 -C cppcheck-1.81
+if [ "$BUILD_TARGET" == "linux-gcc" ]; then
+	wget http://github.com/danmar/cppcheck/releases/download/1.81/cppcheck-1.81.tar.gz
+	tar xvzf cppcheck-1.81.tar.gz
+	make -j 4 -C cppcheck-1.81;
+fi

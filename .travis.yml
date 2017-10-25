@@ -23,7 +23,7 @@ install:
 script:
   - if [ "$BUILD_TARGET" == "linux-clang" ]; then make -C build/projects/gmake-linux-clang -j 4; build/linux64_clang/bin/unittestsDebug; fi
   - if [ "$BUILD_TARGET" == "linux-gcc" ]; then make -C build/projects/gmake-linux -j 4; build/linux64_gcc/bin/unittestsDebug; fi
-  - scripts/cppcheck.sh
+  - if [ "$BUILD_TARGET" == "linux-gcc" ]; then scripts/cppcheck.sh; fi
 
 branches:
   only:

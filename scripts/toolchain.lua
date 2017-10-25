@@ -39,6 +39,11 @@ function toolchain(_buildDir, _libDir)
 		description = "Compile with code coverage support",
 	}
 
+	newoption {
+		trigger 	= "sanitizer",
+		description = "Clang sanitizer to include in the build",
+	}
+
 	-- Avoid error when invoking genie --help.
 	if (_ACTION == nil) then return false end
 
@@ -192,6 +197,16 @@ function toolchain(_buildDir, _libDir)
 			linkoptions {
 				"-Wl,--gc-sections",
 				"-Wl,--as-needed",
+			}
+	end
+
+	if _OPTIONS["sanitizer"] then
+		configuration { "linux-clang" }
+			buildoptions {
+				"-fsanitize=" .. _OPTIONS["sanitizer"]
+			}
+			linkoptions {
+				"-fsanitize=" .. _OPTIONS["sanitizer"]
 			}
 	end
 
