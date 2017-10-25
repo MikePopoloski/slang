@@ -51,32 +51,18 @@ static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t of
     }
 }
 
-static void signExtendCopy(uint64_t* output, const uint64_t* input, uint16_t oldBits, uint16_t newBits) {
+static void signExtendCopy(uint64_t* output, const uint64_t* input, uint16_t oldBits,
+                           int oldWords, int newWords) {
     // copy full words over
-    int i;
-    uint64_t word = 0;
-    for (i = 0; i != oldBits / SVInt::BITS_PER_WORD; i++) {
-        word = input[i];
-        output[i] = word;
-    }
+    memcpy(output, input, sizeof(uint64_t) * oldWords);
 
     // sign-extend the last word
-    uint32_t last = (-oldBits) % SVInt::BITS_PER_WORD;
-    if (last != 0)
-        word = (int64_t)input[i] << last >> last;
-    else
-        word = (int64_t)word >> (SVInt::BITS_PER_WORD - 1);
+    int lastWordBits = SVInt::BITS_PER_WORD - (((oldBits - 1) % SVInt::BITS_PER_WORD) + 1);
+    output[oldWords - 1] = int64_t(output[oldWords - 1] << lastWordBits) >> lastWordBits;
 
-    // fill remaining words
-    for (; i != newBits / SVInt::BITS_PER_WORD; i++) {
-        output[i] = word;
-        word = (int64_t)word >> (SVInt::BITS_PER_WORD - 1);
-    }
-
-    // write remaining partial word
-    last = (-newBits) % SVInt::BITS_PER_WORD;
-    if (last != 0)
-        output[i] = word << last >> last;
+    // fill the remaining words with the sign bit
+    int isNegative = output[oldWords - 1] >> (SVInt::BITS_PER_WORD - 1);
+    memset(output + oldWords, isNegative ? -1 : 0, (newWords - oldWords) * sizeof(uint64_t));
 }
 
 // Specialized adder for values <= 64.
@@ -109,6 +95,7 @@ static bool subOne(uint64_t* dst, uint64_t* src, int len, uint64_t value) {
 }
 
 // Generalized adder
+NO_SANITIZE("unsigned-integer-overflow")
 static bool addGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, int len) {
     bool carry = false;
     for (int i = 0; i < len; i++) {
@@ -120,6 +107,7 @@ static bool addGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, int len) {
 }
 
 // Generalized subtractor (x - y)
+NO_SANITIZE("unsigned-integer-overflow")
 static bool subGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, int len) {
     bool borrow = false;
     for (int i = 0; i < len; i++) {
@@ -131,6 +119,7 @@ static bool subGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, int len) {
 }
 
 // One term of a multiply operation
+NO_SANITIZE("unsigned-integer-overflow")
 static uint64_t mulTerm(uint64_t x, uint64_t ly, uint64_t hy, uint64_t& carry) {
     uint64_t lx = x & 0xffffffffULL;
     uint64_t hx = x >> 32;
@@ -167,6 +156,7 @@ static uint64_t mulOne(uint64_t* dst, uint64_t* x, uint32_t len, uint64_t y) {
 }
 
 // Generalized multiplier
+NO_SANITIZE("unsigned-integer-overflow")
 static void mul(uint64_t* dst, uint64_t* x, uint32_t xlen, uint64_t* y, uint32_t ylen) {
     dst[xlen] = mulOne(dst, x, xlen, y[0]);
     for (uint32_t i = 1; i < ylen; i++) {
@@ -187,6 +177,7 @@ static void mul(uint64_t* dst, uint64_t* x, uint32_t xlen, uint64_t* y, uint32_t
 // from "Art of Computer Programming, Volume 2", section 4.3.1, p. 272.
 // Note that this implementation is based on the APInt implementation from
 // the LLVM project.
+NO_SANITIZE("unsigned-integer-overflow")
 static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_t m, uint32_t n) {
     ASSERT(u, "Must provide dividend");
     ASSERT(v, "Must provide divisor");

@@ -1073,7 +1073,6 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
 
 void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, SourceLocation startLoc,
                                   SourceLocation expansionLoc, Token usageSite, bool& isFirst) {
-    int delta = token.location().offset() - startLoc.offset();
     if (isFirst) {
         token = token.withTrivia(alloc, usageSite.trivia());
         isFirst = false;
@@ -1087,6 +1086,8 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
             }
         }
     }
+    // TODO: make sure locations are valid, I've seen unsigned overflow here
+    int delta = token.location().offset() - startLoc.offset();
     dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
 

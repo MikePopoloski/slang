@@ -864,6 +864,7 @@ SVInt& SVInt::operator+=(const SVInt& rhs) {
     return *this;
 }
 
+NO_SANITIZE("unsigned-integer-overflow")
 SVInt& SVInt::operator-=(const SVInt& rhs) {
     if (bitWidth != rhs.bitWidth) {
         if (bitWidth < rhs.bitWidth)
@@ -1343,6 +1344,9 @@ logic_t SVInt::equalsSlowCase(const SVInt& rhs) const {
     if (a1 != a2)
         return logic_t(false);
 
+    if (a1 == 0)
+        return logic_t(true);
+
     // compare each word
     int limit = whichWord(a1 - 1);
     for (int i = 0; i <= limit; i++) {
@@ -1493,6 +1497,7 @@ void SVInt::buildDivideResult(SVInt* result, uint32_t* value, uint16_t bitWidth,
     }
 }
 
+NO_SANITIZE("unsigned-integer-overflow")
 void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords,
     SVInt* quotient, SVInt* remainder)
 {
@@ -1723,18 +1728,17 @@ SVInt signExtend(const SVInt& value, uint16_t bits) {
 
     // copy and sign extend; for unknown values, this copies the data words
     // but not the unknown-indicator words, which we do separately below
-    SVInt result(new uint64_t[SVInt::getNumWords(bits, value.unknownFlag)], bits, value.signFlag, value.unknownFlag);
-    signExtendCopy(result.pVal, value.getRawData(), value.bitWidth, bits);
+    SVInt result = SVInt::allocUninitialized(bits, value.signFlag, value.unknownFlag);
+    int oldWords = SVInt::getNumWords(value.bitWidth, false);
+    int newWords = SVInt::getNumWords(bits, false);
+    signExtendCopy(result.pVal, value.getRawData(), value.bitWidth, oldWords, newWords);
 
     if (value.unknownFlag) {
-        signExtendCopy(
-            result.pVal + SVInt::getNumWords(bits, false),
-            value.pVal + SVInt::getNumWords(value.bitWidth, false),
-            value.bitWidth,
-            bits
-        );
+        signExtendCopy(result.pVal + newWords, value.pVal + oldWords,
+                       value.bitWidth, oldWords, newWords);
     }
 
+    result.clearUnusedBits();
     return result;
 }
 

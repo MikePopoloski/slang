@@ -32,16 +32,16 @@ using std::uintptr_t;
 
 // Clang 5.0 and 6.0 fails to compile <variant> from libstdc++
 #ifdef __clang__
-#include "compat/variant.h"
-namespace std {
-using mpark::variant;
-using mpark::monostate;
-using mpark::get;
-using mpark::get_if;
-using mpark::visit;
+  #include "compat/variant.h"
+  namespace std {
+  using mpark::variant;
+  using mpark::monostate;
+  using mpark::get;
+  using mpark::get_if;
+  using mpark::visit;
 }
 #else
-#include <variant>
+  #include <variant>
 #endif
 
 #include "ppk_assert/ppk_assert.h"
@@ -54,6 +54,13 @@ using mpark::visit;
 
 using gsl::span;
 using gsl::make_span;
+
+// Compiler-specific macros for warnings and suppressions
+#ifdef __clang__
+  #define NO_SANITIZE(warningName)  __attribute__((no_sanitize(warningName)))
+#else
+  #define NO_SANITIZE(warningName)
+#endif
 
 namespace slang {
 

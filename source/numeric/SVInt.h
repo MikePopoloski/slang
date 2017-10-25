@@ -162,6 +162,7 @@ public:
     }
 
     /// Construct from a given 64-bit value. Uses only the bits necessary to hold the value.
+    NO_SANITIZE("unsigned-integer-overflow")
     explicit SVInt(uint64_t value, bool isSigned) :
         SVIntStorage((uint16_t)clog2(value + 1), isSigned, false)
     {

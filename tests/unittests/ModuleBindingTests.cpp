@@ -175,9 +175,9 @@ module Top;
 endmodule
 )");
 
+    // TODO:
     DesignRootSymbol root(&tree);
-    const auto& instance = evalModule(tree, root);
-    instance.member<ModuleInstanceSymbol>(0);
+    evalModule(tree, root);
 }
 
 TEST_CASE("always_comb", "[binding:modules]") {

@@ -44,7 +44,11 @@ inline SourceManager& getSourceManager() {
 }
 
 inline bool withinUlp(double a, double b) {
-    return std::abs(((int64_t)a - (int64_t)b)) <= 1;
+    static_assert(sizeof(double) == sizeof(int64_t));
+    int64_t ia, ib;
+    memcpy(&ia, &a, sizeof(double));
+    memcpy(&ib, &b, sizeof(double));
+    return std::abs(ia - ib) <= 1;
 }
 
 inline std::string to_string(const Diagnostic& diag) {
