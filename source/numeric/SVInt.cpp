@@ -1501,7 +1501,7 @@ NO_SANITIZE("unsigned-integer-overflow")
 void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords,
     SVInt* quotient, SVInt* remainder)
 {
-    ASSERT(lhsWords >= rhsWords, "Fractional result");
+    ASSERT(lhsWords >= rhsWords);
 
     // The Knuth algorithm requires arrays of 32-bit words (because results of operations
     // need to fit natively into 64 bits). Allocate space for the backing memory, either on

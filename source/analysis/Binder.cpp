@@ -22,7 +22,7 @@ Expression& Binder::bindExpression(const ExpressionSyntax& syntax) {
         case SyntaxKind::TimeLiteralExpression:
         case SyntaxKind::WildcardLiteralExpression:
         case SyntaxKind::OneStepLiteralExpression:
-            ASSERT("Not yet implemented");
+            // TODO: unimplemented
             break;
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:

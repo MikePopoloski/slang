@@ -14,7 +14,7 @@ EvalContext::EvalContext() {
 
 ConstantValue* EvalContext::createLocal(const Symbol* symbol, ConstantValue value) {
     ConstantValue& result = stack.top().temporaries[symbol];
-    ASSERT(!result, "Created multiple temporaries with the same key");
+    ASSERT(!result);
     result = value;
     return &result;
 }

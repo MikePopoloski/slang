@@ -111,10 +111,8 @@ Statement& StatementBlockSymbol::bindReturnStatement(const ReturnStatementSyntax
 }
 
 Statement& StatementBlockSymbol::bindConditionalStatement(const ConditionalStatementSyntax& syntax) const {
-    ASSERT(syntax.predicate.conditions.count() == 1,
-           "The &&& operator in if condition is not yet supported");
-    ASSERT(!syntax.predicate.conditions[0]->matchesClause,
-           "Pattern-matching is not yet supported");
+    ASSERT(syntax.predicate.conditions.count() == 1);
+    ASSERT(!syntax.predicate.conditions[0]->matchesClause);
 
     const auto& cond = Binder(*this).bindSelfDeterminedExpression(syntax.predicate.conditions[0]->expr);
     const auto& ifTrue = bindStatement(syntax.statement);

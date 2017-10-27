@@ -16,7 +16,6 @@ extern Diagnostics diagnostics;
 }
 
 using namespace slang;
-using ppk::assert::AssertionException;
 
 #define CHECK_DIAGNOSTICS_EMPTY do {\
     if (!diagnostics.empty()) FAIL_CHECK(DiagnosticWriter(getSourceManager()).report(diagnostics)); \
@@ -26,7 +25,7 @@ inline std::string findTestDir() {
     auto path = Path::getCurrentDirectory();
     while (!(path + "tests").exists()) {
         path = path.parentPath();
-        ASSERT(!path.empty(), "Failed to find root project directory");
+        ASSERT(!path.empty());
     }
 
     return (path + "tests/unittests/data/").str();

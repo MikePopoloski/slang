@@ -44,10 +44,32 @@ using std::uintptr_t;
   #include <variant>
 #endif
 
-#include "ppk_assert/ppk_assert.h"
+#if !defined(ASSERT_ENABLED)
+  #if !defined(NDEBUG)
+    #define ASSERT_ENABLED 1
+  #endif
+#endif
 
-// Just delegate our assert handling to the 3rd part lib
-#define ASSERT PPK_ASSERT
+#if ASSERT_ENABLED
+  #if defined(__GNUC__) || defined(__clang__)
+    #define ASSERT_FUNCTION __PRETTY_FUNCTION__
+  #elif defined(_MSC_VER)
+    #define ASSERT_FUNCTION __FUNCSIG__
+  #elif defined(__SUNPRO_CC)
+    #define ASSERT_FUNCTION __func__
+  #else
+    #define ASSERT_FUNCTION __FUNCTION__
+  #endif
+
+  #define ASSERT(cond) \
+    do { \
+        if (!(cond)) slang::assert::assertFailed(#cond, __FILE__, __LINE__, ASSERT_FUNCTION); \
+    } while (0)
+
+#else
+  #define ASSERT(cond) do { (void)sizeof(cond); } while(0)
+#endif
+
 #define THROW_UNREACHABLE throw std::logic_error("Default case should be unreachable!")
 
 #include "gsl/gsl"
@@ -67,6 +89,17 @@ namespace slang {
 /// Converts a span of characters into a string_view.
 inline string_view to_string_view(span<char> text) {
     return string_view(text.data(), text.length());
+}
+
+namespace assert {
+
+class AssertionException : public std::logic_error {
+public:
+    AssertionException(const std::string& message) : std::logic_error(message) {}
+};
+
+[[noreturn]] void assertFailed(const char* expr, const char* file, int line, const char* func);
+
 }
 
 }

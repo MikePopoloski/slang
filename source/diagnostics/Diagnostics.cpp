@@ -187,7 +187,8 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     // statements
     descriptors[DiagCode::ReturnNotInSubroutine] = { "return statement is only valid inside task and function blocks", DiagnosticSeverity::Error };
 
-    ASSERT((int)DiagCode::MaxValue == descriptors.size(), "When you add a new diagnostic code you need to update default messages");
+    // if this assert fails, you added a new diagnostic without adding a descriptor for it
+    ASSERT((int)DiagCode::MaxValue == descriptors.size());
 }
 
 void DiagnosticWriter::setMessage(DiagCode code, std::string format) {
@@ -218,7 +219,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         formatDiag(writer, location, diagnostic.ranges, severityToString[(int)desc.severity], desc.format);
     else {
         // The fmtlib API for arg lists isn't very pretty, but it gets the job done
-        ASSERT(diagnostic.args.size() < fmt::ArgList::MAX_PACKED_ARGS - 1, "Too many arguments to diagnostic format.");
+        ASSERT(diagnostic.args.size() < fmt::ArgList::MAX_PACKED_ARGS - 1);
         typedef fmt::internal::ArgArray<fmt::ArgList::MAX_PACKED_ARGS - 1> ArgArray;
         typename ArgArray::Type values;
         uint64_t types = 0;

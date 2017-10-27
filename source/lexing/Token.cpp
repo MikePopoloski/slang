@@ -53,7 +53,8 @@ string_view Trivia::getRawText() const {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:
         case TriviaKind::SkippedTokens:
-            ASSERT(false, "Trivia does not have raw text.");
+            // TODO: maybe just throw here
+            ASSERT(false);
             return "";
         default:
             return rawText;

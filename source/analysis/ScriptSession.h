@@ -51,7 +51,8 @@ public:
                 else if (isStatement(node.kind))
                     return evalStatement(node.as<StatementSyntax>());
                 else
-                    ASSERT(false, "Not supported yet");
+                    // TODO: not supported yet
+                    ASSERT(false);
         }
         return nullptr;
     }

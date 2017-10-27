@@ -179,11 +179,11 @@ static void mul(uint64_t* dst, uint64_t* x, uint32_t xlen, uint64_t* y, uint32_t
 // the LLVM project.
 NO_SANITIZE("unsigned-integer-overflow")
 static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_t m, uint32_t n) {
-    ASSERT(u, "Must provide dividend");
-    ASSERT(v, "Must provide divisor");
-    ASSERT(q, "Must provide quotient");
-    ASSERT(u != v && u != q && v != q, "Must use different memory");
-    ASSERT(n > 1, "n must be > 1");
+    ASSERT(u);
+    ASSERT(v);
+    ASSERT(q);
+    ASSERT(u != v && u != q && v != q);
+    ASSERT(n > 1);
 
     // b denotes the base of the number system. In our case b is 2^32.
     const uint64_t b = 1ULL << 32;
