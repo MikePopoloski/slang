@@ -188,7 +188,7 @@ Path Path::makeAbsolute(const Path& path) {
 Path Path::getCurrentDirectory() {
 #if !defined(_WIN32)
     char temp[PATH_MAX];
-    if (::getcwd(temp, PATH_MAX) == NULL)
+    if (::getcwd(temp, PATH_MAX) == nullptr)
         throw std::runtime_error("Internal error in getcwd(): " + std::string(strerror(errno)));
     return Path(temp);
 #else
@@ -236,10 +236,10 @@ static void findFilesImpl(const Path& path, std::vector<Path>& results, const Ch
         if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
             const wchar_t* ext = wcsrchr(ffd.cFileName, '.');
             if (!extension || (ext && wcscmp(ext, extension) == 0))
-                results.push_back(base + ffd.cFileName);
+                results.emplace_back(base + ffd.cFileName);
         }
         else if (wcscmp(ffd.cFileName, L".") != 0 && wcscmp(ffd.cFileName, L"..") != 0) {
-            directories.push_back(base + ffd.cFileName);
+            directories.emplace_back(base + ffd.cFileName);
         }
     } while (FindNextFileW(hFind, &ffd) != 0);
 
@@ -260,10 +260,10 @@ static void findFilesImpl(const Path& path, std::vector<Path>& results, const Ch
             if (dir->d_type == DT_REG) {
                 const char* ext = strrchr(dir->d_name, '.');
                 if (!extension || (ext && strcmp(ext, extension) == 0))
-                    results.push_back(base + dir->d_name);
+                    results.emplace_back(base + dir->d_name);
             }
             else if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0) {
-                directories.push_back(base + dir->d_name);
+                directories.emplace_back(base + dir->d_name);
             }
         }
         closedir(d);

@@ -225,7 +225,7 @@ function toolchain(_buildDir, _libDir)
 			"-Wlogical-not-parentheses",
 			"-Wvla",
 			"-Wnoexcept",
---			"-Wuseless-cast",
+			"-Wduplicated-cond",
 --			"-Wnon-virtual-dtor"
 		}
 		buildoptions_cpp {

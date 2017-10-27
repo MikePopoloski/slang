@@ -64,10 +64,10 @@ using std::uintptr_t;
   #define ASSERT(cond) \
     do { \
         if (!(cond)) slang::assert::assertFailed(#cond, __FILE__, __LINE__, ASSERT_FUNCTION); \
-    } while (0)
+    } while (false)
 
 #else
-  #define ASSERT(cond) do { (void)sizeof(cond); } while(0)
+  #define ASSERT(cond) do { (void)sizeof(cond); } while (false)
 #endif
 
 #define THROW_UNREACHABLE throw std::logic_error("Default case should be unreachable!")
