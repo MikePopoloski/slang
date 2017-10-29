@@ -98,7 +98,7 @@ namespace slang {
 	cppf.write('uint32_t SyntaxNode::getChildCount() const {\n')
 	cppf.write('    switch (kind) {\n')
 	cppf.write('        case SyntaxKind::Unknown: return 0;\n')
-	cppf.write('        case SyntaxKind::List: return ((SyntaxListBase*)this)->getChildCount();\n')
+	cppf.write('        case SyntaxKind::List: return ((const SyntaxListBase*)this)->getChildCount();\n')
 
 	for k,v in kindmap.items():
 		count = alltypes[v].memberCount

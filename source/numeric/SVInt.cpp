@@ -545,11 +545,11 @@ SVInt SVInt::bitSelect(int16_t lsb, int16_t msb) const {
     int words = getNumWords(selectWidth, unknownFlag || anyOOB);
     uint64_t* newData = new uint64_t[words]();
 
-    copyBits((uint8_t*)newData, frontOOB, (uint8_t*)getRawData(), validSelectWidth, frontOOB ? 0 : lsb);
+    copyBits((uint8_t*)newData, frontOOB, (const uint8_t*)getRawData(), validSelectWidth, frontOOB ? 0 : lsb);
     bool actualUnknownsInResult = anyOOB;
     if (unknownFlag) {
         // copy over preexisting unknown data
-        copyBits((uint8_t*)(newData + words / 2), frontOOB, (uint8_t*)(pVal + getNumWords() / 2), validSelectWidth);
+        copyBits((uint8_t*)(newData + words / 2), frontOOB, (const uint8_t*)(pVal + getNumWords() / 2), validSelectWidth);
         for (int i = words / 2; i < words; ++i) {
             if (newData[i] != 0) {
                 actualUnknownsInResult = true;
@@ -1844,7 +1844,7 @@ SVInt concatenate(span<SVInt const> operands) {
         uint64_t val = 0;
         // The first operand wriets the msb, therefore, we must operate in reverse
         for (auto it = operands.rbegin(); it != operands.rend(); it++) {
-            copyBits((uint8_t*)&val, offset, (uint8_t*)&it->val, it->bitWidth);
+            copyBits((uint8_t*)&val, offset, (const uint8_t*)&it->val, it->bitWidth);
             offset += it->bitWidth;
         }
         return SVInt(bits, val, false);
@@ -1857,7 +1857,7 @@ SVInt concatenate(span<SVInt const> operands) {
     // offset (in bits) to which we are writing
     uint16_t offset = 0;
     for (auto it = operands.rbegin(); it != operands.rend(); it++) {
-        copyBits((uint8_t*)data, offset, (uint8_t*)it->getRawData(), it->bitWidth);
+        copyBits((uint8_t*)data, offset, (const uint8_t*)it->getRawData(), it->bitWidth);
         if (it->unknownFlag) {
             copyBits((uint8_t*)(data + words / 2), offset,
                      (uint8_t*)(it->pVal + it->getNumWords() / 2), it->bitWidth);

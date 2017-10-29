@@ -145,7 +145,7 @@ TEST_CASE("Function calls", "[parser:statements]") {
     testStatement("foo::bar.baz(blah, 324, yes);", SyntaxKind::ExpressionStatement);
 }
 
-DataDeclarationSyntax* parseBlockDeclaration(const std::string& text) {
+void parseBlockDeclaration(const std::string& text) {
     auto fullText = "begin " + text + " end";
     auto& stmt = parseStatement(fullText);
 
@@ -155,8 +155,6 @@ DataDeclarationSyntax* parseBlockDeclaration(const std::string& text) {
     auto& block = stmt.as<BlockStatementSyntax>();
     REQUIRE(block.items.count() == 1);
     REQUIRE(block.items[0]->kind == SyntaxKind::DataDeclaration);
-
-    return (DataDeclarationSyntax*)block.items[0];
 }
 
 TEST_CASE("Sequential declarations", "[parser:statements]") {

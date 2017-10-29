@@ -299,7 +299,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
 // Like memcpy, but at the bit level instead of bytes
 // i.e if destBitOffset % 8 == bitLength % 8 == 0, this is
 // equivalent to memcpy(dest + destBitOffset / 8, src, bitLength / 8)
-static void copyBits(uint8_t* dest, uint16_t destBitOffset, uint8_t* src, uint16_t bitLength, uint16_t srcBitOffset = 0) {
+static void copyBits(uint8_t* dest, uint16_t destBitOffset, const uint8_t* src, uint16_t bitLength, uint16_t srcBitOffset = 0) {
     if (bitLength == 0) return;
     // Get the first byte we want to write to, and the reamaining bits are a bit offset
     dest += destBitOffset / 8;

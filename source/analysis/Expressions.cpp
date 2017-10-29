@@ -136,7 +136,7 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
     // TODO: more robust lvalue handling
     ConstantValue* lvalue = nullptr;
     if (isAssignment()) {
-        lvalue = context.findLocal(&((VariableRefExpression&)left()).symbol);
+        lvalue = context.findLocal(&((const VariableRefExpression&)left()).symbol);
         ASSERT(lvalue);
     }
 

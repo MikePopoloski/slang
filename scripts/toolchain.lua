@@ -236,10 +236,22 @@ function toolchain(_buildDir, _libDir)
 			"dl",
 		}
 
-	configuration { "linux-gcc* or linux-clang*" }
+	configuration { "linux-clang*" }
 		buildoptions {
 			"-msse2",
-			"-Wno-missing-braces"
+			"-Warray-bounds-pointer-arithmetic",
+			"-Wassign-enum",
+			"-Wbad-function-cast",
+			"-Wcast-qual",
+			"-Wcomma",
+			"-Wduplicate-enum",
+			"-Wduplicate-method-arg",
+			"-Wimplicit-fallthrough",
+			"-Wrange-loop-analysis",
+			"-Wpedantic",
+--			"-Wconversion",
+--			"-Wshadow",
+			"-Wno-missing-braces",
 		}
 		buildoptions_cpp {
 			"-std=c++1z",

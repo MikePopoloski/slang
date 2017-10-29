@@ -1586,6 +1586,7 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
                 case TokenKind::RandKeyword:
                 case TokenKind::RandCKeyword:
                     randomQualifier = consume();
+                    break;
                 default:
                     break;
             }
