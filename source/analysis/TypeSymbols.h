@@ -13,8 +13,8 @@ namespace slang {
 /// Base class for all data types.
 class TypeSymbol : public Symbol {
 public:
-    TypeSymbol(SymbolKind kind, string_view name) : Symbol(kind, *this, name) {}
-    TypeSymbol(SymbolKind kind, string_view name, const Symbol& parent) : Symbol(kind, parent, name) {}
+    TypeSymbol(SymbolKind kind, string_view name) : Symbol(kind, name) {}
+    TypeSymbol(SymbolKind kind, string_view name, const ScopeSymbol& parent) : Symbol(kind, parent, name) {}
 
     // SystemVerilog defines various levels of type compatibility, which are used
     // in different scenarios. See the spec, section 6.22.
@@ -53,7 +53,7 @@ public:
     // TODO: parent pointer
     IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState,
                        span<int const> lowerBounds, span<int const> widths) :
-        TypeSymbol(SymbolKind::IntegralType, *this, getTokenKindText(keywordType), SourceLocation()),
+        TypeSymbol(SymbolKind::IntegralType, getTokenKindText(keywordType), SourceLocation()),
         lowerBounds(lowerBounds), widths(widths),
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
 
@@ -74,7 +74,7 @@ public:
     TokenKind keywordType;
 
     RealTypeSymbol(TokenKind keywordType, int width) :
-        TypeSymbol(SymbolKind::RealType, *this, getTokenKindText(keywordType), SourceLocation()),
+        TypeSymbol(SymbolKind::RealType, getTokenKindText(keywordType), SourceLocation()),
         width(width), keywordType(keywordType) {}
 };
 
@@ -104,7 +104,7 @@ public:
 /// resolve the type of some expression or declaration.
 class ErrorTypeSymbol : public TypeSymbol {
 public:
-    explicit ErrorTypeSymbol() : TypeSymbol(SymbolKind::Unknown, *this) {}
+    explicit ErrorTypeSymbol() : TypeSymbol(SymbolKind::Unknown) {}
 };
 
 class TypeAliasSymbol : public TypeSymbol {
@@ -112,7 +112,7 @@ public:
     const SyntaxNode& syntax;
     const TypeSymbol* underlying;
 
-    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, string_view alias, const Symbol& parent) :
+    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, string_view alias, const ScopeSymbol& parent) :
         TypeSymbol(SymbolKind::TypeAlias, parent, alias, location),
         syntax(syntax), underlying(underlying) {}
 };

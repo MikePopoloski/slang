@@ -11,7 +11,7 @@
 
 namespace slang {
 
-CompilationUnitSymbol::CompilationUnitSymbol(const SyntaxNode& rootNode, const Symbol& parent) :
+CompilationUnitSymbol::CompilationUnitSymbol(const SyntaxNode& rootNode, const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::CompilationUnit, parent),
     rootNode(rootNode)
 {
@@ -29,7 +29,7 @@ void CompilationUnitSymbol::fillMembers(MemberBuilder& builder) const {
     }
 }
 
-PackageSymbol::PackageSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& parent) :
+PackageSymbol::PackageSymbol(const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::Package, syntax.header.name, parent), syntax(syntax)
 {
 }
@@ -39,7 +39,7 @@ void PackageSymbol::fillMembers(MemberBuilder& builder) const {
         builder.add(*member, *this);
 }
 
-DefinitionSymbol::DefinitionSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& parent) :
+DefinitionSymbol::DefinitionSymbol(const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent) :
     Symbol(SymbolKind::Module, syntax.header.name, parent), syntax(syntax)
 {
 }
@@ -352,12 +352,12 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
 }
 
 GenerateBlockSymbol::GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
-                                         const Symbol& parent) :
+                                         const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location),
     body(body) {}
 
 GenerateBlockSymbol::GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
-                                         const ParameterSymbol& implicitParam, const Symbol& parent) :
+                                         const ParameterSymbol& implicitParam, const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location),
     body(body), implicitParam(&implicitParam) {}
 

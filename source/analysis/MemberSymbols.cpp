@@ -161,10 +161,10 @@ Statement& StatementBlockSymbol::badStmt(const Statement* stmt) const {
     return getRoot().allocate<InvalidStatement>(stmt);
 }
 
-SequentialBlockSymbol::SequentialBlockSymbol(const Symbol& parent) :
+SequentialBlockSymbol::SequentialBlockSymbol(const ScopeSymbol& parent) :
     StatementBlockSymbol(SymbolKind::SequentialBlock, parent) {}
 
-SequentialBlockSymbol::SequentialBlockSymbol(const BlockStatementSyntax& syntax, const Symbol& parent) :
+SequentialBlockSymbol::SequentialBlockSymbol(const BlockStatementSyntax& syntax, const ScopeSymbol& parent) :
     StatementBlockSymbol(SymbolKind::SequentialBlock, parent),
     syntax(&syntax) {}
 
@@ -175,7 +175,7 @@ const Statement& SequentialBlockSymbol::getBody() const {
 }
 
 SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopStatementSyntax& forLoop,
-                                                                  const Symbol& parent) {
+                                                                  const ScopeSymbol& parent) {
     BumpAllocator& alloc = parent.getRoot().allocator();
     SequentialBlockSymbol& block = *alloc.emplace<SequentialBlockSymbol>(parent);
 
@@ -192,7 +192,7 @@ void SequentialBlockSymbol::fillMembers(MemberBuilder& builder) const {
         findChildSymbols(builder, syntax->items);
 }
 
-ProceduralBlockSymbol::ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const Symbol& parent) :
+ProceduralBlockSymbol::ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const ScopeSymbol& parent) :
     StatementBlockSymbol(SymbolKind::ProceduralBlock, parent),
     syntax(syntax)
 {
@@ -212,7 +212,7 @@ void ProceduralBlockSymbol::fillMembers(MemberBuilder&) const {
 }
 
 ExplicitImportSymbol::ExplicitImportSymbol(string_view packageName, string_view importName,
-                                           SourceLocation location, const Symbol& parent) :
+                                           SourceLocation location, const ScopeSymbol& parent) :
     Symbol(SymbolKind::ExplicitImport, parent, importName, location),
     packageName(packageName), importName(importName)
 {
@@ -236,7 +236,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
 }
 
 ImplicitImportSymbol::ImplicitImportSymbol(const WildcardImportSymbol& wildcard, const Symbol& importedSymbol,
-                                           const Symbol& parent) :
+                                           const ScopeSymbol& parent) :
     Symbol(SymbolKind::ImplicitImport, parent, importedSymbol.name, wildcard.location),
     wildcard_(wildcard), import(importedSymbol)
 {
@@ -246,7 +246,7 @@ const PackageSymbol* ImplicitImportSymbol::package() const {
     return wildcard_.package();
 }
 
-WildcardImportSymbol::WildcardImportSymbol(string_view packageName, SourceLocation location, const Symbol& parent) :
+WildcardImportSymbol::WildcardImportSymbol(string_view packageName, SourceLocation location, const ScopeSymbol& parent) :
     Symbol(SymbolKind::WildcardImport, parent, /* no name */ "", location),
     packageName(packageName)
 {
@@ -269,11 +269,11 @@ const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName
     if (!symbol)
         return nullptr;
 
-    return &getRoot().allocate<ImplicitImportSymbol>(*this, *symbol, *containingSymbol);
+    return &getRoot().allocate<ImplicitImportSymbol>(*this, *symbol, *getParent());
 }
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                                 ConstantValue value, const Symbol& parent) :
+                                 ConstantValue value, const ScopeSymbol& parent) :
     Symbol(SymbolKind::Parameter, parent, name, location),
     type_(&type)
 {
@@ -283,7 +283,7 @@ ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, cons
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const DataTypeSyntax& typeSyntax,
                                  const ExpressionSyntax* defaultInitializer, const ExpressionSyntax* assignedValue,
                                  const ScopeSymbol* instanceScope, bool isLocalParam, bool isPortParam,
-                                 const Symbol& parent) :
+                                 const ScopeSymbol& parent) :
     Symbol(SymbolKind::Parameter, parent, name, location),
     instanceScope(instanceScope), typeSyntax(&typeSyntax),
     defaultInitializer(defaultInitializer), assignedValue(assignedValue),
@@ -347,22 +347,22 @@ void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& 
     }
 }
 
-VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const Symbol& parent, VariableLifetime lifetime,
+VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const ScopeSymbol& parent, VariableLifetime lifetime,
                                bool isConst, const ExpressionSyntax* initializer) :
     Symbol(SymbolKind::Variable, name, parent),
     lifetime(lifetime), isConst(isConst), typeSyntax(&type), initializerSyntax(initializer) {}
 
-VariableSymbol::VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+VariableSymbol::VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const ScopeSymbol& parent,
                                VariableLifetime lifetime, bool isConst, const Expression* initializer) :
     Symbol(SymbolKind::Variable, parent, name, location),
     lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer) {}
 
 VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, SourceLocation location, const TypeSymbol& type,
-                               const Symbol& parent, VariableLifetime lifetime, bool isConst, const Expression* initializer) :
+                               const ScopeSymbol& parent, VariableLifetime lifetime, bool isConst, const Expression* initializer) :
     Symbol(kind, parent, name, location),
     lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer) {}
 
-void VariableSymbol::fromSyntax(const Symbol& parent, const DataDeclarationSyntax& syntax,
+void VariableSymbol::fromSyntax(const ScopeSymbol& parent, const DataDeclarationSyntax& syntax,
                                 SmallVector<const VariableSymbol*>& results) {
 
     const RootSymbol& root = parent.getRoot();
@@ -393,18 +393,18 @@ const Expression* VariableSymbol::initializer() const {
     return initializerBound;
 }
 
-FormalArgumentSymbol::FormalArgumentSymbol(const TypeSymbol& type, const Symbol& parent) :
+FormalArgumentSymbol::FormalArgumentSymbol(const TypeSymbol& type, const ScopeSymbol& parent) :
     VariableSymbol(SymbolKind::FormalArgument, "", SourceLocation(), type, parent) {}
 
 FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                                           const Symbol& parent, const Expression* initializer,
+                                           const ScopeSymbol& parent, const Expression* initializer,
                                            FormalArgumentDirection direction) :
     VariableSymbol(SymbolKind::FormalArgument, name, location, type, parent, VariableLifetime::Automatic,
                    direction == FormalArgumentDirection::ConstRef, initializer),
     direction(direction) {}
 
 // TODO: handle functions that don't have simple name tokens
-SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const Symbol& parent) :
+SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const ScopeSymbol& parent) :
     StatementBlockSymbol(SymbolKind::Subroutine, syntax.prototype.name.getFirstToken(), parent),
     syntax(&syntax)
 {
@@ -413,7 +413,7 @@ SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, cons
 }
 
 SubroutineSymbol::SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
-                                   SystemFunction systemFunction, const Symbol& parent) :
+                                   SystemFunction systemFunction, const ScopeSymbol& parent) :
     StatementBlockSymbol(SymbolKind::Subroutine, parent, name),
     systemFunctionKind(systemFunction), returnType_(&returnType), arguments_(arguments) {}
 
@@ -427,10 +427,10 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
     if (isSystemFunction())
         return;
 
-    const ScopeSymbol& parentScope = containingScope();
+    const ScopeSymbol& parent = containingScope();
     const RootSymbol& root = getRoot();
     const auto& proto = syntax->prototype;
-    const auto& returnType = getRoot().factory.getType(*proto.returnType, parentScope);
+    const auto& returnType = getRoot().factory.getType(*proto.returnType, parent);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
 
@@ -463,7 +463,7 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
             // direction, default to logic. Otherwise, use the last type.
             const TypeSymbol* type;
             if (portSyntax->dataType)
-                type = &root.factory.getType(*portSyntax->dataType, parentScope);
+                type = &root.factory.getType(*portSyntax->dataType, parent);
             else if (directionSpecified)
                 type = &root.factory.getLogicType();
             else
@@ -472,7 +472,7 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
             const auto& declarator = portSyntax->declarator;
             const Expression* initializer = nullptr;
             if (declarator.initializer) {
-                initializer = &Binder(parentScope).bindAssignmentLikeContext(declarator.initializer->expr,
+                initializer = &Binder(parent).bindAssignmentLikeContext(declarator.initializer->expr,
                                                                              declarator.name.location(), *type);
             }
 

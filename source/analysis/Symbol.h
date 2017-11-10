@@ -162,7 +162,7 @@ public:
     /// The symbol that contains this symbol in the source text. All symbols have a containing
     /// symbol except for the design root, which has itself as the containing symbol. Keep that
     /// in mind when traversing the parent links.
-    const Symbol* containingSymbol;
+    const ScopeSymbol* getParent() const { return parentScope; }
 
     /// Finds the first ancestor symbol of the given kind. If this symbol is already of
     /// the given kind, returns this symbol.
@@ -182,16 +182,22 @@ public:
     Symbol& operator=(const Symbol&) = delete;
 
 protected:
-    explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, string_view name = "",
+    explicit Symbol(SymbolKind kind, string_view name = "", SourceLocation location = SourceLocation()) :
+        kind(kind), name(name), location(location) {}
+
+    Symbol(SymbolKind kind, const ScopeSymbol& containingSymbol, string_view name = "",
                     SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location),
-        containingSymbol(&containingSymbol) {}
+        parentScope(&containingSymbol) {}
 
-    Symbol(SymbolKind kind, Token token, const Symbol& containingSymbol) :
+    Symbol(SymbolKind kind, Token token, const ScopeSymbol& containingSymbol) :
         kind(kind), name(token.valueText()), location(token.location()),
-        containingSymbol(&containingSymbol) {}
+        parentScope(&containingSymbol) {}
 
     Diagnostic& addError(DiagCode code, SourceLocation location) const;
+
+private:
+    const ScopeSymbol* parentScope = nullptr;
 };
 
 /// Base class for symbols that also act as scopes, which means they contain
@@ -294,7 +300,7 @@ private:
 /// for tools and unit tests.
 class DynamicScopeSymbol : public ScopeSymbol {
 public:
-    explicit DynamicScopeSymbol(const Symbol& parent);
+    explicit DynamicScopeSymbol(const ScopeSymbol& parent);
 
     /// Adds a symbol to the scope.
     void addSymbol(const Symbol& symbol);
@@ -316,7 +322,7 @@ class ModuleInstanceSymbol;
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public ScopeSymbol {
 public:
-    CompilationUnitSymbol(const SyntaxNode& rootNode, const Symbol& parent);
+    CompilationUnitSymbol(const SyntaxNode& rootNode, const ScopeSymbol& parent);
 
 private:
     void fillMembers(MemberBuilder& builder) const override final;
@@ -327,7 +333,7 @@ private:
 /// A SystemVerilog package construct.
 class PackageSymbol : public ScopeSymbol {
 public:
-    PackageSymbol(const ModuleDeclarationSyntax& package, const Symbol& parent);
+    PackageSymbol(const ModuleDeclarationSyntax& package, const ScopeSymbol& parent);
 
 private:
     void fillMembers(MemberBuilder& builder) const override final;
@@ -340,7 +346,7 @@ class DefinitionSymbol : public Symbol {
 public:
     const ModuleDeclarationSyntax& syntax;
 
-    DefinitionSymbol(const ModuleDeclarationSyntax& decl, const Symbol& container);
+    DefinitionSymbol(const ModuleDeclarationSyntax& decl, const ScopeSymbol& container);
 
     /// Small collection of info extracted from a parameter definition
     struct ParameterInfo {
@@ -428,10 +434,10 @@ private:
 
 class SequentialBlockSymbol : public StatementBlockSymbol {
 public:
-    SequentialBlockSymbol(const Symbol& parent);
-    SequentialBlockSymbol(const BlockStatementSyntax& block, const Symbol& parent);
+    SequentialBlockSymbol(const ScopeSymbol& parent);
+    SequentialBlockSymbol(const BlockStatementSyntax& block, const ScopeSymbol& parent);
 
-    static SequentialBlockSymbol& createImplicitBlock(const ForLoopStatementSyntax& forLoop, const Symbol& parent);
+    static SequentialBlockSymbol& createImplicitBlock(const ForLoopStatementSyntax& forLoop, const ScopeSymbol& parent);
 
     const Statement& getBody() const;
 
@@ -446,7 +452,7 @@ class ProceduralBlockSymbol : public StatementBlockSymbol {
 public:
     ProceduralBlockKind procedureKind;
 
-    ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const Symbol& parent);
+    ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const ScopeSymbol& parent);
 
     const Statement& getBody() const;
 
@@ -487,9 +493,9 @@ private:
 /// the loop iteration value.
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
-    GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body, const Symbol& parent);
+    GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body, const ScopeSymbol& parent);
     GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
-                        const ParameterSymbol& implicitParam, const Symbol& parent);
+                        const ParameterSymbol& implicitParam, const ScopeSymbol& parent);
 
 private:
     void fillMembers(MemberBuilder& builder) const override final;
@@ -507,7 +513,7 @@ public:
     string_view importName;
 
     ExplicitImportSymbol(string_view packageName, string_view importName,
-                         SourceLocation location, const Symbol& parent);
+                         SourceLocation location, const ScopeSymbol& parent);
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
@@ -525,7 +531,7 @@ private:
 class ImplicitImportSymbol : public Symbol {
 public:
     ImplicitImportSymbol(const WildcardImportSymbol& wildcard, const Symbol& importedSymbol,
-                         const Symbol& parent);
+                         const ScopeSymbol& parent);
 
     const WildcardImportSymbol& wildcard() const { return wildcard_; }
     const Symbol* importedSymbol() const { return &import; }
@@ -544,7 +550,7 @@ class WildcardImportSymbol : public Symbol {
 public:
     string_view packageName;
 
-    WildcardImportSymbol(string_view packageName, SourceLocation location, const Symbol& parent);
+    WildcardImportSymbol(string_view packageName, SourceLocation location, const ScopeSymbol& parent);
 
     const PackageSymbol* package() const;
     const ImplicitImportSymbol* resolve(string_view lookupName, SourceLocation lookupLocation) const;
@@ -558,12 +564,12 @@ class ParameterSymbol : public Symbol {
 public:
     /// Creates a new parameter symbol with the given value.
     ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                    ConstantValue value, const Symbol& parent);
+                    ConstantValue value, const ScopeSymbol& parent);
 
     /// Creates a new parameter symbol from the given syntax info.
     ParameterSymbol(string_view name, SourceLocation location, const DataTypeSyntax& typeSyntax,
                     const ExpressionSyntax* defaultInitializer, const ExpressionSyntax* assignedValue,
-                    const ScopeSymbol* instanceScope, bool isLocalParam, bool isPortParam, const Symbol& parent);
+                    const ScopeSymbol* instanceScope, bool isLocalParam, bool isPortParam, const ScopeSymbol& parent);
 
     /// Indicates whether the parameter is a "localparam".
     bool isLocalParam() const { return isLocal; }
@@ -607,22 +613,22 @@ public:
     VariableLifetime lifetime;
     bool isConst;
 
-    VariableSymbol(Token name, const DataTypeSyntax& type, const Symbol& parent, VariableLifetime lifetime,
+    VariableSymbol(Token name, const DataTypeSyntax& type, const ScopeSymbol& parent, VariableLifetime lifetime,
                    bool isConst, const ExpressionSyntax* initializer);
 
-    VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+    VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const ScopeSymbol& parent,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
                    const Expression* initializer = nullptr);
 
     /// Constructs all variable symbols specified by the given syntax node.
-    static void fromSyntax(const Symbol& parent, const DataDeclarationSyntax& syntax,
+    static void fromSyntax(const ScopeSymbol& parent, const DataDeclarationSyntax& syntax,
                            SmallVector<const VariableSymbol*>& results);
 
     const TypeSymbol& type() const;
     const Expression* initializer() const;
 
 protected:
-    VariableSymbol(SymbolKind childKind, string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+    VariableSymbol(SymbolKind childKind, string_view name, SourceLocation location, const TypeSymbol& type, const ScopeSymbol& parent,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
                    const Expression* initializer = nullptr);
 
@@ -641,9 +647,9 @@ class FormalArgumentSymbol : public VariableSymbol {
 public:
     FormalArgumentDirection direction = FormalArgumentDirection::In;
 
-    FormalArgumentSymbol(const TypeSymbol& type, const Symbol& parent);
+    FormalArgumentSymbol(const TypeSymbol& type, const ScopeSymbol& parent);
 
-    FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const Symbol& parent,
+    FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const ScopeSymbol& parent,
                          const Expression* initializer = nullptr,
                          FormalArgumentDirection direction = FormalArgumentDirection::In);
 };
@@ -656,9 +662,9 @@ public:
     SystemFunction systemFunctionKind = SystemFunction::Unknown;
     bool isTask = false;
 
-    SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const Symbol& parent);
+    SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const ScopeSymbol& parent);
     SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
-                     SystemFunction systemFunction, const Symbol& parent);
+                     SystemFunction systemFunction, const ScopeSymbol& parent);
 
     const StatementList& body() const;
     const TypeSymbol& returnType() const { ensureInit(); return *returnType_; }

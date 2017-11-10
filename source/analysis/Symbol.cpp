@@ -29,7 +29,7 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
         if (current->kind == SymbolKind::Root)
             return nullptr;
 
-        current = current->containingSymbol;
+        current = current->getParent();
     }
     return current;
 }
@@ -37,7 +37,7 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
 const ScopeSymbol& Symbol::containingScope() const {
     const Symbol* current = this;
     while (true) {
-        current = current->containingSymbol;
+        current = current->getParent();
         switch (current->kind) {
             case SymbolKind::Root:
             case SymbolKind::CompilationUnit:
@@ -201,7 +201,7 @@ void ScopeSymbol::copyMembers(MemberBuilder& builder) const {
     wildcardImports = builder.wildcardImports.copy(alloc);
 }
 
-DynamicScopeSymbol::DynamicScopeSymbol(const Symbol& parent) : ScopeSymbol(SymbolKind::DynamicScope, parent) {}
+DynamicScopeSymbol::DynamicScopeSymbol(const ScopeSymbol& parent) : ScopeSymbol(SymbolKind::DynamicScope, parent) {}
 
 void DynamicScopeSymbol::addSymbol(const Symbol& symbol) {
     members.push_back(&symbol);
