@@ -34,30 +34,6 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
     return current;
 }
 
-const ScopeSymbol& Symbol::containingScope() const {
-    const Symbol* current = this;
-    while (true) {
-        current = current->getParent();
-        switch (current->kind) {
-            case SymbolKind::Root:
-            case SymbolKind::CompilationUnit:
-            case SymbolKind::Package:
-            case SymbolKind::ModuleInstance:
-            case SymbolKind::InterfaceInstance:
-            case SymbolKind::SequentialBlock:
-            case SymbolKind::ProceduralBlock:
-            case SymbolKind::IfGenerate:
-            case SymbolKind::LoopGenerate:
-            case SymbolKind::GenerateBlock:
-            case SymbolKind::DynamicScope:
-            case SymbolKind::Subroutine:
-                return *static_cast<const ScopeSymbol*>(current);
-
-            default: break;
-        }
-    }
-}
-
 const RootSymbol& Symbol::getRoot() const {
     const Symbol* symbol = findAncestor(SymbolKind::Root);
     ASSERT(symbol);
@@ -133,7 +109,7 @@ const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupL
     }
 
     // Continue up the scope chain.
-    return containingScope().lookup(searchName, lookupLocation, lookupKind);
+    return getParent()->lookup(searchName, lookupLocation, lookupKind);
 }
 
 SymbolList ScopeSymbol::members() const {

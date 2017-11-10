@@ -168,10 +168,6 @@ public:
     /// the given kind, returns this symbol.
     const Symbol* findAncestor(SymbolKind searchKind) const;
 
-    /// Gets the first containing parent symbol that is also a scope. If this is
-    /// the design root, returns itself.
-    const ScopeSymbol& containingScope() const;
-
     /// Gets the symbol for the root of the design.
     const RootSymbol& getRoot() const;
 

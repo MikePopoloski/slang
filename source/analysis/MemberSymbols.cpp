@@ -306,7 +306,7 @@ const TypeSymbol* ParameterSymbol::defaultType() const {
         return nullptr;
 
     if (!defaultType_)
-        evaluate(defaultInitializer, defaultType_, defaultValue_, containingScope());
+        evaluate(defaultInitializer, defaultType_, defaultValue_, *getParent());
 
     return defaultType_;
 }
@@ -379,7 +379,7 @@ const TypeSymbol& VariableSymbol::type() const {
         return *typeSymbol;
 
     ASSERT(typeSyntax);
-    typeSymbol = &getRoot().factory.getType(*typeSyntax, containingScope());
+    typeSymbol = &getRoot().factory.getType(*typeSyntax, *getParent());
     return *typeSymbol;
 }
 
@@ -388,7 +388,7 @@ const Expression* VariableSymbol::initializer() const {
         return initializerBound;
 
     if (initializerSyntax)
-        initializerBound = &Binder(containingScope()).bindAssignmentLikeContext(*initializerSyntax, location, type());
+        initializerBound = &Binder(*getParent()).bindAssignmentLikeContext(*initializerSyntax, location, type());
 
     return initializerBound;
 }
@@ -427,7 +427,7 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
     if (isSystemFunction())
         return;
 
-    const ScopeSymbol& parent = containingScope();
+    const ScopeSymbol& parent = *getParent();
     const RootSymbol& root = getRoot();
     const auto& proto = syntax->prototype;
     const auto& returnType = getRoot().factory.getType(*proto.returnType, parent);

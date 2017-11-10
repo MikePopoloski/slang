@@ -253,7 +253,7 @@ void InstanceSymbol::fillMembers(MemberBuilder& builder) const {
                                                       declaration->type,
                                                       decl->initializer ? &decl->initializer->expr : nullptr,
                                                       it != paramAssignments.end() ? it->second : nullptr,
-                                                      &containingScope(), false, false, *this));
+                                                      getParent(), false, false, *this));
             }
         }
     }
@@ -269,7 +269,7 @@ void InstanceSymbol::fillMembers(MemberBuilder& builder) const {
                                                           declaration.type,
                                                           decl->initializer ? &decl->initializer->expr : nullptr,
                                                           it != paramAssignments.end() ? it->second : nullptr,
-                                                          &containingScope(), false, false, *this));
+                                                          getParent(), false, false, *this));
                 }
                 break;
             }
@@ -293,7 +293,7 @@ IfGenerateSymbol::IfGenerateSymbol(const IfGenerateSyntax& syntax, const ScopeSy
 
 void IfGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     // TODO: better error checking
-    const auto& cv = containingScope().evaluateConstant(syntax.condition);
+    const auto& cv = getParent()->evaluateConstant(syntax.condition);
     if (!cv)
         return;
 
@@ -314,7 +314,7 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    const ScopeSymbol& parent = containingScope();
+    const ScopeSymbol& parent = *getParent();
     const auto& initial = parent.evaluateConstant(syntax.initialExpr);
     if (!initial)
         return;
