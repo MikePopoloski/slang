@@ -277,7 +277,7 @@ const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName
     if (!symbol)
         return nullptr;
 
-    return &allocate<ImplicitImportSymbol>(*this, *symbol, containingSymbol);
+    return &allocate<ImplicitImportSymbol>(*this, *symbol, *containingSymbol);
 }
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,

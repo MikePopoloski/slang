@@ -162,7 +162,7 @@ public:
     /// The symbol that contains this symbol in the source text. All symbols have a containing
     /// symbol except for the design root, which has itself as the containing symbol. Keep that
     /// in mind when traversing the parent links.
-    const Symbol& containingSymbol;
+    const Symbol* containingSymbol;
 
     /// Finds the first ancestor symbol of the given kind. If this symbol is already of
     /// the given kind, returns this symbol.
@@ -185,11 +185,11 @@ protected:
     explicit Symbol(SymbolKind kind, const Symbol& containingSymbol, string_view name = "",
                     SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location),
-        containingSymbol(containingSymbol) {}
+        containingSymbol(&containingSymbol) {}
 
     Symbol(SymbolKind kind, Token token, const Symbol& containingSymbol) :
         kind(kind), name(token.valueText()), location(token.location()),
-        containingSymbol(containingSymbol) {}
+        containingSymbol(&containingSymbol) {}
 
     Diagnostic& addError(DiagCode code, SourceLocation location) const;
 

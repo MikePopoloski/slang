@@ -39,7 +39,7 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
         if (current->kind == SymbolKind::Root)
             return nullptr;
 
-        current = &current->containingSymbol;
+        current = current->containingSymbol;
     }
     return current;
 }
@@ -47,7 +47,7 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
 const ScopeSymbol& Symbol::containingScope() const {
     const Symbol* current = this;
     while (true) {
-        current = &current->containingSymbol;
+        current = current->containingSymbol;
         switch (current->kind) {
             case SymbolKind::Root:
             case SymbolKind::CompilationUnit:
