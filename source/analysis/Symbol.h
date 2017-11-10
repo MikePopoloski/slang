@@ -192,9 +192,6 @@ protected:
         containingSymbol(&containingSymbol) {}
 
     Diagnostic& addError(DiagCode code, SourceLocation location) const;
-
-    template<typename T, typename... Args>
-    T& allocate(Args&&... args) const;
 };
 
 /// Base class for symbols that also act as scopes, which means they contain
@@ -676,10 +673,5 @@ private:
     mutable const TypeSymbol* returnType_ = nullptr;
     mutable span<const FormalArgumentSymbol* const> arguments_;
 };
-
-template<typename T, typename... Args>
-T& Symbol::allocate(Args&&... args) const {
-    return getRoot().allocate<T>(std::forward<Args>(args)...);
-}
 
 }

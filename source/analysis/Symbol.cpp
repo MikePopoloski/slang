@@ -12,16 +12,6 @@
 #include "Binder.h"
 #include "RootSymbol.h"
 
-namespace {
-
-using namespace slang;
-
-TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
-    return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
-}
-
-}
-
 namespace slang {
 
 VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUnset) {

@@ -249,7 +249,7 @@ void InstanceSymbol::fillMembers(MemberBuilder& builder) const {
                 // TODO: hack to get param values working
 
                 auto it = paramAssignments.find(decl->name.valueText());
-                builder.add(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
+                builder.add(getRoot().allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
                                                       declaration->type,
                                                       decl->initializer ? &decl->initializer->expr : nullptr,
                                                       it != paramAssignments.end() ? it->second : nullptr,
@@ -265,7 +265,7 @@ void InstanceSymbol::fillMembers(MemberBuilder& builder) const {
                 for (const VariableDeclaratorSyntax* decl : declaration.declarators) {
 
                     auto it = paramAssignments.find(decl->name.valueText());
-                    builder.add(allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
+                    builder.add(getRoot().allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
                                                           declaration.type,
                                                           decl->initializer ? &decl->initializer->expr : nullptr,
                                                           it != paramAssignments.end() ? it->second : nullptr,
@@ -299,9 +299,9 @@ void IfGenerateSymbol::fillMembers(MemberBuilder& builder) const {
 
     const SVInt& value = cv.integer();
     if ((logic_t)value)
-        builder.add(allocate<GenerateBlockSymbol>("", SourceLocation(), syntax.block, *this));
+        builder.add(getRoot().allocate<GenerateBlockSymbol>("", SourceLocation(), syntax.block, *this));
     else if (syntax.elseClause)
-        builder.add(allocate<GenerateBlockSymbol>("", SourceLocation(), syntax.elseClause->clause, *this));
+        builder.add(getRoot().allocate<GenerateBlockSymbol>("", SourceLocation(), syntax.elseClause->clause, *this));
 }
 
 LoopGenerateSymbol::LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const ScopeSymbol& parent) :

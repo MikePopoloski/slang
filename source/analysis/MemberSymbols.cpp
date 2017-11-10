@@ -11,14 +11,6 @@
 
 namespace slang {
 
-//const Statement& StatementBlockSymbol::bindStatement(const StatementSyntax& syntax) {
-//    return static_cast<const StatementBlockSymbol*>(this)->bindStatement(syntax);
-//}
-//
-//const StatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<SyntaxNode>& items) {
-//    return static_cast<const StatementBlockSymbol*>(this)->bindStatementList(items);
-//}
-
 void StatementBlockSymbol::findChildSymbols(MemberBuilder& builder, const SyntaxList<SyntaxNode>& items) const {
     for (auto item : items) {
         if (item->kind == SyntaxKind::DataDeclaration) {
@@ -61,7 +53,7 @@ void StatementBlockSymbol::findChildSymbols(MemberBuilder& builder, const Statem
             break;
         }
         case SyntaxKind::SequentialBlockStatement:
-            builder.add(allocate<SequentialBlockSymbol>(syntax.as<BlockStatementSyntax>(), *this));
+            builder.add(getRoot().allocate<SequentialBlockSymbol>(syntax.as<BlockStatementSyntax>(), *this));
             break;
         default:
             break;
@@ -86,7 +78,7 @@ const StatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<Sy
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto member : members()) {
         if (member->kind == SymbolKind::Variable)
-            buffer.append(&allocate<VariableDeclStatement>(member->as<VariableSymbol>()));
+            buffer.append(&getRoot().allocate<VariableDeclStatement>(member->as<VariableSymbol>()));
     }
 
     for (const auto& item : items) {
@@ -108,7 +100,7 @@ Statement& StatementBlockSymbol::bindReturnStatement(const ReturnStatementSyntax
 
     const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, stmtLoc,
                                                                subroutine->as<SubroutineSymbol>().returnType());
-    return allocate<ReturnStatement>(syntax, &expr);
+    return getRoot().allocate<ReturnStatement>(syntax, &expr);
 }
 
 Statement& StatementBlockSymbol::bindConditionalStatement(const ConditionalStatementSyntax& syntax) const {
@@ -121,7 +113,7 @@ Statement& StatementBlockSymbol::bindConditionalStatement(const ConditionalState
     if (syntax.elseClause)
         ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>());
 
-    return allocate<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
+    return getRoot().allocate<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
 Statement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSyntax&) const {
@@ -162,11 +154,11 @@ Statement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSynt
 
 Statement& StatementBlockSymbol::bindExpressionStatement(const ExpressionStatementSyntax& syntax) const {
     const auto& expr = Binder(*this).bindSelfDeterminedExpression(syntax.expr);
-    return allocate<ExpressionStatement>(syntax, expr);
+    return getRoot().allocate<ExpressionStatement>(syntax, expr);
 }
 
 Statement& StatementBlockSymbol::badStmt(const Statement* stmt) const {
-    return allocate<InvalidStatement>(stmt);
+    return getRoot().allocate<InvalidStatement>(stmt);
 }
 
 SequentialBlockSymbol::SequentialBlockSymbol(const Symbol& parent) :
@@ -277,7 +269,7 @@ const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName
     if (!symbol)
         return nullptr;
 
-    return &allocate<ImplicitImportSymbol>(*this, *symbol, *containingSymbol);
+    return &getRoot().allocate<ImplicitImportSymbol>(*this, *symbol, *containingSymbol);
 }
 
 ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
