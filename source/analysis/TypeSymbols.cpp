@@ -4,7 +4,9 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Symbol.h"
+#include "TypeSymbols.h"
+
+#include "RootSymbol.h"
 
 namespace slang {
 
@@ -97,6 +99,85 @@ int TypeSymbol::width() const {
         case SymbolKind::RealType: return as<RealTypeSymbol>().width;
         default: return 0;
     }
+}
+
+
+const TypeSymbol& IntegralTypeSymbol::fromSyntax(SymbolFactory& factory, const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) {
+    // This is a simple integral vector (possibly of just one element).
+    bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
+    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
+    bool isFourState = syntax.kind != SyntaxKind::BitType;
+
+    SmallVectorSized<ConstantRange, 4> dims;
+    if (!evaluateConstantDims(syntax.dimensions, dims, scope))
+        return factory.getErrorType();
+
+    // TODO: review this whole mess
+
+    if (dims.empty()) {
+        // TODO: signing
+        return factory.getType(syntax.kind);
+    }
+    else if (dims.size() == 1 && dims[0].right == 0) {
+        // if we have the common case of only one dimension and lsb == 0
+        // then we can use the shared representation
+        int width = dims[0].left + 1;
+        return factory.getType(width, isSigned, isFourState, isReg);
+    }
+    else {
+        SmallVectorSized<int, 4> lowerBounds;
+        SmallVectorSized<int, 4> widths;
+        int totalWidth = 0;
+        for (auto& dim : dims) {
+            int msb = dim.left;
+            int lsb = dim.right;
+            int width;
+            if (msb > lsb) {
+                width = msb - lsb + 1;
+                lowerBounds.append(lsb);
+            }
+            else {
+                // TODO: msb == lsb
+                width = lsb - msb + 1;
+                lowerBounds.append(-lsb);
+            }
+            widths.append(width);
+
+            // TODO: overflow
+            totalWidth += width;
+        }
+        return factory.getType(totalWidth, isSigned, isFourState, isReg,
+                               lowerBounds.copy(factory.alloc), widths.copy(factory.alloc));
+    }
+}
+
+bool IntegralTypeSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) {
+    for (const VariableDimensionSyntax* dim : dimensions) {
+        const SelectorSyntax* selector;
+        if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
+            (selector = &dim->specifier->as<RangeDimensionSpecifierSyntax>().selector)->kind != SyntaxKind::SimpleRangeSelect) {
+
+            // TODO: errors
+            //auto& diag = addError(DiagCode::PackedDimRequiresConstantRange, dim->specifier->getFirstToken().location());
+            //diag << dim->specifier->sourceRange();
+            return false;
+        }
+
+        const RangeSelectSyntax& range = selector->as<RangeSelectSyntax>();
+
+        // §6.9.1 - Implementations may set a limit on the maximum length of a vector, but the limit shall be at least 65536 (2^16) bits.
+        const int MaxRangeBits = 16;
+
+        // TODO: errors
+        auto left = scope.evaluateConstant(range.left).coerceInteger(MaxRangeBits);
+        auto right = scope.evaluateConstant(range.right).coerceInteger(MaxRangeBits);
+
+        if (!left || !right)
+            return false;
+
+        results.emplace(ConstantRange{ *left, *right });
+    }
+    return true;
 }
 
 }

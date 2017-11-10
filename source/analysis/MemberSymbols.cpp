@@ -7,6 +7,7 @@
 #include "Symbol.h"
 
 #include "Binder.h"
+#include "RootSymbol.h"
 
 namespace slang {
 
@@ -349,7 +350,7 @@ void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& 
             determinedValue = getRoot().constantAllocator.emplace(bound.eval());
     }
     else {
-        determinedType = &scope.getType(*typeSyntax);
+        determinedType = &getRoot().factory.getType(*typeSyntax, scope);
         determinedValue = getRoot().constantAllocator.emplace(scope.evaluateConstantAndConvert(*expr, *determinedType, location));
     }
 }
@@ -386,7 +387,7 @@ const TypeSymbol& VariableSymbol::type() const {
         return *typeSymbol;
 
     ASSERT(typeSyntax);
-    typeSymbol = &containingScope().getType(*typeSyntax);
+    typeSymbol = &getRoot().factory.getType(*typeSyntax, containingScope());
     return *typeSymbol;
 }
 
@@ -437,12 +438,12 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
     const ScopeSymbol& parentScope = containingScope();
     const DesignRootSymbol& root = getRoot();
     const auto& proto = syntax->prototype;
-    const auto& returnType = parentScope.getType(*proto.returnType);
+    const auto& returnType = getRoot().factory.getType(*proto.returnType, parentScope);
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
 
     if (proto.portList) {
-        const TypeSymbol* lastType = &root.getKnownType(SyntaxKind::LogicType);
+        const TypeSymbol* lastType = &root.factory.getLogicType();
         auto lastDirection = FormalArgumentDirection::In;
 
         for (const FunctionPortSyntax* portSyntax : proto.portList->ports) {
@@ -470,9 +471,9 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
             // direction, default to logic. Otherwise, use the last type.
             const TypeSymbol* type;
             if (portSyntax->dataType)
-                type = &parentScope.getType(*portSyntax->dataType);
+                type = &root.factory.getType(*portSyntax->dataType, parentScope);
             else if (directionSpecified)
-                type = &root.getKnownType(SyntaxKind::LogicType);
+                type = &root.factory.getLogicType();
             else
                 type = lastType;
 

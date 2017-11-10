@@ -31,6 +31,7 @@ class TypeSymbol;
 class WildcardImportSymbol;
 class PackageSymbol;
 class ParameterSymbol;
+class SymbolFactory;
 
 using SymbolList = span<const Symbol* const>;
 using SymbolMap = std::unordered_map<string_view, const Symbol*>;
@@ -142,10 +143,6 @@ enum class LookupKind {
 /// If the token is unset, returns the value `defaultIfUnset`.
 VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUnset);
 
-/// Create symbols from the given syntax node. Note that this does not add them to the parent scope;
-/// the returned symbols are not part of any tree until you add them somewhere.
-SymbolList createSymbols(const SyntaxNode& node, const ScopeSymbol& parent);
-
 /// Base class for all symbols (logical code constructs) such as modules, types,
 /// functions, variables, etc.
 class Symbol {
@@ -242,9 +239,6 @@ public:
     ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
                                              SourceLocation errorLocation) const;
 
-    /// A helper method to get a type symbol, using the current scope as context.
-    const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
-
     /// Overrides the members of the symbol to be the given list.
     /// Note that if the scope gets explicitly marked dirty and its
     /// members regenerated, this list will be lost.
@@ -262,6 +256,7 @@ protected:
         SmallVectorSized<const WildcardImportSymbol*, 8> wildcardImports;
 
         void add(const Symbol& symbol);
+        void add(const SyntaxNode& node, const ScopeSymbol& parent);
     };
 
     /// Called to ensure that the list of members has been initialized.
@@ -317,195 +312,9 @@ private:
     std::vector<const Symbol*> members;
 };
 
-/// Base class for all data types.
-class TypeSymbol : public Symbol {
-public:
-    TypeSymbol(SymbolKind kind, string_view name, const Symbol& parent) : Symbol(kind, parent, name) {}
-
-    // SystemVerilog defines various levels of type compatibility, which are used
-    // in different scenarios. See the spec, section 6.22.
-    bool isMatching(const TypeSymbol& rhs) const;
-    bool isEquivalent(const TypeSymbol& rhs) const;
-    bool isAssignmentCompatible(const TypeSymbol& rhs) const;
-    bool isCastCompatible(const TypeSymbol& rhs) const;
-
-    // Helpers to get the following pieces of information for any type symbol,
-    // though the information is stored differently for different types
-    bool isSigned() const;
-    bool isReal() const;
-    bool isFourState() const;
-    int width() const;
-
-    std::string toString() const;
-
-protected:
-    using Symbol::Symbol;
-};
-
-class IntegralTypeSymbol : public TypeSymbol {
-public:
-    // a negative lower bound is actually an upper bound specified in the opposite order
-    span<int const> lowerBounds;
-    span<int const> widths;
-    int width;
-    TokenKind keywordType;
-    bool isSigned;
-    bool isFourState;
-
-    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState, const Symbol& parent) :
-        IntegralTypeSymbol(keywordType, width, isSigned, isFourState,
-                           EmptyLowerBound, span<int const>(&width, 1), parent) {}
-
-    IntegralTypeSymbol(TokenKind keywordType, int width, bool isSigned, bool isFourState,
-                       span<int const> lowerBounds, span<int const> widths, const Symbol& parent) :
-        TypeSymbol(SymbolKind::IntegralType, parent, getTokenKindText(keywordType), SourceLocation()),
-        lowerBounds(lowerBounds), widths(widths),
-        width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
-
-private:
-    static span<int const> EmptyLowerBound;
-};
-
-class RealTypeSymbol : public TypeSymbol {
-public:
-    int width;
-    TokenKind keywordType;
-
-    RealTypeSymbol(TokenKind keywordType, int width, const Symbol& parent) :
-        TypeSymbol(SymbolKind::RealType, parent, getTokenKindText(keywordType), SourceLocation()),
-        width(width), keywordType(keywordType) {}
-};
-
-//class EnumValueSymbol : public ConstValueSymbol {
-//public:
-//    EnumValueSymbol(string_view name, SourceLocation location, const TypeSymbol *type, ConstantValue val) :
-//        ConstValueSymbol(SymbolKind::EnumValue, name, location, type, val) {}
-//};
-//
-//class EnumTypeSymbol : public TypeSymbol {
-//public:
-//    const IntegralTypeSymbol* baseType;
-//    span<EnumValueSymbol * const> values;
-//
-//    EnumTypeSymbol(const IntegralTypeSymbol *baseType, SourceLocation location, span<EnumValueSymbol * const> values) :
-//        TypeSymbol(SymbolKind::EnumType, "", location),
-//        baseType(baseType), values(values) {}
-//};
-
-class StructTypeSymbol : public TypeSymbol {
-public:
-    bool isPacked;
-    bool isSigned;
-};
-
-/// An empty type symbol that indicates an error occurred while trying to
-/// resolve the type of some expression or declaration.
-class ErrorTypeSymbol : public TypeSymbol {
-public:
-    explicit ErrorTypeSymbol(const Symbol& parent) : TypeSymbol(SymbolKind::Unknown, parent) {}
-};
-
-class TypeAliasSymbol : public TypeSymbol {
-public:
-    const SyntaxNode& syntax;
-    const TypeSymbol* underlying;
-
-    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, string_view alias, const Symbol& parent) :
-        TypeSymbol(SymbolKind::TypeAlias, parent, alias, location),
-        syntax(syntax), underlying(underlying) {}
-};
-
 class CompilationUnitSymbol;
 class PackageSymbol;
 class ModuleInstanceSymbol;
-
-/// Represents the entirety of a design, along with all contained compilation units.
-/// It also contains most of the machinery for creating and retrieving type symbols.
-class DesignRootSymbol : public ScopeSymbol {
-public:
-    explicit DesignRootSymbol(const SourceManager& sourceManager);
-    explicit DesignRootSymbol(const SyntaxTree* tree);
-    explicit DesignRootSymbol(span<const SyntaxTree* const> trees);
-    DesignRootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units);
-
-    /// Gets all of the compilation units in the design.
-    span<const CompilationUnitSymbol* const> compilationUnits() const { return unitList; }
-
-    /// Finds all of the top-level module instances in the design. These form the roots of the
-    /// actual design hierarchy.
-    span<const ModuleInstanceSymbol* const> topInstances() const { ensureInit(); return topList; }
-
-    /// Finds a package in the design with the given name, or returns null if none is found.
-    const PackageSymbol* findPackage(string_view name) const;
-
-    /// Methods for getting various type symbols.
-    const TypeSymbol& getType(const DataTypeSyntax& syntax) const;
-    const TypeSymbol& getType(const DataTypeSyntax& syntax, const ScopeSymbol& scope) const;
-    const TypeSymbol& getKnownType(SyntaxKind kind) const;
-    const TypeSymbol& getIntegralType(int width, bool isSigned, bool isFourState = true, bool isReg = false) const;
-    const TypeSymbol& getErrorType() const;
-
-    /// Report an error at the specified location.
-    Diagnostic& addError(DiagCode code, SourceLocation location_) const {
-        return diags.add(code, location_);
-    }
-
-    /// Allocate an object using the design's shared allocator.
-    template<typename T, typename... Args>
-    T& allocate(Args&&... args) const {
-        return *alloc.emplace<T>(std::forward<Args>(args)...);
-    }
-
-    BumpAllocator& allocator() const { return alloc; }
-    Diagnostics& diagnostics() const { return diags; }
-    const SourceManager& sourceManager() const { return sourceMan; }
-
-    // TODO: clean this up
-    mutable TypedBumpAllocator<ConstantValue> constantAllocator;
-
-private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    // Gets a type symbol for the given integer type syntax node.
-    const TypeSymbol& getIntegralType(const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) const;
-
-    // Evalutes variable dimensions that are expected to be compile-time constant.
-    // Returns true if evaluation was successful; returns false and reports errors if not.
-    bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) const;
-
-    // Add a compilation unit to the design; has some shared code to filter out members of the compilation
-    // unit that belong in the root scope (for example, modules).
-    void addCompilationUnit(const CompilationUnitSymbol& unit);
-
-    // These functions are used for traversing the syntax hierarchy and finding all instantiations.
-    using NameSet = std::unordered_set<string_view>;
-    static void findInstantiations(const ModuleDeclarationSyntax& module, std::vector<NameSet>& scopeStack,
-                                   NameSet& found);
-    static void findInstantiations(const MemberSyntax& node, std::vector<NameSet>& scopeStack, NameSet& found);
-
-    // The name map for packages. Note that packages have their own namespace,
-    // which is why they can't share the root name table.
-    SymbolMap packageMap;
-
-    // list of compilation units in the design
-    std::vector<const CompilationUnitSymbol*> unitList;
-
-    // preallocated type symbols for known types
-    std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
-
-    // These are mutable so that the design root can be logically const, observing
-    // members lazily but allocating them on demand and reporting errors when asked.
-    mutable BumpAllocator alloc;
-    mutable Diagnostics diags;
-
-    // list of top level module instances in the design
-    mutable std::vector<const ModuleInstanceSymbol*> topList;
-
-    // cache of simple integral types keyed by {width, signedness, 4-state, isReg}
-    mutable std::unordered_map<uint64_t, const TypeSymbol*> integralTypeCache;
-
-    const SourceManager& sourceMan;
-};
 
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public ScopeSymbol {

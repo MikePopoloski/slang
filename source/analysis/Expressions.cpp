@@ -7,6 +7,7 @@
 #include "Expressions.h"
 
 #include "Statements.h"
+#include "TypeSymbols.h"
 
 namespace slang {
 

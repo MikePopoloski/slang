@@ -7,6 +7,7 @@
 #include "Symbol.h"
 
 #include "Binder.h"
+#include "RootSymbol.h"
 
 namespace slang {
 
@@ -20,14 +21,11 @@ void CompilationUnitSymbol::fillMembers(MemberBuilder& builder) const {
     // If the root node is a compilation unit, unwrap it into individual members.
     // Otherwise just take the members as they are.
     if (rootNode.kind == SyntaxKind::CompilationUnit) {
-        for (auto member : rootNode.as<CompilationUnitSyntax>().members) {
-            for (auto symbol : createSymbols(*member, *this))
-                builder.add(*symbol);
-        }
+        for (auto member : rootNode.as<CompilationUnitSyntax>().members)
+            builder.add(*member, *this);
     }
     else {
-        for (auto symbol : createSymbols(rootNode, *this))
-            builder.add(*symbol);
+        builder.add(rootNode, *this);
     }
 }
 
@@ -37,10 +35,8 @@ PackageSymbol::PackageSymbol(const ModuleDeclarationSyntax& syntax, const Symbol
 }
 
 void PackageSymbol::fillMembers(MemberBuilder& builder) const {
-    for (auto member : syntax.members) {
-        for (auto symbol : createSymbols(*member, *this))
-            builder.add(*symbol);
-    }
+    for (auto member : syntax.members)
+        builder.add(*member, *this);
 }
 
 DefinitionSymbol::DefinitionSymbol(const ModuleDeclarationSyntax& syntax, const Symbol& parent) :
@@ -277,11 +273,9 @@ void InstanceSymbol::fillMembers(MemberBuilder& builder) const {
                 }
                 break;
             }
-            default: {
-                for (auto symbol : createSymbols(*node, *this))
-                    builder.add(*symbol);
+            default:
+                builder.add(*node, *this);
                 break;
-            }
         }
     }
 }
@@ -329,7 +323,7 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     const DesignRootSymbol& root = parent.getRoot();
     DynamicScopeSymbol iterScope(parent);
     VariableSymbol local(syntax.identifier.valueText(), syntax.identifier.location(),
-                         root.getKnownType(SyntaxKind::IntType), iterScope);
+                         root.factory.getIntType(), iterScope);
     iterScope.addSymbol(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
@@ -349,7 +343,7 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
 
         const auto& implicitParam = root.allocate<ParameterSymbol>(syntax.identifier.valueText(),
                                                                    syntax.identifier.location(),
-                                                                   root.getKnownType(SyntaxKind::IntType),
+                                                                   root.factory.getIntType(),
                                                                    *genvar, *this);
 
         builder.add(root.allocate<GenerateBlockSymbol>("", SourceLocation(),
@@ -372,14 +366,11 @@ void GenerateBlockSymbol::fillMembers(MemberBuilder& builder) const {
         builder.add(*implicitParam);
 
     if (body.kind == SyntaxKind::GenerateBlock) {
-        for (auto member : body.as<GenerateBlockSyntax>().members) {
-            for (auto symbol : createSymbols(*member, *this))
-                builder.add(*symbol);
-        }
+        for (auto member : body.as<GenerateBlockSyntax>().members)
+            builder.add(*member, *this);
     }
     else {
-        for (auto symbol : createSymbols(body, *this))
-            builder.add(*symbol);
+        builder.add(body, *this);
     }
 }
 

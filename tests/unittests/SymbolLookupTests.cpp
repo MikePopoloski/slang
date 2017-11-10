@@ -1,6 +1,6 @@
 #include "Test.h"
 
-#include "analysis/Symbol.h"
+#include "analysis/RootSymbol.h"
 #include "parsing/SyntaxTree.h"
 
 TEST_CASE("Explicit import lookup", "[symbols:lookup]") {

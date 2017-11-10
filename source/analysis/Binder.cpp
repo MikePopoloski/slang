@@ -8,10 +8,12 @@
 
 #include <algorithm>
 
+#include "RootSymbol.h"
+
 namespace slang {
 
 Binder::Binder(const ScopeSymbol& scope, LookupKind lookupKind) :
-    scope(scope), root(scope.getRoot()), lookupKind(lookupKind)
+    scope(scope), root(scope.getRoot()), factory(root.factory), lookupKind(lookupKind)
 {
 }
 
@@ -147,13 +149,13 @@ Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
         case SyntaxKind::IntegerLiteralExpression:
             return root.allocate<IntegerLiteral>(
                 root.allocator(),
-                root.getKnownType(SyntaxKind::IntType),
+                factory.getIntType(),
                 syntax.literal.intValue(),
                 syntax
             );
         case SyntaxKind::RealLiteralExpression:
             return root.allocate<RealLiteral>(
-                root.getKnownType(SyntaxKind::RealType),
+                factory.getRealType(),
                 syntax.literal.realValue(),
                 syntax
             );
@@ -161,7 +163,7 @@ Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
             // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
             // context, but can grow
             logic_t val = syntax.literal.bitValue();
-            return root.allocate<UnbasedUnsizedIntegerLiteral>(root.getIntegralType(1, false, val.isUnknown()), val, syntax);
+            return root.allocate<UnbasedUnsizedIntegerLiteral>(factory.getType(1, false, val.isUnknown()), val, syntax);
         }
         default: THROW_UNREACHABLE;
     }
@@ -169,10 +171,10 @@ Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
 
 Expression& Binder::bindLiteral(const IntegerVectorExpressionSyntax& syntax) {
     if (syntax.value.isMissing())
-        return badExpr(&root.allocate<IntegerLiteral>(root.allocator(), root.getErrorType(), SVInt::Zero, syntax));
+        return badExpr(&root.allocate<IntegerLiteral>(root.allocator(), factory.getErrorType(), SVInt::Zero, syntax));
 
     const SVInt& value = syntax.value.intValue();
-    const TypeSymbol& type = root.getIntegralType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    const TypeSymbol& type = factory.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
     return root.allocate<IntegerLiteral>(root.allocator(), type, value, syntax);
 }
 
@@ -242,7 +244,7 @@ Expression& Binder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSynta
     // Supported for both integral and real types. Can be overloaded for others.
     Expression* operand = &bindAndPropagate(syntax.operand);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &operand))
-        return badExpr(&root.allocate<UnaryExpression>(root.getErrorType(), *operand, syntax));
+        return badExpr(&root.allocate<UnaryExpression>(factory.getErrorType(), *operand, syntax));
 
     return root.allocate<UnaryExpression>(*operand->type, *operand, syntax);
 }
@@ -251,16 +253,16 @@ Expression& Binder::bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax
     // Result type is always a single bit. Supported on integral types.
     Expression* operand = &bindAndPropagate(syntax.operand);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &operand))
-        return badExpr(&root.allocate<UnaryExpression>(root.getErrorType(), *operand, syntax));
+        return badExpr(&root.allocate<UnaryExpression>(factory.getErrorType(), *operand, syntax));
 
-    return root.allocate<UnaryExpression>(root.getKnownType(SyntaxKind::LogicType), *operand, syntax);
+    return root.allocate<UnaryExpression>(factory.getLogicType(), *operand, syntax);
 }
 
 Expression& Binder::bindArithmeticOperator(const BinaryExpressionSyntax& syntax) {
     Expression* lhs = &bindAndPropagate(syntax.left);
     Expression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BinaryExpression>(root.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(&root.allocate<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
 
     // Get the result type; force the type to be four-state if it's a division, which can make a 4-state output
     // out of 2-state inputs
@@ -272,17 +274,17 @@ Expression& Binder::bindComparisonOperator(const BinaryExpressionSyntax& syntax)
     Expression* lhs = &bindAndPropagate(syntax.left);
     Expression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BinaryExpression>(root.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(&root.allocate<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
 
     // result type is always a single bit
-    return root.allocate<BinaryExpression>(root.getKnownType(SyntaxKind::LogicType), *lhs, *rhs, syntax);
+    return root.allocate<BinaryExpression>(factory.getLogicType(), *lhs, *rhs, syntax);
 }
 
 Expression& Binder::bindRelationalOperator(const BinaryExpressionSyntax& syntax) {
     Expression* lhs = &bindAndPropagate(syntax.left);
     Expression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BinaryExpression>(root.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(&root.allocate<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
 
     // operands are sized to max(l,r) and the result of the operation is always 1 bit
     // no propagations from above have an actual have an effect on the subexpressions
@@ -292,7 +294,7 @@ Expression& Binder::bindRelationalOperator(const BinaryExpressionSyntax& syntax)
         propagateAssignmentLike(*lhs, *rhs->type);
 
     // result type is always a single bit
-    return root.allocate<BinaryExpression>(root.getKnownType(SyntaxKind::LogicType), *lhs, *rhs, syntax);
+    return root.allocate<BinaryExpression>(factory.getLogicType(), *lhs, *rhs, syntax);
 }
 
 Expression& Binder::bindShiftOrPowerOperator(const BinaryExpressionSyntax& syntax) {
@@ -301,7 +303,7 @@ Expression& Binder::bindShiftOrPowerOperator(const BinaryExpressionSyntax& synta
     Expression* lhs = &bindAndPropagate(syntax.left);
     Expression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BinaryExpression>(root.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(&root.allocate<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
 
     // Power operator can result in division by zero 'x
     const TypeSymbol& type = binaryOperatorResultType(lhs->type, rhs->type, syntax.kind == SyntaxKind::PowerExpression);
@@ -334,7 +336,7 @@ Expression& Binder::bindAssignmentOperator(const BinaryExpressionSyntax& syntax)
     }
     // TODO: the LHS has to be assignable (i.e not a general expression)
     if (!checkOperatorApplicability(binopKind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(&root.allocate<BinaryExpression>(root.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(&root.allocate<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
 
     // The operands of an assignment are themselves self determined,
     // but we must increase the size of the RHS to the size of the LHS if it is larger, and then
@@ -397,12 +399,12 @@ Expression& Binder::bindConcatenationExpression(const ConcatenationExpressionSyn
 
         const TypeSymbol& type = *arg.type;
         if (type.kind != SymbolKind::IntegralType)
-            return badExpr(&root.allocate<NaryExpression>(root.getErrorType(), nullptr, syntax));
+            return badExpr(&root.allocate<NaryExpression>(factory.getErrorType(), nullptr, syntax));
 
         totalWidth += type.width();
     }
 
-    return root.allocate<NaryExpression>(root.getIntegralType(totalWidth, false), buffer.copy(root.allocator()), syntax);
+    return root.allocate<NaryExpression>(factory.getType(totalWidth, false), buffer.copy(root.allocator()), syntax);
 }
 
 Expression& Binder::bindMultipleConcatenationExpression(const MultipleConcatenationExpressionSyntax& syntax) {
@@ -414,7 +416,7 @@ Expression& Binder::bindMultipleConcatenationExpression(const MultipleConcatenat
     // TODO: in cases like these, should we bother storing the bound expression? should we at least cache the result
     // so we don't have to compute it again elsewhere?
     uint16_t replicationTimes = left.eval().integer().as<uint16_t>().value();
-    return root.allocate<BinaryExpression>(root.getIntegralType(right.type->width() * replicationTimes, false), left, right, syntax);
+    return root.allocate<BinaryExpression>(factory.getType(right.type->width() * replicationTimes, false), left, right, syntax);
 }
 
 Expression& Binder::bindSelectExpression(const ElementSelectExpressionSyntax& syntax) {
@@ -457,7 +459,7 @@ Expression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, Express
         default: THROW_UNREACHABLE;
     }
     return root.allocate<SelectExpression>(
-        root.getIntegralType(width, expr.type->isSigned(), expr.type->isFourState()),
+        factory.getType(width, expr.type->isSigned(), expr.type->isFourState()),
         kind,
         expr,
         *left,
@@ -541,13 +543,13 @@ bool Binder::propagateAssignmentLike(Expression& rhs, const TypeSymbol& lhsType)
     // Integral case
     if (lhsType.width() > rhs.type->width()) {
         if (!lhsType.isReal() && !rhs.type->isReal()) {
-            rhs.type = &root.getIntegralType(lhsType.width(), rhs.type->isSigned(), rhs.type->isFourState());
+            rhs.type = &factory.getType(lhsType.width(), rhs.type->isSigned(), rhs.type->isFourState());
         }
         else {
             if (lhsType.width() > 32)
-                rhs.type = &root.getKnownType(SyntaxKind::RealType);
+                rhs.type = &factory.getRealType();
             else
-                rhs.type = &root.getKnownType(SyntaxKind::ShortRealType);
+                rhs.type = &factory.getShortRealType();
         }
         rhs.propagateType(*rhs.type);
         return true;
@@ -567,17 +569,17 @@ const TypeSymbol& Binder::binaryOperatorResultType(const TypeSymbol* lhsType, co
         // integral type. For the conditional operator it is clear that this case should lead to a shortreal, and
         // it isn't explicitly mentioned for other binary operators
         if (width >= 64)
-            return root.getKnownType(SyntaxKind::RealType);
+            return factory.getRealType();
         else
-            return root.getKnownType(SyntaxKind::ShortRealType);
+            return factory.getShortRealType();
     }
     else {
-        return root.getIntegralType(width, isSigned, fourState);
+        return factory.getType(width, isSigned, fourState);
     }
 }
 
 InvalidExpression& Binder::badExpr(const Expression* expr) {
-    return root.allocate<InvalidExpression>(expr, root.getErrorType());
+    return root.allocate<InvalidExpression>(expr, factory.getErrorType());
 }
 
 }

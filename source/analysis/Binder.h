@@ -76,6 +76,7 @@ private:
 
     const ScopeSymbol& scope;
     const DesignRootSymbol& root;
+    SymbolFactory& factory;
     LookupKind lookupKind;
 };
 

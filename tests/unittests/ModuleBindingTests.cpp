@@ -4,7 +4,7 @@
 
 #include "analysis/Expressions.h"
 #include "analysis/Statements.h"
-#include "analysis/Symbol.h"
+#include "analysis/RootSymbol.h"
 #include "parsing/SyntaxTree.h"
 
 const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, DesignRootSymbol& root) {
