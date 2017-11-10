@@ -79,7 +79,7 @@ private:
     std::vector<SyntaxTree> syntaxTrees;
     BumpAllocator alloc;
     Diagnostics diagnostics;
-    DesignRootSymbol root;
+    RootSymbol root;
     DynamicScopeSymbol scope;
     EvalContext evalContext;
 };

@@ -68,10 +68,10 @@ const ScopeSymbol& Symbol::containingScope() const {
     }
 }
 
-const DesignRootSymbol& Symbol::getRoot() const {
+const RootSymbol& Symbol::getRoot() const {
     const Symbol* symbol = findAncestor(SymbolKind::Root);
     ASSERT(symbol);
-    return symbol->as<DesignRootSymbol>();
+    return symbol->as<RootSymbol>();
 }
 
 Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {

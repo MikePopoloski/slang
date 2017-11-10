@@ -140,7 +140,7 @@ void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstan
 
     // TODO: check symbol kind?
     const DefinitionSymbol& definition = foundSymbol->as<DefinitionSymbol>();
-    const DesignRootSymbol& root = parent.getRoot();
+    const RootSymbol& root = parent.getRoot();
 
     // Evaluate all parameters now so that we can reuse them for all instances below.
     // If we were given a set of parameter assignments, build up some data structures to
@@ -320,7 +320,7 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
         return;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    const DesignRootSymbol& root = parent.getRoot();
+    const RootSymbol& root = parent.getRoot();
     DynamicScopeSymbol iterScope(parent);
     VariableSymbol local(syntax.identifier.valueText(), syntax.identifier.location(),
                          root.factory.getIntType(), iterScope);

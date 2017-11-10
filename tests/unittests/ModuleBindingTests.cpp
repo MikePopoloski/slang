@@ -7,7 +7,7 @@
 #include "analysis/RootSymbol.h"
 #include "parsing/SyntaxTree.h"
 
-const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, DesignRootSymbol& root) {
+const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, RootSymbol& root) {
     REQUIRE(root.topInstances().size() > 0);
     if (!syntax.diagnostics().empty())
         WARN(syntax.reportDiagnostics());
@@ -20,7 +20,7 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
     std::array<const SyntaxTree*, 2> trees = { &file1, &file2 };
-    DesignRootSymbol root(trees);
+    RootSymbol root(trees);
 
     REQUIRE(root.topInstances().size() == 2);
     CHECK(root.topInstances()[0]->name == "C");
@@ -38,7 +38,7 @@ module Leaf();
 endmodule
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     evalModule(tree, root);
 }
 
@@ -70,7 +70,7 @@ endmodule
 )");
 
     // TODO:
-    /*DesignRootSymbol root(tree);
+    /*RootSymbol root(tree);
     CHECK(tree.diagnostics().count() == 15);*/
 }
 
@@ -89,7 +89,7 @@ module Leaf #(parameter int foo = 4)();
 endmodule
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     const auto& instance = evalModule(tree, root);
     const auto& leaf = instance.member<ModuleInstanceSymbol>(0).member<ModuleInstanceSymbol>(0);
     const auto& foo = leaf.lookup<ParameterSymbol>("foo");
@@ -116,7 +116,7 @@ module Leaf #(parameter int foo = 4)();
 endmodule
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     const auto& instance = evalModule(tree, root);
     const auto& leaf = instance
         .member<ModuleInstanceSymbol>(0)
@@ -140,7 +140,7 @@ module Leaf #(parameter int foo)();
 endmodule
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     const auto& instance = evalModule(tree, root).member<LoopGenerateSymbol>(0);
     REQUIRE(instance.members().size() == 10);
 
@@ -176,7 +176,7 @@ endmodule
 )");
 
     // TODO:
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     evalModule(tree, root);
 }
 
@@ -209,7 +209,7 @@ module module1
 endmodule
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     const auto& instance = evalModule(tree, root);
     const auto& alwaysComb = instance.member<ProceduralBlockSymbol>(2);
 
@@ -229,7 +229,7 @@ module Top;
 endmodule
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     const auto& instance = evalModule(tree, root);
     const auto& foo = instance.member<SubroutineSymbol>(0);
     CHECK(!foo.isTask);
@@ -290,7 +290,7 @@ package Foo;
 endpackage
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     const auto& cv = root.topInstances()[0]->member<ParameterSymbol>(0).value();
     CHECK(cv.integer() == 4);
 }

@@ -26,7 +26,7 @@ class Expression;
 class SyntaxTree;
 class Symbol;
 class ScopeSymbol;
-class DesignRootSymbol;
+class RootSymbol;
 class TypeSymbol;
 class WildcardImportSymbol;
 class PackageSymbol;
@@ -173,7 +173,7 @@ public:
     const ScopeSymbol& containingScope() const;
 
     /// Gets the symbol for the root of the design.
-    const DesignRootSymbol& getRoot() const;
+    const RootSymbol& getRoot() const;
 
     template<typename T>
     const T& as() const { return *static_cast<const T*>(this); }

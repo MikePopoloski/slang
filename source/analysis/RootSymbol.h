@@ -12,12 +12,12 @@
 namespace slang {
 
 /// Represents the entirety of a design, along with all contained compilation units.
-class DesignRootSymbol : public ScopeSymbol {
+class RootSymbol : public ScopeSymbol {
 public:
-    explicit DesignRootSymbol(const SourceManager& sourceManager);
-    explicit DesignRootSymbol(const SyntaxTree* tree);
-    explicit DesignRootSymbol(span<const SyntaxTree* const> trees);
-    DesignRootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units);
+    explicit RootSymbol(const SourceManager& sourceManager);
+    explicit RootSymbol(const SyntaxTree* tree);
+    explicit RootSymbol(span<const SyntaxTree* const> trees);
+    RootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units);
 
     /// Gets all of the compilation units in the design.
     span<const CompilationUnitSymbol* const> compilationUnits() const { return unitList; }

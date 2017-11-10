@@ -10,24 +10,24 @@
 
 namespace slang {
 
-DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager) :
+RootSymbol::RootSymbol(const SourceManager& sourceManager) :
     ScopeSymbol(SymbolKind::Root, *this),
     sourceMan(sourceManager)
 {
 }
 
-DesignRootSymbol::DesignRootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units) :
-    DesignRootSymbol(sourceManager)
+RootSymbol::RootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units) :
+    RootSymbol(sourceManager)
 {
     for (auto unit : units)
         addCompilationUnit(allocate<CompilationUnitSymbol>(*unit, *this));
 }
 
-DesignRootSymbol::DesignRootSymbol(const SyntaxTree* tree) :
-    DesignRootSymbol(make_span(&tree, 1)) {}
+RootSymbol::RootSymbol(const SyntaxTree* tree) :
+    RootSymbol(make_span(&tree, 1)) {}
 
-DesignRootSymbol::DesignRootSymbol(span<const SyntaxTree* const> trees) :
-    DesignRootSymbol(trees[0]->sourceManager())
+RootSymbol::RootSymbol(span<const SyntaxTree* const> trees) :
+    RootSymbol(trees[0]->sourceManager())
 {
     for (auto tree : trees) {
         ASSERT(&tree->sourceManager() == &sourceMan);
@@ -35,7 +35,7 @@ DesignRootSymbol::DesignRootSymbol(span<const SyntaxTree* const> trees) :
     }
 }
 
-const PackageSymbol* DesignRootSymbol::findPackage(string_view lookupName) const {
+const PackageSymbol* RootSymbol::findPackage(string_view lookupName) const {
     ensureInit();
 
     auto it = packageMap.find(lookupName);
@@ -45,7 +45,7 @@ const PackageSymbol* DesignRootSymbol::findPackage(string_view lookupName) const
     return (const PackageSymbol*)it->second;
 }
 
-void DesignRootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
+void RootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
     unitList.push_back(&unit);
 
     // Track packages separately; they live in their own namespace.
@@ -55,7 +55,7 @@ void DesignRootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
     }
 }
 
-void DesignRootSymbol::fillMembers(MemberBuilder& builder) const {
+void RootSymbol::fillMembers(MemberBuilder& builder) const {
     // Register built-in system functions.
     const auto& intType = factory.getIntType();
     SmallVectorSized<const FormalArgumentSymbol*, 8> args;
@@ -110,7 +110,7 @@ void DesignRootSymbol::fillMembers(MemberBuilder& builder) const {
     }
 }
 
-void DesignRootSymbol::findInstantiations(const ModuleDeclarationSyntax& module, std::vector<NameSet>& scopeStack,
+void RootSymbol::findInstantiations(const ModuleDeclarationSyntax& module, std::vector<NameSet>& scopeStack,
                                           NameSet& found) {
     // If there are nested modules that shadow global module names, we need to
     // ignore them when considering instantiations.
@@ -153,7 +153,7 @@ static bool containsName(const std::vector<std::unordered_set<string_view>>& sco
     return false;
 }
 
-void DesignRootSymbol::findInstantiations(const MemberSyntax& node, std::vector<NameSet>& scopeStack,
+void RootSymbol::findInstantiations(const MemberSyntax& node, std::vector<NameSet>& scopeStack,
                                           NameSet& found) {
     switch (node.kind) {
         case SyntaxKind::HierarchyInstantiation: {

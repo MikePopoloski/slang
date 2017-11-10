@@ -12,7 +12,7 @@ endpackage
 import Foo::x;
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     const CompilationUnitSymbol& unit = *root.compilationUnits()[0];
 
     const Symbol* x = unit.lookup("x", tree.root().sourceRange().end(), LookupKind::Local);
@@ -39,7 +39,7 @@ module top;
 endmodule
 )");
 
-    DesignRootSymbol root(&tree);
+    RootSymbol root(&tree);
     const auto& top = *root.topInstances()[0];
     const auto& gen_b = top.member<IfGenerateSymbol>(1).member<GenerateBlockSymbol>(0);
     const auto& param = gen_b.member<ParameterSymbol>(0);

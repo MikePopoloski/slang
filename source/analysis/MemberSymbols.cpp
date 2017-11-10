@@ -94,7 +94,7 @@ const StatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<Sy
             buffer.append(&bindStatement(item->as<StatementSyntax>()));
     }
 
-    const DesignRootSymbol& root = getRoot();
+    const RootSymbol& root = getRoot();
     return root.allocate<StatementList>(buffer.copy(root.allocator()));
 }
 
@@ -373,7 +373,7 @@ VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, SourceLocation
 void VariableSymbol::fromSyntax(const Symbol& parent, const DataDeclarationSyntax& syntax,
                                 SmallVector<const VariableSymbol*>& results) {
 
-    const DesignRootSymbol& root = parent.getRoot();
+    const RootSymbol& root = parent.getRoot();
     for (auto declarator : syntax.declarators) {
         const ExpressionSyntax* initializer = declarator->initializer ? &declarator->initializer->expr : nullptr;
 
@@ -436,7 +436,7 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
         return;
 
     const ScopeSymbol& parentScope = containingScope();
-    const DesignRootSymbol& root = getRoot();
+    const RootSymbol& root = getRoot();
     const auto& proto = syntax->prototype;
     const auto& returnType = getRoot().factory.getType(*proto.returnType, parentScope);
 

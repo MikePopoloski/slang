@@ -75,7 +75,7 @@ private:
     const TypeSymbol& binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState);
 
     const ScopeSymbol& scope;
-    const DesignRootSymbol& root;
+    const RootSymbol& root;
     SymbolFactory& factory;
     LookupKind lookupKind;
 };
