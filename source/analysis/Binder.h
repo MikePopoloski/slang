@@ -39,6 +39,9 @@ public:
     /// to perform any necessary implicit conversions and checking.
     const Expression& bindAssignmentLikeContext(const ExpressionSyntax& syntax, SourceLocation location, const TypeSymbol& assignmentType);
 
+    const Statement& bindStatement(const StatementSyntax& syntax) const;
+    const StatementList& bindStatementList(const SyntaxList<SyntaxNode>& items) const;
+
 private:
     Expression& bindAndPropagate(const ExpressionSyntax& syntax);
     Expression& bindExpression(const ExpressionSyntax& syntax);
@@ -62,11 +65,17 @@ private:
     Expression& bindSelectExpression(const ElementSelectExpressionSyntax& syntax);
     Expression& bindSelectExpression(const ExpressionSyntax& syntax, Expression& expr, const SelectorSyntax& selector);
 
+    Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax) const;
+    Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax) const;
+    Statement& bindReturnStatement(const ReturnStatementSyntax& syntax) const;
+    Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax) const;
+
     // functions to check whether operators are applicable to the given operand types
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, Expression** operand);
     bool checkOperatorApplicability(SyntaxKind op, SourceLocation location, Expression** lhs, Expression** rhs);
 
     InvalidExpression& badExpr(const Expression* expr);
+    InvalidStatement& badStmt(const Statement* stmt) const;
 
     // Apply propagation rules for an assignment; increasing the rhs type to the lhs type if necessary
     // apply to both sides if symmetric. Returns true if a type expansion was necessary

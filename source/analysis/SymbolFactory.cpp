@@ -66,13 +66,8 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
     switch (node.kind) {
         case SyntaxKind::CompilationUnit: {
             auto unit = alloc.emplace<CompilationUnitSymbol>(parent);
+            createChildren(unit, node.as<CompilationUnitSyntax>());
             symbols.append(unit);
-
-            SmallVectorSized<const Symbol*, 16> memberSymbols;
-            for (auto member : node.as<CompilationUnitSyntax>().members)
-                createSymbols(*member, *unit, memberSymbols);
-
-            unit->setMembers(memberSymbols);
             break;
         }
         case SyntaxKind::ModuleDeclaration:
@@ -80,9 +75,13 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         case SyntaxKind::ProgramDeclaration:
             symbols.append(alloc.emplace<DefinitionSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
             break;
-        case SyntaxKind::PackageDeclaration:
-            symbols.append(alloc.emplace<PackageSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
+        case SyntaxKind::PackageDeclaration: {
+            string_view name = node.as<ModuleDeclarationSyntax>().header.name.valueText();
+            auto symbol = alloc.emplace<PackageSymbol>(name, parent);
+            createChildren(symbol, node.as<ModuleDeclarationSyntax>());
+            symbols.append(symbol);
             break;
+        }
         case SyntaxKind::PackageImportDeclaration:
             for (auto item : node.as<PackageImportDeclarationSyntax>().items) {
                 if (item->item.kind == TokenKind::Star) {
@@ -140,9 +139,11 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         case SyntaxKind::AlwaysLatchBlock:
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
-        case SyntaxKind::FinalBlock:
-            symbols.append(alloc.emplace<ProceduralBlockSymbol>(node.as<ProceduralBlockSyntax>(), parent));
+        case SyntaxKind::FinalBlock: {
+            auto kind = SemanticFacts::getProceduralBlockKind(node.as<ProceduralBlockSyntax>().kind);
+            symbols.append(alloc.emplace<ProceduralBlockSymbol>(parent, kind));
             break;
+        }
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
         case SyntaxKind::RegType:
@@ -214,6 +215,14 @@ const IntegralTypeSymbol& SymbolFactory::getType(int width, bool isSigned, bool 
                                                  span<const int> lowerBounds, span<const int> widths) {
     TokenKind type = getIntegralKeywordKind(isFourState, isReg);
     return *alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState, lowerBounds, widths);
+}
+
+template<typename TNode>
+void SymbolFactory::createChildren(ScopeSymbol* scope, const TNode& node) {
+    SmallVectorSized<const Symbol*, 16> symbols;
+    for (auto member : node.members)
+        createSymbols(*member, *scope, symbols);
+    scope->setMembers(symbols);
 }
 
 }

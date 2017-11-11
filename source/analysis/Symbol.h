@@ -17,6 +17,7 @@
 #include "util/HashMap.h"
 
 #include "ConstantValue.h"
+#include "SemanticFacts.h"
 
 namespace slang {
 
@@ -76,44 +77,6 @@ enum class SymbolKind {
     Subroutine
 };
 
-/// Specifies the storage lifetime of a variable.
-enum class VariableLifetime {
-    Automatic,
-    Static
-};
-
-/// Specifies behavior of an argument passed to a subroutine.
-enum class FormalArgumentDirection {
-    In,
-    Out,
-    InOut,
-    Ref,
-    ConstRef
-};
-
-/// Indicates which built-in system function is represented by a symbol.
-enum class SystemFunction {
-    Unknown,
-    clog2,
-    bits,
-    left,
-    right,
-    low,
-    high,
-    size,
-    increment
-};
-
-/// Specifies possible procedural block kinds.
-enum class ProceduralBlockKind {
-    Initial,
-    Final,
-    Always,
-    AlwaysComb,
-    AlwaysLatch,
-    AlwaysFF
-};
-
 /// Specifies possible kinds of lookups that can be done.
 enum class LookupKind {
     /// A direct lookup within the scope is performed, with no upward name referencing
@@ -139,9 +102,22 @@ enum class LookupKind {
     Definition
 };
 
-/// Interprets a keyword token as a variable lifetime value.
-/// If the token is unset, returns the value `defaultIfUnset`.
-VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUnset);
+/// A helper class that defers binding of a statement from syntax nodes until
+/// it's ready to be accessed. This is important both for correctness (some
+/// statements might reference other symbols hierarchically) as well as for
+/// performance (a tool might not care to do all name lookups).
+class DeferredStatement {
+public:
+    const Statement& get(const ScopeSymbol& scope) const;
+    void set(const Statement& stmt) { cache = &stmt; }
+    void set(SymbolFactory& factory, const StatementSyntax& syntax) {
+        cache = std::make_tuple(&factory, &syntax);
+    }
+
+private:
+    using FactoryAndSyntax = std::tuple<SymbolFactory*, const StatementSyntax*>;
+    mutable std::variant<const Statement*, FactoryAndSyntax> cache = nullptr;
+};
 
 /// Base class for all symbols (logical code constructs) such as modules, types,
 /// functions, variables, etc.
@@ -182,7 +158,7 @@ protected:
         kind(kind), name(name), location(location) {}
 
     Symbol(SymbolKind kind, const ScopeSymbol& containingSymbol, string_view name = "",
-                    SourceLocation location = SourceLocation()) :
+           SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location),
         parentScope(&containingSymbol) {}
 
@@ -306,14 +282,8 @@ public:
     SymbolList createAndAddSymbols(const SyntaxNode& node);
 
 private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
     std::vector<const Symbol*> members;
 };
-
-class CompilationUnitSymbol;
-class PackageSymbol;
-class ModuleInstanceSymbol;
 
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public ScopeSymbol {
@@ -325,12 +295,7 @@ public:
 /// A SystemVerilog package construct.
 class PackageSymbol : public ScopeSymbol {
 public:
-    PackageSymbol(const ModuleDeclarationSyntax& package, const ScopeSymbol& parent);
-
-private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    const ModuleDeclarationSyntax& syntax;
+    PackageSymbol(string_view name, const ScopeSymbol& parent);
 };
 
 /// Represents a module, interface, or program declaration.
@@ -397,16 +362,8 @@ public:
 //        Symbol(SymbolKind::Genvar, nullptr, name, location) {}
 //};
 
-/// Base class for block scopes that can contain statements. This just lets us share some helper methods
-/// for binding statements and creating local members.
-class StatementBlockSymbol : public ScopeSymbol {
-public:
-    /// Binds a single statement.
-    //const Statement& bindStatement(const StatementSyntax& syntax);
-
-    /// Binds a list of statements, such as in a function body.
-    //const StatementList& bindStatementList(const SyntaxList<SyntaxNode>& items);
-
+/// Base class for block scopes that can contain statements.
+class BlockSymbol : public ScopeSymbol {
 protected:
     using ScopeSymbol::ScopeSymbol;
 
@@ -424,35 +381,32 @@ private:
     Statement& badStmt(const Statement* stmt) const;
 };
 
-class SequentialBlockSymbol : public StatementBlockSymbol {
+class SequentialBlockSymbol : public BlockSymbol {
 public:
     SequentialBlockSymbol(const ScopeSymbol& parent);
-    SequentialBlockSymbol(const BlockStatementSyntax& block, const ScopeSymbol& parent);
 
     static SequentialBlockSymbol& createImplicitBlock(const ForLoopStatementSyntax& forLoop, const ScopeSymbol& parent);
 
-    const Statement& getBody() const;
+    const Statement& getBody() const { return body.get(*this); }
+    void setBody(const Statement& stmt) { body.set(stmt); }
+    void setBody(SymbolFactory& factory, const StatementSyntax& syntax) { body.set(factory, syntax); }
 
 private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    const BlockStatementSyntax* syntax = nullptr;
-    mutable const Statement* body = nullptr;
+    DeferredStatement body;
 };
 
-class ProceduralBlockSymbol : public StatementBlockSymbol {
+class ProceduralBlockSymbol : public BlockSymbol {
 public:
     ProceduralBlockKind procedureKind;
 
-    ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const ScopeSymbol& parent);
+    ProceduralBlockSymbol(const ScopeSymbol& parent, ProceduralBlockKind procedureKind);
 
-    const Statement& getBody() const;
+    const Statement& getBody() const { return body.get(*this); }
+    void setBody(const Statement& stmt) { body.set(stmt); }
+    void setBody(SymbolFactory& factory, const StatementSyntax& syntax) { body.set(factory, syntax); }
 
 private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    const ProceduralBlockSyntax& syntax;
-    mutable const Statement* body = nullptr;
+    DeferredStatement body;
 };
 
 /// Represents a conditional if-generate construct; the results of evaluating
@@ -646,8 +600,8 @@ public:
                          FormalArgumentDirection direction = FormalArgumentDirection::In);
 };
 
-/// Represents a subroutine (task or function.
-class SubroutineSymbol : public StatementBlockSymbol {
+/// Represents a subroutine (task or function).
+class SubroutineSymbol : public BlockSymbol {
 public:
     const FunctionDeclarationSyntax* syntax = nullptr;
     VariableLifetime defaultLifetime = VariableLifetime::Automatic;

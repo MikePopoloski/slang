@@ -14,13 +14,16 @@
 
 namespace slang {
 
-VariableLifetime getLifetimeFromToken(Token token, VariableLifetime defaultIfUnset) {
-    switch (token.kind) {
-        case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
-        case TokenKind::StaticKeyword: return VariableLifetime::Static;
-        case TokenKind::Unknown: return defaultIfUnset;
-        default: THROW_UNREACHABLE;
+const Statement& DeferredStatement::get(const ScopeSymbol& scope) const {
+    if (cache.index() == 0) {
+        auto stmt = std::get<0>(cache);
+        return stmt ? *stmt : InvalidStatement::Instance;
     }
+
+    FactoryAndSyntax& t = std::get<1>(cache);
+    const Statement& stmt = Binder(scope).bindStatement(*std::get<1>(t));
+    cache = &stmt;
+    return stmt;
 }
 
 const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
@@ -181,7 +184,7 @@ DynamicScopeSymbol::DynamicScopeSymbol(const ScopeSymbol& parent) : ScopeSymbol(
 
 void DynamicScopeSymbol::addSymbol(const Symbol& symbol) {
     members.push_back(&symbol);
-    markDirty();
+    setMembers(members);
 }
 
 SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
@@ -190,11 +193,6 @@ SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
     for (auto symbol : symbols)
         addSymbol(*symbol);
     return symbols.copy(getRoot().factory.alloc);
-}
-
-void DynamicScopeSymbol::fillMembers(MemberBuilder& builder) const {
-    for (auto member : members)
-        builder.add(*member);
 }
 
 }

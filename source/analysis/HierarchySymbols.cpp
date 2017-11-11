@@ -17,14 +17,9 @@ CompilationUnitSymbol::CompilationUnitSymbol(const ScopeSymbol& parent) :
     //setMembers(members);
 }
 
-PackageSymbol::PackageSymbol(const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::Package, syntax.header.name, parent), syntax(syntax)
+PackageSymbol::PackageSymbol(string_view name, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::Package, parent, name)
 {
-}
-
-void PackageSymbol::fillMembers(MemberBuilder& builder) const {
-    for (auto member : syntax.members)
-        builder.add(*member, *this);
 }
 
 DefinitionSymbol::DefinitionSymbol(const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent) :

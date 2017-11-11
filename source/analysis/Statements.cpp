@@ -10,6 +10,8 @@
 
 namespace slang {
 
+const InvalidStatement InvalidStatement::Instance(nullptr);
+
 void Statement::eval(EvalContext& context) const {
     switch (kind) {
         case StatementKind::Invalid: break;

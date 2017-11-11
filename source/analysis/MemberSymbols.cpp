@@ -11,7 +11,7 @@
 
 namespace slang {
 
-void StatementBlockSymbol::findChildSymbols(MemberBuilder& builder, const SyntaxList<SyntaxNode>& items) const {
+void BlockSymbol::findChildSymbols(MemberBuilder& builder, const SyntaxList<SyntaxNode>& items) const {
     for (auto item : items) {
         if (item->kind == SyntaxKind::DataDeclaration) {
             SmallVectorSized<const VariableSymbol*, 4> symbols;
@@ -26,7 +26,7 @@ void StatementBlockSymbol::findChildSymbols(MemberBuilder& builder, const Syntax
     }
 }
 
-void StatementBlockSymbol::findChildSymbols(MemberBuilder& builder, const StatementSyntax& syntax) const {
+void BlockSymbol::findChildSymbols(MemberBuilder& builder, const StatementSyntax& syntax) const {
     switch (syntax.kind) {
         case SyntaxKind::ConditionalStatement: {
             const auto& conditional = syntax.as<ConditionalStatementSyntax>();
@@ -53,14 +53,14 @@ void StatementBlockSymbol::findChildSymbols(MemberBuilder& builder, const Statem
             break;
         }
         case SyntaxKind::SequentialBlockStatement:
-            builder.add(getRoot().allocate<SequentialBlockSymbol>(syntax.as<BlockStatementSyntax>(), *this));
+            builder.add(getRoot().allocate<SequentialBlockSymbol>(*this));
             break;
         default:
             break;
     }
 }
 
-const Statement& StatementBlockSymbol::bindStatement(const StatementSyntax& syntax) const {
+const Statement& BlockSymbol::bindStatement(const StatementSyntax& syntax) const {
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
             return bindReturnStatement((const ReturnStatementSyntax&)syntax);
@@ -74,7 +74,7 @@ const Statement& StatementBlockSymbol::bindStatement(const StatementSyntax& synt
     }
 }
 
-const StatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<SyntaxNode>& items) const {
+const StatementList& BlockSymbol::bindStatementList(const SyntaxList<SyntaxNode>& items) const {
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto member : members()) {
         if (member->kind == SymbolKind::Variable)
@@ -90,7 +90,7 @@ const StatementList& StatementBlockSymbol::bindStatementList(const SyntaxList<Sy
     return root.allocate<StatementList>(buffer.copy(root.allocator()));
 }
 
-Statement& StatementBlockSymbol::bindReturnStatement(const ReturnStatementSyntax& syntax) const {
+Statement& BlockSymbol::bindReturnStatement(const ReturnStatementSyntax& syntax) const {
     auto stmtLoc = syntax.returnKeyword.location();
     const Symbol* subroutine = findAncestor(SymbolKind::Subroutine);
     if (!subroutine) {
@@ -103,7 +103,7 @@ Statement& StatementBlockSymbol::bindReturnStatement(const ReturnStatementSyntax
     return getRoot().allocate<ReturnStatement>(syntax, &expr);
 }
 
-Statement& StatementBlockSymbol::bindConditionalStatement(const ConditionalStatementSyntax& syntax) const {
+Statement& BlockSymbol::bindConditionalStatement(const ConditionalStatementSyntax& syntax) const {
     ASSERT(syntax.predicate.conditions.count() == 1);
     ASSERT(!syntax.predicate.conditions[0]->matchesClause);
 
@@ -116,7 +116,7 @@ Statement& StatementBlockSymbol::bindConditionalStatement(const ConditionalState
     return getRoot().allocate<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
-Statement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSyntax&) const {
+Statement& BlockSymbol::bindForLoopStatement(const ForLoopStatementSyntax&) const {
     // TODO: initializers need better handling
 
     // If the initializers here involve doing variable declarations, then the spec says we create
@@ -152,27 +152,17 @@ Statement& StatementBlockSymbol::bindForLoopStatement(const ForLoopStatementSynt
     return badStmt(nullptr);
 }
 
-Statement& StatementBlockSymbol::bindExpressionStatement(const ExpressionStatementSyntax& syntax) const {
+Statement& BlockSymbol::bindExpressionStatement(const ExpressionStatementSyntax& syntax) const {
     const auto& expr = Binder(*this).bindSelfDeterminedExpression(syntax.expr);
     return getRoot().allocate<ExpressionStatement>(syntax, expr);
 }
 
-Statement& StatementBlockSymbol::badStmt(const Statement* stmt) const {
+Statement& BlockSymbol::badStmt(const Statement* stmt) const {
     return getRoot().allocate<InvalidStatement>(stmt);
 }
 
 SequentialBlockSymbol::SequentialBlockSymbol(const ScopeSymbol& parent) :
-    StatementBlockSymbol(SymbolKind::SequentialBlock, parent) {}
-
-SequentialBlockSymbol::SequentialBlockSymbol(const BlockStatementSyntax& syntax, const ScopeSymbol& parent) :
-    StatementBlockSymbol(SymbolKind::SequentialBlock, parent),
-    syntax(&syntax) {}
-
-const Statement& SequentialBlockSymbol::getBody() const {
-    if (!body)
-        body = &bindStatementList(syntax ? syntax->items : nullptr);
-    return *body;
-}
+    BlockSymbol(SymbolKind::SequentialBlock, parent) {}
 
 SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopStatementSyntax& forLoop,
                                                                   const ScopeSymbol& parent) {
@@ -187,28 +177,10 @@ SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopS
     return block;
 }
 
-void SequentialBlockSymbol::fillMembers(MemberBuilder& builder) const {
-    if (syntax)
-        findChildSymbols(builder, syntax->items);
-}
-
-ProceduralBlockSymbol::ProceduralBlockSymbol(const ProceduralBlockSyntax& syntax, const ScopeSymbol& parent) :
-    StatementBlockSymbol(SymbolKind::ProceduralBlock, parent),
-    syntax(syntax)
+ProceduralBlockSymbol::ProceduralBlockSymbol(const ScopeSymbol& parent, ProceduralBlockKind procedureKind) :
+    BlockSymbol(SymbolKind::ProceduralBlock, parent),
+    procedureKind(procedureKind)
 {
-    switch (syntax.kind) {
-        case SyntaxKind::AlwaysBlock: procedureKind = ProceduralBlockKind::Always; break;
-        case SyntaxKind::AlwaysCombBlock: procedureKind = ProceduralBlockKind::AlwaysComb; break;
-        case SyntaxKind::AlwaysLatchBlock: procedureKind = ProceduralBlockKind::AlwaysLatch; break;
-        case SyntaxKind::AlwaysFFBlock: procedureKind = ProceduralBlockKind::AlwaysFF; break;
-        case SyntaxKind::InitialBlock: procedureKind = ProceduralBlockKind::Initial; break;
-        case SyntaxKind::FinalBlock: procedureKind = ProceduralBlockKind::Final; break;
-        default: THROW_UNREACHABLE;
-    }
-}
-
-void ProceduralBlockSymbol::fillMembers(MemberBuilder&) const {
-    body = &bindStatement(syntax.statement);
 }
 
 ExplicitImportSymbol::ExplicitImportSymbol(string_view packageName, string_view importName,
@@ -405,16 +377,16 @@ FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation loca
 
 // TODO: handle functions that don't have simple name tokens
 SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const ScopeSymbol& parent) :
-    StatementBlockSymbol(SymbolKind::Subroutine, syntax.prototype.name.getFirstToken(), parent),
+    BlockSymbol(SymbolKind::Subroutine, syntax.prototype.name.getFirstToken(), parent),
     syntax(&syntax)
 {
-    defaultLifetime = getLifetimeFromToken(syntax.prototype.lifetime, VariableLifetime::Automatic);
+    defaultLifetime = SemanticFacts::getVariableLifetime(syntax.prototype.lifetime).value_or(VariableLifetime::Automatic);
     isTask = syntax.kind == SyntaxKind::TaskDeclaration;
 }
 
 SubroutineSymbol::SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
                                    SystemFunction systemFunction, const ScopeSymbol& parent) :
-    StatementBlockSymbol(SymbolKind::Subroutine, parent, name),
+    BlockSymbol(SymbolKind::Subroutine, parent, name),
     systemFunctionKind(systemFunction), returnType_(&returnType), arguments_(arguments) {}
 
 const StatementList& SubroutineSymbol::body() const {

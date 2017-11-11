@@ -17,6 +17,68 @@ Binder::Binder(const ScopeSymbol& scope, LookupKind lookupKind) :
 {
 }
 
+const Expression& Binder::bindConstantExpression(const ExpressionSyntax& syntax) {
+    return bindAndPropagate(syntax);
+}
+
+const Expression& Binder::bindSelfDeterminedExpression(const ExpressionSyntax& syntax) {
+    return bindAndPropagate(syntax);
+}
+
+const Expression& Binder::bindAssignmentLikeContext(const ExpressionSyntax& syntax, SourceLocation location, const TypeSymbol& assignmentType) {
+    Expression& expr = bindAndPropagate(syntax);
+    if (expr.bad())
+        return expr;
+
+    const TypeSymbol& type = *expr.type;
+    if (!assignmentType.isAssignmentCompatible(type)) {
+        DiagCode code = assignmentType.isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
+        root.addError(code, location) << syntax.sourceRange();
+        return badExpr(&expr);
+    }
+
+    if (!propagateAssignmentLike(expr, assignmentType))
+        expr.propagateType(*expr.type);
+
+    // TODO: truncation
+    return expr;
+}
+
+const Statement& Binder::bindStatement(const StatementSyntax& syntax) const {
+    switch (syntax.kind) {
+        case SyntaxKind::ReturnStatement:
+            return bindReturnStatement((const ReturnStatementSyntax&)syntax);
+        case SyntaxKind::ConditionalStatement:
+            return bindConditionalStatement((const ConditionalStatementSyntax&)syntax);
+        case SyntaxKind::ForLoopStatement:
+            return bindForLoopStatement((const ForLoopStatementSyntax&)syntax);
+        case SyntaxKind::ExpressionStatement:
+            return bindExpressionStatement((const ExpressionStatementSyntax&)syntax);
+        default: THROW_UNREACHABLE;
+    }
+}
+
+const StatementList& Binder::bindStatementList(const SyntaxList<SyntaxNode>& items) const {
+    SmallVectorSized<const Statement*, 8> buffer;
+    for (auto member : scope.members()) {
+        if (member->kind == SymbolKind::Variable)
+            buffer.append(&root.allocate<VariableDeclStatement>(member->as<VariableSymbol>()));
+    }
+
+    for (const auto& item : items) {
+        if (isStatement(item->kind))
+            buffer.append(&bindStatement(item->as<StatementSyntax>()));
+    }
+
+    return root.allocate<StatementList>(buffer.copy(root.allocator()));
+}
+
+Expression& Binder::bindAndPropagate(const ExpressionSyntax& syntax) {
+    Expression& expr = bindExpression(syntax);
+    expr.propagateType(*expr.type);
+    return expr;
+}
+
 Expression& Binder::bindExpression(const ExpressionSyntax& syntax) {
     switch (syntax.kind) {
         case SyntaxKind::NullLiteralExpression:
@@ -109,39 +171,6 @@ Expression& Binder::bindExpression(const ExpressionSyntax& syntax) {
         default: THROW_UNREACHABLE;
     }
     return badExpr(nullptr);
-}
-
-const Expression& Binder::bindConstantExpression(const ExpressionSyntax& syntax) {
-    return bindAndPropagate(syntax);
-}
-
-const Expression& Binder::bindSelfDeterminedExpression(const ExpressionSyntax& syntax) {
-    return bindAndPropagate(syntax);
-}
-
-Expression& Binder::bindAndPropagate(const ExpressionSyntax& syntax) {
-    Expression& expr = bindExpression(syntax);
-    expr.propagateType(*expr.type);
-    return expr;
-}
-
-const Expression& Binder::bindAssignmentLikeContext(const ExpressionSyntax& syntax, SourceLocation location, const TypeSymbol& assignmentType) {
-    Expression& expr = bindAndPropagate(syntax);
-    if (expr.bad())
-        return expr;
-
-    const TypeSymbol& type = *expr.type;
-    if (!assignmentType.isAssignmentCompatible(type)) {
-        DiagCode code = assignmentType.isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        root.addError(code, location) << syntax.sourceRange();
-        return badExpr(&expr);
-    }
-
-    if (!propagateAssignmentLike(expr, assignmentType))
-        expr.propagateType(*expr.type);
-
-    // TODO: truncation
-    return expr;
 }
 
 Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
@@ -468,6 +497,73 @@ Expression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, Express
     );
 }
 
+Statement& Binder::bindReturnStatement(const ReturnStatementSyntax& syntax) const {
+    auto stmtLoc = syntax.returnKeyword.location();
+    const Symbol* subroutine = scope.findAncestor(SymbolKind::Subroutine);
+    if (!subroutine) {
+        root.addError(DiagCode::ReturnNotInSubroutine, stmtLoc);
+        return badStmt(nullptr);
+    }
+
+    const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, stmtLoc,
+                                                               subroutine->as<SubroutineSymbol>().returnType());
+    return root.allocate<ReturnStatement>(syntax, &expr);
+}
+
+Statement& Binder::bindConditionalStatement(const ConditionalStatementSyntax& syntax) const {
+    ASSERT(syntax.predicate.conditions.count() == 1);
+    ASSERT(!syntax.predicate.conditions[0]->matchesClause);
+
+    const auto& cond = Binder(*this).bindSelfDeterminedExpression(syntax.predicate.conditions[0]->expr);
+    const auto& ifTrue = bindStatement(syntax.statement);
+    const Statement* ifFalse = nullptr;
+    if (syntax.elseClause)
+        ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>());
+
+    return root.allocate<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
+}
+
+Statement& Binder::bindForLoopStatement(const ForLoopStatementSyntax&) const {
+    // TODO: initializers need better handling
+
+    // If the initializers here involve doing variable declarations, then the spec says we create
+    // an implicit sequential block and do the declaration there.
+    /*BumpAllocator& alloc = root.allocator();
+    SequentialBinder& implicitInitBlock = *alloc.emplace<SequentialBinder>(*this);
+    const auto& forVariable = syntax.initializers[0]->as<ForVariableDeclarationSyntax>();
+
+    const auto& loopVar = *alloc.emplace<VariableSymbol>(forVariable.declarator.name, forVariable.type,
+    implicitInitBlock, VariableLifetime::Automatic, false,
+    &forVariable.declarator.initializer->expr);
+
+    implicitInitBlock.setMember(loopVar);
+    builder.add(implicitInitBlock);
+
+    Binder binder(implicitInitBlock);
+    const auto& stopExpr = binder.bindSelfDeterminedExpression(syntax.stopExpr);
+
+    SmallVectorSized<const BoundExpression*, 2> steps;
+    for (auto step : syntax.steps)
+    steps.append(&binder.bindSelfDeterminedExpression(*step));
+
+    const auto& statement = implicitInitBlock.bindStatement(syntax.statement);
+    const auto& loop = allocate<BoundForLoopStatement>(syntax, stopExpr, steps.copy(root.allocator()), statement);
+
+    SmallVectorSized<const Statement*, 2> blockList;
+    blockList.append(&allocate<BoundVariableDecl>(loopVar));
+    blockList.append(&loop);
+
+    implicitInitBlock.setBody(allocate<StatementList>(blockList.copy(root.allocator())));
+    return allocate<BoundSequentialBlock>(implicitInitBlock);*/
+
+    return badStmt(nullptr);
+}
+
+Statement& Binder::bindExpressionStatement(const ExpressionStatementSyntax& syntax) const {
+    const auto& expr = Binder(*this).bindSelfDeterminedExpression(syntax.expr);
+    return root.allocate<ExpressionStatement>(syntax, expr);
+}
+
 bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, Expression** operand) {
     if ((*operand)->bad())
         return false;
@@ -580,6 +676,10 @@ const TypeSymbol& Binder::binaryOperatorResultType(const TypeSymbol* lhsType, co
 
 InvalidExpression& Binder::badExpr(const Expression* expr) {
     return root.allocate<InvalidExpression>(expr, factory.getErrorType());
+}
+
+InvalidStatement& Binder::badStmt(const Statement* stmt) const {
+    return root.allocate<InvalidStatement>(stmt);
 }
 
 }

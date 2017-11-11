@@ -52,6 +52,9 @@ public:
     BumpAllocator alloc;
 
 private:
+    template<typename TNode>
+    void createChildren(ScopeSymbol* scope, const TNode& node);
+
     std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
     std::unordered_map<uint64_t, const IntegralTypeSymbol*> integralTypeCache;
 

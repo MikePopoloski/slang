@@ -58,6 +58,8 @@ public:
 
     explicit InvalidStatement(const Statement* child) :
         Statement(StatementKind::Invalid), child(child) {}
+
+    static const InvalidStatement Instance;
 };
 
 /// Represents a list of statements.
