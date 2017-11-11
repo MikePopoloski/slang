@@ -318,12 +318,8 @@ class ModuleInstanceSymbol;
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public ScopeSymbol {
 public:
-    CompilationUnitSymbol(const SyntaxNode& rootNode, const ScopeSymbol& parent);
-
-private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    const SyntaxNode& rootNode;
+    //CompilationUnitSymbol(const ScopeSymbol& parent, SymbolList members);
+    CompilationUnitSymbol(const ScopeSymbol& parent);
 };
 
 /// A SystemVerilog package construct.

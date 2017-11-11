@@ -23,6 +23,8 @@ public:
     /// Creates symbols for the given syntax node.
     void createSymbols(const SyntaxNode& node, const ScopeSymbol& parent, SmallVector<const Symbol*>& symbols);
 
+    const CompilationUnitSymbol& createCompilationUnit(const SyntaxNode& node, const ScopeSymbol& parent);
+
     const TypeSymbol& getType(SyntaxKind kind) const;
     const TypeSymbol& getType(const DataTypeSyntax& node, const ScopeSymbol& parent);
     const IntegralTypeSymbol& getType(int width, bool isSigned, bool isFourState = true, bool isReg = false);

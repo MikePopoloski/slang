@@ -20,7 +20,7 @@ RootSymbol::RootSymbol(const SourceManager& sourceManager, span<const Compilatio
     RootSymbol(sourceManager)
 {
     for (auto unit : units)
-        addCompilationUnit(allocate<CompilationUnitSymbol>(*unit, *this));
+        addCompilationUnit(factory.createCompilationUnit(*unit, *this));
 }
 
 RootSymbol::RootSymbol(const SyntaxTree* tree) :
@@ -31,7 +31,7 @@ RootSymbol::RootSymbol(span<const SyntaxTree* const> trees) :
 {
     for (auto tree : trees) {
         ASSERT(&tree->sourceManager() == &sourceMan);
-        addCompilationUnit(allocate<CompilationUnitSymbol>(tree->root(), *this));
+        addCompilationUnit(factory.createCompilationUnit(tree->root(), *this));
     }
 }
 

@@ -46,9 +46,35 @@ SymbolFactory::SymbolFactory() :
     knownTypes[SyntaxKind::Unknown] = &errorType;
 }
 
+const CompilationUnitSymbol& SymbolFactory::createCompilationUnit(const SyntaxNode& node, const ScopeSymbol& parent) {
+    SmallVectorSized<const Symbol*, 4> symbols;
+    createSymbols(node, parent, symbols);
+
+    if (node.kind == SyntaxKind::CompilationUnit) {
+        ASSERT(symbols.size() == 1);
+        return symbols[0]->as<CompilationUnitSymbol>();
+    }
+    else {
+        auto unit = alloc.emplace<CompilationUnitSymbol>(parent);
+        unit->setMembers(symbols);
+        return *unit;
+    }
+}
+
 void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& parent,
                                   SmallVector<const Symbol*>& symbols) {
     switch (node.kind) {
+        case SyntaxKind::CompilationUnit: {
+            auto unit = alloc.emplace<CompilationUnitSymbol>(parent);
+            symbols.append(unit);
+
+            SmallVectorSized<const Symbol*, 16> memberSymbols;
+            for (auto member : node.as<CompilationUnitSyntax>().members)
+                createSymbols(*member, *unit, memberSymbols);
+
+            unit->setMembers(memberSymbols);
+            break;
+        }
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration:

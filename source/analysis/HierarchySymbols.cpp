@@ -11,22 +11,10 @@
 
 namespace slang {
 
-CompilationUnitSymbol::CompilationUnitSymbol(const SyntaxNode& rootNode, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::CompilationUnit, parent),
-    rootNode(rootNode)
+CompilationUnitSymbol::CompilationUnitSymbol(const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::CompilationUnit, parent)
 {
-}
-
-void CompilationUnitSymbol::fillMembers(MemberBuilder& builder) const {
-    // If the root node is a compilation unit, unwrap it into individual members.
-    // Otherwise just take the members as they are.
-    if (rootNode.kind == SyntaxKind::CompilationUnit) {
-        for (auto member : rootNode.as<CompilationUnitSyntax>().members)
-            builder.add(*member, *this);
-    }
-    else {
-        builder.add(rootNode, *this);
-    }
+    //setMembers(members);
 }
 
 PackageSymbol::PackageSymbol(const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent) :
