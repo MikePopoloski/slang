@@ -14,16 +14,25 @@
 
 namespace slang {
 
-const Statement& DeferredStatement::get(const ScopeSymbol& scope) const {
-    if (cache.index() == 0) {
-        auto stmt = std::get<0>(cache);
-        return stmt ? *stmt : InvalidStatement::Instance;
-    }
+Symbol::LazyStatement::LazyStatement() : Lazy(InvalidStatement::Instance) {}
 
-    FactoryAndSyntax& t = std::get<1>(cache);
-    const Statement& stmt = Binder(scope).bindStatement(*std::get<1>(t));
-    cache = &stmt;
-    return stmt;
+const Statement& Symbol::LazyStatement::evaluate(const ScopeSymbol& scope,
+                                                 const StatementSyntax& syntax) const {
+    return Binder(scope).bindStatement(syntax);
+}
+
+Symbol::LazyExpression::LazyExpression() : Lazy(InvalidExpression::Instance) {}
+
+const Expression& Symbol::LazyExpression::evaluate(const ScopeSymbol& scope,
+                                                   const ExpressionSyntax& syntax) const {
+    return Binder(scope).bindConstantExpression(syntax);
+}
+
+Symbol::LazyType::LazyType() : Lazy(ErrorTypeSymbol::Instance) {}
+
+const TypeSymbol& Symbol::LazyType::evaluate(const ScopeSymbol& scope,
+                                             const DataTypeSyntax& syntax) const {
+    return scope.getFactory().getType(syntax, scope);
 }
 
 const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
@@ -41,6 +50,10 @@ const RootSymbol& Symbol::getRoot() const {
     const Symbol* symbol = findAncestor(SymbolKind::Root);
     ASSERT(symbol);
     return symbol->as<RootSymbol>();
+}
+
+SymbolFactory& Symbol::getFactory() const {
+    return getRoot().factory;
 }
 
 Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {

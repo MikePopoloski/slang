@@ -104,7 +104,9 @@ public:
 /// resolve the type of some expression or declaration.
 class ErrorTypeSymbol : public TypeSymbol {
 public:
-    explicit ErrorTypeSymbol() : TypeSymbol(SymbolKind::Unknown) {}
+    ErrorTypeSymbol() : TypeSymbol(SymbolKind::Unknown) {}
+
+    static const ErrorTypeSymbol Instance;
 };
 
 class TypeAliasSymbol : public TypeSymbol {

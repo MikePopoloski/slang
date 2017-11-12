@@ -102,23 +102,6 @@ enum class LookupKind {
     Definition
 };
 
-/// A helper class that defers binding of a statement from syntax nodes until
-/// it's ready to be accessed. This is important both for correctness (some
-/// statements might reference other symbols hierarchically) as well as for
-/// performance (a tool might not care to do all name lookups).
-class DeferredStatement {
-public:
-    const Statement& get(const ScopeSymbol& scope) const;
-    void set(const Statement& stmt) { cache = &stmt; }
-    void set(SymbolFactory& factory, const StatementSyntax& syntax) {
-        cache = std::make_tuple(&factory, &syntax);
-    }
-
-private:
-    using FactoryAndSyntax = std::tuple<SymbolFactory*, const StatementSyntax*>;
-    mutable std::variant<const Statement*, FactoryAndSyntax> cache = nullptr;
-};
-
 /// Base class for all symbols (logical code constructs) such as modules, types,
 /// functions, variables, etc.
 class Symbol {
@@ -147,6 +130,8 @@ public:
     /// Gets the symbol for the root of the design.
     const RootSymbol& getRoot() const;
 
+    SymbolFactory& getFactory() const;
+
     template<typename T>
     const T& as() const { return *static_cast<const T*>(this); }
 
@@ -167,6 +152,47 @@ protected:
         parentScope(&containingSymbol) {}
 
     Diagnostic& addError(DiagCode code, SourceLocation location) const;
+
+    // The following are helper classes for deferring binding of statements,
+    // expressions, and types until they're ready to be accessed. This is
+    // important both for correctness as well as for performance when not
+    // doing a batch compilation.
+
+    template<typename TDerived, typename TResult, typename TSource>
+    struct Lazy {
+        Lazy(const TResult& init) : cache(&init) {}
+
+        void set(const TResult& result) { cache = &result; }
+        void set(const TSource& source) { cache = &source; }
+
+        const TResult& get(const ScopeSymbol& scope) const {
+            if (cache.index() == 0)
+                return *std::get<0>(cache);
+
+            auto derived = static_cast<const TDerived*>(this);
+            const TResult& result = derived->evaluate(scope, *std::get<1>(cache));
+            cache = &result;
+            return result;
+        }
+
+    private:
+        mutable std::variant<const TResult*, const TSource*> cache;
+    };
+
+    struct LazyStatement : public Lazy<LazyStatement, Statement, StatementSyntax> {
+        LazyStatement();
+        const Statement& evaluate(const ScopeSymbol& scope, const StatementSyntax& syntax) const;
+    };
+
+    struct LazyExpression : public Lazy<LazyExpression, Expression, ExpressionSyntax> {
+        LazyExpression();
+        const Expression& evaluate(const ScopeSymbol& scope, const ExpressionSyntax& syntax) const;
+    };
+
+    struct LazyType : public Lazy<LazyType, TypeSymbol, DataTypeSyntax> {
+        LazyType();
+        const TypeSymbol& evaluate(const ScopeSymbol& scope, const DataTypeSyntax& syntax) const;
+    };
 
 private:
     const ScopeSymbol* parentScope = nullptr;
@@ -381,7 +407,7 @@ private:
     Statement& badStmt(const Statement* stmt) const;
 };
 
-class SequentialBlockSymbol : public BlockSymbol {
+class SequentialBlockSymbol : public ScopeSymbol {
 public:
     SequentialBlockSymbol(const ScopeSymbol& parent);
 
@@ -389,13 +415,13 @@ public:
 
     const Statement& getBody() const { return body.get(*this); }
     void setBody(const Statement& stmt) { body.set(stmt); }
-    void setBody(SymbolFactory& factory, const StatementSyntax& syntax) { body.set(factory, syntax); }
+    void setBody(const StatementSyntax& syntax) { body.set(syntax); }
 
 private:
-    DeferredStatement body;
+    LazyStatement body;
 };
 
-class ProceduralBlockSymbol : public BlockSymbol {
+class ProceduralBlockSymbol : public ScopeSymbol {
 public:
     ProceduralBlockKind procedureKind;
 
@@ -403,10 +429,10 @@ public:
 
     const Statement& getBody() const { return body.get(*this); }
     void setBody(const Statement& stmt) { body.set(stmt); }
-    void setBody(SymbolFactory& factory, const StatementSyntax& syntax) { body.set(factory, syntax); }
+    void setBody(const StatementSyntax& syntax) { body.set(syntax); }
 
 private:
-    DeferredStatement body;
+    LazyStatement body;
 };
 
 /// Represents a conditional if-generate construct; the results of evaluating

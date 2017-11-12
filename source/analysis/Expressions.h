@@ -142,6 +142,8 @@ public:
 
     InvalidExpression(const Expression* child, const TypeSymbol& type) :
         Expression(ExpressionKind::Invalid, type), child(child) {}
+
+    static const InvalidExpression Instance;
 };
 
 /// Represents an integer literal.

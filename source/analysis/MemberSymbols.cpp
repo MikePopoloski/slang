@@ -162,7 +162,7 @@ Statement& BlockSymbol::badStmt(const Statement* stmt) const {
 }
 
 SequentialBlockSymbol::SequentialBlockSymbol(const ScopeSymbol& parent) :
-    BlockSymbol(SymbolKind::SequentialBlock, parent) {}
+    ScopeSymbol(SymbolKind::SequentialBlock, parent) {}
 
 SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopStatementSyntax& forLoop,
                                                                   const ScopeSymbol& parent) {
@@ -178,7 +178,7 @@ SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopS
 }
 
 ProceduralBlockSymbol::ProceduralBlockSymbol(const ScopeSymbol& parent, ProceduralBlockKind procedureKind) :
-    BlockSymbol(SymbolKind::ProceduralBlock, parent),
+    ScopeSymbol(SymbolKind::ProceduralBlock, parent),
     procedureKind(procedureKind)
 {
 }

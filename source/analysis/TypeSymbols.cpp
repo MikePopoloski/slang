@@ -10,6 +10,8 @@
 
 namespace slang {
 
+const ErrorTypeSymbol ErrorTypeSymbol::Instance;
+
 static int zero = 0;
 span<int const> IntegralTypeSymbol::EmptyLowerBound{ &zero, 1 };
 

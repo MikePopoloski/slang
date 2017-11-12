@@ -11,6 +11,8 @@
 
 namespace slang {
 
+const InvalidExpression InvalidExpression::Instance(nullptr, ErrorTypeSymbol::Instance);
+
 bool Expression::evalBool(EvalContext& context) const {
     ConstantValue result = eval(context);
     if (!result.isInteger())
