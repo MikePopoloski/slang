@@ -14,21 +14,36 @@
 
 namespace slang {
 
-Symbol::LazyStatement::LazyStatement() : Lazy(InvalidStatement::Instance) {}
+Symbol::LazyStatement::LazyStatement() : Lazy(&InvalidStatement::Instance) {}
 
 const Statement& Symbol::LazyStatement::evaluate(const ScopeSymbol& scope,
                                                  const StatementSyntax& syntax) const {
     return Binder(scope).bindStatement(syntax);
 }
 
-Symbol::LazyExpression::LazyExpression() : Lazy(InvalidExpression::Instance) {}
+Symbol::LazyStatementList::LazyStatementList() : Lazy(&StatementList::Empty) {}
 
-const Expression& Symbol::LazyExpression::evaluate(const ScopeSymbol& scope,
-                                                   const ExpressionSyntax& syntax) const {
+const StatementList& Symbol::LazyStatementList::evaluate(const ScopeSymbol& scope,
+                                                         const SyntaxList<SyntaxNode>& list) const {
+    return Binder(scope).bindStatementList(list);
+}
+
+Symbol::LazyConstant::LazyConstant() : Lazy(&InvalidExpression::Instance) {}
+
+const Expression& Symbol::LazyConstant::evaluate(const ScopeSymbol& scope,
+                                                 const ExpressionSyntax& syntax) const {
     return Binder(scope).bindConstantExpression(syntax);
 }
 
-Symbol::LazyType::LazyType() : Lazy(ErrorTypeSymbol::Instance) {}
+Symbol::LazyInitializer::LazyInitializer() : Lazy(nullptr) {}
+
+const Expression& Symbol::LazyInitializer::evaluate(const ScopeSymbol& scope,
+                                                    const ExpressionSyntax& syntax) const {
+    // TODO: bind assignment-like here
+    return Binder(scope).bindConstantExpression(syntax);
+}
+
+Symbol::LazyType::LazyType() : Lazy(&ErrorTypeSymbol::Instance) {}
 
 const TypeSymbol& Symbol::LazyType::evaluate(const ScopeSymbol& scope,
                                              const DataTypeSyntax& syntax) const {

@@ -305,8 +305,8 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     // Fabricate a local variable that will serve as the loop iteration variable.
     const RootSymbol& root = parent.getRoot();
     DynamicScopeSymbol iterScope(parent);
-    VariableSymbol local(syntax.identifier.valueText(), syntax.identifier.location(),
-                         root.factory.getIntType(), iterScope);
+    VariableSymbol local(syntax.identifier.valueText(), iterScope);
+    local.setType(root.factory.getIntType());
     iterScope.addSymbol(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.

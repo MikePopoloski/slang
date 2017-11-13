@@ -196,7 +196,7 @@ public:
     const VariableSymbol& symbol;
 
     VariableRefExpression(const VariableSymbol& symbol, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::VariableRef, symbol.type(), syntax), symbol(symbol) {}
+        Expression(ExpressionKind::VariableRef, symbol.getType(), syntax), symbol(symbol) {}
 
     ConstantValue eval(EvalContext& context) const;
 };
@@ -329,7 +329,7 @@ public:
     const SubroutineSymbol& subroutine;
 
     CallExpression(const SubroutineSymbol& subroutine, span<const Expression*> arguments, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::Call, subroutine.returnType(), syntax),
+        Expression(ExpressionKind::Call, subroutine.getReturnType(), syntax),
         subroutine(subroutine), arguments_(arguments) {}
 
     span<const Expression* const> arguments() const { return arguments_; }

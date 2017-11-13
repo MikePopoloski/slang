@@ -33,10 +33,8 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local {
-        varToken.valueText(), varToken.location(),
-        root.factory.getIntType(), scope
-    };
+    VariableSymbol local {varToken.valueText(), scope};
+    local.setType(root.factory.getIntType());
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
@@ -65,10 +63,8 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local {
-        varToken.valueText(), varToken.location(),
-        root.factory.getType(20, false), scope
-    };
+    VariableSymbol local { varToken.valueText(), scope };
+    local.setType(root.factory.getType(20, false));
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
@@ -93,10 +89,8 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local {
-        varToken.valueText(), varToken.location(),
-        root.factory.getType(20, false), scope
-    };
+    VariableSymbol local { varToken.valueText(), scope };
+    local.setType(root.factory.getType(20, false));
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
@@ -125,10 +119,8 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local {
-        varToken.valueText(), varToken.location(),
-        root.factory.getType(20, false), scope
-    };
+    VariableSymbol local { varToken.valueText(), scope };
+    local.setType(root.factory.getType(20, false));
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);

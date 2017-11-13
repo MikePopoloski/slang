@@ -99,7 +99,7 @@ Statement& BlockSymbol::bindReturnStatement(const ReturnStatementSyntax& syntax)
     }
 
     const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, stmtLoc,
-                                                               subroutine->as<SubroutineSymbol>().returnType());
+                                                               subroutine->as<SubroutineSymbol>().getReturnType());
     return getRoot().allocate<ReturnStatement>(syntax, &expr);
 }
 
@@ -170,9 +170,10 @@ SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopS
     SequentialBlockSymbol& block = *alloc.emplace<SequentialBlockSymbol>(parent);
 
     const auto& forVariable = forLoop.initializers[0]->as<ForVariableDeclarationSyntax>();
-    const auto& loopVar = *alloc.emplace<VariableSymbol>(forVariable.declarator.name, forVariable.type,
-                                                         block, VariableLifetime::Automatic, false,
-                                                         &forVariable.declarator.initializer->expr);
+    auto& loopVar = *alloc.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
+    loopVar.setType(forVariable.type);
+    loopVar.setInitializer(forVariable.declarator.initializer->expr);
+
     block.setMember(loopVar);
     return block;
 }
@@ -319,95 +320,64 @@ void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& 
     }
 }
 
-VariableSymbol::VariableSymbol(Token name, const DataTypeSyntax& type, const ScopeSymbol& parent, VariableLifetime lifetime,
-                               bool isConst, const ExpressionSyntax* initializer) :
-    Symbol(SymbolKind::Variable, name, parent),
-    lifetime(lifetime), isConst(isConst), typeSyntax(&type), initializerSyntax(initializer) {}
+VariableSymbol::VariableSymbol(string_view name, const ScopeSymbol& parent,
+                               VariableLifetime lifetime, bool isConst) :
+    Symbol(SymbolKind::Variable, parent, name),
+    lifetime(lifetime), isConst(isConst) {}
 
-VariableSymbol::VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const ScopeSymbol& parent,
-                               VariableLifetime lifetime, bool isConst, const Expression* initializer) :
-    Symbol(SymbolKind::Variable, parent, name, location),
-    lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer) {}
-
-VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, SourceLocation location, const TypeSymbol& type,
-                               const ScopeSymbol& parent, VariableLifetime lifetime, bool isConst, const Expression* initializer) :
-    Symbol(kind, parent, name, location),
-    lifetime(lifetime), isConst(isConst), typeSymbol(&type), initializerBound(initializer) {}
+VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, const ScopeSymbol& parent,
+                               VariableLifetime lifetime, bool isConst) :
+    Symbol(kind, parent, name),
+    lifetime(lifetime), isConst(isConst) {}
 
 void VariableSymbol::fromSyntax(const ScopeSymbol& parent, const DataDeclarationSyntax& syntax,
                                 SmallVector<const VariableSymbol*>& results) {
 
     const RootSymbol& root = parent.getRoot();
     for (auto declarator : syntax.declarators) {
-        const ExpressionSyntax* initializer = declarator->initializer ? &declarator->initializer->expr : nullptr;
+        auto& variable = root.allocate<VariableSymbol>(declarator->name.valueText(), parent);
+        variable.setType(syntax.type);
+        if (declarator->initializer)
+            variable.setInitializer(declarator->initializer->expr);
 
-        results.append(&root.allocate<VariableSymbol>(declarator->name, syntax.type, parent,
-                                                      VariableLifetime::Automatic, false, initializer));
+        results.append(&variable);
     }
 }
 
-const TypeSymbol& VariableSymbol::type() const {
-    if (typeSymbol)
-        return *typeSymbol;
+FormalArgumentSymbol::FormalArgumentSymbol(const ScopeSymbol& parent) :
+    VariableSymbol(SymbolKind::FormalArgument, "", parent) {}
 
-    ASSERT(typeSyntax);
-    typeSymbol = &getRoot().factory.getType(*typeSyntax, *getParent());
-    return *typeSymbol;
-}
-
-const Expression* VariableSymbol::initializer() const {
-    if (initializerBound)
-        return initializerBound;
-
-    if (initializerSyntax)
-        initializerBound = &Binder(*getParent()).bindAssignmentLikeContext(*initializerSyntax, location, type());
-
-    return initializerBound;
-}
-
-FormalArgumentSymbol::FormalArgumentSymbol(const TypeSymbol& type, const ScopeSymbol& parent) :
-    VariableSymbol(SymbolKind::FormalArgument, "", SourceLocation(), type, parent) {}
-
-FormalArgumentSymbol::FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                                           const ScopeSymbol& parent, const Expression* initializer,
+FormalArgumentSymbol::FormalArgumentSymbol(string_view name, const ScopeSymbol& parent,
                                            FormalArgumentDirection direction) :
-    VariableSymbol(SymbolKind::FormalArgument, name, location, type, parent, VariableLifetime::Automatic,
-                   direction == FormalArgumentDirection::ConstRef, initializer),
+    VariableSymbol(SymbolKind::FormalArgument, name, parent, VariableLifetime::Automatic,
+                   direction == FormalArgumentDirection::ConstRef),
     direction(direction) {}
 
-// TODO: handle functions that don't have simple name tokens
-SubroutineSymbol::SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const ScopeSymbol& parent) :
-    BlockSymbol(SymbolKind::Subroutine, syntax.prototype.name.getFirstToken(), parent),
-    syntax(&syntax)
+SubroutineSymbol::SubroutineSymbol(string_view name, VariableLifetime defaultLifetime,
+                                   bool isTask, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::Subroutine, parent, name),
+    defaultLifetime(defaultLifetime), isTask(isTask)
 {
-    defaultLifetime = SemanticFacts::getVariableLifetime(syntax.prototype.lifetime).value_or(VariableLifetime::Automatic);
-    isTask = syntax.kind == SyntaxKind::TaskDeclaration;
 }
 
-SubroutineSymbol::SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
-                                   SystemFunction systemFunction, const ScopeSymbol& parent) :
-    BlockSymbol(SymbolKind::Subroutine, parent, name),
-    systemFunctionKind(systemFunction), returnType_(&returnType), arguments_(arguments) {}
+SubroutineSymbol::SubroutineSymbol(string_view name, SystemFunction systemFunction, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::Subroutine, parent, name),
+    systemFunctionKind(systemFunction) {}
 
-const StatementList& SubroutineSymbol::body() const {
-    if (!body_)
-        body_ = &bindStatementList(syntax ? syntax->items : nullptr);
-    return *body_;
-}
-
-void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
-    if (isSystemFunction())
-        return;
-
-    const ScopeSymbol& parent = *getParent();
-    const RootSymbol& root = getRoot();
-    const auto& proto = syntax->prototype;
-    const auto& returnType = getRoot().factory.getType(*proto.returnType, parent);
+SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const FunctionDeclarationSyntax& syntax,
+                                               const ScopeSymbol& parent) {
+    // TODO: non simple names?
+    const auto& proto = syntax.prototype;
+    auto result = factory.alloc.emplace<SubroutineSymbol>(
+        proto.name.getFirstToken().valueText(),
+        SemanticFacts::getVariableLifetime(proto.lifetime).value_or(VariableLifetime::Automatic),
+        syntax.kind == SyntaxKind::TaskDeclaration,
+        parent
+    );
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
-
     if (proto.portList) {
-        const TypeSymbol* lastType = &root.factory.getLogicType();
+        const DataTypeSyntax* lastType = nullptr;
         auto lastDirection = FormalArgumentDirection::In;
 
         for (const FunctionPortSyntax* portSyntax : proto.portList->ports) {
@@ -431,46 +401,47 @@ void SubroutineSymbol::fillMembers(MemberBuilder& builder) const {
                 default: THROW_UNREACHABLE;
             }
 
+            const auto& declarator = portSyntax->declarator;
+            auto arg = factory.alloc.emplace<FormalArgumentSymbol>(declarator.name.valueText(),
+                                                                   *result, direction);
+
             // If we're given a type, use that. Otherwise, if we were given a
             // direction, default to logic. Otherwise, use the last type.
-            const TypeSymbol* type;
-            if (portSyntax->dataType)
-                type = &root.factory.getType(*portSyntax->dataType, parent);
-            else if (directionSpecified)
-                type = &root.factory.getLogicType();
-            else
-                type = lastType;
-
-            const auto& declarator = portSyntax->declarator;
-            const Expression* initializer = nullptr;
-            if (declarator.initializer) {
-                initializer = &Binder(parent).bindAssignmentLikeContext(declarator.initializer->expr,
-                                                                             declarator.name.location(), *type);
+            if (portSyntax->dataType) {
+                arg->setType(*portSyntax->dataType);
+                lastType = portSyntax->dataType;
+            }
+            else if (directionSpecified || !lastType) {
+                arg->setType(factory.getLogicType());
+                lastType = nullptr;
+            }
+            else {
+                arg->setType(*lastType);
             }
 
-            arguments.append(&root.allocate<FormalArgumentSymbol>(
-                declarator.name.valueText(),
-                declarator.name.location(),
-                *type,
-                *this,
-                initializer,
-                direction
-                ));
+            if (declarator.initializer)
+                arg->setInitializer(declarator.initializer->expr);
 
-            builder.add(*arguments.back());
-
+            arguments.append(arg);
             lastDirection = direction;
-            lastType = type;
         }
     }
 
-    returnType_ = &returnType;
-    arguments_ = arguments.copy(root.allocator());
-    findChildSymbols(builder, syntax->items);
+    // TODO: mising return type
+    result->setArguments(arguments.copy(factory.alloc));
+    result->setReturnType(*proto.returnType);
+    result->setBody(syntax.items);
 
-    // Note: call this last; binding the statements might request other members
-    // of this subroutine, like the return type
-    //body_ = &bindStatementList(builder, syntax->items);
+    // TODO: find child symbols
+
+    // TODO: clean this up
+    SmallVectorSized<const Symbol*, 8> members;
+    for (auto arg : arguments)
+        members.append(arg);
+
+    result->setMembers(members);
+
+    return *result;
 }
 
 }

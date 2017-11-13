@@ -55,28 +55,38 @@ void RootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
     }
 }
 
+SubroutineSymbol& RootSymbol::createSystemFunction(string_view funcName, SystemFunction funcKind,
+                                                   std::initializer_list<const TypeSymbol*> argTypes) const {
+    auto func = alloc.emplace<SubroutineSymbol>(funcName, funcKind, *this);
+    func->setReturnType(factory.getIntType());
+
+    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
+    for (auto type : argTypes) {
+        auto arg = alloc.emplace<FormalArgumentSymbol>(*func);
+        arg->setType(*type);
+        args.append(arg);
+    }
+
+    func->setArguments(args.copy(alloc));
+    return *func;
+}
+
 void RootSymbol::fillMembers(MemberBuilder& builder) const {
     // Register built-in system functions.
-    const auto& intType = factory.getIntType();
-    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
-
-    args.append(alloc.emplace<FormalArgumentSymbol>(intType, *this));
-    builder.add(allocate<SubroutineSymbol>("$clog2", intType, args.copy(alloc), SystemFunction::clog2, *this));
+    builder.add(createSystemFunction("$clog2", SystemFunction::clog2, { &factory.getIntType() }));
 
     // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
     // assignment like context
     // TODO: add support for all these operands on data_types, not just expressions,
     // and add support for things like unpacked arrays
     const auto& trivialIntType = factory.getType(1, false, true);
-    args.clear();
-    args.append(alloc.emplace<FormalArgumentSymbol>(trivialIntType, *this));
-    builder.add(allocate<SubroutineSymbol>("$bits", intType, args.copy(alloc), SystemFunction::bits, *this));
-    builder.add(allocate<SubroutineSymbol>("$left", intType, args.copy(alloc), SystemFunction::left, *this));
-    builder.add(allocate<SubroutineSymbol>("$right", intType, args.copy(alloc), SystemFunction::right, *this));
-    builder.add(allocate<SubroutineSymbol>("$low", intType, args.copy(alloc), SystemFunction::low, *this));
-    builder.add(allocate<SubroutineSymbol>("$high", intType, args.copy(alloc), SystemFunction::high, *this));
-    builder.add(allocate<SubroutineSymbol>("$size", intType, args.copy(alloc), SystemFunction::size, *this));
-    builder.add(allocate<SubroutineSymbol>("$increment", intType, args.copy(alloc), SystemFunction::increment, *this));
+    builder.add(createSystemFunction("$bits", SystemFunction::bits, { &trivialIntType }));
+    builder.add(createSystemFunction("$left", SystemFunction::left, { &trivialIntType }));
+    builder.add(createSystemFunction("$right", SystemFunction::right, { &trivialIntType }));
+    builder.add(createSystemFunction("$low", SystemFunction::low, { &trivialIntType }));
+    builder.add(createSystemFunction("$high", SystemFunction::high, { &trivialIntType }));
+    builder.add(createSystemFunction("$size", SystemFunction::size, { &trivialIntType }));
+    builder.add(createSystemFunction("$increment", SystemFunction::increment, { &trivialIntType }));
 
     // Compute which modules should be automatically instantiated; this is the set of modules that are:
     // 1) declared at the root level

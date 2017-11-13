@@ -111,7 +111,7 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
-            symbols.append(alloc.emplace<SubroutineSymbol>(node.as<FunctionDeclarationSyntax>(), parent));
+            symbols.append(&SubroutineSymbol::fromSyntax(*this, node.as<FunctionDeclarationSyntax>(), parent));
             break;
         case SyntaxKind::DataDeclaration: {
             SmallVectorSized<const VariableSymbol*, 4> variables;

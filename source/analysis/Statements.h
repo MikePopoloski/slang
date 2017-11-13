@@ -71,6 +71,8 @@ public:
         Statement(StatementKind::List), list(list) {}
 
     void eval(EvalContext& context) const;
+
+    static const StatementList Empty;
 };
 
 /// Represents a sequential block statement.

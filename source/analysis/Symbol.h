@@ -160,20 +160,22 @@ protected:
 
     template<typename TDerived, typename TResult, typename TSource>
     struct Lazy {
-        Lazy(const TResult& init) : cache(&init) {}
+        Lazy(const TResult* init) : cache(init) {}
 
-        void set(const TResult& result) { cache = &result; }
+        void set(const TResult* result) { cache = result; }
         void set(const TSource& source) { cache = &source; }
 
-        const TResult& get(const ScopeSymbol& scope) const {
+        const TResult* getOpt(const ScopeSymbol& scope) const {
             if (cache.index() == 0)
-                return *std::get<0>(cache);
+                return std::get<0>(cache);
 
             auto derived = static_cast<const TDerived*>(this);
             const TResult& result = derived->evaluate(scope, *std::get<1>(cache));
             cache = &result;
-            return result;
+            return &result;
         }
+
+        const TResult& get(const ScopeSymbol& scope) const { return *getOpt(scope); }
 
     private:
         mutable std::variant<const TResult*, const TSource*> cache;
@@ -184,8 +186,18 @@ protected:
         const Statement& evaluate(const ScopeSymbol& scope, const StatementSyntax& syntax) const;
     };
 
-    struct LazyExpression : public Lazy<LazyExpression, Expression, ExpressionSyntax> {
-        LazyExpression();
+    struct LazyStatementList : public Lazy<LazyStatementList, StatementList, SyntaxList<SyntaxNode>> {
+        LazyStatementList();
+        const StatementList& evaluate(const ScopeSymbol& scope, const SyntaxList<SyntaxNode>& list) const;
+    };
+
+    struct LazyConstant : public Lazy<LazyConstant, Expression, ExpressionSyntax> {
+        LazyConstant();
+        const Expression& evaluate(const ScopeSymbol& scope, const ExpressionSyntax& syntax) const;
+    };
+
+    struct LazyInitializer : public Lazy<LazyInitializer, Expression, ExpressionSyntax> {
+        LazyInitializer();
         const Expression& evaluate(const ScopeSymbol& scope, const ExpressionSyntax& syntax) const;
     };
 
@@ -414,7 +426,7 @@ public:
     static SequentialBlockSymbol& createImplicitBlock(const ForLoopStatementSyntax& forLoop, const ScopeSymbol& parent);
 
     const Statement& getBody() const { return body.get(*this); }
-    void setBody(const Statement& stmt) { body.set(stmt); }
+    void setBody(const Statement& stmt) { body.set(&stmt); }
     void setBody(const StatementSyntax& syntax) { body.set(syntax); }
 
 private:
@@ -428,7 +440,7 @@ public:
     ProceduralBlockSymbol(const ScopeSymbol& parent, ProceduralBlockKind procedureKind);
 
     const Statement& getBody() const { return body.get(*this); }
-    void setBody(const Statement& stmt) { body.set(stmt); }
+    void setBody(const Statement& stmt) { body.set(&stmt); }
     void setBody(const StatementSyntax& syntax) { body.set(syntax); }
 
 private:
@@ -585,33 +597,28 @@ public:
     VariableLifetime lifetime;
     bool isConst;
 
-    VariableSymbol(Token name, const DataTypeSyntax& type, const ScopeSymbol& parent, VariableLifetime lifetime,
-                   bool isConst, const ExpressionSyntax* initializer);
-
-    VariableSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const ScopeSymbol& parent,
-                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
-                   const Expression* initializer = nullptr);
+    VariableSymbol(string_view name, const ScopeSymbol& parent,
+                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false);
 
     /// Constructs all variable symbols specified by the given syntax node.
     static void fromSyntax(const ScopeSymbol& parent, const DataDeclarationSyntax& syntax,
                            SmallVector<const VariableSymbol*>& results);
 
-    const TypeSymbol& type() const;
-    const Expression* initializer() const;
+    const TypeSymbol& getType() const { return type.get(*getParent()); }
+    void setType(const TypeSymbol& t) { type.set(&t); }
+    void setType(const DataTypeSyntax& syntax) { type.set(syntax); }
+
+    const Expression* getInitializer() const { return initializer.getOpt(*getParent()); }
+    void setInitializer(const Expression* expr) { initializer.set(expr); }
+    void setInitializer(const ExpressionSyntax& syntax) { initializer.set(syntax); }
 
 protected:
-    VariableSymbol(SymbolKind childKind, string_view name, SourceLocation location, const TypeSymbol& type, const ScopeSymbol& parent,
-                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false,
-                   const Expression* initializer = nullptr);
+    VariableSymbol(SymbolKind childKind, string_view name, const ScopeSymbol& parent,
+                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false);
 
 private:
-    // To allow lazy binding, save pointers to the raw syntax nodes. When we eventually bind,
-    // we will fill in the type symbol and bound initializer. Also a user can fill in those
-    // manually for synthetically constructed symbols.
-    const DataTypeSyntax* typeSyntax = nullptr;
-    const ExpressionSyntax* initializerSyntax = nullptr;
-    mutable const TypeSymbol* typeSymbol = nullptr;
-    mutable const Expression* initializerBound = nullptr;
+    LazyType type;
+    LazyInitializer initializer;
 };
 
 /// Represents a formal argument in subroutine (task or function).
@@ -619,37 +626,43 @@ class FormalArgumentSymbol : public VariableSymbol {
 public:
     FormalArgumentDirection direction = FormalArgumentDirection::In;
 
-    FormalArgumentSymbol(const TypeSymbol& type, const ScopeSymbol& parent);
+    FormalArgumentSymbol(const ScopeSymbol& parent);
 
-    FormalArgumentSymbol(string_view name, SourceLocation location, const TypeSymbol& type, const ScopeSymbol& parent,
-                         const Expression* initializer = nullptr,
+    FormalArgumentSymbol(string_view name, const ScopeSymbol& parent,
                          FormalArgumentDirection direction = FormalArgumentDirection::In);
 };
 
 /// Represents a subroutine (task or function).
-class SubroutineSymbol : public BlockSymbol {
+class SubroutineSymbol : public ScopeSymbol {
 public:
-    const FunctionDeclarationSyntax* syntax = nullptr;
     VariableLifetime defaultLifetime = VariableLifetime::Automatic;
     SystemFunction systemFunctionKind = SystemFunction::Unknown;
     bool isTask = false;
 
-    SubroutineSymbol(const FunctionDeclarationSyntax& syntax, const ScopeSymbol& parent);
-    SubroutineSymbol(string_view name, const TypeSymbol& returnType, span<const FormalArgumentSymbol* const> arguments,
-                     SystemFunction systemFunction, const ScopeSymbol& parent);
+    SubroutineSymbol(string_view name, VariableLifetime defaultLifetime, bool isTask, const ScopeSymbol& parent);
+    SubroutineSymbol(string_view name, SystemFunction systemFunction, const ScopeSymbol& parent);
 
-    const StatementList& body() const;
-    const TypeSymbol& returnType() const { ensureInit(); return *returnType_; }
-    span<const FormalArgumentSymbol* const> arguments() const { ensureInit(); return arguments_; }
+    static SubroutineSymbol& fromSyntax(SymbolFactory& factory, const FunctionDeclarationSyntax& syntax,
+                                        const ScopeSymbol& parent);
+
+    const StatementList& getBody() const { return body.get(*this); }
+    void setBody(const StatementList& stmt) { body.set(&stmt); }
+    void setBody(const SyntaxList<SyntaxNode>& syntax) { body.set(syntax); }
+
+    const TypeSymbol& getReturnType() const { return returnType.get(*this); }
+    void setReturnType(const TypeSymbol& type) { returnType.set(&type); }
+    void setReturnType(const DataTypeSyntax& syntax) { returnType.set(syntax); }
+
+    using ArgList = span<const FormalArgumentSymbol* const>;
+    ArgList getArguments() const { return arguments; }
+    void setArguments(ArgList args) { arguments = args; }
 
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
 
 private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    mutable const StatementList* body_ = nullptr;
-    mutable const TypeSymbol* returnType_ = nullptr;
-    mutable span<const FormalArgumentSymbol* const> arguments_;
+    LazyStatementList body;
+    LazyType returnType;
+    ArgList arguments;
 };
 
 }

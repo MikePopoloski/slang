@@ -216,7 +216,7 @@ endmodule
     CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
 
     const auto& variable = instance.member<VariableSymbol>(4);
-    CHECK(variable.type().kind == SymbolKind::IntegralType);
+    CHECK(variable.getType().kind == SymbolKind::IntegralType);
     CHECK(variable.name == "arr1");
 }
 
@@ -234,21 +234,23 @@ endmodule
     const auto& foo = instance.member<SubroutineSymbol>(0);
     CHECK(!foo.isTask);
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
-    CHECK(foo.returnType().as<IntegralTypeSymbol>().width == 16);
+    CHECK(foo.getReturnType().as<IntegralTypeSymbol>().width == 16);
     CHECK(foo.name == "foo");
-    REQUIRE(foo.arguments().size() == 5);
-    CHECK(foo.arguments()[0]->type().as<IntegralTypeSymbol>().width == 1);
-    CHECK(foo.arguments()[0]->direction == FormalArgumentDirection::In);
-    CHECK(foo.arguments()[1]->type().as<IntegralTypeSymbol>().width == 32);
-    CHECK(foo.arguments()[1]->direction == FormalArgumentDirection::In);
-    CHECK(foo.arguments()[2]->type().as<IntegralTypeSymbol>().width == 16);
-    CHECK(foo.arguments()[2]->direction == FormalArgumentDirection::Out);
-    CHECK(foo.arguments()[3]->type().as<IntegralTypeSymbol>().width == 16);
-    CHECK(foo.arguments()[3]->direction == FormalArgumentDirection::Out);
-    CHECK(foo.arguments()[4]->type().as<IntegralTypeSymbol>().width == 1);
-    CHECK(foo.arguments()[4]->direction == FormalArgumentDirection::InOut);
 
-    const auto& returnStmt = foo.body().list[0]->as<ReturnStatement>();
+    auto args = foo.getArguments();
+    REQUIRE(args.size() == 5);
+    CHECK(args[0]->getType().as<IntegralTypeSymbol>().width == 1);
+    CHECK(args[0]->direction == FormalArgumentDirection::In);
+    CHECK(args[1]->getType().as<IntegralTypeSymbol>().width == 32);
+    CHECK(args[1]->direction == FormalArgumentDirection::In);
+    CHECK(args[2]->getType().as<IntegralTypeSymbol>().width == 16);
+    CHECK(args[2]->direction == FormalArgumentDirection::Out);
+    CHECK(args[3]->getType().as<IntegralTypeSymbol>().width == 16);
+    CHECK(args[3]->direction == FormalArgumentDirection::Out);
+    CHECK(args[4]->getType().as<IntegralTypeSymbol>().width == 1);
+    CHECK(args[4]->direction == FormalArgumentDirection::InOut);
+
+    const auto& returnStmt = foo.getBody().as<StatementList>().list[0]->as<ReturnStatement>();
     REQUIRE(returnStmt.kind == StatementKind::Return);
     CHECK(!returnStmt.expr->bad());
     CHECK(returnStmt.expr->type->as<IntegralTypeSymbol>().width == 32);

@@ -56,6 +56,9 @@ private:
     // unit that belong in the root scope (for example, modules).
     void addCompilationUnit(const CompilationUnitSymbol& unit);
 
+    SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,
+                                           std::initializer_list<const TypeSymbol*> argTypes) const;
+
     // These functions are used for traversing the syntax hierarchy and finding all instantiations.
     using NameSet = std::unordered_set<string_view>;
     static void findInstantiations(const ModuleDeclarationSyntax& module, std::vector<NameSet>& scopeStack,

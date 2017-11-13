@@ -11,6 +11,7 @@
 namespace slang {
 
 const InvalidStatement InvalidStatement::Instance(nullptr);
+const StatementList StatementList::Empty(nullptr);
 
 void Statement::eval(EvalContext& context) const {
     switch (kind) {
@@ -44,8 +45,8 @@ void ExpressionStatement::eval(EvalContext& context) const {
 void VariableDeclStatement::eval(EvalContext& context) const {
     // Create storage for the variable
     ConstantValue initial;
-    if (symbol.initializer())
-        initial = symbol.initializer()->eval(context);
+    if (const Expression* init = symbol.getInitializer(); init)
+        initial = init->eval(context);
 
     context.createLocal(&symbol, initial);
 }
