@@ -400,25 +400,6 @@ public:
 //        Symbol(SymbolKind::Genvar, nullptr, name, location) {}
 //};
 
-/// Base class for block scopes that can contain statements.
-class BlockSymbol : public ScopeSymbol {
-protected:
-    using ScopeSymbol::ScopeSymbol;
-
-    const Statement& bindStatement(const StatementSyntax& syntax) const;
-    const StatementList& bindStatementList(const SyntaxList<SyntaxNode>& items) const;
-
-    void findChildSymbols(MemberBuilder& builder, const StatementSyntax& syntax) const;
-    void findChildSymbols(MemberBuilder& builder, const SyntaxList<SyntaxNode>& items) const;
-
-private:
-    Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax) const;
-    Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax) const;
-    Statement& bindReturnStatement(const ReturnStatementSyntax& syntax) const;
-    Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax) const;
-    Statement& badStmt(const Statement* stmt) const;
-};
-
 class SequentialBlockSymbol : public ScopeSymbol {
 public:
     SequentialBlockSymbol(const ScopeSymbol& parent);
