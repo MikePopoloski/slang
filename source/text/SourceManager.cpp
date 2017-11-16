@@ -115,7 +115,7 @@ bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocatio
     // TODO: add a cache for this?
 
     auto moveUp = [this](SourceLocation& sl) {
-        if (!isFileLoc(sl))
+        if (sl && !isFileLoc(sl))
             sl = getExpansionLoc(sl);
         else {
             SourceLocation included = getIncludedFrom(sl.buffer());

@@ -210,6 +210,60 @@ SubroutineSymbol::SubroutineSymbol(string_view name, VariableLifetime defaultLif
 {
 }
 
+// TODO: move these someplace better
+
+static void findChildSymbols(const ScopeSymbol& parent, const StatementSyntax& syntax,
+                             SmallVector<const Symbol*>& results) {
+    switch (syntax.kind) {
+        case SyntaxKind::ConditionalStatement: {
+            const auto& conditional = syntax.as<ConditionalStatementSyntax>();
+            findChildSymbols(parent, conditional.statement, results);
+            if (conditional.elseClause)
+                findChildSymbols(parent, conditional.elseClause->clause.as<StatementSyntax>(), results);
+            break;
+        }
+        case SyntaxKind::ForLoopStatement: {
+            // A for loop has an implicit block around it iff it has variable declarations in its initializers.
+            const auto& loop = syntax.as<ForLoopStatementSyntax>();
+            bool any = false;
+            for (auto initializer : loop.initializers) {
+                if (initializer->kind == SyntaxKind::ForVariableDeclaration) {
+                    any = true;
+                    break;
+                }
+            }
+
+            if (any)
+                results.append(&SequentialBlockSymbol::createImplicitBlock(loop, parent));
+            else
+                findChildSymbols(parent, loop.statement, results);
+            break;
+        }
+        case SyntaxKind::SequentialBlockStatement: {
+            auto block = &parent.getRoot().allocate<SequentialBlockSymbol>(parent);
+            // TODO: set children
+            results.append(block);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+static void findChildSymbols(const ScopeSymbol& parent, const SyntaxList<SyntaxNode>& items,
+                             SmallVector<const Symbol*>& results) {
+    for (auto item : items) {
+        if (item->kind == SyntaxKind::DataDeclaration) {
+            SmallVectorSized<const VariableSymbol*, 4> symbols;
+            VariableSymbol::fromSyntax(parent, item->as<DataDeclarationSyntax>(), symbols);
+            results.appendRange(symbols);
+        }
+        else if (isStatement(item->kind)) {
+            findChildSymbols(parent, item->as<StatementSyntax>(), results);
+        }
+    }
+}
+
 SubroutineSymbol::SubroutineSymbol(string_view name, SystemFunction systemFunction, const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::Subroutine, parent, name),
     systemFunctionKind(systemFunction) {}
@@ -282,12 +336,12 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const Fun
     result->setReturnType(*proto.returnType);
     result->setBody(syntax.items);
 
-    // TODO: find child symbols
-
     // TODO: clean this up
     SmallVectorSized<const Symbol*, 8> members;
     for (auto arg : arguments)
         members.append(arg);
+
+    findChildSymbols(*result, syntax.items, members);
 
     result->setMembers(members);
 

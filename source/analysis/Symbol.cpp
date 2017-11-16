@@ -94,8 +94,8 @@ const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupL
         // referenced anywhere in the scope; location doesn't matter.
         bool locationGood = true;
         const Symbol* result = it->second;
-        if (lookupKind == LookupKind::Local || lookupKind == LookupKind::Scoped)
-            locationGood = sm.isBeforeInCompilationUnit(result->location, lookupLocation);
+        //if (lookupKind == LookupKind::Local || lookupKind == LookupKind::Scoped)
+        //    locationGood = sm.isBeforeInCompilationUnit(result->location, lookupLocation);
 
         if (locationGood) {
             // If this is a package import, unwrap it to return the imported symbol.
