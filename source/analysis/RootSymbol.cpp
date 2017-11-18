@@ -58,16 +58,16 @@ void RootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
 SubroutineSymbol& RootSymbol::createSystemFunction(string_view funcName, SystemFunction funcKind,
                                                    std::initializer_list<const TypeSymbol*> argTypes) const {
     auto func = alloc.emplace<SubroutineSymbol>(funcName, funcKind, *this);
-    func->setReturnType(factory.getIntType());
+    func->returnType = factory.getIntType();
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> args;
     for (auto type : argTypes) {
         auto arg = alloc.emplace<FormalArgumentSymbol>(*func);
-        arg->setType(*type);
+        arg->type = *type;
         args.append(arg);
     }
 
-    func->setArguments(args.copy(alloc));
+    func->arguments = args.copy(alloc);
     return *func;
 }
 

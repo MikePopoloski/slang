@@ -386,7 +386,7 @@ Expression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& syntax)
     const SubroutineSymbol& subroutine = symbol->as<SubroutineSymbol>();
 
     // TODO: handle too few args as well, which requires looking at default values
-    auto formalArgs = subroutine.getArguments();
+    auto formalArgs = subroutine.arguments;
     if (formalArgs.size() < actualArgs.count()) {
         auto& diag = root.addError(DiagCode::TooManyArguments, name.location());
         diag << syntax.left.sourceRange();
@@ -399,7 +399,7 @@ Expression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& syntax)
     SmallVectorSized<const Expression*, 8> buffer;
     for (uint32_t i = 0; i < actualArgs.count(); i++) {
         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-        buffer.append(&bindAssignmentLikeContext(arg.expr, arg.sourceRange().start(), formalArgs[i]->getType()));
+        buffer.append(&bindAssignmentLikeContext(arg.expr, arg.sourceRange().start(), *formalArgs[i]->type));
     }
 
     return root.allocate<CallExpression>(subroutine, buffer.copy(root.allocator()), syntax);
@@ -506,7 +506,7 @@ Statement& Binder::bindReturnStatement(const ReturnStatementSyntax& syntax) cons
     }
 
     const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, stmtLoc,
-                                                               subroutine->as<SubroutineSymbol>().getReturnType());
+                                                               *subroutine->as<SubroutineSymbol>().returnType);
     return root.allocate<ReturnStatement>(syntax, &expr);
 }
 

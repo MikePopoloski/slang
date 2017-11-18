@@ -35,7 +35,7 @@ void StatementList::eval(EvalContext& context) const {
 }
 
 void SequentialBlockStatement::eval(EvalContext& context) const {
-    block.getBody().eval(context);
+    block.body->eval(context);
 }
 
 void ExpressionStatement::eval(EvalContext& context) const {
@@ -45,8 +45,8 @@ void ExpressionStatement::eval(EvalContext& context) const {
 void VariableDeclStatement::eval(EvalContext& context) const {
     // Create storage for the variable
     ConstantValue initial;
-    if (const Expression* init = symbol.getInitializer(); init)
-        initial = init->eval(context);
+    if (symbol.initializer)
+        initial = symbol.initializer->eval(context);
 
     context.createLocal(&symbol, initial);
 }

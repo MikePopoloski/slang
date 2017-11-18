@@ -35,7 +35,7 @@ public:
             case SyntaxKind::DataDeclaration: {
                 for (auto symbol : scope.createAndAddSymbols(syntaxTrees.back().root())) {
                     ConstantValue initial;
-                    const Expression* init = symbol->as<VariableSymbol>().getInitializer();
+                    const auto& init = symbol->as<VariableSymbol>().initializer;
                     if (init)
                         initial = init->eval(evalContext);
                     else

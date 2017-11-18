@@ -138,6 +138,52 @@ public:
     Symbol(const Symbol&) = delete;
     Symbol& operator=(const Symbol&) = delete;
 
+    template<typename TDerived, typename TResult, typename TSource>
+    struct Lazy {
+        Lazy(const ScopeSymbol* scope, const TResult* init) : storedScope(scope), cache(init) {}
+
+        Lazy& operator=(const TResult* result) { cache = result; return *this; }
+        Lazy& operator=(const TResult& result) { cache = &result; return *this; }
+        Lazy& operator=(const TSource& source) { cache = &source; return *this; }
+
+        const TResult& operator*() const { return *get(); }
+
+        const TResult* operator->() const { return get(); }
+
+        explicit operator bool() const { return get(); }
+
+        const TResult* get() const {
+            if (cache.index() == 0)
+                return std::get<0>(cache);
+
+            auto derived = static_cast<const TDerived*>(this);
+            const TResult& result = derived->evaluate(*storedScope, *std::get<1>(cache));
+            cache = &result;
+            return &result;
+        }
+
+    private:
+        const ScopeSymbol* storedScope;
+        mutable std::variant<const TResult*, const TSource*> cache;
+    };
+
+#define LAZY(name, TResult, TSource) \
+    struct name : public Lazy<name, TResult, TSource> { \
+        name(const ScopeSymbol* scope); \
+        using Lazy<name, TResult, TSource>::operator=; \
+    private: \
+        friend struct Lazy<name, TResult, TSource>; \
+        const TResult& evaluate(const ScopeSymbol& scope, const TSource& source) const; \
+    }
+
+    LAZY(LazyStatement, Statement, StatementSyntax);
+    LAZY(LazyStatementList, StatementList, SyntaxList<SyntaxNode>);
+    LAZY(LazyConstant, Expression, ExpressionSyntax);
+    LAZY(LazyInitializer, Expression, ExpressionSyntax);
+    LAZY(LazyType, TypeSymbol, DataTypeSyntax);
+
+#undef LAZY
+
 protected:
     explicit Symbol(SymbolKind kind, string_view name = "", SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location) {}
@@ -152,59 +198,6 @@ protected:
         parentScope(&containingSymbol) {}
 
     Diagnostic& addError(DiagCode code, SourceLocation location) const;
-
-    // The following are helper classes for deferring binding of statements,
-    // expressions, and types until they're ready to be accessed. This is
-    // important both for correctness as well as for performance when not
-    // doing a batch compilation.
-
-    template<typename TDerived, typename TResult, typename TSource>
-    struct Lazy {
-        Lazy(const TResult* init) : cache(init) {}
-
-        void set(const TResult* result) { cache = result; }
-        void set(const TSource& source) { cache = &source; }
-
-        const TResult* getOpt(const ScopeSymbol& scope) const {
-            if (cache.index() == 0)
-                return std::get<0>(cache);
-
-            auto derived = static_cast<const TDerived*>(this);
-            const TResult& result = derived->evaluate(scope, *std::get<1>(cache));
-            cache = &result;
-            return &result;
-        }
-
-        const TResult& get(const ScopeSymbol& scope) const { return *getOpt(scope); }
-
-    private:
-        mutable std::variant<const TResult*, const TSource*> cache;
-    };
-
-    struct LazyStatement : public Lazy<LazyStatement, Statement, StatementSyntax> {
-        LazyStatement();
-        const Statement& evaluate(const ScopeSymbol& scope, const StatementSyntax& syntax) const;
-    };
-
-    struct LazyStatementList : public Lazy<LazyStatementList, StatementList, SyntaxList<SyntaxNode>> {
-        LazyStatementList();
-        const StatementList& evaluate(const ScopeSymbol& scope, const SyntaxList<SyntaxNode>& list) const;
-    };
-
-    struct LazyConstant : public Lazy<LazyConstant, Expression, ExpressionSyntax> {
-        LazyConstant();
-        const Expression& evaluate(const ScopeSymbol& scope, const ExpressionSyntax& syntax) const;
-    };
-
-    struct LazyInitializer : public Lazy<LazyInitializer, Expression, ExpressionSyntax> {
-        LazyInitializer();
-        const Expression& evaluate(const ScopeSymbol& scope, const ExpressionSyntax& syntax) const;
-    };
-
-    struct LazyType : public Lazy<LazyType, TypeSymbol, DataTypeSyntax> {
-        LazyType();
-        const TypeSymbol& evaluate(const ScopeSymbol& scope, const DataTypeSyntax& syntax) const;
-    };
 
 private:
     const ScopeSymbol* parentScope = nullptr;
@@ -402,30 +395,19 @@ public:
 
 class SequentialBlockSymbol : public ScopeSymbol {
 public:
+    LazyStatement body;
+
     SequentialBlockSymbol(const ScopeSymbol& parent);
 
     static SequentialBlockSymbol& createImplicitBlock(const ForLoopStatementSyntax& forLoop, const ScopeSymbol& parent);
-
-    const Statement& getBody() const { return body.get(*this); }
-    void setBody(const Statement& stmt) { body.set(&stmt); }
-    void setBody(const StatementSyntax& syntax) { body.set(syntax); }
-
-private:
-    LazyStatement body;
 };
 
 class ProceduralBlockSymbol : public ScopeSymbol {
 public:
+    LazyStatement body;
     ProceduralBlockKind procedureKind;
 
     ProceduralBlockSymbol(const ScopeSymbol& parent, ProceduralBlockKind procedureKind);
-
-    const Statement& getBody() const { return body.get(*this); }
-    void setBody(const Statement& stmt) { body.set(&stmt); }
-    void setBody(const StatementSyntax& syntax) { body.set(syntax); }
-
-private:
-    LazyStatement body;
 };
 
 /// Represents a conditional if-generate construct; the results of evaluating
@@ -575,6 +557,8 @@ private:
 /// Represents a variable declaration (which does not include nets).
 class VariableSymbol : public Symbol {
 public:
+    LazyType type;
+    LazyInitializer initializer;
     VariableLifetime lifetime;
     bool isConst;
 
@@ -585,21 +569,9 @@ public:
     static void fromSyntax(const ScopeSymbol& parent, const DataDeclarationSyntax& syntax,
                            SmallVector<const VariableSymbol*>& results);
 
-    const TypeSymbol& getType() const { return type.get(*getParent()); }
-    void setType(const TypeSymbol& t) { type.set(&t); }
-    void setType(const DataTypeSyntax& syntax) { type.set(syntax); }
-
-    const Expression* getInitializer() const { return initializer.getOpt(*getParent()); }
-    void setInitializer(const Expression* expr) { initializer.set(expr); }
-    void setInitializer(const ExpressionSyntax& syntax) { initializer.set(syntax); }
-
 protected:
     VariableSymbol(SymbolKind childKind, string_view name, const ScopeSymbol& parent,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false);
-
-private:
-    LazyType type;
-    LazyInitializer initializer;
 };
 
 /// Represents a formal argument in subroutine (task or function).
@@ -616,6 +588,11 @@ public:
 /// Represents a subroutine (task or function).
 class SubroutineSymbol : public ScopeSymbol {
 public:
+    using ArgList = span<const FormalArgumentSymbol* const>;
+
+    LazyStatementList body;
+    LazyType returnType;
+    ArgList arguments;
     VariableLifetime defaultLifetime = VariableLifetime::Automatic;
     SystemFunction systemFunctionKind = SystemFunction::Unknown;
     bool isTask = false;
@@ -626,24 +603,7 @@ public:
     static SubroutineSymbol& fromSyntax(SymbolFactory& factory, const FunctionDeclarationSyntax& syntax,
                                         const ScopeSymbol& parent);
 
-    const StatementList& getBody() const { return body.get(*this); }
-    void setBody(const StatementList& stmt) { body.set(&stmt); }
-    void setBody(const SyntaxList<SyntaxNode>& syntax) { body.set(syntax); }
-
-    const TypeSymbol& getReturnType() const { return returnType.get(*this); }
-    void setReturnType(const TypeSymbol& type) { returnType.set(&type); }
-    void setReturnType(const DataTypeSyntax& syntax) { returnType.set(syntax); }
-
-    using ArgList = span<const FormalArgumentSymbol* const>;
-    ArgList getArguments() const { return arguments; }
-    void setArguments(ArgList args) { arguments = args; }
-
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
-
-private:
-    LazyStatementList body;
-    LazyType returnType;
-    ArgList arguments;
 };
 
 }

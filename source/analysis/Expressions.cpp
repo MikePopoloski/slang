@@ -296,15 +296,15 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
 
     // Push a new stack frame, push argument values as locals.
     context.pushFrame();
-    span<const FormalArgumentSymbol* const> formals = subroutine.getArguments();
+    span<const FormalArgumentSymbol* const> formals = subroutine.arguments;
     for (uint32_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
     VariableSymbol callValue(subroutine.name, subroutine);
-    callValue.setType(subroutine.getReturnType());
+    callValue.type = subroutine.returnType;
     context.createLocal(&callValue, nullptr);
 
-    subroutine.getBody().eval(context);
+    subroutine.body->eval(context);
 
     // Pop the frame and return the value
     return context.popFrame();

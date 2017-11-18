@@ -14,28 +14,32 @@
 
 namespace slang {
 
-Symbol::LazyStatement::LazyStatement() : Lazy(&InvalidStatement::Instance) {}
+Symbol::LazyStatement::LazyStatement(const ScopeSymbol* scope) :
+    Lazy(scope, &InvalidStatement::Instance) {}
 
 const Statement& Symbol::LazyStatement::evaluate(const ScopeSymbol& scope,
                                                  const StatementSyntax& syntax) const {
     return Binder(scope).bindStatement(syntax);
 }
 
-Symbol::LazyStatementList::LazyStatementList() : Lazy(&StatementList::Empty) {}
+Symbol::LazyStatementList::LazyStatementList(const ScopeSymbol* scope) :
+    Lazy(scope, &StatementList::Empty) {}
 
 const StatementList& Symbol::LazyStatementList::evaluate(const ScopeSymbol& scope,
                                                          const SyntaxList<SyntaxNode>& list) const {
     return Binder(scope).bindStatementList(list);
 }
 
-Symbol::LazyConstant::LazyConstant() : Lazy(&InvalidExpression::Instance) {}
+Symbol::LazyConstant::LazyConstant(const ScopeSymbol* scope) :
+    Lazy(scope, &InvalidExpression::Instance) {}
 
 const Expression& Symbol::LazyConstant::evaluate(const ScopeSymbol& scope,
                                                  const ExpressionSyntax& syntax) const {
     return Binder(scope).bindConstantExpression(syntax);
 }
 
-Symbol::LazyInitializer::LazyInitializer() : Lazy(nullptr) {}
+Symbol::LazyInitializer::LazyInitializer(const ScopeSymbol* scope) :\
+    Lazy(scope, nullptr) {}
 
 const Expression& Symbol::LazyInitializer::evaluate(const ScopeSymbol& scope,
                                                     const ExpressionSyntax& syntax) const {
@@ -43,7 +47,8 @@ const Expression& Symbol::LazyInitializer::evaluate(const ScopeSymbol& scope,
     return Binder(scope).bindConstantExpression(syntax);
 }
 
-Symbol::LazyType::LazyType() : Lazy(&ErrorTypeSymbol::Instance) {}
+Symbol::LazyType::LazyType(const ScopeSymbol* scope) :
+    Lazy(scope, &ErrorTypeSymbol::Instance) {}
 
 const TypeSymbol& Symbol::LazyType::evaluate(const ScopeSymbol& scope,
                                              const DataTypeSyntax& syntax) const {

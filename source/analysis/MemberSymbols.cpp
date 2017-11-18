@@ -12,7 +12,10 @@
 namespace slang {
 
 SequentialBlockSymbol::SequentialBlockSymbol(const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::SequentialBlock, parent) {}
+    ScopeSymbol(SymbolKind::SequentialBlock, parent),
+    body(this)
+{
+}
 
 SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopStatementSyntax& forLoop,
                                                                   const ScopeSymbol& parent) {
@@ -21,8 +24,8 @@ SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopS
 
     const auto& forVariable = forLoop.initializers[0]->as<ForVariableDeclarationSyntax>();
     auto& loopVar = *alloc.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
-    loopVar.setType(forVariable.type);
-    loopVar.setInitializer(forVariable.declarator.initializer->expr);
+    loopVar.type = forVariable.type;
+    loopVar.initializer = forVariable.declarator.initializer->expr;
 
     block.setMember(loopVar);
     return block;
@@ -30,6 +33,7 @@ SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopS
 
 ProceduralBlockSymbol::ProceduralBlockSymbol(const ScopeSymbol& parent, ProceduralBlockKind procedureKind) :
     ScopeSymbol(SymbolKind::ProceduralBlock, parent),
+    body(this),
     procedureKind(procedureKind)
 {
 }
@@ -173,11 +177,13 @@ void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& 
 VariableSymbol::VariableSymbol(string_view name, const ScopeSymbol& parent,
                                VariableLifetime lifetime, bool isConst) :
     Symbol(SymbolKind::Variable, parent, name),
+    type(&parent), initializer(&parent),
     lifetime(lifetime), isConst(isConst) {}
 
 VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, const ScopeSymbol& parent,
                                VariableLifetime lifetime, bool isConst) :
     Symbol(kind, parent, name),
+    type(&parent), initializer(&parent),
     lifetime(lifetime), isConst(isConst) {}
 
 void VariableSymbol::fromSyntax(const ScopeSymbol& parent, const DataDeclarationSyntax& syntax,
@@ -186,9 +192,9 @@ void VariableSymbol::fromSyntax(const ScopeSymbol& parent, const DataDeclaration
     const RootSymbol& root = parent.getRoot();
     for (auto declarator : syntax.declarators) {
         auto& variable = root.allocate<VariableSymbol>(declarator->name.valueText(), parent);
-        variable.setType(syntax.type);
+        variable.type = syntax.type;
         if (declarator->initializer)
-            variable.setInitializer(declarator->initializer->expr);
+            variable.initializer = declarator->initializer->expr;
 
         results.append(&variable);
     }
@@ -206,6 +212,7 @@ FormalArgumentSymbol::FormalArgumentSymbol(string_view name, const ScopeSymbol& 
 SubroutineSymbol::SubroutineSymbol(string_view name, VariableLifetime defaultLifetime,
                                    bool isTask, const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::Subroutine, parent, name),
+    body(this), returnType(this),
     defaultLifetime(defaultLifetime), isTask(isTask)
 {
 }
@@ -266,6 +273,7 @@ static void findChildSymbols(const ScopeSymbol& parent, const SyntaxList<SyntaxN
 
 SubroutineSymbol::SubroutineSymbol(string_view name, SystemFunction systemFunction, const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::Subroutine, parent, name),
+    body(this), returnType(this),
     systemFunctionKind(systemFunction) {}
 
 SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const FunctionDeclarationSyntax& syntax,
@@ -312,19 +320,19 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const Fun
             // If we're given a type, use that. Otherwise, if we were given a
             // direction, default to logic. Otherwise, use the last type.
             if (portSyntax->dataType) {
-                arg->setType(*portSyntax->dataType);
+                arg->type = *portSyntax->dataType;
                 lastType = portSyntax->dataType;
             }
             else if (directionSpecified || !lastType) {
-                arg->setType(factory.getLogicType());
+                arg->type = factory.getLogicType();
                 lastType = nullptr;
             }
             else {
-                arg->setType(*lastType);
+                arg->type = *lastType;
             }
 
             if (declarator.initializer)
-                arg->setInitializer(declarator.initializer->expr);
+                arg->initializer = declarator.initializer->expr;
 
             arguments.append(arg);
             lastDirection = direction;
@@ -332,9 +340,9 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const Fun
     }
 
     // TODO: mising return type
-    result->setArguments(arguments.copy(factory.alloc));
-    result->setReturnType(*proto.returnType);
-    result->setBody(syntax.items);
+    result->arguments = arguments.copy(factory.alloc);
+    result->returnType = *proto.returnType;
+    result->body = syntax.items;
 
     // TODO: clean this up
     SmallVectorSized<const Symbol*, 8> members;
