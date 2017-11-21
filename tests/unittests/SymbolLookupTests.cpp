@@ -18,7 +18,7 @@ import Foo::x;
     const Symbol* x = unit.lookup("x", tree.root().sourceRange().end(), LookupKind::Local);
     REQUIRE(x);
     CHECK(x->kind == SymbolKind::Parameter);
-    CHECK(x->as<ParameterSymbol>().value().integer() == 4);
+    CHECK(x->as<ParameterSymbol>().value->integer() == 4);
 }
 
 TEST_CASE("Wildcard import lookup 1", "[symbols:lookup]") {
@@ -44,7 +44,7 @@ endmodule
     const auto& gen_b = top.member<IfGenerateSymbol>(1).member<GenerateBlockSymbol>(0);
     const auto& param = gen_b.member<ParameterSymbol>(0);
     CHECK(root.diagnostics().empty());
-    CHECK(param.value().integer() == 12);
+    CHECK(param.value->integer() == 12);
 
     // Lookup at (2); should return the local parameter
     auto symbol = gen_b.lookup("x", param.location + 22, LookupKind::Local);

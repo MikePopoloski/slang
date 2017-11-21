@@ -14,6 +14,26 @@
 
 namespace slang {
 
+Symbol::LazyConstant::LazyConstant(const ScopeSymbol* scope) :
+    Lazy(scope, &ConstantValue::Invalid) {}
+
+Symbol::LazyConstant& Symbol::LazyConstant::operator=(const ExpressionSyntax& source) {
+    Lazy<LazyConstant, ConstantValue, ExpressionSyntax>::operator=(source);
+    return *this;
+}
+
+Symbol::LazyConstant& Symbol::LazyConstant::operator=(ConstantValue result) {
+    ConstantValue* p = storedScope->getRoot().constantAllocator.emplace(std::move(result));
+    Lazy<LazyConstant, ConstantValue, ExpressionSyntax>::operator=(p);
+    return *this;
+}
+
+const ConstantValue& Symbol::LazyConstant::evaluate(const ScopeSymbol& scope,
+                                                    const ExpressionSyntax& syntax) const {
+    ConstantValue v = Binder(scope).bindConstantExpression(syntax).eval();
+    return *scope.getRoot().constantAllocator.emplace(std::move(v));
+}
+
 Symbol::LazyStatement::LazyStatement(const ScopeSymbol* scope) :
     Lazy(scope, &InvalidStatement::Instance) {}
 
@@ -28,14 +48,6 @@ Symbol::LazyStatementList::LazyStatementList(const ScopeSymbol* scope) :
 const StatementList& Symbol::LazyStatementList::evaluate(const ScopeSymbol& scope,
                                                          const SyntaxList<SyntaxNode>& list) const {
     return Binder(scope).bindStatementList(list);
-}
-
-Symbol::LazyConstant::LazyConstant(const ScopeSymbol* scope) :
-    Lazy(scope, &InvalidExpression::Instance) {}
-
-const Expression& Symbol::LazyConstant::evaluate(const ScopeSymbol& scope,
-                                                 const ExpressionSyntax& syntax) const {
-    return Binder(scope).bindConstantExpression(syntax);
 }
 
 Symbol::LazyInitializer::LazyInitializer(const ScopeSymbol* scope) :\
@@ -188,7 +200,7 @@ void ScopeSymbol::setMember(const Symbol& member) {
     setMembers(span<const Symbol* const>(&ptr, 1));
 }
 
-void ScopeSymbol::setMembers(span<const Symbol* const> members) {
+void ScopeSymbol::setMembers(span<const Symbol* const> members) const {
     membersInitialized = true;
 
     MemberBuilder builder;
@@ -204,6 +216,19 @@ void ScopeSymbol::doInit() const {
     MemberBuilder builder;
     fillMembers(builder);
     copyMembers(builder);
+
+    // TODO: clean this up
+    if (isLazy) {
+        switch (kind) {
+            case SymbolKind::Module:
+            case SymbolKind::Interface:
+            case SymbolKind::Program:
+                static_cast<const DefinitionSymbol*>(this)->resolveMembers();
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
 }
 
 void ScopeSymbol::copyMembers(MemberBuilder& builder) const {
@@ -226,6 +251,46 @@ SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
     for (auto symbol : symbols)
         addSymbol(*symbol);
     return symbols.copy(getRoot().factory.alloc);
+}
+
+Symbol& Symbol::clone(const ScopeSymbol& newParent) const {
+    Symbol* result;
+    SymbolFactory& factory = getFactory();
+#define CLONE(type) result = factory.alloc.emplace<type>(*(const type*)this); break
+
+    switch (kind) {
+        case SymbolKind::CompilationUnit: CLONE(CompilationUnitSymbol);
+        case SymbolKind::IntegralType: CLONE(IntegralTypeSymbol);
+        case SymbolKind::RealType: CLONE(RealTypeSymbol);
+        case SymbolKind::StringType: CLONE(TypeSymbol);
+        case SymbolKind::CHandleType: CLONE(TypeSymbol);
+        case SymbolKind::VoidType: CLONE(TypeSymbol);
+        case SymbolKind::EventType: CLONE(TypeSymbol);
+        case SymbolKind::TypeAlias: CLONE(TypeAliasSymbol);
+        case SymbolKind::Parameter: CLONE(ParameterSymbol);
+        case SymbolKind::Module: CLONE(DefinitionSymbol);
+        case SymbolKind::Interface: CLONE(DefinitionSymbol);
+        case SymbolKind::ModuleInstance: CLONE(ModuleInstanceSymbol);
+        case SymbolKind::Package: CLONE(PackageSymbol);
+        case SymbolKind::ExplicitImport: CLONE(ExplicitImportSymbol);
+        case SymbolKind::ImplicitImport: CLONE(ImplicitImportSymbol);
+        case SymbolKind::WildcardImport: CLONE(WildcardImportSymbol);
+        case SymbolKind::Program: CLONE(DefinitionSymbol);
+        case SymbolKind::IfGenerate: CLONE(IfGenerateSymbol);
+        case SymbolKind::LoopGenerate: CLONE(LoopGenerateSymbol);
+        case SymbolKind::GenerateBlock: CLONE(GenerateBlockSymbol);
+        case SymbolKind::ProceduralBlock: CLONE(ProceduralBlockSymbol);
+        case SymbolKind::SequentialBlock: CLONE(SequentialBlockSymbol);
+        case SymbolKind::Variable: CLONE(VariableSymbol);
+        case SymbolKind::FormalArgument: CLONE(FormalArgumentSymbol);
+        case SymbolKind::Subroutine: CLONE(SubroutineSymbol);
+        default:
+            THROW_UNREACHABLE;
+    }
+#undef CLONE
+
+    result->parentScope = &newParent;
+    return *result;
 }
 
 }

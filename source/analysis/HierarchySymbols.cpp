@@ -14,7 +14,6 @@ namespace slang {
 CompilationUnitSymbol::CompilationUnitSymbol(const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::CompilationUnit, parent)
 {
-    //setMembers(members);
 }
 
 PackageSymbol::PackageSymbol(string_view name, const ScopeSymbol& parent) :
@@ -22,96 +21,59 @@ PackageSymbol::PackageSymbol(string_view name, const ScopeSymbol& parent) :
 {
 }
 
-DefinitionSymbol::DefinitionSymbol(const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent) :
-    Symbol(SymbolKind::Module, syntax.header.name, parent), syntax(syntax)
+DefinitionSymbol::DefinitionSymbol(string_view name, const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::Module, parent, name),
+    syntax(&syntax)
 {
+    isLazy = true;
 }
 
-span<DefinitionSymbol::ParameterInfo> DefinitionSymbol::getDeclaredParams() const {
-    if (!paramInfoCache) {
-        // Discover all of the element's parameters. If we have a parameter port list, the only
-        // publicly visible parameters are the ones in that list. Otherwise, parameters declared
-        // in the module body are publicly visible.
-        const ModuleHeaderSyntax& header = syntax.header;
-        SmallHashMap<string_view, SourceLocation, 16> nameDupMap;
-        SmallVectorSized<ParameterInfo, 8> buffer;
+void DefinitionSymbol::resolveMembers() const {
+    SmallVectorSized<const Symbol*, 32> members;
 
-        bool overrideLocal = false;
-        if (header.parameters) {
-            bool lastLocal = false;
-            for (const ParameterDeclarationSyntax* paramDecl : header.parameters->declarations)
-                lastLocal = getParamDecls(*paramDecl, buffer, nameDupMap, lastLocal, false, false);
-            overrideLocal = true;
+    SymbolFactory& factory = getFactory();
+    if (syntax->header.parameters) {
+        bool lastLocal = false;
+        SmallVectorSized<const ParameterSymbol*, 8> tempParams;
+        for (auto declaration : syntax->header.parameters->declarations) {
+            // It's legal to leave off the parameter keyword in the parameter port list.
+            // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
+            // This isn't allowed in a module body, but the parser will take care of the error for us.
+            bool local = false;
+            if (!declaration->keyword)
+                local = lastLocal;
+            else
+                local = declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            lastLocal = local;
+
+            SmallVectorSized<ParameterSymbol*, 16> params;
+            ParameterSymbol::fromSyntax(factory, *declaration, *this, params);
+
+            for (auto param : params) {
+                param->isLocalParam = local;
+                param->isPortParam = true;
+                members.append(param);
+                tempParams.append(param);
+            }
         }
 
-        // also find direct body parameters
-        for (const MemberSyntax* member : syntax.members) {
-            if (member->kind == SyntaxKind::ParameterDeclarationStatement)
-                getParamDecls(member->as<ParameterDeclarationStatementSyntax>().parameter, buffer,
-                              nameDupMap, false, overrideLocal, true);
-        }
+        // TODO: clean this up
 
-        paramInfoCache = buffer.copy(getRoot().allocator());
-    }
-    return *paramInfoCache;
-}
-
-bool DefinitionSymbol::getParamDecls(const ParameterDeclarationSyntax& paramDecl, SmallVector<ParameterInfo>& buffer,
-                                     HashMapBase<string_view, SourceLocation>& nameDupMap,
-                                     bool lastLocal, bool overrideLocal, bool bodyParam) const {
-    // It's legal to leave off the parameter keyword in the parameter port list.
-    // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
-    // This isn't allowed in a module body, but the parser will take care of the error for us.
-    bool local = false;
-    if (!paramDecl.keyword)
-        local = lastLocal;
-    else {
-        // In the body of a module that has a parameter port list in its header, parameters are
-        // actually just localparams. overrideLocal will be true in this case.
-        local = paramDecl.keyword.kind == TokenKind::LocalParamKeyword || overrideLocal;
+        parameters = tempParams.copy(factory.alloc);
     }
 
-    for (const VariableDeclaratorSyntax* declarator : paramDecl.declarators) {
-        string_view declName = declarator->name.valueText();
-        if (declName.empty())
-            continue;
-
-        auto declLocation = declarator->name.location();
-        auto pair = nameDupMap.emplace(declName, declLocation);
-        if (!pair.second) {
-            addError(DiagCode::DuplicateDefinition, declLocation) << std::string("parameter") << declName;
-            addError(DiagCode::NotePreviousDefinition, pair.first->second);
-        }
-        else {
-            ExpressionSyntax* init = nullptr;
-            if (declarator->initializer)
-                init = &declarator->initializer->expr;
-            else if (local)
-                addError(DiagCode::LocalParamNoInitializer, declLocation);
-            else if (bodyParam)
-                addError(DiagCode::BodyParamNoInitializer, declLocation);
-            buffer.append({ paramDecl, *declarator, declName, declLocation, init, local, bodyParam });
-        }
+    for (auto node : syntax->members) {
+        // TODO: overrideLocal on body params
+        factory.createSymbols(*node, *this, members);
     }
-    return local;
+
+    setMembers(members);
 }
 
-InstanceSymbol::InstanceSymbol(SymbolKind kind, const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
-                               HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent) :
-    ScopeSymbol(kind, parent, getName(definition, syntax), getLocation(definition, syntax)),
-    definition(definition), syntax(syntax), paramAssignments(parameters) {}
-
-SourceLocation InstanceSymbol::getLocation(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax) {
-    if (syntax)
-        return syntax->name.location();
-    return definition.syntax.header.name.location();
-}
-
-string_view InstanceSymbol::getName(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax) {
-    if (syntax)
-        return syntax->name.valueText();
-    return definition.syntax.header.name.valueText();
-}
+InstanceSymbol::InstanceSymbol(SymbolKind kind, string_view name, const DefinitionSymbol& definition,
+                               const ScopeSymbol& parent) :
+    ScopeSymbol(kind, parent, name),
+    definition(definition) {}
 
 void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstantiationSyntax& syntax,
                                 SmallVector<const Symbol*>& results) {
@@ -123,13 +85,14 @@ void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstan
 
     // TODO: check symbol kind?
     const DefinitionSymbol& definition = foundSymbol->as<DefinitionSymbol>();
+    definition.members();
     const RootSymbol& root = parent.getRoot();
 
     // Evaluate all parameters now so that we can reuse them for all instances below.
     // If we were given a set of parameter assignments, build up some data structures to
     // allow us to easily index them. We need to handle both ordered assignment as well as
     // named assignment (though a specific instance can only use one method or the other).
-    SmallHashMap<string_view, const ExpressionSyntax*, 8> paramMap;
+    SmallHashMap<const ParameterSymbol*, const ExpressionSyntax*, 8> paramMap;
     if (syntax.parameters) {
         bool hasParamAssignments = false;
         bool orderedAssignments = true;
@@ -163,14 +126,14 @@ void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstan
         // For each parameter assignment we have, match it up to a real parameter
         if (orderedAssignments) {
             uint32_t orderedIndex = 0;
-            for (const auto& info : definition.getDeclaredParams()) {
+            for (auto param : definition.parameters) {
                 if (orderedIndex >= orderedParams.size())
                     break;
 
-                if (info.local)
+                if (param->isLocalParam)
                     continue;
 
-                paramMap[info.name] = &orderedParams[orderedIndex++]->expr;
+                paramMap[param] = &orderedParams[orderedIndex++]->expr;
             }
 
             // Make sure there aren't extra param assignments for non-existent params.
@@ -183,17 +146,17 @@ void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstan
         }
         else {
             // Otherwise handle named assignments.
-            for (const auto& info : definition.getDeclaredParams()) {
-                auto it = namedParams.find(info.name);
+            for (auto param : definition.parameters) {
+                auto it = namedParams.find(param->name);
                 if (it == namedParams.end())
                     continue;
 
                 const NamedArgumentSyntax* arg = it->second.first;
                 it->second.second = true;
-                if (info.local) {
+                if (param->isLocalParam) {
                     // Can't assign to localparams, so this is an error.
-                    root.addError(info.bodyParam ? DiagCode::AssignedToLocalBodyParam : DiagCode::AssignedToLocalPortParam, arg->name.location());
-                    root.addError(DiagCode::NoteDeclarationHere, info.location) << string_view("parameter");
+                    root.addError(param->isPortParam ? DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam, arg->name.location());
+                    root.addError(DiagCode::NoteDeclarationHere, param->location) << string_view("parameter");
                     continue;
                 }
 
@@ -201,7 +164,7 @@ void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstan
                 if (!arg->expr)
                     continue;
 
-                paramMap[info.name] = arg->expr;
+                paramMap[param] = arg->expr;
             }
 
             for (const auto& pair : namedParams) {
@@ -216,59 +179,30 @@ void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstan
         }
     }
 
-    HashMapRef<string_view, const ExpressionSyntax*> parameters = paramMap.copy(root.allocator());
-
     for (auto instance : syntax.instances) {
         // TODO: handle arrays
-        results.append(&root.allocate<ModuleInstanceSymbol>(definition, instance, parameters, parent));
+        auto symbol = &root.allocate<ModuleInstanceSymbol>(instance->name.valueText(), definition, parent);
+        results.append(symbol);
+
+        // Copy all members from the definition
+        SmallVectorSized<const Symbol*, 32> members((uint32_t)definition.members().size());
+        for (auto member : definition.members()) {
+            Symbol& cloned = member->clone(*symbol);
+            members.append(&cloned);
+
+            // If this is a parameter symbol, see if we have a value override for it.
+            if (member->kind == SymbolKind::Parameter) {
+                auto it = paramMap.find(&member->as<ParameterSymbol>());
+                if (it != paramMap.end())
+                    cloned.as<ParameterSymbol>().value = LazyConstant(symbol, *it->second);
+            }
+        }
+        symbol->setMembers(members);
     }
 }
 
-void InstanceSymbol::fillMembers(MemberBuilder& builder) const {
-    ParameterPortListSyntax* parameterList = definition.syntax.header.parameters;
-    if (parameterList) {
-        for (const ParameterDeclarationSyntax* declaration : parameterList->declarations) {
-            for (const VariableDeclaratorSyntax* decl : declaration->declarators) {
-                // TODO: hack to get param values working
-
-                auto it = paramAssignments.find(decl->name.valueText());
-                builder.add(getRoot().allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
-                                                      declaration->type,
-                                                      decl->initializer ? &decl->initializer->expr : nullptr,
-                                                      it != paramAssignments.end() ? it->second : nullptr,
-                                                      getParent(), false, false, *this));
-            }
-        }
-    }
-
-    for (const MemberSyntax* node : definition.syntax.members) {
-        switch (node->kind) {
-            case SyntaxKind::ParameterDeclarationStatement: {
-                const ParameterDeclarationSyntax& declaration = node->as<ParameterDeclarationStatementSyntax>().parameter;
-                for (const VariableDeclaratorSyntax* decl : declaration.declarators) {
-
-                    auto it = paramAssignments.find(decl->name.valueText());
-                    builder.add(getRoot().allocate<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
-                                                          declaration.type,
-                                                          decl->initializer ? &decl->initializer->expr : nullptr,
-                                                          it != paramAssignments.end() ? it->second : nullptr,
-                                                          getParent(), false, false, *this));
-                }
-                break;
-            }
-            default:
-                builder.add(*node, *this);
-                break;
-        }
-    }
-}
-
-ModuleInstanceSymbol::ModuleInstanceSymbol(const DefinitionSymbol& definition, const ScopeSymbol& parent) :
-    InstanceSymbol(SymbolKind::ModuleInstance, definition, nullptr, HashMapRef<string_view, const ExpressionSyntax*>(), parent) {}
-
-ModuleInstanceSymbol::ModuleInstanceSymbol(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
-                                           HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent) :
-    InstanceSymbol(SymbolKind::ModuleInstance, definition, syntax, parameters, parent) {}
+ModuleInstanceSymbol::ModuleInstanceSymbol(string_view name, const DefinitionSymbol& definition, const ScopeSymbol& parent) :
+    InstanceSymbol(SymbolKind::ModuleInstance, name, definition, parent) {}
 
 IfGenerateSymbol::IfGenerateSymbol(const IfGenerateSyntax& syntax, const ScopeSymbol& parent) :
     ScopeSymbol(SymbolKind::IfGenerate, parent),
@@ -324,10 +258,8 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
         // localparam of the same name as the genvar.
         // TODO: scope name
 
-        const auto& implicitParam = root.allocate<ParameterSymbol>(syntax.identifier.valueText(),
-                                                                   syntax.identifier.location(),
-                                                                   root.factory.getIntType(),
-                                                                   *genvar, *this);
+        auto& implicitParam = root.allocate<ParameterSymbol>(syntax.identifier.valueText(), *this);
+        implicitParam.value = *genvar;
 
         builder.add(root.allocate<GenerateBlockSymbol>("", SourceLocation(),
                                                        syntax.block, implicitParam, parent));

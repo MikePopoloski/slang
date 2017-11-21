@@ -24,7 +24,7 @@ public:
 
     /// Finds all of the top-level module instances in the design. These form the roots of the
     /// actual design hierarchy.
-    span<const ModuleInstanceSymbol* const> topInstances() const { ensureInit(); return topList; }
+    span<const ModuleInstanceSymbol* const> topInstances() const { return topList; }
 
     /// Finds a package in the design with the given name, or returns null if none is found.
     const PackageSymbol* findPackage(string_view name) const;
@@ -50,11 +50,8 @@ public:
     mutable SymbolFactory factory;
 
 private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    // Add a compilation unit to the design; has some shared code to filter out members of the compilation
-    // unit that belong in the root scope (for example, modules).
-    void addCompilationUnit(const CompilationUnitSymbol& unit);
+    // Initializes the list of members from the given set of roots; called by several constructors.
+    void init(span<const SyntaxNode* const> nodes);
 
     SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,
                                            std::initializer_list<const TypeSymbol*> argTypes) const;
@@ -78,7 +75,7 @@ private:
     mutable Diagnostics diags;
 
     // list of top level module instances in the design
-    mutable std::vector<const ModuleInstanceSymbol*> topList;
+    std::vector<ModuleInstanceSymbol*> topList;
 
     const SourceManager& sourceMan;
 };

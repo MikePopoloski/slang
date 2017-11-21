@@ -207,7 +207,7 @@ public:
     const ParameterSymbol& symbol;
 
     ParameterRefExpression(const ParameterSymbol& symbol, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::ParameterRef, symbol.type(), syntax), symbol(symbol) {}
+        Expression(ExpressionKind::ParameterRef, symbol.value->getType(), syntax), symbol(symbol) {}
 
     ConstantValue eval(EvalContext& context) const;
 };

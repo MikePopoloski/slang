@@ -59,11 +59,11 @@ ConstantValue IntegerLiteral::eval(EvalContext&) const {
     // TODO: truncation?
     if (width > result.getBitWidth())
         result = extend(result, width, type->isSigned());
-    return result;
+    return { *type, result };
 }
 
 ConstantValue RealLiteral::eval(EvalContext&) const {
-    return value;
+    return { *type, value };
 }
 
 ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
@@ -71,14 +71,14 @@ ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
     bool isSigned = type->isSigned();
 
     switch (value.value) {
-        case 0: return SVInt(width, 0, isSigned);
+        case 0: return { *type, SVInt(width, 0, isSigned) };
         case 1: {
             SVInt tmp(width, 0, isSigned);
             tmp.setAllOnes();
-            return tmp;
+            return { *type, tmp };
         }
-        case logic_t::X_VALUE: return SVInt::createFillX(width, isSigned);
-        case logic_t::Z_VALUE: return SVInt::createFillZ(width, isSigned);
+        case logic_t::X_VALUE: return { *type, SVInt::createFillX(width, isSigned) };
+        case logic_t::Z_VALUE: return { *type, SVInt::createFillZ(width, isSigned) };
         default: THROW_UNREACHABLE;
     }
 }
@@ -90,25 +90,27 @@ ConstantValue VariableRefExpression::eval(EvalContext& context) const {
 }
 
 ConstantValue ParameterRefExpression::eval(EvalContext&) const {
-    return symbol.value();
+    return *symbol.value;
 }
 
 ConstantValue UnaryExpression::eval(EvalContext& context) const {
     SVInt v = operand().eval(context).integer();
 
+#define OP(k, v) case UnaryOperator::k: return { *type, v };
     switch (op) {
-        case UnaryOperator::Plus: return v;
-        case UnaryOperator::Minus: return -v;
-        case UnaryOperator::BitwiseNot: return ~v;
-        case UnaryOperator::BitwiseAnd: return SVInt(v.reductionAnd());
-        case UnaryOperator::BitwiseOr: return SVInt(v.reductionOr());
-        case UnaryOperator::BitwiseXor: return SVInt(v.reductionXor());
-        case UnaryOperator::BitwiseNand: return SVInt(!v.reductionAnd());
-        case UnaryOperator::BitwiseNor: return SVInt(!v.reductionOr());
-        case UnaryOperator::BitwiseXnor: return SVInt(!v.reductionXor());
-        case UnaryOperator::LogicalNot: return SVInt(!v);
+        OP(Plus, v);
+        OP(Minus, -v);
+        OP(BitwiseNot, ~v);
+        OP(BitwiseAnd, SVInt(v.reductionAnd()));
+        OP(BitwiseOr, SVInt(v.reductionOr()));
+        OP(BitwiseXor, SVInt(v.reductionXor()));
+        OP(BitwiseNand, SVInt(!v.reductionAnd()));
+        OP(BitwiseNor, SVInt(!v.reductionOr()));
+        OP(BitwiseXnor, SVInt(!v.reductionXor()));
+        OP(LogicalNot, SVInt(!v));
     }
     THROW_UNREACHABLE;
+#undef OP
 }
 
 bool BinaryExpression::isAssignment() const {
@@ -143,51 +145,55 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
         ASSERT(lvalue);
     }
 
+#define OP(k, v) case BinaryOperator::k: return { *type, v }
+#define ASSIGN(k, v) case BinaryOperator::k: *lvalue = { *type, v }; return *lvalue
     switch (op) {
-        case BinaryOperator::Add: return l + r;
-        case BinaryOperator::Subtract: return l - r;
-        case BinaryOperator::Multiply: return l * r;
-        case BinaryOperator::Divide: return l / r;
-        case BinaryOperator::Mod: return l % r;
-        case BinaryOperator::BinaryAnd: return l & r;
-        case BinaryOperator::BinaryOr: return l | r;
-        case BinaryOperator::BinaryXor: return l ^ r;
-        case BinaryOperator::LogicalShiftLeft: return l.shl(r);
-        case BinaryOperator::LogicalShiftRight: return l.lshr(r);
-        case BinaryOperator::ArithmeticShiftLeft: return l.shl(r);
-        case BinaryOperator::ArithmeticShiftRight: return l.ashr(r);
-        case BinaryOperator::BinaryXnor: return l.xnor(r);
-        case BinaryOperator::Equality: return SVInt(l == r);
-        case BinaryOperator::Inequality: return SVInt(l != r);
-        case BinaryOperator::CaseEquality: return SVInt((logic_t)exactlyEqual(l, r));
-        case BinaryOperator::CaseInequality: return SVInt((logic_t)!exactlyEqual(l, r));
-        case BinaryOperator::WildcardEquality: return SVInt(wildcardEqual(l, r));
-        case BinaryOperator::WildcardInequality: return SVInt(!wildcardEqual(l, r));
-        case BinaryOperator::GreaterThanEqual: return SVInt(l >= r);
-        case BinaryOperator::GreaterThan: return SVInt(l > r);
-        case BinaryOperator::LessThanEqual: return SVInt(l <= r);
-        case BinaryOperator::LessThan: return SVInt(l < r);
-        case BinaryOperator::LogicalAnd: return SVInt(l && r);
-        case BinaryOperator::LogicalOr: return SVInt(l || r);
-        case BinaryOperator::LogicalImplication: return SVInt(SVInt::logicalImplication(l, r));
-        case BinaryOperator::LogicalEquivalence: return SVInt(SVInt::logicalEquivalence(l, r));
-        case BinaryOperator::Power: return l.pow(r);
-        case BinaryOperator::Replication: return r.replicate(l);
-        case BinaryOperator::Assignment: *lvalue = r; return *lvalue;
-        case BinaryOperator::AddAssignment: *lvalue = l + r; return *lvalue;
-        case BinaryOperator::SubtractAssignment: *lvalue = l - r; return *lvalue;
-        case BinaryOperator::MultiplyAssignment: *lvalue = l * r; return *lvalue;
-        case BinaryOperator::DivideAssignment: *lvalue = l / r; return *lvalue;
-        case BinaryOperator::ModAssignment: *lvalue = l % r; return *lvalue;
-        case BinaryOperator::AndAssignment: *lvalue = l & r; return *lvalue;
-        case BinaryOperator::OrAssignment: *lvalue = l | r; return *lvalue;
-        case BinaryOperator::XorAssignment: *lvalue = l ^ r; return *lvalue;
-        case BinaryOperator::LogicalLeftShiftAssignment: *lvalue = l.shl(r); return *lvalue;
-        case BinaryOperator::LogicalRightShiftAssignment: *lvalue = l.lshr(r); return *lvalue;
-        case BinaryOperator::ArithmeticLeftShiftAssignment: *lvalue = l.shl(r); return *lvalue;
-        case BinaryOperator::ArithmeticRightShiftAssignment: *lvalue = l.ashr(r); return *lvalue;
+        OP(Add, l + r);
+        OP(Subtract, l - r);
+        OP(Multiply, l * r);
+        OP(Divide, l / r);
+        OP(Mod, l % r);
+        OP(BinaryAnd, l & r);
+        OP(BinaryOr, l | r);
+        OP(BinaryXor, l ^ r);
+        OP(LogicalShiftLeft, l.shl(r));
+        OP(LogicalShiftRight, l.lshr(r));
+        OP(ArithmeticShiftLeft, l.shl(r));
+        OP(ArithmeticShiftRight, l.ashr(r));
+        OP(BinaryXnor, l.xnor(r));
+        OP(Equality, SVInt(l == r));
+        OP(Inequality, SVInt(l != r));
+        OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
+        OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
+        OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
+        OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
+        OP(GreaterThanEqual, SVInt(l >= r));
+        OP(GreaterThan, SVInt(l > r));
+        OP(LessThanEqual, SVInt(l <= r));
+        OP(LessThan, SVInt(l < r));
+        OP(LogicalAnd, SVInt(l && r));
+        OP(LogicalOr, SVInt(l || r));
+        OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
+        OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
+        OP(Power, l.pow(r));
+        OP(Replication, r.replicate(l));
+        ASSIGN(Assignment, r);
+        ASSIGN(AddAssignment, l + r);
+        ASSIGN(SubtractAssignment, l - r);
+        ASSIGN(MultiplyAssignment, l * r);
+        ASSIGN(DivideAssignment, l / r);
+        ASSIGN(ModAssignment, l % r);
+        ASSIGN(AndAssignment, l & r);
+        ASSIGN(OrAssignment, l | r);
+        ASSIGN(XorAssignment, l ^ r);
+        ASSIGN(LogicalLeftShiftAssignment, l.shl(r));
+        ASSIGN(LogicalRightShiftAssignment, l.lshr(r));
+        ASSIGN(ArithmeticLeftShiftAssignment, l.shl(r));
+        ASSIGN(ArithmeticRightShiftAssignment, l.ashr(r));
     }
     THROW_UNREACHABLE;
+#undef OP
+#undef ASSIGN
 }
 
 ConstantValue TernaryExpression::eval(EvalContext& context) const {
@@ -198,14 +204,13 @@ ConstantValue TernaryExpression::eval(EvalContext& context) const {
         // do strange combination operation
         SVInt l = left().eval(context).integer();
         SVInt r = right().eval(context).integer();
-        return SVInt::conditional(cond, l, r);
+        return { *type, SVInt::conditional(cond, l, r) };
     }
-    else if (bool(pred)) {
-        // Only one side gets evaluate if true or false
-        return left().eval(context).integer();
+    else if (pred) {
+        return { *type, left().eval(context).integer() };
     }
     else {
-        return right().eval(context).integer();
+        return { *type, right().eval(context).integer() };
     }
 }
 
@@ -219,7 +224,7 @@ ConstantValue SelectExpression::eval(EvalContext& context) const {
         // If any part of an address is unknown, then the whole thing returns
         // 'x; let's handle this here so everywhere else we can assume the inputs
         // are normal numbers
-        return SVInt::createFillX((uint16_t)type->width(), false);
+        return { *type, SVInt::createFillX((uint16_t)type->width(), false) };
     }
 
     // here "actual" bit refers to bits numbered from
@@ -227,19 +232,19 @@ ConstantValue SelectExpression::eval(EvalContext& context) const {
     int16_t actualMsb = int16_t((lb < 0 ? -1 : 1) * (int16_t)msb.as<int64_t>().value() - lb);
     switch (kind) {
         case SyntaxKind::BitSelect: {
-            return first.bitSelect(actualMsb, actualMsb);
+            return { *type, first.bitSelect(actualMsb, actualMsb) };
         }
         case SyntaxKind::SimpleRangeSelect: {
             int16_t actualLsb = int16_t((lb < 0 ? -1 : 1) * (int16_t)lsbOrWidth.as<int64_t>().value() - lb);
-            return first.bitSelect(actualLsb, actualMsb);
+            return { *type, first.bitSelect(actualLsb, actualMsb) };
         }
         case SyntaxKind::AscendingRangeSelect: {
             int16_t width = int16_t(lsbOrWidth.as<int64_t>().value());
-            return first.bitSelect(actualMsb, actualMsb + width);
+            return { *type, first.bitSelect(actualMsb, actualMsb + width) };
         }
         case SyntaxKind::DescendingRangeSelect: {
             int16_t width = int16_t(lsbOrWidth.as<int64_t>().value());
-            return first.bitSelect(actualMsb - width, actualMsb);
+            return { *type, first.bitSelect(actualMsb - width, actualMsb) };
         }
         default: THROW_UNREACHABLE;
     }
@@ -255,7 +260,7 @@ ConstantValue NaryExpression::eval(EvalContext& context) const {
       //  case SyntaxKind::ConcatenationExpression: return concatenate(values);
     //}
 
-    return concatenate(values);
+    return { *type, concatenate(values) };
 }
 
 ConstantValue CallExpression::eval(EvalContext& context) const {
@@ -268,7 +273,7 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
     if (subroutine.systemFunctionKind != SystemFunction::Unknown) {
         switch (subroutine.systemFunctionKind) {
             case SystemFunction::Unknown: break;
-            case SystemFunction::clog2: return SVInt(clog2(args[0].integer()));
+            case SystemFunction::clog2: return { *type, SVInt(clog2(args[0].integer())) };
             case SystemFunction::bits:
             case SystemFunction::low:
             case SystemFunction::high:
@@ -280,13 +285,13 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
                 const auto& argType = arguments()[0]->type->as<IntegralTypeSymbol>();
                 bool down = argType.lowerBounds[0] >= 0;
                 switch (subroutine.systemFunctionKind) {
-                    case SystemFunction::bits:  return SVInt(argType.width);
-                    case SystemFunction::low:   return SVInt(down ? argType.lowerBounds[0] + argType.width - 1 : -argType.lowerBounds[0]);
-                    case SystemFunction::high:  return SVInt(down ? argType.lowerBounds[0] : -argType.lowerBounds[0] - argType.width + 1);
-                    case SystemFunction::left:  return SVInt(down ? argType.lowerBounds[0] + argType.width - 1 : -argType.lowerBounds[0] - argType.width + 1);
-                    case SystemFunction::right: return SVInt(down ? argType.lowerBounds[0] : -argType.lowerBounds[0]);
-                    case SystemFunction::size:  return SVInt(argType.width);
-                    case SystemFunction::increment: return SVInt(down ? -1 : 1, true);
+                    case SystemFunction::bits:  return { *type, SVInt(argType.width) };
+                    case SystemFunction::low:   return { *type, SVInt(down ? argType.lowerBounds[0] + argType.width - 1 : -argType.lowerBounds[0]) };
+                    case SystemFunction::high:  return { *type, SVInt(down ? argType.lowerBounds[0] : -argType.lowerBounds[0] - argType.width + 1) };
+                    case SystemFunction::left:  return { *type, SVInt(down ? argType.lowerBounds[0] + argType.width - 1 : -argType.lowerBounds[0] - argType.width + 1) };
+                    case SystemFunction::right: return { *type, SVInt(down ? argType.lowerBounds[0] : -argType.lowerBounds[0]) };
+                    case SystemFunction::size:  return { *type, SVInt(argType.width) };
+                    case SystemFunction::increment: return { *type, SVInt(down ? -1 : 1, true) };
                     default: THROW_UNREACHABLE;
                 }
                 break;

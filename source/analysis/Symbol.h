@@ -133,14 +133,18 @@ public:
     SymbolFactory& getFactory() const;
 
     template<typename T>
+    T& as() { return *static_cast<T*>(this); }
+
+    template<typename T>
     const T& as() const { return *static_cast<const T*>(this); }
 
-    Symbol(const Symbol&) = delete;
-    Symbol& operator=(const Symbol&) = delete;
+    /// Makes a clone of the symbol with the provided scope as the new parent.
+    Symbol& clone(const ScopeSymbol& newParent) const;
 
     template<typename TDerived, typename TResult, typename TSource>
     struct Lazy {
         Lazy(const ScopeSymbol* scope, const TResult* init) : storedScope(scope), cache(init) {}
+        Lazy(const ScopeSymbol* scope, const TSource& init) : storedScope(scope), cache(&init) {}
 
         Lazy& operator=(const TResult* result) { cache = result; return *this; }
         Lazy& operator=(const TResult& result) { cache = &result; return *this; }
@@ -162,23 +166,43 @@ public:
             return &result;
         }
 
-    private:
+    protected:
         const ScopeSymbol* storedScope;
+
+    private:
         mutable std::variant<const TResult*, const TSource*> cache;
     };
 
-#define LAZY(name, TResult, TSource) \
-    struct name : public Lazy<name, TResult, TSource> { \
-        name(const ScopeSymbol* scope); \
-        using Lazy<name, TResult, TSource>::operator=; \
-    private: \
-        friend struct Lazy<name, TResult, TSource>; \
+    struct LazyConstant : public Lazy<LazyConstant, ConstantValue, ExpressionSyntax> {
+        explicit LazyConstant(const ScopeSymbol* scope);
+        LazyConstant(const ScopeSymbol* scope, const ConstantValue* init) :
+            Lazy<LazyConstant, ConstantValue, ExpressionSyntax>(scope, init) {}
+        LazyConstant(const ScopeSymbol* scope, const ExpressionSyntax& init) :
+            Lazy<LazyConstant, ConstantValue, ExpressionSyntax>(scope, init) {}
+
+        LazyConstant& operator=(const ExpressionSyntax& source);
+        LazyConstant& operator=(ConstantValue result);
+
+    private:
+        friend struct Lazy<LazyConstant, ConstantValue, ExpressionSyntax>;
+        const ConstantValue& evaluate(const ScopeSymbol& scope, const ExpressionSyntax& source) const;
+    };
+
+#define LAZY(name, TResult, TSource)                            \
+    struct name : public Lazy<name, TResult, TSource> {         \
+        explicit name(const ScopeSymbol* scope);                \
+        name(const ScopeSymbol* scope, const TResult* init) :   \
+            Lazy<name, TResult, TSource>(scope, init) {}        \
+        name(const ScopeSymbol* scope, const TSource& init) :   \
+            Lazy<name, TResult, TSource>(scope, init) {}        \
+        using Lazy<name, TResult, TSource>::operator=;          \
+    private:                                                    \
+        friend struct Lazy<name, TResult, TSource>;             \
         const TResult& evaluate(const ScopeSymbol& scope, const TSource& source) const; \
     }
 
     LAZY(LazyStatement, Statement, StatementSyntax);
     LAZY(LazyStatementList, StatementList, SyntaxList<SyntaxNode>);
-    LAZY(LazyConstant, Expression, ExpressionSyntax);
     LAZY(LazyInitializer, Expression, ExpressionSyntax);
     LAZY(LazyType, TypeSymbol, DataTypeSyntax);
 
@@ -248,7 +272,8 @@ public:
     /// Overrides the members of the symbol to be the given list.
     /// Note that if the scope gets explicitly marked dirty and its
     /// members regenerated, this list will be lost.
-    void setMembers(span<const Symbol* const> members);
+    // TODO: shouldn't be const
+    void setMembers(span<const Symbol* const> members) const;
     void setMember(const Symbol& member);
 
 protected:
@@ -279,6 +304,8 @@ protected:
 
     /// Overriden by derived classes to fill in the list of members for the symbol.
     virtual void fillMembers(MemberBuilder&) const {}
+
+    bool isLazy = false;
 
 private:
     void doInit() const;
@@ -330,61 +357,34 @@ public:
 };
 
 /// Represents a module, interface, or program declaration.
-class DefinitionSymbol : public Symbol {
+class DefinitionSymbol : public ScopeSymbol {
 public:
-    const ModuleDeclarationSyntax& syntax;
+    mutable span<const ParameterSymbol* const> parameters;
 
-    DefinitionSymbol(const ModuleDeclarationSyntax& decl, const ScopeSymbol& container);
-
-    /// Small collection of info extracted from a parameter definition
-    struct ParameterInfo {
-        const ParameterDeclarationSyntax& paramDecl;
-        const VariableDeclaratorSyntax& declarator;
-        string_view name;
-        SourceLocation location;
-        ExpressionSyntax* initializer;
-        bool local;
-        bool bodyParam;
-    };
-
-    span<ParameterInfo> getDeclaredParams() const;
+    DefinitionSymbol(string_view name, const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent);
 
 private:
-    // Helper function used by getDeclaredParams to convert a single parameter declaration into
-    // one or more ParameterInfo instances.
-    bool getParamDecls(const ParameterDeclarationSyntax& syntax, SmallVector<ParameterInfo>& buffer,
-                       HashMapBase<string_view, SourceLocation>& nameDupMap,
-                       bool lastLocal, bool overrideLocal, bool bodyParam) const;
+    const ModuleDeclarationSyntax* syntax;
 
-    mutable optional<span<ParameterInfo>> paramInfoCache;
+    friend class ScopeSymbol;
+    void resolveMembers() const;
 };
 
 /// Base class for module, interface, and program instance symbols.
 class InstanceSymbol : public ScopeSymbol {
 public:
     const DefinitionSymbol& definition;
-    const HierarchicalInstanceSyntax* syntax;
 
     static void fromSyntax(const ScopeSymbol& parent, const HierarchyInstantiationSyntax& syntax,
                            SmallVector<const Symbol*>& results);
 
 protected:
-    InstanceSymbol(SymbolKind kind, const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
-                   HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent);
-
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    static SourceLocation getLocation(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax);
-    static string_view getName(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax);
-
-    HashMapRef<string_view, const ExpressionSyntax*> paramAssignments;
+    InstanceSymbol(SymbolKind kind, string_view name, const DefinitionSymbol& definition, const ScopeSymbol& parent);
 };
 
 class ModuleInstanceSymbol : public InstanceSymbol {
 public:
-    ModuleInstanceSymbol(const DefinitionSymbol& definition, const ScopeSymbol& parent);
-    ModuleInstanceSymbol(const DefinitionSymbol& definition, const HierarchicalInstanceSyntax* syntax,
-                         HashMapRef<string_view, const ExpressionSyntax*> parameters, const ScopeSymbol& parent);
+    ModuleInstanceSymbol(string_view name, const DefinitionSymbol& definition, const ScopeSymbol& parent);
 };
 
 //class GenvarSymbol : public Symbol {
@@ -509,49 +509,15 @@ private:
 
 class ParameterSymbol : public Symbol {
 public:
-    /// Creates a new parameter symbol with the given value.
-    ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                    ConstantValue value, const ScopeSymbol& parent);
+    LazyConstant defaultValue;
+    LazyConstant value;
+    bool isLocalParam = false;
+    bool isPortParam = false;
 
-    /// Creates a new parameter symbol from the given syntax info.
-    ParameterSymbol(string_view name, SourceLocation location, const DataTypeSyntax& typeSyntax,
-                    const ExpressionSyntax* defaultInitializer, const ExpressionSyntax* assignedValue,
-                    const ScopeSymbol* instanceScope, bool isLocalParam, bool isPortParam, const ScopeSymbol& parent);
+    ParameterSymbol(string_view name, const ScopeSymbol& parent);
 
-    /// Indicates whether the parameter is a "localparam".
-    bool isLocalParam() const { return isLocal; }
-
-    /// Indicates whether the parameter was declared in the element's parameter port list.
-    /// Otherwise, it was found declared in the design element itself as a member.
-    bool isPortParam() const { return isPort; }
-
-    /// Indicates whether the parameter was given a default value in its initializer.
-    bool hasDefault() const { return defaultInitializer != nullptr; }
-
-    // Methods for getting information about the default value for the parameter.
-    // Parameters are not required to have a default so you must check if you care.
-    const ConstantValue* defaultValue() const;
-    const TypeSymbol* defaultType() const;
-
-    const TypeSymbol& type() const;
-    const ConstantValue& value() const;
-
-private:
-    void evaluate(const ExpressionSyntax* expr, const TypeSymbol*& determinedType,
-                  ConstantValue*& determinedValue, const ScopeSymbol& scope) const;
-
-    mutable const TypeSymbol* type_ = nullptr;
-    mutable const TypeSymbol* defaultType_ = nullptr;
-    mutable ConstantValue* value_;
-    mutable ConstantValue* defaultValue_;
-
-    const ScopeSymbol* instanceScope = nullptr;
-    const DataTypeSyntax* typeSyntax = nullptr;
-    const ExpressionSyntax* defaultInitializer = nullptr;
-    const ExpressionSyntax* assignedValue = nullptr;
-
-    bool isLocal = false;
-    bool isPort = false;
+    static void fromSyntax(SymbolFactory& factory, const ParameterDeclarationSyntax& syntax,
+                           const ScopeSymbol& parent, SmallVector<ParameterSymbol*>& results);
 };
 
 /// Represents a variable declaration (which does not include nets).

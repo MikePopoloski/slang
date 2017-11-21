@@ -72,9 +72,11 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         }
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
-        case SyntaxKind::ProgramDeclaration:
-            symbols.append(alloc.emplace<DefinitionSymbol>(node.as<ModuleDeclarationSyntax>(), parent));
+        case SyntaxKind::ProgramDeclaration: {
+            const auto& decl = node.as<ModuleDeclarationSyntax>();
+            symbols.append(alloc.emplace<DefinitionSymbol>(decl.header.name.valueText(), decl, parent));
             break;
+        }
         case SyntaxKind::PackageDeclaration: {
             string_view name = node.as<ModuleDeclarationSyntax>().header.name.valueText();
             auto symbol = alloc.emplace<PackageSymbol>(name, parent);
@@ -102,6 +104,9 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         case SyntaxKind::HierarchyInstantiation:
             InstanceSymbol::fromSyntax(parent, node.as<HierarchyInstantiationSyntax>(), symbols);
             break;
+        case SyntaxKind::ModportDeclaration:
+            // TODO:!
+            break;
         case SyntaxKind::IfGenerate:
             // TODO: add special name conflict checks for generate blocks
             symbols.append(alloc.emplace<IfGenerateSymbol>(node.as<IfGenerateSyntax>(), parent));
@@ -121,19 +126,12 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
                 symbols.append(variable);
             break;
         }
-        case SyntaxKind::ParameterDeclarationStatement: {
-            const ParameterDeclarationSyntax& declaration = node.as<ParameterDeclarationStatementSyntax>().parameter;
-            for (const VariableDeclaratorSyntax* decl : declaration.declarators) {
-
-                // TODO: hack to get param values working
-                //auto it = paramAssignments.find(decl->name.valueText());
-                const ConstantValue& cv = parent.evaluateConstant(decl->initializer->expr);
-
-                symbols.append(alloc.emplace<ParameterSymbol>(decl->name.valueText(), decl->name.location(),
-                                                              getIntType(), cv, parent));
-            }
+        case SyntaxKind::ParameterDeclarationStatement:
+            createParamSymbols(node.as<ParameterDeclarationStatementSyntax>().parameter, parent, symbols);
             break;
-        }
+        case SyntaxKind::ParameterDeclaration:
+            createParamSymbols(node.as<ParameterDeclarationSyntax>(), parent, symbols);
+            break;
         case SyntaxKind::AlwaysBlock:
         case SyntaxKind::AlwaysCombBlock:
         case SyntaxKind::AlwaysLatchBlock:
@@ -177,6 +175,14 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         default:
             THROW_UNREACHABLE;
     }
+}
+
+void SymbolFactory::createParamSymbols(const ParameterDeclarationSyntax& syntax, const ScopeSymbol& parent,
+                                       SmallVector<const Symbol*>& symbols) {
+    SmallVectorSized<ParameterSymbol*, 16> params;
+    ParameterSymbol::fromSyntax(*this, syntax, parent, params);
+    for (auto param : params)
+        symbols.append(param);
 }
 
 static TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {

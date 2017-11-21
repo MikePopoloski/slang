@@ -14,25 +14,32 @@ RootSymbol::RootSymbol(const SourceManager& sourceManager) :
     ScopeSymbol(SymbolKind::Root, *this),
     sourceMan(sourceManager)
 {
+    init(nullptr);
 }
 
 RootSymbol::RootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units) :
-    RootSymbol(sourceManager)
+    ScopeSymbol(SymbolKind::Root, *this),
+    sourceMan(sourceManager)
 {
+    SmallVectorSized<const SyntaxNode*, 16> nodes((uint32_t)units.size());
     for (auto unit : units)
-        addCompilationUnit(factory.createCompilationUnit(*unit, *this));
+        nodes.append(unit);
+    init(nodes);
 }
 
 RootSymbol::RootSymbol(const SyntaxTree* tree) :
     RootSymbol(make_span(&tree, 1)) {}
 
 RootSymbol::RootSymbol(span<const SyntaxTree* const> trees) :
-    RootSymbol(trees[0]->sourceManager())
+    ScopeSymbol(SymbolKind::Root, *this),
+    sourceMan(trees[0]->sourceManager())
 {
+    SmallVectorSized<const SyntaxNode*, 16> nodes((uint32_t)trees.size());
     for (auto tree : trees) {
         ASSERT(&tree->sourceManager() == &sourceMan);
-        addCompilationUnit(factory.createCompilationUnit(tree->root(), *this));
+        nodes.append(&tree->root());
     }
+    init(nodes);
 }
 
 const PackageSymbol* RootSymbol::findPackage(string_view lookupName) const {
@@ -43,16 +50,6 @@ const PackageSymbol* RootSymbol::findPackage(string_view lookupName) const {
         return nullptr;
 
     return (const PackageSymbol*)it->second;
-}
-
-void RootSymbol::addCompilationUnit(const CompilationUnitSymbol& unit) {
-    unitList.push_back(&unit);
-
-    // Track packages separately; they live in their own namespace.
-    for (auto symbol : unit.members()) {
-        if (symbol->kind == SymbolKind::Package)
-            packageMap.emplace(symbol->name, symbol);
-    }
 }
 
 SubroutineSymbol& RootSymbol::createSystemFunction(string_view funcName, SystemFunction funcKind,
@@ -71,39 +68,62 @@ SubroutineSymbol& RootSymbol::createSystemFunction(string_view funcName, SystemF
     return *func;
 }
 
-void RootSymbol::fillMembers(MemberBuilder& builder) const {
+void RootSymbol::init(span<const SyntaxNode* const> nodes) {
     // Register built-in system functions.
-    builder.add(createSystemFunction("$clog2", SystemFunction::clog2, { &factory.getIntType() }));
+    SmallVectorSized<const Symbol*, 32> symbols;
+    symbols.append(&createSystemFunction("$clog2", SystemFunction::clog2, { &factory.getIntType() }));
 
     // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
     // assignment like context
     // TODO: add support for all these operands on data_types, not just expressions,
     // and add support for things like unpacked arrays
     const auto& trivialIntType = factory.getType(1, false, true);
-    builder.add(createSystemFunction("$bits", SystemFunction::bits, { &trivialIntType }));
-    builder.add(createSystemFunction("$left", SystemFunction::left, { &trivialIntType }));
-    builder.add(createSystemFunction("$right", SystemFunction::right, { &trivialIntType }));
-    builder.add(createSystemFunction("$low", SystemFunction::low, { &trivialIntType }));
-    builder.add(createSystemFunction("$high", SystemFunction::high, { &trivialIntType }));
-    builder.add(createSystemFunction("$size", SystemFunction::size, { &trivialIntType }));
-    builder.add(createSystemFunction("$increment", SystemFunction::increment, { &trivialIntType }));
+    symbols.append(&createSystemFunction("$bits", SystemFunction::bits, { &trivialIntType }));
+    symbols.append(&createSystemFunction("$left", SystemFunction::left, { &trivialIntType }));
+    symbols.append(&createSystemFunction("$right", SystemFunction::right, { &trivialIntType }));
+    symbols.append(&createSystemFunction("$low", SystemFunction::low, { &trivialIntType }));
+    symbols.append(&createSystemFunction("$high", SystemFunction::high, { &trivialIntType }));
+    symbols.append(&createSystemFunction("$size", SystemFunction::size, { &trivialIntType }));
+    symbols.append(&createSystemFunction("$increment", SystemFunction::increment, { &trivialIntType }));
 
-    // Compute which modules should be automatically instantiated; this is the set of modules that are:
-    // 1) declared at the root level
-    // 2) never instantiated anywhere in the design (even inside generate blocks that are not selected)
-    // 3) don't have any parameters, or all parameters have default values
-    //
-    // Because of the requirement that we look at uninstantiated branches of generate blocks, we need
-    // to look at the syntax nodes instead of any bound symbols.
+    // Go through our list of root nodes and process them. That involves:
+    // - creating a CompilationUnitSymbol for each one
+    // - pulling packages and definitions out into our own member list
+    // - searching the actual syntax tree for instantiations so that we can know the top level instances
     NameSet instances;
-    for (auto symbol : unitList) {
-        for (auto member : symbol->members()) {
-            if (member->kind == SymbolKind::Module) {
-                builder.add(*member);
+    for (auto node : nodes) {
+        const auto& unit = factory.createCompilationUnit(*node, *this);
+        unitList.push_back(&unit);
 
-                std::vector<NameSet> scopeStack;
-                findInstantiations(member->as<DefinitionSymbol>().syntax, scopeStack, instances);
+        for (auto symbol : unit.members()) {
+            switch (symbol->kind) {
+                case SymbolKind::Package:
+                    // Track packages separately; they live in their own namespace.
+                    packageMap.emplace(symbol->name, symbol);
+                    break;
+                case SymbolKind::Module:
+                case SymbolKind::Interface:
+                case SymbolKind::Program:
+                    symbols.append(symbol);
+                    break;
+                default:
+                    break;
             }
+        }
+
+        // Because of the requirement that we look at uninstantiated branches of generate blocks,
+        // we need to look at the syntax nodes instead of any bound symbols.
+        if (node->kind == SyntaxKind::CompilationUnit) {
+            for (auto member : node->as<CompilationUnitSyntax>().members) {
+                if (member->kind == SyntaxKind::ModuleDeclaration) {
+                    std::vector<NameSet> scopeStack;
+                    findInstantiations(member->as<MemberSyntax>(), scopeStack, instances);
+                }
+            }
+        }
+        else if (node->kind == SyntaxKind::ModuleDeclaration) {
+            std::vector<NameSet> scopeStack;
+            findInstantiations(node->as<MemberSyntax>(), scopeStack, instances);
         }
     }
 
@@ -112,16 +132,27 @@ void RootSymbol::fillMembers(MemberBuilder& builder) const {
         for (auto member : symbol->members()) {
             if (member->kind == SymbolKind::Module && instances.count(member->name) == 0) {
                 // TODO: check for no parameters here
-                const auto& instance = allocate<ModuleInstanceSymbol>(member->as<DefinitionSymbol>(), *this);
-                builder.add(instance);
+                const auto& definition = member->as<DefinitionSymbol>();
+                auto& instance = allocate<ModuleInstanceSymbol>(definition.name, definition, *this);
                 topList.push_back(&instance);
             }
         }
     }
+
+    setMembers(symbols);
+
+    // Finally, go back through our list of top-level instances and elaborate their children.
+    for (auto instance : topList) {
+        // Copy all members from the definition
+        symbols.clear();
+        for (auto member : instance->definition.members())
+            symbols.append(&member->clone(*instance));
+        instance->setMembers(symbols);
+    }
 }
 
 void RootSymbol::findInstantiations(const ModuleDeclarationSyntax& module, std::vector<NameSet>& scopeStack,
-                                          NameSet& found) {
+                                    NameSet& found) {
     // If there are nested modules that shadow global module names, we need to
     // ignore them when considering instantiations.
     NameSet* localDefs = nullptr;
@@ -164,7 +195,7 @@ static bool containsName(const std::vector<std::unordered_set<string_view>>& sco
 }
 
 void RootSymbol::findInstantiations(const MemberSyntax& node, std::vector<NameSet>& scopeStack,
-                                          NameSet& found) {
+                                    NameSet& found) {
     switch (node.kind) {
         case SyntaxKind::HierarchyInstantiation: {
             // Determine whether this is a local or global module we're instantiating;

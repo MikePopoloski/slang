@@ -14,7 +14,7 @@ SVInt testParameter(const std::string& text, int index = 0) {
         WARN(tree.reportDiagnostics());
 
     const ParameterSymbol& param = module.member<ParameterSymbol>(index);
-    return param.value().integer();
+    return param.value->integer();
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {
@@ -44,7 +44,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
     // Initialize `i` to 1.
     EvalContext context;
-    auto i = context.createLocal(&local, SVInt(1));
+    auto i = context.createLocal(&local, { root.factory.getIntType(), SVInt(1) });
 
     // Evaluate the expression tree.
     bound.eval(context);

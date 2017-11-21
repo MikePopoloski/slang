@@ -55,6 +55,9 @@ private:
     template<typename TNode>
     void createChildren(ScopeSymbol* scope, const TNode& node);
 
+    void createParamSymbols(const ParameterDeclarationSyntax& syntax, const ScopeSymbol& parent,
+                            SmallVector<const Symbol*>& symbols);
+
     std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
     std::unordered_map<uint64_t, const IntegralTypeSymbol*> integralTypeCache;
 

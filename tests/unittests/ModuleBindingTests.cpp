@@ -93,7 +93,7 @@ endmodule
     const auto& instance = evalModule(tree, root);
     const auto& leaf = instance.member<ModuleInstanceSymbol>(0).member<ModuleInstanceSymbol>(0);
     const auto& foo = leaf.lookup<ParameterSymbol>("foo");
-    CHECK(foo.value().integer() == 4);
+    CHECK(foo.value->integer() == 4);
 }
 
 TEST_CASE("Module children (conditional generate)", "[binding:modules]") {
@@ -125,7 +125,7 @@ endmodule
         .member<ModuleInstanceSymbol>(0);
 
     const auto& foo = leaf.lookup<ParameterSymbol>("foo");
-    CHECK(foo.value().integer() == 1);
+    CHECK(foo.value->integer() == 1);
 }
 
 TEST_CASE("Module children (loop generate)", "[binding:modules]") {
@@ -147,7 +147,7 @@ endmodule
     for (uint32_t i = 0; i < 10; i++) {
         const auto& leaf = instance.member<GenerateBlockSymbol>(i).member<ModuleInstanceSymbol>(1);
         const auto& foo = leaf.lookup<ParameterSymbol>("foo");
-        CHECK(foo.value().integer() == i);
+        CHECK(foo.value->integer() == i);
     }
 }
 
@@ -293,6 +293,6 @@ endpackage
 )");
 
     RootSymbol root(&tree);
-    const auto& cv = root.topInstances()[0]->member<ParameterSymbol>(0).value();
+    const auto& cv = *root.topInstances()[0]->member<ParameterSymbol>(0).value;
     CHECK(cv.integer() == 4);
 }

@@ -30,22 +30,20 @@ public:
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::HierarchyInstantiation:
                 scope.createAndAddSymbols(syntaxTrees.back().root());
-                return true;
-
+                return nullptr;
             case SyntaxKind::DataDeclaration: {
                 for (auto symbol : scope.createAndAddSymbols(syntaxTrees.back().root())) {
                     ConstantValue initial;
-                    const auto& init = symbol->as<VariableSymbol>().initializer;
-                    if (init)
-                        initial = init->eval(evalContext);
+                    const auto& variable = symbol->as<VariableSymbol>();
+                    if (variable.initializer)
+                        initial = variable.initializer->eval(evalContext);
                     else
-                        initial = SVInt(0);
+                        initial = { *variable.type, SVInt(0) };
 
                     evalContext.createLocal(symbol, initial);
                 }
-                return true;
+                return nullptr;
             }
-
             default:
                 if (isExpression(node.kind))
                     return evalExpression(node.as<ExpressionSyntax>());
@@ -53,9 +51,8 @@ public:
                     return evalStatement(node.as<StatementSyntax>());
                 else
                     // TODO: not supported yet
-                    ASSERT(false);
+                    THROW_UNREACHABLE;
         }
-        return nullptr;
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {

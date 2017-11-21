@@ -99,80 +99,56 @@ const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName
     return &getRoot().allocate<ImplicitImportSymbol>(*this, *symbol, *getParent());
 }
 
-ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const TypeSymbol& type,
-                                 ConstantValue value, const ScopeSymbol& parent) :
-    Symbol(SymbolKind::Parameter, parent, name, location),
-    type_(&type)
+ParameterSymbol::ParameterSymbol(string_view name, const ScopeSymbol& parent) :
+    Symbol(SymbolKind::Parameter, parent, name),
+    defaultValue(getParent()),
+    value(getParent())
 {
-    value_ = getRoot().constantAllocator.emplace(std::move(value));
 }
 
-ParameterSymbol::ParameterSymbol(string_view name, SourceLocation location, const DataTypeSyntax& typeSyntax,
-                                 const ExpressionSyntax* defaultInitializer, const ExpressionSyntax* assignedValue,
-                                 const ScopeSymbol* instanceScope, bool isLocalParam, bool isPortParam,
-                                 const ScopeSymbol& parent) :
-    Symbol(SymbolKind::Parameter, parent, name, location),
-    instanceScope(instanceScope), typeSyntax(&typeSyntax),
-    defaultInitializer(defaultInitializer), assignedValue(assignedValue),
-    isLocal(isLocalParam), isPort(isPortParam)
-{
-    ASSERT(defaultInitializer || assignedValue);
-    ASSERT(!assignedValue || instanceScope);
-}
+void ParameterSymbol::fromSyntax(SymbolFactory& factory, const ParameterDeclarationSyntax& syntax,
+                                 const ScopeSymbol& parent, SmallVector<ParameterSymbol*>& results) {
 
-const ConstantValue* ParameterSymbol::defaultValue() const {
-    if (!hasDefault())
-        return nullptr;
+    bool isLocal = syntax.keyword.kind == TokenKind::LocalParamKeyword;
 
-    defaultType();
-    return defaultValue_;
-}
+    for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
+        auto param = factory.alloc.emplace<ParameterSymbol>(decl->name.valueText(), parent);
+        param->isLocalParam = isLocal;
 
-const TypeSymbol* ParameterSymbol::defaultType() const {
-    if (!hasDefault())
-        return nullptr;
-
-    if (!defaultType_)
-        evaluate(defaultInitializer, defaultType_, defaultValue_, *getParent());
-
-    return defaultType_;
-}
-
-const ConstantValue& ParameterSymbol::value() const {
-    if (!type_)
-        type();
-    return *value_;
-}
-
-const TypeSymbol& ParameterSymbol::type() const {
-    if (!type_) {
-        if (assignedValue)
-            evaluate(assignedValue, type_, value_, *instanceScope);
-        else {
-            defaultType();
-            type_ = defaultType_;
-            value_ = defaultValue_;
+        if (decl->initializer) {
+            param->defaultValue = decl->initializer->expr;
+            param->value = param->defaultValue;
         }
+
+        // TODO: handle defaultType
+
+            // TODO:
+           /* else if (local)
+                addError(DiagCode::LocalParamNoInitializer, declLocation);
+            else if (bodyParam)
+                addError(DiagCode::BodyParamNoInitializer, declLocation);*/
+
+        results.append(param);
     }
-    return *type_;
 }
 
-void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& determinedType,
-                               ConstantValue*& determinedValue, const ScopeSymbol& scope) const {
-    ASSERT(expr);
-
-    // If no type is given, infer the type from the initializer
-    if (typeSyntax->kind == SyntaxKind::ImplicitType) {
-        const auto& bound = Binder(scope).bindConstantExpression(*expr);
-        determinedType = bound.type;
-        if (!bound.bad())
-            determinedValue = getRoot().constantAllocator.emplace(bound.eval());
-    }
-    else {
-        determinedType = &getRoot().factory.getType(*typeSyntax, scope);
-        determinedValue = getRoot().constantAllocator.emplace(scope.evaluateConstantAndConvert(*expr, *determinedType, location));
-    }
-}
+// TODO:
+//void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& determinedType,
+//                               ConstantValue*& determinedValue, const ScopeSymbol& scope) const {
+//    ASSERT(expr);
+//
+//    // If no type is given, infer the type from the initializer
+//    if (typeSyntax->kind == SyntaxKind::ImplicitType) {
+//        const auto& bound = Binder(scope).bindConstantExpression(*expr);
+//        determinedType = bound.type;
+//        if (!bound.bad())
+//            determinedValue = getRoot().constantAllocator.emplace(bound.eval());
+//    }
+//    else {
+//        determinedType = &getRoot().factory.getType(*typeSyntax, scope);
+//        determinedValue = getRoot().constantAllocator.emplace(scope.evaluateConstantAndConvert(*expr, *determinedType, location));
+//    }
+//}
 
 VariableSymbol::VariableSymbol(string_view name, const ScopeSymbol& parent,
                                VariableLifetime lifetime, bool isConst) :

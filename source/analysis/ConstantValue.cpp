@@ -8,6 +8,8 @@
 
 namespace slang {
 
+const ConstantValue ConstantValue::Invalid;
+
 optional<int> ConstantValue::coerceInteger(uint32_t maxBits, Diagnostics*,
                                            SourceLocation) {
     // TODO: report errors

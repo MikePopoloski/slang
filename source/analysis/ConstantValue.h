@@ -11,6 +11,8 @@
 
 namespace slang {
 
+class TypeSymbol;
+
 /// Represents a constant (compile-time evaluated) value, of one of a few possible types.
 /// By default the value is indeterminate, or "bad". Expressions involving bad
 /// values result in bad values, as you might expect.
@@ -20,9 +22,9 @@ public:
     ConstantValue() {}
     ConstantValue(nullptr_t) {}
 
-    ConstantValue(const SVInt& integer) : value(integer) {}
-    ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
-    ConstantValue(double real) : value(real) {}
+    ConstantValue(const TypeSymbol& type, const SVInt& integer) : type(&type), value(integer) {}
+    ConstantValue(const TypeSymbol& type, SVInt&& integer) : type(&type), value(std::move(integer)) {}
+    ConstantValue(const TypeSymbol& type, double real) : type(&type), value(real) {}
 
     ConstantValue(const ConstantValue& other) = default;
     ConstantValue(ConstantValue&& other) noexcept = default;
@@ -38,13 +40,18 @@ public:
     const SVInt& integer() const { return std::get<1>(value); }
     double real() const { return std::get<2>(value); }
 
+    const TypeSymbol& getType() const { return *type; }
+
     /// Tries to interpret the constant value as an integer, with no unknown bits,
     /// and which fits in the given number of bits. If it does, the value is returned.
     /// Otherwise, a diagnostic is issued.
     optional<int> coerceInteger(uint32_t maxBits, Diagnostics* diagnostics = nullptr,
                                 SourceLocation location = SourceLocation());
 
+    static const ConstantValue Invalid;
+
 private:
+    const TypeSymbol* type;
     std::variant<std::monostate, SVInt, double> value;
 };
 
