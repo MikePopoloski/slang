@@ -12,6 +12,7 @@
 #include <string>
 
 #include "lexing/Token.h"
+#include "util/Iterator.h"
 #include "util/SmallVector.h"
 
 namespace slang {
@@ -691,35 +692,31 @@ private:
 template<typename T>
 class SeparatedSyntaxList : public SyntaxListBase {
 public:
-    class const_iterator {
+    class const_iterator : public iterator_facade<const_iterator, std::random_access_iterator_tag,
+                                                  const T*, int32_t> {
     public:
-        using difference_type = ptrdiff_t;
-        using value_type = const T*;
-        using pointer = const T**;
-        using reference = const T*;
-        using iterator_category = std::forward_iterator_tag;
+        using difference_type = typename iterator_facade<const_iterator, std::random_access_iterator_tag,
+                                                         const T*, int32_t>::difference_type;
 
-        const_iterator(const SeparatedSyntaxList& list, int index) :
-            list(list), index(index)
-        {
+        const_iterator(const SeparatedSyntaxList& list, uint32_t index) :
+            list(list), index(index) {}
+
+        bool operator==(const const_iterator& other) const {
+            return &list == &other.list && index == other.index;
         }
 
-        const_iterator& operator++() { ++index; return *this; }
-        const_iterator operator++(int) {
-            const_iterator result = *this;
-            ++(*this);
-            return result;
-        }
+        bool operator<(const const_iterator& other) const { return index < other.index; }
 
-        reference operator*() const { return list[index]; }
-        pointer operator->() const { return &list[index]; }
+        const T* operator*() const { return list[index]; }
 
-        bool operator==(const const_iterator& other) const { return &list == &other.list && index == other.index; }
-        bool operator!=(const const_iterator& other) const { return !(*this == other); }
+        difference_type operator-(const const_iterator& other) const { return index - other.index; }
+
+        const_iterator& operator+=(difference_type n) { index += n; return *this; }
+        const_iterator& operator-=(difference_type n) { index -= n; return *this; }
 
     private:
         const SeparatedSyntaxList& list;
-        int index;
+        uint32_t index;
     };
 
     SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>(nullptr)) {}
@@ -740,10 +737,8 @@ public:
         return static_cast<const T*>(elements[index].node);
     }
 
-    const_iterator begin() const { return cbegin(); }
-    const_iterator end() const { return cend(); }
-    const_iterator cbegin() const { return const_iterator(*this, 0); }
-    const_iterator cend() const { return const_iterator(*this, count()); }
+    const_iterator begin() const { return const_iterator(*this, 0); }
+    const_iterator end() const { return const_iterator(*this, count()); }
 
 private:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
