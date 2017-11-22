@@ -440,15 +440,7 @@ private:
 /// the loop iteration value.
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
-    GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body, const ScopeSymbol& parent);
-    GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
-                        const ParameterSymbol& implicitParam, const ScopeSymbol& parent);
-
-private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    const SyntaxNode& body;
-    const ParameterSymbol* implicitParam = nullptr;
+    GenerateBlockSymbol(string_view name, const ScopeSymbol& parent);
 };
 
 /// Represents an explicit import from a package. This symbol type is

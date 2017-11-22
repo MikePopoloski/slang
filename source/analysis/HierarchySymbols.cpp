@@ -214,11 +214,17 @@ void IfGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     if (!cv)
         return;
 
+    const auto& block = getRoot().allocate<GenerateBlockSymbol>("", *this);
+    builder.add(block);
+
+    SmallVectorSized<const Symbol*, 16> members;
     const SVInt& value = cv.integer();
     if ((logic_t)value)
-        builder.add(getRoot().allocate<GenerateBlockSymbol>("", SourceLocation(), syntax.block, *this));
+        getFactory().createSymbols(syntax.block, block, members);
     else if (syntax.elseClause)
-        builder.add(getRoot().allocate<GenerateBlockSymbol>("", SourceLocation(), syntax.elseClause->clause, *this));
+        getFactory().createSymbols(syntax.elseClause->clause, block, members);
+
+    block.setMembers(members);
 }
 
 LoopGenerateSymbol::LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const ScopeSymbol& parent) :
@@ -257,36 +263,21 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
+        const auto& block = root.allocate<GenerateBlockSymbol>("", parent);
 
         auto& implicitParam = root.allocate<ParameterSymbol>(syntax.identifier.valueText(), *this);
         implicitParam.value = *genvar;
 
-        builder.add(root.allocate<GenerateBlockSymbol>("", SourceLocation(),
-                                                       syntax.block, implicitParam, parent));
+        SmallVectorSized<const Symbol*, 16> members;
+        members.append(&implicitParam);
+        root.factory.createSymbols(syntax.block, block, members);
+
+        block.setMembers(members);
+        builder.add(block);
     }
 }
 
-GenerateBlockSymbol::GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
-                                         const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location),
-    body(body) {}
-
-GenerateBlockSymbol::GenerateBlockSymbol(string_view name, SourceLocation location, const SyntaxNode& body,
-                                         const ParameterSymbol& implicitParam, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::GenerateBlock, parent, name, location),
-    body(body), implicitParam(&implicitParam) {}
-
-void GenerateBlockSymbol::fillMembers(MemberBuilder& builder) const {
-    if (implicitParam)
-        builder.add(*implicitParam);
-
-    if (body.kind == SyntaxKind::GenerateBlock) {
-        for (auto member : body.as<GenerateBlockSyntax>().members)
-            builder.add(*member, *this);
-    }
-    else {
-        builder.add(body, *this);
-    }
-}
+GenerateBlockSymbol::GenerateBlockSymbol(string_view name, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::GenerateBlock, parent, name) {}
 
 }

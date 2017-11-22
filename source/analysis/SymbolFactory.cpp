@@ -132,6 +132,10 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         case SyntaxKind::ParameterDeclaration:
             createParamSymbols(node.as<ParameterDeclarationSyntax>(), parent, symbols);
             break;
+        case SyntaxKind::GenerateBlock:
+            for (auto member : node.as<GenerateBlockSyntax>().members)
+                createSymbols(*member, parent, symbols);
+            break;
         case SyntaxKind::AlwaysBlock:
         case SyntaxKind::AlwaysCombBlock:
         case SyntaxKind::AlwaysLatchBlock:
