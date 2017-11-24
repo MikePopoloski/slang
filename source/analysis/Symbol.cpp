@@ -67,6 +67,28 @@ const TypeSymbol& Symbol::LazyType::evaluate(const ScopeSymbol& scope,
     return scope.getFactory().getType(syntax, scope);
 }
 
+const Symbol::LazyDefinition::Value& Symbol::LazyDefinition::get() const {
+    if (cache.index() == 0)
+        return std::get<0>(cache);
+
+    // TODO: module namespacing
+    Source source = std::get<1>(cache);
+    const DefinitionSymbol* definition = nullptr;
+    ParamOverrideMap paramMap;
+
+    Token typeName = source->type;
+    auto foundSymbol = scope->lookup(typeName.valueText(), typeName.location(), LookupKind::Definition);
+    if (foundSymbol) {
+        // TODO: check symbol kind?
+        definition = &foundSymbol->as<DefinitionSymbol>();
+        if (source->parameters)
+            definition->createParamOverrides(*source->parameters, paramMap);
+    }
+
+    cache = std::make_tuple(definition, std::move(paramMap));
+    return std::get<0>(cache);
+}
+
 const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
     const Symbol* current = this;
     while (current->kind != searchKind) {
@@ -94,7 +116,9 @@ Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
 
 const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupLocation,
                                   LookupKind lookupKind) const {
-    ensureInit();
+    // Ensure our name map has been constructed.
+    if (!nameMap)
+        buildNameMap();
 
     // If the parser added a missing identifier token, it already issued an
     // appropriate error. This check here makes it easier to silently continue
@@ -103,14 +127,12 @@ const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupL
         return nullptr;
 
     // First, do a direct search within the current scope's name map.
-    const SourceManager& sm = getRoot().sourceManager();
-    auto it = memberMap.find(searchName);
-    if (it != memberMap.end()) {
+    if (auto member = nameMap->find(searchName)) {
         // If this is a local or scoped lookup, check that we can access
         // the symbol (it must be declared before usage). Callables can be
         // referenced anywhere in the scope; location doesn't matter.
         bool locationGood = true;
-        const Symbol* result = it->second;
+        const Symbol* result = member->symbol;
         //if (lookupKind == LookupKind::Local || lookupKind == LookupKind::Scoped)
         //    locationGood = sm.isBeforeInCompilationUnit(result->location, lookupLocation);
 
@@ -140,29 +162,29 @@ const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupL
         return nullptr;
     }
 
-    if (lookupKind != LookupKind::Definition) {
-        // Check wildcard imports that lexically preceed the lookup location
-        // to see if the symbol can be found in one of them.
-        for (auto wildcard : wildcardImports) {
-            if (sm.isBeforeInCompilationUnit(wildcard->location, lookupLocation)) {
-                // TODO: if we find multiple, error and report all matching locations
-                auto result = wildcard->resolve(searchName, lookupLocation);
-                if (result) {
-                    // TODO: this can cause other errors for this particular scope
-                    //addMember(*result);
-                    return result->importedSymbol();
-                }
-            }
-        }
-    }
+    //if (lookupKind != LookupKind::Definition) {
+    //    // Check wildcard imports that lexically preceed the lookup location
+    //    // to see if the symbol can be found in one of them.
+    //    for (auto wildcard : wildcardImports) {
+    //        if (sm.isBeforeInCompilationUnit(wildcard->location, lookupLocation)) {
+    //            // TODO: if we find multiple, error and report all matching locations
+    //            auto result = wildcard->resolve(searchName, lookupLocation);
+    //            if (result) {
+    //                // TODO: this can cause other errors for this particular scope
+    //                //addMember(*result);
+    //                return result->importedSymbol();
+    //            }
+    //        }
+    //    }
+    //}
 
     // Continue up the scope chain.
     return getParent()->lookup(searchName, lookupLocation, lookupKind);
 }
 
-SymbolList ScopeSymbol::members() const {
-    ensureInit();
-    return memberList;
+void ScopeSymbol::setMembers(SymbolList list) {
+    nameMap = nullptr;
+    memberList = getFactory().alloc.makeCopy(list);
 }
 
 ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
@@ -177,65 +199,19 @@ ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& ex
     return bound.eval();
 }
 
-void ScopeSymbol::MemberBuilder::add(const Symbol& symbol) {
-    // TODO: check for duplicate names
-    // TODO: packages and definition namespaces
-    memberList.append(&symbol);
-    if (!symbol.name.empty())
-        memberMap.emplace(symbol.name, &symbol);
+void ScopeSymbol::buildNameMap() const {
+    // TODO: make sure this doesn't become re-entrant when evaluating generate conditions
+    nameMap = getFactory().symbolMapAllocator.emplace();
+    for (uint32_t i = 0; i < memberList.size(); i++) {
+        // If the symbol is lazy, replace it with the resolved symbol now.
+        const Symbol* symbol = memberList[i];
+        if (symbol->kind == SymbolKind::LazySyntax)
+            memberList[i] = symbol = symbol->as<LazySyntaxSymbol>().resolve();
 
-    if (symbol.kind == SymbolKind::WildcardImport)
-        wildcardImports.append(&symbol.as<WildcardImportSymbol>());
-}
-
-void ScopeSymbol::MemberBuilder::add(const SyntaxNode& node, const ScopeSymbol& parent) {
-    SmallVectorSized<const Symbol*, 8> symbols;
-    parent.getRoot().factory.createSymbols(node, parent, symbols);
-    for (auto symbol : symbols)
-        add(*symbol);
-}
-
-void ScopeSymbol::setMember(const Symbol& member) {
-    const Symbol* ptr = &member;
-    setMembers(span<const Symbol* const>(&ptr, 1));
-}
-
-void ScopeSymbol::setMembers(span<const Symbol* const> members) const {
-    membersInitialized = true;
-
-    MemberBuilder builder;
-    for (auto member : members)
-        builder.add(*member);
-
-    copyMembers(builder);
-}
-
-void ScopeSymbol::doInit() const {
-    membersInitialized = true;
-
-    MemberBuilder builder;
-    fillMembers(builder);
-    copyMembers(builder);
-
-    // TODO: clean this up
-    if (isLazy) {
-        switch (kind) {
-            case SymbolKind::Module:
-            case SymbolKind::Interface:
-            case SymbolKind::Program:
-                static_cast<const DefinitionSymbol*>(this)->resolveMembers();
-                break;
-            default:
-                THROW_UNREACHABLE;
-        }
+        // If the symbol has a name, we can look it up.
+        if (!symbol->name.empty())
+            nameMap->add(*symbol, i);
     }
-}
-
-void ScopeSymbol::copyMembers(MemberBuilder& builder) const {
-    BumpAllocator& alloc = getRoot().allocator();
-    memberMap = builder.memberMap.copy(alloc);
-    memberList = builder.memberList.copy(alloc);
-    wildcardImports = builder.wildcardImports.copy(alloc);
 }
 
 DynamicScopeSymbol::DynamicScopeSymbol(const ScopeSymbol& parent) : ScopeSymbol(SymbolKind::DynamicScope, parent) {}
@@ -251,6 +227,27 @@ SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
     for (auto symbol : symbols)
         addSymbol(*symbol);
     return symbols.copy(getRoot().factory.alloc);
+}
+
+LazySyntaxSymbol::LazySyntaxSymbol(const SyntaxNode& node, const ScopeSymbol& parent, LazyDefinition* definition) :
+    Symbol(SymbolKind::LazySyntax, parent),
+    node(node),
+    instanceDefinition(definition) {}
+
+const Symbol* LazySyntaxSymbol::resolve() const {
+    SymbolFactory& factory = getFactory();
+    switch (node.kind) {
+        case SyntaxKind::IfGenerate:
+            return GenerateBlockSymbol::fromSyntax(factory, node.as<IfGenerateSyntax>(), *getParent());
+        case SyntaxKind::LoopGenerate:
+            return &GenerateBlockArraySymbol::fromSyntax(factory, node.as<LoopGenerateSyntax>(), *getParent());
+        case SyntaxKind::HierarchicalInstance:
+            ASSERT(instanceDefinition);
+            return &InstanceSymbol::fromSyntax(factory, node.as<HierarchicalInstanceSyntax>(),
+                                               *instanceDefinition, *getParent());
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 Symbol& Symbol::clone(const ScopeSymbol& newParent) const {
@@ -276,9 +273,8 @@ Symbol& Symbol::clone(const ScopeSymbol& newParent) const {
         case SymbolKind::ImplicitImport: CLONE(ImplicitImportSymbol);
         case SymbolKind::WildcardImport: CLONE(WildcardImportSymbol);
         case SymbolKind::Program: CLONE(DefinitionSymbol);
-        case SymbolKind::IfGenerate: CLONE(IfGenerateSymbol);
-        case SymbolKind::LoopGenerate: CLONE(LoopGenerateSymbol);
         case SymbolKind::GenerateBlock: CLONE(GenerateBlockSymbol);
+        case SymbolKind::GenerateBlockArray: CLONE(GenerateBlockArraySymbol);
         case SymbolKind::ProceduralBlock: CLONE(ProceduralBlockSymbol);
         case SymbolKind::SequentialBlock: CLONE(SequentialBlockSymbol);
         case SymbolKind::Variable: CLONE(VariableSymbol);

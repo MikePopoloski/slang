@@ -811,9 +811,9 @@ private:
         return std::max(detailv3::min_lookups, desired);
     }
 
-    size_t num_buckets_for_reserve(size_t num_elements) const
+    size_t num_buckets_for_reserve(size_t count) const
     {
-        return static_cast<size_t>(std::ceil(num_elements / std::min(0.5, static_cast<double>(_max_load_factor))));
+        return static_cast<size_t>(std::ceil(count / std::min(0.5, static_cast<double>(_max_load_factor))));
     }
     void rehash_for_other_container(const sherwood_v3_table & other)
     {
@@ -882,11 +882,11 @@ private:
         rehash(std::max(size_t(4), 2 * bucket_count()));
     }
 
-    void deallocate_data(EntryPointer begin, size_t num_slots_minus_one, int8_t max_lookups)
+    void deallocate_data(EntryPointer begin, size_t slots_minus_one, int8_t max_lookups_to_dealloc)
     {
         if (begin != const_cast<Entry *>(reinterpret_cast<const Entry *>(DefaultTable::table)))
         {
-            AllocatorTraits::deallocate(*this, begin, num_slots_minus_one + max_lookups + 1);
+            AllocatorTraits::deallocate(*this, begin, slots_minus_one + max_lookups_to_dealloc + 1);
         }
     }
 
@@ -1439,3 +1439,6 @@ struct power_of_two_std_hash : std::hash<T>
 };
 
 } // end namespace ska
+
+using ska::flat_hash_map;
+using ska::flat_hash_set;

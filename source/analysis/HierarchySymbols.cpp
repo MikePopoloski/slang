@@ -21,21 +21,20 @@ PackageSymbol::PackageSymbol(string_view name, const ScopeSymbol& parent) :
 {
 }
 
-DefinitionSymbol::DefinitionSymbol(string_view name, const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::Module, parent, name),
-    syntax(&syntax)
+DefinitionSymbol::DefinitionSymbol(string_view name, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::Module, parent, name)
 {
-    isLazy = true;
 }
 
-void DefinitionSymbol::resolveMembers() const {
+DefinitionSymbol& DefinitionSymbol::fromSyntax(SymbolFactory& factory, const ModuleDeclarationSyntax& syntax,
+                                               const ScopeSymbol& parent) {
+    auto result = factory.alloc.emplace<DefinitionSymbol>(syntax.header.name.valueText(), parent);
     SmallVectorSized<const Symbol*, 32> members;
 
-    SymbolFactory& factory = getFactory();
-    if (syntax->header.parameters) {
+    if (syntax.header.parameters) {
         bool lastLocal = false;
         SmallVectorSized<const ParameterSymbol*, 8> tempParams;
-        for (auto declaration : syntax->header.parameters->declarations) {
+        for (auto declaration : syntax.header.parameters->declarations) {
             // It's legal to leave off the parameter keyword in the parameter port list.
             // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
             // This isn't allowed in a module body, but the parser will take care of the error for us.
@@ -47,7 +46,7 @@ void DefinitionSymbol::resolveMembers() const {
             lastLocal = local;
 
             SmallVectorSized<ParameterSymbol*, 16> params;
-            ParameterSymbol::fromSyntax(factory, *declaration, *this, params);
+            ParameterSymbol::fromSyntax(factory, *declaration, *result, params);
 
             for (auto param : params) {
                 param->isLocalParam = local;
@@ -59,15 +58,106 @@ void DefinitionSymbol::resolveMembers() const {
 
         // TODO: clean this up
 
-        parameters = tempParams.copy(factory.alloc);
+        result->parameters = tempParams.copy(factory.alloc);
     }
 
-    for (auto node : syntax->members) {
+    for (auto node : syntax.members) {
         // TODO: overrideLocal on body params
-        factory.createSymbols(*node, *this, members);
+        factory.createSymbols(*node, *result, members);
     }
 
-    setMembers(members);
+    result->setMembers(members);
+    return *result;
+}
+
+void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax& syntax, ParamOverrideMap& map) const {
+    // Build up data structures to easily index the parameter assignments. We need to handle
+    // both ordered assignment as well as named assignment, though a specific instance can only
+    // use one method or the other.
+    bool hasParamAssignments = false;
+    bool orderedAssignments = true;
+    SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
+    SmallHashMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
+
+    // TODO: the name of the syntax elements here is ridiculous
+    const auto& root = getRoot();
+    for (auto paramBase : syntax.parameters.parameters) {
+        bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
+        if (!hasParamAssignments) {
+            hasParamAssignments = true;
+            orderedAssignments = isOrdered;
+        }
+        else if (isOrdered != orderedAssignments) {
+            root.addError(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
+            break;
+        }
+
+        if (isOrdered)
+            orderedParams.append(&paramBase->as<OrderedArgumentSyntax>());
+        else {
+            const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
+            auto pair = namedParams.emplace(nas.name.valueText(), std::make_pair(&nas, false));
+            if (!pair.second) {
+                root.addError(DiagCode::DuplicateParamAssignment, nas.name.location()) << nas.name.valueText();
+                root.addError(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
+            }
+        }
+    }
+
+    // For each parameter assignment we have, match it up to a real parameter
+    if (orderedAssignments) {
+        uint32_t orderedIndex = 0;
+        for (auto param : parameters) {
+            if (orderedIndex >= orderedParams.size())
+                break;
+
+            if (param->isLocalParam)
+                continue;
+
+            map[param] = &orderedParams[orderedIndex++]->expr;
+        }
+
+        // Make sure there aren't extra param assignments for non-existent params.
+        if (orderedIndex < orderedParams.size()) {
+            auto& diag = root.addError(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
+            diag << name;
+            diag << orderedParams.size();
+            diag << orderedIndex;
+        }
+    }
+    else {
+        // Otherwise handle named assignments.
+        for (auto param : parameters) {
+            auto it = namedParams.find(param->name);
+            if (it == namedParams.end())
+                continue;
+
+            const NamedArgumentSyntax* arg = it->second.first;
+            it->second.second = true;
+            if (param->isLocalParam) {
+                // Can't assign to localparams, so this is an error.
+                root.addError(param->isPortParam ? DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam, arg->name.location());
+                root.addError(DiagCode::NoteDeclarationHere, param->location) << string_view("parameter");
+                continue;
+            }
+
+            // It's allowed to have no initializer in the assignment; it means to just use the default
+            if (!arg->expr)
+                continue;
+
+            map[param] = arg->expr;
+        }
+
+        for (const auto& pair : namedParams) {
+            // We marked all the args that we used, so anything left over is a param assignment
+            // for a non-existent parameter.
+            if (!pair.second.second) {
+                auto& diag = root.addError(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
+                diag << pair.second.first->name.valueText();
+                diag << name;
+            }
+        }
+    }
 }
 
 InstanceSymbol::InstanceSymbol(SymbolKind kind, string_view name, const DefinitionSymbol& definition,
@@ -75,178 +165,97 @@ InstanceSymbol::InstanceSymbol(SymbolKind kind, string_view name, const Definiti
     ScopeSymbol(kind, parent, name),
     definition(definition) {}
 
-void InstanceSymbol::fromSyntax(const ScopeSymbol& parent, const HierarchyInstantiationSyntax& syntax,
-                                SmallVector<const Symbol*>& results) {
-    // TODO: module namespacing
-    Token typeName = syntax.type;
-    auto foundSymbol = parent.lookup(typeName.valueText(), typeName.location(), LookupKind::Definition);
-    if (!foundSymbol)
-        return;
-
-    // TODO: check symbol kind?
-    const DefinitionSymbol& definition = foundSymbol->as<DefinitionSymbol>();
-    definition.members();
-    const RootSymbol& root = parent.getRoot();
-
-    // Evaluate all parameters now so that we can reuse them for all instances below.
-    // If we were given a set of parameter assignments, build up some data structures to
-    // allow us to easily index them. We need to handle both ordered assignment as well as
-    // named assignment (though a specific instance can only use one method or the other).
-    SmallHashMap<const ParameterSymbol*, const ExpressionSyntax*, 8> paramMap;
-    if (syntax.parameters) {
-        bool hasParamAssignments = false;
-        bool orderedAssignments = true;
-        SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
-        SmallHashMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
-
-        // TODO: the name of the syntax elements here is ridiculous
-        for (auto paramBase : syntax.parameters->parameters.parameters) {
-            bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
-            if (!hasParamAssignments) {
-                hasParamAssignments = true;
-                orderedAssignments = isOrdered;
-            }
-            else if (isOrdered != orderedAssignments) {
-                root.addError(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
-                break;
-            }
-
-            if (isOrdered)
-                orderedParams.append(&paramBase->as<OrderedArgumentSyntax>());
-            else {
-                const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
-                auto pair = namedParams.emplace(nas.name.valueText(), std::make_pair(&nas, false));
-                if (!pair.second) {
-                    root.addError(DiagCode::DuplicateParamAssignment, nas.name.location()) << nas.name.valueText();
-                    root.addError(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
-                }
-            }
-        }
-
-        // For each parameter assignment we have, match it up to a real parameter
-        if (orderedAssignments) {
-            uint32_t orderedIndex = 0;
-            for (auto param : definition.parameters) {
-                if (orderedIndex >= orderedParams.size())
-                    break;
-
-                if (param->isLocalParam)
-                    continue;
-
-                paramMap[param] = &orderedParams[orderedIndex++]->expr;
-            }
-
-            // Make sure there aren't extra param assignments for non-existent params.
-            if (orderedIndex < orderedParams.size()) {
-                auto& diag = root.addError(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
-                diag << definition.name;
-                diag << orderedParams.size();
-                diag << orderedIndex;
-            }
-        }
-        else {
-            // Otherwise handle named assignments.
-            for (auto param : definition.parameters) {
-                auto it = namedParams.find(param->name);
-                if (it == namedParams.end())
-                    continue;
-
-                const NamedArgumentSyntax* arg = it->second.first;
-                it->second.second = true;
-                if (param->isLocalParam) {
-                    // Can't assign to localparams, so this is an error.
-                    root.addError(param->isPortParam ? DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam, arg->name.location());
-                    root.addError(DiagCode::NoteDeclarationHere, param->location) << string_view("parameter");
-                    continue;
-                }
-
-                // It's allowed to have no initializer in the assignment; it means to just use the default
-                if (!arg->expr)
-                    continue;
-
-                paramMap[param] = arg->expr;
-            }
-
-            for (const auto& pair : namedParams) {
-                // We marked all the args that we used, so anything left over is a param assignment
-                // for a non-existent parameter.
-                if (!pair.second.second) {
-                    auto& diag = root.addError(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
-                    diag << pair.second.first->name.valueText();
-                    diag << definition.name;
-                }
-            }
-        }
-    }
+void InstanceSymbol::lazyFromSyntax(SymbolFactory& factory, const HierarchyInstantiationSyntax& syntax,
+                                    const ScopeSymbol& parent, SmallVector<const Symbol*>& results) {
+    // Definition information (along with parameter overrides) will be shared among all instances.
+    auto definition = factory.lazyDefinitionAllocator.emplace(&parent, &syntax);
 
     for (auto instance : syntax.instances) {
         // TODO: handle arrays
-        auto symbol = &root.allocate<ModuleInstanceSymbol>(instance->name.valueText(), definition, parent);
-        results.append(symbol);
-
-        // Copy all members from the definition
-        SmallVectorSized<const Symbol*, 32> members((uint32_t)definition.members().size());
-        for (auto member : definition.members()) {
-            Symbol& cloned = member->clone(*symbol);
-            members.append(&cloned);
-
-            // If this is a parameter symbol, see if we have a value override for it.
-            if (member->kind == SymbolKind::Parameter) {
-                auto it = paramMap.find(&member->as<ParameterSymbol>());
-                if (it != paramMap.end())
-                    cloned.as<ParameterSymbol>().value = LazyConstant(symbol, *it->second);
-            }
-        }
-        symbol->setMembers(members);
+        results.append(factory.alloc.emplace<LazySyntaxSymbol>(*instance, parent, definition));
     }
+}
+
+InstanceSymbol& InstanceSymbol::fromSyntax(SymbolFactory& factory, const HierarchicalInstanceSyntax& syntax,
+                                           const LazyDefinition& defInfo, const ScopeSymbol& parent) {
+    const auto& [definition, paramMap] = defInfo.get();
+
+    // TODO: missing module
+    ASSERT(definition);
+
+    // TODO: other things besides modules
+    auto result = factory.alloc.emplace<ModuleInstanceSymbol>(syntax.name.valueText(), *definition, parent);
+    
+    // Copy all members from the definition
+    SmallVectorSized<const Symbol*, 32> members((uint32_t)definition->members().size());
+    for (auto member : definition->members()) {
+        Symbol& cloned = member->clone(*result);
+        members.append(&cloned);
+
+        // If this is a parameter symbol, see if we have a value override for it.
+        if (member->kind == SymbolKind::Parameter) {
+            auto it = paramMap.find(&member->as<ParameterSymbol>());
+            if (it != paramMap.end())
+                cloned.as<ParameterSymbol>().value = LazyConstant(result, *it->second);
+        }
+    }
+    result->setMembers(members);
+    return *result;
 }
 
 ModuleInstanceSymbol::ModuleInstanceSymbol(string_view name, const DefinitionSymbol& definition, const ScopeSymbol& parent) :
     InstanceSymbol(SymbolKind::ModuleInstance, name, definition, parent) {}
 
-IfGenerateSymbol::IfGenerateSymbol(const IfGenerateSyntax& syntax, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::IfGenerate, parent),
-    syntax(syntax) {}
+GenerateBlockSymbol::GenerateBlockSymbol(string_view name, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::GenerateBlock, parent, name) {}
 
-void IfGenerateSymbol::fillMembers(MemberBuilder& builder) const {
+GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(SymbolFactory& factory, const IfGenerateSyntax& syntax,
+                                                     const ScopeSymbol& parent) {
     // TODO: better error checking
-    const auto& cv = getParent()->evaluateConstant(syntax.condition);
+    const auto& cv = parent.evaluateConstant(syntax.condition);
     if (!cv)
-        return;
+        return nullptr;
 
-    const auto& block = getRoot().allocate<GenerateBlockSymbol>("", *this);
-    builder.add(block);
-
+    // TODO: handle named block
     SmallVectorSized<const Symbol*, 16> members;
     const SVInt& value = cv.integer();
-    if ((logic_t)value)
-        getFactory().createSymbols(syntax.block, block, members);
-    else if (syntax.elseClause)
-        getFactory().createSymbols(syntax.elseClause->clause, block, members);
+    if ((logic_t)value) {
+        auto block = factory.alloc.emplace<GenerateBlockSymbol>("", parent);
+        factory.createSymbols(syntax.block, *block, members);
 
-    block.setMembers(members);
+        block->setMembers(members);
+        return block;
+    }
+    else if (syntax.elseClause) {
+        auto block = factory.alloc.emplace<GenerateBlockSymbol>("", parent);
+        factory.createSymbols(syntax.elseClause->clause, *block, members);
+
+        block->setMembers(members);
+        return block;
+    }
+    return nullptr;
 }
 
-LoopGenerateSymbol::LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::LoopGenerate, parent),
-    syntax(syntax) {}
+GenerateBlockArraySymbol::GenerateBlockArraySymbol(string_view name, const ScopeSymbol& parent) :
+    ScopeSymbol(SymbolKind::GenerateBlockArray, parent, name) {}
 
-void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
+GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(SymbolFactory& factory,
+                                                               const LoopGenerateSyntax& syntax,
+                                                               const ScopeSymbol& parent) {
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
     // we need to do a lookup to make sure we have the actual genvar.
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    const ScopeSymbol& parent = *getParent();
+    auto result = factory.alloc.emplace<GenerateBlockArraySymbol>("", parent);
     const auto& initial = parent.evaluateConstant(syntax.initialExpr);
     if (!initial)
-        return;
+        return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    const RootSymbol& root = parent.getRoot();
     DynamicScopeSymbol iterScope(parent);
     VariableSymbol local(syntax.identifier.valueText(), iterScope);
-    local.type = root.factory.getIntType();
+    local.type = factory.getIntType();
     iterScope.addSymbol(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
@@ -259,25 +268,26 @@ void LoopGenerateSymbol::fillMembers(MemberBuilder& builder) const {
     auto genvar = context.createLocal(&local, initial);
 
     // Generate blocks!
+    SmallVectorSized<const Symbol*, 16> arrayEntries;
     for (; stopExpr.evalBool(context); iterExpr.eval(context)) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
-        const auto& block = root.allocate<GenerateBlockSymbol>("", parent);
+        auto block = factory.alloc.emplace<GenerateBlockSymbol>("", parent);
 
-        auto& implicitParam = root.allocate<ParameterSymbol>(syntax.identifier.valueText(), *this);
-        implicitParam.value = *genvar;
+        auto implicitParam = factory.alloc.emplace<ParameterSymbol>(syntax.identifier.valueText(), *block);
+        implicitParam->value = *genvar;
 
-        SmallVectorSized<const Symbol*, 16> members;
-        members.append(&implicitParam);
-        root.factory.createSymbols(syntax.block, block, members);
+        SmallVectorSized<const Symbol*, 16> blockMembers;
+        blockMembers.append(implicitParam);
+        factory.createSymbols(syntax.block, *block, blockMembers);
 
-        block.setMembers(members);
-        builder.add(block);
+        block->setMembers(blockMembers);
+        arrayEntries.append(block);
     }
-}
 
-GenerateBlockSymbol::GenerateBlockSymbol(string_view name, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::GenerateBlock, parent, name) {}
+    result->setMembers(arrayEntries);
+    return *result;
+}
 
 }

@@ -72,11 +72,9 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         }
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
-        case SyntaxKind::ProgramDeclaration: {
-            const auto& decl = node.as<ModuleDeclarationSyntax>();
-            symbols.append(alloc.emplace<DefinitionSymbol>(decl.header.name.valueText(), decl, parent));
+        case SyntaxKind::ProgramDeclaration:
+            symbols.append(&DefinitionSymbol::fromSyntax(*this, node.as<ModuleDeclarationSyntax>(), parent));
             break;
-        }
         case SyntaxKind::PackageDeclaration: {
             string_view name = node.as<ModuleDeclarationSyntax>().header.name.valueText();
             auto symbol = alloc.emplace<PackageSymbol>(name, parent);
@@ -102,17 +100,15 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
             }
             break;
         case SyntaxKind::HierarchyInstantiation:
-            InstanceSymbol::fromSyntax(parent, node.as<HierarchyInstantiationSyntax>(), symbols);
+            InstanceSymbol::lazyFromSyntax(*this, node.as<HierarchyInstantiationSyntax>(), parent, symbols);
             break;
         case SyntaxKind::ModportDeclaration:
-            // TODO:!
+            // TODO: modports
             break;
         case SyntaxKind::IfGenerate:
-            // TODO: add special name conflict checks for generate blocks
-            symbols.append(alloc.emplace<IfGenerateSymbol>(node.as<IfGenerateSyntax>(), parent));
-            break;
         case SyntaxKind::LoopGenerate:
-            symbols.append(alloc.emplace<LoopGenerateSymbol>(node.as<LoopGenerateSyntax>(), parent));
+            // TODO: add special name conflict checks for generate blocks
+            symbols.append(alloc.emplace<LazySyntaxSymbol>(node, parent));
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:

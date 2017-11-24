@@ -23,11 +23,13 @@ SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopS
     SequentialBlockSymbol& block = *alloc.emplace<SequentialBlockSymbol>(parent);
 
     const auto& forVariable = forLoop.initializers[0]->as<ForVariableDeclarationSyntax>();
-    auto& loopVar = *alloc.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
-    loopVar.type = forVariable.type;
-    loopVar.initializer = forVariable.declarator.initializer->expr;
+    auto loopVar = alloc.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
+    loopVar->type = forVariable.type;
+    loopVar->initializer = forVariable.declarator.initializer->expr;
 
-    block.setMember(loopVar);
+    SmallVectorSized<const Symbol*, 2> members;
+    members.append(loopVar);
+    block.setMembers(members);
     return block;
 }
 

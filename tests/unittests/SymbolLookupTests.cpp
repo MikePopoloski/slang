@@ -41,7 +41,7 @@ endmodule
 
     RootSymbol root(&tree);
     const auto& top = *root.topInstances()[0];
-    const auto& gen_b = top.member<IfGenerateSymbol>(1).member<GenerateBlockSymbol>(0);
+    const auto& gen_b = top.member<GenerateBlockSymbol>(1);
     const auto& param = gen_b.member<ParameterSymbol>(0);
     CHECK(root.diagnostics().empty());
     CHECK(param.value->integer() == 12);

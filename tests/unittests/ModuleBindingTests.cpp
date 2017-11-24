@@ -120,8 +120,7 @@ endmodule
     const auto& instance = evalModule(tree, root);
     const auto& leaf = instance
         .member<ModuleInstanceSymbol>(0)
-        .member<IfGenerateSymbol>(1)
-        .member<GenerateBlockSymbol>(0)
+        .member<GenerateBlockSymbol>(1)
         .member<ModuleInstanceSymbol>(0);
 
     const auto& foo = leaf.lookup<ParameterSymbol>("foo");
@@ -141,7 +140,7 @@ endmodule
 )");
 
     RootSymbol root(&tree);
-    const auto& instance = evalModule(tree, root).member<LoopGenerateSymbol>(0);
+    const auto& instance = evalModule(tree, root).member<GenerateBlockArraySymbol>(0);
     REQUIRE(instance.members().size() == 10);
 
     for (uint32_t i = 0; i < 10; i++) {

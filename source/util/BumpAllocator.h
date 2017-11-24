@@ -54,6 +54,16 @@ public:
         return string_view(data, str.length());
     }
 
+    template<typename T, typename U = std::remove_const_t<T>>
+    span<U> makeCopy(span<T> source) {
+        if (source.empty())
+            return nullptr;
+
+        U* data = (U*)allocate(sizeof(U) * source.size(), alignof(U));
+        std::copy(source.begin(), source.end(), data);
+        return span<U>(data, source.size());
+    }
+
 protected:
     // Allocations are tracked as a linked list of segments.
     struct Segment {

@@ -9,6 +9,7 @@
 #include "util/BumpAllocator.h"
 #include "util/SmallVector.h"
 
+#include "SymbolMap.h"
 #include "TypeSymbols.h"
 
 namespace slang {
@@ -50,6 +51,9 @@ public:
     const ErrorTypeSymbol& getErrorType() const { return errorType; }
 
     BumpAllocator alloc;
+
+    TypedBumpAllocator<SymbolMap> symbolMapAllocator;
+    TypedBumpAllocator<Symbol::LazyDefinition> lazyDefinitionAllocator;
 
 private:
     template<typename TNode>

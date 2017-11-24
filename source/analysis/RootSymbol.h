@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <unordered_set>
+
 #include "Symbol.h"
 #include "SymbolFactory.h"
 
@@ -64,7 +66,7 @@ private:
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the root name table.
-    SymbolMap packageMap;
+    flat_hash_map<string_view, const Symbol*> packageMap;
 
     // list of compilation units in the design
     std::vector<const CompilationUnitSymbol*> unitList;

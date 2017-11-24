@@ -6,21 +6,24 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <unordered_map>
-#include <unordered_set>
+#include <tuple>
 #include <vector>
+
+#include "flat_hash_map.hpp"
 
 #include "diagnostics/Diagnostics.h"
 #include "numeric/SVInt.h"
 #include "parsing/AllSyntax.h"
 #include "text/SourceLocation.h"
 #include "util/HashMap.h"
+#include "util/Iterator.h"
 
 #include "ConstantValue.h"
 #include "SemanticFacts.h"
 
 namespace slang {
 
+class DefinitionSymbol;
 class Statement;
 class StatementList;
 class Expression;
@@ -33,10 +36,10 @@ class WildcardImportSymbol;
 class PackageSymbol;
 class ParameterSymbol;
 class SymbolFactory;
+class SymbolMap;
 
 using SymbolList = span<const Symbol* const>;
-using SymbolMap = std::unordered_map<string_view, const Symbol*>;
-
+using ParamOverrideMap = flat_hash_map<const ParameterSymbol*, const ExpressionSyntax*>;
 using Dimensions = span<ConstantRange const>;
 
 enum class SymbolKind {
@@ -44,6 +47,7 @@ enum class SymbolKind {
     Root,
     DynamicScope,
     CompilationUnit,
+    LazySyntax,
     IntegralType,
     RealType,
     StringType,
@@ -66,9 +70,8 @@ enum class SymbolKind {
     Program,
     Attribute,
     Genvar,
-    IfGenerate,
-    LoopGenerate,
     GenerateBlock,
+    GenerateBlockArray,
     ProceduralBlock,
     SequentialBlock,
     Variable,
@@ -206,6 +209,19 @@ public:
     LAZY(LazyInitializer, Expression, ExpressionSyntax);
     LAZY(LazyType, TypeSymbol, DataTypeSyntax);
 
+    // TODO: move this stuff to its own header / namespace
+    struct LazyDefinition {
+        using Source = const HierarchyInstantiationSyntax*;
+        using Value = std::tuple<const DefinitionSymbol*, ParamOverrideMap>;
+
+        LazyDefinition(const ScopeSymbol* scope, Source source) : scope(scope), cache(source) {}
+        const Value& get() const;
+
+    private:
+        const ScopeSymbol* scope;
+        mutable std::variant<Value, Source> cache;
+    };
+
 #undef LAZY
 
 protected:
@@ -253,7 +269,15 @@ public:
     }
 
     /// Gets a list of all of the members in the scope.
-    SymbolList members() const;
+    SymbolList members() const {
+        if (!nameMap)
+            buildNameMap();
+        return memberList;
+    }
+
+    /// Sets the list of members in the scope. A copy of the provided span will be
+    /// made so the provided memory need not outlive the call.
+    void setMembers(SymbolList members);
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified type.
     /// If the type does not match, this will assert.
@@ -269,61 +293,20 @@ public:
     ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
                                              SourceLocation errorLocation) const;
 
-    /// Overrides the members of the symbol to be the given list.
-    /// Note that if the scope gets explicitly marked dirty and its
-    /// members regenerated, this list will be lost.
-    // TODO: shouldn't be const
-    void setMembers(span<const Symbol* const> members) const;
-    void setMember(const Symbol& member);
-
 protected:
     using Symbol::Symbol;
 
-    /// A simple wrapper around mutable buffers used to build up the
-    /// list of members in a symbol.
-    struct MemberBuilder {
-        SmallHashMap<string_view, const Symbol*, 16> memberMap;
-        SmallVectorSized<const Symbol*, 16> memberList;
-        SmallVectorSized<const WildcardImportSymbol*, 8> wildcardImports;
-
-        void add(const Symbol& symbol);
-        void add(const SyntaxNode& node, const ScopeSymbol& parent);
-    };
-
-    /// Called to ensure that the list of members has been initialized.
-    void ensureInit() const {
-        // Most of the work of initialization is deferred to doInit() so that
-        // this function will be easy inlined.
-        if (!membersInitialized)
-            doInit();
-    }
-
-    /// Called in a few rare cases to mark the symbol's members as dirty, which
-    /// means they will be recomputed the next time they are requested.
-    void markDirty() { membersInitialized = false; }
-
-    /// Overriden by derived classes to fill in the list of members for the symbol.
-    virtual void fillMembers(MemberBuilder&) const {}
-
-    bool isLazy = false;
-
 private:
-    void doInit() const;
-    void copyMembers(MemberBuilder& builder) const;
+    void buildNameMap() const;
 
-    // For now, there is one hash table here for the normal members namespace. The other
-    // namespaces are specific to certain symbol types so I don't want to have extra overhead
-    // on every kind of scope symbol.
-    mutable HashMapRef<string_view, const Symbol*> memberMap;
+    // The list of members assigned to this scope.
+    span<const Symbol*> memberList;
 
-    // In addition to the hash, also maintain an ordered list of members for easier access.
-    mutable span<const Symbol* const> memberList;
-
-    // Also, maintain a separate list containing just wildcard imports.
-    // Every time we fail to look up a symbol name, we'll fall back to looking at imports.
-    mutable span<const WildcardImportSymbol* const> wildcardImports;
-
-    mutable bool membersInitialized = false;
+    // The map of names to members that can be looked up within this scope. This is built
+    // on demand the first time a name lookup is performed. This map can contain names from
+    // symbols that are lexically in other scopes but have been made visible here, such
+    // as with enum values and package imports.
+    mutable SymbolMap* nameMap = nullptr;
 };
 
 /// A scope that can be dynamically modified programmatically. Not used for batch compilation; intended
@@ -343,10 +326,28 @@ private:
     std::vector<const Symbol*> members;
 };
 
+/// This is a placeholder symbol for syntax nodes that need to defer evaluation until the
+/// rest of the hierarchy is in place. Examples of this are generate nodes and hierarchy
+/// instantiations. The parent scope will resolve the symbol and replace it in its own member
+/// list on demand.
+class LazySyntaxSymbol : public Symbol {
+public:
+    LazySyntaxSymbol(const SyntaxNode& syntax, const ScopeSymbol& parent,
+                     LazyDefinition* definition = nullptr);
+
+    const Symbol* resolve() const;
+
+private:
+    const SyntaxNode& node;
+
+    // If this lazy syntax is for a hierarchical instantiation, this member
+    // will contain the set of shared data among all of the instances.
+    LazyDefinition* instanceDefinition = nullptr;
+};
+
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public ScopeSymbol {
 public:
-    //CompilationUnitSymbol(const ScopeSymbol& parent, SymbolList members);
     CompilationUnitSymbol(const ScopeSymbol& parent);
 };
 
@@ -359,15 +360,14 @@ public:
 /// Represents a module, interface, or program declaration.
 class DefinitionSymbol : public ScopeSymbol {
 public:
-    mutable span<const ParameterSymbol* const> parameters;
+    span<const ParameterSymbol* const> parameters;
 
-    DefinitionSymbol(string_view name, const ModuleDeclarationSyntax& syntax, const ScopeSymbol& parent);
+    DefinitionSymbol(string_view name, const ScopeSymbol& parent);
 
-private:
-    const ModuleDeclarationSyntax* syntax;
+    static DefinitionSymbol& fromSyntax(SymbolFactory& factory, const ModuleDeclarationSyntax& syntax,
+                                        const ScopeSymbol& parent);
 
-    friend class ScopeSymbol;
-    void resolveMembers() const;
+    void createParamOverrides(const ParameterValueAssignmentSyntax& syntax, ParamOverrideMap& map) const;
 };
 
 /// Base class for module, interface, and program instance symbols.
@@ -375,8 +375,12 @@ class InstanceSymbol : public ScopeSymbol {
 public:
     const DefinitionSymbol& definition;
 
-    static void fromSyntax(const ScopeSymbol& parent, const HierarchyInstantiationSyntax& syntax,
-                           SmallVector<const Symbol*>& results);
+    /// Constructs LazySyntaxSymbols for each instance in the given syntax node.
+    static void lazyFromSyntax(SymbolFactory& factory, const HierarchyInstantiationSyntax& syntax,
+                               const ScopeSymbol& parent, SmallVector<const Symbol*>& results);
+
+    static InstanceSymbol& fromSyntax(SymbolFactory& factory, const HierarchicalInstanceSyntax& syntax,
+                                      const LazyDefinition& definition, const ScopeSymbol& parent);
 
 protected:
     InstanceSymbol(SymbolKind kind, string_view name, const DefinitionSymbol& definition, const ScopeSymbol& parent);
@@ -410,30 +414,6 @@ public:
     ProceduralBlockSymbol(const ScopeSymbol& parent, ProceduralBlockKind procedureKind);
 };
 
-/// Represents a conditional if-generate construct; the results of evaluating
-/// the condition become child members of this symbol.
-class IfGenerateSymbol : public ScopeSymbol {
-public:
-    IfGenerateSymbol(const IfGenerateSyntax& syntax, const ScopeSymbol& parent);
-
-private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    const IfGenerateSyntax& syntax;
-};
-
-/// Represents a loop generate construct; the results of evaluating
-/// the loop become child members of this symbol.
-class LoopGenerateSymbol : public ScopeSymbol {
-public:
-    LoopGenerateSymbol(const LoopGenerateSyntax& syntax, const ScopeSymbol& parent);
-
-private:
-    void fillMembers(MemberBuilder& builder) const override final;
-
-    const LoopGenerateSyntax& syntax;
-};
-
 /// Represents blocks that are instantiated by a loop generate or conditional
 /// generate construct. These blocks can contain a bunch of members, or just
 /// a single item. They can also contain an implicit parameter representing
@@ -441,6 +421,21 @@ private:
 class GenerateBlockSymbol : public ScopeSymbol {
 public:
     GenerateBlockSymbol(string_view name, const ScopeSymbol& parent);
+
+    /// Creates a generate block from the given if-generate syntax node. Note that
+    /// this can return null if the condition is false and there is no else block.
+    static GenerateBlockSymbol* fromSyntax(SymbolFactory& factory, const IfGenerateSyntax& syntax,
+                                           const ScopeSymbol& parent);
+};
+
+/// Represents an array of generate blocks, as generated by a loop generate construct.
+class GenerateBlockArraySymbol : public ScopeSymbol {
+public:
+    GenerateBlockArraySymbol(string_view name, const ScopeSymbol& parent);
+
+    /// Creates a generate block array from the given loop-generate syntax node.
+    static GenerateBlockArraySymbol& fromSyntax(SymbolFactory& factory, const LoopGenerateSyntax& syntax,
+                                                const ScopeSymbol& parent);
 };
 
 /// Represents an explicit import from a package. This symbol type is

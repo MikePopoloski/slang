@@ -695,9 +695,6 @@ public:
     class const_iterator : public iterator_facade<const_iterator, std::random_access_iterator_tag,
                                                   const T*, int32_t> {
     public:
-        using difference_type = typename iterator_facade<const_iterator, std::random_access_iterator_tag,
-                                                         const T*, int32_t>::difference_type;
-
         const_iterator(const SeparatedSyntaxList& list, uint32_t index) :
             list(list), index(index) {}
 
@@ -709,10 +706,10 @@ public:
 
         const T* operator*() const { return list[index]; }
 
-        difference_type operator-(const const_iterator& other) const { return index - other.index; }
+        int32_t operator-(const const_iterator& other) const { return index - other.index; }
 
-        const_iterator& operator+=(difference_type n) { index += n; return *this; }
-        const_iterator& operator-=(difference_type n) { index -= n; return *this; }
+        const_iterator& operator+=(int32_t n) { index += n; return *this; }
+        const_iterator& operator-=(int32_t n) { index -= n; return *this; }
 
     private:
         const SeparatedSyntaxList& list;

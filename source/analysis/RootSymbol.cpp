@@ -43,8 +43,6 @@ RootSymbol::RootSymbol(span<const SyntaxTree* const> trees) :
 }
 
 const PackageSymbol* RootSymbol::findPackage(string_view lookupName) const {
-    ensureInit();
-
     auto it = packageMap.find(lookupName);
     if (it == packageMap.end())
         return nullptr;
