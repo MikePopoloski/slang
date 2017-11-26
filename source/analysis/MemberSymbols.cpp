@@ -11,19 +11,20 @@
 
 namespace slang {
 
-SequentialBlockSymbol::SequentialBlockSymbol(const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::SequentialBlock, parent),
+SequentialBlockSymbol::SequentialBlockSymbol(const Scope& parent) :
+    Symbol(SymbolKind::SequentialBlock, parent),
+    Scope(this),
     body(this)
 {
 }
 
-SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopStatementSyntax& forLoop,
-                                                                  const ScopeSymbol& parent) {
-    BumpAllocator& alloc = parent.getRoot().allocator();
-    SequentialBlockSymbol& block = *alloc.emplace<SequentialBlockSymbol>(parent);
+SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(SymbolFactory& factory,
+                                                                  const ForLoopStatementSyntax& forLoop,
+                                                                  const Scope& parent) {
+    SequentialBlockSymbol& block = *factory.emplace<SequentialBlockSymbol>(parent);
 
     const auto& forVariable = forLoop.initializers[0]->as<ForVariableDeclarationSyntax>();
-    auto loopVar = alloc.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
+    auto loopVar = factory.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
     loopVar->type = forVariable.type;
     loopVar->initializer = forVariable.declarator.initializer->expr;
 
@@ -33,15 +34,16 @@ SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(const ForLoopS
     return block;
 }
 
-ProceduralBlockSymbol::ProceduralBlockSymbol(const ScopeSymbol& parent, ProceduralBlockKind procedureKind) :
-    ScopeSymbol(SymbolKind::ProceduralBlock, parent),
+ProceduralBlockSymbol::ProceduralBlockSymbol(const Scope& parent, ProceduralBlockKind procedureKind) :
+    Symbol(SymbolKind::ProceduralBlock, parent),
+    Scope(this),
     body(this),
     procedureKind(procedureKind)
 {
 }
 
 ExplicitImportSymbol::ExplicitImportSymbol(string_view packageName, string_view importName,
-                                           SourceLocation location, const ScopeSymbol& parent) :
+                                           SourceLocation location, const Scope& parent) :
     Symbol(SymbolKind::ExplicitImport, parent, importName, location),
     packageName(packageName), importName(importName)
 {
@@ -65,7 +67,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
 }
 
 ImplicitImportSymbol::ImplicitImportSymbol(const WildcardImportSymbol& wildcard, const Symbol& importedSymbol,
-                                           const ScopeSymbol& parent) :
+                                           const Scope& parent) :
     Symbol(SymbolKind::ImplicitImport, parent, importedSymbol.name, wildcard.location),
     wildcard_(wildcard), import(importedSymbol)
 {
@@ -75,7 +77,7 @@ const PackageSymbol* ImplicitImportSymbol::package() const {
     return wildcard_.package();
 }
 
-WildcardImportSymbol::WildcardImportSymbol(string_view packageName, SourceLocation location, const ScopeSymbol& parent) :
+WildcardImportSymbol::WildcardImportSymbol(string_view packageName, SourceLocation location, const Scope& parent) :
     Symbol(SymbolKind::WildcardImport, parent, /* no name */ "", location),
     packageName(packageName)
 {
@@ -98,23 +100,23 @@ const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName
     if (!symbol)
         return nullptr;
 
-    return &getRoot().allocate<ImplicitImportSymbol>(*this, *symbol, *getParent());
+    return &getRoot().allocate<ImplicitImportSymbol>(*this, *symbol, *getScope());
 }
 
-ParameterSymbol::ParameterSymbol(string_view name, const ScopeSymbol& parent) :
+ParameterSymbol::ParameterSymbol(string_view name, const Scope& parent) :
     Symbol(SymbolKind::Parameter, parent, name),
-    defaultValue(getParent()),
-    value(getParent())
+    defaultValue(&parent),
+    value(&parent)
 {
 }
 
 void ParameterSymbol::fromSyntax(SymbolFactory& factory, const ParameterDeclarationSyntax& syntax,
-                                 const ScopeSymbol& parent, SmallVector<ParameterSymbol*>& results) {
+                                 const Scope& parent, SmallVector<ParameterSymbol*>& results) {
 
     bool isLocal = syntax.keyword.kind == TokenKind::LocalParamKeyword;
 
     for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
-        auto param = factory.alloc.emplace<ParameterSymbol>(decl->name.valueText(), parent);
+        auto param = factory.emplace<ParameterSymbol>(decl->name.valueText(), parent);
         param->isLocalParam = isLocal;
 
         if (decl->initializer) {
@@ -136,7 +138,7 @@ void ParameterSymbol::fromSyntax(SymbolFactory& factory, const ParameterDeclarat
 
 // TODO:
 //void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& determinedType,
-//                               ConstantValue*& determinedValue, const ScopeSymbol& scope) const {
+//                               ConstantValue*& determinedValue, const Scope& scope) const {
 //    ASSERT(expr);
 //
 //    // If no type is given, infer the type from the initializer
@@ -152,44 +154,43 @@ void ParameterSymbol::fromSyntax(SymbolFactory& factory, const ParameterDeclarat
 //    }
 //}
 
-VariableSymbol::VariableSymbol(string_view name, const ScopeSymbol& parent,
+VariableSymbol::VariableSymbol(string_view name, const Scope& parent,
                                VariableLifetime lifetime, bool isConst) :
     Symbol(SymbolKind::Variable, parent, name),
     type(&parent), initializer(&parent),
     lifetime(lifetime), isConst(isConst) {}
 
-VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, const ScopeSymbol& parent,
+VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, const Scope& parent,
                                VariableLifetime lifetime, bool isConst) :
     Symbol(kind, parent, name),
     type(&parent), initializer(&parent),
     lifetime(lifetime), isConst(isConst) {}
 
-void VariableSymbol::fromSyntax(const ScopeSymbol& parent, const DataDeclarationSyntax& syntax,
-                                SmallVector<const VariableSymbol*>& results) {
-
-    const RootSymbol& root = parent.getRoot();
+void VariableSymbol::fromSyntax(SymbolFactory& factory, const DataDeclarationSyntax& syntax,
+                                const Scope& parent, SmallVector<const VariableSymbol*>& results) {
     for (auto declarator : syntax.declarators) {
-        auto& variable = root.allocate<VariableSymbol>(declarator->name.valueText(), parent);
-        variable.type = syntax.type;
+        auto variable = factory.emplace<VariableSymbol>(declarator->name.valueText(), parent);
+        variable->type = syntax.type;
         if (declarator->initializer)
-            variable.initializer = declarator->initializer->expr;
+            variable->initializer = declarator->initializer->expr;
 
-        results.append(&variable);
+        results.append(variable);
     }
 }
 
-FormalArgumentSymbol::FormalArgumentSymbol(const ScopeSymbol& parent) :
+FormalArgumentSymbol::FormalArgumentSymbol(const Scope& parent) :
     VariableSymbol(SymbolKind::FormalArgument, "", parent) {}
 
-FormalArgumentSymbol::FormalArgumentSymbol(string_view name, const ScopeSymbol& parent,
+FormalArgumentSymbol::FormalArgumentSymbol(string_view name, const Scope& parent,
                                            FormalArgumentDirection direction) :
     VariableSymbol(SymbolKind::FormalArgument, name, parent, VariableLifetime::Automatic,
                    direction == FormalArgumentDirection::ConstRef),
     direction(direction) {}
 
 SubroutineSymbol::SubroutineSymbol(string_view name, VariableLifetime defaultLifetime,
-                                   bool isTask, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::Subroutine, parent, name),
+                                   bool isTask, const Scope& parent) :
+    Symbol(SymbolKind::Subroutine, parent, name),
+    Scope(this),
     body(this), returnType(this),
     defaultLifetime(defaultLifetime), isTask(isTask)
 {
@@ -197,7 +198,7 @@ SubroutineSymbol::SubroutineSymbol(string_view name, VariableLifetime defaultLif
 
 // TODO: move these someplace better
 
-static void findChildSymbols(const ScopeSymbol& parent, const StatementSyntax& syntax,
+static void findChildSymbols(const Scope& parent, const StatementSyntax& syntax,
                              SmallVector<const Symbol*>& results) {
     switch (syntax.kind) {
         case SyntaxKind::ConditionalStatement: {
@@ -219,13 +220,13 @@ static void findChildSymbols(const ScopeSymbol& parent, const StatementSyntax& s
             }
 
             if (any)
-                results.append(&SequentialBlockSymbol::createImplicitBlock(loop, parent));
+                results.append(&SequentialBlockSymbol::createImplicitBlock(parent.getFactory(), loop, parent));
             else
                 findChildSymbols(parent, loop.statement, results);
             break;
         }
         case SyntaxKind::SequentialBlockStatement: {
-            auto block = &parent.getRoot().allocate<SequentialBlockSymbol>(parent);
+            auto block = parent.getFactory().emplace<SequentialBlockSymbol>(parent);
             // TODO: set children
             results.append(block);
             break;
@@ -235,12 +236,12 @@ static void findChildSymbols(const ScopeSymbol& parent, const StatementSyntax& s
     }
 }
 
-static void findChildSymbols(const ScopeSymbol& parent, const SyntaxList<SyntaxNode>& items,
+static void findChildSymbols(const Scope& parent, const SyntaxList<SyntaxNode>& items,
                              SmallVector<const Symbol*>& results) {
     for (auto item : items) {
         if (item->kind == SyntaxKind::DataDeclaration) {
             SmallVectorSized<const VariableSymbol*, 4> symbols;
-            VariableSymbol::fromSyntax(parent, item->as<DataDeclarationSyntax>(), symbols);
+            VariableSymbol::fromSyntax(parent.getFactory(), item->as<DataDeclarationSyntax>(), parent, symbols);
             results.appendRange(symbols);
         }
         else if (isStatement(item->kind)) {
@@ -249,16 +250,19 @@ static void findChildSymbols(const ScopeSymbol& parent, const SyntaxList<SyntaxN
     }
 }
 
-SubroutineSymbol::SubroutineSymbol(string_view name, SystemFunction systemFunction, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::Subroutine, parent, name),
+SubroutineSymbol::SubroutineSymbol(string_view name, SystemFunction systemFunction, const Scope& parent) :
+    Symbol(SymbolKind::Subroutine, parent, name),
+    Scope(this),
     body(this), returnType(this),
-    systemFunctionKind(systemFunction) {}
+    systemFunctionKind(systemFunction)
+{
+}
 
 SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const FunctionDeclarationSyntax& syntax,
-                                               const ScopeSymbol& parent) {
+                                               const Scope& parent) {
     // TODO: non simple names?
     const auto& proto = syntax.prototype;
-    auto result = factory.alloc.emplace<SubroutineSymbol>(
+    auto result = factory.emplace<SubroutineSymbol>(
         proto.name.getFirstToken().valueText(),
         SemanticFacts::getVariableLifetime(proto.lifetime).value_or(VariableLifetime::Automatic),
         syntax.kind == SyntaxKind::TaskDeclaration,
@@ -292,7 +296,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const Fun
             }
 
             const auto& declarator = portSyntax->declarator;
-            auto arg = factory.alloc.emplace<FormalArgumentSymbol>(declarator.name.valueText(),
+            auto arg = factory.emplace<FormalArgumentSymbol>(declarator.name.valueText(),
                                                                    *result, direction);
 
             // If we're given a type, use that. Otherwise, if we were given a
@@ -318,7 +322,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const Fun
     }
 
     // TODO: mising return type
-    result->arguments = arguments.copy(factory.alloc);
+    result->arguments = arguments.copy(factory);
     result->returnType = *proto.returnType;
     result->body = syntax.items;
 

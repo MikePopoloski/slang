@@ -104,7 +104,7 @@ int TypeSymbol::width() const {
 }
 
 
-const TypeSymbol& IntegralTypeSymbol::fromSyntax(SymbolFactory& factory, const IntegerTypeSyntax& syntax, const ScopeSymbol& scope) {
+const TypeSymbol& IntegralTypeSymbol::fromSyntax(SymbolFactory& factory, const IntegerTypeSyntax& syntax, const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
     bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
@@ -149,11 +149,11 @@ const TypeSymbol& IntegralTypeSymbol::fromSyntax(SymbolFactory& factory, const I
             totalWidth += width;
         }
         return factory.getType(totalWidth, isSigned, isFourState, isReg,
-                               lowerBounds.copy(factory.alloc), widths.copy(factory.alloc));
+                               lowerBounds.copy(factory), widths.copy(factory));
     }
 }
 
-bool IntegralTypeSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const ScopeSymbol& scope) {
+bool IntegralTypeSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope& scope) {
     for (const VariableDimensionSyntax* dim : dimensions) {
         const SelectorSyntax* selector;
         if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||

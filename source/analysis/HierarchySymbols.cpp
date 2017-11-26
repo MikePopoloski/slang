@@ -11,24 +11,27 @@
 
 namespace slang {
 
-CompilationUnitSymbol::CompilationUnitSymbol(const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::CompilationUnit, parent)
+CompilationUnitSymbol::CompilationUnitSymbol(const Scope& parent) :
+    Symbol(SymbolKind::CompilationUnit, parent),
+    Scope(this)
 {
 }
 
-PackageSymbol::PackageSymbol(string_view name, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::Package, parent, name)
+PackageSymbol::PackageSymbol(string_view name, const Scope& parent) :
+    Symbol(SymbolKind::Package, parent, name),
+    Scope(this)
 {
 }
 
-DefinitionSymbol::DefinitionSymbol(string_view name, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::Module, parent, name)
+DefinitionSymbol::DefinitionSymbol(string_view name, const Scope& parent) :
+    Symbol(SymbolKind::Module, parent, name),
+    Scope(this)
 {
 }
 
 DefinitionSymbol& DefinitionSymbol::fromSyntax(SymbolFactory& factory, const ModuleDeclarationSyntax& syntax,
-                                               const ScopeSymbol& parent) {
-    auto result = factory.alloc.emplace<DefinitionSymbol>(syntax.header.name.valueText(), parent);
+                                               const Scope& parent) {
+    auto result = factory.emplace<DefinitionSymbol>(syntax.header.name.valueText(), parent);
     SmallVectorSized<const Symbol*, 32> members;
 
     if (syntax.header.parameters) {
@@ -58,7 +61,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(SymbolFactory& factory, const Mod
 
         // TODO: clean this up
 
-        result->parameters = tempParams.copy(factory.alloc);
+        result->parameters = tempParams.copy(factory);
     }
 
     for (auto node : syntax.members) {
@@ -161,30 +164,31 @@ void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax
 }
 
 InstanceSymbol::InstanceSymbol(SymbolKind kind, string_view name, const DefinitionSymbol& definition,
-                               const ScopeSymbol& parent) :
-    ScopeSymbol(kind, parent, name),
+                               const Scope& parent) :
+    Symbol(kind, parent, name),
+    Scope(this),
     definition(definition) {}
 
 void InstanceSymbol::lazyFromSyntax(SymbolFactory& factory, const HierarchyInstantiationSyntax& syntax,
-                                    const ScopeSymbol& parent, SmallVector<const Symbol*>& results) {
+                                    const Scope& parent, SmallVector<const Symbol*>& results) {
     // Definition information (along with parameter overrides) will be shared among all instances.
-    auto definition = factory.lazyDefinitionAllocator.emplace(&parent, &syntax);
+    auto definition = factory.createLazyDefinition(parent, syntax);
 
     for (auto instance : syntax.instances) {
         // TODO: handle arrays
-        results.append(factory.alloc.emplace<LazySyntaxSymbol>(*instance, parent, definition));
+        results.append(factory.emplace<LazySyntaxSymbol>(*instance, parent, definition));
     }
 }
 
 InstanceSymbol& InstanceSymbol::fromSyntax(SymbolFactory& factory, const HierarchicalInstanceSyntax& syntax,
-                                           const LazyDefinition& defInfo, const ScopeSymbol& parent) {
+                                           const LazyDefinition& defInfo, const Scope& parent) {
     const auto& [definition, paramMap] = defInfo.get();
 
     // TODO: missing module
     ASSERT(definition);
 
     // TODO: other things besides modules
-    auto result = factory.alloc.emplace<ModuleInstanceSymbol>(syntax.name.valueText(), *definition, parent);
+    auto result = factory.emplace<ModuleInstanceSymbol>(syntax.name.valueText(), *definition, parent);
     
     // Copy all members from the definition
     SmallVectorSized<const Symbol*, 32> members((uint32_t)definition->members().size());
@@ -203,14 +207,17 @@ InstanceSymbol& InstanceSymbol::fromSyntax(SymbolFactory& factory, const Hierarc
     return *result;
 }
 
-ModuleInstanceSymbol::ModuleInstanceSymbol(string_view name, const DefinitionSymbol& definition, const ScopeSymbol& parent) :
+ModuleInstanceSymbol::ModuleInstanceSymbol(string_view name, const DefinitionSymbol& definition, const Scope& parent) :
     InstanceSymbol(SymbolKind::ModuleInstance, name, definition, parent) {}
 
-GenerateBlockSymbol::GenerateBlockSymbol(string_view name, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::GenerateBlock, parent, name) {}
+GenerateBlockSymbol::GenerateBlockSymbol(string_view name, const Scope& parent) :
+    Symbol(SymbolKind::GenerateBlock, parent, name),
+    Scope(this)
+{
+}
 
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(SymbolFactory& factory, const IfGenerateSyntax& syntax,
-                                                     const ScopeSymbol& parent) {
+                                                     const Scope& parent) {
     // TODO: better error checking
     const auto& cv = parent.evaluateConstant(syntax.condition);
     if (!cv)
@@ -220,14 +227,14 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(SymbolFactory& factory, con
     SmallVectorSized<const Symbol*, 16> members;
     const SVInt& value = cv.integer();
     if ((logic_t)value) {
-        auto block = factory.alloc.emplace<GenerateBlockSymbol>("", parent);
+        auto block = factory.emplace<GenerateBlockSymbol>("", parent);
         factory.createSymbols(syntax.block, *block, members);
 
         block->setMembers(members);
         return block;
     }
     else if (syntax.elseClause) {
-        auto block = factory.alloc.emplace<GenerateBlockSymbol>("", parent);
+        auto block = factory.emplace<GenerateBlockSymbol>("", parent);
         factory.createSymbols(syntax.elseClause->clause, *block, members);
 
         block->setMembers(members);
@@ -236,18 +243,21 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(SymbolFactory& factory, con
     return nullptr;
 }
 
-GenerateBlockArraySymbol::GenerateBlockArraySymbol(string_view name, const ScopeSymbol& parent) :
-    ScopeSymbol(SymbolKind::GenerateBlockArray, parent, name) {}
+GenerateBlockArraySymbol::GenerateBlockArraySymbol(string_view name, const Scope& parent) :
+    Symbol(SymbolKind::GenerateBlockArray, parent, name),
+    Scope(this)
+{
+}
 
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(SymbolFactory& factory,
                                                                const LoopGenerateSyntax& syntax,
-                                                               const ScopeSymbol& parent) {
+                                                               const Scope& parent) {
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
     // we need to do a lookup to make sure we have the actual genvar.
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    auto result = factory.alloc.emplace<GenerateBlockArraySymbol>("", parent);
+    auto result = factory.emplace<GenerateBlockArraySymbol>("", parent);
     const auto& initial = parent.evaluateConstant(syntax.initialExpr);
     if (!initial)
         return *result;
@@ -273,9 +283,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(SymbolFactory& fa
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
-        auto block = factory.alloc.emplace<GenerateBlockSymbol>("", parent);
+        auto block = factory.emplace<GenerateBlockSymbol>("", parent);
 
-        auto implicitParam = factory.alloc.emplace<ParameterSymbol>(syntax.identifier.valueText(), *block);
+        auto implicitParam = factory.emplace<ParameterSymbol>(syntax.identifier.valueText(), *block);
         implicitParam->value = *genvar;
 
         SmallVectorSized<const Symbol*, 16> blockMembers;

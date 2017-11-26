@@ -14,7 +14,7 @@
 
 namespace slang {
 
-Symbol::LazyConstant::LazyConstant(const ScopeSymbol* scope) :
+Symbol::LazyConstant::LazyConstant(const Scope* scope) :
     Lazy(scope, &ConstantValue::Invalid) {}
 
 Symbol::LazyConstant& Symbol::LazyConstant::operator=(const ExpressionSyntax& source) {
@@ -23,46 +23,46 @@ Symbol::LazyConstant& Symbol::LazyConstant::operator=(const ExpressionSyntax& so
 }
 
 Symbol::LazyConstant& Symbol::LazyConstant::operator=(ConstantValue result) {
-    ConstantValue* p = storedScope->getRoot().constantAllocator.emplace(std::move(result));
+    ConstantValue* p = storedScope->getFactory().createConstant(std::move(result));
     Lazy<LazyConstant, ConstantValue, ExpressionSyntax>::operator=(p);
     return *this;
 }
 
-const ConstantValue& Symbol::LazyConstant::evaluate(const ScopeSymbol& scope,
+const ConstantValue& Symbol::LazyConstant::evaluate(const Scope& scope,
                                                     const ExpressionSyntax& syntax) const {
     ConstantValue v = Binder(scope).bindConstantExpression(syntax).eval();
-    return *scope.getRoot().constantAllocator.emplace(std::move(v));
+    return *scope.getFactory().createConstant(std::move(v));
 }
 
-Symbol::LazyStatement::LazyStatement(const ScopeSymbol* scope) :
+Symbol::LazyStatement::LazyStatement(const Scope* scope) :
     Lazy(scope, &InvalidStatement::Instance) {}
 
-const Statement& Symbol::LazyStatement::evaluate(const ScopeSymbol& scope,
+const Statement& Symbol::LazyStatement::evaluate(const Scope& scope,
                                                  const StatementSyntax& syntax) const {
     return Binder(scope).bindStatement(syntax);
 }
 
-Symbol::LazyStatementList::LazyStatementList(const ScopeSymbol* scope) :
+Symbol::LazyStatementList::LazyStatementList(const Scope* scope) :
     Lazy(scope, &StatementList::Empty) {}
 
-const StatementList& Symbol::LazyStatementList::evaluate(const ScopeSymbol& scope,
+const StatementList& Symbol::LazyStatementList::evaluate(const Scope& scope,
                                                          const SyntaxList<SyntaxNode>& list) const {
     return Binder(scope).bindStatementList(list);
 }
 
-Symbol::LazyInitializer::LazyInitializer(const ScopeSymbol* scope) :\
+Symbol::LazyInitializer::LazyInitializer(const Scope* scope) :\
     Lazy(scope, nullptr) {}
 
-const Expression& Symbol::LazyInitializer::evaluate(const ScopeSymbol& scope,
+const Expression& Symbol::LazyInitializer::evaluate(const Scope& scope,
                                                     const ExpressionSyntax& syntax) const {
     // TODO: bind assignment-like here
     return Binder(scope).bindConstantExpression(syntax);
 }
 
-Symbol::LazyType::LazyType(const ScopeSymbol* scope) :
+Symbol::LazyType::LazyType(const Scope* scope) :
     Lazy(scope, &ErrorTypeSymbol::Instance) {}
 
-const TypeSymbol& Symbol::LazyType::evaluate(const ScopeSymbol& scope,
+const TypeSymbol& Symbol::LazyType::evaluate(const Scope& scope,
                                              const DataTypeSyntax& syntax) const {
     return scope.getFactory().getType(syntax, scope);
 }
@@ -95,7 +95,7 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
         if (current->kind == SymbolKind::Root)
             return nullptr;
 
-        current = current->getParent();
+        current = &current->getScope()->asSymbol();
     }
     return current;
 }
@@ -106,15 +106,15 @@ const RootSymbol& Symbol::getRoot() const {
     return symbol->as<RootSymbol>();
 }
 
-SymbolFactory& Symbol::getFactory() const {
-    return getRoot().factory;
-}
-
 Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
     return getRoot().addError(code, location_);
 }
 
-const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupLocation,
+SymbolFactory& Scope::getFactory() const {
+    return thisSym->getRoot().factory;
+}
+
+const Symbol* Scope::lookup(string_view searchName, SourceLocation lookupLocation,
                                   LookupKind lookupKind) const {
     // Ensure our name map has been constructed.
     if (!nameMap)
@@ -154,11 +154,11 @@ const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupL
     if (lookupKind == LookupKind::Direct)
         return nullptr;
 
-    if (kind == SymbolKind::Root) {
+    if (thisSym->kind == SymbolKind::Root) {
         // For scoped lookups, if we reach the root without finding anything,
         // look for a package.
         if (lookupKind == LookupKind::Scoped)
-            return getRoot().findPackage(searchName);
+            return thisSym->getRoot().findPackage(searchName);
         return nullptr;
     }
 
@@ -182,26 +182,27 @@ const Symbol* ScopeSymbol::lookup(string_view searchName, SourceLocation lookupL
     return getParent()->lookup(searchName, lookupLocation, lookupKind);
 }
 
-void ScopeSymbol::setMembers(SymbolList list) {
+void Scope::setMembers(SymbolList list) {
+    // TODO: don't require looking up the factory for every scope like this
     nameMap = nullptr;
-    memberList = getFactory().alloc.makeCopy(list);
+    memberList = getFactory().makeCopy(list);
 }
 
-ConstantValue ScopeSymbol::evaluateConstant(const ExpressionSyntax& expr) const {
+ConstantValue Scope::evaluateConstant(const ExpressionSyntax& expr) const {
     const auto& bound = Binder(*this).bindConstantExpression(expr);
     return bound.eval();
 }
 
-ConstantValue ScopeSymbol::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
+ConstantValue Scope::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
                                                       SourceLocation errorLocation) const {
     SourceLocation errLoc = errorLocation ? errorLocation : expr.getFirstToken().location();
     const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errLoc, targetType);
     return bound.eval();
 }
 
-void ScopeSymbol::buildNameMap() const {
+void Scope::buildNameMap() const {
     // TODO: make sure this doesn't become re-entrant when evaluating generate conditions
-    nameMap = getFactory().symbolMapAllocator.emplace();
+    nameMap = getFactory().createSymbolMap();
     for (uint32_t i = 0; i < memberList.size(); i++) {
         // If the symbol is lazy, replace it with the resolved symbol now.
         const Symbol* symbol = memberList[i];
@@ -214,7 +215,11 @@ void ScopeSymbol::buildNameMap() const {
     }
 }
 
-DynamicScopeSymbol::DynamicScopeSymbol(const ScopeSymbol& parent) : ScopeSymbol(SymbolKind::DynamicScope, parent) {}
+DynamicScopeSymbol::DynamicScopeSymbol(const Scope& parent) :
+    Symbol(SymbolKind::DynamicScope, parent),
+    Scope(this)
+{
+}
 
 void DynamicScopeSymbol::addSymbol(const Symbol& symbol) {
     members.push_back(&symbol);
@@ -226,34 +231,34 @@ SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
     getRoot().factory.createSymbols(node, *this, symbols);
     for (auto symbol : symbols)
         addSymbol(*symbol);
-    return symbols.copy(getRoot().factory.alloc);
+    return symbols.copy(getRoot().factory);
 }
 
-LazySyntaxSymbol::LazySyntaxSymbol(const SyntaxNode& node, const ScopeSymbol& parent, LazyDefinition* definition) :
+LazySyntaxSymbol::LazySyntaxSymbol(const SyntaxNode& node, const Scope& parent, LazyDefinition* definition) :
     Symbol(SymbolKind::LazySyntax, parent),
     node(node),
     instanceDefinition(definition) {}
 
 const Symbol* LazySyntaxSymbol::resolve() const {
-    SymbolFactory& factory = getFactory();
+    SymbolFactory& factory = getScope()->getFactory();
     switch (node.kind) {
         case SyntaxKind::IfGenerate:
-            return GenerateBlockSymbol::fromSyntax(factory, node.as<IfGenerateSyntax>(), *getParent());
+            return GenerateBlockSymbol::fromSyntax(factory, node.as<IfGenerateSyntax>(), *getScope());
         case SyntaxKind::LoopGenerate:
-            return &GenerateBlockArraySymbol::fromSyntax(factory, node.as<LoopGenerateSyntax>(), *getParent());
+            return &GenerateBlockArraySymbol::fromSyntax(factory, node.as<LoopGenerateSyntax>(), *getScope());
         case SyntaxKind::HierarchicalInstance:
             ASSERT(instanceDefinition);
             return &InstanceSymbol::fromSyntax(factory, node.as<HierarchicalInstanceSyntax>(),
-                                               *instanceDefinition, *getParent());
+                                               *instanceDefinition, *getScope());
         default:
             THROW_UNREACHABLE;
     }
 }
 
-Symbol& Symbol::clone(const ScopeSymbol& newParent) const {
+Symbol& Symbol::clone(const Scope& newParent) const {
     Symbol* result;
-    SymbolFactory& factory = getFactory();
-#define CLONE(type) result = factory.alloc.emplace<type>(*(const type*)this); break
+    SymbolFactory& factory = getScope()->getFactory();
+#define CLONE(type) result = factory.emplace<type>(*(const type*)this); break
 
     switch (kind) {
         case SymbolKind::CompilationUnit: CLONE(CompilationUnitSymbol);

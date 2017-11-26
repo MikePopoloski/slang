@@ -25,7 +25,7 @@ public:
     /// Constructs a new binder for the given scope. The lookup kind is used whenever
     /// a name lookup must be performed (excepting some specific cases that are always
     /// done a certain way, such as callable expressions).
-    explicit Binder(const ScopeSymbol& scope, LookupKind lookupKind = LookupKind::Local);
+    explicit Binder(const Scope& scope, LookupKind lookupKind = LookupKind::Local);
 
     /// Binds an expression in a context that requires a compile-time value.
     const Expression& bindConstantExpression(const ExpressionSyntax& syntax);
@@ -83,7 +83,7 @@ private:
 
     const TypeSymbol& binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState);
 
-    const ScopeSymbol& scope;
+    const Scope& scope;
     const RootSymbol& root;
     SymbolFactory& factory;
     LookupKind lookupKind;

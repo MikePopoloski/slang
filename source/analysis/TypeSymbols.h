@@ -14,7 +14,7 @@ namespace slang {
 class TypeSymbol : public Symbol {
 public:
     TypeSymbol(SymbolKind kind, string_view name) : Symbol(kind, name) {}
-    TypeSymbol(SymbolKind kind, string_view name, const ScopeSymbol& parent) : Symbol(kind, parent, name) {}
+    TypeSymbol(SymbolKind kind, string_view name, const Scope& parent) : Symbol(kind, parent, name) {}
 
     // SystemVerilog defines various levels of type compatibility, which are used
     // in different scenarios. See the spec, section 6.22.
@@ -57,13 +57,13 @@ public:
         lowerBounds(lowerBounds), widths(widths),
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
 
-    static const TypeSymbol& fromSyntax(SymbolFactory& factory, const IntegerTypeSyntax& syntax, const ScopeSymbol& scope);
+    static const TypeSymbol& fromSyntax(SymbolFactory& factory, const IntegerTypeSyntax& syntax, const Scope& scope);
 
 private:
     // Evalutes variable dimensions that are expected to be compile-time constant.
     // Returns true if evaluation was successful; returns false and reports errors if not.
     static bool evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions,
-                                     SmallVector<ConstantRange>& results, const ScopeSymbol& scope);
+                                     SmallVector<ConstantRange>& results, const Scope& scope);
 
     static span<int const> EmptyLowerBound;
 };
@@ -114,7 +114,7 @@ public:
     const SyntaxNode& syntax;
     const TypeSymbol* underlying;
 
-    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, string_view alias, const ScopeSymbol& parent) :
+    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, string_view alias, const Scope& parent) :
         TypeSymbol(SymbolKind::TypeAlias, parent, alias, location),
         syntax(syntax), underlying(underlying) {}
 };

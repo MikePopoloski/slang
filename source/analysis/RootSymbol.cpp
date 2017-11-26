@@ -11,14 +11,16 @@
 namespace slang {
 
 RootSymbol::RootSymbol(const SourceManager& sourceManager) :
-    ScopeSymbol(SymbolKind::Root, *this),
+    Symbol(SymbolKind::Root, *this),
+    Scope(this),
     sourceMan(sourceManager)
 {
     init(nullptr);
 }
 
 RootSymbol::RootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units) :
-    ScopeSymbol(SymbolKind::Root, *this),
+    Symbol(SymbolKind::Root, *this),
+    Scope(this),
     sourceMan(sourceManager)
 {
     SmallVectorSized<const SyntaxNode*, 16> nodes((uint32_t)units.size());
@@ -31,7 +33,8 @@ RootSymbol::RootSymbol(const SyntaxTree* tree) :
     RootSymbol(make_span(&tree, 1)) {}
 
 RootSymbol::RootSymbol(span<const SyntaxTree* const> trees) :
-    ScopeSymbol(SymbolKind::Root, *this),
+    Symbol(SymbolKind::Root, *this),
+    Scope(this),
     sourceMan(trees[0]->sourceManager())
 {
     SmallVectorSized<const SyntaxNode*, 16> nodes((uint32_t)trees.size());

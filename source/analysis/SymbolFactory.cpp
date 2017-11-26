@@ -46,7 +46,7 @@ SymbolFactory::SymbolFactory() :
     knownTypes[SyntaxKind::Unknown] = &errorType;
 }
 
-const CompilationUnitSymbol& SymbolFactory::createCompilationUnit(const SyntaxNode& node, const ScopeSymbol& parent) {
+const CompilationUnitSymbol& SymbolFactory::createCompilationUnit(const SyntaxNode& node, const Scope& parent) {
     SmallVectorSized<const Symbol*, 4> symbols;
     createSymbols(node, parent, symbols);
 
@@ -55,17 +55,17 @@ const CompilationUnitSymbol& SymbolFactory::createCompilationUnit(const SyntaxNo
         return symbols[0]->as<CompilationUnitSymbol>();
     }
     else {
-        auto unit = alloc.emplace<CompilationUnitSymbol>(parent);
+        auto unit = emplace<CompilationUnitSymbol>(parent);
         unit->setMembers(symbols);
         return *unit;
     }
 }
 
-void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& parent,
+void SymbolFactory::createSymbols(const SyntaxNode& node, const Scope& parent,
                                   SmallVector<const Symbol*>& symbols) {
     switch (node.kind) {
         case SyntaxKind::CompilationUnit: {
-            auto unit = alloc.emplace<CompilationUnitSymbol>(parent);
+            auto unit = emplace<CompilationUnitSymbol>(parent);
             createChildren(unit, node.as<CompilationUnitSyntax>());
             symbols.append(unit);
             break;
@@ -77,7 +77,7 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
             break;
         case SyntaxKind::PackageDeclaration: {
             string_view name = node.as<ModuleDeclarationSyntax>().header.name.valueText();
-            auto symbol = alloc.emplace<PackageSymbol>(name, parent);
+            auto symbol = emplace<PackageSymbol>(name, parent);
             createChildren(symbol, node.as<ModuleDeclarationSyntax>());
             symbols.append(symbol);
             break;
@@ -85,13 +85,13 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         case SyntaxKind::PackageImportDeclaration:
             for (auto item : node.as<PackageImportDeclarationSyntax>().items) {
                 if (item->item.kind == TokenKind::Star) {
-                    symbols.append(alloc.emplace<WildcardImportSymbol>(
+                    symbols.append(emplace<WildcardImportSymbol>(
                         item->package.valueText(),
                         item->item.location(),
                         parent));
                 }
                 else {
-                    symbols.append(alloc.emplace<ExplicitImportSymbol>(
+                    symbols.append(emplace<ExplicitImportSymbol>(
                         item->package.valueText(),
                         item->item.valueText(),
                         item->item.location(),
@@ -108,7 +108,7 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         case SyntaxKind::IfGenerate:
         case SyntaxKind::LoopGenerate:
             // TODO: add special name conflict checks for generate blocks
-            symbols.append(alloc.emplace<LazySyntaxSymbol>(node, parent));
+            symbols.append(emplace<LazySyntaxSymbol>(node, parent));
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
@@ -116,7 +116,7 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
             break;
         case SyntaxKind::DataDeclaration: {
             SmallVectorSized<const VariableSymbol*, 4> variables;
-            VariableSymbol::fromSyntax(parent, node.as<DataDeclarationSyntax>(), variables);
+            VariableSymbol::fromSyntax(*this, node.as<DataDeclarationSyntax>(), parent, variables);
 
             for (auto variable : variables)
                 symbols.append(variable);
@@ -139,7 +139,7 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock: {
             auto kind = SemanticFacts::getProceduralBlockKind(node.as<ProceduralBlockSyntax>().kind);
-            symbols.append(alloc.emplace<ProceduralBlockSymbol>(parent, kind));
+            symbols.append(emplace<ProceduralBlockSymbol>(parent, kind));
             break;
         }
         case SyntaxKind::BitType:
@@ -177,7 +177,7 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const ScopeSymbol& par
     }
 }
 
-void SymbolFactory::createParamSymbols(const ParameterDeclarationSyntax& syntax, const ScopeSymbol& parent,
+void SymbolFactory::createParamSymbols(const ParameterDeclarationSyntax& syntax, const Scope& parent,
                                        SmallVector<const Symbol*>& symbols) {
     SmallVectorSized<ParameterSymbol*, 16> params;
     ParameterSymbol::fromSyntax(*this, syntax, parent, params);
@@ -194,7 +194,7 @@ const TypeSymbol& SymbolFactory::getType(SyntaxKind typeKind) const {
     return it == knownTypes.end() ? errorType : *it->second;
 }
 
-const TypeSymbol& SymbolFactory::getType(const DataTypeSyntax& node, const ScopeSymbol& parent) {
+const TypeSymbol& SymbolFactory::getType(const DataTypeSyntax& node, const Scope& parent) {
     SmallVectorSized<const Symbol*, 2> results;
     createSymbols(node, parent, results);
     ASSERT(results.size() == 1);
@@ -212,7 +212,7 @@ const IntegralTypeSymbol& SymbolFactory::getType(int width, bool isSigned, bool 
         return *it->second;
 
     TokenKind type = getIntegralKeywordKind(isFourState, isReg);
-    auto symbol = alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
+    auto symbol = emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
     integralTypeCache.emplace_hint(it, key, symbol);
     return *symbol;
 }
@@ -220,11 +220,11 @@ const IntegralTypeSymbol& SymbolFactory::getType(int width, bool isSigned, bool 
 const IntegralTypeSymbol& SymbolFactory::getType(int width, bool isSigned, bool isFourState, bool isReg,
                                                  span<const int> lowerBounds, span<const int> widths) {
     TokenKind type = getIntegralKeywordKind(isFourState, isReg);
-    return *alloc.emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState, lowerBounds, widths);
+    return *emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState, lowerBounds, widths);
 }
 
 template<typename TNode>
-void SymbolFactory::createChildren(ScopeSymbol* scope, const TNode& node) {
+void SymbolFactory::createChildren(Scope* scope, const TNode& node) {
     SmallVectorSized<const Symbol*, 16> symbols;
     for (auto member : node.members)
         createSymbols(*member, *scope, symbols);

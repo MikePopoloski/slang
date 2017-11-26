@@ -12,8 +12,8 @@
 
 namespace slang {
 
-Binder::Binder(const ScopeSymbol& scope, LookupKind lookupKind) :
-    scope(scope), root(scope.getRoot()), factory(root.factory), lookupKind(lookupKind)
+Binder::Binder(const Scope& scope, LookupKind lookupKind) :
+    scope(scope), root(scope.asSymbol().getRoot()), factory(root.factory), lookupKind(lookupKind)
 {
 }
 
@@ -499,7 +499,7 @@ Expression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, Express
 
 Statement& Binder::bindReturnStatement(const ReturnStatementSyntax& syntax) const {
     auto stmtLoc = syntax.returnKeyword.location();
-    const Symbol* subroutine = scope.findAncestor(SymbolKind::Subroutine);
+    const Symbol* subroutine = scope.asSymbol().findAncestor(SymbolKind::Subroutine);
     if (!subroutine) {
         root.addError(DiagCode::ReturnNotInSubroutine, stmtLoc);
         return badStmt(nullptr);

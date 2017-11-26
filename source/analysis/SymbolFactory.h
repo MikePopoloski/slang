@@ -17,17 +17,17 @@ namespace slang {
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
-class SymbolFactory {
+class SymbolFactory : public BumpAllocator {
 public:
     SymbolFactory();
 
     /// Creates symbols for the given syntax node.
-    void createSymbols(const SyntaxNode& node, const ScopeSymbol& parent, SmallVector<const Symbol*>& symbols);
+    void createSymbols(const SyntaxNode& node, const Scope& parent, SmallVector<const Symbol*>& symbols);
 
-    const CompilationUnitSymbol& createCompilationUnit(const SyntaxNode& node, const ScopeSymbol& parent);
+    const CompilationUnitSymbol& createCompilationUnit(const SyntaxNode& node, const Scope& parent);
 
     const TypeSymbol& getType(SyntaxKind kind) const;
-    const TypeSymbol& getType(const DataTypeSyntax& node, const ScopeSymbol& parent);
+    const TypeSymbol& getType(const DataTypeSyntax& node, const Scope& parent);
     const IntegralTypeSymbol& getType(int width, bool isSigned, bool isFourState = true, bool isReg = false);
     const IntegralTypeSymbol& getType(int width, bool isSigned, bool isFourState, bool isReg, span<const int> lowerBounds, span<const int> widths);
 
@@ -50,17 +50,24 @@ public:
     const TypeSymbol& getEventType() const { return eventType; }
     const ErrorTypeSymbol& getErrorType() const { return errorType; }
 
-    BumpAllocator alloc;
+    SymbolMap* createSymbolMap() { return symbolMapAllocator.emplace(); }
 
-    TypedBumpAllocator<SymbolMap> symbolMapAllocator;
-    TypedBumpAllocator<Symbol::LazyDefinition> lazyDefinitionAllocator;
+    ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
+
+    Symbol::LazyDefinition* createLazyDefinition(const Scope& scope, const HierarchyInstantiationSyntax& source) {
+        return lazyDefinitionAllocator.emplace(&scope, &source);
+    }
 
 private:
     template<typename TNode>
-    void createChildren(ScopeSymbol* scope, const TNode& node);
+    void createChildren(Scope* scope, const TNode& node);
 
-    void createParamSymbols(const ParameterDeclarationSyntax& syntax, const ScopeSymbol& parent,
+    void createParamSymbols(const ParameterDeclarationSyntax& syntax, const Scope& parent,
                             SmallVector<const Symbol*>& symbols);
+
+    TypedBumpAllocator<SymbolMap> symbolMapAllocator;
+    TypedBumpAllocator<ConstantValue> constantAllocator;
+    TypedBumpAllocator<Symbol::LazyDefinition> lazyDefinitionAllocator;
 
     std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
     std::unordered_map<uint64_t, const IntegralTypeSymbol*> integralTypeCache;

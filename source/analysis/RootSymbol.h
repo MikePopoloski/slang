@@ -14,7 +14,7 @@
 namespace slang {
 
 /// Represents the entirety of a design, along with all contained compilation units.
-class RootSymbol : public ScopeSymbol {
+class RootSymbol : public Symbol, public Scope {
 public:
     explicit RootSymbol(const SourceManager& sourceManager);
     explicit RootSymbol(const SyntaxTree* tree);
@@ -45,9 +45,6 @@ public:
     BumpAllocator& allocator() const { return alloc; }
     Diagnostics& diagnostics() const { return diags; }
     const SourceManager& sourceManager() const { return sourceMan; }
-
-    // TODO: clean this up
-    mutable TypedBumpAllocator<ConstantValue> constantAllocator;
 
     mutable SymbolFactory factory;
 
