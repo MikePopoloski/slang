@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "diagnostics/Diagnostics.h"
 #include "util/BumpAllocator.h"
 #include "util/SmallVector.h"
 
@@ -50,6 +51,14 @@ public:
     const TypeSymbol& getEventType() const { return eventType; }
     const ErrorTypeSymbol& getErrorType() const { return errorType; }
 
+    Diagnostics& diagnostics() { return diags; }
+    const Diagnostics& diagnostics() const { return diags; }
+
+    /// Report an error at the specified location.
+    Diagnostic& addError(DiagCode code, SourceLocation location) {
+        return diags.add(code, location);
+    }
+
     SymbolMap* createSymbolMap() { return symbolMapAllocator.emplace(); }
 
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
@@ -64,6 +73,8 @@ private:
 
     void createParamSymbols(const ParameterDeclarationSyntax& syntax, const Scope& parent,
                             SmallVector<const Symbol*>& symbols);
+
+    Diagnostics diags;
 
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
