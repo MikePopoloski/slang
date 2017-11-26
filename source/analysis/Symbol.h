@@ -15,7 +15,6 @@
 #include "numeric/SVInt.h"
 #include "parsing/AllSyntax.h"
 #include "text/SourceLocation.h"
-#include "util/HashMap.h"
 #include "util/Iterator.h"
 
 #include "ConstantValue.h"

@@ -16,10 +16,10 @@ namespace slang {
 /// Represents the entirety of a design, along with all contained compilation units.
 class RootSymbol : public Symbol, public Scope {
 public:
-    explicit RootSymbol(const SourceManager& sourceManager);
+    RootSymbol();
     explicit RootSymbol(const SyntaxTree* tree);
     explicit RootSymbol(span<const SyntaxTree* const> trees);
-    RootSymbol(const SourceManager& sourceManager, span<const CompilationUnitSyntax* const> units);
+    explicit RootSymbol(span<const CompilationUnitSyntax* const> units);
 
     /// Gets all of the compilation units in the design.
     span<const CompilationUnitSymbol* const> compilationUnits() const { return unitList; }
@@ -44,7 +44,6 @@ public:
 
     BumpAllocator& allocator() const { return alloc; }
     Diagnostics& diagnostics() const { return diags; }
-    const SourceManager& sourceManager() const { return sourceMan; }
 
     mutable SymbolFactory factory;
 
@@ -75,8 +74,6 @@ private:
 
     // list of top level module instances in the design
     std::vector<ModuleInstanceSymbol*> topList;
-
-    const SourceManager& sourceMan;
 };
 
 }

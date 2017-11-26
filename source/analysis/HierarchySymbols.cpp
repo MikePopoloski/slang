@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "Symbol.h"
 
+#include "util/HashMap.h"
+
 #include "Binder.h"
 #include "RootSymbol.h"
 

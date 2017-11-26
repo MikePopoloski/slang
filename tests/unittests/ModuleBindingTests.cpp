@@ -20,7 +20,7 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
     std::array<const SyntaxTree*, 2> trees = { &file1, &file2 };
-    RootSymbol root(trees);
+    RootSymbol root(make_span(trees));
 
     REQUIRE(root.topInstances().size() == 2);
     CHECK(root.topInstances()[0]->name == "C");

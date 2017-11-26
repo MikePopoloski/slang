@@ -16,7 +16,7 @@ namespace slang {
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
-    ScriptSession() : root(SyntaxTree::getDefaultSourceManager()), scope(root) {}
+    ScriptSession() : scope(root) {}
 
     ConstantValue eval(const std::string& text) {
         syntaxTrees.emplace_back(SyntaxTree::fromText(string_view(text)));
