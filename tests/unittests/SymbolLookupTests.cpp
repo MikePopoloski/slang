@@ -43,7 +43,7 @@ endmodule
     const auto& top = *root.topInstances()[0];
     const auto& gen_b = top.member<GenerateBlockSymbol>(1);
     const auto& param = gen_b.member<ParameterSymbol>(0);
-    CHECK(root.diagnostics().empty());
+    CHECK(root.factory.diagnostics().empty());
     CHECK(param.value->integer() == 12);
 
     // Lookup at (2); should return the local parameter
@@ -51,7 +51,7 @@ endmodule
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol == &param);
-    CHECK(root.diagnostics().empty());
+    CHECK(root.factory.diagnostics().empty());
 
     // Lookup at (1); should return the package parameter
     symbol = gen_b.lookup("x", param.location - 2, LookupKind::Local);

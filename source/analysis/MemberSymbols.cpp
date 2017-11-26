@@ -100,7 +100,7 @@ const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName
     if (!symbol)
         return nullptr;
 
-    return &getRoot().allocate<ImplicitImportSymbol>(*this, *symbol, *getScope());
+    return getScope()->getFactory().emplace<ImplicitImportSymbol>(*this, *symbol, *getScope());
 }
 
 ParameterSymbol::ParameterSymbol(string_view name, const Scope& parent) :

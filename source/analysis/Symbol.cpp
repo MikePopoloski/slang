@@ -107,7 +107,7 @@ const RootSymbol& Symbol::getRoot() const {
 }
 
 Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
-    return getRoot().addError(code, location_);
+    return getScope()->getFactory().addError(code, location_);
 }
 
 SymbolFactory& Scope::getFactory() const {

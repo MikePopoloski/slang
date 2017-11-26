@@ -85,7 +85,6 @@ void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax
     SmallHashMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
 
     // TODO: the name of the syntax elements here is ridiculous
-    const auto& root = getRoot();
     for (auto paramBase : syntax.parameters.parameters) {
         bool isOrdered = paramBase->kind == SyntaxKind::OrderedArgument;
         if (!hasParamAssignments) {
@@ -93,7 +92,7 @@ void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax
             orderedAssignments = isOrdered;
         }
         else if (isOrdered != orderedAssignments) {
-            root.addError(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
+            addError(DiagCode::MixingOrderedAndNamedParams, paramBase->getFirstToken().location());
             break;
         }
 
@@ -103,8 +102,8 @@ void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax
             const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
             auto pair = namedParams.emplace(nas.name.valueText(), std::make_pair(&nas, false));
             if (!pair.second) {
-                root.addError(DiagCode::DuplicateParamAssignment, nas.name.location()) << nas.name.valueText();
-                root.addError(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
+                addError(DiagCode::DuplicateParamAssignment, nas.name.location()) << nas.name.valueText();
+                addError(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
             }
         }
     }
@@ -124,7 +123,7 @@ void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax
 
         // Make sure there aren't extra param assignments for non-existent params.
         if (orderedIndex < orderedParams.size()) {
-            auto& diag = root.addError(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
+            auto& diag = addError(DiagCode::TooManyParamAssignments, orderedParams[orderedIndex]->getFirstToken().location());
             diag << name;
             diag << orderedParams.size();
             diag << orderedIndex;
@@ -141,8 +140,8 @@ void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax
             it->second.second = true;
             if (param->isLocalParam) {
                 // Can't assign to localparams, so this is an error.
-                root.addError(param->isPortParam ? DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam, arg->name.location());
-                root.addError(DiagCode::NoteDeclarationHere, param->location) << string_view("parameter");
+                addError(param->isPortParam ? DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam, arg->name.location());
+                addError(DiagCode::NoteDeclarationHere, param->location) << string_view("parameter");
                 continue;
             }
 
@@ -157,7 +156,7 @@ void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax
             // We marked all the args that we used, so anything left over is a param assignment
             // for a non-existent parameter.
             if (!pair.second.second) {
-                auto& diag = root.addError(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
+                auto& diag = addError(DiagCode::ParameterDoesNotExist, pair.second.first->name.location());
                 diag << pair.second.first->name.valueText();
                 diag << name;
             }

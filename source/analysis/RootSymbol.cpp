@@ -50,17 +50,17 @@ const PackageSymbol* RootSymbol::findPackage(string_view lookupName) const {
 
 SubroutineSymbol& RootSymbol::createSystemFunction(string_view funcName, SystemFunction funcKind,
                                                    std::initializer_list<const TypeSymbol*> argTypes) const {
-    auto func = alloc.emplace<SubroutineSymbol>(funcName, funcKind, *this);
+    auto func = factory.emplace<SubroutineSymbol>(funcName, funcKind, *this);
     func->returnType = factory.getIntType();
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> args;
     for (auto type : argTypes) {
-        auto arg = alloc.emplace<FormalArgumentSymbol>(*func);
+        auto arg = factory.emplace<FormalArgumentSymbol>(*func);
         arg->type = *type;
         args.append(arg);
     }
 
-    func->arguments = args.copy(alloc);
+    func->arguments = args.copy(factory);
     return *func;
 }
 
@@ -129,8 +129,8 @@ void RootSymbol::init(span<const SyntaxNode* const> nodes) {
             if (member->kind == SymbolKind::Module && instances.count(member->name) == 0) {
                 // TODO: check for no parameters here
                 const auto& definition = member->as<DefinitionSymbol>();
-                auto& instance = allocate<ModuleInstanceSymbol>(definition.name, definition, *this);
-                topList.push_back(&instance);
+                auto instance = factory.emplace<ModuleInstanceSymbol>(definition.name, definition, *this);
+                topList.push_back(instance);
             }
         }
     }
