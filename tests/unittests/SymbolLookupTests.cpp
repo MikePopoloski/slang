@@ -15,7 +15,12 @@ import Foo::x;
     RootSymbol root(&tree);
     const CompilationUnitSymbol& unit = *root.compilationUnits()[0];
 
-    const Symbol* x = unit.lookup("x", tree.root().sourceRange().end(), LookupKind::Local);
+    LookupResult result;
+    unit.lookup("x", result);
+    const Symbol* x = result.getFoundSymbol();
+
+    CHECK(result.getResultKind() == LookupResult::Found);
+    CHECK(result.wasImported());
     REQUIRE(x);
     CHECK(x->kind == SymbolKind::Parameter);
     CHECK(x->as<ParameterSymbol>().value->integer() == 4);
@@ -47,14 +52,26 @@ endmodule
     CHECK(param.value->integer() == 12);
 
     // Lookup at (2); should return the local parameter
-    auto symbol = gen_b.lookup("x", param.location + 22, LookupKind::Local);
+    LookupResult result;
+    result.referencePoint = LookupRefPoint::after(param);
+    gen_b.lookup("x", result);
+    const Symbol* symbol = result.getFoundSymbol();
+
+    CHECK(result.getResultKind() == LookupResult::Found);
+    CHECK(!result.wasImported());
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol == &param);
     CHECK(root.factory.diagnostics().empty());
 
     // Lookup at (1); should return the package parameter
-    symbol = gen_b.lookup("x", param.location - 2, LookupKind::Local);
+    result.clear();
+    result.referencePoint = LookupRefPoint::before(param);
+    gen_b.lookup("x", result);
+    symbol = result.getFoundSymbol();
+
+    CHECK(result.getResultKind() == LookupResult::Found);
+    // TODO: CHECK(result.wasImported());
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     

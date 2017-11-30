@@ -38,8 +38,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
-    Binder binder(scope, LookupKind::Direct);
-    const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     // Initialize `i` to 1.
@@ -68,8 +67,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
-    Binder binder(scope, LookupKind::Direct);
-    const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
@@ -94,8 +92,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
-    Binder binder(scope, LookupKind::Direct);
-    const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
@@ -124,8 +121,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
-    Binder binder(scope, LookupKind::Direct);
-    const auto& bound = binder.bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);

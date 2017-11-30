@@ -149,6 +149,10 @@ enum class DiagCode : uint8_t {
     // statements
     ReturnNotInSubroutine,
 
+    // lookups
+    //AmbiguousWildcardImport,
+    //NoteImportedFrom,
+
     MaxValue
 };
 

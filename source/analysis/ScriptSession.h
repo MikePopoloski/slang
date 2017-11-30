@@ -56,7 +56,7 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-        const auto& bound = Binder(scope, LookupKind::Direct).bindConstantExpression(expr);
+        const auto& bound = Binder(scope).bindConstantExpression(expr);
         return bound.eval(evalContext);
     }
 

@@ -70,8 +70,8 @@ endmodule
 )");
 
     // TODO:
-    /*RootSymbol root(tree);
-    CHECK(tree.diagnostics().count() == 15);*/
+    /*RootSymbol root(/&tree);
+    CHECK(root.diagnostics().size() == 15);*/
 }
 
 TEST_CASE("Module children (simple)", "[binding:modules]") {
@@ -92,7 +92,7 @@ endmodule
     RootSymbol root(&tree);
     const auto& instance = evalModule(tree, root);
     const auto& leaf = instance.member<ModuleInstanceSymbol>(0).member<ModuleInstanceSymbol>(0);
-    const auto& foo = leaf.lookup<ParameterSymbol>("foo");
+    const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
     CHECK(foo.value->integer() == 4);
 }
 
@@ -123,7 +123,7 @@ endmodule
         .member<GenerateBlockSymbol>(1)
         .member<ModuleInstanceSymbol>(0);
 
-    const auto& foo = leaf.lookup<ParameterSymbol>("foo");
+    const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
     CHECK(foo.value->integer() == 1);
 }
 
@@ -145,7 +145,7 @@ endmodule
 
     for (uint32_t i = 0; i < 10; i++) {
         const auto& leaf = instance.member<GenerateBlockSymbol>(i).member<ModuleInstanceSymbol>(1);
-        const auto& foo = leaf.lookup<ParameterSymbol>("foo");
+        const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
         CHECK(foo.value->integer() == i);
     }
 }

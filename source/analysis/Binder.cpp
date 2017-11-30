@@ -12,8 +12,8 @@
 
 namespace slang {
 
-Binder::Binder(const Scope& scope, LookupKind lookupKind) :
-    scope(scope), factory(scope.getFactory()), lookupKind(lookupKind)
+Binder::Binder(const Scope& scope) :
+    scope(scope), factory(scope.getFactory())
 {
 }
 
@@ -213,12 +213,15 @@ Expression& Binder::bindName(const NameSyntax& syntax) {
 
 Expression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
     string_view identifier = syntax.identifier.valueText();
-    const Symbol* symbol = scope.lookup(identifier, syntax.identifier.location(), lookupKind);
-    if (!symbol) {
+    LookupResult result;
+    scope.lookup(identifier, result);
+
+    if (result.getResultKind() != LookupResult::Found) {
         factory.addError(DiagCode::UndeclaredIdentifier, syntax.identifier.location()) << identifier;
         return badExpr(nullptr);
     }
 
+    const Symbol* symbol = result.getFoundSymbol();
     switch (symbol->kind) {
         case SymbolKind::Variable:
         case SymbolKind::FormalArgument:
@@ -258,7 +261,7 @@ Expression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
     if (!package)
         return badExpr(nullptr);
 
-    return Binder(*package, LookupKind::Direct).bindName(syntax.right);
+    return Binder(*package).bindName(syntax.right);
 }
 
 Expression& Binder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSyntax& syntax) {
@@ -371,7 +374,10 @@ Expression& Binder::bindAssignmentOperator(const BinaryExpressionSyntax& syntax)
 Expression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& syntax) {
     // TODO: check for something other than a simple name on the LHS
     auto name = syntax.left.getFirstToken();
-    const Symbol* symbol = scope.lookup(name.valueText(), name.location(), LookupKind::Callable);
+    LookupResult result;
+    result.nameKind = LookupNameKind::Callable;
+    scope.lookup(name.valueText(), result);
+    const Symbol* symbol = result.getFoundSymbol();
     ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
 
     auto actualArgs = syntax.arguments->parameters;

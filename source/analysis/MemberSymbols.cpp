@@ -61,20 +61,9 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
         package_ = getRoot().findPackage(packageName);
         // TODO: errors
         if (package_)
-            import = package_->lookup(importName, location, LookupKind::Direct);
+            import = package_->lookupDirect(importName);
     }
     return import;
-}
-
-ImplicitImportSymbol::ImplicitImportSymbol(const WildcardImportSymbol& wildcard, const Symbol& importedSymbol,
-                                           const Scope& parent) :
-    Symbol(SymbolKind::ImplicitImport, parent, importedSymbol.name, wildcard.location),
-    wildcard_(wildcard), import(importedSymbol)
-{
-}
-
-const PackageSymbol* ImplicitImportSymbol::package() const {
-    return wildcard_.package();
 }
 
 WildcardImportSymbol::WildcardImportSymbol(string_view packageName, SourceLocation location, const Scope& parent) :
@@ -83,24 +72,10 @@ WildcardImportSymbol::WildcardImportSymbol(string_view packageName, SourceLocati
 {
 }
 
-const PackageSymbol* WildcardImportSymbol::package() const {
-    if (!initialized) {
-        initialized = true;
-        package_ = getRoot().findPackage(packageName);
-    }
-    return package_;
-}
-
-const ImplicitImportSymbol* WildcardImportSymbol::resolve(string_view lookupName, SourceLocation lookupLocation) const {
-    if (!package())
-        return nullptr;
-
-    // TODO: errors... don't error on missing!
-    auto symbol = package_->lookup(lookupName, lookupLocation, LookupKind::Direct);
-    if (!symbol)
-        return nullptr;
-
-    return getScope()->getFactory().emplace<ImplicitImportSymbol>(*this, *symbol, *getScope());
+const PackageSymbol* WildcardImportSymbol::getPackage() const {
+    if (!package)
+        package = getRoot().findPackage(packageName);
+    return *package;
 }
 
 ParameterSymbol::ParameterSymbol(string_view name, const Scope& parent) :

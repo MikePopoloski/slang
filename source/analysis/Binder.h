@@ -22,10 +22,8 @@ namespace slang {
 ///
 class Binder {
 public:
-    /// Constructs a new binder for the given scope. The lookup kind is used whenever
-    /// a name lookup must be performed (excepting some specific cases that are always
-    /// done a certain way, such as callable expressions).
-    explicit Binder(const Scope& scope, LookupKind lookupKind = LookupKind::Local);
+    /// Constructs a new binder for the given scope.
+    explicit Binder(const Scope& scope);
 
     /// Binds an expression in a context that requires a compile-time value.
     const Expression& bindConstantExpression(const ExpressionSyntax& syntax);
@@ -85,7 +83,6 @@ private:
 
     const Scope& scope;
     SymbolFactory& factory;
-    LookupKind lookupKind;
 };
 
 }
