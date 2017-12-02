@@ -6,8 +6,8 @@
 //------------------------------------------------------------------------------
 #include "Symbol.h"
 
-#include "Binder.h"
-#include "RootSymbol.h"
+#include "binding/Binder.h"
+#include "symbols/RootSymbol.h"
 
 namespace slang {
 

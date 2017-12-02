@@ -9,8 +9,8 @@
 #include "diagnostics/Diagnostics.h"
 #include "text/SourceManager.h"
 
-#include "Binder.h"
-#include "RootSymbol.h"
+#include "binding/Binder.h"
+#include "symbols/RootSymbol.h"
 
 namespace slang {
 

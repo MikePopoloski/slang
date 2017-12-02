@@ -2,10 +2,10 @@
 
 #include <array>
 
-#include "analysis/Expressions.h"
-#include "analysis/Statements.h"
-#include "analysis/RootSymbol.h"
+#include "binding/Expressions.h"
+#include "binding/Statements.h"
 #include "parsing/SyntaxTree.h"
+#include "symbols/RootSymbol.h"
 
 const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, RootSymbol& root) {
     REQUIRE(root.topInstances().size() > 0);

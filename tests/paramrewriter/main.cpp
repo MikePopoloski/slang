@@ -4,9 +4,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "analysis/Symbol.h"
 #include "parsing/SyntaxTree.h"
 #include "parsing/SyntaxVisitor.h"
+#include "symbols/Symbol.h"
 
 using namespace slang;
 using namespace std;

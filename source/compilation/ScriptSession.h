@@ -6,9 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "analysis/Binder.h"
-#include "analysis/RootSymbol.h"
+#include "binding/Binder.h"
 #include "parsing/SyntaxTree.h"
+#include "symbols/RootSymbol.h"
 
 namespace slang {
 

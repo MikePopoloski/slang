@@ -8,8 +8,8 @@
 
 #include <unordered_set>
 
-#include "Compilation.h"
-#include "Symbol.h"
+#include "compilation/Compilation.h"
+#include "symbols/Symbol.h"
 
 namespace slang {
 

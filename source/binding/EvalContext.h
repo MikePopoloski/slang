@@ -9,8 +9,8 @@
 #include <map>
 #include <stack>
 
-#include "ConstantValue.h"
-#include "Symbol.h"
+#include "binding/ConstantValue.h"
+#include "symbols/Symbol.h"
 
 namespace slang {
 

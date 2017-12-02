@@ -6,8 +6,8 @@
 //------------------------------------------------------------------------------
 #include "Expressions.h"
 
-#include "Statements.h"
-#include "TypeSymbols.h"
+#include "binding/Statements.h"
+#include "symbols/TypeSymbols.h"
 
 namespace slang {
 

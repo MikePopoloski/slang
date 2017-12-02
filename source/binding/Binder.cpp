@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-#include "RootSymbol.h"
+#include "symbols/RootSymbol.h"
 
 namespace slang {
 

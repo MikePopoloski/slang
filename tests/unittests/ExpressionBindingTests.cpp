@@ -1,8 +1,8 @@
 #include "Test.h"
 
-#include "analysis/Binder.h"
-#include "analysis/RootSymbol.h"
+#include "binding/Binder.h"
 #include "parsing/SyntaxTree.h"
+#include "symbols/RootSymbol.h"
 
 SVInt testParameter(const std::string& text, int index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";

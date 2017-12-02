@@ -7,11 +7,10 @@
 #pragma once
 
 #include "diagnostics/Diagnostics.h"
+#include "symbols/SymbolMap.h"
+#include "symbols/TypeSymbols.h"
 #include "util/BumpAllocator.h"
 #include "util/SmallVector.h"
-
-#include "SymbolMap.h"
-#include "TypeSymbols.h"
 
 namespace slang {
 

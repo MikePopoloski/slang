@@ -1,6 +1,6 @@
 #include "Test.h"
 
-#include "analysis/ScriptSession.h"
+#include "compilation/ScriptSession.h"
 
 TEST_CASE("Simple eval", "[eval]") {
     ScriptSession session;

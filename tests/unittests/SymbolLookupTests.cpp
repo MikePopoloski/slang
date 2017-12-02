@@ -1,7 +1,7 @@
 #include "Test.h"
 
-#include "analysis/RootSymbol.h"
 #include "parsing/SyntaxTree.h"
+#include "symbols/RootSymbol.h"
 
 TEST_CASE("Explicit import lookup", "[symbols:lookup]") {
     auto tree = SyntaxTree::fromText(R"(

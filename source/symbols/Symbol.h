@@ -11,14 +11,13 @@
 
 #include "flat_hash_map.hpp"
 
+#include "binding/ConstantValue.h"
 #include "diagnostics/Diagnostics.h"
 #include "parsing/AllSyntax.h"
+#include "symbols/SemanticFacts.h"
+#include "symbols/SymbolMap.h"
 #include "text/SourceLocation.h"
 #include "util/Iterator.h"
-
-#include "ConstantValue.h"
-#include "SemanticFacts.h"
-#include "SymbolMap.h"
 
 namespace slang {
 
