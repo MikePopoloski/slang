@@ -34,7 +34,7 @@ class TypeSymbol;
 class WildcardImportSymbol;
 class PackageSymbol;
 class ParameterSymbol;
-class SymbolFactory;
+class Compilation;
 class SymbolMap;
 
 using SymbolList = span<const Symbol* const>;
@@ -357,7 +357,7 @@ class Scope {
 public:
     const Scope* getParent() const { return thisSym->getScope(); }
     const Symbol& asSymbol() const { return *thisSym; }
-    SymbolFactory& getFactory() const;
+    Compilation& getCompilation() const;
 
     /// Performs a symbol lookup using SystemVerilog name lookup rules.
     ///
@@ -488,7 +488,8 @@ public:
 
     DefinitionSymbol(string_view name, const Scope& parent);
 
-    static DefinitionSymbol& fromSyntax(SymbolFactory& factory, const ModuleDeclarationSyntax& syntax,
+    static DefinitionSymbol& fromSyntax(Compilation& compilation,
+                                        const ModuleDeclarationSyntax& syntax,
                                         const Scope& parent);
 
     void createParamOverrides(const ParameterValueAssignmentSyntax& syntax, ParamOverrideMap& map) const;
@@ -500,10 +501,11 @@ public:
     const DefinitionSymbol& definition;
 
     /// Constructs LazySyntaxSymbols for each instance in the given syntax node.
-    static void lazyFromSyntax(SymbolFactory& factory, const HierarchyInstantiationSyntax& syntax,
+    static void lazyFromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                                const Scope& parent, SmallVector<const Symbol*>& results);
 
-    static InstanceSymbol& fromSyntax(SymbolFactory& factory, const HierarchicalInstanceSyntax& syntax,
+    static InstanceSymbol& fromSyntax(Compilation& compilation,
+                                      const HierarchicalInstanceSyntax& syntax,
                                       const LazyDefinition& definition, const Scope& parent);
 
 protected:
@@ -527,7 +529,7 @@ public:
 
     SequentialBlockSymbol(const Scope& parent);
 
-    static SequentialBlockSymbol& createImplicitBlock(SymbolFactory& factory,
+    static SequentialBlockSymbol& createImplicitBlock(Compilation& compilation,
                                                       const ForLoopStatementSyntax& forLoop,
                                                       const Scope& parent);
 };
@@ -550,7 +552,7 @@ public:
 
     /// Creates a generate block from the given if-generate syntax node. Note that
     /// this can return null if the condition is false and there is no else block.
-    static GenerateBlockSymbol* fromSyntax(SymbolFactory& factory, const IfGenerateSyntax& syntax,
+    static GenerateBlockSymbol* fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                            const Scope& parent);
 };
 
@@ -560,7 +562,7 @@ public:
     GenerateBlockArraySymbol(string_view name, const Scope& parent);
 
     /// Creates a generate block array from the given loop-generate syntax node.
-    static GenerateBlockArraySymbol& fromSyntax(SymbolFactory& factory, const LoopGenerateSyntax& syntax,
+    static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation, const LoopGenerateSyntax& syntax,
                                                 const Scope& parent);
 };
 
@@ -609,7 +611,7 @@ public:
 
     ParameterSymbol(string_view name, const Scope& parent);
 
-    static void fromSyntax(SymbolFactory& factory, const ParameterDeclarationSyntax& syntax,
+    static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
                            const Scope& parent, SmallVector<ParameterSymbol*>& results);
 };
 
@@ -625,7 +627,7 @@ public:
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false);
 
     /// Constructs all variable symbols specified by the given syntax node.
-    static void fromSyntax(SymbolFactory& factory, const DataDeclarationSyntax& syntax,
+    static void fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                            const Scope& parent, SmallVector<const VariableSymbol*>& results);
 
 protected:
@@ -659,7 +661,7 @@ public:
     SubroutineSymbol(string_view name, VariableLifetime defaultLifetime, bool isTask, const Scope& parent);
     SubroutineSymbol(string_view name, SystemFunction systemFunction, const Scope& parent);
 
-    static SubroutineSymbol& fromSyntax(SymbolFactory& factory, const FunctionDeclarationSyntax& syntax,
+    static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax,
                                         const Scope& parent);
 
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }

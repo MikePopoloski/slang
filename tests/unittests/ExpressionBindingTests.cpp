@@ -34,7 +34,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local {varToken.valueText(), scope};
-    local.type = root.factory.getIntType();
+    local.type = root.compilation.getIntType();
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
@@ -43,7 +43,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
     // Initialize `i` to 1.
     EvalContext context;
-    auto i = context.createLocal(&local, { root.factory.getIntType(), SVInt(1) });
+    auto i = context.createLocal(&local, { root.compilation.getIntType(), SVInt(1) });
 
     // Evaluate the expression tree.
     bound.eval(context);
@@ -59,11 +59,11 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     auto syntax = SyntaxTree::fromText("i = 5'b0101 + 4'b1100");
     RootSymbol root;
     DynamicScopeSymbol scope(root);
-    
+
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local { varToken.valueText(), scope };
-    local.type = root.factory.getType(20, false);
+    local.type = root.compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
@@ -88,7 +88,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local { varToken.valueText(), scope };
-    local.type = root.factory.getType(20, false);
+    local.type = root.compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);
@@ -117,7 +117,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local { varToken.valueText(), scope };
-    local.type = root.factory.getType(20, false);
+    local.type = root.compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
     scope.addSymbol(local);

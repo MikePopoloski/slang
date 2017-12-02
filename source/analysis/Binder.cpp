@@ -13,7 +13,7 @@
 namespace slang {
 
 Binder::Binder(const Scope& scope) :
-    scope(scope), factory(scope.getFactory())
+    scope(scope), compilation(scope.getCompilation())
 {
 }
 
@@ -33,7 +33,7 @@ const Expression& Binder::bindAssignmentLikeContext(const ExpressionSyntax& synt
     const TypeSymbol& type = *expr.type;
     if (!assignmentType.isAssignmentCompatible(type)) {
         DiagCode code = assignmentType.isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        factory.addError(code, location) << syntax.sourceRange();
+        compilation.addError(code, location) << syntax.sourceRange();
         return badExpr(&expr);
     }
 
@@ -62,7 +62,7 @@ const StatementList& Binder::bindStatementList(const SyntaxList<SyntaxNode>& ite
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto member : scope.members()) {
         if (member->kind == SymbolKind::Variable)
-            buffer.append(factory.emplace<VariableDeclStatement>(member->as<VariableSymbol>()));
+            buffer.append(compilation.emplace<VariableDeclStatement>(member->as<VariableSymbol>()));
     }
 
     for (const auto& item : items) {
@@ -70,7 +70,7 @@ const StatementList& Binder::bindStatementList(const SyntaxList<SyntaxNode>& ite
             buffer.append(&bindStatement(item->as<StatementSyntax>()));
     }
 
-    return *factory.emplace<StatementList>(buffer.copy(factory));
+    return *compilation.emplace<StatementList>(buffer.copy(compilation));
 }
 
 Expression& Binder::bindAndPropagate(const ExpressionSyntax& syntax) {
@@ -176,15 +176,15 @@ Expression& Binder::bindExpression(const ExpressionSyntax& syntax) {
 Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
     switch (syntax.kind) {
         case SyntaxKind::IntegerLiteralExpression:
-            return *factory.emplace<IntegerLiteral>(factory, factory.getIntType(),
+            return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
                                                     syntax.literal.intValue(), syntax);
         case SyntaxKind::RealLiteralExpression:
-            return *factory.emplace<RealLiteral>(factory.getRealType(), syntax.literal.realValue(), syntax);
+            return *compilation.emplace<RealLiteral>(compilation.getRealType(), syntax.literal.realValue(), syntax);
         case SyntaxKind::UnbasedUnsizedLiteralExpression: {
             // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
             // context, but can grow
             logic_t val = syntax.literal.bitValue();
-            return *factory.emplace<UnbasedUnsizedIntegerLiteral>(factory.getType(1, false, val.isUnknown()), val, syntax);
+            return *compilation.emplace<UnbasedUnsizedIntegerLiteral>(compilation.getType(1, false, val.isUnknown()), val, syntax);
         }
         default: THROW_UNREACHABLE;
     }
@@ -192,11 +192,11 @@ Expression& Binder::bindLiteral(const LiteralExpressionSyntax& syntax) {
 
 Expression& Binder::bindLiteral(const IntegerVectorExpressionSyntax& syntax) {
     if (syntax.value.isMissing())
-        return badExpr(factory.emplace<IntegerLiteral>(factory, factory.getErrorType(), SVInt::Zero, syntax));
+        return badExpr(compilation.emplace<IntegerLiteral>(compilation, compilation.getErrorType(), SVInt::Zero, syntax));
 
     const SVInt& value = syntax.value.intValue();
-    const TypeSymbol& type = factory.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
-    return *factory.emplace<IntegerLiteral>(factory, type, value, syntax);
+    const TypeSymbol& type = compilation.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    return *compilation.emplace<IntegerLiteral>(compilation, type, value, syntax);
 }
 
 Expression& Binder::bindName(const NameSyntax& syntax) {
@@ -217,7 +217,7 @@ Expression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
     scope.lookup(identifier, result);
 
     if (result.getResultKind() != LookupResult::Found) {
-        factory.addError(DiagCode::UndeclaredIdentifier, syntax.identifier.location()) << identifier;
+        compilation.addError(DiagCode::UndeclaredIdentifier, syntax.identifier.location()) << identifier;
         return badExpr(nullptr);
     }
 
@@ -225,10 +225,10 @@ Expression& Binder::bindSimpleName(const IdentifierNameSyntax& syntax) {
     switch (symbol->kind) {
         case SymbolKind::Variable:
         case SymbolKind::FormalArgument:
-            return *factory.emplace<VariableRefExpression>(symbol->as<VariableSymbol>(), syntax);
+            return *compilation.emplace<VariableRefExpression>(symbol->as<VariableSymbol>(), syntax);
 
         case SymbolKind::Parameter:
-            return *factory.emplace<ParameterRefExpression>(symbol->as<ParameterSymbol>(), syntax);
+            return *compilation.emplace<ParameterRefExpression>(symbol->as<ParameterSymbol>(), syntax);
 
         default: THROW_UNREACHABLE;
     }
@@ -245,7 +245,7 @@ Expression& Binder::bindSelectName(const IdentifierSelectNameSyntax& syntax) {
     ASSERT(syntax.selectors[0]->selector);
     // spoof this being just a simple ElementSelectExpression
     return bindSelectExpression(syntax,
-        bindName(*factory.emplace<IdentifierNameSyntax>(syntax.identifier)), *syntax.selectors[0]->selector);
+        bindName(*compilation.emplace<IdentifierNameSyntax>(syntax.identifier)), *syntax.selectors[0]->selector);
 }
 
 Expression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
@@ -268,47 +268,47 @@ Expression& Binder::bindUnaryArithmeticOperator(const PrefixUnaryExpressionSynta
     // Supported for both integral and real types. Can be overloaded for others.
     Expression* operand = &bindAndPropagate(syntax.operand);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &operand))
-        return badExpr(factory.emplace<UnaryExpression>(factory.getErrorType(), *operand, syntax));
+        return badExpr(compilation.emplace<UnaryExpression>(compilation.getErrorType(), *operand, syntax));
 
-    return *factory.emplace<UnaryExpression>(*operand->type, *operand, syntax);
+    return *compilation.emplace<UnaryExpression>(*operand->type, *operand, syntax);
 }
 
 Expression& Binder::bindUnaryReductionOperator(const PrefixUnaryExpressionSyntax& syntax) {
     // Result type is always a single bit. Supported on integral types.
     Expression* operand = &bindAndPropagate(syntax.operand);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &operand))
-        return badExpr(factory.emplace<UnaryExpression>(factory.getErrorType(), *operand, syntax));
+        return badExpr(compilation.emplace<UnaryExpression>(compilation.getErrorType(), *operand, syntax));
 
-    return *factory.emplace<UnaryExpression>(factory.getLogicType(), *operand, syntax);
+    return *compilation.emplace<UnaryExpression>(compilation.getLogicType(), *operand, syntax);
 }
 
 Expression& Binder::bindArithmeticOperator(const BinaryExpressionSyntax& syntax) {
     Expression* lhs = &bindAndPropagate(syntax.left);
     Expression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(factory.emplace<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(compilation.emplace<BinaryExpression>(compilation.getErrorType(), *lhs, *rhs, syntax));
 
     // Get the result type; force the type to be four-state if it's a division, which can make a 4-state output
     // out of 2-state inputs
     const TypeSymbol& type = binaryOperatorResultType(lhs->type, rhs->type, syntax.kind == SyntaxKind::DivideExpression);
-    return *factory.emplace<BinaryExpression>(type, *lhs, *rhs, syntax);
+    return *compilation.emplace<BinaryExpression>(type, *lhs, *rhs, syntax);
 }
 
 Expression& Binder::bindComparisonOperator(const BinaryExpressionSyntax& syntax) {
     Expression* lhs = &bindAndPropagate(syntax.left);
     Expression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(factory.emplace<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(compilation.emplace<BinaryExpression>(compilation.getErrorType(), *lhs, *rhs, syntax));
 
     // result type is always a single bit
-    return *factory.emplace<BinaryExpression>(factory.getLogicType(), *lhs, *rhs, syntax);
+    return *compilation.emplace<BinaryExpression>(compilation.getLogicType(), *lhs, *rhs, syntax);
 }
 
 Expression& Binder::bindRelationalOperator(const BinaryExpressionSyntax& syntax) {
     Expression* lhs = &bindAndPropagate(syntax.left);
     Expression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(factory.emplace<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(compilation.emplace<BinaryExpression>(compilation.getErrorType(), *lhs, *rhs, syntax));
 
     // operands are sized to max(l,r) and the result of the operation is always 1 bit
     // no propagations from above have an actual have an effect on the subexpressions
@@ -318,7 +318,7 @@ Expression& Binder::bindRelationalOperator(const BinaryExpressionSyntax& syntax)
         propagateAssignmentLike(*lhs, *rhs->type);
 
     // result type is always a single bit
-    return *factory.emplace<BinaryExpression>(factory.getLogicType(), *lhs, *rhs, syntax);
+    return *compilation.emplace<BinaryExpression>(compilation.getLogicType(), *lhs, *rhs, syntax);
 }
 
 Expression& Binder::bindShiftOrPowerOperator(const BinaryExpressionSyntax& syntax) {
@@ -327,12 +327,12 @@ Expression& Binder::bindShiftOrPowerOperator(const BinaryExpressionSyntax& synta
     Expression* lhs = &bindAndPropagate(syntax.left);
     Expression* rhs = &bindAndPropagate(syntax.right);
     if (!checkOperatorApplicability(syntax.kind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(factory.emplace<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(compilation.emplace<BinaryExpression>(compilation.getErrorType(), *lhs, *rhs, syntax));
 
     // Power operator can result in division by zero 'x
     const TypeSymbol& type = binaryOperatorResultType(lhs->type, rhs->type, syntax.kind == SyntaxKind::PowerExpression);
 
-    return *factory.emplace<BinaryExpression>(type, *lhs, *rhs, syntax);
+    return *compilation.emplace<BinaryExpression>(type, *lhs, *rhs, syntax);
 }
 
 Expression& Binder::bindAssignmentOperator(const BinaryExpressionSyntax& syntax) {
@@ -360,7 +360,7 @@ Expression& Binder::bindAssignmentOperator(const BinaryExpressionSyntax& syntax)
     }
     // TODO: the LHS has to be assignable (i.e not a general expression)
     if (!checkOperatorApplicability(binopKind, syntax.operatorToken.location(), &lhs, &rhs))
-        return badExpr(factory.emplace<BinaryExpression>(factory.getErrorType(), *lhs, *rhs, syntax));
+        return badExpr(compilation.emplace<BinaryExpression>(compilation.getErrorType(), *lhs, *rhs, syntax));
 
     // The operands of an assignment are themselves self determined,
     // but we must increase the size of the RHS to the size of the LHS if it is larger, and then
@@ -368,7 +368,7 @@ Expression& Binder::bindAssignmentOperator(const BinaryExpressionSyntax& syntax)
     propagateAssignmentLike(*rhs, *lhs->type);
 
     // result type is always the type of the left hand side
-    return *factory.emplace<BinaryExpression>(*lhs->type, *lhs, *rhs, syntax);
+    return *compilation.emplace<BinaryExpression>(*lhs->type, *lhs, *rhs, syntax);
 }
 
 Expression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& syntax) {
@@ -386,7 +386,7 @@ Expression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& syntax)
     // TODO: handle too few args as well, which requires looking at default values
     auto formalArgs = subroutine.arguments;
     if (formalArgs.size() < actualArgs.count()) {
-        auto& diag = factory.addError(DiagCode::TooManyArguments, name.location());
+        auto& diag = compilation.addError(DiagCode::TooManyArguments, name.location());
         diag << syntax.left.sourceRange();
         diag << (int)formalArgs.size();
         diag << actualArgs.count();
@@ -400,7 +400,7 @@ Expression& Binder::bindSubroutineCall(const InvocationExpressionSyntax& syntax)
         buffer.append(&bindAssignmentLikeContext(arg.expr, arg.sourceRange().start(), *formalArgs[i]->type));
     }
 
-    return *factory.emplace<CallExpression>(subroutine, buffer.copy(factory), syntax);
+    return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation), syntax);
 }
 
 Expression& Binder::bindConditionalExpression(const ConditionalExpressionSyntax& syntax) {
@@ -414,7 +414,7 @@ Expression& Binder::bindConditionalExpression(const ConditionalExpressionSyntax&
     // TODO: handle non-integral and non-real types properly
     // force four-state return type for ambiguous condition case
     const TypeSymbol& type = binaryOperatorResultType(left.type, right.type, true);
-    return *factory.emplace<TernaryExpression>(type, pred, left, right, syntax);
+    return *compilation.emplace<TernaryExpression>(type, pred, left, right, syntax);
 }
 
 Expression& Binder::bindConcatenationExpression(const ConcatenationExpressionSyntax& syntax) {
@@ -426,12 +426,12 @@ Expression& Binder::bindConcatenationExpression(const ConcatenationExpressionSyn
 
         const TypeSymbol& type = *arg.type;
         if (type.kind != SymbolKind::IntegralType)
-            return badExpr(factory.emplace<NaryExpression>(factory.getErrorType(), nullptr, syntax));
+            return badExpr(compilation.emplace<NaryExpression>(compilation.getErrorType(), nullptr, syntax));
 
         totalWidth += type.width();
     }
 
-    return *factory.emplace<NaryExpression>(factory.getType(totalWidth, false), buffer.copy(factory), syntax);
+    return *compilation.emplace<NaryExpression>(compilation.getType(totalWidth, false), buffer.copy(compilation), syntax);
 }
 
 Expression& Binder::bindMultipleConcatenationExpression(const MultipleConcatenationExpressionSyntax& syntax) {
@@ -443,7 +443,7 @@ Expression& Binder::bindMultipleConcatenationExpression(const MultipleConcatenat
     // TODO: in cases like these, should we bother storing the bound expression? should we at least cache the result
     // so we don't have to compute it again elsewhere?
     uint16_t replicationTimes = left.eval().integer().as<uint16_t>().value();
-    return *factory.emplace<BinaryExpression>(factory.getType(right.type->width() * replicationTimes, false), left, right, syntax);
+    return *compilation.emplace<BinaryExpression>(compilation.getType(right.type->width() * replicationTimes, false), left, right, syntax);
 }
 
 Expression& Binder::bindSelectExpression(const ElementSelectExpressionSyntax& syntax) {
@@ -485,8 +485,8 @@ Expression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, Express
             break;
         default: THROW_UNREACHABLE;
     }
-    return *factory.emplace<SelectExpression>(
-        factory.getType(width, expr.type->isSigned(), expr.type->isFourState()),
+    return *compilation.emplace<SelectExpression>(
+        compilation.getType(width, expr.type->isSigned(), expr.type->isFourState()),
         kind,
         expr,
         *left,
@@ -499,13 +499,13 @@ Statement& Binder::bindReturnStatement(const ReturnStatementSyntax& syntax) cons
     auto stmtLoc = syntax.returnKeyword.location();
     const Symbol* subroutine = scope.asSymbol().findAncestor(SymbolKind::Subroutine);
     if (!subroutine) {
-        factory.addError(DiagCode::ReturnNotInSubroutine, stmtLoc);
+        compilation.addError(DiagCode::ReturnNotInSubroutine, stmtLoc);
         return badStmt(nullptr);
     }
 
     const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, stmtLoc,
                                                                *subroutine->as<SubroutineSymbol>().returnType);
-    return *factory.emplace<ReturnStatement>(syntax, &expr);
+    return *compilation.emplace<ReturnStatement>(syntax, &expr);
 }
 
 Statement& Binder::bindConditionalStatement(const ConditionalStatementSyntax& syntax) const {
@@ -518,7 +518,7 @@ Statement& Binder::bindConditionalStatement(const ConditionalStatementSyntax& sy
     if (syntax.elseClause)
         ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>());
 
-    return *factory.emplace<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
+    return *compilation.emplace<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
 Statement& Binder::bindForLoopStatement(const ForLoopStatementSyntax&) const {
@@ -545,13 +545,13 @@ Statement& Binder::bindForLoopStatement(const ForLoopStatementSyntax&) const {
     steps.append(&binder.bindSelfDeterminedExpression(*step));
 
     const auto& statement = implicitInitBlock.bindStatement(syntax.statement);
-    const auto& loop = allocate<BoundForLoopStatement>(syntax, stopExpr, steps.copy(factory), statement);
+    const auto& loop = allocate<BoundForLoopStatement>(syntax, stopExpr, steps.copy(compilation), statement);
 
     SmallVectorSized<const Statement*, 2> blockList;
     blockList.append(&allocate<BoundVariableDecl>(loopVar));
     blockList.append(&loop);
 
-    implicitInitBlock.setBody(allocate<StatementList>(blockList.copy(factory)));
+    implicitInitBlock.setBody(allocate<StatementList>(blockList.copy(compilation)));
     return allocate<BoundSequentialBlock>(implicitInitBlock);*/
 
     return badStmt(nullptr);
@@ -559,7 +559,7 @@ Statement& Binder::bindForLoopStatement(const ForLoopStatementSyntax&) const {
 
 Statement& Binder::bindExpressionStatement(const ExpressionStatementSyntax& syntax) const {
     const auto& expr = Binder(*this).bindSelfDeterminedExpression(syntax.expr);
-    return *factory.emplace<ExpressionStatement>(syntax, expr);
+    return *compilation.emplace<ExpressionStatement>(syntax, expr);
 }
 
 bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, Expression** operand) {
@@ -581,7 +581,7 @@ bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, 
     if (good)
         return true;
 
-    auto& diag = factory.addError(DiagCode::BadUnaryExpression, location);
+    auto& diag = compilation.addError(DiagCode::BadUnaryExpression, location);
     diag << type->toString();
     // TODO: source ranges for symbols / expressions
     //diag << (*operand)->syntax.sourceRange();
@@ -625,7 +625,7 @@ bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, 
     if (good)
         return true;
 
-    auto& diag = factory.addError(DiagCode::BadBinaryExpression, location);
+    auto& diag = compilation.addError(DiagCode::BadBinaryExpression, location);
     diag << lt->toString() << rt->toString();
     // TODO:
     //diag << (*lhs)->syntax.sourceRange();
@@ -637,13 +637,13 @@ bool Binder::propagateAssignmentLike(Expression& rhs, const TypeSymbol& lhsType)
     // Integral case
     if (lhsType.width() > rhs.type->width()) {
         if (!lhsType.isReal() && !rhs.type->isReal()) {
-            rhs.type = &factory.getType(lhsType.width(), rhs.type->isSigned(), rhs.type->isFourState());
+            rhs.type = &compilation.getType(lhsType.width(), rhs.type->isSigned(), rhs.type->isFourState());
         }
         else {
             if (lhsType.width() > 32)
-                rhs.type = &factory.getRealType();
+                rhs.type = &compilation.getRealType();
             else
-                rhs.type = &factory.getShortRealType();
+                rhs.type = &compilation.getShortRealType();
         }
         rhs.propagateType(*rhs.type);
         return true;
@@ -663,21 +663,21 @@ const TypeSymbol& Binder::binaryOperatorResultType(const TypeSymbol* lhsType, co
         // integral type. For the conditional operator it is clear that this case should lead to a shortreal, and
         // it isn't explicitly mentioned for other binary operators
         if (width >= 64)
-            return factory.getRealType();
+            return compilation.getRealType();
         else
-            return factory.getShortRealType();
+            return compilation.getShortRealType();
     }
     else {
-        return factory.getType(width, isSigned, fourState);
+        return compilation.getType(width, isSigned, fourState);
     }
 }
 
 InvalidExpression& Binder::badExpr(const Expression* expr) {
-    return *factory.emplace<InvalidExpression>(expr, factory.getErrorType());
+    return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
 }
 
 InvalidStatement& Binder::badStmt(const Statement* stmt) const {
-    return *factory.emplace<InvalidStatement>(stmt);
+    return *compilation.emplace<InvalidStatement>(stmt);
 }
 
 }

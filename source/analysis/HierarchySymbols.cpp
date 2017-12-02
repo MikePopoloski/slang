@@ -31,9 +31,10 @@ DefinitionSymbol::DefinitionSymbol(string_view name, const Scope& parent) :
 {
 }
 
-DefinitionSymbol& DefinitionSymbol::fromSyntax(SymbolFactory& factory, const ModuleDeclarationSyntax& syntax,
+DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
+                                               const ModuleDeclarationSyntax& syntax,
                                                const Scope& parent) {
-    auto result = factory.emplace<DefinitionSymbol>(syntax.header.name.valueText(), parent);
+    auto result = compilation.emplace<DefinitionSymbol>(syntax.header.name.valueText(), parent);
     SmallVectorSized<const Symbol*, 32> members;
 
     if (syntax.header.parameters) {
@@ -51,7 +52,7 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(SymbolFactory& factory, const Mod
             lastLocal = local;
 
             SmallVectorSized<ParameterSymbol*, 16> params;
-            ParameterSymbol::fromSyntax(factory, *declaration, *result, params);
+            ParameterSymbol::fromSyntax(compilation, *declaration, *result, params);
 
             for (auto param : params) {
                 param->isLocalParam = local;
@@ -63,12 +64,12 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(SymbolFactory& factory, const Mod
 
         // TODO: clean this up
 
-        result->parameters = tempParams.copy(factory);
+        result->parameters = tempParams.copy(compilation);
     }
 
     for (auto node : syntax.members) {
         // TODO: overrideLocal on body params
-        factory.createSymbols(*node, *result, members);
+        compilation.createSymbols(*node, *result, members);
     }
 
     result->setMembers(members);
@@ -170,18 +171,18 @@ InstanceSymbol::InstanceSymbol(SymbolKind kind, string_view name, const Definiti
     Scope(this),
     definition(definition) {}
 
-void InstanceSymbol::lazyFromSyntax(SymbolFactory& factory, const HierarchyInstantiationSyntax& syntax,
+void InstanceSymbol::lazyFromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                                     const Scope& parent, SmallVector<const Symbol*>& results) {
     // Definition information (along with parameter overrides) will be shared among all instances.
-    auto definition = factory.createLazyDefinition(parent, syntax);
+    auto definition = compilation.createLazyDefinition(parent, syntax);
 
     for (auto instance : syntax.instances) {
         // TODO: handle arrays
-        results.append(factory.emplace<LazySyntaxSymbol>(*instance, parent, definition));
+        results.append(compilation.emplace<LazySyntaxSymbol>(*instance, parent, definition));
     }
 }
 
-InstanceSymbol& InstanceSymbol::fromSyntax(SymbolFactory& factory, const HierarchicalInstanceSyntax& syntax,
+InstanceSymbol& InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
                                            const LazyDefinition& defInfo, const Scope& parent) {
     const auto& [definition, paramMap] = defInfo.get();
 
@@ -189,8 +190,8 @@ InstanceSymbol& InstanceSymbol::fromSyntax(SymbolFactory& factory, const Hierarc
     ASSERT(definition);
 
     // TODO: other things besides modules
-    auto result = factory.emplace<ModuleInstanceSymbol>(syntax.name.valueText(), *definition, parent);
-    
+    auto result = compilation.emplace<ModuleInstanceSymbol>(syntax.name.valueText(), *definition, parent);
+
     // Copy all members from the definition
     SmallVectorSized<const Symbol*, 32> members((uint32_t)definition->members().size());
     for (auto member : definition->members()) {
@@ -217,7 +218,7 @@ GenerateBlockSymbol::GenerateBlockSymbol(string_view name, const Scope& parent) 
 {
 }
 
-GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(SymbolFactory& factory, const IfGenerateSyntax& syntax,
+GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                                      const Scope& parent) {
     // TODO: better error checking
     const auto& cv = parent.evaluateConstant(syntax.condition);
@@ -228,15 +229,15 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(SymbolFactory& factory, con
     SmallVectorSized<const Symbol*, 16> members;
     const SVInt& value = cv.integer();
     if ((logic_t)value) {
-        auto block = factory.emplace<GenerateBlockSymbol>("", parent);
-        factory.createSymbols(syntax.block, *block, members);
+        auto block = compilation.emplace<GenerateBlockSymbol>("", parent);
+        compilation.createSymbols(syntax.block, *block, members);
 
         block->setMembers(members);
         return block;
     }
     else if (syntax.elseClause) {
-        auto block = factory.emplace<GenerateBlockSymbol>("", parent);
-        factory.createSymbols(syntax.elseClause->clause, *block, members);
+        auto block = compilation.emplace<GenerateBlockSymbol>("", parent);
+        compilation.createSymbols(syntax.elseClause->clause, *block, members);
 
         block->setMembers(members);
         return block;
@@ -250,7 +251,7 @@ GenerateBlockArraySymbol::GenerateBlockArraySymbol(string_view name, const Scope
 {
 }
 
-GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(SymbolFactory& factory,
+GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
                                                                const LoopGenerateSyntax& syntax,
                                                                const Scope& parent) {
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
@@ -258,7 +259,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(SymbolFactory& fa
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    auto result = factory.emplace<GenerateBlockArraySymbol>("", parent);
+    auto result = compilation.emplace<GenerateBlockArraySymbol>("", parent);
     const auto& initial = parent.evaluateConstant(syntax.initialExpr);
     if (!initial)
         return *result;
@@ -266,7 +267,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(SymbolFactory& fa
     // Fabricate a local variable that will serve as the loop iteration variable.
     DynamicScopeSymbol iterScope(parent);
     VariableSymbol local(syntax.identifier.valueText(), iterScope);
-    local.type = factory.getIntType();
+    local.type = compilation.getIntType();
     iterScope.addSymbol(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
@@ -284,14 +285,14 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(SymbolFactory& fa
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
-        auto block = factory.emplace<GenerateBlockSymbol>("", parent);
+        auto block = compilation.emplace<GenerateBlockSymbol>("", parent);
 
-        auto implicitParam = factory.emplace<ParameterSymbol>(syntax.identifier.valueText(), *block);
+        auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText(), *block);
         implicitParam->value = *genvar;
 
         SmallVectorSized<const Symbol*, 16> blockMembers;
         blockMembers.append(implicitParam);
-        factory.createSymbols(syntax.block, *block, blockMembers);
+        compilation.createSymbols(syntax.block, *block, blockMembers);
 
         block->setMembers(blockMembers);
         arrayEntries.append(block);

@@ -50,30 +50,30 @@ const PackageSymbol* RootSymbol::findPackage(string_view lookupName) const {
 
 SubroutineSymbol& RootSymbol::createSystemFunction(string_view funcName, SystemFunction funcKind,
                                                    std::initializer_list<const TypeSymbol*> argTypes) const {
-    auto func = factory.emplace<SubroutineSymbol>(funcName, funcKind, *this);
-    func->returnType = factory.getIntType();
+    auto func = compilation.emplace<SubroutineSymbol>(funcName, funcKind, *this);
+    func->returnType = compilation.getIntType();
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> args;
     for (auto type : argTypes) {
-        auto arg = factory.emplace<FormalArgumentSymbol>(*func);
+        auto arg = compilation.emplace<FormalArgumentSymbol>(*func);
         arg->type = *type;
         args.append(arg);
     }
 
-    func->arguments = args.copy(factory);
+    func->arguments = args.copy(compilation);
     return *func;
 }
 
 void RootSymbol::init(span<const SyntaxNode* const> nodes) {
     // Register built-in system functions.
     SmallVectorSized<const Symbol*, 32> symbols;
-    symbols.append(&createSystemFunction("$clog2", SystemFunction::clog2, { &factory.getIntType() }));
+    symbols.append(&createSystemFunction("$clog2", SystemFunction::clog2, { &compilation.getIntType() }));
 
     // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
     // assignment like context
     // TODO: add support for all these operands on data_types, not just expressions,
     // and add support for things like unpacked arrays
-    const auto& trivialIntType = factory.getType(1, false, true);
+    const auto& trivialIntType = compilation.getType(1, false, true);
     symbols.append(&createSystemFunction("$bits", SystemFunction::bits, { &trivialIntType }));
     symbols.append(&createSystemFunction("$left", SystemFunction::left, { &trivialIntType }));
     symbols.append(&createSystemFunction("$right", SystemFunction::right, { &trivialIntType }));
@@ -88,7 +88,7 @@ void RootSymbol::init(span<const SyntaxNode* const> nodes) {
     // - searching the actual syntax tree for instantiations so that we can know the top level instances
     NameSet instances;
     for (auto node : nodes) {
-        const auto& unit = factory.createCompilationUnit(*node, *this);
+        const auto& unit = compilation.createCompilationUnit(*node, *this);
         unitList.push_back(&unit);
 
         for (auto symbol : unit.members()) {
@@ -129,7 +129,7 @@ void RootSymbol::init(span<const SyntaxNode* const> nodes) {
             if (member->kind == SymbolKind::Module && instances.count(member->name) == 0) {
                 // TODO: check for no parameters here
                 const auto& definition = member->as<DefinitionSymbol>();
-                auto instance = factory.emplace<ModuleInstanceSymbol>(definition.name, definition, *this);
+                auto instance = compilation.emplace<ModuleInstanceSymbol>(definition.name, definition, *this);
                 topList.push_back(instance);
             }
         }

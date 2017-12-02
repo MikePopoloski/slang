@@ -104,7 +104,9 @@ int TypeSymbol::width() const {
 }
 
 
-const TypeSymbol& IntegralTypeSymbol::fromSyntax(SymbolFactory& factory, const IntegerTypeSyntax& syntax, const Scope& scope) {
+const TypeSymbol& IntegralTypeSymbol::fromSyntax(Compilation& compilation,
+                                                 const IntegerTypeSyntax& syntax,
+                                                 const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
     bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
@@ -112,19 +114,19 @@ const TypeSymbol& IntegralTypeSymbol::fromSyntax(SymbolFactory& factory, const I
 
     SmallVectorSized<ConstantRange, 4> dims;
     if (!evaluateConstantDims(syntax.dimensions, dims, scope))
-        return factory.getErrorType();
+        return compilation.getErrorType();
 
     // TODO: review this whole mess
 
     if (dims.empty()) {
         // TODO: signing
-        return factory.getType(syntax.kind);
+        return compilation.getType(syntax.kind);
     }
     else if (dims.size() == 1 && dims[0].right == 0) {
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
         int width = dims[0].left + 1;
-        return factory.getType(width, isSigned, isFourState, isReg);
+        return compilation.getType(width, isSigned, isFourState, isReg);
     }
     else {
         SmallVectorSized<int, 4> lowerBounds;
@@ -148,8 +150,8 @@ const TypeSymbol& IntegralTypeSymbol::fromSyntax(SymbolFactory& factory, const I
             // TODO: overflow
             totalWidth += width;
         }
-        return factory.getType(totalWidth, isSigned, isFourState, isReg,
-                               lowerBounds.copy(factory), widths.copy(factory));
+        return compilation.getType(totalWidth, isSigned, isFourState, isReg,
+                                   lowerBounds.copy(compilation), widths.copy(compilation));
     }
 }
 

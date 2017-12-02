@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// SymbolFactory.h
-// Symbol creation and caching.
+// Compilation.h
+// Central manager for compilation processes.
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
@@ -18,9 +18,9 @@ namespace slang {
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
-class SymbolFactory : public BumpAllocator {
+class Compilation : public BumpAllocator {
 public:
-    SymbolFactory();
+    Compilation();
 
     /// Creates symbols for the given syntax node.
     void createSymbols(const SyntaxNode& node, const Scope& parent, SmallVector<const Symbol*>& symbols);

@@ -1,14 +1,14 @@
 //------------------------------------------------------------------------------
-// SymbolFactory.cpp
-// Symbol creation and caching.
+// Compilation.cpp
+// Central manager for compilation processes.
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "SymbolFactory.h"
+#include "Compilation.h"
 
 namespace slang {
 
-SymbolFactory::SymbolFactory() :
+Compilation::Compilation() :
     shortIntType(TokenKind::ShortIntKeyword, 16, true, false),
     intType(TokenKind::IntKeyword, 32, true, false),
     longIntType(TokenKind::LongIntKeyword, 164, true, false),
@@ -46,7 +46,7 @@ SymbolFactory::SymbolFactory() :
     knownTypes[SyntaxKind::Unknown] = &errorType;
 }
 
-const CompilationUnitSymbol& SymbolFactory::createCompilationUnit(const SyntaxNode& node, const Scope& parent) {
+const CompilationUnitSymbol& Compilation::createCompilationUnit(const SyntaxNode& node, const Scope& parent) {
     SmallVectorSized<const Symbol*, 4> symbols;
     createSymbols(node, parent, symbols);
 
@@ -61,7 +61,7 @@ const CompilationUnitSymbol& SymbolFactory::createCompilationUnit(const SyntaxNo
     }
 }
 
-void SymbolFactory::createSymbols(const SyntaxNode& node, const Scope& parent,
+void Compilation::createSymbols(const SyntaxNode& node, const Scope& parent,
                                   SmallVector<const Symbol*>& symbols) {
     switch (node.kind) {
         case SyntaxKind::CompilationUnit: {
@@ -177,7 +177,7 @@ void SymbolFactory::createSymbols(const SyntaxNode& node, const Scope& parent,
     }
 }
 
-void SymbolFactory::createParamSymbols(const ParameterDeclarationSyntax& syntax, const Scope& parent,
+void Compilation::createParamSymbols(const ParameterDeclarationSyntax& syntax, const Scope& parent,
                                        SmallVector<const Symbol*>& symbols) {
     SmallVectorSized<ParameterSymbol*, 16> params;
     ParameterSymbol::fromSyntax(*this, syntax, parent, params);
@@ -189,19 +189,19 @@ static TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
     return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
 }
 
-const TypeSymbol& SymbolFactory::getType(SyntaxKind typeKind) const {
+const TypeSymbol& Compilation::getType(SyntaxKind typeKind) const {
     auto it = knownTypes.find(typeKind);
     return it == knownTypes.end() ? errorType : *it->second;
 }
 
-const TypeSymbol& SymbolFactory::getType(const DataTypeSyntax& node, const Scope& parent) {
+const TypeSymbol& Compilation::getType(const DataTypeSyntax& node, const Scope& parent) {
     SmallVectorSized<const Symbol*, 2> results;
     createSymbols(node, parent, results);
     ASSERT(results.size() == 1);
     return results[0]->as<TypeSymbol>();
 }
 
-const IntegralTypeSymbol& SymbolFactory::getType(int width, bool isSigned, bool isFourState, bool isReg) {
+const IntegralTypeSymbol& Compilation::getType(int width, bool isSigned, bool isFourState, bool isReg) {
     uint64_t key = width;
     key |= uint64_t(isSigned) << 32;
     key |= uint64_t(isFourState) << 33;
@@ -217,14 +217,14 @@ const IntegralTypeSymbol& SymbolFactory::getType(int width, bool isSigned, bool 
     return *symbol;
 }
 
-const IntegralTypeSymbol& SymbolFactory::getType(int width, bool isSigned, bool isFourState, bool isReg,
+const IntegralTypeSymbol& Compilation::getType(int width, bool isSigned, bool isFourState, bool isReg,
                                                  span<const int> lowerBounds, span<const int> widths) {
     TokenKind type = getIntegralKeywordKind(isFourState, isReg);
     return *emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState, lowerBounds, widths);
 }
 
 template<typename TNode>
-void SymbolFactory::createChildren(Scope* scope, const TNode& node) {
+void Compilation::createChildren(Scope* scope, const TNode& node) {
     SmallVectorSized<const Symbol*, 16> symbols;
     for (auto member : node.members)
         createSymbols(*member, *scope, symbols);

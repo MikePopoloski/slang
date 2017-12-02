@@ -82,7 +82,7 @@ private:
     const TypeSymbol& binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState);
 
     const Scope& scope;
-    SymbolFactory& factory;
+    Compilation& compilation;
 };
 
 }

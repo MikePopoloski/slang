@@ -8,8 +8,8 @@
 
 #include <unordered_set>
 
+#include "Compilation.h"
 #include "Symbol.h"
-#include "SymbolFactory.h"
 
 namespace slang {
 
@@ -31,7 +31,7 @@ public:
     /// Finds a package in the design with the given name, or returns null if none is found.
     const PackageSymbol* findPackage(string_view name) const;
 
-    mutable SymbolFactory factory;
+    mutable Compilation compilation;
 
 private:
     // Initializes the list of members from the given set of roots; called by several constructors.

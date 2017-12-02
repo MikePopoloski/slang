@@ -18,13 +18,13 @@ SequentialBlockSymbol::SequentialBlockSymbol(const Scope& parent) :
 {
 }
 
-SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(SymbolFactory& factory,
+SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(Compilation& compilation,
                                                                   const ForLoopStatementSyntax& forLoop,
                                                                   const Scope& parent) {
-    SequentialBlockSymbol& block = *factory.emplace<SequentialBlockSymbol>(parent);
+    SequentialBlockSymbol& block = *compilation.emplace<SequentialBlockSymbol>(parent);
 
     const auto& forVariable = forLoop.initializers[0]->as<ForVariableDeclarationSyntax>();
-    auto loopVar = factory.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
+    auto loopVar = compilation.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
     loopVar->type = forVariable.type;
     loopVar->initializer = forVariable.declarator.initializer->expr;
 
@@ -85,13 +85,13 @@ ParameterSymbol::ParameterSymbol(string_view name, const Scope& parent) :
 {
 }
 
-void ParameterSymbol::fromSyntax(SymbolFactory& factory, const ParameterDeclarationSyntax& syntax,
+void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
                                  const Scope& parent, SmallVector<ParameterSymbol*>& results) {
 
     bool isLocal = syntax.keyword.kind == TokenKind::LocalParamKeyword;
 
     for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
-        auto param = factory.emplace<ParameterSymbol>(decl->name.valueText(), parent);
+        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), parent);
         param->isLocalParam = isLocal;
 
         if (decl->initializer) {
@@ -124,7 +124,7 @@ void ParameterSymbol::fromSyntax(SymbolFactory& factory, const ParameterDeclarat
 //            determinedValue = getRoot().constantAllocator.emplace(bound.eval());
 //    }
 //    else {
-//        determinedType = &getRoot().factory.getType(*typeSyntax, scope);
+//        determinedType = &getRoot().compilation.getType(*typeSyntax, scope);
 //        determinedValue = getRoot().constantAllocator.emplace(scope.evaluateConstantAndConvert(*expr, *determinedType, location));
 //    }
 //}
@@ -141,10 +141,10 @@ VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, const Scope& p
     type(&parent), initializer(&parent),
     lifetime(lifetime), isConst(isConst) {}
 
-void VariableSymbol::fromSyntax(SymbolFactory& factory, const DataDeclarationSyntax& syntax,
+void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                                 const Scope& parent, SmallVector<const VariableSymbol*>& results) {
     for (auto declarator : syntax.declarators) {
-        auto variable = factory.emplace<VariableSymbol>(declarator->name.valueText(), parent);
+        auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(), parent);
         variable->type = syntax.type;
         if (declarator->initializer)
             variable->initializer = declarator->initializer->expr;
@@ -195,13 +195,13 @@ static void findChildSymbols(const Scope& parent, const StatementSyntax& syntax,
             }
 
             if (any)
-                results.append(&SequentialBlockSymbol::createImplicitBlock(parent.getFactory(), loop, parent));
+                results.append(&SequentialBlockSymbol::createImplicitBlock(parent.getCompilation(), loop, parent));
             else
                 findChildSymbols(parent, loop.statement, results);
             break;
         }
         case SyntaxKind::SequentialBlockStatement: {
-            auto block = parent.getFactory().emplace<SequentialBlockSymbol>(parent);
+            auto block = parent.getCompilation().emplace<SequentialBlockSymbol>(parent);
             // TODO: set children
             results.append(block);
             break;
@@ -216,7 +216,7 @@ static void findChildSymbols(const Scope& parent, const SyntaxList<SyntaxNode>& 
     for (auto item : items) {
         if (item->kind == SyntaxKind::DataDeclaration) {
             SmallVectorSized<const VariableSymbol*, 4> symbols;
-            VariableSymbol::fromSyntax(parent.getFactory(), item->as<DataDeclarationSyntax>(), parent, symbols);
+            VariableSymbol::fromSyntax(parent.getCompilation(), item->as<DataDeclarationSyntax>(), parent, symbols);
             results.appendRange(symbols);
         }
         else if (isStatement(item->kind)) {
@@ -233,11 +233,12 @@ SubroutineSymbol::SubroutineSymbol(string_view name, SystemFunction systemFuncti
 {
 }
 
-SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const FunctionDeclarationSyntax& syntax,
+SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
+                                               const FunctionDeclarationSyntax& syntax,
                                                const Scope& parent) {
     // TODO: non simple names?
     const auto& proto = syntax.prototype;
-    auto result = factory.emplace<SubroutineSymbol>(
+    auto result = compilation.emplace<SubroutineSymbol>(
         proto.name.getFirstToken().valueText(),
         SemanticFacts::getVariableLifetime(proto.lifetime).value_or(VariableLifetime::Automatic),
         syntax.kind == SyntaxKind::TaskDeclaration,
@@ -271,7 +272,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const Fun
             }
 
             const auto& declarator = portSyntax->declarator;
-            auto arg = factory.emplace<FormalArgumentSymbol>(declarator.name.valueText(),
+            auto arg = compilation.emplace<FormalArgumentSymbol>(declarator.name.valueText(),
                                                                    *result, direction);
 
             // If we're given a type, use that. Otherwise, if we were given a
@@ -281,7 +282,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const Fun
                 lastType = portSyntax->dataType;
             }
             else if (directionSpecified || !lastType) {
-                arg->type = factory.getLogicType();
+                arg->type = compilation.getLogicType();
                 lastType = nullptr;
             }
             else {
@@ -297,7 +298,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(SymbolFactory& factory, const Fun
     }
 
     // TODO: mising return type
-    result->arguments = arguments.copy(factory);
+    result->arguments = arguments.copy(compilation);
     result->returnType = *proto.returnType;
     result->body = syntax.items;
 

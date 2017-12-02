@@ -57,7 +57,7 @@ public:
         lowerBounds(lowerBounds), widths(widths),
         width(width), keywordType(keywordType), isSigned(isSigned), isFourState(isFourState) {}
 
-    static const TypeSymbol& fromSyntax(SymbolFactory& factory, const IntegerTypeSyntax& syntax, const Scope& scope);
+    static const TypeSymbol& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax, const Scope& scope);
 
 private:
     // Evalutes variable dimensions that are expected to be compile-time constant.

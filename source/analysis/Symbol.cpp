@@ -25,7 +25,7 @@ Symbol::LazyConstant& Symbol::LazyConstant::operator=(const ExpressionSyntax& so
 }
 
 Symbol::LazyConstant& Symbol::LazyConstant::operator=(ConstantValue result) {
-    ConstantValue* p = storedScope->getFactory().createConstant(std::move(result));
+    ConstantValue* p = storedScope->getCompilation().createConstant(std::move(result));
     Lazy<LazyConstant, ConstantValue, ExpressionSyntax>::operator=(p);
     return *this;
 }
@@ -33,7 +33,7 @@ Symbol::LazyConstant& Symbol::LazyConstant::operator=(ConstantValue result) {
 const ConstantValue& Symbol::LazyConstant::evaluate(const Scope& scope,
                                                     const ExpressionSyntax& syntax) const {
     ConstantValue v = Binder(scope).bindConstantExpression(syntax).eval();
-    return *scope.getFactory().createConstant(std::move(v));
+    return *scope.getCompilation().createConstant(std::move(v));
 }
 
 Symbol::LazyStatement::LazyStatement(const Scope* scope) :
@@ -66,7 +66,7 @@ Symbol::LazyType::LazyType(const Scope* scope) :
 
 const TypeSymbol& Symbol::LazyType::evaluate(const Scope& scope,
                                              const DataTypeSyntax& syntax) const {
-    return scope.getFactory().getType(syntax, scope);
+    return scope.getCompilation().getType(syntax, scope);
 }
 
 const Symbol::LazyDefinition::Value& Symbol::LazyDefinition::get() const {
@@ -82,7 +82,7 @@ const Symbol::LazyDefinition::Value& Symbol::LazyDefinition::get() const {
     LookupResult result;
     result.nameKind = LookupNameKind::Definition;
     scope->lookup(typeName.valueText(), result);
-    
+
     const Symbol* foundSymbol = result.getFoundSymbol();
     if (foundSymbol) {
         // TODO: check symbol kind?
@@ -113,7 +113,7 @@ const RootSymbol& Symbol::getRoot() const {
 }
 
 Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
-    return getScope()->getFactory().addError(code, location_);
+    return getScope()->getCompilation().addError(code, location_);
 }
 
 LookupRefPoint LookupRefPoint::before(const Symbol& symbol) {
@@ -161,8 +161,8 @@ void LookupResult::addPotentialImport(const Symbol& import) {
     imports.append(&import);
 }
 
-SymbolFactory& Scope::getFactory() const {
-    return thisSym->getRoot().factory;
+Compilation& Scope::getCompilation() const {
+    return thisSym->getRoot().compilation;
 }
 
 void Scope::lookup(string_view searchName, LookupResult& result) const {
@@ -232,9 +232,9 @@ const Symbol* Scope::lookupDirect(string_view searchName) const {
 }
 
 void Scope::setMembers(SymbolList list) {
-    // TODO: don't require looking up the factory for every scope like this
+    // TODO: don't require looking up the compilation for every scope like this
     nameMap = nullptr;
-    memberList = getFactory().makeCopy(list);
+    memberList = getCompilation().makeCopy(list);
 }
 
 ConstantValue Scope::evaluateConstant(const ExpressionSyntax& expr) const {
@@ -265,7 +265,7 @@ const SymbolMap::NameEntry* Scope::lookupInternal(string_view searchName) const 
 
 void Scope::buildNameMap() const {
     // TODO: make sure this doesn't become re-entrant when evaluating generate conditions
-    nameMap = getFactory().createSymbolMap();
+    nameMap = getCompilation().createSymbolMap();
     for (uint32_t i = 0; i < memberList.size(); i++) {
         // If the symbol is lazy, replace it with the resolved symbol now.
         const Symbol* symbol = memberList[i];
@@ -291,10 +291,10 @@ void DynamicScopeSymbol::addSymbol(const Symbol& symbol) {
 
 SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
     SmallVectorSized<const Symbol*, 2> symbols;
-    getRoot().factory.createSymbols(node, *this, symbols);
+    getRoot().compilation.createSymbols(node, *this, symbols);
     for (auto symbol : symbols)
         addSymbol(*symbol);
-    return symbols.copy(getRoot().factory);
+    return symbols.copy(getRoot().compilation);
 }
 
 LazySyntaxSymbol::LazySyntaxSymbol(const SyntaxNode& node, const Scope& parent, LazyDefinition* definition) :
@@ -303,15 +303,15 @@ LazySyntaxSymbol::LazySyntaxSymbol(const SyntaxNode& node, const Scope& parent, 
     instanceDefinition(definition) {}
 
 const Symbol* LazySyntaxSymbol::resolve() const {
-    SymbolFactory& factory = getScope()->getFactory();
+    Compilation& compilation = getScope()->getCompilation();
     switch (node.kind) {
         case SyntaxKind::IfGenerate:
-            return GenerateBlockSymbol::fromSyntax(factory, node.as<IfGenerateSyntax>(), *getScope());
+            return GenerateBlockSymbol::fromSyntax(compilation, node.as<IfGenerateSyntax>(), *getScope());
         case SyntaxKind::LoopGenerate:
-            return &GenerateBlockArraySymbol::fromSyntax(factory, node.as<LoopGenerateSyntax>(), *getScope());
+            return &GenerateBlockArraySymbol::fromSyntax(compilation, node.as<LoopGenerateSyntax>(), *getScope());
         case SyntaxKind::HierarchicalInstance:
             ASSERT(instanceDefinition);
-            return &InstanceSymbol::fromSyntax(factory, node.as<HierarchicalInstanceSyntax>(),
+            return &InstanceSymbol::fromSyntax(compilation, node.as<HierarchicalInstanceSyntax>(),
                                                *instanceDefinition, *getScope());
         default:
             THROW_UNREACHABLE;
@@ -320,8 +320,8 @@ const Symbol* LazySyntaxSymbol::resolve() const {
 
 Symbol& Symbol::clone(const Scope& newParent) const {
     Symbol* result;
-    SymbolFactory& factory = getScope()->getFactory();
-#define CLONE(type) result = factory.emplace<type>(*(const type*)this); break
+    Compilation& compilation = getScope()->getCompilation();
+#define CLONE(type) result = compilation.emplace<type>(*(const type*)this); break
 
     switch (kind) {
         case SymbolKind::CompilationUnit: CLONE(CompilationUnitSymbol);
