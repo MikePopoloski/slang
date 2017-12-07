@@ -154,7 +154,7 @@ public:
 #endif
 
   // Opens a file.
-  FMT_API BufferedFile(Cstring_view filename, Cstring_view mode);
+  FMT_API BufferedFile(CStringRef filename, CStringRef mode);
 
   // Closes the file.
   FMT_API void close();
@@ -166,10 +166,10 @@ public:
   // of MinGW that define fileno as a macro.
   FMT_API int (fileno)() const;
 
-  void print(Cstring_view format_str, const ArgList &args) {
+  void print(CStringRef format_str, const ArgList &args) {
     fmt::print(file_, format_str, args);
   }
-  FMT_VARIADIC(void, print, Cstring_view)
+  FMT_VARIADIC(void, print, CStringRef)
 };
 
 // A file. Closed file is represented by a File object with descriptor -1.
@@ -197,7 +197,7 @@ class File {
   File() FMT_NOEXCEPT : fd_(-1) {}
 
   // Opens a file and constructs a File object representing this file.
-  FMT_API File(Cstring_view path, int oflag);
+  FMT_API File(CStringRef path, int oflag);
 
 #if !FMT_USE_RVALUE_REFERENCES
   // Emulate a move constructor and a move assignment operator if rvalue

@@ -52,13 +52,15 @@ Yes &convert(std::ostream &);
 
 struct DummyStream : std::ostream {
   DummyStream();  // Suppress a bogus warning in MSVC.
+
   // Hide all operator<< overloads from std::ostream.
-  void operator<<(Null<>);
+  template <typename T>
+  typename EnableIf<sizeof(T) == 0>::type operator<<(const T &);
 };
 
 No &operator<<(std::ostream &, int);
 
-template<typename T>
+template <typename T>
 struct ConvertToIntImpl<T, true> {
   // Convert to int only if T doesn't have an overloaded operator<<.
   enum {
@@ -78,9 +80,10 @@ void format_arg(BasicFormatter<Char, ArgFormatter_> &f,
 
   internal::FormatBuf<Char> format_buf(buffer);
   std::basic_ostream<Char> output(&format_buf);
+  output.exceptions(std::ios_base::failbit | std::ios_base::badbit);
   output << value;
 
-  Basicstring_view<Char> str(&buffer[0], buffer.size());
+  BasicStringRef<Char> str(&buffer[0], buffer.size());
   typedef internal::MakeArg< BasicFormatter<Char> > MakeArg;
   format_str = f.format(format_str, MakeArg(str));
 }
@@ -94,8 +97,8 @@ void format_arg(BasicFormatter<Char, ArgFormatter_> &f,
     print(cerr, "Don't {}!", "panic");
   \endrst
  */
-FMT_API void print(std::ostream &os, Cstring_view format_str, ArgList args);
-FMT_VARIADIC(void, print, std::ostream &, Cstring_view)
+FMT_API void print(std::ostream &os, CStringRef format_str, ArgList args);
+FMT_VARIADIC(void, print, std::ostream &, CStringRef)
 }  // namespace fmt
 
 #ifdef FMT_HEADER_ONLY

@@ -13,9 +13,9 @@
 namespace fmt {
 
 template <typename Char>
-void printf(BasicWriter<Char> &w, BasicCstring_view<Char> format, ArgList args);
+void printf(BasicWriter<Char> &w, BasicCStringRef<Char> format, ArgList args);
 
-FMT_FUNC int fprintf(std::FILE *f, Cstring_view format, ArgList args) {
+FMT_FUNC int fprintf(std::FILE *f, CStringRef format, ArgList args) {
   MemoryWriter w;
   printf(w, format, args);
   std::size_t size = w.size();
@@ -24,8 +24,8 @@ FMT_FUNC int fprintf(std::FILE *f, Cstring_view format, ArgList args) {
 
 #ifndef FMT_HEADER_ONLY
 
-template void PrintfFormatter<char>::format(Cstring_view format);
-template void PrintfFormatter<wchar_t>::format(WCstring_view format);
+template void PrintfFormatter<char>::format(CStringRef format);
+template void PrintfFormatter<wchar_t>::format(WCStringRef format);
 
 #endif  // FMT_HEADER_ONLY
 

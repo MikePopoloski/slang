@@ -45,6 +45,20 @@
 // The fmt library version in the form major * 10000 + minor * 100 + patch.
 #define FMT_VERSION 40001
 
+#if defined(__has_include)
+# define FMT_HAS_INCLUDE(x) __has_include(x)
+#else
+# define FMT_HAS_INCLUDE(x) 0
+#endif
+
+#if (FMT_HAS_INCLUDE(<string_view>) && __cplusplus > 201402L) || \
+    (defined(_MSVC_LANG) && _MSVC_LANG > 201402L && _MSC_VER >= 1910)
+# include <string_view>
+# define FMT_HAS_STRING_VIEW 1
+#else
+# define FMT_HAS_STRING_VIEW 0
+#endif
+
 #if defined _SECURE_SCL && _SECURE_SCL
 # define FMT_SECURE_SCL _SECURE_SCL
 #else
@@ -139,6 +153,23 @@ typedef __int64          intmax_t;
 # define FMT_HAS_CPP_ATTRIBUTE(x) 0
 #endif
 
+#if FMT_HAS_CPP_ATTRIBUTE(maybe_unused)
+# define FMT_HAS_CXX17_ATTRIBUTE_MAYBE_UNUSED
+// VC++ 1910 support /std: option and that will set _MSVC_LANG macro
+// Clang with Microsoft CodeGen doesn't define _MSVC_LANG macro
+#elif defined(_MSVC_LANG) && _MSVC_LANG > 201402 && _MSC_VER >= 1910
+# define FMT_HAS_CXX17_ATTRIBUTE_MAYBE_UNUSED
+#endif
+
+#ifdef FMT_HAS_CXX17_ATTRIBUTE_MAYBE_UNUSED
+# define FMT_MAYBE_UNUSED [[maybe_unused]]
+// g++/clang++ also support [[gnu::unused]]. However, we don't use it.
+#elif defined(__GNUC__)
+# define FMT_MAYBE_UNUSED __attribute__((unused))
+#else
+# define FMT_MAYBE_UNUSED
+#endif
+
 // Use the compiler's attribute noreturn
 #if defined(__MINGW32__) || defined(__MINGW64__)
 # define FMT_NORETURN __attribute__((noreturn))
@@ -167,6 +198,12 @@ typedef __int64          intmax_t;
     (FMT_HAS_FEATURE(cxx_rvalue_references) || \
         (FMT_GCC_VERSION >= 403 && FMT_HAS_GXX_CXX11) || FMT_MSC_VER >= 1600)
 # endif
+#endif
+
+#if __cplusplus >= 201103L || FMT_MSC_VER >= 1700
+# define FMT_USE_ALLOCATOR_TRAITS 1
+#else
+# define FMT_USE_ALLOCATOR_TRAITS 0
 #endif
 
 // Check if exceptions are disabled.
@@ -321,7 +358,10 @@ typedef __int64          intmax_t;
 
 namespace fmt {
 namespace internal {
-# pragma intrinsic(_BitScanReverse)
+// avoid Clang with Microsoft CodeGen's -Wunknown-pragmas warning
+# ifndef __clang__
+#  pragma intrinsic(_BitScanReverse)
+# endif
 inline uint32_t clz(uint32_t x) {
   unsigned long r = 0;
   _BitScanReverse(&r, x);
@@ -335,7 +375,8 @@ inline uint32_t clz(uint32_t x) {
 }
 # define FMT_BUILTIN_CLZ(n) fmt::internal::clz(n)
 
-# ifdef _WIN64
+// avoid Clang with Microsoft CodeGen's -Wunknown-pragmas warning
+# if defined(_WIN64) && !defined(__clang__)
 #  pragma intrinsic(_BitScanReverse64)
 # endif
 
@@ -477,30 +518,30 @@ class BasicFormatter;
   +------------+-------------------------+
   | Type       | Definition              |
   +============+=========================+
-  | string_view  | Basicstring_view<char>    |
+  | StringRef  | BasicStringRef<char>    |
   +------------+-------------------------+
-  | Wstring_view | Basicstring_view<wchar_t> |
+  | WStringRef | BasicStringRef<wchar_t> |
   +------------+-------------------------+
 
   This class is most useful as a parameter type to allow passing
   different types of strings to a function, for example::
 
     template <typename... Args>
-    std::string format(string_view format_str, const Args & ... args);
+    std::string format(StringRef format_str, const Args & ... args);
 
     format("{}", 42);
     format(std::string("{}"), 42);
   \endrst
  */
 template <typename Char>
-class Basicstring_view {
+class BasicStringRef {
  private:
   const Char *data_;
   std::size_t size_;
 
  public:
   /** Constructs a string reference object from a C string and a size. */
-  Basicstring_view(const Char *s, std::size_t size) : data_(s), size_(size) {}
+  BasicStringRef(const Char *s, std::size_t size) : data_(s), size_(size) {}
 
   /**
     \rst
@@ -508,7 +549,7 @@ class Basicstring_view {
     the size with ``std::char_traits<Char>::length``.
     \endrst
    */
-  Basicstring_view(const Char *s)
+  BasicStringRef(const Char *s)
     : data_(s), size_(std::char_traits<Char>::length(s)) {}
 
   /**
@@ -517,9 +558,29 @@ class Basicstring_view {
     \endrst
    */
   template <typename Allocator>
-  Basicstring_view(
+  BasicStringRef(
       const std::basic_string<Char, std::char_traits<Char>, Allocator> &s)
   : data_(s.c_str()), size_(s.size()) {}
+
+#if FMT_HAS_STRING_VIEW
+  /**
+    \rst
+    Constructs a string reference from a ``std::basic_string_view`` object.
+    \endrst
+   */
+  BasicStringRef(
+      const std::basic_string_view<Char, std::char_traits<Char>> &s)
+  : data_(s.data()), size_(s.size()) {}
+
+  /**
+   \rst
+   Converts a string reference to an ``std::string_view`` object.
+   \endrst
+  */
+  explicit operator std::basic_string_view<Char>() const FMT_NOEXCEPT {
+    return std::basic_string_view<Char>(data_, size_);
+  }
+#endif
 
   /**
     \rst
@@ -537,7 +598,7 @@ class Basicstring_view {
   std::size_t size() const { return size_; }
 
   // Lexicographically compare this string reference to other.
-  int compare(Basicstring_view other) const {
+  int compare(BasicStringRef other) const {
     std::size_t size = size_ < other.size_ ? size_ : other.size_;
     int result = std::char_traits<Char>::compare(data_, other.data_, size);
     if (result == 0)
@@ -545,28 +606,28 @@ class Basicstring_view {
     return result;
   }
 
-  friend bool operator==(Basicstring_view lhs, Basicstring_view rhs) {
+  friend bool operator==(BasicStringRef lhs, BasicStringRef rhs) {
     return lhs.compare(rhs) == 0;
   }
-  friend bool operator!=(Basicstring_view lhs, Basicstring_view rhs) {
+  friend bool operator!=(BasicStringRef lhs, BasicStringRef rhs) {
     return lhs.compare(rhs) != 0;
   }
-  friend bool operator<(Basicstring_view lhs, Basicstring_view rhs) {
+  friend bool operator<(BasicStringRef lhs, BasicStringRef rhs) {
     return lhs.compare(rhs) < 0;
   }
-  friend bool operator<=(Basicstring_view lhs, Basicstring_view rhs) {
+  friend bool operator<=(BasicStringRef lhs, BasicStringRef rhs) {
     return lhs.compare(rhs) <= 0;
   }
-  friend bool operator>(Basicstring_view lhs, Basicstring_view rhs) {
+  friend bool operator>(BasicStringRef lhs, BasicStringRef rhs) {
     return lhs.compare(rhs) > 0;
   }
-  friend bool operator>=(Basicstring_view lhs, Basicstring_view rhs) {
+  friend bool operator>=(BasicStringRef lhs, BasicStringRef rhs) {
     return lhs.compare(rhs) >= 0;
   }
 };
 
-typedef Basicstring_view<char> string_view;
-typedef Basicstring_view<wchar_t> Wstring_view;
+typedef BasicStringRef<char> StringRef;
+typedef BasicStringRef<wchar_t> WStringRef;
 
 /**
   \rst
@@ -578,29 +639,29 @@ typedef Basicstring_view<wchar_t> Wstring_view;
   +-------------+--------------------------+
   | Type        | Definition               |
   +=============+==========================+
-  | Cstring_view  | BasicCstring_view<char>    |
+  | CStringRef  | BasicCStringRef<char>    |
   +-------------+--------------------------+
-  | WCstring_view | BasicCstring_view<wchar_t> |
+  | WCStringRef | BasicCStringRef<wchar_t> |
   +-------------+--------------------------+
 
   This class is most useful as a parameter type to allow passing
   different types of strings to a function, for example::
 
     template <typename... Args>
-    std::string format(Cstring_view format_str, const Args & ... args);
+    std::string format(CStringRef format_str, const Args & ... args);
 
     format("{}", 42);
     format(std::string("{}"), 42);
   \endrst
  */
 template <typename Char>
-class BasicCstring_view {
+class BasicCStringRef {
  private:
   const Char *data_;
 
  public:
   /** Constructs a string reference object from a C string. */
-  BasicCstring_view(const Char *s) : data_(s) {}
+  BasicCStringRef(const Char *s) : data_(s) {}
 
   /**
     \rst
@@ -608,7 +669,7 @@ class BasicCstring_view {
     \endrst
    */
   template <typename Allocator>
-  BasicCstring_view(
+  BasicCStringRef(
       const std::basic_string<Char, std::char_traits<Char>, Allocator> &s)
   : data_(s.c_str()) {}
 
@@ -616,16 +677,16 @@ class BasicCstring_view {
   const Char *c_str() const { return data_; }
 };
 
-typedef BasicCstring_view<char> Cstring_view;
-typedef BasicCstring_view<wchar_t> WCstring_view;
+typedef BasicCStringRef<char> CStringRef;
+typedef BasicCStringRef<wchar_t> WCStringRef;
 
 /** A formatting error such as invalid format string. */
 class FormatError : public std::runtime_error {
  public:
-  explicit FormatError(Cstring_view message)
+  explicit FormatError(CStringRef message)
   : std::runtime_error(message.c_str()) {}
   FormatError(const FormatError &ferr) : std::runtime_error(ferr) {}
-  FMT_API ~FormatError() FMT_DTOR_NOEXCEPT;
+  FMT_API ~FormatError() FMT_DTOR_NOEXCEPT FMT_OVERRIDE;
 };
 
 namespace internal {
@@ -770,7 +831,7 @@ class MemoryBuffer : private Allocator, public Buffer<T> {
  public:
   explicit MemoryBuffer(const Allocator &alloc = Allocator())
       : Allocator(alloc), Buffer<T>(data_, SIZE) {}
-  ~MemoryBuffer() { deallocate(); }
+  ~MemoryBuffer() FMT_OVERRIDE { deallocate(); }
 
 #if FMT_USE_RVALUE_REFERENCES
  private:
@@ -814,7 +875,12 @@ void MemoryBuffer<T, SIZE, Allocator>::grow(std::size_t size) {
   std::size_t new_capacity = this->capacity_ + this->capacity_ / 2;
   if (size > new_capacity)
       new_capacity = size;
+#if FMT_USE_ALLOCATOR_TRAITS
+  T *new_ptr =
+      std::allocator_traits<Allocator>::allocate(*this, new_capacity, FMT_NULL);
+#else
   T *new_ptr = this->allocate(new_capacity, FMT_NULL);
+#endif
   // The following code doesn't throw, so the raw pointer above doesn't leak.
   std::uninitialized_copy(this->ptr_, this->ptr_ + this->size_,
                           make_ptr(new_ptr, new_capacity));
@@ -993,13 +1059,13 @@ struct NoThousandsSep {
 // A functor that adds a thousands separator.
 class ThousandsSep {
  private:
-  fmt::string_view sep_;
+  fmt::StringRef sep_;
 
   // Index of a decimal digit with the least significant digit having index 0.
   unsigned digit_index_;
 
  public:
-  explicit ThousandsSep(fmt::string_view sep) : sep_(sep), digit_index_(0) {}
+  explicit ThousandsSep(fmt::StringRef sep) : sep_(sep), digit_index_(0) {}
 
   template <typename Char>
   void operator()(Char *&buffer) {
@@ -1061,8 +1127,8 @@ class UTF8ToUTF16 {
   MemoryBuffer<wchar_t, INLINE_BUFFER_SIZE> buffer_;
 
  public:
-  FMT_API explicit UTF8ToUTF16(string_view s);
-  operator Wstring_view() const { return Wstring_view(&buffer_[0], size()); }
+  FMT_API explicit UTF8ToUTF16(StringRef s);
+  operator WStringRef() const { return WStringRef(&buffer_[0], size()); }
   size_t size() const { return buffer_.size() - 1; }
   const wchar_t *c_str() const { return &buffer_[0]; }
   std::wstring str() const { return std::wstring(&buffer_[0], size()); }
@@ -1076,8 +1142,8 @@ class UTF16ToUTF8 {
 
  public:
   UTF16ToUTF8() {}
-  FMT_API explicit UTF16ToUTF8(Wstring_view s);
-  operator string_view() const { return string_view(&buffer_[0], size()); }
+  FMT_API explicit UTF16ToUTF8(WStringRef s);
+  operator StringRef() const { return StringRef(&buffer_[0], size()); }
   size_t size() const { return buffer_.size() - 1; }
   const char *c_str() const { return &buffer_[0]; }
   std::string str() const { return std::string(&buffer_[0], size()); }
@@ -1085,11 +1151,11 @@ class UTF16ToUTF8 {
   // Performs conversion returning a system error code instead of
   // throwing exception on conversion error. This method may still throw
   // in case of memory allocation error.
-  FMT_API int convert(Wstring_view s);
+  FMT_API int convert(WStringRef s);
 };
 
 FMT_API void format_windows_error(fmt::Writer &out, int error_code,
-                                  fmt::string_view message) FMT_NOEXCEPT;
+                                  fmt::StringRef message) FMT_NOEXCEPT;
 #endif
 
 // A formatting argument value.
@@ -1171,17 +1237,17 @@ T &get();
 Yes &convert(fmt::ULongLong);
 No &convert(...);
 
-template<typename T, bool ENABLE_CONVERSION>
+template <typename T, bool ENABLE_CONVERSION>
 struct ConvertToIntImpl {
   enum { value = ENABLE_CONVERSION };
 };
 
-template<typename T, bool ENABLE_CONVERSION>
+template <typename T, bool ENABLE_CONVERSION>
 struct ConvertToIntImpl2 {
   enum { value = false };
 };
 
-template<typename T>
+template <typename T>
 struct ConvertToIntImpl2<T, true> {
   enum {
     // Don't convert numeric types.
@@ -1189,7 +1255,7 @@ struct ConvertToIntImpl2<T, true> {
   };
 };
 
-template<typename T>
+template <typename T>
 struct ConvertToInt {
   enum {
     enable_conversion = sizeof(fmt::internal::convert(get<T>())) == sizeof(Yes)
@@ -1206,16 +1272,16 @@ FMT_DISABLE_CONVERSION_TO_INT(float);
 FMT_DISABLE_CONVERSION_TO_INT(double);
 FMT_DISABLE_CONVERSION_TO_INT(long double);
 
-template<bool B, class T = void>
+template <bool B, class T = void>
 struct EnableIf {};
 
-template<class T>
+template <class T>
 struct EnableIf<true, T> { typedef T type; };
 
-template<bool B, class T, class F>
+template <bool B, class T, class F>
 struct Conditional { typedef T type; };
 
-template<class T, class F>
+template <class T, class F>
 struct Conditional<false, T, F> { typedef F type; };
 
 // For bcc32 which doesn't understand ! in template arguments.
@@ -1236,12 +1302,12 @@ template <typename T, T> struct LConvCheck {
 // We check if ``lconv`` contains ``thousands_sep`` because on Android
 // ``lconv`` is stubbed as an empty struct.
 template <typename LConv>
-inline string_view thousands_sep(
+inline StringRef thousands_sep(
     LConv *lc, LConvCheck<char *LConv::*, &LConv::thousands_sep> = 0) {
   return lc->thousands_sep;
 }
 
-inline fmt::string_view thousands_sep(...) { return ""; }
+inline fmt::StringRef thousands_sep(...) { return ""; }
 
 #define FMT_CONCAT(a, b) a##b
 
@@ -1299,14 +1365,17 @@ class MakeValue : public Arg {
   MakeValue(typename WCharHelper<wchar_t *, Char>::Unsupported);
   MakeValue(typename WCharHelper<const wchar_t *, Char>::Unsupported);
   MakeValue(typename WCharHelper<const std::wstring &, Char>::Unsupported);
-  MakeValue(typename WCharHelper<Wstring_view, Char>::Unsupported);
+#if FMT_HAS_STRING_VIEW
+  MakeValue(typename WCharHelper<const std::wstring_view &, Char>::Unsupported);
+#endif
+  MakeValue(typename WCharHelper<WStringRef, Char>::Unsupported);
 
-  void set_string(string_view str) {
+  void set_string(StringRef str) {
     string.value = str.data();
     string.size = str.size();
   }
 
-  void set_string(Wstring_view str) {
+  void set_string(WStringRef str) {
     wstring.value = str.data();
     wstring.size = str.size();
   }
@@ -1368,6 +1437,20 @@ class MakeValue : public Arg {
   FMT_MAKE_VALUE(unsigned char, uint_value, UINT)
   FMT_MAKE_VALUE(char, int_value, CHAR)
 
+#if __cplusplus >= 201103L
+  template <
+    typename T,
+    typename = typename std::enable_if<
+      std::is_enum<T>::value && ConvertToInt<T>::value>::type>
+   MakeValue(T value) { int_value = value; }
+
+  template <
+    typename T,
+    typename = typename std::enable_if<
+      std::is_enum<T>::value && ConvertToInt<T>::value>::type>
+  static uint64_t type(T) { return Arg::INT; }
+#endif
+
 #if !defined(_MSC_VER) || defined(_NATIVE_WCHAR_T_DEFINED)
   MakeValue(typename WCharHelper<wchar_t, Char>::Supported value) {
     int_value = value;
@@ -1386,8 +1469,11 @@ class MakeValue : public Arg {
   FMT_MAKE_VALUE(unsigned char *, ustring.value, CSTRING)
   FMT_MAKE_VALUE(const unsigned char *, ustring.value, CSTRING)
   FMT_MAKE_STR_VALUE(const std::string &, STRING)
-  FMT_MAKE_STR_VALUE(string_view, STRING)
-  FMT_MAKE_VALUE_(Cstring_view, string.value, CSTRING, value.c_str())
+#if FMT_HAS_STRING_VIEW
+  FMT_MAKE_STR_VALUE(const std::string_view &, STRING)
+#endif
+  FMT_MAKE_STR_VALUE(StringRef, STRING)
+  FMT_MAKE_VALUE_(CStringRef, string.value, CSTRING, value.c_str())
 
 #define FMT_MAKE_WSTR_VALUE(Type, TYPE) \
   MakeValue(typename WCharHelper<Type, Char>::Supported value) { \
@@ -1398,7 +1484,10 @@ class MakeValue : public Arg {
   FMT_MAKE_WSTR_VALUE(wchar_t *, WSTRING)
   FMT_MAKE_WSTR_VALUE(const wchar_t *, WSTRING)
   FMT_MAKE_WSTR_VALUE(const std::wstring &, WSTRING)
-  FMT_MAKE_WSTR_VALUE(Wstring_view, WSTRING)
+#if FMT_HAS_STRING_VIEW
+  FMT_MAKE_WSTR_VALUE(const std::wstring_view &, WSTRING)
+#endif
+  FMT_MAKE_WSTR_VALUE(WStringRef, WSTRING)
 
   FMT_MAKE_VALUE(void *, pointer, POINTER)
   FMT_MAKE_VALUE(const void *, pointer, POINTER)
@@ -1446,16 +1535,16 @@ public:
 
 template <typename Char>
 struct NamedArg : Arg {
-  Basicstring_view<Char> name;
+  BasicStringRef<Char> name;
 
   template <typename T>
-  NamedArg(Basicstring_view<Char> argname, const T &value)
+  NamedArg(BasicStringRef<Char> argname, const T &value)
   : Arg(MakeArg< BasicFormatter<Char> >(value)), name(argname) {}
 };
 
 template <typename Char, typename T>
 struct NamedArgWithType : NamedArg<Char> {
-  NamedArgWithType(Basicstring_view<Char> argname, const T &value)
+  NamedArgWithType(BasicStringRef<Char> argname, const T &value)
   : NamedArg<Char>(argname, value) {}
 };
 
@@ -1463,7 +1552,7 @@ class RuntimeError : public std::runtime_error {
  protected:
   RuntimeError() : std::runtime_error("") {}
   RuntimeError(const RuntimeError &rerr) : std::runtime_error(rerr) {}
-  FMT_API ~RuntimeError() FMT_DTOR_NOEXCEPT;
+  FMT_API ~RuntimeError() FMT_DTOR_NOEXCEPT FMT_OVERRIDE;
 };
 
 template <typename Char>
@@ -1936,15 +2025,15 @@ template <typename Char>
 class ArgMap {
  private:
   typedef std::vector<
-    std::pair<fmt::Basicstring_view<Char>, internal::Arg> > MapType;
+    std::pair<fmt::BasicStringRef<Char>, internal::Arg> > MapType;
   typedef typename MapType::value_type Pair;
 
   MapType map_;
 
  public:
-  FMT_API void init(const ArgList &args);
+  void init(const ArgList &args);
 
-  const internal::Arg *find(const fmt::Basicstring_view<Char> &name) const {
+  const internal::Arg *find(const fmt::BasicStringRef<Char> &name) const {
     // The list is unsorted, so just return the first matching name.
     for (typename MapType::const_iterator it = map_.begin(), end = map_.end();
          it != end; ++it) {
@@ -1954,6 +2043,51 @@ class ArgMap {
     return FMT_NULL;
   }
 };
+
+template <typename Char>
+void ArgMap<Char>::init(const ArgList &args) {
+  if (!map_.empty())
+    return;
+  typedef internal::NamedArg<Char> NamedArg;
+  const NamedArg *named_arg = FMT_NULL;
+  bool use_values =
+      args.type(ArgList::MAX_PACKED_ARGS - 1) == internal::Arg::NONE;
+  if (use_values) {
+    for (unsigned i = 0;/*nothing*/; ++i) {
+      internal::Arg::Type arg_type = args.type(i);
+      switch (arg_type) {
+      case internal::Arg::NONE:
+        return;
+      case internal::Arg::NAMED_ARG:
+        named_arg = static_cast<const NamedArg*>(args.values_[i].pointer);
+        map_.push_back(Pair(named_arg->name, *named_arg));
+        break;
+      default:
+        /*nothing*/;
+      }
+    }
+    return;
+  }
+  for (unsigned i = 0; i != ArgList::MAX_PACKED_ARGS; ++i) {
+    internal::Arg::Type arg_type = args.type(i);
+    if (arg_type == internal::Arg::NAMED_ARG) {
+      named_arg = static_cast<const NamedArg*>(args.args_[i].pointer);
+      map_.push_back(Pair(named_arg->name, *named_arg));
+    }
+  }
+  for (unsigned i = ArgList::MAX_PACKED_ARGS;/*nothing*/; ++i) {
+    switch (args.args_[i].type) {
+    case internal::Arg::NONE:
+      return;
+    case internal::Arg::NAMED_ARG:
+      named_arg = static_cast<const NamedArg*>(args.args_[i].pointer);
+      map_.push_back(Pair(named_arg->name, *named_arg));
+      break;
+    default:
+      /*nothing*/;
+    }
+  }
+}
 
 template <typename Impl, typename Char, typename Spec = fmt::FormatSpec>
 class ArgFormatterBase : public ArgVisitor<Impl, void> {
@@ -2103,7 +2237,7 @@ class FormatterBase {
   template <typename Char>
   void write(BasicWriter<Char> &w, const Char *start, const Char *end) {
     if (start != end)
-      w << Basicstring_view<Char>(start, internal::to_unsigned(end - start));
+      w << BasicStringRef<Char>(start, internal::to_unsigned(end - start));
   }
 };
 }  // namespace internal
@@ -2180,7 +2314,7 @@ class BasicFormatter : private internal::FormatterBase {
 
   // Checks if manual indexing is used and returns the argument with
   // specified name.
-  internal::Arg get_arg(Basicstring_view<Char> arg_name, const char *&error);
+  internal::Arg get_arg(BasicStringRef<Char> arg_name, const char *&error);
 
   // Parses argument index and returns corresponding argument.
   internal::Arg parse_arg_index(const Char *&s);
@@ -2203,7 +2337,7 @@ class BasicFormatter : private internal::FormatterBase {
   BasicWriter<Char> &writer() { return writer_; }
 
   /** Formats stored arguments and writes the output to the writer. */
-  void format(BasicCstring_view<Char> format_str);
+  void format(BasicCStringRef<Char> format_str);
 
   // Formats a single argument and advances format_str, a format string pointer.
   const Char *format(const Char *&format_str, const internal::Arg &arg);
@@ -2241,7 +2375,8 @@ struct ArgArray;
 
 template <std::size_t N>
 struct ArgArray<N, true/*IsPacked*/> {
-  typedef Value Type[N > 0 ? N : 1];
+  // '+' is used to silence GCC -Wduplicated-branches warning.
+  typedef Value Type[N > 0 ? N : +1];
 
   template <typename Formatter, typename T>
   static Value make(const T &value) {
@@ -2397,7 +2532,7 @@ inline uint64_t make_type(FMT_GEN15(FMT_ARG_TYPE_DEFAULT)) {
 */
 class SystemError : public internal::RuntimeError {
  private:
-  FMT_API void init(int err_code, Cstring_view format_str, ArgList args);
+  FMT_API void init(int err_code, CStringRef format_str, ArgList args);
 
  protected:
   int error_code_;
@@ -2425,13 +2560,13 @@ class SystemError : public internal::RuntimeError {
        throw fmt::SystemError(errno, "cannot open file '{}'", filename);
    \endrst
   */
-  SystemError(int error_code, Cstring_view message) {
+  SystemError(int error_code, CStringRef message) {
     init(error_code, message, ArgList());
   }
   FMT_DEFAULTED_COPY_CTOR(SystemError)
-  FMT_VARIADIC_CTOR(SystemError, init, int, Cstring_view)
+  FMT_VARIADIC_CTOR(SystemError, init, int, CStringRef)
 
-  FMT_API ~SystemError() FMT_DTOR_NOEXCEPT;
+  FMT_API ~SystemError() FMT_DTOR_NOEXCEPT FMT_OVERRIDE;
 
   int error_code() const { return error_code_; }
 };
@@ -2453,7 +2588,7 @@ class SystemError : public internal::RuntimeError {
   \endrst
  */
 FMT_API void format_system_error(fmt::Writer &out, int error_code,
-                                 fmt::string_view message) FMT_NOEXCEPT;
+                                 fmt::StringRef message) FMT_NOEXCEPT;
 
 /**
   \rst
@@ -2647,10 +2782,10 @@ class BasicWriter {
     See also :ref:`syntax`.
     \endrst
    */
-  void write(BasicCstring_view<Char> format, ArgList args) {
+  void write(BasicCStringRef<Char> format, ArgList args) {
     BasicFormatter<Char>(args, *this).format(format);
   }
-  FMT_VARIADIC_VOID(write, BasicCstring_view<Char>)
+  FMT_VARIADIC_VOID(write, BasicCStringRef<Char>)
 
   BasicWriter &operator<<(int value) {
     write_decimal(value);
@@ -2715,14 +2850,14 @@ class BasicWriter {
     Writes *value* to the stream.
     \endrst
    */
-  BasicWriter &operator<<(fmt::Basicstring_view<Char> value) {
+  BasicWriter &operator<<(fmt::BasicStringRef<Char> value) {
     const Char *str = value.data();
     buffer_.append(str, str + value.size());
     return *this;
   }
 
   BasicWriter &operator<<(
-      typename internal::WCharHelper<string_view, Char>::Supported value) {
+      typename internal::WCharHelper<StringRef, Char>::Supported value) {
     const char *str = value.data();
     buffer_.append(str, str + value.size());
     return *this;
@@ -2947,7 +3082,7 @@ void BasicWriter<Char>::write_int(T value, Spec spec) {
   }
   case 'n': {
     unsigned num_digits = internal::count_digits(abs_value);
-    fmt::string_view sep = "";
+    fmt::StringRef sep = "";
 #if !(defined(ANDROID) || defined(__ANDROID__))
     sep = internal::thousands_sep(std::localeconv());
 #endif
@@ -3240,14 +3375,14 @@ typedef BasicArrayWriter<wchar_t> WArrayWriter;
 // Reports a system error without throwing an exception.
 // Can be used to report errors from destructors.
 FMT_API void report_system_error(int error_code,
-                                 string_view message) FMT_NOEXCEPT;
+                                 StringRef message) FMT_NOEXCEPT;
 
 #if FMT_USE_WINDOWS_H
 
 /** A Windows error. */
 class WindowsError : public SystemError {
  private:
-  FMT_API void init(int error_code, Cstring_view format_str, ArgList args);
+  FMT_API void init(int error_code, CStringRef format_str, ArgList args);
 
  public:
   /**
@@ -3278,16 +3413,16 @@ class WindowsError : public SystemError {
      }
    \endrst
   */
-  WindowsError(int error_code, Cstring_view message) {
+  WindowsError(int error_code, CStringRef message) {
     init(error_code, message, ArgList());
   }
-  FMT_VARIADIC_CTOR(WindowsError, init, int, Cstring_view)
+  FMT_VARIADIC_CTOR(WindowsError, init, int, CStringRef)
 };
 
 // Reports a Windows error without throwing an exception.
 // Can be used to report errors from destructors.
 FMT_API void report_windows_error(int error_code,
-                                  string_view message) FMT_NOEXCEPT;
+                                  StringRef message) FMT_NOEXCEPT;
 
 #endif
 
@@ -3299,7 +3434,7 @@ enum Color { BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE };
   Example:
     print_colored(fmt::RED, "Elapsed time: {0:.2f} seconds", 1.23);
  */
-FMT_API void print_colored(Color c, Cstring_view format, ArgList args);
+FMT_API void print_colored(Color c, CStringRef format, ArgList args);
 
 /**
   \rst
@@ -3310,13 +3445,13 @@ FMT_API void print_colored(Color c, Cstring_view format, ArgList args);
     std::string message = format("The answer is {}", 42);
   \endrst
 */
-inline std::string format(Cstring_view format_str, ArgList args) {
+inline std::string format(CStringRef format_str, ArgList args) {
   MemoryWriter w;
   w.write(format_str, args);
   return w.str();
 }
 
-inline std::wstring format(WCstring_view format_str, ArgList args) {
+inline std::wstring format(WCStringRef format_str, ArgList args) {
   WMemoryWriter w;
   w.write(format_str, args);
   return w.str();
@@ -3331,7 +3466,7 @@ inline std::wstring format(WCstring_view format_str, ArgList args) {
     print(stderr, "Don't {}!", "panic");
   \endrst
  */
-FMT_API void print(std::FILE *f, Cstring_view format_str, ArgList args);
+FMT_API void print(std::FILE *f, CStringRef format_str, ArgList args);
 
 /**
   \rst
@@ -3342,7 +3477,7 @@ FMT_API void print(std::FILE *f, Cstring_view format_str, ArgList args);
     print("Elapsed time: {0:.2f} seconds", 1.23);
   \endrst
  */
-FMT_API void print(Cstring_view format_str, ArgList args);
+FMT_API void print(CStringRef format_str, ArgList args);
 
 /**
   Fast integer formatter.
@@ -3460,21 +3595,21 @@ inline void format_decimal(char *&buffer, T value) {
   \endrst
  */
 template <typename T>
-inline internal::NamedArgWithType<char, T> arg(string_view name, const T &arg) {
+inline internal::NamedArgWithType<char, T> arg(StringRef name, const T &arg) {
   return internal::NamedArgWithType<char, T>(name, arg);
 }
 
 template <typename T>
-inline internal::NamedArgWithType<wchar_t, T> arg(Wstring_view name, const T &arg) {
+inline internal::NamedArgWithType<wchar_t, T> arg(WStringRef name, const T &arg) {
   return internal::NamedArgWithType<wchar_t, T>(name, arg);
 }
 
 // The following two functions are deleted intentionally to disable
 // nested named arguments as in ``format("{}", arg("a", arg("b", 42)))``.
 template <typename Char>
-void arg(string_view, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
+void arg(StringRef, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
 template <typename Char>
-void arg(Wstring_view, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
+void arg(WStringRef, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED;
 }
 
 #if FMT_GCC_VERSION
@@ -3504,10 +3639,10 @@ void arg(Wstring_view, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED
 #define FMT_GET_ARG_NAME(type, index) arg##index
 
 #if FMT_USE_VARIADIC_TEMPLATES
-# define FMT_VARIADIC_(Char, ReturnType, func, call, ...) \
+# define FMT_VARIADIC_(Const, Char, ReturnType, func, call, ...) \
   template <typename... Args> \
   ReturnType func(FMT_FOR_EACH(FMT_ADD_ARG_NAME, __VA_ARGS__), \
-      const Args & ... args) { \
+      const Args & ... args) Const { \
     typedef fmt::internal::ArgArray<sizeof...(Args)> ArgArray; \
     typename ArgArray::Type array{ \
       ArgArray::template make<fmt::BasicFormatter<Char> >(args)...}; \
@@ -3517,35 +3652,35 @@ void arg(Wstring_view, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED
 #else
 // Defines a wrapper for a function taking __VA_ARGS__ arguments
 // and n additional arguments of arbitrary types.
-# define FMT_WRAP(Char, ReturnType, func, call, n, ...) \
+# define FMT_WRAP(Const, Char, ReturnType, func, call, n, ...) \
   template <FMT_GEN(n, FMT_MAKE_TEMPLATE_ARG)> \
   inline ReturnType func(FMT_FOR_EACH(FMT_ADD_ARG_NAME, __VA_ARGS__), \
-      FMT_GEN(n, FMT_MAKE_ARG)) { \
+      FMT_GEN(n, FMT_MAKE_ARG)) Const { \
     fmt::internal::ArgArray<n>::Type arr; \
     FMT_GEN(n, FMT_ASSIGN_##Char); \
     call(FMT_FOR_EACH(FMT_GET_ARG_NAME, __VA_ARGS__), fmt::ArgList( \
       fmt::internal::make_type(FMT_GEN(n, FMT_MAKE_REF2)), arr)); \
   }
 
-# define FMT_VARIADIC_(Char, ReturnType, func, call, ...) \
-  inline ReturnType func(FMT_FOR_EACH(FMT_ADD_ARG_NAME, __VA_ARGS__)) { \
+# define FMT_VARIADIC_(Const, Char, ReturnType, func, call, ...) \
+  inline ReturnType func(FMT_FOR_EACH(FMT_ADD_ARG_NAME, __VA_ARGS__)) Const { \
     call(FMT_FOR_EACH(FMT_GET_ARG_NAME, __VA_ARGS__), fmt::ArgList()); \
   } \
-  FMT_WRAP(Char, ReturnType, func, call, 1, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 2, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 3, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 4, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 5, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 6, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 7, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 8, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 9, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 10, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 11, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 12, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 13, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 14, __VA_ARGS__) \
-  FMT_WRAP(Char, ReturnType, func, call, 15, __VA_ARGS__)
+  FMT_WRAP(Const, Char, ReturnType, func, call, 1, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 2, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 3, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 4, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 5, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 6, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 7, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 8, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 9, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 10, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 11, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 12, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 13, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 14, __VA_ARGS__) \
+  FMT_WRAP(Const, Char, ReturnType, func, call, 15, __VA_ARGS__)
 #endif  // FMT_USE_VARIADIC_TEMPLATES
 
 /**
@@ -3576,10 +3711,16 @@ void arg(Wstring_view, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED
   \endrst
  */
 #define FMT_VARIADIC(ReturnType, func, ...) \
-  FMT_VARIADIC_(char, ReturnType, func, return func, __VA_ARGS__)
+  FMT_VARIADIC_(, char, ReturnType, func, return func, __VA_ARGS__)
+
+#define FMT_VARIADIC_CONST(ReturnType, func, ...) \
+  FMT_VARIADIC_(const, char, ReturnType, func, return func, __VA_ARGS__)
 
 #define FMT_VARIADIC_W(ReturnType, func, ...) \
-  FMT_VARIADIC_(wchar_t, ReturnType, func, return func, __VA_ARGS__)
+  FMT_VARIADIC_(, wchar_t, ReturnType, func, return func, __VA_ARGS__)
+
+#define FMT_VARIADIC_CONST_W(ReturnType, func, ...) \
+  FMT_VARIADIC_(const, wchar_t, ReturnType, func, return func, __VA_ARGS__)
 
 #define FMT_CAPTURE_ARG_(id, index) ::fmt::arg(#id, id)
 
@@ -3604,11 +3745,11 @@ void arg(Wstring_view, const internal::NamedArg<Char>&) FMT_DELETED_OR_UNDEFINED
 #define FMT_CAPTURE_W(...) FMT_FOR_EACH(FMT_CAPTURE_ARG_W_, __VA_ARGS__)
 
 namespace fmt {
-FMT_VARIADIC(std::string, format, Cstring_view)
-FMT_VARIADIC_W(std::wstring, format, WCstring_view)
-FMT_VARIADIC(void, print, Cstring_view)
-FMT_VARIADIC(void, print, std::FILE *, Cstring_view)
-FMT_VARIADIC(void, print_colored, Color, Cstring_view)
+FMT_VARIADIC(std::string, format, CStringRef)
+FMT_VARIADIC_W(std::wstring, format, WCStringRef)
+FMT_VARIADIC(void, print, CStringRef)
+FMT_VARIADIC(void, print, std::FILE *, CStringRef)
+FMT_VARIADIC(void, print_colored, Color, CStringRef)
 
 namespace internal {
 template <typename Char>
@@ -3622,17 +3763,19 @@ template <typename Char>
 unsigned parse_nonnegative_int(const Char *&s) {
   assert('0' <= *s && *s <= '9');
   unsigned value = 0;
-  do {
-    unsigned new_value = value * 10 + (*s++ - '0');
-    // Check if value wrapped around.
-    if (new_value < value) {
-      value = (std::numeric_limits<unsigned>::max)();
-      break;
-    }
-    value = new_value;
-  } while ('0' <= *s && *s <= '9');
   // Convert to unsigned to prevent a warning.
   unsigned max_int = (std::numeric_limits<int>::max)();
+  unsigned big = max_int / 10;
+  do {
+    // Check for overflow.
+    if (value > big) {
+      value = max_int + 1;
+      break;
+    }
+    value = value * 10 + (*s - '0');
+    ++s;
+  } while ('0' <= *s && *s <= '9');
+  // Convert to unsigned to prevent a warning.
   if (value > max_int)
     FMT_THROW(FormatError("number is too big"));
   return value;
@@ -3660,7 +3803,7 @@ void check_sign(const Char *&s, const Arg &arg) {
 
 template <typename Char, typename AF>
 inline internal::Arg BasicFormatter<Char, AF>::get_arg(
-    Basicstring_view<Char> arg_name, const char *&error) {
+    BasicStringRef<Char> arg_name, const char *&error) {
   if (check_no_auto_index(error)) {
     map_.init(args());
     const internal::Arg *arg = map_.find(arg_name);
@@ -3692,7 +3835,7 @@ inline internal::Arg BasicFormatter<Char, AF>::parse_arg_name(const Char *&s) {
     c = *++s;
   } while (internal::is_name_start(c) || ('0' <= c && c <= '9'));
   const char *error = FMT_NULL;
-  internal::Arg arg = get_arg(Basicstring_view<Char>(start, s - start), error);
+  internal::Arg arg = get_arg(BasicStringRef<Char>(start, s - start), error);
   if (error)
     FMT_THROW(FormatError(error));
   return arg;
@@ -3804,7 +3947,8 @@ const Char *BasicFormatter<Char, ArgFormatter>::format(
       default:
         FMT_THROW(FormatError("width is not integer"));
       }
-      if (value > (std::numeric_limits<int>::max)())
+      unsigned max_int = (std::numeric_limits<int>::max)();
+      if (value > max_int)
         FMT_THROW(FormatError("number is too big"));
       spec.width_ = static_cast<int>(value);
     }
@@ -3842,7 +3986,8 @@ const Char *BasicFormatter<Char, ArgFormatter>::format(
           default:
             FMT_THROW(FormatError("precision is not integer"));
         }
-        if (value > (std::numeric_limits<int>::max)())
+        unsigned max_int = (std::numeric_limits<int>::max)();
+        if (value > max_int)
           FMT_THROW(FormatError("number is too big"));
         spec.precision_ = static_cast<int>(value);
       } else {
@@ -3869,7 +4014,7 @@ const Char *BasicFormatter<Char, ArgFormatter>::format(
 }
 
 template <typename Char, typename AF>
-void BasicFormatter<Char, AF>::format(BasicCstring_view<Char> format_str) {
+void BasicFormatter<Char, AF>::format(BasicCStringRef<Char> format_str) {
   const Char *s = format_str.c_str();
   const Char *start = s;
   while (*s) {
@@ -3894,33 +4039,33 @@ template <typename Char, typename It>
 struct ArgJoin {
   It first;
   It last;
-  BasicCstring_view<Char> sep;
+  BasicCStringRef<Char> sep;
 
-  ArgJoin(It first, It last, const BasicCstring_view<Char>& sep) :
+  ArgJoin(It first, It last, const BasicCStringRef<Char>& sep) :
     first(first),
     last(last),
     sep(sep) {}
 };
 
 template <typename It>
-ArgJoin<char, It> join(It first, It last, const BasicCstring_view<char>& sep) {
+ArgJoin<char, It> join(It first, It last, const BasicCStringRef<char>& sep) {
   return ArgJoin<char, It>(first, last, sep);
 }
 
 template <typename It>
-ArgJoin<wchar_t, It> join(It first, It last, const BasicCstring_view<wchar_t>& sep) {
+ArgJoin<wchar_t, It> join(It first, It last, const BasicCStringRef<wchar_t>& sep) {
   return ArgJoin<wchar_t, It>(first, last, sep);
 }
 
 #if FMT_HAS_GXX_CXX11
 template <typename Range>
-auto join(const Range& range, const BasicCstring_view<char>& sep)
+auto join(const Range& range, const BasicCStringRef<char>& sep)
     -> ArgJoin<char, decltype(std::begin(range))> {
   return join(std::begin(range), std::end(range), sep);
 }
 
 template <typename Range>
-auto join(const Range& range, const BasicCstring_view<wchar_t>& sep)
+auto join(const Range& range, const BasicCStringRef<wchar_t>& sep)
     -> ArgJoin<wchar_t, decltype(std::begin(range))> {
   return join(std::begin(range), std::end(range), sep);
 }
