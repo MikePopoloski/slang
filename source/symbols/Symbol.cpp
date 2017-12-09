@@ -16,8 +16,8 @@ namespace slang {
 
 const LookupRefPoint LookupRefPoint::any;
 
-Symbol::LazyConstant::LazyConstant(const Scope* scope) :
-    Lazy(scope, &ConstantValue::Invalid) {}
+Symbol::LazyConstant::LazyConstant(ScopeOrSymbol parent) :
+    Lazy(parent, &ConstantValue::Invalid) {}
 
 Symbol::LazyConstant& Symbol::LazyConstant::operator=(const ExpressionSyntax& source) {
     Lazy<LazyConstant, ConstantValue, ExpressionSyntax>::operator=(source);
@@ -25,7 +25,7 @@ Symbol::LazyConstant& Symbol::LazyConstant::operator=(const ExpressionSyntax& so
 }
 
 Symbol::LazyConstant& Symbol::LazyConstant::operator=(ConstantValue result) {
-    ConstantValue* p = storedScope->getCompilation().createConstant(std::move(result));
+    ConstantValue* p = getScope().getCompilation().createConstant(std::move(result));
     Lazy<LazyConstant, ConstantValue, ExpressionSyntax>::operator=(p);
     return *this;
 }
@@ -36,24 +36,24 @@ const ConstantValue& Symbol::LazyConstant::evaluate(const Scope& scope,
     return *scope.getCompilation().createConstant(std::move(v));
 }
 
-Symbol::LazyStatement::LazyStatement(const Scope* scope) :
-    Lazy(scope, &InvalidStatement::Instance) {}
+Symbol::LazyStatement::LazyStatement(ScopeOrSymbol parent) :
+    Lazy(parent, &InvalidStatement::Instance) {}
 
 const Statement& Symbol::LazyStatement::evaluate(const Scope& scope,
                                                  const StatementSyntax& syntax) const {
     return Binder(scope).bindStatement(syntax);
 }
 
-Symbol::LazyStatementList::LazyStatementList(const Scope* scope) :
-    Lazy(scope, &StatementList::Empty) {}
+Symbol::LazyStatementList::LazyStatementList(ScopeOrSymbol parent) :
+    Lazy(parent, &StatementList::Empty) {}
 
 const StatementList& Symbol::LazyStatementList::evaluate(const Scope& scope,
                                                          const SyntaxList<SyntaxNode>& list) const {
     return Binder(scope).bindStatementList(list);
 }
 
-Symbol::LazyInitializer::LazyInitializer(const Scope* scope) :\
-    Lazy(scope, nullptr) {}
+Symbol::LazyInitializer::LazyInitializer(ScopeOrSymbol parent) :\
+    Lazy(parent, nullptr) {}
 
 const Expression& Symbol::LazyInitializer::evaluate(const Scope& scope,
                                                     const ExpressionSyntax& syntax) const {
@@ -61,38 +61,12 @@ const Expression& Symbol::LazyInitializer::evaluate(const Scope& scope,
     return Binder(scope).bindConstantExpression(syntax);
 }
 
-Symbol::LazyType::LazyType(const Scope* scope) :
-    Lazy(scope, &ErrorTypeSymbol::Instance) {}
+Symbol::LazyType::LazyType(ScopeOrSymbol parent) :
+    Lazy(parent, &ErrorTypeSymbol::Instance) {}
 
 const TypeSymbol& Symbol::LazyType::evaluate(const Scope& scope,
                                              const DataTypeSyntax& syntax) const {
     return scope.getCompilation().getType(syntax, scope);
-}
-
-const Symbol::LazyDefinition::Value& Symbol::LazyDefinition::get() const {
-    if (cache.index() == 0)
-        return std::get<0>(cache);
-
-    // TODO: module namespacing
-    Source source = std::get<1>(cache);
-    const DefinitionSymbol* definition = nullptr;
-    ParamOverrideMap paramMap;
-
-    Token typeName = source->type;
-    LookupResult result;
-    result.nameKind = LookupNameKind::Definition;
-    scope->lookup(typeName.valueText(), result);
-
-    const Symbol* foundSymbol = result.getFoundSymbol();
-    if (foundSymbol) {
-        // TODO: check symbol kind?
-        definition = &foundSymbol->as<DefinitionSymbol>();
-        if (source->parameters)
-            definition->createParamOverrides(*source->parameters, paramMap);
-    }
-
-    cache = std::make_tuple(definition, std::move(paramMap));
-    return std::get<0>(cache);
 }
 
 const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
@@ -161,21 +135,129 @@ void LookupResult::addPotentialImport(const Symbol& import) {
     imports.append(&import);
 }
 
-Compilation& Scope::getCompilation() const {
-    return thisSym->getRoot().compilation;
+Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
+    compilation(compilation_), thisSym(thisSym_)
+{
+    nameMap = compilation.allocSymbolMap();
+}
+
+void Scope::addMember(const Symbol& symbol) {
+    ASSERT(!symbol.parentScope);
+    ASSERT(!symbol.nextInScope);
+
+    if (!lastMember) {
+        lastMember = firstMember = &symbol;
+        symbol.indexInScope = Symbol::Index{ 1 };
+    }
+    else {
+        symbol.indexInScope = Symbol::Index{ (uint32_t)lastMember->indexInScope + 1 };
+        lastMember->nextInScope = &symbol;
+        lastMember = &symbol;
+    }
+
+    symbol.parentScope = this;
+    if (!symbol.name.empty())
+        nameMap->emplace(symbol.name, &symbol);
+}
+
+void Scope::addMembers(const SyntaxNode& syntax) {
+    switch (syntax.kind) {
+        case SyntaxKind::CompilationUnit: {
+            auto unit = compilation.emplace<CompilationUnitSymbol>(compilation);
+            for (auto ms : syntax.as<CompilationUnitSyntax>().members)
+                unit->addMembers(*ms);
+            break;
+        }
+        case SyntaxKind::ModuleDeclaration:
+        case SyntaxKind::InterfaceDeclaration:
+        case SyntaxKind::ProgramDeclaration:
+            addMember(DefinitionSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>()));
+            break;
+        case SyntaxKind::PackageImportDeclaration:
+            for (auto item : syntax.as<PackageImportDeclarationSyntax>().items) {
+                if (item->item.kind == TokenKind::Star) {
+                    addMember(*compilation.emplace<WildcardImportSymbol>(
+                        item->package.valueText(),
+                        item->item.location()));
+                }
+                else {
+                    addMember(*compilation.emplace<ExplicitImportSymbol>(
+                        item->package.valueText(),
+                        item->item.valueText(),
+                        item->item.location()));
+                }
+            }
+            break;
+        case SyntaxKind::HierarchyInstantiation:
+            compilation.addDeferredMembers(deferredMemberIndex, syntax);
+            break;
+        case SyntaxKind::ModportDeclaration:
+            // TODO: modports
+            break;
+        case SyntaxKind::IfGenerate:
+        case SyntaxKind::LoopGenerate:
+            // TODO: add special name conflict checks for generate blocks
+            compilation.addDeferredMembers(deferredMemberIndex, syntax);
+            break;
+        case SyntaxKind::FunctionDeclaration:
+        case SyntaxKind::TaskDeclaration:
+            addMember(SubroutineSymbol::fromSyntax(compilation, syntax.as<FunctionDeclarationSyntax>()));
+            break;
+        case SyntaxKind::DataDeclaration: {
+            SmallVectorSized<const VariableSymbol*, 4> variables;
+            VariableSymbol::fromSyntax(compilation, syntax.as<DataDeclarationSyntax>(), variables);
+            for (auto variable : variables)
+                addMember(*variable);
+            break;
+        }
+        case SyntaxKind::ParameterDeclarationStatement: {
+            SmallVectorSized<ParameterSymbol*, 16> params;
+            ParameterSymbol::fromSyntax(compilation,
+                                        syntax.as<ParameterDeclarationStatementSyntax>().parameter,
+                                        params);
+            for (auto param : params)
+                addMember(*param);
+            break;
+        }
+        case SyntaxKind::ParameterDeclaration: {
+            SmallVectorSized<ParameterSymbol*, 16> params;
+            ParameterSymbol::fromSyntax(compilation,
+                                        syntax.as<ParameterDeclarationSyntax>(),
+                                        params);
+            for (auto param : params)
+                addMember(*param);
+            break;
+        }
+        case SyntaxKind::GenerateBlock:
+            for (auto member : syntax.as<GenerateBlockSyntax>().members)
+                addMembers(*member);
+            break;
+        case SyntaxKind::AlwaysBlock:
+        case SyntaxKind::AlwaysCombBlock:
+        case SyntaxKind::AlwaysLatchBlock:
+        case SyntaxKind::AlwaysFFBlock:
+        case SyntaxKind::InitialBlock:
+        case SyntaxKind::FinalBlock: {
+            auto kind = SemanticFacts::getProceduralBlockKind(syntax.as<ProceduralBlockSyntax>().kind);
+            addMember(*compilation.emplace<ProceduralBlockSymbol>(compilation, kind));
+            break;
+        }
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 void Scope::lookup(string_view searchName, LookupResult& result) const {
     // First do a direct search and see if we find anything.
-    auto nameEntry = lookupInternal(searchName);
-    if (nameEntry) {
+    auto it = nameMap->find(searchName);
+    if (it != nameMap->end()) {
         // If this is a local or scoped lookup, check that we can access
         // the symbol (it must be declared before usage). Callables can be
         // referenced anywhere in the scope, so the location doesn't matter for them.
         bool locationGood = true;
-        const Symbol* symbol = nameEntry->symbol;
+        const Symbol* symbol = it->second;
         if (result.referencePointMatters())
-            locationGood = LookupRefPoint(*this, nameEntry->index) < result.referencePoint;
+            locationGood = LookupRefPoint::before(*symbol) < result.referencePoint;
 
         if (locationGood) {
             // We found the symbol we wanted. If it was an explicit package import, unwrap it first.
@@ -190,24 +272,24 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
 
     // If we got here, we didn't find a viable symbol locally. Try looking in
     // any wildcard imports we may have.
-    SmallVectorSized<std::tuple<ImportEntry*, const Symbol*>, 4> importResults;
-    for (auto& importEntry : imports) {
-        if (result.referencePoint < LookupRefPoint(*this, importEntry.index))
-            break;
+    //SmallVectorSized<std::tuple<ImportEntry*, const Symbol*>, 4> importResults;
+    //for (auto& importEntry : imports) {
+    //    if (result.referencePoint < LookupRefPoint(*this, importEntry.index))
+    //        break;
 
-        // TODO: handle missing package
-        auto symbol = importEntry.import->getPackage()->lookupDirect(searchName);
-        if (symbol) {
-            importResults.append(std::make_tuple(&importEntry, symbol));
-            result.addPotentialImport(*symbol);
-        }
-    }
+    //    // TODO: handle missing package
+    //    auto symbol = importEntry.import->getPackage()->lookupDirect(searchName);
+    //    if (symbol) {
+    //        importResults.append(std::make_tuple(&importEntry, symbol));
+    //        result.addPotentialImport(*symbol);
+    //    }
+    //}
 
-    if (!importResults.empty()) {
-        if (importResults.size() == 1)
-            result.setSymbol(*std::get<1>(importResults[0]), true);
-        return;
-    }
+    //if (!importResults.empty()) {
+    //    if (importResults.size() == 1)
+    //        result.setSymbol(*std::get<1>(importResults[0]), true);
+    //    return;
+    //}
 
     if (thisSym->kind == SymbolKind::Root) {
         // For scoped lookups, if we reach the root without finding anything,
@@ -223,18 +305,18 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
 }
 
 const Symbol* Scope::lookupDirect(string_view searchName) const {
+    // If the parser added a missing identifier token, it already issued an
+    // appropriate error. This check here makes it easier to silently continue
+    // in that case without checking every time someone wants to do a lookup.
+    if (searchName.empty())
+        return nullptr;
+
     // Just do a simple lookup and return the result if we have one.
     // One wrinkle is that we should not include any imported symbols.
-    auto result = lookupInternal(searchName);
-    if (result && result->symbol->kind != SymbolKind::ExplicitImport)
-        return result->symbol;
+    auto result = nameMap->find(searchName);
+    if (result != nameMap->end() && result->second->kind != SymbolKind::ExplicitImport)
+        return result->second;
     return nullptr;
-}
-
-void Scope::setMembers(SymbolList list) {
-    // TODO: don't require looking up the compilation for every scope like this
-    nameMap = nullptr;
-    memberList = getCompilation().makeCopy(list);
 }
 
 ConstantValue Scope::evaluateConstant(const ExpressionSyntax& expr) const {
@@ -247,75 +329,6 @@ ConstantValue Scope::evaluateConstantAndConvert(const ExpressionSyntax& expr, co
     SourceLocation errLoc = errorLocation ? errorLocation : expr.getFirstToken().location();
     const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errLoc, targetType);
     return bound.eval();
-}
-
-const SymbolMap::NameEntry* Scope::lookupInternal(string_view searchName) const {
-    // Ensure our name map has been constructed.
-    if (!nameMap)
-        buildNameMap();
-
-    // If the parser added a missing identifier token, it already issued an
-    // appropriate error. This check here makes it easier to silently continue
-    // in that case without checking every time someone wants to do a lookup.
-    if (searchName.empty())
-        return nullptr;
-
-    return nameMap->find(searchName);
-}
-
-void Scope::buildNameMap() const {
-    // TODO: make sure this doesn't become re-entrant when evaluating generate conditions
-    nameMap = getCompilation().createSymbolMap();
-    for (uint32_t i = 0; i < memberList.size(); i++) {
-        // If the symbol is lazy, replace it with the resolved symbol now.
-        const Symbol* symbol = memberList[i];
-        if (symbol->kind == SymbolKind::LazySyntax)
-            memberList[i] = symbol = symbol->as<LazySyntaxSymbol>().resolve();
-
-        // If the symbol has a name, we can look it up.
-        if (!symbol->name.empty())
-            nameMap->add(*symbol, i);
-    }
-}
-
-DynamicScopeSymbol::DynamicScopeSymbol(const Scope& parent) :
-    Symbol(SymbolKind::DynamicScope, parent),
-    Scope(this)
-{
-}
-
-void DynamicScopeSymbol::addSymbol(const Symbol& symbol) {
-    members.push_back(&symbol);
-    setMembers(members);
-}
-
-SymbolList DynamicScopeSymbol::createAndAddSymbols(const SyntaxNode& node) {
-    SmallVectorSized<const Symbol*, 2> symbols;
-    getRoot().compilation.createSymbols(node, *this, symbols);
-    for (auto symbol : symbols)
-        addSymbol(*symbol);
-    return symbols.copy(getRoot().compilation);
-}
-
-LazySyntaxSymbol::LazySyntaxSymbol(const SyntaxNode& node, const Scope& parent, LazyDefinition* definition) :
-    Symbol(SymbolKind::LazySyntax, parent),
-    node(node),
-    instanceDefinition(definition) {}
-
-const Symbol* LazySyntaxSymbol::resolve() const {
-    Compilation& compilation = getScope()->getCompilation();
-    switch (node.kind) {
-        case SyntaxKind::IfGenerate:
-            return GenerateBlockSymbol::fromSyntax(compilation, node.as<IfGenerateSyntax>(), *getScope());
-        case SyntaxKind::LoopGenerate:
-            return &GenerateBlockArraySymbol::fromSyntax(compilation, node.as<LoopGenerateSyntax>(), *getScope());
-        case SyntaxKind::HierarchicalInstance:
-            ASSERT(instanceDefinition);
-            return &InstanceSymbol::fromSyntax(compilation, node.as<HierarchicalInstanceSyntax>(),
-                                               *instanceDefinition, *getScope());
-        default:
-            THROW_UNREACHABLE;
-    }
 }
 
 Symbol& Symbol::clone(const Scope& newParent) const {

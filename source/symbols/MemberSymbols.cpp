@@ -11,42 +11,17 @@
 
 namespace slang {
 
-SequentialBlockSymbol::SequentialBlockSymbol(const Scope& parent) :
-    Symbol(SymbolKind::SequentialBlock, parent),
-    Scope(this),
-    body(this)
-{
-}
-
 SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(Compilation& compilation,
-                                                                  const ForLoopStatementSyntax& forLoop,
-                                                                  const Scope& parent) {
-    SequentialBlockSymbol& block = *compilation.emplace<SequentialBlockSymbol>(parent);
+                                                                  const ForLoopStatementSyntax& forLoop) {
+    SequentialBlockSymbol& block = *compilation.emplace<SequentialBlockSymbol>(compilation);
 
     const auto& forVariable = forLoop.initializers[0]->as<ForVariableDeclarationSyntax>();
-    auto loopVar = compilation.emplace<VariableSymbol>(forVariable.declarator.name.valueText(), block);
+    auto loopVar = compilation.emplace<VariableSymbol>(forVariable.declarator.name.valueText());
     loopVar->type = forVariable.type;
     loopVar->initializer = forVariable.declarator.initializer->expr;
 
-    SmallVectorSized<const Symbol*, 2> members;
-    members.append(loopVar);
-    block.setMembers(members);
+    block.addMember(*loopVar);
     return block;
-}
-
-ProceduralBlockSymbol::ProceduralBlockSymbol(const Scope& parent, ProceduralBlockKind procedureKind) :
-    Symbol(SymbolKind::ProceduralBlock, parent),
-    Scope(this),
-    body(this),
-    procedureKind(procedureKind)
-{
-}
-
-ExplicitImportSymbol::ExplicitImportSymbol(string_view packageName, string_view importName,
-                                           SourceLocation location, const Scope& parent) :
-    Symbol(SymbolKind::ExplicitImport, parent, importName, location),
-    packageName(packageName), importName(importName)
-{
 }
 
 const PackageSymbol* ExplicitImportSymbol::package() const {
@@ -66,32 +41,19 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
     return import;
 }
 
-WildcardImportSymbol::WildcardImportSymbol(string_view packageName, SourceLocation location, const Scope& parent) :
-    Symbol(SymbolKind::WildcardImport, parent, /* no name */ "", location),
-    packageName(packageName)
-{
-}
-
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
     if (!package)
         package = getRoot().findPackage(packageName);
     return *package;
 }
 
-ParameterSymbol::ParameterSymbol(string_view name, const Scope& parent) :
-    Symbol(SymbolKind::Parameter, parent, name),
-    defaultValue(&parent),
-    value(&parent)
-{
-}
-
 void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
-                                 const Scope& parent, SmallVector<ParameterSymbol*>& results) {
+                                 SmallVector<ParameterSymbol*>& results) {
 
     bool isLocal = syntax.keyword.kind == TokenKind::LocalParamKeyword;
 
     for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
-        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), parent);
+        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText());
         param->isLocalParam = isLocal;
 
         if (decl->initializer) {
@@ -129,22 +91,22 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
 //    }
 //}
 
-VariableSymbol::VariableSymbol(string_view name, const Scope& parent,
-                               VariableLifetime lifetime, bool isConst) :
-    Symbol(SymbolKind::Variable, parent, name),
-    type(&parent), initializer(&parent),
-    lifetime(lifetime), isConst(isConst) {}
+//VariableSymbol::VariableSymbol(string_view name, const Scope& parent,
+//                               VariableLifetime lifetime, bool isConst) :
+//    Symbol(SymbolKind::Variable, parent, name),
+//    type(&parent), initializer(&parent),
+//    lifetime(lifetime), isConst(isConst) {}
 
-VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, const Scope& parent,
-                               VariableLifetime lifetime, bool isConst) :
-    Symbol(kind, parent, name),
-    type(&parent), initializer(&parent),
-    lifetime(lifetime), isConst(isConst) {}
+//VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, const Scope& parent,
+//                               VariableLifetime lifetime, bool isConst) :
+//    Symbol(kind, parent, name),
+//    type(&parent), initializer(&parent),
+//    lifetime(lifetime), isConst(isConst) {}
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
-                                const Scope& parent, SmallVector<const VariableSymbol*>& results) {
+                                SmallVector<const VariableSymbol*>& results) {
     for (auto declarator : syntax.declarators) {
-        auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(), parent);
+        auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText());
         variable->type = syntax.type;
         if (declarator->initializer)
             variable->initializer = declarator->initializer->expr;
@@ -153,34 +115,16 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     }
 }
 
-FormalArgumentSymbol::FormalArgumentSymbol(const Scope& parent) :
-    VariableSymbol(SymbolKind::FormalArgument, "", parent) {}
-
-FormalArgumentSymbol::FormalArgumentSymbol(string_view name, const Scope& parent,
-                                           FormalArgumentDirection direction) :
-    VariableSymbol(SymbolKind::FormalArgument, name, parent, VariableLifetime::Automatic,
-                   direction == FormalArgumentDirection::ConstRef),
-    direction(direction) {}
-
-SubroutineSymbol::SubroutineSymbol(string_view name, VariableLifetime defaultLifetime,
-                                   bool isTask, const Scope& parent) :
-    Symbol(SymbolKind::Subroutine, parent, name),
-    Scope(this),
-    body(this), returnType(this),
-    defaultLifetime(defaultLifetime), isTask(isTask)
-{
-}
-
 // TODO: move these someplace better
 
-static void findChildSymbols(const Scope& parent, const StatementSyntax& syntax,
+static void findChildSymbols(Compilation& compilation, const StatementSyntax& syntax,
                              SmallVector<const Symbol*>& results) {
     switch (syntax.kind) {
         case SyntaxKind::ConditionalStatement: {
             const auto& conditional = syntax.as<ConditionalStatementSyntax>();
-            findChildSymbols(parent, conditional.statement, results);
+            findChildSymbols(compilation, conditional.statement, results);
             if (conditional.elseClause)
-                findChildSymbols(parent, conditional.elseClause->clause.as<StatementSyntax>(), results);
+                findChildSymbols(compilation, conditional.elseClause->clause.as<StatementSyntax>(), results);
             break;
         }
         case SyntaxKind::ForLoopStatement: {
@@ -195,13 +139,13 @@ static void findChildSymbols(const Scope& parent, const StatementSyntax& syntax,
             }
 
             if (any)
-                results.append(&SequentialBlockSymbol::createImplicitBlock(parent.getCompilation(), loop, parent));
+                results.append(&SequentialBlockSymbol::createImplicitBlock(compilation, loop));
             else
-                findChildSymbols(parent, loop.statement, results);
+                findChildSymbols(compilation, loop.statement, results);
             break;
         }
         case SyntaxKind::SequentialBlockStatement: {
-            auto block = parent.getCompilation().emplace<SequentialBlockSymbol>(parent);
+            auto block = compilation.emplace<SequentialBlockSymbol>(compilation);
             // TODO: set children
             results.append(block);
             break;
@@ -211,38 +155,29 @@ static void findChildSymbols(const Scope& parent, const StatementSyntax& syntax,
     }
 }
 
-static void findChildSymbols(const Scope& parent, const SyntaxList<SyntaxNode>& items,
+static void findChildSymbols(Compilation& compilation, const SyntaxList<SyntaxNode>& items,
                              SmallVector<const Symbol*>& results) {
     for (auto item : items) {
         if (item->kind == SyntaxKind::DataDeclaration) {
             SmallVectorSized<const VariableSymbol*, 4> symbols;
-            VariableSymbol::fromSyntax(parent.getCompilation(), item->as<DataDeclarationSyntax>(), parent, symbols);
+            VariableSymbol::fromSyntax(compilation, item->as<DataDeclarationSyntax>(), symbols);
             results.appendRange(symbols);
         }
         else if (isStatement(item->kind)) {
-            findChildSymbols(parent, item->as<StatementSyntax>(), results);
+            findChildSymbols(compilation, item->as<StatementSyntax>(), results);
         }
     }
 }
 
-SubroutineSymbol::SubroutineSymbol(string_view name, SystemFunction systemFunction, const Scope& parent) :
-    Symbol(SymbolKind::Subroutine, parent, name),
-    Scope(this),
-    body(this), returnType(this),
-    systemFunctionKind(systemFunction)
-{
-}
-
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
-                                               const FunctionDeclarationSyntax& syntax,
-                                               const Scope& parent) {
+                                               const FunctionDeclarationSyntax& syntax) {
     // TODO: non simple names?
     const auto& proto = syntax.prototype;
     auto result = compilation.emplace<SubroutineSymbol>(
+        compilation,
         proto.name.getFirstToken().valueText(),
         SemanticFacts::getVariableLifetime(proto.lifetime).value_or(VariableLifetime::Automatic),
-        syntax.kind == SyntaxKind::TaskDeclaration,
-        parent
+        syntax.kind == SyntaxKind::TaskDeclaration
     );
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;
@@ -272,8 +207,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
             }
 
             const auto& declarator = portSyntax->declarator;
-            auto arg = compilation.emplace<FormalArgumentSymbol>(declarator.name.valueText(),
-                                                                   *result, direction);
+            auto arg = compilation.emplace<FormalArgumentSymbol>(declarator.name.valueText(), direction);
 
             // If we're given a type, use that. Otherwise, if we were given a
             // direction, default to logic. Otherwise, use the last type.
@@ -292,6 +226,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
             if (declarator.initializer)
                 arg->initializer = declarator.initializer->expr;
 
+            result->addMember(*arg);
             arguments.append(arg);
             lastDirection = direction;
         }
@@ -304,12 +239,9 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     // TODO: clean this up
     SmallVectorSized<const Symbol*, 8> members;
-    for (auto arg : arguments)
-        members.append(arg);
-
-    findChildSymbols(*result, syntax.items, members);
-
-    result->setMembers(members);
+    findChildSymbols(compilation, syntax.items, members);
+    for (auto member : members)
+        result->addMember(*member);
 
     return *result;
 }

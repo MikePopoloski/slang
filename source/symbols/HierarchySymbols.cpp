@@ -12,29 +12,9 @@
 
 namespace slang {
 
-CompilationUnitSymbol::CompilationUnitSymbol(const Scope& parent) :
-    Symbol(SymbolKind::CompilationUnit, parent),
-    Scope(this)
-{
-}
-
-PackageSymbol::PackageSymbol(string_view name, const Scope& parent) :
-    Symbol(SymbolKind::Package, parent, name),
-    Scope(this)
-{
-}
-
-DefinitionSymbol::DefinitionSymbol(string_view name, const Scope& parent) :
-    Symbol(SymbolKind::Module, parent, name),
-    Scope(this)
-{
-}
-
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
-                                               const ModuleDeclarationSyntax& syntax,
-                                               const Scope& parent) {
-    auto result = compilation.emplace<DefinitionSymbol>(syntax.header.name.valueText(), parent);
-    SmallVectorSized<const Symbol*, 32> members;
+                                               const ModuleDeclarationSyntax& syntax) {
+    auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header.name.valueText());
 
     if (syntax.header.parameters) {
         bool lastLocal = false;
@@ -51,12 +31,12 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
             lastLocal = local;
 
             SmallVectorSized<ParameterSymbol*, 16> params;
-            ParameterSymbol::fromSyntax(compilation, *declaration, *result, params);
+            ParameterSymbol::fromSyntax(compilation, *declaration, params);
 
             for (auto param : params) {
                 param->isLocalParam = local;
                 param->isPortParam = true;
-                members.append(param);
+                result->addMember(*param);
                 tempParams.append(param);
             }
         }
@@ -68,10 +48,9 @@ DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
 
     for (auto node : syntax.members) {
         // TODO: overrideLocal on body params
-        compilation.createSymbols(*node, *result, members);
+        result->addMembers(*node);
     }
 
-    result->setMembers(members);
     return *result;
 }
 
@@ -164,57 +143,46 @@ void DefinitionSymbol::createParamOverrides(const ParameterValueAssignmentSyntax
     }
 }
 
-InstanceSymbol::InstanceSymbol(SymbolKind kind, string_view name, const DefinitionSymbol& definition,
-                               const Scope& parent) :
-    Symbol(kind, parent, name),
-    Scope(this),
-    definition(definition) {}
+void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
+                                const Scope& scope, SmallVector<const Symbol*>& results) {
+    // TODO: module namespacing
+    LookupResult result;
+    result.nameKind = LookupNameKind::Definition;
+    scope.lookup(syntax.type.valueText(), result);
 
-void InstanceSymbol::lazyFromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
-                                    const Scope& parent, SmallVector<const Symbol*>& results) {
-    // Definition information (along with parameter overrides) will be shared among all instances.
-    auto definition = compilation.createLazyDefinition(parent, syntax);
-
-    for (auto instance : syntax.instances) {
-        // TODO: handle arrays
-        results.append(compilation.emplace<LazySyntaxSymbol>(*instance, parent, definition));
+    ParamOverrideMap paramMap;
+    const DefinitionSymbol* definition = nullptr;
+    const Symbol* foundSymbol = result.getFoundSymbol();
+    if (foundSymbol) {
+        // TODO: check symbol kind?
+        definition = &foundSymbol->as<DefinitionSymbol>();
+        if (syntax.parameters)
+            definition->createParamOverrides(*syntax.parameters, paramMap);
     }
-}
-
-InstanceSymbol& InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchicalInstanceSyntax& syntax,
-                                           const LazyDefinition& defInfo, const Scope& parent) {
-    const auto& [definition, paramMap] = defInfo.get();
 
     // TODO: missing module
     ASSERT(definition);
 
-    // TODO: other things besides modules
-    auto result = compilation.emplace<ModuleInstanceSymbol>(syntax.name.valueText(), *definition, parent);
+    for (auto instanceSyntax : syntax.instances) {
+        // TODO: other things besides modules
+        auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation,
+                                                                  instanceSyntax->name.valueText(),
+                                                                  *definition);
+        results.append(instance);
 
-    // Copy all members from the definition
-    SmallVectorSized<const Symbol*, 32> members((uint32_t)definition->members().size());
-    for (auto member : definition->members()) {
-        Symbol& cloned = member->clone(*result);
-        members.append(&cloned);
+        // Copy all members from the definition
+        for (auto member : definition->members()) {
+            Symbol& cloned = member->clone(*instance);
+            instance->addMember(cloned);
 
-        // If this is a parameter symbol, see if we have a value override for it.
-        if (member->kind == SymbolKind::Parameter) {
-            auto it = paramMap.find(&member->as<ParameterSymbol>());
-            if (it != paramMap.end())
-                cloned.as<ParameterSymbol>().value = LazyConstant(result, *it->second);
+            // If this is a parameter symbol, see if we have a value override for it.
+            if (member->kind == SymbolKind::Parameter) {
+                auto it = paramMap.find(&member->as<ParameterSymbol>());
+                if (it != paramMap.end())
+                    cloned.as<ParameterSymbol>().value = LazyConstant(static_cast<const Scope*>(instance), *it->second);
+            }
         }
     }
-    result->setMembers(members);
-    return *result;
-}
-
-ModuleInstanceSymbol::ModuleInstanceSymbol(string_view name, const DefinitionSymbol& definition, const Scope& parent) :
-    InstanceSymbol(SymbolKind::ModuleInstance, name, definition, parent) {}
-
-GenerateBlockSymbol::GenerateBlockSymbol(string_view name, const Scope& parent) :
-    Symbol(SymbolKind::GenerateBlock, parent, name),
-    Scope(this)
-{
 }
 
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
@@ -225,29 +193,18 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
         return nullptr;
 
     // TODO: handle named block
-    SmallVectorSized<const Symbol*, 16> members;
     const SVInt& value = cv.integer();
     if ((logic_t)value) {
-        auto block = compilation.emplace<GenerateBlockSymbol>("", parent);
-        compilation.createSymbols(syntax.block, *block, members);
-
-        block->setMembers(members);
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "");
+        block->addMembers(syntax.block);
         return block;
     }
     else if (syntax.elseClause) {
-        auto block = compilation.emplace<GenerateBlockSymbol>("", parent);
-        compilation.createSymbols(syntax.elseClause->clause, *block, members);
-
-        block->setMembers(members);
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "");
+        block->addMembers(syntax.elseClause->clause);
         return block;
     }
     return nullptr;
-}
-
-GenerateBlockArraySymbol::GenerateBlockArraySymbol(string_view name, const Scope& parent) :
-    Symbol(SymbolKind::GenerateBlockArray, parent, name),
-    Scope(this)
-{
 }
 
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
@@ -258,16 +215,16 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    auto result = compilation.emplace<GenerateBlockArraySymbol>("", parent);
+    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "");
     const auto& initial = parent.evaluateConstant(syntax.initialExpr);
     if (!initial)
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    DynamicScopeSymbol iterScope(parent);
-    VariableSymbol local(syntax.identifier.valueText(), iterScope);
+    SequentialBlockSymbol iterScope(compilation);
+    VariableSymbol local { syntax.identifier.valueText() };
     local.type = compilation.getIntType();
-    iterScope.addSymbol(local);
+    iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
     Binder binder(iterScope);
@@ -284,20 +241,15 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
-        auto block = compilation.emplace<GenerateBlockSymbol>("", parent);
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "");
 
-        auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText(), *block);
+        auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText());
         implicitParam->value = *genvar;
+        block->addMember(*implicitParam);
+        block->addMembers(syntax.block);
 
-        SmallVectorSized<const Symbol*, 16> blockMembers;
-        blockMembers.append(implicitParam);
-        compilation.createSymbols(syntax.block, *block, blockMembers);
-
-        block->setMembers(blockMembers);
-        arrayEntries.append(block);
+        result->addMember(*block);
     }
-
-    result->setMembers(arrayEntries);
     return *result;
 }
 

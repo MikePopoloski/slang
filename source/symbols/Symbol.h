@@ -15,9 +15,9 @@
 #include "diagnostics/Diagnostics.h"
 #include "parsing/AllSyntax.h"
 #include "symbols/SemanticFacts.h"
-#include "symbols/SymbolMap.h"
 #include "text/SourceLocation.h"
 #include "util/Iterator.h"
+#include "util/PointerUnion.h"
 
 namespace slang {
 
@@ -34,9 +34,9 @@ class WildcardImportSymbol;
 class PackageSymbol;
 class ParameterSymbol;
 class Compilation;
-class SymbolMap;
 
 using SymbolList = span<const Symbol* const>;
+using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 using ParamOverrideMap = flat_hash_map<const ParameterSymbol*, const ExpressionSyntax*>;
 using Dimensions = span<ConstantRange const>;
 
@@ -45,7 +45,6 @@ enum class SymbolKind {
     Root,
     DynamicScope,
     CompilationUnit,
-    LazySyntax,
     IntegralType,
     RealType,
     StringType,
@@ -100,9 +99,6 @@ public:
     /// the given kind, returns this symbol.
     const Symbol* findAncestor(SymbolKind searchKind) const;
 
-    /// Gets the symbol for the root of the design.
-    const RootSymbol& getRoot() const;
-
     template<typename T>
     T& as() { return *static_cast<T*>(this); }
 
@@ -112,10 +108,16 @@ public:
     /// Makes a clone of the symbol with the provided scope as the new parent.
     Symbol& clone(const Scope& newParent) const;
 
+    /// A numeric index that can be used to compare the relative ordering of symbols
+    /// within a single lexical scope.
+    enum class Index : uint32_t {};
+
     template<typename TDerived, typename TResult, typename TSource>
     struct Lazy {
-        Lazy(const Scope* scope, const TResult* init) : storedScope(scope), cache(init) {}
-        Lazy(const Scope* scope, const TSource& init) : storedScope(scope), cache(&init) {}
+        using ScopeOrSymbol = PointerUnion<const Scope*, const Symbol*>;
+
+        Lazy(ScopeOrSymbol parent, const TResult* init) : parent(parent), cache(init) {}
+        Lazy(ScopeOrSymbol parent, const TSource& init) : parent(parent), cache(&init) {}
 
         Lazy& operator=(const TResult* result) { cache = result; return *this; }
         Lazy& operator=(const TResult& result) { cache = &result; return *this; }
@@ -132,24 +134,30 @@ public:
                 return std::get<0>(cache);
 
             auto derived = static_cast<const TDerived*>(this);
-            const TResult& result = derived->evaluate(*storedScope, *std::get<1>(cache));
+            const TResult& result = derived->evaluate(getScope(), *std::get<1>(cache));
             cache = &result;
             return &result;
         }
 
     protected:
-        const Scope* storedScope;
+        const Scope& getScope() const {
+            if (parent.is<const Symbol*>())
+                return *parent.get<const Symbol*>()->getScope();
+            else
+                return *parent.get<const Scope*>();
+        }
 
     private:
+        ScopeOrSymbol parent;
         mutable std::variant<const TResult*, const TSource*> cache;
     };
 
     struct LazyConstant : public Lazy<LazyConstant, ConstantValue, ExpressionSyntax> {
-        explicit LazyConstant(const Scope* scope);
-        LazyConstant(const Scope* scope, const ConstantValue* init) :
-            Lazy<LazyConstant, ConstantValue, ExpressionSyntax>(scope, init) {}
-        LazyConstant(const Scope* scope, const ExpressionSyntax& init) :
-            Lazy<LazyConstant, ConstantValue, ExpressionSyntax>(scope, init) {}
+        explicit LazyConstant(ScopeOrSymbol parent);
+        LazyConstant(ScopeOrSymbol parent, const ConstantValue* init) :
+            Lazy<LazyConstant, ConstantValue, ExpressionSyntax>(parent, init) {}
+        LazyConstant(ScopeOrSymbol parent, const ExpressionSyntax& init) :
+            Lazy<LazyConstant, ConstantValue, ExpressionSyntax>(parent, init) {}
 
         LazyConstant& operator=(const ExpressionSyntax& source);
         LazyConstant& operator=(ConstantValue result);
@@ -161,11 +169,11 @@ public:
 
 #define LAZY(name, TResult, TSource)                            \
     struct name : public Lazy<name, TResult, TSource> {         \
-        explicit name(const Scope* scope);                \
-        name(const Scope* scope, const TResult* init) :   \
-            Lazy<name, TResult, TSource>(scope, init) {}        \
-        name(const Scope* scope, const TSource& init) :   \
-            Lazy<name, TResult, TSource>(scope, init) {}        \
+        explicit name(ScopeOrSymbol parent);                    \
+        name(ScopeOrSymbol parent, const TResult* init) :       \
+            Lazy<name, TResult, TSource>(parent, init) {}       \
+        name(ScopeOrSymbol parent, const TSource& init) :       \
+            Lazy<name, TResult, TSource>(parent, init) {}       \
         using Lazy<name, TResult, TSource>::operator=;          \
     private:                                                    \
         friend struct Lazy<name, TResult, TSource>;             \
@@ -177,38 +185,24 @@ public:
     LAZY(LazyInitializer, Expression, ExpressionSyntax);
     LAZY(LazyType, TypeSymbol, DataTypeSyntax);
 
-    // TODO: move this stuff to its own header / namespace
-    struct LazyDefinition {
-        using Source = const HierarchyInstantiationSyntax*;
-        using Value = std::tuple<const DefinitionSymbol*, ParamOverrideMap>;
-
-        LazyDefinition(const Scope* scope, Source source) : scope(scope), cache(source) {}
-        const Value& get() const;
-
-    private:
-        const Scope* scope;
-        mutable std::variant<Value, Source> cache;
-    };
-
 #undef LAZY
 
 protected:
     explicit Symbol(SymbolKind kind, string_view name = "", SourceLocation location = SourceLocation()) :
         kind(kind), name(name), location(location) {}
 
-    Symbol(SymbolKind kind, const Scope& containingSymbol, string_view name = "",
-           SourceLocation location = SourceLocation()) :
-        kind(kind), name(name), location(location),
-        parentScope(&containingSymbol) {}
-
-    Symbol(SymbolKind kind, Token token, const Scope& containingSymbol) :
-        kind(kind), name(token.valueText()), location(token.location()),
-        parentScope(&containingSymbol) {}
-
     Diagnostic& addError(DiagCode code, SourceLocation location) const;
 
 private:
-    const Scope* parentScope = nullptr;
+    friend class Scope;
+
+    // When a symbol is first added to a scope a pointer to it will be stored here.
+    // Along with that pointer, a linked list of members in the scope will be created
+    // by using the nextInScope pointer, and the index within the scope (used to quickly
+    // determine ordering during lookups) will set here.
+    mutable const Scope* parentScope = nullptr;
+    mutable const Symbol* nextInScope = nullptr;
+    mutable Index indexInScope {0};
 };
 
 /// Specifies possible kinds of lookups that can be done.
@@ -335,7 +329,7 @@ public:
     /// Clears the result object and resets all state to the defaults.
     void clear();
 
-    /// Sets the found symbol that is the result of successful lookup.
+    /// Sets the symbol that was found as the result of successful lookup.
     void setSymbol(const Symbol& symbol, bool wasImported = false);
 
     /// Adds an import symbol from which the looked up name is visible.
@@ -354,9 +348,12 @@ private:
 /// Base class for scopes that can contain child symbols and look them up by name.
 class Scope {
 public:
+    void addMember(const Symbol& symbol);
+    void addMembers(const SyntaxNode& syntax);
+
     const Scope* getParent() const { return thisSym->getScope(); }
     const Symbol& asSymbol() const { return *thisSym; }
-    Compilation& getCompilation() const;
+    Compilation& getCompilation() const { return compilation; }
 
     /// Performs a symbol lookup using SystemVerilog name lookup rules.
     ///
@@ -379,21 +376,10 @@ public:
         return sym->as<T>();
     }
 
-    /// Gets a list of all of the members in the scope.
-    SymbolList members() const {
-        if (!nameMap)
-            buildNameMap();
-        return memberList;
-    }
-
-    /// Sets the list of members in the scope. A copy of the provided span will be
-    /// made so the provided memory need not outlive the call.
-    void setMembers(SymbolList members);
-
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified type.
     /// If the type does not match, this will assert.
     template<typename T>
-    const T& member(uint32_t index) const { return members()[index]->as<T>(); }
+    const T& memberAt(uint32_t index) const { return (*std::next(members().begin(), index))->as<T>(); }
 
     /// A helper method to evaluate a constant in the current scope.
     ConstantValue evaluateConstant(const ExpressionSyntax& expr) const;
@@ -404,80 +390,93 @@ public:
     ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
                                              SourceLocation errorLocation) const;
 
-protected:
-    Scope(const Symbol* symbol) : thisSym(symbol) {}
+    /// Strongly typed index type which is used in a sideband list in the Compilation object
+    /// to store information about deferred members in this scope.
+    enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
 
-private:
-    const SymbolMap::NameEntry* lookupInternal(string_view name) const;
-    void buildNameMap() const;
+    /// Data stored in sideband tables in the Compilation object for deferred members.
+    using DeferredMemberData = std::vector<const SyntaxNode*>;
 
-    // The list of members assigned to this scope.
-    span<const Symbol*> memberList;
+    /// Strongly typed index type which is used in a sideband list in the Compilation object
+    /// to store information about wildcard imports in this scope.
+    enum class ImportDataIndex : uint32_t { Invalid = 0 };
 
-    // A list of wildcard imports that occur in this scope. Note that the entries in the
-    // list are ordered by index, though they are probably not contiguous.
-    struct ImportEntry {
-        const WildcardImportSymbol* import;
-        uint32_t index;
+    /// An iterator for members in the scope.
+    class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Symbol*> {
+    public:
+        iterator(const Symbol* firstSymbol) : current(firstSymbol) {}
+
+        iterator& operator=(const iterator& other) {
+            current = other.current;
+            return *this;
+        }
+
+        bool operator==(const iterator& other) const { return current == other.current; }
+
+        const Symbol* operator*() const { return current; }
+        const Symbol* operator*() { return current; }
+
+        iterator& operator++() {
+            current = current->nextInScope;
+            return *this;
+        }
+
+    private:
+        const Symbol* current;
     };
-    mutable span<ImportEntry> imports;
 
-    // The map of names to members that can be looked up within this scope. This is built
-    // on demand the first time a name lookup is performed. This map can contain names from
-    // symbols that are lexically in other scopes but have been made visible here, such
-    // as with enum values and package imports.
-    mutable SymbolMap* nameMap = nullptr;
+    /// Gets the members contained in the scope.
+    iterator_range<iterator> members() const {
+        return { iterator(firstMember), iterator(nullptr) };
+    }
 
-    // A pointer to symbol that this scope represents.
+protected:
+    Scope(Compilation& compilation_, const Symbol* thisSym_);
+
+private:
+    // The compilation that owns this scope.
+    Compilation& compilation;
+
+    // A pointer to the symbol that this scope represents.
     const Symbol* thisSym;
+
+    // The map of names to members that can be looked up within this scope.
+    SymbolMap* nameMap;
+
+    // A linked list of member symbols in the scope.
+    const Symbol* firstMember = nullptr;
+    const Symbol* lastMember = nullptr;
+
+    // If this scope has any deferred member symbols they'll be temporarily
+    // stored in a sideband list in the compilation object until we expand them.
+    DeferredMemberIndex deferredMemberIndex {0};
+
+    // If this scope has any wildcard import directives we'll keep track of them
+    // in a sideband list in the compilation object.
+    ImportDataIndex importDataIndex {0};
 };
 
-/// A scope that can be dynamically modified programmatically. Not used for batch compilation; intended
-/// for tools and unit tests.
-class DynamicScopeSymbol : public Symbol, public Scope {
+/// Represents the entirety of a design, along with all contained compilation units.
+class RootSymbol : public Symbol, public Scope {
 public:
-    explicit DynamicScopeSymbol(const Scope& parent);
+    span<const ModuleInstanceSymbol* const> topInstances;
 
-    /// Adds a symbol to the scope.
-    void addSymbol(const Symbol& symbol);
-
-    /// Creates one or more symbols for the given syntax node and adds them to the scope.
-    /// Also returns the set of created symbols.
-    SymbolList createAndAddSymbols(const SyntaxNode& node);
-
-private:
-    std::vector<const Symbol*> members;
-};
-
-/// This is a placeholder symbol for syntax nodes that need to defer evaluation until the
-/// rest of the hierarchy is in place. Examples of this are generate nodes and hierarchy
-/// instantiations. The parent scope will resolve the symbol and replace it in its own member
-/// list on demand.
-class LazySyntaxSymbol : public Symbol {
-public:
-    LazySyntaxSymbol(const SyntaxNode& syntax, const Scope& parent,
-                     LazyDefinition* definition = nullptr);
-
-    const Symbol* resolve() const;
-
-private:
-    const SyntaxNode& node;
-
-    // If this lazy syntax is for a hierarchical instantiation, this member
-    // will contain the set of shared data among all of the instances.
-    LazyDefinition* instanceDefinition = nullptr;
+    explicit RootSymbol(Compilation& compilation) :
+        Symbol(SymbolKind::Root), Scope(compilation, this) {}
 };
 
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public Symbol, public Scope {
 public:
-    CompilationUnitSymbol(const Scope& parent);
+    explicit CompilationUnitSymbol(Compilation& compilation) :
+        Symbol(SymbolKind::CompilationUnit), Scope(compilation, this) {}
 };
 
 /// A SystemVerilog package construct.
 class PackageSymbol : public Symbol, public Scope {
 public:
-    PackageSymbol(string_view name, const Scope& parent);
+    PackageSymbol(Compilation& compilation, string_view name) :
+        Symbol(SymbolKind::Package, name), Scope(compilation, this) {}
 };
 
 /// Represents a module, interface, or program declaration.
@@ -485,11 +484,10 @@ class DefinitionSymbol : public Symbol, public Scope {
 public:
     span<const ParameterSymbol* const> parameters;
 
-    DefinitionSymbol(string_view name, const Scope& parent);
+    DefinitionSymbol(Compilation& compilation, string_view name) :
+        Symbol(SymbolKind::Module, name), Scope(compilation, this) {}
 
-    static DefinitionSymbol& fromSyntax(Compilation& compilation,
-                                        const ModuleDeclarationSyntax& syntax,
-                                        const Scope& parent);
+    static DefinitionSymbol& fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax);
 
     void createParamOverrides(const ParameterValueAssignmentSyntax& syntax, ParamOverrideMap& map) const;
 };
@@ -499,38 +497,34 @@ class InstanceSymbol : public Symbol, public Scope {
 public:
     const DefinitionSymbol& definition;
 
-    /// Constructs LazySyntaxSymbols for each instance in the given syntax node.
-    static void lazyFromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
-                               const Scope& parent, SmallVector<const Symbol*>& results);
-
-    static InstanceSymbol& fromSyntax(Compilation& compilation,
-                                      const HierarchicalInstanceSyntax& syntax,
-                                      const LazyDefinition& definition, const Scope& parent);
+    static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
+                           const Scope& scope, SmallVector<const Symbol*>& results);
 
 protected:
-    InstanceSymbol(SymbolKind kind, string_view name, const DefinitionSymbol& definition, const Scope& parent);
+    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name,
+                   const DefinitionSymbol& definition) :
+        Symbol(kind, name),
+        Scope(compilation, this),
+        definition(definition) {}
 };
 
 class ModuleInstanceSymbol : public InstanceSymbol {
 public:
-    ModuleInstanceSymbol(string_view name, const DefinitionSymbol& definition, const Scope& parent);
+    ModuleInstanceSymbol(Compilation& compilation, string_view name, const DefinitionSymbol& definition) :
+        InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, definition) {}
 };
-
-//class GenvarSymbol : public Symbol {
-//public:
-//    GenvarSymbol(string_view name, SourceLocation location, ) :
-//        Symbol(SymbolKind::Genvar, nullptr, name, location) {}
-//};
 
 class SequentialBlockSymbol : public Symbol, public Scope {
 public:
     LazyStatement body;
 
-    SequentialBlockSymbol(const Scope& parent);
+    explicit SequentialBlockSymbol(Compilation& compilation) :
+        Symbol(SymbolKind::SequentialBlock),
+        Scope(compilation, this),
+        body(static_cast<const Scope*>(this)) {}
 
     static SequentialBlockSymbol& createImplicitBlock(Compilation& compilation,
-                                                      const ForLoopStatementSyntax& forLoop,
-                                                      const Scope& parent);
+                                                      const ForLoopStatementSyntax& forLoop);
 };
 
 class ProceduralBlockSymbol : public Symbol, public Scope {
@@ -538,7 +532,11 @@ public:
     LazyStatement body;
     ProceduralBlockKind procedureKind;
 
-    ProceduralBlockSymbol(const Scope& parent, ProceduralBlockKind procedureKind);
+    ProceduralBlockSymbol(Compilation& compilation, ProceduralBlockKind procedureKind) :
+        Symbol(SymbolKind::ProceduralBlock),
+        Scope(compilation, this),
+        body(static_cast<const Scope*>(this)),
+        procedureKind(procedureKind) {}
 };
 
 /// Represents blocks that are instantiated by a loop generate or conditional
@@ -547,7 +545,8 @@ public:
 /// the loop iteration value.
 class GenerateBlockSymbol : public Symbol, public Scope {
 public:
-    GenerateBlockSymbol(string_view name, const Scope& parent);
+    GenerateBlockSymbol(Compilation& compilation, string_view name) :
+        Symbol(SymbolKind::GenerateBlock, name), Scope(compilation, this) {}
 
     /// Creates a generate block from the given if-generate syntax node. Note that
     /// this can return null if the condition is false and there is no else block.
@@ -558,11 +557,12 @@ public:
 /// Represents an array of generate blocks, as generated by a loop generate construct.
 class GenerateBlockArraySymbol : public Symbol, public Scope {
 public:
-    GenerateBlockArraySymbol(string_view name, const Scope& parent);
+    GenerateBlockArraySymbol(Compilation& compilation, string_view name) :
+        Symbol(SymbolKind::GenerateBlockArray, name), Scope(compilation, this) {}
 
     /// Creates a generate block array from the given loop-generate syntax node.
-    static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation, const LoopGenerateSyntax& syntax,
-                                                const Scope& parent);
+    static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation,
+                                                const LoopGenerateSyntax& syntax, const Scope& parent);
 };
 
 /// Represents an explicit import from a package. This symbol type is
@@ -573,8 +573,9 @@ public:
     string_view packageName;
     string_view importName;
 
-    ExplicitImportSymbol(string_view packageName, string_view importName,
-                         SourceLocation location, const Scope& parent);
+    ExplicitImportSymbol(string_view packageName, string_view importName, SourceLocation location) :
+        Symbol(SymbolKind::ExplicitImport, importName, location),
+        packageName(packageName), importName(importName) {}
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
@@ -593,7 +594,9 @@ class WildcardImportSymbol : public Symbol {
 public:
     string_view packageName;
 
-    WildcardImportSymbol(string_view packageName, SourceLocation location, const Scope& parent);
+    WildcardImportSymbol(string_view packageName, SourceLocation location) :
+        Symbol(SymbolKind::WildcardImport, "", location),
+        packageName(packageName) {}
 
     const PackageSymbol* getPackage() const;
 
@@ -608,10 +611,13 @@ public:
     bool isLocalParam = false;
     bool isPortParam = false;
 
-    ParameterSymbol(string_view name, const Scope& parent);
+    ParameterSymbol(string_view name) :
+        Symbol(SymbolKind::Parameter, name),
+        defaultValue(this),
+        value(this) {}
 
     static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
-                           const Scope& parent, SmallVector<ParameterSymbol*>& results);
+                           SmallVector<ParameterSymbol*>& results);
 };
 
 /// Represents a variable declaration (which does not include nets).
@@ -622,16 +628,22 @@ public:
     VariableLifetime lifetime;
     bool isConst;
 
-    VariableSymbol(string_view name, const Scope& parent,
-                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false);
+    VariableSymbol(string_view name, VariableLifetime lifetime = VariableLifetime::Automatic,
+                   bool isConst = false) :
+        VariableSymbol(SymbolKind::Variable, name, lifetime, isConst) {}
 
     /// Constructs all variable symbols specified by the given syntax node.
     static void fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
-                           const Scope& parent, SmallVector<const VariableSymbol*>& results);
+                           SmallVector<const VariableSymbol*>& results);
 
 protected:
-    VariableSymbol(SymbolKind childKind, string_view name, const Scope& parent,
-                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false);
+    VariableSymbol(SymbolKind childKind, string_view name,
+                   VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
+        Symbol(childKind, name),
+        type(this),
+        initializer(this),
+        lifetime(lifetime),
+        isConst(isConst) {}
 };
 
 /// Represents a formal argument in subroutine (task or function).
@@ -639,10 +651,13 @@ class FormalArgumentSymbol : public VariableSymbol {
 public:
     FormalArgumentDirection direction = FormalArgumentDirection::In;
 
-    FormalArgumentSymbol(const Scope& parent);
+    FormalArgumentSymbol() :
+        VariableSymbol(SymbolKind::FormalArgument, "") {}
 
-    FormalArgumentSymbol(string_view name, const Scope& parent,
-                         FormalArgumentDirection direction = FormalArgumentDirection::In);
+    FormalArgumentSymbol(string_view name, FormalArgumentDirection direction = FormalArgumentDirection::In) :
+        VariableSymbol(SymbolKind::FormalArgument, name, VariableLifetime::Automatic,
+                       direction == FormalArgumentDirection::ConstRef),
+        direction(direction) {}
 };
 
 /// Represents a subroutine (task or function).
@@ -657,11 +672,21 @@ public:
     SystemFunction systemFunctionKind = SystemFunction::Unknown;
     bool isTask = false;
 
-    SubroutineSymbol(string_view name, VariableLifetime defaultLifetime, bool isTask, const Scope& parent);
-    SubroutineSymbol(string_view name, SystemFunction systemFunction, const Scope& parent);
+    SubroutineSymbol(Compilation& compilation, string_view name, VariableLifetime defaultLifetime, bool isTask) :
+        Symbol(SymbolKind::Subroutine, name),
+        Scope(compilation, this),
+        body(static_cast<const Scope*>(this)),
+        returnType(static_cast<const Scope*>(this)),
+        defaultLifetime(defaultLifetime), isTask(isTask) {}
 
-    static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax,
-                                        const Scope& parent);
+    SubroutineSymbol(Compilation& compilation, string_view name, SystemFunction systemFunction) :
+        Symbol(SymbolKind::Subroutine, name),
+        Scope(compilation, this),
+        body(static_cast<const Scope*>(this)),
+        returnType(static_cast<const Scope*>(this)),
+        systemFunctionKind(systemFunction) {}
+
+    static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax);
 
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
 };

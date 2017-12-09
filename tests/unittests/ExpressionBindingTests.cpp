@@ -13,7 +13,7 @@ SVInt testParameter(const std::string& text, int index = 0) {
     if (!tree.diagnostics().empty())
         WARN(tree.reportDiagnostics());
 
-    const ParameterSymbol& param = module.member<ParameterSymbol>(index);
+    const ParameterSymbol& param = module.memberAt<ParameterSymbol>(index);
     return param.value->integer();
 }
 
@@ -28,17 +28,16 @@ TEST_CASE("Bind parameter", "[binding:expressions]") {
 TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     // Evaluate an assignment expression (has an LValue we can observe)
     auto syntax = SyntaxTree::fromText("i = i + 3");
-    RootSymbol root;
-    DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
+    RootSymbol root;
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local {varToken.valueText(), scope};
+    VariableSymbol local { varToken.valueText() };
     local.type = root.compilation.getIntType();
 
     // Bind the expression tree to the symbol
-    scope.addSymbol(local);
-    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    root.addMember(local);
+    const auto& bound = Binder(root).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     // Initialize `i` to 1.
@@ -57,17 +56,16 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 TEST_CASE("Check type propagation", "[binding:expressions]") {
     // Assignment operator should increase RHS size to 20
     auto syntax = SyntaxTree::fromText("i = 5'b0101 + 4'b1100");
-    RootSymbol root;
-    DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
+    RootSymbol root;
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local { varToken.valueText(), scope };
+    VariableSymbol local { varToken.valueText() };
     local.type = root.compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
-    scope.addSymbol(local);
-    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    root.addMember(local);
+    const auto& bound = Binder(root).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
@@ -83,16 +81,15 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     // Tests a number of rules of size propogation
     auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 4'b1100) == 21'b1)");
     RootSymbol root;
-    DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local { varToken.valueText(), scope };
+    VariableSymbol local { varToken.valueText() };
     local.type = root.compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
-    scope.addSymbol(local);
-    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    root.addMember(local);
+    const auto& bound = Binder(root).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
@@ -112,16 +109,15 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     // Tests a number of rules of size propogation
     auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 2.0) == 21'b1)");
     RootSymbol root;
-    DynamicScopeSymbol scope(root);
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local { varToken.valueText(), scope };
+    VariableSymbol local { varToken.valueText() };
     local.type = root.compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
-    scope.addSymbol(local);
-    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    root.addMember(local);
+    const auto& bound = Binder(root).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);

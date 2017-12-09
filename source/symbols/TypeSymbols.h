@@ -14,7 +14,6 @@ namespace slang {
 class TypeSymbol : public Symbol {
 public:
     TypeSymbol(SymbolKind kind, string_view name) : Symbol(kind, name) {}
-    TypeSymbol(SymbolKind kind, string_view name, const Scope& parent) : Symbol(kind, parent, name) {}
 
     // SystemVerilog defines various levels of type compatibility, which are used
     // in different scenarios. See the spec, section 6.22.
@@ -114,8 +113,8 @@ public:
     const SyntaxNode& syntax;
     const TypeSymbol* underlying;
 
-    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, string_view alias, const Scope& parent) :
-        TypeSymbol(SymbolKind::TypeAlias, parent, alias, location),
+    TypeAliasSymbol(const SyntaxNode& syntax, SourceLocation location, const TypeSymbol* underlying, string_view alias) :
+        TypeSymbol(SymbolKind::TypeAlias, alias, location),
         syntax(syntax), underlying(underlying) {}
 };
 

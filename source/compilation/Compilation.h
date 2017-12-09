@@ -7,9 +7,9 @@
 #pragma once
 
 #include "diagnostics/Diagnostics.h"
-#include "symbols/SymbolMap.h"
 #include "symbols/TypeSymbols.h"
 #include "util/BumpAllocator.h"
+#include "util/SafeIndexedVector.h"
 #include "util/SmallVector.h"
 
 namespace slang {
@@ -21,10 +21,31 @@ class Compilation : public BumpAllocator {
 public:
     Compilation();
 
-    /// Creates symbols for the given syntax node.
-    void createSymbols(const SyntaxNode& node, const Scope& parent, SmallVector<const Symbol*>& symbols);
+    /// Adds a syntax tree to the compilation. Note that the syntax tree must outlive
+    /// the compilation object. If the compilation has already been finalized by
+    /// calling @a getRoot this call will throw an exception.
+    void addSyntaxTree(const SyntaxTree& tree);
 
-    const CompilationUnitSymbol& createCompilationUnit(const SyntaxNode& node, const Scope& parent);
+    /// Gets the root of the design. The first time you call this method all top-level
+    /// instances will be elaborated and the compilation finalized. After that you can
+    /// no longer make any modifications to the compilation object; any attempts to do
+    /// so will result in an exception.
+    const RootSymbol& getRoot();
+
+    /// Indicates whether the design has been compiled and can no longer accept modifications.
+    bool isFinalized() const { return finalized; }
+
+    /// Gets the definition with the given name, or null if there is no such definition.
+    const DefinitionSymbol* getDefinition(string_view name) const;
+
+    /// Adds a definition to the map of global definitions.
+    void addDefinition(const DefinitionSymbol& definition);
+
+    /// Gets the package with the give name, or null if there is no such package.
+    const PackageSymbol* getPackage(string_view name) const;
+
+    /// Adds a package to the map of global packages.
+    void addPackage(const PackageSymbol& package);
 
     const TypeSymbol& getType(SyntaxKind kind) const;
     const TypeSymbol& getType(const DataTypeSyntax& node, const Scope& parent);
@@ -44,7 +65,7 @@ public:
     const RealTypeSymbol& getRealType() const { return realType; }
     const RealTypeSymbol& getRealTimeType() const { return realTimeType; }
     const RealTypeSymbol& getShortRealType() const { return shortRealType; }
-    const TypeSymbol& getstringType() const { return stringType; }
+    const TypeSymbol& getStringType() const { return stringType; }
     const TypeSymbol& getCHandleType() const { return chandleType; }
     const TypeSymbol& getVoidType() const { return voidType; }
     const TypeSymbol& getEventType() const { return eventType; }
@@ -58,30 +79,55 @@ public:
         return diags.add(code, location);
     }
 
-    SymbolMap* createSymbolMap() { return symbolMapAllocator.emplace(); }
+    SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
 
-    Symbol::LazyDefinition* createLazyDefinition(const Scope& scope, const HierarchyInstantiationSyntax& source) {
-        return lazyDefinitionAllocator.emplace(&scope, &source);
-    }
+    void addDeferredMembers(Scope::DeferredMemberIndex& index, const SyntaxNode& syntax);
+    Scope::DeferredMemberData popDeferredMembers(Scope::DeferredMemberIndex index);
 
 private:
-    template<typename TNode>
-    void createChildren(Scope* scope, const TNode& node);
+    SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,
+                                           std::initializer_list<const TypeSymbol*> argTypes);
 
-    void createParamSymbols(const ParameterDeclarationSyntax& syntax, const Scope& parent,
-                            SmallVector<const Symbol*>& symbols);
+    // These functions are used for traversing the syntax hierarchy and finding all instantiations.
+    using NameSet = flat_hash_set<string_view>;
+    static void findInstantiations(const ModuleDeclarationSyntax& module,
+                                   SmallVector<NameSet>& scopeStack, NameSet& found);
+    static void findInstantiations(const MemberSyntax& node, SmallVector<NameSet>& scopeStack, NameSet& found);
 
     Diagnostics diags;
+    RootSymbol root;
+    bool finalized = false;
 
+    // A set of names that are instantiated anywhere in the design. This is used to
+    // determine which modules should be top-level instances (because nobody ever
+    // instantiates them).
+    NameSet instantiatedNames;
+
+    // Specialized allocators for types that are not trivially destructible.
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
-    TypedBumpAllocator<Symbol::LazyDefinition> lazyDefinitionAllocator;
 
-    std::unordered_map<SyntaxKind, const TypeSymbol*> knownTypes;
-    std::unordered_map<uint64_t, const IntegralTypeSymbol*> integralTypeCache;
+    // Sideband data for scopes that have deferred members. This is mostly
+    // a temporary state of affairs; once a scope expands its members it
+    // will pop its storage here.
+    SafeIndexedVector<Scope::DeferredMemberData, Scope::DeferredMemberIndex> deferredData;
 
+    // The name map for global definitions.
+    flat_hash_map<string_view, const DefinitionSymbol*> definitionMap;
+
+    // The name map for packages. Note that packages have their own namespace,
+    // which is why they can't share the definitions name table.
+    flat_hash_map<string_view, const PackageSymbol*> packageMap;
+
+    // A cache of integral types, keyed on various properties such as width.
+    flat_hash_map<uint64_t, const IntegralTypeSymbol*> integralTypeCache;
+
+    // Map from syntax kinds to the built-in types.
+    flat_hash_map<SyntaxKind, const TypeSymbol*> knownTypes;
+
+    // Instances of all the built-in types.
     IntegralTypeSymbol shortIntType;
     IntegralTypeSymbol intType;
     IntegralTypeSymbol longIntType;

@@ -16,7 +16,7 @@ namespace slang {
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
-    ScriptSession() : scope(root) {}
+    ScriptSession() {}
 
     ConstantValue eval(const std::string& text) {
         syntaxTrees.emplace_back(SyntaxTree::fromText(string_view(text)));
@@ -29,16 +29,18 @@ public:
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::HierarchyInstantiation:
-                scope.createAndAddSymbols(syntaxTrees.back().root());
+                root.addMembers(syntaxTrees.back().root());
                 return nullptr;
             case SyntaxKind::DataDeclaration: {
-                for (auto symbol : scope.createAndAddSymbols(syntaxTrees.back().root())) {
+                SmallVectorSized<const VariableSymbol*, 2> symbols;
+                VariableSymbol::fromSyntax(root.compilation, syntaxTrees.back().root().as<DataDeclarationSyntax>(), symbols);
+
+                for (auto symbol : symbols) {
                     ConstantValue initial;
-                    const auto& variable = symbol->as<VariableSymbol>();
-                    if (variable.initializer)
-                        initial = variable.initializer->eval(evalContext);
+                    if (symbol->initializer)
+                        initial = symbol->initializer->eval(evalContext);
                     else
-                        initial = { *variable.type, SVInt(0) };
+                        initial = { *symbol->type, SVInt(0) };
 
                     evalContext.createLocal(symbol, initial);
                 }
@@ -56,7 +58,7 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-        const auto& bound = Binder(scope).bindConstantExpression(expr);
+        const auto& bound = Binder(root).bindConstantExpression(expr);
         return bound.eval(evalContext);
     }
 
@@ -77,7 +79,6 @@ private:
     BumpAllocator alloc;
     Diagnostics diagnostics;
     RootSymbol root;
-    DynamicScopeSymbol scope;
     EvalContext evalContext;
 };
 
