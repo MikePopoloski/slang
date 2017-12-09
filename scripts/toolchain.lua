@@ -214,7 +214,7 @@ function toolchain(_buildDir, _libDir)
 		buildoptions {
 			"-msse2",
 			"-Wunused-value",
-			"-Wformat=2",
+			"-Wformat-security",
 			"-Wnull-dereference",
 			"-Wimplicit-fallthrough=5",
 			"-Wsuggest-override",
