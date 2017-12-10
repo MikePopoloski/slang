@@ -11,7 +11,6 @@
 namespace slang {
 
 Compilation::Compilation() :
-    root(*this),
     shortIntType(TokenKind::ShortIntKeyword, 16, true, false),
     intType(TokenKind::IntKeyword, 32, true, false),
     longIntType(TokenKind::LongIntKeyword, 164, true, false),
@@ -48,21 +47,23 @@ Compilation::Compilation() :
     knownTypes[SyntaxKind::EventType] = &eventType;
     knownTypes[SyntaxKind::Unknown] = &errorType;
 
+    root.reset(new RootSymbol(*this));
+
     // Register known system functions with the root symbol.
-    root.addMember(createSystemFunction("$clog2", SystemFunction::clog2, { &getIntType() }));
+    root->addMember(createSystemFunction("$clog2", SystemFunction::clog2, { &getIntType() }));
 
     // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
     // assignment like context
     // TODO: add support for all these operands on data_types, not just expressions,
     // and add support for things like unpacked arrays
     const auto& trivialIntType = getType(1, false, true);
-    root.addMember(createSystemFunction("$bits", SystemFunction::bits, { &trivialIntType }));
-    root.addMember(createSystemFunction("$left", SystemFunction::left, { &trivialIntType }));
-    root.addMember(createSystemFunction("$right", SystemFunction::right, { &trivialIntType }));
-    root.addMember(createSystemFunction("$low", SystemFunction::low, { &trivialIntType }));
-    root.addMember(createSystemFunction("$high", SystemFunction::high, { &trivialIntType }));
-    root.addMember(createSystemFunction("$size", SystemFunction::size, { &trivialIntType }));
-    root.addMember(createSystemFunction("$increment", SystemFunction::increment, { &trivialIntType }));
+    root->addMember(createSystemFunction("$bits", SystemFunction::bits, { &trivialIntType }));
+    root->addMember(createSystemFunction("$left", SystemFunction::left, { &trivialIntType }));
+    root->addMember(createSystemFunction("$right", SystemFunction::right, { &trivialIntType }));
+    root->addMember(createSystemFunction("$low", SystemFunction::low, { &trivialIntType }));
+    root->addMember(createSystemFunction("$high", SystemFunction::high, { &trivialIntType }));
+    root->addMember(createSystemFunction("$size", SystemFunction::size, { &trivialIntType }));
+    root->addMember(createSystemFunction("$increment", SystemFunction::increment, { &trivialIntType }));
 }
 
 void Compilation::addSyntaxTree(const SyntaxTree& tree) {
@@ -105,19 +106,20 @@ void Compilation::addSyntaxTree(const SyntaxTree& tree) {
         switch (symbol->kind) {
             case SymbolKind::Package:
                 // Track packages separately; they live in their own namespace.
-                packageMap.emplace(symbol->name, symbol);
+                packageMap.emplace(symbol->name, &symbol->as<PackageSymbol>());
                 break;
             case SymbolKind::Module:
             case SymbolKind::Interface:
             case SymbolKind::Program:
-                root.addMember(*symbol);
+                root->addMember(*symbol);
                 break;
             default:
                 break;
         }
     }
 
-    root.addMember(*unit);
+    root->addMember(*unit);
+    compilationUnits.push_back(unit);
 }
 
 const RootSymbol& Compilation::getRoot() {
@@ -128,7 +130,7 @@ const RootSymbol& Compilation::getRoot() {
             if (definition->kind == SymbolKind::Module && instantiatedNames.count(definition->name) == 0) {
                 // TODO: check for no parameters here
                 auto instance = emplace<ModuleInstanceSymbol>(*this, name, *definition);
-                root.addMember(*instance);
+                root->addMember(*instance);
                 topList.append(instance);
 
                 // Copy in all members from the definition into the instance.
@@ -137,10 +139,11 @@ const RootSymbol& Compilation::getRoot() {
             }
         }
 
-        root.topInstances = topList.copy(*this);
+        root->topInstances = topList.copy(*this);
+        root->compilationUnits = compilationUnits;
         finalized = true;
     }
-    return root;
+    return *root;
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
@@ -148,6 +151,12 @@ const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
     if (it == packageMap.end())
         return nullptr;
     return it->second;
+}
+
+CompilationUnitSymbol& Compilation::createScriptScope() {
+    auto unit = emplace<CompilationUnitSymbol>(*this);
+    root->addMember(*unit);
+    return *unit;
 }
 
 static TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {

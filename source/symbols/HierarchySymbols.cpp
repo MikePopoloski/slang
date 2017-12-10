@@ -7,7 +7,7 @@
 #include "Symbol.h"
 
 #include "binding/Binder.h"
-#include "symbols/RootSymbol.h"
+#include "compilation/Compilation.h"
 #include "util/HashMap.h"
 
 namespace slang {

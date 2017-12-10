@@ -6,11 +6,11 @@
 //------------------------------------------------------------------------------
 #include "Symbol.h"
 
+#include "compilation/Compilation.h"
 #include "diagnostics/Diagnostics.h"
 #include "text/SourceManager.h"
 
 #include "binding/Binder.h"
-#include "symbols/RootSymbol.h"
 
 namespace slang {
 
@@ -78,12 +78,6 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
         current = &current->getScope()->asSymbol();
     }
     return current;
-}
-
-const RootSymbol& Symbol::getRoot() const {
-    const Symbol* symbol = findAncestor(SymbolKind::Root);
-    ASSERT(symbol);
-    return symbol->as<RootSymbol>();
 }
 
 Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
@@ -296,7 +290,7 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
         // look for a package.
         // TODO: handle missing package
         if (result.nameKind == LookupNameKind::Scoped)
-            result.setSymbol(*thisSym->getRoot().findPackage(searchName));
+            result.setSymbol(*compilation.getPackage(searchName));
         return;
     }
 

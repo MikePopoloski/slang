@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "TypeSymbols.h"
 
-#include "RootSymbol.h"
+#include "compilation/Compilation.h"
 
 namespace slang {
 

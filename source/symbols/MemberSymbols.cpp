@@ -7,7 +7,7 @@
 #include "Symbol.h"
 
 #include "binding/Binder.h"
-#include "symbols/RootSymbol.h"
+#include "compilation/Compilation.h"
 
 namespace slang {
 
@@ -33,7 +33,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
     if (!initialized) {
         initialized = true;
 
-        package_ = getRoot().findPackage(packageName);
+        package_ = getScope()->getCompilation().getPackage(packageName);
         // TODO: errors
         if (package_)
             import = package_->lookupDirect(importName);
@@ -43,7 +43,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
 
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
     if (!package)
-        package = getRoot().findPackage(packageName);
+        package = getScope()->getCompilation().getPackage(packageName);
     return *package;
 }
 

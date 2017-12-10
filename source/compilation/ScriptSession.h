@@ -7,8 +7,8 @@
 #pragma once
 
 #include "binding/Binder.h"
+#include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
-#include "symbols/RootSymbol.h"
 
 namespace slang {
 
@@ -16,7 +16,7 @@ namespace slang {
 /// source code and maintaining state across multiple eval calls.
 class ScriptSession {
 public:
-    ScriptSession() {}
+    ScriptSession() : scope(compilation.createScriptScope()) {}
 
     ConstantValue eval(const std::string& text) {
         syntaxTrees.emplace_back(SyntaxTree::fromText(string_view(text)));
@@ -29,11 +29,11 @@ public:
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::HierarchyInstantiation:
-                root.addMembers(syntaxTrees.back().root());
+                scope.addMembers(syntaxTrees.back().root());
                 return nullptr;
             case SyntaxKind::DataDeclaration: {
                 SmallVectorSized<const VariableSymbol*, 2> symbols;
-                VariableSymbol::fromSyntax(root.compilation, syntaxTrees.back().root().as<DataDeclarationSyntax>(), symbols);
+                VariableSymbol::fromSyntax(compilation, syntaxTrees.back().root().as<DataDeclarationSyntax>(), symbols);
 
                 for (auto symbol : symbols) {
                     ConstantValue initial;
@@ -58,7 +58,7 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-        const auto& bound = Binder(root).bindConstantExpression(expr);
+        const auto& bound = Binder(scope).bindConstantExpression(expr);
         return bound.eval(evalContext);
     }
 
@@ -68,6 +68,7 @@ public:
     }
 
     std::string reportDiagnostics() {
+        // TODO: clean this up
         if (syntaxTrees.empty())
             return "";
 
@@ -78,7 +79,8 @@ private:
     std::vector<SyntaxTree> syntaxTrees;
     BumpAllocator alloc;
     Diagnostics diagnostics;
-    RootSymbol root;
+    Compilation compilation;
+    CompilationUnitSymbol& scope;
     EvalContext evalContext;
 };
 

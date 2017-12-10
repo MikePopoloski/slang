@@ -4,27 +4,32 @@
 
 #include "binding/Expressions.h"
 #include "binding/Statements.h"
+#include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
-#include "symbols/RootSymbol.h"
 
-const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, RootSymbol& root) {
-    REQUIRE(root.topInstances().size() > 0);
+const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, Compilation& compilation) {
+    compilation.addSyntaxTree(syntax);
+    const RootSymbol& root = compilation.getRoot();
+
+    REQUIRE(root.topInstances.size() > 0);
     if (!syntax.diagnostics().empty())
         WARN(syntax.reportDiagnostics());
 
-    return *root.topInstances()[0];
+    return *root.topInstances[0];
 }
 
 TEST_CASE("Finding top level", "[binding:decls]") {
     auto file1 = SyntaxTree::fromText("module A; A a(); endmodule\nmodule B; endmodule\nmodule C; endmodule");
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
 
-    std::array<const SyntaxTree*, 2> trees = { &file1, &file2 };
-    RootSymbol root(make_span(trees));
+    Compilation compilation;
+    compilation.addSyntaxTree(file1);
+    compilation.addSyntaxTree(file2);
 
-    REQUIRE(root.topInstances().size() == 2);
-    CHECK(root.topInstances()[0]->name == "C");
-    CHECK(root.topInstances()[1]->name == "D");
+    const RootSymbol& root = compilation.getRoot();
+    REQUIRE(root.topInstances.size() == 2);
+    CHECK(root.topInstances[0]->name == "C");
+    CHECK(root.topInstances[1]->name == "D");
 }
 
 TEST_CASE("Bind module implicit", "[binding:modules]") {
@@ -38,8 +43,8 @@ module Leaf();
 endmodule
 )");
 
-    RootSymbol root(&tree);
-    evalModule(tree, root);
+    Compilation compilation;
+    evalModule(tree, compilation);
 }
 
 TEST_CASE("Module parameterization errors", "[binding:modules]") {
@@ -89,8 +94,8 @@ module Leaf #(parameter int foo = 4)();
 endmodule
 )");
 
-    RootSymbol root(&tree);
-    const auto& instance = evalModule(tree, root);
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
     const auto& leaf = instance.memberAt<ModuleInstanceSymbol>(0).memberAt<ModuleInstanceSymbol>(0);
     const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
     CHECK(foo.value->integer() == 4);
@@ -116,8 +121,8 @@ module Leaf #(parameter int foo = 4)();
 endmodule
 )");
 
-    RootSymbol root(&tree);
-    const auto& instance = evalModule(tree, root);
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
     const auto& leaf = instance
         .memberAt<ModuleInstanceSymbol>(0)
         .memberAt<GenerateBlockSymbol>(1)
@@ -139,8 +144,8 @@ module Leaf #(parameter int foo)();
 endmodule
 )");
 
-    RootSymbol root(&tree);
-    const auto& instance = evalModule(tree, root).memberAt<GenerateBlockArraySymbol>(0);
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation).memberAt<GenerateBlockArraySymbol>(0);
     
     // TODO: size of the range?
     //REQUIRE(instance.members().size() == 10);
@@ -177,8 +182,8 @@ endmodule
 )");
 
     // TODO:
-    RootSymbol root(&tree);
-    evalModule(tree, root);
+    Compilation compilation;
+    evalModule(tree, compilation);
 }
 
 TEST_CASE("always_comb", "[binding:modules]") {
@@ -210,8 +215,8 @@ module module1
 endmodule
 )");
 
-    RootSymbol root(&tree);
-    const auto& instance = evalModule(tree, root);
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
     const auto& alwaysComb = instance.memberAt<ProceduralBlockSymbol>(2);
 
     CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
@@ -230,8 +235,8 @@ module Top;
 endmodule
 )");
 
-    RootSymbol root(&tree);
-    const auto& instance = evalModule(tree, root);
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
     const auto& foo = instance.memberAt<SubroutineSymbol>(0);
     CHECK(!foo.isTask);
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
@@ -293,7 +298,8 @@ package Foo;
 endpackage
 )");
 
-    RootSymbol root(&tree);
-    const auto& cv = *root.topInstances()[0]->memberAt<ParameterSymbol>(0).value;
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    const auto& cv = *compilation.getRoot().topInstances[0]->memberAt<ParameterSymbol>(0).value;
     CHECK(cv.integer() == 4);
 }

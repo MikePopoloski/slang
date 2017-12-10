@@ -43,7 +43,6 @@ using Dimensions = span<ConstantRange const>;
 enum class SymbolKind {
     Unknown,
     Root,
-    DynamicScope,
     CompilationUnit,
     IntegralType,
     RealType,
@@ -456,15 +455,6 @@ private:
     ImportDataIndex importDataIndex {0};
 };
 
-/// Represents the entirety of a design, along with all contained compilation units.
-class RootSymbol : public Symbol, public Scope {
-public:
-    span<const ModuleInstanceSymbol* const> topInstances;
-
-    explicit RootSymbol(Compilation& compilation) :
-        Symbol(SymbolKind::Root), Scope(compilation, this) {}
-};
-
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public Symbol, public Scope {
 public:
@@ -689,6 +679,16 @@ public:
     static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax);
 
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
+};
+
+/// Represents the entirety of a design, along with all contained compilation units.
+class RootSymbol : public Symbol, public Scope {
+public:
+    span<const ModuleInstanceSymbol* const> topInstances;
+    span<const CompilationUnitSymbol* const> compilationUnits;
+
+    explicit RootSymbol(Compilation& compilation) :
+        Symbol(SymbolKind::Root), Scope(compilation, this) {}
 };
 
 }

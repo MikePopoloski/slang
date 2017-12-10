@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-#include "symbols/RootSymbol.h"
+#include "compilation/Compilation.h"
 
 namespace slang {
 
@@ -257,7 +257,7 @@ Expression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
     if (identifier.empty())
         return badExpr(nullptr);
 
-    auto package = scope.asSymbol().getRoot().findPackage(identifier);
+    auto package = scope.getCompilation().getPackage(identifier);
     if (!package)
         return badExpr(nullptr);
 

@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <memory>
+
 #include "diagnostics/Diagnostics.h"
 #include "symbols/TypeSymbols.h"
 #include "util/BumpAllocator.h"
@@ -47,6 +49,20 @@ public:
     /// Adds a package to the map of global packages.
     void addPackage(const PackageSymbol& package);
 
+    /// Creates a new compilation unit within the design that can be modified dynamically,
+    /// which is useful in runtime scripting scenarios. Note that this call will succeed
+    /// even if the design has been finalized, but in that case any instantiations in the
+    /// script scope won't affect which modules are determined to be top-level instances.
+    CompilationUnitSymbol& createScriptScope();
+
+    Diagnostics& diagnostics() { return diags; }
+    const Diagnostics& diagnostics() const { return diags; }
+
+    /// Report an error at the specified location.
+    Diagnostic& addError(DiagCode code, SourceLocation location) {
+        return diags.add(code, location);
+    }
+
     const TypeSymbol& getType(SyntaxKind kind) const;
     const TypeSymbol& getType(const DataTypeSyntax& node, const Scope& parent);
     const IntegralTypeSymbol& getType(int width, bool isSigned, bool isFourState = true, bool isReg = false);
@@ -71,14 +87,6 @@ public:
     const TypeSymbol& getEventType() const { return eventType; }
     const ErrorTypeSymbol& getErrorType() const { return errorType; }
 
-    Diagnostics& diagnostics() { return diags; }
-    const Diagnostics& diagnostics() const { return diags; }
-
-    /// Report an error at the specified location.
-    Diagnostic& addError(DiagCode code, SourceLocation location) {
-        return diags.add(code, location);
-    }
-
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
@@ -97,13 +105,16 @@ private:
     static void findInstantiations(const MemberSyntax& node, SmallVector<NameSet>& scopeStack, NameSet& found);
 
     Diagnostics diags;
-    RootSymbol root;
+    std::unique_ptr<RootSymbol> root;
     bool finalized = false;
 
     // A set of names that are instantiated anywhere in the design. This is used to
     // determine which modules should be top-level instances (because nobody ever
     // instantiates them).
     NameSet instantiatedNames;
+
+    // A list of compilation units that have been added to the compilation.
+    std::vector<const CompilationUnitSymbol*> compilationUnits;
 
     // Specialized allocators for types that are not trivially destructible.
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;

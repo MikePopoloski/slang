@@ -1,15 +1,17 @@
 #include "Test.h"
 
 #include "binding/Binder.h"
+#include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
-#include "symbols/RootSymbol.h"
 
 SVInt testParameter(const std::string& text, int index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(string_view(fullText));
 
-    RootSymbol root(&tree);
-    const auto& module = *root.topInstances()[0];
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    const auto& module = *compilation.getRoot().topInstances[0];
     if (!tree.diagnostics().empty())
         WARN(tree.reportDiagnostics());
 
@@ -30,19 +32,21 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     auto syntax = SyntaxTree::fromText("i = i + 3");
 
     // Fabricate a symbol for the `i` variable
-    RootSymbol root;
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local { varToken.valueText() };
-    local.type = root.compilation.getIntType();
+    local.type = compilation.getIntType();
 
     // Bind the expression tree to the symbol
-    root.addMember(local);
-    const auto& bound = Binder(root).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    scope.addMember(local);
+    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     // Initialize `i` to 1.
     EvalContext context;
-    auto i = context.createLocal(&local, { root.compilation.getIntType(), SVInt(1) });
+    auto i = context.createLocal(&local, { compilation.getIntType(), SVInt(1) });
 
     // Evaluate the expression tree.
     bound.eval(context);
@@ -58,14 +62,16 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     auto syntax = SyntaxTree::fromText("i = 5'b0101 + 4'b1100");
 
     // Fabricate a symbol for the `i` variable
-    RootSymbol root;
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local { varToken.valueText() };
-    local.type = root.compilation.getType(20, false);
+    local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
-    root.addMember(local);
-    const auto& bound = Binder(root).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    scope.addMember(local);
+    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
@@ -80,16 +86,17 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
 TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     // Tests a number of rules of size propogation
     auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 4'b1100) == 21'b1)");
-    RootSymbol root;
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local { varToken.valueText() };
-    local.type = root.compilation.getType(20, false);
+    local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
-    root.addMember(local);
-    const auto& bound = Binder(root).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    scope.addMember(local);
+    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);
@@ -108,16 +115,17 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 TEST_CASE("Check type propagation real", "[binding:expressions]") {
     // Tests a number of rules of size propogation
     auto syntax = SyntaxTree::fromText("i = 2'b1 & (((17'b101 >> 1'b1) - 2.0) == 21'b1)");
-    RootSymbol root;
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
     VariableSymbol local { varToken.valueText() };
-    local.type = root.compilation.getType(20, false);
+    local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
-    root.addMember(local);
-    const auto& bound = Binder(root).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    scope.addMember(local);
+    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->width() == 20);

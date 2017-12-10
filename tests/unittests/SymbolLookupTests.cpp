@@ -1,7 +1,7 @@
 #include "Test.h"
 
+#include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
-#include "symbols/RootSymbol.h"
 
 TEST_CASE("Explicit import lookup", "[symbols:lookup]") {
     auto tree = SyntaxTree::fromText(R"(
@@ -12,11 +12,13 @@ endpackage
 import Foo::x;
 )");
 
-    RootSymbol root(&tree);
-    const CompilationUnitSymbol& unit = *root.compilationUnits()[0];
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    const CompilationUnitSymbol* unit = compilation.getRoot().compilationUnits[0];
 
     LookupResult result;
-    unit.lookup("x", result);
+    unit->lookup("x", result);
     const Symbol* x = result.getFoundSymbol();
 
     CHECK(result.getResultKind() == LookupResult::Found);
@@ -44,11 +46,13 @@ module top;
 endmodule
 )");
 
-    RootSymbol root(&tree);
-    const auto& top = *root.topInstances()[0];
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    const auto& top = *compilation.getRoot().topInstances[0];
     const auto& gen_b = top.memberAt<GenerateBlockSymbol>(1);
     const auto& param = gen_b.memberAt<ParameterSymbol>(0);
-    CHECK(root.compilation.diagnostics().empty());
+    CHECK(compilation.diagnostics().empty());
     CHECK(param.value->integer() == 12);
 
     // Lookup at (2); should return the local parameter
@@ -62,7 +66,7 @@ endmodule
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol == &param);
-    CHECK(root.compilation.diagnostics().empty());
+    CHECK(compilation.diagnostics().empty());
 
     // Lookup at (1); should return the package parameter
     result.clear();
