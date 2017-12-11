@@ -394,7 +394,10 @@ public:
     enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
 
     /// Data stored in sideband tables in the Compilation object for deferred members.
-    using DeferredMemberData = std::vector<const SyntaxNode*>;
+    /// If the scope has deferred members, it will store a list of syntax nodes that need
+    /// to be elaborated, along with a pointer to the symbol in the scope that marks where
+    /// the elaborated members should be inserted.
+    using DeferredMemberData = std::vector<std::tuple<const SyntaxNode*, const Symbol*>>;
 
     /// Strongly typed index type which is used in a sideband list in the Compilation object
     /// to store information about wildcard imports in this scope.
@@ -426,6 +429,7 @@ public:
 
     /// Gets the members contained in the scope.
     iterator_range<iterator> members() const {
+        ensureMembers();
         return { iterator(firstMember), iterator(nullptr) };
     }
 
@@ -433,6 +437,22 @@ protected:
     Scope(Compilation& compilation_, const Symbol* thisSym_);
 
 private:
+    // Inserts the given member symbol into our own list of members, right after
+    // the given symbol. If `at` is null, it will insert at the head of the list.
+    void insertMember(const Symbol* member, const Symbol* at) const;
+
+    // Adds a deferred member to the scope, which is tracked in the Compilation object
+    // and will later be elaborated by `realizeDeferredMembers`.
+    void addDeferredMember(const SyntaxNode& member);
+
+    // Before we access any members to do lookups or return iterators, make sure
+    // we don't have any deferred members to take care of first.
+    void realizeDeferredMembers() const;
+    void ensureMembers() const {
+        if (deferredMemberIndex != DeferredMemberIndex::Invalid)
+            realizeDeferredMembers();
+    }
+
     // The compilation that owns this scope.
     Compilation& compilation;
 
@@ -442,13 +462,16 @@ private:
     // The map of names to members that can be looked up within this scope.
     SymbolMap* nameMap;
 
-    // A linked list of member symbols in the scope.
-    const Symbol* firstMember = nullptr;
-    const Symbol* lastMember = nullptr;
+    // A linked list of member symbols in the scope. These are mutable because a
+    // scope might have only deferred members, and realization of deferred members
+    // happens in logically const scenarios (such as the first time a lookup is
+    // performed in the scope).
+    mutable const Symbol* firstMember = nullptr;
+    mutable const Symbol* lastMember = nullptr;
 
     // If this scope has any deferred member symbols they'll be temporarily
     // stored in a sideband list in the compilation object until we expand them.
-    DeferredMemberIndex deferredMemberIndex {0};
+    mutable DeferredMemberIndex deferredMemberIndex {0};
 
     // If this scope has any wildcard import directives we'll keep track of them
     // in a sideband list in the compilation object.
@@ -467,6 +490,8 @@ class PackageSymbol : public Symbol, public Scope {
 public:
     PackageSymbol(Compilation& compilation, string_view name) :
         Symbol(SymbolKind::Package, name), Scope(compilation, this) {}
+
+    static PackageSymbol& fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax);
 };
 
 /// Represents a module, interface, or program declaration.

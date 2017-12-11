@@ -136,36 +136,29 @@ Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
 }
 
 void Scope::addMember(const Symbol& symbol) {
-    ASSERT(!symbol.parentScope);
-    ASSERT(!symbol.nextInScope);
+    insertMember(&symbol, lastMember);
+}
 
-    if (!lastMember) {
-        lastMember = firstMember = &symbol;
-        symbol.indexInScope = Symbol::Index{ 1 };
-    }
-    else {
-        symbol.indexInScope = Symbol::Index{ (uint32_t)lastMember->indexInScope + 1 };
-        lastMember->nextInScope = &symbol;
-        lastMember = &symbol;
-    }
-
-    symbol.parentScope = this;
-    if (!symbol.name.empty())
-        nameMap->emplace(symbol.name, &symbol);
+void Scope::addDeferredMember(const SyntaxNode& member) {
+    compilation.addDeferredMembers(deferredMemberIndex, member, lastMember);
 }
 
 void Scope::addMembers(const SyntaxNode& syntax) {
     switch (syntax.kind) {
-        case SyntaxKind::CompilationUnit: {
+        // TODO: remove this?
+        /*case SyntaxKind::CompilationUnit: {
             auto unit = compilation.emplace<CompilationUnitSymbol>(compilation);
             for (auto ms : syntax.as<CompilationUnitSyntax>().members)
                 unit->addMembers(*ms);
             break;
-        }
+        }*/
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration:
             addMember(DefinitionSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>()));
+            break;
+        case SyntaxKind::PackageDeclaration:
+            addMember(PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>()));
             break;
         case SyntaxKind::PackageImportDeclaration:
             for (auto item : syntax.as<PackageImportDeclarationSyntax>().items) {
@@ -183,7 +176,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             }
             break;
         case SyntaxKind::HierarchyInstantiation:
-            compilation.addDeferredMembers(deferredMemberIndex, syntax);
+            addDeferredMember(syntax);
             break;
         case SyntaxKind::ModportDeclaration:
             // TODO: modports
@@ -191,7 +184,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::IfGenerate:
         case SyntaxKind::LoopGenerate:
             // TODO: add special name conflict checks for generate blocks
-            compilation.addDeferredMembers(deferredMemberIndex, syntax);
+            addDeferredMember(syntax);
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
@@ -243,6 +236,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
 
 void Scope::lookup(string_view searchName, LookupResult& result) const {
     // First do a direct search and see if we find anything.
+    ensureMembers();
     auto it = nameMap->find(searchName);
     if (it != nameMap->end()) {
         // If this is a local or scoped lookup, check that we can access
@@ -307,6 +301,7 @@ const Symbol* Scope::lookupDirect(string_view searchName) const {
 
     // Just do a simple lookup and return the result if we have one.
     // One wrinkle is that we should not include any imported symbols.
+    ensureMembers();
     auto result = nameMap->find(searchName);
     if (result != nameMap->end() && result->second->kind != SymbolKind::ExplicitImport)
         return result->second;
@@ -323,6 +318,66 @@ ConstantValue Scope::evaluateConstantAndConvert(const ExpressionSyntax& expr, co
     SourceLocation errLoc = errorLocation ? errorLocation : expr.getFirstToken().location();
     const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errLoc, targetType);
     return bound.eval();
+}
+
+void Scope::insertMember(const Symbol* member, const Symbol* at) const {
+    ASSERT(!member->parentScope);
+    ASSERT(!member->nextInScope);
+
+    if (!at) {
+        member->indexInScope = Symbol::Index { 1 };
+        member->nextInScope = std::exchange(firstMember, member);
+    }
+    else {
+        member->indexInScope = Symbol::Index { (uint32_t)at->indexInScope + 1 };
+        member->nextInScope = std::exchange(at->nextInScope, member);
+    }
+
+    if (!member->nextInScope)
+        lastMember = member;
+
+    member->parentScope = this;
+    if (!member->name.empty())
+        nameMap->emplace(member->name, member);
+}
+
+void Scope::realizeDeferredMembers() const {
+    ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
+    auto nodes = compilation.popDeferredMembers(deferredMemberIndex);
+    deferredMemberIndex = DeferredMemberIndex::Invalid;
+
+    for (auto [node, insertionPoint] : nodes) {
+        switch (node->kind) {
+            case SyntaxKind::HierarchyInstantiation: {
+                SmallVectorSized<const Symbol*, 8> symbols;
+                InstanceSymbol::fromSyntax(compilation, node->as<HierarchyInstantiationSyntax>(),
+                                           *this, symbols);
+
+                const Symbol* last = insertionPoint;
+                for (auto symbol : symbols) {
+                    insertMember(symbol, last);
+                    last = symbol;
+                }
+                break;
+            }
+            case SyntaxKind::IfGenerate: {
+                auto block = GenerateBlockSymbol::fromSyntax(compilation,
+                                                             node->as<IfGenerateSyntax>(), *this);
+                if (block)
+                    insertMember(block, insertionPoint);
+                break;
+            }
+            case SyntaxKind::LoopGenerate: {
+                const auto& block = GenerateBlockArraySymbol::fromSyntax(compilation,
+                                                                         node->as<LoopGenerateSyntax>(),
+                                                                         *this);
+                insertMember(&block, insertionPoint);
+                break;
+            }
+            default:
+                THROW_UNREACHABLE;
+        }
+    }
 }
 
 Symbol& Symbol::clone(const Scope& newParent) const {

@@ -36,6 +36,8 @@ public:
                 VariableSymbol::fromSyntax(compilation, syntaxTrees.back().root().as<DataDeclarationSyntax>(), symbols);
 
                 for (auto symbol : symbols) {
+                    scope.addMember(*symbol);
+
                     ConstantValue initial;
                     if (symbol->initializer)
                         initial = symbol->initializer->eval(evalContext);

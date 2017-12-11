@@ -12,6 +12,13 @@
 
 namespace slang {
 
+PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
+    auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header.name.valueText());
+    for (auto member : syntax.members)
+        result->addMembers(*member);
+    return *result;
+}
+
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                                                const ModuleDeclarationSyntax& syntax) {
     auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header.name.valueText());

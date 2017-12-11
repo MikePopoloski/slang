@@ -104,14 +104,14 @@ void Compilation::addSyntaxTree(const SyntaxTree& tree) {
     // Keep track of any newly created definitions in the root symbol's name map.
     for (auto symbol : unit->members()) {
         switch (symbol->kind) {
-            case SymbolKind::Package:
-                // Track packages separately; they live in their own namespace.
-                packageMap.emplace(symbol->name, &symbol->as<PackageSymbol>());
-                break;
             case SymbolKind::Module:
             case SymbolKind::Interface:
             case SymbolKind::Program:
-                root->addMember(*symbol);
+                addDefinition(symbol->as<DefinitionSymbol>());
+                break;
+            case SymbolKind::Package:
+                // Track packages separately; they live in their own namespace.
+                addPackage(symbol->as<PackageSymbol>());
                 break;
             default:
                 break;
@@ -146,11 +146,26 @@ const RootSymbol& Compilation::getRoot() {
     return *root;
 }
 
+const DefinitionSymbol* Compilation::getDefinition(string_view lookupName) const {
+    auto it = definitionMap.find(lookupName);
+    if (it == definitionMap.end())
+        return nullptr;
+    return it->second;
+}
+
+void Compilation::addDefinition(const DefinitionSymbol& definition) {
+    definitionMap.emplace(definition.name, &definition);
+}
+
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
     auto it = packageMap.find(lookupName);
     if (it == packageMap.end())
         return nullptr;
     return it->second;
+}
+
+void Compilation::addPackage(const PackageSymbol& package) {
+    packageMap.emplace(package.name, &package);
 }
 
 CompilationUnitSymbol& Compilation::createScriptScope() {
@@ -224,11 +239,12 @@ const IntegralTypeSymbol& Compilation::getType(int width, bool isSigned, bool is
     return *emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState, lowerBounds, widths);
 }
 
-void Compilation::addDeferredMembers(Scope::DeferredMemberIndex& index, const SyntaxNode& syntax) {
+void Compilation::addDeferredMembers(Scope::DeferredMemberIndex& index, const SyntaxNode& syntax,
+                                     const Symbol* insertionPoint) {
     if (index != Scope::DeferredMemberIndex::Invalid)
-        deferredData[index].push_back(&syntax);
+        deferredData[index].emplace_back(&syntax, insertionPoint);
     else
-        index = deferredData.add({ &syntax });
+        index = deferredData.add({ std::make_tuple(&syntax, insertionPoint) });
 }
 
 Scope::DeferredMemberData Compilation::popDeferredMembers(Scope::DeferredMemberIndex index) {

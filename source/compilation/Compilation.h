@@ -91,7 +91,8 @@ public:
 
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
 
-    void addDeferredMembers(Scope::DeferredMemberIndex& index, const SyntaxNode& syntax);
+    void addDeferredMembers(Scope::DeferredMemberIndex& index, const SyntaxNode& syntax,
+                            const Symbol* insertionPoint);
     Scope::DeferredMemberData popDeferredMembers(Scope::DeferredMemberIndex index);
 
 private:

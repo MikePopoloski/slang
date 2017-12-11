@@ -43,7 +43,7 @@ public:
             return i;
         }
         storage.push_back(item);
-        return static_cast<Index>(storage.size());
+        return static_cast<Index>(storage.size() - 1);
     }
 
     Index add(T&& item) {
@@ -54,7 +54,7 @@ public:
             return i;
         }
         storage.push_back(std::move(item));
-        return static_cast<Index>(storage.size());
+        return static_cast<Index>(storage.size() - 1);
     }
 
     void remove(Index index) {
