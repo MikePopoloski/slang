@@ -179,7 +179,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
 
         // Copy all members from the definition
         for (auto member : definition->members()) {
-            Symbol& cloned = member->clone(*instance);
+            Symbol& cloned = member->clone();
             instance->addMember(cloned);
 
             // If this is a parameter symbol, see if we have a value override for it.
@@ -249,13 +249,12 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         // localparam of the same name as the genvar.
         // TODO: scope name
         auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "");
-
         auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText());
-        implicitParam->value = *genvar;
         block->addMember(*implicitParam);
         block->addMembers(syntax.block);
-
         result->addMember(*block);
+
+        implicitParam->value = *genvar;
     }
     return *result;
 }

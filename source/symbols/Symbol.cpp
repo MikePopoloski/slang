@@ -380,7 +380,7 @@ void Scope::realizeDeferredMembers() const {
     }
 }
 
-Symbol& Symbol::clone(const Scope& newParent) const {
+Symbol& Symbol::clone() const {
     Symbol* result;
     Compilation& compilation = getScope()->getCompilation();
 #define CLONE(type) result = compilation.emplace<type>(*(const type*)this); break
@@ -414,7 +414,8 @@ Symbol& Symbol::clone(const Scope& newParent) const {
     }
 #undef CLONE
 
-    result->parentScope = &newParent;
+    result->parentScope = nullptr;
+    result->nextInScope = nullptr;
     return *result;
 }
 

@@ -135,7 +135,7 @@ const RootSymbol& Compilation::getRoot() {
 
                 // Copy in all members from the definition into the instance.
                 for (auto member : instance->definition.members())
-                    instance->addMember(member->clone(*instance));
+                    instance->addMember(member->clone());
             }
         }
 

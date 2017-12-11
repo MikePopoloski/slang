@@ -104,8 +104,9 @@ public:
     template<typename T>
     const T& as() const { return *static_cast<const T*>(this); }
 
-    /// Makes a clone of the symbol with the provided scope as the new parent.
-    Symbol& clone(const Scope& newParent) const;
+    /// Makes a clone of the symbol. The cloned symbol has the same properties as
+    /// the original but will not be a member of any scope.
+    Symbol& clone() const;
 
     /// A numeric index that can be used to compare the relative ordering of symbols
     /// within a single lexical scope.
