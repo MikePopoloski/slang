@@ -139,6 +139,10 @@ const RootSymbol& Compilation::getRoot() {
             }
         }
 
+        // Sort the list of instances so that we get deterministic ordering of instances;
+        // the order is otherwise dependent on iterating over a hash table.
+        std::sort(topList.begin(), topList.end(), [](auto a, auto b) { return a->name < b->name; });
+
         root->topInstances = topList.copy(*this);
         root->compilationUnits = compilationUnits;
         finalized = true;

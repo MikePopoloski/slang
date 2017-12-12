@@ -285,6 +285,11 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
         // TODO: handle missing package
         if (result.nameKind == LookupNameKind::Scoped)
             result.setSymbol(*compilation.getPackage(searchName));
+        else if (result.nameKind == LookupNameKind::Definition) {
+            auto def = compilation.getDefinition(searchName);
+            if (def)
+                result.setSymbol(*def);
+        }
         return;
     }
 
