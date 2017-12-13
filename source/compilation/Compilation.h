@@ -95,6 +95,9 @@ public:
                             const Symbol* insertionPoint);
     Scope::DeferredMemberData popDeferredMembers(Scope::DeferredMemberIndex index);
 
+    void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
+    span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
+
 private:
     SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,
                                            std::initializer_list<const TypeSymbol*> argTypes);
@@ -125,6 +128,10 @@ private:
     // a temporary state of affairs; once a scope expands its members it
     // will pop its storage here.
     SafeIndexedVector<Scope::DeferredMemberData, Scope::DeferredMemberIndex> deferredData;
+
+    // Sideband data for scopes that have wildcard imports. The list of imports
+    // is stored here and queried during name lookups.
+    SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
 
     // The name map for global definitions.
     flat_hash_map<string_view, const DefinitionSymbol*> definitionMap;

@@ -14,7 +14,8 @@
 
 namespace slang {
 
-const LookupRefPoint LookupRefPoint::any;
+const LookupRefPoint LookupRefPoint::max {nullptr, UINT_MAX};
+const LookupRefPoint LookupRefPoint::min {nullptr, 0};
 
 Symbol::LazyConstant::LazyConstant(ScopeOrSymbol parent) :
     Lazy(parent, &ConstantValue::Invalid) {}
@@ -85,32 +86,28 @@ Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
 }
 
 LookupRefPoint LookupRefPoint::before(const Symbol& symbol) {
-    // TODO: look up the actual index of the symbol
-    return LookupRefPoint(*symbol.getScope(), UINT32_MAX);
+    return LookupRefPoint(symbol.getScope(), (uint32_t)symbol.getIndex());
 }
 
 LookupRefPoint LookupRefPoint::after(const Symbol& symbol) {
-    // TODO: look up the actual index of the symbol
-    return LookupRefPoint(*symbol.getScope(), UINT32_MAX);
+    return LookupRefPoint(symbol.getScope(), (uint32_t)symbol.getIndex() + 1);
 }
 
 LookupRefPoint LookupRefPoint::startOfScope(const Scope& scope) {
-    return LookupRefPoint(scope, 0);
+    return LookupRefPoint(&scope, 0);
 }
 
 LookupRefPoint LookupRefPoint::endOfScope(const Scope& scope) {
-    return LookupRefPoint(scope, UINT32_MAX);
+    return LookupRefPoint(&scope, UINT32_MAX);
 }
 
 bool LookupRefPoint::operator<(const LookupRefPoint& other) const {
-    if (scope == other.scope)
-        return index < other.index;
-    return scope;
+    return index < other.index;
 }
 
 void LookupResult::clear() {
     nameKind = LookupNameKind::Local;
-    referencePoint = LookupRefPoint::any;
+    referencePoint = LookupRefPoint::max;
     resultKind = NotFound;
     resultWasImported = false;
     symbol = nullptr;
@@ -145,13 +142,6 @@ void Scope::addDeferredMember(const SyntaxNode& member) {
 
 void Scope::addMembers(const SyntaxNode& syntax) {
     switch (syntax.kind) {
-        // TODO: remove this?
-        /*case SyntaxKind::CompilationUnit: {
-            auto unit = compilation.emplace<CompilationUnitSymbol>(compilation);
-            for (auto ms : syntax.as<CompilationUnitSyntax>().members)
-                unit->addMembers(*ms);
-            break;
-        }*/
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration:
@@ -163,9 +153,12 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::PackageImportDeclaration:
             for (auto item : syntax.as<PackageImportDeclarationSyntax>().items) {
                 if (item->item.kind == TokenKind::Star) {
-                    addMember(*compilation.emplace<WildcardImportSymbol>(
+                    auto import = compilation.emplace<WildcardImportSymbol>(
                         item->package.valueText(),
-                        item->item.location()));
+                        item->item.location());
+
+                    addMember(*import);
+                    compilation.trackImport(importDataIndex, *import);
                 }
                 else {
                     addMember(*compilation.emplace<ExplicitImportSymbol>(
@@ -260,24 +253,24 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
 
     // If we got here, we didn't find a viable symbol locally. Try looking in
     // any wildcard imports we may have.
-    //SmallVectorSized<std::tuple<ImportEntry*, const Symbol*>, 4> importResults;
-    //for (auto& importEntry : imports) {
-    //    if (result.referencePoint < LookupRefPoint(*this, importEntry.index))
-    //        break;
+    SmallVectorSized<std::tuple<const WildcardImportSymbol*, const Symbol*>, 4> importResults;
+    for (auto import : compilation.queryImports(importDataIndex)) {
+        if (result.referencePoint < LookupRefPoint::after(*import))
+            break;
 
-    //    // TODO: handle missing package
-    //    auto symbol = importEntry.import->getPackage()->lookupDirect(searchName);
-    //    if (symbol) {
-    //        importResults.append(std::make_tuple(&importEntry, symbol));
-    //        result.addPotentialImport(*symbol);
-    //    }
-    //}
+        // TODO: handle missing package
+        auto symbol = import->getPackage()->lookupDirect(searchName);
+        if (symbol) {
+            importResults.append(std::make_tuple(import, symbol));
+            result.addPotentialImport(*symbol);
+        }
+    }
 
-    //if (!importResults.empty()) {
-    //    if (importResults.size() == 1)
-    //        result.setSymbol(*std::get<1>(importResults[0]), true);
-    //    return;
-    //}
+    if (!importResults.empty()) {
+        if (importResults.size() == 1)
+            result.setSymbol(*std::get<1>(importResults[0]), true);
+        return;
+    }
 
     if (thisSym->kind == SymbolKind::Root) {
         // For scoped lookups, if we reach the root without finding anything,
@@ -294,6 +287,7 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
     }
 
     // Continue up the scope chain.
+    result.referencePoint = LookupRefPoint::before(asSymbol());
     return getParent()->lookup(searchName, result);
 }
 

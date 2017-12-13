@@ -257,6 +257,19 @@ Scope::DeferredMemberData Compilation::popDeferredMembers(Scope::DeferredMemberI
     return result;
 }
 
+void Compilation::trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import) {
+    if (index != Scope::ImportDataIndex::Invalid)
+        importData[index].push_back(&import);
+    else
+        index = importData.add({ &import });
+}
+
+span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataIndex index) {
+    if (index == Scope::ImportDataIndex::Invalid)
+        return nullptr;
+    return importData[index];
+}
+
 SubroutineSymbol& Compilation::createSystemFunction(string_view funcName, SystemFunction funcKind,
                                                     std::initializer_list<const TypeSymbol*> argTypes) {
     auto func = emplace<SubroutineSymbol>(*this, funcName, funcKind);

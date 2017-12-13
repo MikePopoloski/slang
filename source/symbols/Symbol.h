@@ -112,6 +112,10 @@ public:
     /// within a single lexical scope.
     enum class Index : uint32_t {};
 
+    /// Gets the index of the symbol within its parent scope, which can be used
+    /// to determine the relative ordering of scope members.
+    Index getIndex() const { return indexInScope; }
+
     template<typename TDerived, typename TResult, typename TSource>
     struct Lazy {
         using ScopeOrSymbol = PointerUnion<const Scope*, const Symbol*>;
@@ -252,7 +256,10 @@ public:
     static LookupRefPoint endOfScope(const Scope& scope);
 
     /// A special reference point that should always compare after any other reference point.
-    static const LookupRefPoint any;
+    static const LookupRefPoint max;
+
+    /// A special reference point that should always compare before any other reference point.
+    static const LookupRefPoint min;
 
     bool operator==(const LookupRefPoint& other) const {
         return scope == other.scope && index == other.index;
@@ -264,8 +271,8 @@ public:
 private:
     friend class Scope;
 
-    LookupRefPoint(const Scope& scope, uint32_t index) :
-        scope(&scope), index(index) {}
+    LookupRefPoint(const Scope* scope_, uint32_t index) :
+        scope(scope_), index(index) {}
 
     const Scope* scope = nullptr;
     uint32_t index = 0;
@@ -403,6 +410,9 @@ public:
     /// Strongly typed index type which is used in a sideband list in the Compilation object
     /// to store information about wildcard imports in this scope.
     enum class ImportDataIndex : uint32_t { Invalid = 0 };
+
+    /// Sideband collection of wildcard imports stored in the Compilation object.
+    using ImportData = std::vector<const WildcardImportSymbol*>;
 
     /// An iterator for members in the scope.
     class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Symbol*> {

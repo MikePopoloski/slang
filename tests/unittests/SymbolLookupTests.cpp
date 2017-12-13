@@ -75,10 +75,8 @@ endmodule
     symbol = result.getFoundSymbol();
 
     CHECK(result.getResultKind() == LookupResult::Found);
-    // TODO: CHECK(result.wasImported());
+    CHECK(result.wasImported());
     REQUIRE(symbol);
-    CHECK(symbol->kind == SymbolKind::Parameter);
-
-    // TODO: re-enable
-    //CHECK(symbol->as<ParameterSymbol>().value().integer() == 4);
+    REQUIRE(symbol->kind == SymbolKind::Parameter);
+    CHECK(symbol->as<ParameterSymbol>().value->integer() == 4);
 }
