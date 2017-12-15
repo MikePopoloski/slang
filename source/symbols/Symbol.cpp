@@ -37,22 +37,6 @@ const ConstantValue& Symbol::LazyConstant::evaluate(const Scope& scope,
     return *scope.getCompilation().createConstant(std::move(v));
 }
 
-Symbol::LazyStatement::LazyStatement(ScopeOrSymbol parent) :
-    Lazy(parent, &InvalidStatement::Instance) {}
-
-const Statement& Symbol::LazyStatement::evaluate(const Scope& scope,
-                                                 const StatementSyntax& syntax) const {
-    return Binder(scope).bindStatement(syntax);
-}
-
-Symbol::LazyStatementList::LazyStatementList(ScopeOrSymbol parent) :
-    Lazy(parent, &StatementList::Empty) {}
-
-const StatementList& Symbol::LazyStatementList::evaluate(const Scope& scope,
-                                                         const SyntaxList<SyntaxNode>& list) const {
-    return Binder(scope).bindStatementList(list);
-}
-
 Symbol::LazyInitializer::LazyInitializer(ScopeOrSymbol parent) :\
     Lazy(parent, nullptr) {}
 
@@ -134,10 +118,6 @@ Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
 
 void Scope::addMember(const Symbol& symbol) {
     insertMember(&symbol, lastMember);
-}
-
-void Scope::addDeferredMember(const SyntaxNode& member) {
-    compilation.addDeferredMembers(deferredMemberIndex, member, lastMember);
 }
 
 void Scope::addMembers(const SyntaxNode& syntax) {
@@ -319,6 +299,10 @@ ConstantValue Scope::evaluateConstantAndConvert(const ExpressionSyntax& expr, co
     return bound.eval();
 }
 
+Scope::DeferredMemberData& Scope::getOrAddDeferredData() {
+    return compilation.getOrAddDeferredData(deferredMemberIndex);
+}
+
 void Scope::insertMember(const Symbol* member, const Symbol* at) const {
     ASSERT(!member->parentScope);
     ASSERT(!member->nextInScope);
@@ -340,49 +324,79 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
         nameMap->emplace(member->name, member);
 }
 
+void Scope::addDeferredMember(const SyntaxNode& member) {
+    getOrAddDeferredData().addMember(member, lastMember);
+}
+
 void Scope::realizeDeferredMembers() const {
     ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
-    auto nodes = compilation.popDeferredMembers(deferredMemberIndex);
+    auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
 
-    for (auto [node, insertionPoint] : nodes) {
-        switch (node->kind) {
-            case SyntaxKind::HierarchyInstantiation: {
-                SmallVectorSized<const Symbol*, 8> symbols;
-                InstanceSymbol::fromSyntax(compilation, node->as<HierarchyInstantiationSyntax>(),
-                                           *this, symbols);
+    if (deferredData.hasStatement()) {
+        auto syntax = deferredData.getStatement();
+        ASSERT(syntax);
 
-                const Symbol* last = insertionPoint;
-                for (auto symbol : symbols) {
-                    insertMember(symbol, last);
-                    last = symbol;
+        Binder binder(*this);
+        const Statement* stmt;
+        if (syntax->kind == SyntaxKind::List)
+            stmt = &binder.bindStatementList(*(const SyntaxList<SyntaxNode>*)syntax);
+        else
+            stmt = &binder.bindStatement(*(const StatementSyntax*)syntax);
+
+        // const cast should always be safe here; there's no way for statement
+        // syntax to be added to our deferred members unless the original class
+        // was non-const.
+        static_cast<StatementBodiedScope*>(const_cast<Scope*>(this))->setBody(stmt);
+    }
+    else {
+        for (auto [node, insertionPoint] : deferredData.getMembers()) {
+            switch (node->kind) {
+                case SyntaxKind::HierarchyInstantiation: {
+                    SmallVectorSized<const Symbol*, 8> symbols;
+                    InstanceSymbol::fromSyntax(compilation, node->as<HierarchyInstantiationSyntax>(),
+                                               *this, symbols);
+
+                    const Symbol* last = insertionPoint;
+                    for (auto symbol : symbols) {
+                        insertMember(symbol, last);
+                        last = symbol;
+                    }
+                    break;
                 }
-                break;
+                case SyntaxKind::IfGenerate: {
+                    auto block = GenerateBlockSymbol::fromSyntax(compilation,
+                                                                 node->as<IfGenerateSyntax>(), *this);
+                    if (block)
+                        insertMember(block, insertionPoint);
+                    break;
+                }
+                case SyntaxKind::LoopGenerate: {
+                    const auto& block = GenerateBlockArraySymbol::fromSyntax(compilation,
+                                                                             node->as<LoopGenerateSyntax>(),
+                                                                             *this);
+                    insertMember(&block, insertionPoint);
+                    break;
+                }
+                default:
+                    THROW_UNREACHABLE;
             }
-            case SyntaxKind::IfGenerate: {
-                auto block = GenerateBlockSymbol::fromSyntax(compilation,
-                                                             node->as<IfGenerateSyntax>(), *this);
-                if (block)
-                    insertMember(block, insertionPoint);
-                break;
-            }
-            case SyntaxKind::LoopGenerate: {
-                const auto& block = GenerateBlockArraySymbol::fromSyntax(compilation,
-                                                                         node->as<LoopGenerateSyntax>(),
-                                                                         *this);
-                insertMember(&block, insertionPoint);
-                break;
-            }
-            default:
-                THROW_UNREACHABLE;
         }
     }
+}
+
+void StatementBodiedScope::setBody(const StatementSyntax& syntax) {
+    getOrAddDeferredData().setStatement(syntax);
+}
+
+void StatementBodiedScope::setBody(const SyntaxList<SyntaxNode>& syntax) {
+    getOrAddDeferredData().setStatement(syntax);
 }
 
 Symbol& Symbol::clone() const {
     Symbol* result;
     Compilation& compilation = getScope()->getCompilation();
-#define CLONE(type) result = compilation.emplace<type>(*(const type*)this); break
+#define CLONE(type) result = compilation.emplace<type>(*static_cast<const type*>(this)); break
 
     switch (kind) {
         case SymbolKind::CompilationUnit: CLONE(CompilationUnitSymbol);

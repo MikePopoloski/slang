@@ -309,7 +309,7 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
     callValue.type = subroutine.returnType;
     context.createLocal(&callValue, nullptr);
 
-    subroutine.body->eval(context);
+    subroutine.getBody()->eval(context);
 
     // Pop the frame and return the value
     return context.popFrame();

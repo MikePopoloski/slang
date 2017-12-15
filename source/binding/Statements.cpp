@@ -35,7 +35,7 @@ void StatementList::eval(EvalContext& context) const {
 }
 
 void SequentialBlockStatement::eval(EvalContext& context) const {
-    block.body->eval(context);
+    block.getBody()->eval(context);
 }
 
 void ExpressionStatement::eval(EvalContext& context) const {

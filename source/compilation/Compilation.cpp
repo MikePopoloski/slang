@@ -243,18 +243,10 @@ const IntegralTypeSymbol& Compilation::getType(int width, bool isSigned, bool is
     return *emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState, lowerBounds, widths);
 }
 
-void Compilation::addDeferredMembers(Scope::DeferredMemberIndex& index, const SyntaxNode& syntax,
-                                     const Symbol* insertionPoint) {
-    if (index != Scope::DeferredMemberIndex::Invalid)
-        deferredData[index].emplace_back(&syntax, insertionPoint);
-    else
-        index = deferredData.add({ std::make_tuple(&syntax, insertionPoint) });
-}
-
-Scope::DeferredMemberData Compilation::popDeferredMembers(Scope::DeferredMemberIndex index) {
-    auto result = std::move(deferredData[index]);
-    deferredData.remove(index);
-    return result;
+Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
+    if (index == Scope::DeferredMemberIndex::Invalid)
+        index = deferredData.emplace();
+    return deferredData[index];
 }
 
 void Compilation::trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import) {

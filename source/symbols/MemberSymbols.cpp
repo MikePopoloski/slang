@@ -235,7 +235,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     // TODO: mising return type
     result->arguments = arguments.copy(compilation);
     result->returnType = *proto.returnType;
-    result->body = syntax.items;
+    result->setBody(syntax.items);
 
     // TODO: clean this up
     SmallVectorSized<const Symbol*, 8> members;

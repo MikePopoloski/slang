@@ -57,6 +57,18 @@ public:
         return static_cast<Index>(storage.size() - 1);
     }
 
+    template<typename... Args>
+    Index emplace(Args&&... args) {
+        if (!freelist.empty()) {
+            Index i = freelist.front();
+            storage[static_cast<size_t>(i)] = T(std::forward<Args>(args)...);
+            freelist.pop_front();
+            return i;
+        }
+        storage.emplace_back(std::forward<Args>(args)...);
+        return static_cast<Index>(storage.size() - 1);
+    }
+
     void remove(Index index) {
         storage[static_cast<size_t>(index)] = T();
         freelist.push_back(index);

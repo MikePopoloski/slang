@@ -34,6 +34,7 @@ class WildcardImportSymbol;
 class PackageSymbol;
 class ParameterSymbol;
 class Compilation;
+class StatementBodiedScope;
 
 using SymbolList = span<const Symbol* const>;
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
@@ -184,8 +185,6 @@ public:
         const TResult& evaluate(const Scope& scope, const TSource& source) const; \
     }
 
-    LAZY(LazyStatement, Statement, StatementSyntax);
-    LAZY(LazyStatementList, StatementList, SyntaxList<SyntaxNode>);
     LAZY(LazyInitializer, Expression, ExpressionSyntax);
     LAZY(LazyType, TypeSymbol, DataTypeSyntax);
 
@@ -402,10 +401,31 @@ public:
     enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
 
     /// Data stored in sideband tables in the Compilation object for deferred members.
-    /// If the scope has deferred members, it will store a list of syntax nodes that need
-    /// to be elaborated, along with a pointer to the symbol in the scope that marks where
-    /// the elaborated members should be inserted.
-    using DeferredMemberData = std::vector<std::tuple<const SyntaxNode*, const Symbol*>>;
+    /// A given scope only ever stores one of the following:
+    /// - A list of syntax nodes that represent deferred members that need to be elaborated
+    ///   before any lookups or iterations are done of members in the scope.
+    /// - Statement syntax (a single node or a list of them) that describes the body
+    ///   of a StatementBodiedScope.
+    struct DeferredMemberData : std::variant<
+        std::vector<std::tuple<const SyntaxNode*, const Symbol*>>,
+        const SyntaxNode*
+    > {
+        void addMember(const SyntaxNode& member, const Symbol* insertionPoint) {
+            std::get<0>(*this).emplace_back(&member, insertionPoint);
+        }
+
+        void setStatement(const SyntaxNode& syntax) {
+            std::variant<
+                std::vector<std::tuple<const SyntaxNode*, const Symbol*>>,
+                const SyntaxNode*
+            >::operator=(&syntax);
+        }
+
+        span<std::tuple<const SyntaxNode*, const Symbol*> const> getMembers() const { return std::get<0>(*this); }
+        const SyntaxNode* getStatement() const { return std::get<1>(*this); }
+
+        bool hasStatement() const { return index() == 1; }
+    };
 
     /// Strongly typed index type which is used in a sideband list in the Compilation object
     /// to store information about wildcard imports in this scope.
@@ -447,22 +467,27 @@ public:
 protected:
     Scope(Compilation& compilation_, const Symbol* thisSym_);
 
+    /// Before we access any members to do lookups or return iterators, make sure
+    /// we don't have any deferred members to take care of first.
+    void ensureMembers() const {
+        if (deferredMemberIndex != DeferredMemberIndex::Invalid)
+            realizeDeferredMembers();
+    }
+
+    /// Gets or creates deferred member data in the Compilation object's sideband table.
+    DeferredMemberData& getOrAddDeferredData();
+
 private:
     // Inserts the given member symbol into our own list of members, right after
     // the given symbol. If `at` is null, it will insert at the head of the list.
     void insertMember(const Symbol* member, const Symbol* at) const;
 
-    // Adds a deferred member to the scope, which is tracked in the Compilation object
-    // and will later be elaborated by `realizeDeferredMembers`.
+    // Adds a syntax node to the list of deferred members in the scope.
     void addDeferredMember(const SyntaxNode& member);
 
-    // Before we access any members to do lookups or return iterators, make sure
-    // we don't have any deferred members to take care of first.
+    // Elaborates all deferred members and then releases the entry from the
+    // Compilation object's sideband table.
     void realizeDeferredMembers() const;
-    void ensureMembers() const {
-        if (deferredMemberIndex != DeferredMemberIndex::Invalid)
-            realizeDeferredMembers();
-    }
 
     // The compilation that owns this scope.
     Compilation& compilation;
@@ -487,6 +512,25 @@ private:
     // If this scope has any wildcard import directives we'll keep track of them
     // in a sideband list in the compilation object.
     ImportDataIndex importDataIndex {0};
+};
+
+/// Base class for scopes that have a statement body.
+class StatementBodiedScope : public Scope {
+public:
+    const Statement* getBody() const {
+        ensureMembers();
+        return body;
+    }
+
+    void setBody(const Statement* statement) { body = statement; }
+    void setBody(const StatementSyntax& syntax);
+    void setBody(const SyntaxList<SyntaxNode>& syntax);
+
+protected:
+    using Scope::Scope;
+
+private:
+    const Statement* body = nullptr;
 };
 
 /// The root of a single compilation unit.
@@ -540,28 +584,23 @@ public:
         InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, definition) {}
 };
 
-class SequentialBlockSymbol : public Symbol, public Scope {
+class SequentialBlockSymbol : public Symbol, public StatementBodiedScope {
 public:
-    LazyStatement body;
-
     explicit SequentialBlockSymbol(Compilation& compilation) :
         Symbol(SymbolKind::SequentialBlock),
-        Scope(compilation, this),
-        body(static_cast<const Scope*>(this)) {}
+        StatementBodiedScope(compilation, this) {}
 
     static SequentialBlockSymbol& createImplicitBlock(Compilation& compilation,
                                                       const ForLoopStatementSyntax& forLoop);
 };
 
-class ProceduralBlockSymbol : public Symbol, public Scope {
+class ProceduralBlockSymbol : public Symbol, public StatementBodiedScope {
 public:
-    LazyStatement body;
     ProceduralBlockKind procedureKind;
 
     ProceduralBlockSymbol(Compilation& compilation, ProceduralBlockKind procedureKind) :
         Symbol(SymbolKind::ProceduralBlock),
-        Scope(compilation, this),
-        body(static_cast<const Scope*>(this)),
+        StatementBodiedScope(compilation, this),
         procedureKind(procedureKind) {}
 };
 
@@ -687,11 +726,10 @@ public:
 };
 
 /// Represents a subroutine (task or function).
-class SubroutineSymbol : public Symbol, public Scope {
+class SubroutineSymbol : public Symbol, public StatementBodiedScope {
 public:
     using ArgList = span<const FormalArgumentSymbol* const>;
 
-    LazyStatementList body;
     LazyType returnType;
     ArgList arguments;
     VariableLifetime defaultLifetime = VariableLifetime::Automatic;
@@ -700,15 +738,13 @@ public:
 
     SubroutineSymbol(Compilation& compilation, string_view name, VariableLifetime defaultLifetime, bool isTask) :
         Symbol(SymbolKind::Subroutine, name),
-        Scope(compilation, this),
-        body(static_cast<const Scope*>(this)),
+        StatementBodiedScope(compilation, this),
         returnType(static_cast<const Scope*>(this)),
         defaultLifetime(defaultLifetime), isTask(isTask) {}
 
     SubroutineSymbol(Compilation& compilation, string_view name, SystemFunction systemFunction) :
         Symbol(SymbolKind::Subroutine, name),
-        Scope(compilation, this),
-        body(static_cast<const Scope*>(this)),
+        StatementBodiedScope(compilation, this),
         returnType(static_cast<const Scope*>(this)),
         systemFunctionKind(systemFunction) {}
 

@@ -91,9 +91,7 @@ public:
 
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
 
-    void addDeferredMembers(Scope::DeferredMemberIndex& index, const SyntaxNode& syntax,
-                            const Symbol* insertionPoint);
-    Scope::DeferredMemberData popDeferredMembers(Scope::DeferredMemberIndex index);
+    Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
 
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
@@ -124,9 +122,7 @@ private:
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
 
-    // Sideband data for scopes that have deferred members. This is mostly
-    // a temporary state of affairs; once a scope expands its members it
-    // will pop its storage here.
+    // Sideband data for scopes that have deferred members.
     SafeIndexedVector<Scope::DeferredMemberData, Scope::DeferredMemberIndex> deferredData;
 
     // Sideband data for scopes that have wildcard imports. The list of imports

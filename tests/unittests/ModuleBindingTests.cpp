@@ -256,7 +256,7 @@ endmodule
     CHECK(args[4]->type->as<IntegralTypeSymbol>().width == 1);
     CHECK(args[4]->direction == FormalArgumentDirection::InOut);
 
-    const auto& returnStmt = foo.body->as<StatementList>().list[0]->as<ReturnStatement>();
+    const auto& returnStmt = foo.getBody()->as<StatementList>().list[0]->as<ReturnStatement>();
     REQUIRE(returnStmt.kind == StatementKind::Return);
     CHECK(!returnStmt.expr->bad());
     CHECK(returnStmt.expr->type->as<IntegralTypeSymbol>().width == 32);
