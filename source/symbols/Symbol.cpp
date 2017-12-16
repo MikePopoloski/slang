@@ -337,17 +337,10 @@ void Scope::realizeDeferredMembers() const {
         auto syntax = deferredData.getStatement();
         ASSERT(syntax);
 
-        Binder binder(*this);
-        const Statement* stmt;
-        if (syntax->kind == SyntaxKind::List)
-            stmt = &binder.bindStatementList(*(const SyntaxList<SyntaxNode>*)syntax);
-        else
-            stmt = &binder.bindStatement(*(const StatementSyntax*)syntax);
-
-        // const cast should always be safe here; there's no way for statement
+        // The const_cast should always be safe here; there's no way for statement
         // syntax to be added to our deferred members unless the original class
         // was non-const.
-        static_cast<StatementBodiedScope*>(const_cast<Scope*>(this))->setBody(stmt);
+        static_cast<StatementBodiedScope*>(const_cast<Scope*>(this))->bindBody(*syntax);
     }
     else {
         for (auto [node, insertionPoint] : deferredData.getMembers()) {

@@ -530,6 +530,18 @@ protected:
     using Scope::Scope;
 
 private:
+    friend class Scope;
+
+    void bindBody(const SyntaxNode& syntax);
+    Statement& bindStatement(const StatementSyntax& syntax);
+    Statement& bindStatementList(const SyntaxList<SyntaxNode>& items);
+    Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax);
+    Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax);
+    Statement& bindReturnStatement(const ReturnStatementSyntax& syntax);
+    Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax);
+
+    Statement& badStmt(const Statement* stmt);
+
     const Statement* body = nullptr;
 };
 

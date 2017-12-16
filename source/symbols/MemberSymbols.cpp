@@ -117,57 +117,43 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 
 // TODO: move these someplace better
 
-static void findChildSymbols(Compilation& compilation, const StatementSyntax& syntax,
-                             SmallVector<const Symbol*>& results) {
-    switch (syntax.kind) {
-        case SyntaxKind::ConditionalStatement: {
-            const auto& conditional = syntax.as<ConditionalStatementSyntax>();
-            findChildSymbols(compilation, conditional.statement, results);
-            if (conditional.elseClause)
-                findChildSymbols(compilation, conditional.elseClause->clause.as<StatementSyntax>(), results);
-            break;
-        }
-        case SyntaxKind::ForLoopStatement: {
-            // A for loop has an implicit block around it iff it has variable declarations in its initializers.
-            const auto& loop = syntax.as<ForLoopStatementSyntax>();
-            bool any = false;
-            for (auto initializer : loop.initializers) {
-                if (initializer->kind == SyntaxKind::ForVariableDeclaration) {
-                    any = true;
-                    break;
-                }
-            }
-
-            if (any)
-                results.append(&SequentialBlockSymbol::createImplicitBlock(compilation, loop));
-            else
-                findChildSymbols(compilation, loop.statement, results);
-            break;
-        }
-        case SyntaxKind::SequentialBlockStatement: {
-            auto block = compilation.emplace<SequentialBlockSymbol>(compilation);
-            // TODO: set children
-            results.append(block);
-            break;
-        }
-        default:
-            break;
-    }
-}
-
-static void findChildSymbols(Compilation& compilation, const SyntaxList<SyntaxNode>& items,
-                             SmallVector<const Symbol*>& results) {
-    for (auto item : items) {
-        if (item->kind == SyntaxKind::DataDeclaration) {
-            SmallVectorSized<const VariableSymbol*, 4> symbols;
-            VariableSymbol::fromSyntax(compilation, item->as<DataDeclarationSyntax>(), symbols);
-            results.appendRange(symbols);
-        }
-        else if (isStatement(item->kind)) {
-            findChildSymbols(compilation, item->as<StatementSyntax>(), results);
-        }
-    }
-}
+//static void findChildSymbols(Compilation& compilation, const StatementSyntax& syntax,
+//                             SmallVector<const Symbol*>& results) {
+//    switch (syntax.kind) {
+//        case SyntaxKind::ConditionalStatement: {
+//            const auto& conditional = syntax.as<ConditionalStatementSyntax>();
+//            findChildSymbols(compilation, conditional.statement, results);
+//            if (conditional.elseClause)
+//                findChildSymbols(compilation, conditional.elseClause->clause.as<StatementSyntax>(), results);
+//            break;
+//        }
+//        case SyntaxKind::ForLoopStatement: {
+//            // A for loop has an implicit block around it iff it has variable declarations in its initializers.
+//            const auto& loop = syntax.as<ForLoopStatementSyntax>();
+//            bool any = false;
+//            for (auto initializer : loop.initializers) {
+//                if (initializer->kind == SyntaxKind::ForVariableDeclaration) {
+//                    any = true;
+//                    break;
+//                }
+//            }
+//
+//            if (any)
+//                results.append(&SequentialBlockSymbol::createImplicitBlock(compilation, loop));
+//            else
+//                findChildSymbols(compilation, loop.statement, results);
+//            break;
+//        }
+//        case SyntaxKind::SequentialBlockStatement: {
+//            auto block = compilation.emplace<SequentialBlockSymbol>(compilation);
+//            // TODO: set children
+//            results.append(block);
+//            break;
+//        }
+//        default:
+//            break;
+//    }
+//}
 
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const FunctionDeclarationSyntax& syntax) {
@@ -236,13 +222,6 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     result->arguments = arguments.copy(compilation);
     result->returnType = *proto.returnType;
     result->setBody(syntax.items);
-
-    // TODO: clean this up
-    SmallVectorSized<const Symbol*, 8> members;
-    findChildSymbols(compilation, syntax.items, members);
-    for (auto member : members)
-        result->addMember(*member);
-
     return *result;
 }
 
