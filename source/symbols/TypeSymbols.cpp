@@ -6,114 +6,195 @@
 //------------------------------------------------------------------------------
 #include "TypeSymbols.h"
 
+#include "binding/ConstantValue.h"
 #include "compilation/Compilation.h"
+
+namespace {
+
+using namespace slang;
+
+string_view getName(BuiltInIntegerType::Kind kind) {
+    switch (kind) {
+        case BuiltInIntegerType::Bit: return "bit";
+        case BuiltInIntegerType::Logic: return "logic";
+        case BuiltInIntegerType::Reg: return "reg";
+        case BuiltInIntegerType::ShortInt: return "shortint";
+        case BuiltInIntegerType::Int: return "int";
+        case BuiltInIntegerType::LongInt: return "longint";
+        case BuiltInIntegerType::Byte: return "byte";
+        case BuiltInIntegerType::Integer: return "integer";
+        case BuiltInIntegerType::Time: return "time";
+        default: THROW_UNREACHABLE;
+    }
+}
+
+uint32_t getWidth(BuiltInIntegerType::Kind kind) {
+    switch (kind) {
+        case BuiltInIntegerType::Bit: return 1;
+        case BuiltInIntegerType::Logic: return 1;
+        case BuiltInIntegerType::Reg: return 1;
+        case BuiltInIntegerType::ShortInt: return 16;
+        case BuiltInIntegerType::Int: return 32;
+        case BuiltInIntegerType::LongInt: return 64;
+        case BuiltInIntegerType::Byte: return 8;
+        case BuiltInIntegerType::Integer: return 32;
+        case BuiltInIntegerType::Time: return 64;
+        default: THROW_UNREACHABLE;
+    }
+}
+
+bool getSigned(BuiltInIntegerType::Kind kind) {
+    switch (kind) {
+        case BuiltInIntegerType::Bit: return false;
+        case BuiltInIntegerType::Logic: return false;
+        case BuiltInIntegerType::Reg: return false;
+        case BuiltInIntegerType::ShortInt: return true;
+        case BuiltInIntegerType::Int: return true;
+        case BuiltInIntegerType::LongInt: return true;
+        case BuiltInIntegerType::Byte: return true;
+        case BuiltInIntegerType::Integer: return true;
+        case BuiltInIntegerType::Time: return false;
+        default: THROW_UNREACHABLE;
+    }
+}
+
+bool getFourState(BuiltInIntegerType::Kind kind) {
+    switch (kind) {
+        case BuiltInIntegerType::Bit: return false;
+        case BuiltInIntegerType::Logic: return true;
+        case BuiltInIntegerType::Reg: return true;
+        case BuiltInIntegerType::ShortInt: return false;
+        case BuiltInIntegerType::Int: return false;
+        case BuiltInIntegerType::LongInt: return false;
+        case BuiltInIntegerType::Byte: return false;
+        case BuiltInIntegerType::Integer: return true;
+        case BuiltInIntegerType::Time: return true;
+        default: THROW_UNREACHABLE;
+    }
+}
+
+uint32_t getWidth(span<ConstantRange const> dims) {
+    uint32_t width = 0;
+    for (const auto& dim : dims)
+        width += dim.width();
+    return width;
+}
+
+string_view getName(FloatingType::Kind kind) {
+    switch (kind) {
+        case FloatingType::Real: return "real";
+        case FloatingType::RealTime: return "realtime";
+        case FloatingType::ShortReal: return "shortreal";
+        default: THROW_UNREACHABLE;
+    }
+}
+
+}
 
 namespace slang {
 
-const ErrorTypeSymbol ErrorTypeSymbol::Instance;
+const ErrorType ErrorType::Instance;
 
-static int zero = 0;
-span<int const> IntegralTypeSymbol::EmptyLowerBound{ &zero, 1 };
+const Type& Type::getCanonicalType() const {
+    return *this;
+}
 
-bool isDefaultSigned(TokenKind) {
+uint32_t Type::getBitWidth() const {
+    if (isIntegral())
+        return as<IntegralType>().bitWidth;
+    if (isFloating()) {
+        switch (as<FloatingType>().floatKind) {
+            case FloatingType::Real: return 64;
+            case FloatingType::RealTime: return 64;
+            case FloatingType::ShortReal: return 32;
+            default: THROW_UNREACHABLE;
+        }
+    }
+    return 0;
+}
+
+bool Type::isIntegral() const {
+    switch (kind) {
+        case SymbolKind::BuiltInIntegerType:
+        case SymbolKind::VectorType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool Type::isMatching(const Type& rhs) const {
+    const Type* l = &getCanonicalType();
+    const Type* r = &rhs.getCanonicalType();
+
+    // If the two types have the same address, they are literally the same type.
+    // This handles all built-in types, which are allocated once and then shared,
+    // and also handles simple bit vector types that share the same range, signedness,
+    // and four-stateness because we uniquify them in the compilation cache.
+    if (l == r)
+        return true;
+
+    // TODO: check array types here
+
     return false;
 }
 
-bool TypeSymbol::isMatching(const TypeSymbol&) const {
-    return true;
-}
-
-bool TypeSymbol::isEquivalent(const TypeSymbol& rhs) const {
+bool Type::isEquivalent(const Type& rhs) const {
     if (isMatching(rhs))
         return true;
 
     return true;
 }
 
-bool TypeSymbol::isAssignmentCompatible(const TypeSymbol& rhs) const {
+bool Type::isAssignmentCompatible(const Type& rhs) const {
     if (isEquivalent(rhs))
         return true;
 
     return true;
 }
 
-bool TypeSymbol::isCastCompatible(const TypeSymbol& rhs) const {
+bool Type::isCastCompatible(const Type& rhs) const {
     if (isAssignmentCompatible(rhs))
         return true;
 
     return true;
 }
 
-std::string TypeSymbol::toString() const {
-    std::string result;
-    switch (kind) {
-        case SymbolKind::IntegralType: {
-            const auto& s = as<IntegralTypeSymbol>();
-            result = name;
-            if (isDefaultSigned(s.keywordType) != s.isSigned)
-                result += s.isSigned ? " signed" : " unsigned";
-            break;
-        }
-        case SymbolKind::RealType:
-            result = name;
-            break;
-            /*case SymbolKind::Instance: {
-            result = name.toString();
-            auto ia = as<InstanceSymbol>();
-            for (auto r : ia.dimensions)
-            result += "[" + r.left.toString(LiteralBase::Decimal) +
-            ":" + r.right.toString(LiteralBase::Decimal) + "]";
-            break;
-            }*/
-        default:
-            break;
-    }
-    return "'" + result + "'";
+std::string Type::toString() const {
+    return "";
 }
 
-bool TypeSymbol::isSigned() const {
-    switch (kind) {
-        case SymbolKind::IntegralType: return as<IntegralTypeSymbol>().isSigned;
-        case SymbolKind::RealType: return true;
-        default: return false;
-    }
+IntegralType::IntegralType(SymbolKind kind, string_view name, uint32_t bitWidth_,
+                           bool isSigned_, bool isFourState_) :
+    Type(kind, name),
+    bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_)
+{
 }
 
-bool TypeSymbol::isFourState() const {
-    switch (kind) {
-        case SymbolKind::IntegralType: return as<IntegralTypeSymbol>().isFourState;
-        case SymbolKind::RealType: return false;
-        default: return false;
-    }
+bool IntegralType::isSimpleBitVector() const {
+    return isBuiltIn() || (kind == SymbolKind::VectorType && as<VectorType>().dimensions.size() == 1);
 }
 
-bool TypeSymbol::isReal() const {
-    switch (kind) {
-        case SymbolKind::IntegralType: return false;
-        case SymbolKind::RealType: return true;
-        default: return false;
-    }
+ConstantRange IntegralType::getBitVectorRange() const {
+    if (isBuiltIn())
+        return { (int)bitWidth - 1, 0 };
+
+    ASSERT(kind == SymbolKind::VectorType);
+
+    const auto& vt = as<VectorType>();
+    ASSERT(vt.dimensions.size() == 1);
+    return vt.dimensions[0];
 }
 
-int TypeSymbol::width() const {
-    switch (kind) {
-        case SymbolKind::IntegralType: return as<IntegralTypeSymbol>().width;
-        case SymbolKind::RealType: return as<RealTypeSymbol>().width;
-        default: return 0;
-    }
-}
-
-
-const TypeSymbol& IntegralTypeSymbol::fromSyntax(Compilation& compilation,
-                                                 const IntegerTypeSyntax& syntax,
-                                                 const Scope& scope) {
+const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
+                                     const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
     bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool isFourState = syntax.kind != SyntaxKind::BitType;
 
     SmallVectorSized<ConstantRange, 4> dims;
-    if (!evaluateConstantDims(syntax.dimensions, dims, scope))
+    if (!evaluateConstantDims(compilation, syntax.dimensions, dims, scope))
         return compilation.getErrorType();
 
     // TODO: review this whole mess
@@ -126,36 +207,16 @@ const TypeSymbol& IntegralTypeSymbol::fromSyntax(Compilation& compilation,
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
         int width = dims[0].left + 1;
-        return compilation.getType(width, isSigned, isFourState, isReg);
+        return compilation.getType((uint16_t)width, isSigned, isFourState, isReg);
     }
     else {
-        SmallVectorSized<int, 4> lowerBounds;
-        SmallVectorSized<int, 4> widths;
-        int totalWidth = 0;
-        for (auto& dim : dims) {
-            int msb = dim.left;
-            int lsb = dim.right;
-            int width;
-            if (msb > lsb) {
-                width = msb - lsb + 1;
-                lowerBounds.append(lsb);
-            }
-            else {
-                // TODO: msb == lsb
-                width = lsb - msb + 1;
-                lowerBounds.append(-lsb);
-            }
-            widths.append(width);
-
-            // TODO: overflow
-            totalWidth += width;
-        }
-        return compilation.getType(totalWidth, isSigned, isFourState, isReg,
-                                   lowerBounds.copy(compilation), widths.copy(compilation));
+        return compilation.getType(isSigned, isFourState, isReg, dims.copy(compilation));
     }
 }
 
-bool IntegralTypeSymbol::evaluateConstantDims(const SyntaxList<VariableDimensionSyntax>& dimensions, SmallVector<ConstantRange>& results, const Scope& scope) {
+bool IntegralType::evaluateConstantDims(Compilation&,
+                                        const SyntaxList<VariableDimensionSyntax>& dimensions,
+                                        SmallVector<ConstantRange>& results, const Scope& scope) {
     for (const VariableDimensionSyntax* dim : dimensions) {
         const SelectorSyntax* selector;
         if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
@@ -169,7 +230,8 @@ bool IntegralTypeSymbol::evaluateConstantDims(const SyntaxList<VariableDimension
 
         const RangeSelectSyntax& range = selector->as<RangeSelectSyntax>();
 
-        // §6.9.1 - Implementations may set a limit on the maximum length of a vector, but the limit shall be at least 65536 (2^16) bits.
+        // §6.9.1 - Implementations may set a limit on the maximum length of a vector,
+        // but the limit shall be at least 65536 (2^16) bits.
         const int MaxRangeBits = 16;
 
         // TODO: errors
@@ -179,9 +241,40 @@ bool IntegralTypeSymbol::evaluateConstantDims(const SyntaxList<VariableDimension
         if (!left || !right)
             return false;
 
-        results.emplace(ConstantRange{ *left, *right });
+        results.emplace(ConstantRange { *left, *right });
     }
     return true;
+}
+
+BuiltInIntegerType::BuiltInIntegerType(Kind builtInKind) :
+    BuiltInIntegerType(builtInKind, getSigned(builtInKind))
+{
+}
+
+BuiltInIntegerType::BuiltInIntegerType(Kind builtInKind, bool isSigned) :
+    IntegralType(SymbolKind::BuiltInIntegerType,
+                 getName(builtInKind),
+                 getWidth(builtInKind),
+                 isSigned,
+                 getFourState(builtInKind)),
+    integerKind(builtInKind)
+{
+}
+
+VectorType::VectorType(ScalarType scalarType_, span<ConstantRange const> dimensions_, bool isSigned) :
+    IntegralType(SymbolKind::VectorType, getName((BuiltInIntegerType::Kind)scalarType_),
+                 getWidth(dimensions_),
+                 isSigned,
+                 getFourState((BuiltInIntegerType::Kind)scalarType_)),
+    scalarType(scalarType_),
+    dimensions(dimensions_)
+{
+}
+
+FloatingType::FloatingType(Kind floatKind_) :
+    Type(SymbolKind::FloatingType, getName(floatKind_)),
+    floatKind(floatKind_)
+{
 }
 
 }

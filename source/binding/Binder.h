@@ -35,7 +35,7 @@ public:
     /// Binds an expression in the context of an assignment, using the type of the left hand side
     /// to perform any necessary implicit conversions and checking.
     const Expression& bindAssignmentLikeContext(const ExpressionSyntax& syntax,
-                                                SourceLocation location, const TypeSymbol& assignmentType);
+                                                SourceLocation location, const Type& assignmentType);
 
 private:
     Expression& bindAndPropagate(const ExpressionSyntax& syntax);
@@ -68,9 +68,9 @@ private:
 
     // Apply propagation rules for an assignment; increasing the rhs type to the lhs type if necessary
     // apply to both sides if symmetric. Returns true if a type expansion was necessary
-    bool propagateAssignmentLike(Expression& rhs, const TypeSymbol& lhsType);
+    bool propagateAssignmentLike(Expression& rhs, const Type& lhsType);
 
-    const TypeSymbol& binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState);
+    const Type& binaryOperatorResultType(const Type* lhsType, const Type* rhsType, bool forceFourState);
 
     const Scope& scope;
     Compilation& compilation;

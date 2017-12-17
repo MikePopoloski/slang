@@ -11,22 +11,18 @@
 namespace slang {
 
 Compilation::Compilation() :
-    shortIntType(TokenKind::ShortIntKeyword, 16, true, false),
-    intType(TokenKind::IntKeyword, 32, true, false),
-    longIntType(TokenKind::LongIntKeyword, 164, true, false),
-    byteType(TokenKind::ByteKeyword, 8, true, false),
-    bitType(TokenKind::BitKeyword, 1, false, false),
-    logicType(TokenKind::LogicKeyword, 1, false, true),
-    regType(TokenKind::RegKeyword, 1, false, true),
-    integerType(TokenKind::IntegerKeyword, 32, true, true),
-    timeType(TokenKind::TimeKeyword, 64, false, true),
-    realType(TokenKind::RealKeyword, 64),
-    realTimeType(TokenKind::RealTimeKeyword, 64),
-    shortRealType(TokenKind::ShortRealKeyword, 64),
-    stringType(SymbolKind::StringType, "string"),
-    chandleType(SymbolKind::CHandleType, "chandle"),
-    voidType(SymbolKind::VoidType, "void"),
-    eventType(SymbolKind::EventType, "event")
+    shortIntType(BuiltInIntegerType::ShortInt),
+    intType(BuiltInIntegerType::Int),
+    longIntType(BuiltInIntegerType::LongInt),
+    byteType(BuiltInIntegerType::Byte),
+    bitType(BuiltInIntegerType::Bit),
+    logicType(BuiltInIntegerType::Logic),
+    regType(BuiltInIntegerType::Reg),
+    integerType(BuiltInIntegerType::Integer),
+    timeType(BuiltInIntegerType::Time),
+    realType(FloatingType::Real),
+    realTimeType(FloatingType::RealTime),
+    shortRealType(FloatingType::ShortReal)
 {
     // Register built-in types for lookup by syntax kind.
     knownTypes[SyntaxKind::ShortIntType] = &shortIntType;
@@ -178,21 +174,21 @@ CompilationUnitSymbol& Compilation::createScriptScope() {
     return *unit;
 }
 
-static TokenKind getIntegralKeywordKind(bool isFourState, bool isReg) {
-    return !isFourState ? TokenKind::BitKeyword : isReg ? TokenKind::RegKeyword : TokenKind::LogicKeyword;
+static VectorType::ScalarType getScalarType(bool isFourState, bool isReg) {
+    return !isFourState ? VectorType::Bit : isReg ? VectorType::Reg : VectorType::Logic;
 }
 
-const TypeSymbol& Compilation::getType(SyntaxKind typeKind) const {
+const Type& Compilation::getType(SyntaxKind typeKind) const {
     auto it = knownTypes.find(typeKind);
     return it == knownTypes.end() ? errorType : *it->second;
 }
 
-const TypeSymbol& Compilation::getType(const DataTypeSyntax& node, const Scope& parent) {
+const Type& Compilation::getType(const DataTypeSyntax& node, const Scope& parent) {
     switch (node.kind) {
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
         case SyntaxKind::RegType:
-            return IntegralTypeSymbol::fromSyntax(*this, node.as<IntegerTypeSyntax>(), parent);
+            return IntegralType::fromSyntax(*this, node.as<IntegerTypeSyntax>(), parent);
         case SyntaxKind::ByteType:
         case SyntaxKind::ShortIntType:
         case SyntaxKind::IntType:
@@ -221,26 +217,27 @@ const TypeSymbol& Compilation::getType(const DataTypeSyntax& node, const Scope& 
     }
 }
 
-const IntegralTypeSymbol& Compilation::getType(int width, bool isSigned, bool isFourState, bool isReg) {
-    uint64_t key = width;
-    key |= uint64_t(isSigned) << 32;
-    key |= uint64_t(isFourState) << 33;
-    key |= uint64_t(isReg) << 34;
+const VectorType& Compilation::getType(uint16_t width, bool isSigned, bool isFourState, bool isReg) {
+    uint32_t key = width;
+    key |= uint64_t(isSigned) << 16;
+    key |= uint64_t(isFourState) << 17;
+    key |= uint64_t(isReg) << 18;
 
-    auto it = integralTypeCache.find(key);
-    if (it != integralTypeCache.end())
+    auto it = vectorTypeCache.find(key);
+    if (it != vectorTypeCache.end())
         return *it->second;
 
-    TokenKind type = getIntegralKeywordKind(isFourState, isReg);
-    auto symbol = emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState);
-    integralTypeCache.emplace_hint(it, key, symbol);
-    return *symbol;
+    SmallVectorSized<ConstantRange, 2> dims;
+    dims.append({ width - 1, 0 });
+
+    auto type = emplace<VectorType>(getScalarType(isFourState, isReg), dims.copy(*this), isSigned);
+    vectorTypeCache.emplace_hint(it, key, type);
+    return *type;
 }
 
-const IntegralTypeSymbol& Compilation::getType(int width, bool isSigned, bool isFourState, bool isReg,
-                                                 span<const int> lowerBounds, span<const int> widths) {
-    TokenKind type = getIntegralKeywordKind(isFourState, isReg);
-    return *emplace<IntegralTypeSymbol>(type, width, isSigned, isFourState, lowerBounds, widths);
+const VectorType& Compilation::getType(bool isSigned, bool isFourState, bool isReg,
+                                       span<ConstantRange const> dimensions) {
+    return *emplace<VectorType>(getScalarType(isFourState, isReg), dimensions, isSigned);
 }
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
@@ -263,7 +260,7 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
 }
 
 SubroutineSymbol& Compilation::createSystemFunction(string_view funcName, SystemFunction funcKind,
-                                                    std::initializer_list<const TypeSymbol*> argTypes) {
+                                                    std::initializer_list<const Type*> argTypes) {
     auto func = emplace<SubroutineSymbol>(*this, funcName, funcKind);
     func->returnType = getIntType();
 

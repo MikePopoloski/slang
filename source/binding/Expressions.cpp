@@ -11,7 +11,7 @@
 
 namespace slang {
 
-const InvalidExpression InvalidExpression::Instance(nullptr, ErrorTypeSymbol::Instance);
+const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);
 
 bool Expression::evalBool(EvalContext& context) const {
     ConstantValue result = eval(context);
@@ -39,7 +39,7 @@ ConstantValue Expression::eval(EvalContext& context) const {
     THROW_UNREACHABLE;
 }
 
-IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const TypeSymbol& type, const SVInt& value,
+IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
                                const ExpressionSyntax& syntax) :
     Expression(ExpressionKind::IntegerLiteral, type, syntax),
     valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown())
@@ -53,12 +53,12 @@ IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const TypeSymbol& type, con
 }
 
 ConstantValue IntegerLiteral::eval(EvalContext&) const {
-    uint16_t width = (uint16_t)type->width();
+    uint16_t width = (uint16_t)type->getBitWidth();
     SVInt result = getValue();
 
     // TODO: truncation?
     if (width > result.getBitWidth())
-        result = extend(result, width, type->isSigned());
+        result = extend(result, width, type->as<IntegralType>().isSigned);
     return { *type, result };
 }
 
@@ -67,8 +67,8 @@ ConstantValue RealLiteral::eval(EvalContext&) const {
 }
 
 ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
-    uint16_t width = (uint16_t)type->width();
-    bool isSigned = type->isSigned();
+    uint16_t width = (uint16_t)type->getBitWidth();
+    bool isSigned = type->as<IntegralType>().isSigned;
 
     switch (value.value) {
         case 0: return { *type, SVInt(width, 0, isSigned) };
@@ -215,38 +215,46 @@ ConstantValue TernaryExpression::eval(EvalContext& context) const {
 }
 
 ConstantValue SelectExpression::eval(EvalContext& context) const {
-    const auto first = expr().eval(context).integer();
-    int lb = expr().type->as<IntegralTypeSymbol>().lowerBounds[0];
-    const auto msb = left().eval(context).integer();
-    const auto lsbOrWidth = right().eval(context).integer();
+    SVInt value = expr().eval(context).integer();
+    ConstantRange range = expr().type->as<IntegralType>().getBitVectorRange();
+
+    SVInt msb = left().eval(context).integer();
+    SVInt lsbOrWidth = right().eval(context).integer();
 
     if (msb.hasUnknown() || lsbOrWidth.hasUnknown()) {
         // If any part of an address is unknown, then the whole thing returns
         // 'x; let's handle this here so everywhere else we can assume the inputs
         // are normal numbers
-        return { *type, SVInt::createFillX((uint16_t)type->width(), false) };
+        return { *type, SVInt::createFillX((uint16_t)type->getBitWidth(), false) };
     }
 
-    // here "actual" bit refers to bits numbered from
-    // lsb 0 to msb <width>, which is what is understood by SVInt::bitSelect
-    int16_t actualMsb = int16_t((lb < 0 ? -1 : 1) * (int16_t)msb.as<int64_t>().value() - lb);
+    // SVInt uses little endian ranges starting from zero; we need to translate from the
+    // actual range used in the declaration of the variable.
+    int16_t actualMsb = int16_t(msb.as<int>().value() - range.lower());
+    if (!range.isLittleEndian())
+        actualMsb = int16_t(range.width() - actualMsb - 1);
+
     switch (kind) {
         case SyntaxKind::BitSelect: {
-            return { *type, first.bitSelect(actualMsb, actualMsb) };
+            return { *type, value.bitSelect(actualMsb, actualMsb) };
         }
         case SyntaxKind::SimpleRangeSelect: {
-            int16_t actualLsb = int16_t((lb < 0 ? -1 : 1) * (int16_t)lsbOrWidth.as<int64_t>().value() - lb);
-            return { *type, first.bitSelect(actualLsb, actualMsb) };
+            int16_t actualLsb = int16_t(lsbOrWidth.as<int>().value() - range.lower());
+            if (!range.isLittleEndian())
+                actualLsb = int16_t(range.width() - actualLsb - 1);
+
+            return { *type, value.bitSelect(actualLsb, actualMsb) };
         }
         case SyntaxKind::AscendingRangeSelect: {
-            int16_t width = int16_t(lsbOrWidth.as<int64_t>().value());
-            return { *type, first.bitSelect(actualMsb, actualMsb + width) };
+            int16_t width = lsbOrWidth.as<int16_t>().value();
+            return { *type, value.bitSelect(actualMsb, actualMsb + width) };
         }
         case SyntaxKind::DescendingRangeSelect: {
-            int16_t width = int16_t(lsbOrWidth.as<int64_t>().value());
-            return { *type, first.bitSelect(actualMsb - width, actualMsb) };
+            int16_t width = lsbOrWidth.as<int16_t>().value();
+            return { *type, value.bitSelect(actualMsb - width, actualMsb) };
         }
-        default: THROW_UNREACHABLE;
+        default:
+            THROW_UNREACHABLE;
     }
 }
 
@@ -282,16 +290,16 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
             case SystemFunction::size:
             case SystemFunction::increment: {
                 //TODO: add support for things other than integral types
-                const auto& argType = arguments()[0]->type->as<IntegralTypeSymbol>();
-                bool down = argType.lowerBounds[0] >= 0;
+                const auto& argType = arguments()[0]->type->as<IntegralType>();
+                ConstantRange range = argType.getBitVectorRange();
                 switch (subroutine.systemFunctionKind) {
-                    case SystemFunction::bits:  return { *type, SVInt(argType.width) };
-                    case SystemFunction::low:   return { *type, SVInt(down ? argType.lowerBounds[0] + argType.width - 1 : -argType.lowerBounds[0]) };
-                    case SystemFunction::high:  return { *type, SVInt(down ? argType.lowerBounds[0] : -argType.lowerBounds[0] - argType.width + 1) };
-                    case SystemFunction::left:  return { *type, SVInt(down ? argType.lowerBounds[0] + argType.width - 1 : -argType.lowerBounds[0] - argType.width + 1) };
-                    case SystemFunction::right: return { *type, SVInt(down ? argType.lowerBounds[0] : -argType.lowerBounds[0]) };
-                    case SystemFunction::size:  return { *type, SVInt(argType.width) };
-                    case SystemFunction::increment: return { *type, SVInt(down ? -1 : 1, true) };
+                    case SystemFunction::bits:  return { *type, SVInt(argType.bitWidth) };
+                    case SystemFunction::low:   return { *type, SVInt(range.lower()) };
+                    case SystemFunction::high:  return { *type, SVInt(range.upper()) };
+                    case SystemFunction::left:  return { *type, SVInt(range.left) };
+                    case SystemFunction::right: return { *type, SVInt(range.right) };
+                    case SystemFunction::size:  return { *type, SVInt(argType.bitWidth) };
+                    case SystemFunction::increment: return { *type, SVInt(range.isLittleEndian() ? 1 : -1) };
                     default: THROW_UNREACHABLE;
                 }
                 break;
@@ -315,7 +323,7 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
     return context.popFrame();
 }
 
-void Expression::propagateType(const TypeSymbol& newType) {
+void Expression::propagateType(const Type& newType) {
     // SystemVerilog rules for width propagation are subtle and very specific
     // to each individual operator type. They also mainly only apply to
     // expressions of integral type (which will be the majority in most designs).
@@ -351,22 +359,22 @@ void Expression::propagateType(const TypeSymbol& newType) {
     }
 }
 
-void IntegerLiteral::propagateType(const TypeSymbol& newType) {
+void IntegerLiteral::propagateType(const Type& newType) {
     type = &newType;
 }
 
-void RealLiteral::propagateType(const TypeSymbol& newType) {
+void RealLiteral::propagateType(const Type& newType) {
     type = &newType;
 }
 
-void UnbasedUnsizedIntegerLiteral::propagateType(const TypeSymbol& newType) {
+void UnbasedUnsizedIntegerLiteral::propagateType(const Type& newType) {
     type = &newType;
 }
 
-void UnaryExpression::propagateType(const TypeSymbol& newType) {
+void UnaryExpression::propagateType(const Type& newType) {
     // If a type of real is propagated to an expression of a non-real type, the type of the
     // direct sub-expression is changed, but it is not propagated any further down.
-    bool doNotPropagateRealDownToNonReal = newType.isReal() && !type->isReal();
+    bool doNotPropagateRealDownToNonReal = newType.isFloating() && !type->isFloating();
 
     switch (op) {
         case UnaryOperator::Plus:
@@ -388,10 +396,10 @@ void UnaryExpression::propagateType(const TypeSymbol& newType) {
     }
 }
 
-void BinaryExpression::propagateType(const TypeSymbol& newType) {
+void BinaryExpression::propagateType(const Type& newType) {
     // If a type of real is propagated to an expression of a non-real type, the type of the
     // direct sub-expression is changed, but it is not propagated any further down.
-    bool doNotPropagateRealDownToNonReal = newType.isReal() && !type->isReal();
+    bool doNotPropagateRealDownToNonReal = newType.isFloating() && !type->isFloating();
 
     switch (op) {
         case BinaryOperator::Add:
@@ -461,10 +469,10 @@ void BinaryExpression::propagateType(const TypeSymbol& newType) {
     }
 }
 
-void TernaryExpression::propagateType(const TypeSymbol& newType) {
+void TernaryExpression::propagateType(const Type& newType) {
     // If a type of real is propagated to an expression of a non-real type, the type of the
     // direct sub-expression is changed, but it is not propagated any further down.
-    bool doNotPropagateRealDownToNonReal = newType.isReal() && !type->isReal();
+    bool doNotPropagateRealDownToNonReal = newType.isFloating() && !type->isFloating();
 
     // predicate is self determined
     type = &newType;

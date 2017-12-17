@@ -61,7 +61,7 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
 }
 
 // TODO:
-//void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const TypeSymbol*& determinedType,
+//void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const Type*& determinedType,
 //                               ConstantValue*& determinedValue, const Scope& scope) const {
 //    ASSERT(expr);
 //

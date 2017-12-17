@@ -63,29 +63,29 @@ public:
         return diags.add(code, location);
     }
 
-    const TypeSymbol& getType(SyntaxKind kind) const;
-    const TypeSymbol& getType(const DataTypeSyntax& node, const Scope& parent);
-    const IntegralTypeSymbol& getType(int width, bool isSigned, bool isFourState = true, bool isReg = false);
-    const IntegralTypeSymbol& getType(int width, bool isSigned, bool isFourState, bool isReg, span<const int> lowerBounds, span<const int> widths);
+    const Type& getType(SyntaxKind kind) const;
+    const Type& getType(const DataTypeSyntax& node, const Scope& parent);
+    const VectorType& getType(uint16_t width, bool isSigned, bool isFourState = true, bool isReg = false);
+    const VectorType& getType(bool isSigned, bool isFourState, bool isReg, span<ConstantRange const> dimensions);
 
     /// Various built-in type symbols for easy access.
-    const IntegralTypeSymbol& getShortIntType() const { return shortIntType; }
-    const IntegralTypeSymbol& getIntType() const { return intType; }
-    const IntegralTypeSymbol& getLongIntType() const { return longIntType; }
-    const IntegralTypeSymbol& getByteType() const { return byteType; }
-    const IntegralTypeSymbol& getBitType() const { return bitType; }
-    const IntegralTypeSymbol& getLogicType() const { return logicType; }
-    const IntegralTypeSymbol& getRegType() const { return regType; }
-    const IntegralTypeSymbol& getIntegerType() const { return integerType; }
-    const IntegralTypeSymbol& getTimeType() const { return timeType; }
-    const RealTypeSymbol& getRealType() const { return realType; }
-    const RealTypeSymbol& getRealTimeType() const { return realTimeType; }
-    const RealTypeSymbol& getShortRealType() const { return shortRealType; }
-    const TypeSymbol& getStringType() const { return stringType; }
-    const TypeSymbol& getCHandleType() const { return chandleType; }
-    const TypeSymbol& getVoidType() const { return voidType; }
-    const TypeSymbol& getEventType() const { return eventType; }
-    const ErrorTypeSymbol& getErrorType() const { return errorType; }
+    const BuiltInIntegerType& getShortIntType() const { return shortIntType; }
+    const BuiltInIntegerType& getIntType() const { return intType; }
+    const BuiltInIntegerType& getLongIntType() const { return longIntType; }
+    const BuiltInIntegerType& getByteType() const { return byteType; }
+    const BuiltInIntegerType& getBitType() const { return bitType; }
+    const BuiltInIntegerType& getLogicType() const { return logicType; }
+    const BuiltInIntegerType& getRegType() const { return regType; }
+    const BuiltInIntegerType& getIntegerType() const { return integerType; }
+    const BuiltInIntegerType& getTimeType() const { return timeType; }
+    const FloatingType& getRealType() const { return realType; }
+    const FloatingType& getRealTimeType() const { return realTimeType; }
+    const FloatingType& getShortRealType() const { return shortRealType; }
+    const StringType& getStringType() const { return stringType; }
+    const CHandleType& getCHandleType() const { return chandleType; }
+    const VoidType& getVoidType() const { return voidType; }
+    const EventType& getEventType() const { return eventType; }
+    const ErrorType& getErrorType() const { return errorType; }
 
     SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
 
@@ -98,7 +98,7 @@ public:
 
 private:
     SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,
-                                           std::initializer_list<const TypeSymbol*> argTypes);
+                                           std::initializer_list<const Type*> argTypes);
 
     // These functions are used for traversing the syntax hierarchy and finding all instantiations.
     using NameSet = flat_hash_set<string_view>;
@@ -136,30 +136,30 @@ private:
     // which is why they can't share the definitions name table.
     flat_hash_map<string_view, const PackageSymbol*> packageMap;
 
-    // A cache of integral types, keyed on various properties such as width.
-    flat_hash_map<uint64_t, const IntegralTypeSymbol*> integralTypeCache;
+    // A cache of vector types, keyed on various properties such as bit width.
+    flat_hash_map<uint32_t, const VectorType*> vectorTypeCache;
 
     // Map from syntax kinds to the built-in types.
-    flat_hash_map<SyntaxKind, const TypeSymbol*> knownTypes;
+    flat_hash_map<SyntaxKind, const Type*> knownTypes;
 
     // Instances of all the built-in types.
-    IntegralTypeSymbol shortIntType;
-    IntegralTypeSymbol intType;
-    IntegralTypeSymbol longIntType;
-    IntegralTypeSymbol byteType;
-    IntegralTypeSymbol bitType;
-    IntegralTypeSymbol logicType;
-    IntegralTypeSymbol regType;
-    IntegralTypeSymbol integerType;
-    IntegralTypeSymbol timeType;
-    RealTypeSymbol realType;
-    RealTypeSymbol realTimeType;
-    RealTypeSymbol shortRealType;
-    TypeSymbol stringType;
-    TypeSymbol chandleType;
-    TypeSymbol voidType;
-    TypeSymbol eventType;
-    ErrorTypeSymbol errorType;
+    BuiltInIntegerType shortIntType;
+    BuiltInIntegerType intType;
+    BuiltInIntegerType longIntType;
+    BuiltInIntegerType byteType;
+    BuiltInIntegerType bitType;
+    BuiltInIntegerType logicType;
+    BuiltInIntegerType regType;
+    BuiltInIntegerType integerType;
+    BuiltInIntegerType timeType;
+    FloatingType realType;
+    FloatingType realTimeType;
+    FloatingType shortRealType;
+    StringType stringType;
+    CHandleType chandleType;
+    VoidType voidType;
+    EventType eventType;
+    ErrorType errorType;
 };
 
 }

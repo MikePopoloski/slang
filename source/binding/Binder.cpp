@@ -26,12 +26,12 @@ const Expression& Binder::bindSelfDeterminedExpression(const ExpressionSyntax& s
 }
 
 const Expression& Binder::bindAssignmentLikeContext(const ExpressionSyntax& syntax,
-                                                    SourceLocation location, const TypeSymbol& assignmentType) {
+                                                    SourceLocation location, const Type& assignmentType) {
     Expression& expr = bindAndPropagate(syntax);
     if (expr.bad())
         return expr;
 
-    const TypeSymbol& type = *expr.type;
+    const Type& type = *expr.type;
     if (!assignmentType.isAssignmentCompatible(type)) {
         DiagCode code = assignmentType.isCastCompatible(type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
         compilation.addError(code, location) << syntax.sourceRange();
@@ -167,7 +167,7 @@ Expression& Binder::bindLiteral(const IntegerVectorExpressionSyntax& syntax) {
         return badExpr(compilation.emplace<IntegerLiteral>(compilation, compilation.getErrorType(), SVInt::Zero, syntax));
 
     const SVInt& value = syntax.value.intValue();
-    const TypeSymbol& type = compilation.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    const Type& type = compilation.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
     return *compilation.emplace<IntegerLiteral>(compilation, type, value, syntax);
 }
 
@@ -263,7 +263,7 @@ Expression& Binder::bindArithmeticOperator(const BinaryExpressionSyntax& syntax)
 
     // Get the result type; force the type to be four-state if it's a division, which can make a 4-state output
     // out of 2-state inputs
-    const TypeSymbol& type = binaryOperatorResultType(lhs->type, rhs->type, syntax.kind == SyntaxKind::DivideExpression);
+    const Type& type = binaryOperatorResultType(lhs->type, rhs->type, syntax.kind == SyntaxKind::DivideExpression);
     return *compilation.emplace<BinaryExpression>(type, *lhs, *rhs, syntax);
 }
 
@@ -303,7 +303,7 @@ Expression& Binder::bindShiftOrPowerOperator(const BinaryExpressionSyntax& synta
         return badExpr(compilation.emplace<BinaryExpression>(compilation.getErrorType(), *lhs, *rhs, syntax));
 
     // Power operator can result in division by zero 'x
-    const TypeSymbol& type = binaryOperatorResultType(lhs->type, rhs->type, syntax.kind == SyntaxKind::PowerExpression);
+    const Type& type = binaryOperatorResultType(lhs->type, rhs->type, syntax.kind == SyntaxKind::PowerExpression);
 
     return *compilation.emplace<BinaryExpression>(type, *lhs, *rhs, syntax);
 }
@@ -386,22 +386,22 @@ Expression& Binder::bindConditionalExpression(const ConditionalExpressionSyntax&
 
     // TODO: handle non-integral and non-real types properly
     // force four-state return type for ambiguous condition case
-    const TypeSymbol& type = binaryOperatorResultType(left.type, right.type, true);
+    const Type& type = binaryOperatorResultType(left.type, right.type, true);
     return *compilation.emplace<TernaryExpression>(type, pred, left, right, syntax);
 }
 
 Expression& Binder::bindConcatenationExpression(const ConcatenationExpressionSyntax& syntax) {
     SmallVectorSized<const Expression*, 8> buffer;
-    int totalWidth = 0;
+    uint16_t totalWidth = 0;
     for (auto argSyntax : syntax.expressions) {
         const Expression& arg = bindAndPropagate(*argSyntax);
         buffer.append(&arg);
 
-        const TypeSymbol& type = *arg.type;
-        if (type.kind != SymbolKind::IntegralType)
+        const Type& type = *arg.type;
+        if (!type.isIntegral())
             return badExpr(compilation.emplace<NaryExpression>(compilation.getErrorType(), nullptr, syntax));
 
-        totalWidth += type.width();
+        totalWidth += (uint16_t)type.as<IntegralType>().bitWidth;
     }
 
     return *compilation.emplace<NaryExpression>(compilation.getType(totalWidth, false), buffer.copy(compilation), syntax);
@@ -416,7 +416,7 @@ Expression& Binder::bindMultipleConcatenationExpression(const MultipleConcatenat
     // TODO: in cases like these, should we bother storing the bound expression? should we at least cache the result
     // so we don't have to compute it again elsewhere?
     uint16_t replicationTimes = left.eval().integer().as<uint16_t>().value();
-    return *compilation.emplace<BinaryExpression>(compilation.getType(right.type->width() * replicationTimes, false), left, right, syntax);
+    return *compilation.emplace<BinaryExpression>(compilation.getType((uint16_t)right.type->getBitWidth() * replicationTimes, false), left, right, syntax);
 }
 
 Expression& Binder::bindSelectExpression(const ElementSelectExpressionSyntax& syntax) {
@@ -431,7 +431,8 @@ Expression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, Express
     if (expr.bad())
         return badExpr(&expr);
 
-    bool down = expr.type->as<IntegralTypeSymbol>().lowerBounds[0] >= 0;
+    const auto& integralType = expr.type->as<IntegralType>();
+    bool down = integralType.getBitVectorRange().isLittleEndian();
     Expression* left = nullptr;
     Expression* right = nullptr;
     int width = 0;
@@ -459,7 +460,7 @@ Expression& Binder::bindSelectExpression(const ExpressionSyntax& syntax, Express
         default: THROW_UNREACHABLE;
     }
     return *compilation.emplace<SelectExpression>(
-        compilation.getType(width, expr.type->isSigned(), expr.type->isFourState()),
+        compilation.getType((uint16_t)width, integralType.isSigned, integralType.isFourState),
         kind,
         expr,
         *left,
@@ -472,16 +473,16 @@ bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, 
     if ((*operand)->bad())
         return false;
 
-    const TypeSymbol* type = (*operand)->type;
+    const Type* type = (*operand)->type;
     bool good;
     switch (op) {
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryLogicalNotExpression:
-            good = type->kind == SymbolKind::IntegralType || type->kind == SymbolKind::RealType;
+            good = type->isIntegral() || type->isFloating();
             break;
         default:
-            good = type->kind == SymbolKind::IntegralType;
+            good = type->isIntegral();
             break;
     }
     if (good)
@@ -498,8 +499,8 @@ bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, 
     if ((*lhs)->bad() || (*rhs)->bad())
         return false;
 
-    const TypeSymbol* lt = (*lhs)->type;
-    const TypeSymbol* rt = (*rhs)->type;
+    const Type* lt = (*lhs)->type;
+    const Type* rt = (*rhs)->type;
     bool good;
     switch (op) {
         case SyntaxKind::AddExpression:
@@ -521,11 +522,11 @@ bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, 
         case SyntaxKind::WildcardInequalityExpression:
         case SyntaxKind::CaseEqualityExpression:
         case SyntaxKind::CaseInequalityExpression:
-            good = (lt->kind == SymbolKind::IntegralType || lt->kind == SymbolKind::RealType) &&
-                   (rt->kind == SymbolKind::IntegralType || rt->kind == SymbolKind::RealType);
+            good = (lt->isIntegral() || lt->isFloating()) &&
+                   (rt->isIntegral() || rt->isFloating());
             break;
         default:
-            good = lt->kind == SymbolKind::IntegralType && rt->kind == SymbolKind::IntegralType;
+            good = lt->isIntegral() && rt->isIntegral();
             break;
     }
     if (good)
@@ -539,14 +540,15 @@ bool Binder::checkOperatorApplicability(SyntaxKind op, SourceLocation location, 
     return false;
 }
 
-bool Binder::propagateAssignmentLike(Expression& rhs, const TypeSymbol& lhsType) {
+bool Binder::propagateAssignmentLike(Expression& rhs, const Type& lhsType) {
     // Integral case
-    if (lhsType.width() > rhs.type->width()) {
-        if (!lhsType.isReal() && !rhs.type->isReal()) {
-            rhs.type = &compilation.getType(lhsType.width(), rhs.type->isSigned(), rhs.type->isFourState());
+    if (lhsType.getBitWidth() > rhs.type->getBitWidth()) {
+        if (!lhsType.isFloating() && !rhs.type->isFloating()) {
+            const auto& rt = rhs.type->as<IntegralType>();
+            rhs.type = &compilation.getType((uint16_t)lhsType.getBitWidth(), rt.isSigned, rt.isFourState);
         }
         else {
-            if (lhsType.width() > 32)
+            if (lhsType.getBitWidth() > 32)
                 rhs.type = &compilation.getRealType();
             else
                 rhs.type = &compilation.getShortRealType();
@@ -557,12 +559,9 @@ bool Binder::propagateAssignmentLike(Expression& rhs, const TypeSymbol& lhsType)
     return false;
 }
 
-const TypeSymbol& Binder::binaryOperatorResultType(const TypeSymbol* lhsType, const TypeSymbol* rhsType, bool forceFourState) {
-    int width = std::max(lhsType->width(), rhsType->width());
-    bool isSigned = lhsType->isSigned() && rhsType->isSigned();
-    bool fourState = forceFourState || lhsType->isFourState() || rhsType->isFourState();
-
-    if (lhsType->isReal() || rhsType->isReal()) {
+const Type& Binder::binaryOperatorResultType(const Type* lhsType, const Type* rhsType, bool forceFourState) {
+    int width = std::max(lhsType->getBitWidth(), rhsType->getBitWidth());
+    if (lhsType->isFloating() || rhsType->isFloating()) {
         // spec says that RealTime and RealType are interchangeable, so we will just use RealType for
         // intermediate symbols
         // TODO: The spec is unclear for binary operators what to do if the operands are a shortreal and a larger
@@ -574,7 +573,11 @@ const TypeSymbol& Binder::binaryOperatorResultType(const TypeSymbol* lhsType, co
             return compilation.getShortRealType();
     }
     else {
-        return compilation.getType(width, isSigned, fourState);
+        const auto& lt = lhsType->as<IntegralType>();
+        const auto& rt = rhsType->as<IntegralType>();
+        bool isSigned = lt.isSigned && rt.isSigned;
+        bool fourState = forceFourState || lt.isFourState || rt.isFourState;
+        return compilation.getType((int16_t)width, isSigned, fourState);
     }
 }
 

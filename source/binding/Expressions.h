@@ -99,14 +99,14 @@ public:
     const ExpressionSyntax* syntax;
 
     /// The type of the expression.
-    const TypeSymbol* type;
+    const Type* type;
 
     /// Indicates whether the expression is invalid.
     bool bad() const { return kind == ExpressionKind::Invalid; }
 
     /// Propagates the type of the expression down to its children,
     /// according to the rules laid out in the standard.
-    void propagateType(const TypeSymbol& newType);
+    void propagateType(const Type& newType);
 
     /// Evaluates the expression under the given evaluation context.
     ConstantValue eval(EvalContext& context) const;
@@ -127,9 +127,9 @@ public:
     T& as() { return *static_cast<T*>(this); }
 
 protected:
-    Expression(ExpressionKind kind, const TypeSymbol& type) :
+    Expression(ExpressionKind kind, const Type& type) :
         kind(kind), syntax(nullptr), type(&type) {}
-    Expression(ExpressionKind kind, const TypeSymbol& type, const ExpressionSyntax& syntax) :
+    Expression(ExpressionKind kind, const Type& type, const ExpressionSyntax& syntax) :
         kind(kind), syntax(&syntax), type(&type) {}
 };
 
@@ -140,7 +140,7 @@ public:
     /// A wrapped sub-expression that is considered invalid.
     const Expression* child;
 
-    InvalidExpression(const Expression* child, const TypeSymbol& type) :
+    InvalidExpression(const Expression* child, const Type& type) :
         Expression(ExpressionKind::Invalid, type), child(child) {}
 
     static const InvalidExpression Instance;
@@ -149,11 +149,11 @@ public:
 /// Represents an integer literal.
 class IntegerLiteral : public Expression {
 public:
-    IntegerLiteral(BumpAllocator& alloc, const TypeSymbol& type, const SVInt& value, const ExpressionSyntax& syntax);
+    IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value, const ExpressionSyntax& syntax);
 
     SVInt getValue() const { return valueStorage; }
 
-    void propagateType(const TypeSymbol& newType);
+    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
 private:
@@ -163,12 +163,12 @@ private:
 /// Represents a real number literal.
 class RealLiteral : public Expression {
 public:
-    RealLiteral(const TypeSymbol& type, double value, const ExpressionSyntax& syntax) :
+    RealLiteral(const Type& type, double value, const ExpressionSyntax& syntax) :
         Expression(ExpressionKind::RealLiteral, type, syntax), value(value) {}
 
     double getValue() const { return value; }
 
-    void propagateType(const TypeSymbol& newType);
+    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
 private:
@@ -178,12 +178,12 @@ private:
 /// Represents an unbased unsized integer literal, which fills all bits in an expression.
 class UnbasedUnsizedIntegerLiteral : public Expression {
 public:
-    UnbasedUnsizedIntegerLiteral(const TypeSymbol& type, logic_t value, const ExpressionSyntax& syntax) :
+    UnbasedUnsizedIntegerLiteral(const Type& type, logic_t value, const ExpressionSyntax& syntax) :
         Expression(ExpressionKind::UnbasedUnsizedIntegerLiteral, type, syntax), value(value) {}
 
     logic_t getValue() const { return value; }
 
-    void propagateType(const TypeSymbol& newType);
+    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
 private:
@@ -217,14 +217,14 @@ class UnaryExpression : public Expression {
 public:
     UnaryOperator op;
 
-    UnaryExpression(const TypeSymbol& type, Expression& operand, const ExpressionSyntax& syntax) :
+    UnaryExpression(const Type& type, Expression& operand, const ExpressionSyntax& syntax) :
         Expression(ExpressionKind::UnaryOp, type, syntax),
         op(getUnaryOperator(syntax)), operand_(&operand) {}
 
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }
 
-    void propagateType(const TypeSymbol& newType);
+    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
 private:
@@ -236,7 +236,7 @@ class BinaryExpression : public Expression {
 public:
     BinaryOperator op;
 
-    BinaryExpression(const TypeSymbol& type, Expression& left, Expression& right, const ExpressionSyntax& syntax) :
+    BinaryExpression(const Type& type, Expression& left, Expression& right, const ExpressionSyntax& syntax) :
         Expression(ExpressionKind::BinaryOp, type, syntax),
         op(getBinaryOperator(syntax)), left_(&left), right_(&right) {}
 
@@ -248,7 +248,7 @@ public:
     const Expression& right() const { return *right_; }
     Expression& right() { return *right_; }
 
-    void propagateType(const TypeSymbol& newType);
+    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
 private:
@@ -259,7 +259,7 @@ private:
 /// Represents a ternary operator expression (only the conditional operator is ternary).
 class TernaryExpression : public Expression {
 public:
-    TernaryExpression(const TypeSymbol& type, Expression& pred, Expression& left, Expression& right, const ExpressionSyntax& syntax) :
+    TernaryExpression(const Type& type, Expression& pred, Expression& left, Expression& right, const ExpressionSyntax& syntax) :
         Expression(ExpressionKind::TernaryOp, type, syntax), pred_(&pred), left_(&left), right_(&right) {}
 
     const Expression& pred() const { return *pred_; }
@@ -271,7 +271,7 @@ public:
     const Expression& right() const { return *right_; }
     Expression& right() { return *right_; }
 
-    void propagateType(const TypeSymbol& newType);
+    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
 private:
@@ -286,7 +286,7 @@ public:
     // TODO: get rid of this
     SyntaxKind kind;
 
-    SelectExpression(const TypeSymbol& type, SyntaxKind kind, Expression& expr, Expression& left,
+    SelectExpression(const Type& type, SyntaxKind kind, Expression& expr, Expression& left,
                      Expression& right, const ExpressionSyntax& syntax) :
         Expression(ExpressionKind::Select, type, syntax), kind(kind),
         expr_(&expr), left_(&left), right_(&right) {}
@@ -311,7 +311,7 @@ private:
 /// Represents an expression of unbounded arity (for example, concatenations).
 class NaryExpression : public Expression {
 public:
-    NaryExpression(const TypeSymbol& type, span<const Expression*> operands, const ExpressionSyntax& syntax) :
+    NaryExpression(const Type& type, span<const Expression*> operands, const ExpressionSyntax& syntax) :
         Expression(ExpressionKind::NaryOp, type, syntax), operands_(operands) {}
 
     span<const Expression* const> operands() const { return operands_; }

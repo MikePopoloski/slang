@@ -74,13 +74,13 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
-    CHECK(bound.type->width() == 20);
+    CHECK(bound.type->getBitWidth() == 20);
     const Expression& rhs = bound.as<BinaryExpression>().right();
-    CHECK(rhs.type->width() == 20);
+    CHECK(rhs.type->getBitWidth() == 20);
     const Expression& op1 = rhs.as<BinaryExpression>().left();
-    CHECK(op1.type->width() == 20);
+    CHECK(op1.type->getBitWidth() == 20);
     const Expression& op2 = rhs.as<BinaryExpression>().right();
-    CHECK(op2.type->width() == 20);
+    CHECK(op2.type->getBitWidth() == 20);
 }
 
 TEST_CASE("Check type propagation 2", "[binding:expressions]") {
@@ -99,17 +99,17 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
-    CHECK(bound.type->width() == 20);
+    CHECK(bound.type->getBitWidth() == 20);
     const Expression& rhs = bound.as<BinaryExpression>().right();
-    CHECK(rhs.type->width() == 20);
+    CHECK(rhs.type->getBitWidth() == 20);
     const Expression& rrhs = rhs.as<BinaryExpression>().right();
-    CHECK(rrhs.type->width() == 1);
+    CHECK(rrhs.type->getBitWidth() == 1);
     const Expression& op1 = rrhs.as<BinaryExpression>().left();
     const Expression& shiftExpr = op1.as<BinaryExpression>().left();
-    CHECK(shiftExpr.type->width() == 17);
-    CHECK(op1.type->width() == 17);
+    CHECK(shiftExpr.type->getBitWidth() == 17);
+    CHECK(op1.type->getBitWidth() == 17);
     const Expression& op2 = rrhs.as<BinaryExpression>().right();
-    CHECK(op2.type->width() == 21);
+    CHECK(op2.type->getBitWidth() == 21);
 }
 
 TEST_CASE("Check type propagation real", "[binding:expressions]") {
@@ -128,21 +128,21 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
     REQUIRE(syntax.diagnostics().empty());
 
-    CHECK(bound.type->width() == 20);
+    CHECK(bound.type->getBitWidth() == 20);
     const Expression& rhs = bound.as<BinaryExpression>().right();
-    CHECK(rhs.type->width() == 20);
+    CHECK(rhs.type->getBitWidth() == 20);
     const Expression& rrhs = rhs.as<BinaryExpression>().right();
-    CHECK(rrhs.type->width() == 1);
+    CHECK(rrhs.type->getBitWidth() == 1);
     const Expression& op1 = rrhs.as<BinaryExpression>().left();
     const Expression& shiftExpr = op1.as<BinaryExpression>().left();
-    CHECK(shiftExpr.type->width() == 64);
-    CHECK(shiftExpr.type->isReal());
+    CHECK(shiftExpr.type->getBitWidth() == 64);
+    CHECK(shiftExpr.type->isFloating());
     const Expression& rshiftOp = shiftExpr.as<BinaryExpression>().right();
-    CHECK(rshiftOp.type->width() == 1);
+    CHECK(rshiftOp.type->getBitWidth() == 1);
     const Expression& lshiftOp = shiftExpr.as<BinaryExpression>().left();
-    CHECK(lshiftOp.type->width() == 17);
-    CHECK(op1.type->width() == 64);
-    CHECK(op1.type->isReal());
+    CHECK(lshiftOp.type->getBitWidth() == 17);
+    CHECK(op1.type->getBitWidth() == 64);
+    CHECK(op1.type->isFloating());
     const Expression& op2 = rrhs.as<BinaryExpression>().right();
-    CHECK(op2.type->width() == 21);
+    CHECK(op2.type->getBitWidth() == 21);
 }

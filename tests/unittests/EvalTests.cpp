@@ -249,10 +249,10 @@ TEST_CASE("dimension based system functions", "[eval]") {
     EVAL("$left(down_vect)", 15);
     EVAL("$right(down_vect)", 0);
 
-    EVAL("$low(up_vect)", 15);
-    EVAL("$high(up_vect)", 0);
-    EVAL("$low(down_vect)", 15);
-    EVAL("$high(down_vect)", 0);
+    EVAL("$low(up_vect)", 0);
+    EVAL("$high(up_vect)", 15);
+    EVAL("$low(down_vect)", 0);
+    EVAL("$high(down_vect)", 15);
 
     EVAL("$size(up_vect)", 16);
     EVAL("$size(down_vect)", 16);
@@ -261,6 +261,6 @@ TEST_CASE("dimension based system functions", "[eval]") {
     EVAL("$bits(down_vect)", 16);
 
     EVAL("$increment(up_vect)", -1);
-    // TODO: EVAL("$increment(down_vect)", 1);
+    EVAL("$increment(down_vect)", 1);
 #undef EVAL
 }

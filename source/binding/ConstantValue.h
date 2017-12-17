@@ -11,7 +11,7 @@
 
 namespace slang {
 
-class TypeSymbol;
+class Type;
 
 /// Represents a constant (compile-time evaluated) value, of one of a few possible types.
 /// By default the value is indeterminate, or "bad". Expressions involving bad
@@ -22,9 +22,9 @@ public:
     ConstantValue() {}
     ConstantValue(nullptr_t) {}
 
-    ConstantValue(const TypeSymbol& type, const SVInt& integer) : type(&type), value(integer) {}
-    ConstantValue(const TypeSymbol& type, SVInt&& integer) : type(&type), value(std::move(integer)) {}
-    ConstantValue(const TypeSymbol& type, double real) : type(&type), value(real) {}
+    ConstantValue(const Type& type, const SVInt& integer) : type(&type), value(integer) {}
+    ConstantValue(const Type& type, SVInt&& integer) : type(&type), value(std::move(integer)) {}
+    ConstantValue(const Type& type, double real) : type(&type), value(real) {}
 
     ConstantValue(const ConstantValue& other) = default;
     ConstantValue(ConstantValue&& other) noexcept = default;
@@ -40,7 +40,7 @@ public:
     const SVInt& integer() const { return std::get<1>(value); }
     double real() const { return std::get<2>(value); }
 
-    const TypeSymbol& getType() const { return *type; }
+    const Type& getType() const { return *type; }
 
     /// Tries to interpret the constant value as an integer, with no unknown bits,
     /// and which fits in the given number of bits. If it does, the value is returned.
@@ -51,7 +51,7 @@ public:
     static const ConstantValue Invalid;
 
 private:
-    const TypeSymbol* type;
+    const Type* type;
     std::variant<std::monostate, SVInt, double> value;
 };
 
@@ -67,16 +67,24 @@ struct ConstantRange {
 
     /// Gets the width of the range, regardless of the order in which
     /// the bounds are specified.
-    int width() const {
+    uint32_t width() const {
         int diff = left - right;
         return (diff < 0 ? -diff : diff) + 1;
     }
+
+    /// Gets the lower bound of the range, regardless of the order in which
+    /// the bounds are specified.
+    int lower() const { return std::min(left, right); }
+
+    /// Gets the upper bound of the range, regardless of the order in which
+    /// the bounds are specified.
+    int upper() const { return std::max(left, right); }
 
     /// "Little endian" bit order is when the msb is >= the lsb.
     bool isLittleEndian() const { return left >= right; }
 
     /// Normalizes the range so that it's of the form [msb-lsb, 0] and in little endian bit order.
-    ConstantRange normalize() const { return { std::max(left, right) - std::min(left, right), 0 }; }
+    ConstantRange normalize() const { return { upper() - lower(), 0 }; }
 };
 
 }

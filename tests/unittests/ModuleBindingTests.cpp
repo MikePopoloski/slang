@@ -222,7 +222,7 @@ endmodule
     CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
 
     const auto& variable = instance.memberAt<VariableSymbol>(4);
-    CHECK(variable.type->kind == SymbolKind::IntegralType);
+    CHECK(variable.type->isIntegral());
     CHECK(variable.name == "arr1");
 }
 
@@ -240,26 +240,26 @@ endmodule
     const auto& foo = instance.memberAt<SubroutineSymbol>(0);
     CHECK(!foo.isTask);
     CHECK(foo.defaultLifetime == VariableLifetime::Static);
-    CHECK(foo.returnType->as<IntegralTypeSymbol>().width == 16);
+    CHECK(foo.returnType->getBitWidth() == 16);
     CHECK(foo.name == "foo");
 
     auto args = foo.arguments;
     REQUIRE(args.size() == 5);
-    CHECK(args[0]->type->as<IntegralTypeSymbol>().width == 1);
+    CHECK(args[0]->type->getBitWidth() == 1);
     CHECK(args[0]->direction == FormalArgumentDirection::In);
-    CHECK(args[1]->type->as<IntegralTypeSymbol>().width == 32);
+    CHECK(args[1]->type->getBitWidth() == 32);
     CHECK(args[1]->direction == FormalArgumentDirection::In);
-    CHECK(args[2]->type->as<IntegralTypeSymbol>().width == 16);
+    CHECK(args[2]->type->getBitWidth() == 16);
     CHECK(args[2]->direction == FormalArgumentDirection::Out);
-    CHECK(args[3]->type->as<IntegralTypeSymbol>().width == 16);
+    CHECK(args[3]->type->getBitWidth() == 16);
     CHECK(args[3]->direction == FormalArgumentDirection::Out);
-    CHECK(args[4]->type->as<IntegralTypeSymbol>().width == 1);
+    CHECK(args[4]->type->getBitWidth() == 1);
     CHECK(args[4]->direction == FormalArgumentDirection::InOut);
 
     const auto& returnStmt = foo.getBody()->as<StatementList>().list[0]->as<ReturnStatement>();
     REQUIRE(returnStmt.kind == StatementKind::Return);
     CHECK(!returnStmt.expr->bad());
-    CHECK(returnStmt.expr->type->as<IntegralTypeSymbol>().width == 32);
+    CHECK(returnStmt.expr->type->getBitWidth() == 32);
 }
 
 TEST_CASE("Enum declaration", "[binding:modules]") {

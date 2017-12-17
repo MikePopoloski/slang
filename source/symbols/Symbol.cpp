@@ -47,9 +47,9 @@ const Expression& Symbol::LazyInitializer::evaluate(const Scope& scope,
 }
 
 Symbol::LazyType::LazyType(ScopeOrSymbol parent) :
-    Lazy(parent, &ErrorTypeSymbol::Instance) {}
+    Lazy(parent, &ErrorType::Instance) {}
 
-const TypeSymbol& Symbol::LazyType::evaluate(const Scope& scope,
+const Type& Symbol::LazyType::evaluate(const Scope& scope,
                                              const DataTypeSyntax& syntax) const {
     return scope.getCompilation().getType(syntax, scope);
 }
@@ -292,7 +292,7 @@ ConstantValue Scope::evaluateConstant(const ExpressionSyntax& expr) const {
     return bound.eval();
 }
 
-ConstantValue Scope::evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
+ConstantValue Scope::evaluateConstantAndConvert(const ExpressionSyntax& expr, const Type& targetType,
                                                       SourceLocation errorLocation) const {
     SourceLocation errLoc = errorLocation ? errorLocation : expr.getFirstToken().location();
     const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errLoc, targetType);
@@ -393,13 +393,15 @@ Symbol& Symbol::clone() const {
 
     switch (kind) {
         case SymbolKind::CompilationUnit: CLONE(CompilationUnitSymbol);
-        case SymbolKind::IntegralType: CLONE(IntegralTypeSymbol);
-        case SymbolKind::RealType: CLONE(RealTypeSymbol);
-        case SymbolKind::StringType: CLONE(TypeSymbol);
-        case SymbolKind::CHandleType: CLONE(TypeSymbol);
-        case SymbolKind::VoidType: CLONE(TypeSymbol);
-        case SymbolKind::EventType: CLONE(TypeSymbol);
-        case SymbolKind::TypeAlias: CLONE(TypeAliasSymbol);
+        case SymbolKind::BuiltInIntegerType: CLONE(BuiltInIntegerType);
+        case SymbolKind::VectorType: CLONE(VectorType);
+        case SymbolKind::FloatingType: CLONE(FloatingType);
+        case SymbolKind::VoidType: CLONE(VoidType);
+        case SymbolKind::CHandleType: CLONE(CHandleType);
+        case SymbolKind::StringType: CLONE(StringType);
+        case SymbolKind::EventType: CLONE(EventType);
+        case SymbolKind::TypeAlias: CLONE(TypeAliasType);
+        case SymbolKind::ErrorType: CLONE(ErrorType);
         case SymbolKind::Parameter: CLONE(ParameterSymbol);
         case SymbolKind::Module: CLONE(DefinitionSymbol);
         case SymbolKind::Interface: CLONE(DefinitionSymbol);

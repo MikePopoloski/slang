@@ -29,7 +29,7 @@ class SyntaxTree;
 class Symbol;
 class Scope;
 class RootSymbol;
-class TypeSymbol;
+class Type;
 class WildcardImportSymbol;
 class PackageSymbol;
 class ParameterSymbol;
@@ -45,16 +45,18 @@ enum class SymbolKind {
     Unknown,
     Root,
     CompilationUnit,
-    IntegralType,
-    RealType,
-    StringType,
-    CHandleType,
-    VoidType,
-    EventType,
+    BuiltInIntegerType,
+    VectorType,
     EnumType,
-    TypeAlias,
-    Parameter,
     EnumValue,
+    FloatingType,
+    VoidType,
+    CHandleType,
+    StringType,
+    EventType,
+    TypeAlias,
+    ErrorType,
+    Parameter,
     Module,
     Interface,
     Modport,
@@ -186,7 +188,7 @@ public:
     }
 
     LAZY(LazyInitializer, Expression, ExpressionSyntax);
-    LAZY(LazyType, TypeSymbol, DataTypeSyntax);
+    LAZY(LazyType, Type, DataTypeSyntax);
 
 #undef LAZY
 
@@ -393,7 +395,7 @@ public:
     /// A helper method to evaluate a constant in the current scope and then
     /// convert it to the given destination type. If the conversion fails, the
     /// returned value will be marked bad.
-    ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const TypeSymbol& targetType,
+    ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const Type& targetType,
                                              SourceLocation errorLocation) const;
 
     /// Strongly typed index type which is used in a sideband list in the Compilation object
