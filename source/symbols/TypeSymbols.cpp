@@ -266,8 +266,8 @@ VectorType::VectorType(ScalarType scalarType_, span<ConstantRange const> dimensi
                  getWidth(dimensions_),
                  isSigned,
                  getFourState((BuiltInIntegerType::Kind)scalarType_)),
-    scalarType(scalarType_),
-    dimensions(dimensions_)
+    dimensions(dimensions_),
+    scalarType(scalarType_)
 {
 }
 
