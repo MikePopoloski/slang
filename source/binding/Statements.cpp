@@ -64,12 +64,9 @@ void ConditionalStatement::eval(EvalContext& context) const {
 }
 
 void ForLoopStatement::eval(EvalContext& context) const {
-    // TODO:
-    /*for (auto initializer : loop.initializers)
-    evaluateVariableDecl(*initializer);*/
-
-    while (stopExpr.evalBool(context)) {
-        statement.eval(context);
+    initializers.eval(context);
+    while (stopExpr && stopExpr->evalBool(context)) {
+        body.eval(context);
         for (auto step : steps)
             step->eval(context);
     }

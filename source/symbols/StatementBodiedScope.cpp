@@ -36,25 +36,26 @@ Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax) {
 
 Statement& StatementBodiedScope::bindStatementList(const SyntaxList<SyntaxNode>& items) {
     SmallVectorSized<const Statement*, 8> buffer;
-    Compilation& comp = getCompilation();
-
     for (auto item : items) {
         if (isStatement(item->kind))
             buffer.append(&bindStatement(item->as<StatementSyntax>()));
-        else if (item->kind == SyntaxKind::DataDeclaration) {
-            SmallVectorSized<const VariableSymbol*, 4> variables;
-            VariableSymbol::fromSyntax(comp, item->as<DataDeclarationSyntax>(), variables);
-            for (auto variable : variables) {
-                addMember(*variable);
-                buffer.append(comp.emplace<VariableDeclStatement>(*variable));
-            }
-        }
-        else {
+        else if (item->kind == SyntaxKind::DataDeclaration)
+            bindVariableDecl(item->as<DataDeclarationSyntax>(), buffer);
+        else
             THROW_UNREACHABLE;
-        }
     }
 
-    return *comp.emplace<StatementList>(buffer.copy(comp));
+    return *getCompilation().emplace<StatementList>(buffer.copy(getCompilation()));
+}
+
+void StatementBodiedScope::bindVariableDecl(const DataDeclarationSyntax& syntax,
+                                            SmallVector<const Statement*>& statements) {
+    SmallVectorSized<const VariableSymbol*, 4> variables;
+    VariableSymbol::fromSyntax(getCompilation(), syntax, variables);
+    for (auto variable : variables) {
+        addMember(*variable);
+        statements.append(getCompilation().emplace<VariableDeclStatement>(*variable));
+    }
 }
 
 Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax& syntax) {
@@ -83,40 +84,56 @@ Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalState
     return *getCompilation().emplace<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
-Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSyntax&) {
-    // TODO: initializers need better handling
-
+Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSyntax& syntax) {
     // If the initializers here involve doing variable declarations, then the spec says we create
-    // an implicit sequential block and do the declaration there.
-    /*BumpAllocator& alloc = root.allocator();
-    SequentialBinder& implicitInitBlock = *alloc.emplace<SequentialBinder>(*this);
-    const auto& forVariable = syntax.initializers[0]->as<ForVariableDeclarationSyntax>();
+    // an implicit sequential block and do the declaration there. Otherwise we'll just
+    // end up returning the for statement directly.
+    StatementBodiedScope* forScope = this;
+    SequentialBlockStatement* implicitBlockStmt = nullptr;
+    SmallVectorSized<const Statement*, 4> initializers;
 
-    const auto& loopVar = *alloc.emplace<VariableSymbol>(forVariable.declarator.name, forVariable.type,
-    implicitInitBlock, VariableLifetime::Automatic, false,
-    &forVariable.declarator.initializer->expr);
+    Compilation& comp = getCompilation();
+    if (!syntax.initializers.empty() && syntax.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
+        auto implicitBlock = comp.emplace<SequentialBlockSymbol>(comp);
+        implicitBlockStmt = comp.emplace<SequentialBlockStatement>(*implicitBlock);
 
-    implicitInitBlock.setMember(loopVar);
-    builder.add(implicitInitBlock);
+        addMember(*implicitBlock);
+        forScope = implicitBlock;
 
-    Binder binder(implicitInitBlock);
+        for (auto initializer : syntax.initializers) {
+            // If one entry is a variable declaration, they should all be. Checked by the parser.
+            ASSERT(initializer->kind == SyntaxKind::ForVariableDeclaration);
+            
+            auto& var = VariableSymbol::fromSyntax(comp, initializer->as<ForVariableDeclarationSyntax>());
+            implicitBlock->addMember(var);
+            initializers.append(comp.emplace<VariableDeclStatement>(var));
+        }
+    }
+    else {
+        for (auto initializer : syntax.initializers) {
+            ASSERT(isStatement(initializer->kind));
+            initializers.append(&bindStatement(initializer->as<StatementSyntax>()));
+        }
+    }
+
+    Binder binder(*forScope);
     const auto& stopExpr = binder.bindSelfDeterminedExpression(syntax.stopExpr);
 
-    SmallVectorSized<const BoundExpression*, 2> steps;
+    SmallVectorSized<const Expression*, 2> steps;
     for (auto step : syntax.steps)
-    steps.append(&binder.bindSelfDeterminedExpression(*step));
+        steps.append(&binder.bindSelfDeterminedExpression(*step));
 
-    const auto& statement = implicitInitBlock.bindStatement(syntax.statement);
-    const auto& loop = allocate<BoundForLoopStatement>(syntax, stopExpr, steps.copy(compilation), statement);
+    const auto& bodyStmt = forScope->bindStatement(syntax.statement);
+    auto initList = comp.emplace<StatementList>(initializers.copy(comp));
+    auto loop = comp.emplace<ForLoopStatement>(syntax, *initList, &stopExpr, steps.copy(comp), bodyStmt);
 
-    SmallVectorSized<const Statement*, 2> blockList;
-    blockList.append(&allocate<BoundVariableDecl>(loopVar));
-    blockList.append(&loop);
-
-    implicitInitBlock.setBody(allocate<StatementList>(blockList.copy(compilation)));
-    return allocate<BoundSequentialBlock>(implicitInitBlock);*/
-
-    return badStmt(nullptr);
+    // If we had an implicit block created to wrap the for loop, set the loop as the body
+    // of that block and return it. Otherwise, just return the loop itself.
+    if (implicitBlockStmt) {
+        forScope->setBody(loop);
+        return *implicitBlockStmt;
+    }
+    return *loop;
 }
 
 Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStatementSyntax& syntax) {

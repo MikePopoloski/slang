@@ -122,16 +122,16 @@ public:
 
 class ForLoopStatement : public Statement {
 public:
-    //span<const BoundVariableDecl* const> initializers;
-    const Expression& stopExpr;
+    const StatementList& initializers;
+    const Expression* stopExpr;
     span<const Expression* const> steps;
-    const Statement& statement;
+    const Statement& body;
 
-    ForLoopStatement(const StatementSyntax& syntax, /*span<const BoundVariableDecl* const> initializers,*/
-                          const Expression& stopExpr, span<const Expression* const> steps,
-                          const Statement& statement) :
+    ForLoopStatement(const StatementSyntax& syntax, const StatementList& initializers,
+                     const Expression* stopExpr, span<const Expression* const> steps,
+                     const Statement& body) :
         Statement(StatementKind::ForLoop, syntax),
-        /*initializers(initializers),*/ stopExpr(stopExpr), steps(steps), statement(statement) {}
+        initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
 
     void eval(EvalContext& context) const;
 };

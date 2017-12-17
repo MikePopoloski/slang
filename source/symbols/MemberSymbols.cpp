@@ -11,19 +11,6 @@
 
 namespace slang {
 
-SequentialBlockSymbol& SequentialBlockSymbol::createImplicitBlock(Compilation& compilation,
-                                                                  const ForLoopStatementSyntax& forLoop) {
-    SequentialBlockSymbol& block = *compilation.emplace<SequentialBlockSymbol>(compilation);
-
-    const auto& forVariable = forLoop.initializers[0]->as<ForVariableDeclarationSyntax>();
-    auto loopVar = compilation.emplace<VariableSymbol>(forVariable.declarator.name.valueText());
-    loopVar->type = forVariable.type;
-    loopVar->initializer = forVariable.declarator.initializer->expr;
-
-    block.addMember(*loopVar);
-    return block;
-}
-
 const PackageSymbol* ExplicitImportSymbol::package() const {
     importedSymbol();
     return package_;
@@ -115,45 +102,14 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
     }
 }
 
-// TODO: move these someplace better
-
-//static void findChildSymbols(Compilation& compilation, const StatementSyntax& syntax,
-//                             SmallVector<const Symbol*>& results) {
-//    switch (syntax.kind) {
-//        case SyntaxKind::ConditionalStatement: {
-//            const auto& conditional = syntax.as<ConditionalStatementSyntax>();
-//            findChildSymbols(compilation, conditional.statement, results);
-//            if (conditional.elseClause)
-//                findChildSymbols(compilation, conditional.elseClause->clause.as<StatementSyntax>(), results);
-//            break;
-//        }
-//        case SyntaxKind::ForLoopStatement: {
-//            // A for loop has an implicit block around it iff it has variable declarations in its initializers.
-//            const auto& loop = syntax.as<ForLoopStatementSyntax>();
-//            bool any = false;
-//            for (auto initializer : loop.initializers) {
-//                if (initializer->kind == SyntaxKind::ForVariableDeclaration) {
-//                    any = true;
-//                    break;
-//                }
-//            }
-//
-//            if (any)
-//                results.append(&SequentialBlockSymbol::createImplicitBlock(compilation, loop));
-//            else
-//                findChildSymbols(compilation, loop.statement, results);
-//            break;
-//        }
-//        case SyntaxKind::SequentialBlockStatement: {
-//            auto block = compilation.emplace<SequentialBlockSymbol>(compilation);
-//            // TODO: set children
-//            results.append(block);
-//            break;
-//        }
-//        default:
-//            break;
-//    }
-//}
+VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
+                                           const ForVariableDeclarationSyntax& syntax) {
+    auto var = compilation.emplace<VariableSymbol>(syntax.declarator.name.valueText());
+    var->type = syntax.type;
+    if (syntax.declarator.initializer)
+        var->initializer = syntax.declarator.initializer->expr;
+    return *var;
+}
 
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const FunctionDeclarationSyntax& syntax) {

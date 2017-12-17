@@ -533,11 +533,13 @@ private:
     friend class Scope;
 
     void bindBody(const SyntaxNode& syntax);
+    void bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const Statement*>& statements);
+
     Statement& bindStatement(const StatementSyntax& syntax);
     Statement& bindStatementList(const SyntaxList<SyntaxNode>& items);
+    Statement& bindReturnStatement(const ReturnStatementSyntax& syntax);
     Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax);
     Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax);
-    Statement& bindReturnStatement(const ReturnStatementSyntax& syntax);
     Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax);
 
     Statement& badStmt(const Statement* stmt);
@@ -601,9 +603,6 @@ public:
     explicit SequentialBlockSymbol(Compilation& compilation) :
         Symbol(SymbolKind::SequentialBlock),
         StatementBodiedScope(compilation, this) {}
-
-    static SequentialBlockSymbol& createImplicitBlock(Compilation& compilation,
-                                                      const ForLoopStatementSyntax& forLoop);
 };
 
 class ProceduralBlockSymbol : public Symbol, public StatementBodiedScope {
@@ -712,6 +711,8 @@ public:
     /// Constructs all variable symbols specified by the given syntax node.
     static void fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                            SmallVector<const VariableSymbol*>& results);
+
+    static VariableSymbol& fromSyntax(Compilation& compilation, const ForVariableDeclarationSyntax& syntax);
 
 protected:
     VariableSymbol(SymbolKind childKind, string_view name,
