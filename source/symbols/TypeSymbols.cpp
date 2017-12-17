@@ -13,21 +13,6 @@ namespace {
 
 using namespace slang;
 
-string_view getName(BuiltInIntegerType::Kind kind) {
-    switch (kind) {
-        case BuiltInIntegerType::Bit: return "bit";
-        case BuiltInIntegerType::Logic: return "logic";
-        case BuiltInIntegerType::Reg: return "reg";
-        case BuiltInIntegerType::ShortInt: return "shortint";
-        case BuiltInIntegerType::Int: return "int";
-        case BuiltInIntegerType::LongInt: return "longint";
-        case BuiltInIntegerType::Byte: return "byte";
-        case BuiltInIntegerType::Integer: return "integer";
-        case BuiltInIntegerType::Time: return "time";
-        default: THROW_UNREACHABLE;
-    }
-}
-
 uint32_t getWidth(BuiltInIntegerType::Kind kind) {
     switch (kind) {
         case BuiltInIntegerType::Bit: return 1;
@@ -78,15 +63,6 @@ uint32_t getWidth(span<ConstantRange const> dims) {
     for (const auto& dim : dims)
         width += dim.width();
     return width;
-}
-
-string_view getName(FloatingType::Kind kind) {
-    switch (kind) {
-        case FloatingType::Real: return "real";
-        case FloatingType::RealTime: return "realtime";
-        case FloatingType::ShortReal: return "shortreal";
-        default: THROW_UNREACHABLE;
-    }
 }
 
 }
@@ -164,9 +140,9 @@ std::string Type::toString() const {
     return "";
 }
 
-IntegralType::IntegralType(SymbolKind kind, string_view name, uint32_t bitWidth_,
+IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth_,
                            bool isSigned_, bool isFourState_) :
-    Type(kind, name),
+    Type(kind, name, loc),
     bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_)
 {
 }
@@ -252,27 +228,22 @@ BuiltInIntegerType::BuiltInIntegerType(Kind builtInKind) :
 }
 
 BuiltInIntegerType::BuiltInIntegerType(Kind builtInKind, bool isSigned) :
-    IntegralType(SymbolKind::BuiltInIntegerType,
-                 getName(builtInKind),
-                 getWidth(builtInKind),
-                 isSigned,
-                 getFourState(builtInKind)),
+    IntegralType(SymbolKind::BuiltInIntegerType, "", SourceLocation(),
+                 getWidth(builtInKind), isSigned, getFourState(builtInKind)),
     integerKind(builtInKind)
 {
 }
 
 VectorType::VectorType(ScalarType scalarType_, span<ConstantRange const> dimensions_, bool isSigned) :
-    IntegralType(SymbolKind::VectorType, getName((BuiltInIntegerType::Kind)scalarType_),
-                 getWidth(dimensions_),
-                 isSigned,
-                 getFourState((BuiltInIntegerType::Kind)scalarType_)),
+    IntegralType(SymbolKind::VectorType, "", SourceLocation(),
+                 getWidth(dimensions_), isSigned, getFourState((BuiltInIntegerType::Kind)scalarType_)),
     dimensions(dimensions_),
     scalarType(scalarType_)
 {
 }
 
 FloatingType::FloatingType(Kind floatKind_) :
-    Type(SymbolKind::FloatingType, getName(floatKind_)),
+    Type(SymbolKind::FloatingType, "", SourceLocation()),
     floatKind(floatKind_)
 {
 }

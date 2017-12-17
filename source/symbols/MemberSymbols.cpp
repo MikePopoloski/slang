@@ -40,7 +40,7 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
     bool isLocal = syntax.keyword.kind == TokenKind::LocalParamKeyword;
 
     for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
-        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText());
+        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), decl->name.location());
         param->isLocalParam = isLocal;
 
         if (decl->initializer) {
@@ -93,7 +93,8 @@ void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclar
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                                 SmallVector<const VariableSymbol*>& results) {
     for (auto declarator : syntax.declarators) {
-        auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText());
+        auto variable = compilation.emplace<VariableSymbol>(declarator->name.valueText(),
+                                                            declarator->name.location());
         variable->type = syntax.type;
         if (declarator->initializer)
             variable->initializer = declarator->initializer->expr;
@@ -104,7 +105,8 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
 
 VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
                                            const ForVariableDeclarationSyntax& syntax) {
-    auto var = compilation.emplace<VariableSymbol>(syntax.declarator.name.valueText());
+    auto var = compilation.emplace<VariableSymbol>(syntax.declarator.name.valueText(),
+                                                   syntax.declarator.name.location());
     var->type = syntax.type;
     if (syntax.declarator.initializer)
         var->initializer = syntax.declarator.initializer->expr;
@@ -115,9 +117,12 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                                                const FunctionDeclarationSyntax& syntax) {
     // TODO: non simple names?
     const auto& proto = syntax.prototype;
+    Token nameToken = proto.name.getFirstToken();
+
     auto result = compilation.emplace<SubroutineSymbol>(
         compilation,
-        proto.name.getFirstToken().valueText(),
+        nameToken.valueText(),
+        nameToken.location(),
         SemanticFacts::getVariableLifetime(proto.lifetime).value_or(VariableLifetime::Automatic),
         syntax.kind == SyntaxKind::TaskDeclaration
     );
@@ -145,11 +150,16 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
                     direction = lastDirection;
                     directionSpecified = false;
                     break;
-                default: THROW_UNREACHABLE;
+                default:
+                    THROW_UNREACHABLE;
             }
 
             const auto& declarator = portSyntax->declarator;
-            auto arg = compilation.emplace<FormalArgumentSymbol>(declarator.name.valueText(), direction);
+            auto arg = compilation.emplace<FormalArgumentSymbol>(
+                declarator.name.valueText(),
+                declarator.name.location(),
+                direction
+            );
 
             // If we're given a type, use that. Otherwise, if we were given a
             // direction, default to logic. Otherwise, use the last type.

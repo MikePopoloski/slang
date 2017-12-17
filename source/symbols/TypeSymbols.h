@@ -67,7 +67,8 @@ public:
     std::string toString() const;
 
 protected:
-    Type(SymbolKind kind, string_view name) : Symbol(kind, name) {}
+    Type(SymbolKind kind, string_view name, SourceLocation loc) :
+        Symbol(kind, name, loc) {}
 };
 
 /// A base class for integral types, which include all scalar types, built-in integer types,
@@ -107,7 +108,7 @@ public:
                                   const Scope& scope);
 
 protected:
-    IntegralType(SymbolKind kind, string_view name, uint32_t bitWidth,
+    IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth,
                  bool isSigned, bool isFourState);
 
     static bool evaluateConstantDims(Compilation& compilation,
@@ -171,26 +172,26 @@ public:
 /// and as the type of members in tagged unions.
 class VoidType : public Type {
 public:
-    VoidType() : Type(SymbolKind::VoidType, "void") {}
+    VoidType() : Type(SymbolKind::VoidType, "void", SourceLocation()) {}
 };
 
 /// Represents storage for pointers passed using the DPI (a "C" compatible handle).
 class CHandleType : public Type {
 public:
-    CHandleType() : Type(SymbolKind::CHandleType, "chandle") {}
+    CHandleType() : Type(SymbolKind::CHandleType, "chandle", SourceLocation()) {}
 };
 
 /// Represents an ASCII string type.
 class StringType : public Type {
 public:
-    StringType() : Type(SymbolKind::StringType, "string") {}
+    StringType() : Type(SymbolKind::StringType, "string", SourceLocation()) {}
 };
 
 /// Represents a SystemVerilog event handle, which is used for synchronization between
 /// asynchronous processes.
 class EventType : public Type {
 public:
-    EventType() : Type(SymbolKind::EventType, "event") {}
+    EventType() : Type(SymbolKind::EventType, "event", SourceLocation()) {}
 };
 
 /// Represents a type alias, which is introduced via a typedef or type parameter.
@@ -201,7 +202,7 @@ class TypeAliasType : public Type {
 /// resolve the type of some expression or declaration.
 class ErrorType : public Type {
 public:
-    ErrorType() : Type(SymbolKind::ErrorType, "") {}
+    ErrorType() : Type(SymbolKind::ErrorType, "", SourceLocation()) {}
 
     static const ErrorType Instance;
 };

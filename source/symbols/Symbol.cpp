@@ -198,8 +198,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock: {
-            auto kind = SemanticFacts::getProceduralBlockKind(syntax.as<ProceduralBlockSyntax>().kind);
-            addMember(*compilation.emplace<ProceduralBlockSymbol>(compilation, kind));
+            const auto& blockSyntax = syntax.as<ProceduralBlockSyntax>();
+            auto kind = SemanticFacts::getProceduralBlockKind(blockSyntax.kind);
+            addMember(*compilation.emplace<ProceduralBlockSymbol>(compilation,
+                                                                  blockSyntax.keyword.location(),
+                                                                  kind));
             break;
         }
         default:

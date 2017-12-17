@@ -36,7 +36,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     auto& scope = compilation.createScriptScope();
 
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local { varToken.valueText() };
+    VariableSymbol local { varToken.valueText(), varToken.location() };
     local.type = compilation.getIntType();
 
     // Bind the expression tree to the symbol
@@ -66,7 +66,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     auto& scope = compilation.createScriptScope();
 
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local { varToken.valueText() };
+    VariableSymbol local { varToken.valueText(), varToken.location() };
     local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
@@ -91,7 +91,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local { varToken.valueText() };
+    VariableSymbol local { varToken.valueText(), varToken.location() };
     local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
@@ -120,7 +120,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
 
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax.root().getFirstToken();
-    VariableSymbol local { varToken.valueText() };
+    VariableSymbol local { varToken.valueText(), varToken.location() };
     local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol

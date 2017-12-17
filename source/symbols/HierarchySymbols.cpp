@@ -13,7 +13,8 @@
 namespace slang {
 
 PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax) {
-    auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header.name.valueText());
+    auto result = compilation.emplace<PackageSymbol>(compilation, syntax.header.name.valueText(),
+                                                     syntax.header.name.location());
     for (auto member : syntax.members)
         result->addMembers(*member);
     return *result;
@@ -21,7 +22,8 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
 
 DefinitionSymbol& DefinitionSymbol::fromSyntax(Compilation& compilation,
                                                const ModuleDeclarationSyntax& syntax) {
-    auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header.name.valueText());
+    auto result = compilation.emplace<DefinitionSymbol>(compilation, syntax.header.name.valueText(),
+                                                        syntax.header.name.location());
 
     if (syntax.header.parameters) {
         bool lastLocal = false;
@@ -174,6 +176,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         // TODO: other things besides modules
         auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation,
                                                                   instanceSyntax->name.valueText(),
+                                                                  instanceSyntax->name.location(),
                                                                   *definition);
         results.append(instance);
 
@@ -199,15 +202,15 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
     if (!cv)
         return nullptr;
 
-    // TODO: handle named block
+    // TODO: handle named block, location
     const SVInt& value = cv.integer();
     if ((logic_t)value) {
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "");
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
         block->addMembers(syntax.block);
         return block;
     }
     else if (syntax.elseClause) {
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "");
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
         block->addMembers(syntax.elseClause->clause);
         return block;
     }
@@ -222,14 +225,14 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "");
+    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
     const auto& initial = parent.evaluateConstant(syntax.initialExpr);
     if (!initial)
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    SequentialBlockSymbol iterScope(compilation);
-    VariableSymbol local { syntax.identifier.valueText() };
+    SequentialBlockSymbol iterScope(compilation, SourceLocation());
+    VariableSymbol local { syntax.identifier.valueText(), syntax.identifier.location() };
     local.type = compilation.getIntType();
     iterScope.addMember(local);
 
@@ -248,8 +251,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "");
-        auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText());
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
+        auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText(),
+                                                                  syntax.identifier.location());
         block->addMember(*implicitParam);
         block->addMembers(syntax.block);
         result->addMember(*block);

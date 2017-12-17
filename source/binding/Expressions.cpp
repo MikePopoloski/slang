@@ -313,7 +313,7 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
     for (uint32_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
-    VariableSymbol callValue(subroutine.name);
+    VariableSymbol callValue(subroutine.name, subroutine.location);
     callValue.type = subroutine.returnType;
     context.createLocal(&callValue, nullptr);
 

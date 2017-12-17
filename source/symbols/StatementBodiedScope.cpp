@@ -94,7 +94,7 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
 
     Compilation& comp = getCompilation();
     if (!syntax.initializers.empty() && syntax.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
-        auto implicitBlock = comp.emplace<SequentialBlockSymbol>(comp);
+        auto implicitBlock = comp.emplace<SequentialBlockSymbol>(comp, syntax.forKeyword.location());
         implicitBlockStmt = comp.emplace<SequentialBlockStatement>(*implicitBlock);
 
         addMember(*implicitBlock);

@@ -125,7 +125,7 @@ const RootSymbol& Compilation::getRoot() {
         for (auto& [name, definition] : definitionMap) {
             if (definition->kind == SymbolKind::Module && instantiatedNames.count(definition->name) == 0) {
                 // TODO: check for no parameters here
-                auto instance = emplace<ModuleInstanceSymbol>(*this, name, *definition);
+                auto instance = emplace<ModuleInstanceSymbol>(*this, name, definition->location, *definition);
                 root->addMember(*instance);
                 topList.append(instance);
 
@@ -261,7 +261,7 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
 
 SubroutineSymbol& Compilation::createSystemFunction(string_view funcName, SystemFunction funcKind,
                                                     std::initializer_list<const Type*> argTypes) {
-    auto func = emplace<SubroutineSymbol>(*this, funcName, funcKind);
+    auto func = emplace<SubroutineSymbol>(*this, funcName, SourceLocation(), funcKind);
     func->returnType = getIntType();
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> args;
