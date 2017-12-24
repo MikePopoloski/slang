@@ -2,9 +2,13 @@
 
 #include "Catch/catch.hpp"
 
+#include "binding/Expressions.h"
+#include "binding/Statements.h"
+#include "compilation/Compilation.h"
 #include "diagnostics/Diagnostics.h"
 #include "lexing/Preprocessor.h"
 #include "parsing/Parser.h"
+#include "parsing/SyntaxTree.h"
 #include "text/SourceManager.h"
 #include "util/BumpAllocator.h"
 
@@ -125,6 +129,17 @@ inline const ExpressionSyntax& parseExpression(const std::string& text) {
 
     Parser parser(preprocessor);
     return parser.parseExpression();
+}
+
+inline const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, Compilation& compilation) {
+    compilation.addSyntaxTree(syntax);
+    const RootSymbol& root = compilation.getRoot();
+
+    REQUIRE(root.topInstances.size() > 0);
+    if (!syntax.diagnostics().empty())
+        WARN(syntax.reportDiagnostics());
+
+    return *root.topInstances[0];
 }
 
 class LogicExactlyEqualMatcher : public Catch::MatcherBase<logic_t> {

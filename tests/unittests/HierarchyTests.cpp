@@ -1,23 +1,5 @@
 #include "Test.h"
 
-#include <array>
-
-#include "binding/Expressions.h"
-#include "binding/Statements.h"
-#include "compilation/Compilation.h"
-#include "parsing/SyntaxTree.h"
-
-const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, Compilation& compilation) {
-    compilation.addSyntaxTree(syntax);
-    const RootSymbol& root = compilation.getRoot();
-
-    REQUIRE(root.topInstances.size() > 0);
-    if (!syntax.diagnostics().empty())
-        WARN(syntax.reportDiagnostics());
-
-    return *root.topInstances[0];
-}
-
 TEST_CASE("Finding top level", "[binding:decls]") {
     auto file1 = SyntaxTree::fromText("module A; A a(); endmodule\nmodule B; endmodule\nmodule C; endmodule");
     auto file2 = SyntaxTree::fromText("module D; B b(); E e(); endmodule\nmodule E; module C; endmodule C c(); endmodule");
@@ -260,31 +242,6 @@ endmodule
     REQUIRE(returnStmt.kind == StatementKind::Return);
     CHECK(!returnStmt.expr->bad());
     CHECK(returnStmt.expr->type->getBitWidth() == 32);
-}
-
-TEST_CASE("Enum declaration", "[binding:modules]") {
-    auto tree = SyntaxTree::fromText(R"(
-module Top;
-    enum logic [3:0] {
-        A,
-        B = 4,
-        C
-    } someVar;
-endmodule
-)");
-
-    /*const auto& instance = evalModule(tree);
-    const auto& someVar = instance.member<VariableSymbol>(0);
-    REQUIRE(someVar.type().kind == SymbolKind::EnumType);*/
-   /* REQUIRE(someVar.type->as<EnumTypeSymbol>().values.count() == 3);
-    CHECK(someVar.type->as<EnumTypeSymbol>().values[0]->value.integer() == 0);
-    CHECK(someVar.type->as<EnumTypeSymbol>().values[1]->value.integer() == 4);
-    CHECK(someVar.type->as<EnumTypeSymbol>().values[2]->value.integer() == 5);
-
-    const auto& b = instance.module->scope->lookup("B")->as<EnumValueSymbol>();
-    CHECK(b.value.integer() == 4);*/
-
-    // TODO: test (and implement) all the restrictions on enum and enum values
 }
 
 TEST_CASE("Package declaration", "[symbols]") {

@@ -12,7 +12,6 @@ TEST_CASE("Simple eval", "[eval]") {
     CHECK(value.integer() == 13);
 }
 
-
 TEST_CASE("Eval function calls", "[eval]") {
     ScriptSession session;
     session.eval(R"(
