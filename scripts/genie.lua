@@ -57,5 +57,4 @@ end
 
 group "tests"
 testProject('unittests')
-testProject('paramrewriter')
 testProject('depmap')
