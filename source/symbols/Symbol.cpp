@@ -125,10 +125,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::ProgramDeclaration:
-            addMember(DefinitionSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>()));
+            compilation.addDefinition(syntax.as<ModuleDeclarationSyntax>(), *this);
             break;
         case SyntaxKind::PackageDeclaration:
-            addMember(PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>()));
+            // Packages exist in their own namespace and are tracked in the Compilation
+            compilation.addPackage(PackageSymbol::fromSyntax(compilation, syntax.as<ModuleDeclarationSyntax>()));
             break;
         case SyntaxKind::PackageImportDeclaration:
             for (auto item : syntax.as<PackageImportDeclarationSyntax>().items) {
@@ -261,11 +262,6 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
         // TODO: handle missing package
         if (result.nameKind == LookupNameKind::Scoped)
             result.setSymbol(*compilation.getPackage(searchName));
-        else if (result.nameKind == LookupNameKind::Definition) {
-            auto def = compilation.getDefinition(searchName);
-            if (def)
-                result.setSymbol(*def);
-        }
         return;
     }
 
@@ -379,55 +375,6 @@ void Scope::realizeDeferredMembers() const {
             }
         }
     }
-}
-
-void StatementBodiedScope::setBody(const StatementSyntax& syntax) {
-    getOrAddDeferredData().setStatement(syntax);
-}
-
-void StatementBodiedScope::setBody(const SyntaxList<SyntaxNode>& syntax) {
-    getOrAddDeferredData().setStatement(syntax);
-}
-
-Symbol& Symbol::clone() const {
-    Symbol* result;
-    Compilation& compilation = getScope()->getCompilation();
-#define CLONE(type) result = compilation.emplace<type>(*static_cast<const type*>(this)); break
-
-    switch (kind) {
-        case SymbolKind::CompilationUnit: CLONE(CompilationUnitSymbol);
-        case SymbolKind::BuiltInIntegerType: CLONE(BuiltInIntegerType);
-        case SymbolKind::VectorType: CLONE(VectorType);
-        case SymbolKind::FloatingType: CLONE(FloatingType);
-        case SymbolKind::VoidType: CLONE(VoidType);
-        case SymbolKind::CHandleType: CLONE(CHandleType);
-        case SymbolKind::StringType: CLONE(StringType);
-        case SymbolKind::EventType: CLONE(EventType);
-        case SymbolKind::TypeAlias: CLONE(TypeAliasType);
-        case SymbolKind::ErrorType: CLONE(ErrorType);
-        case SymbolKind::Parameter: CLONE(ParameterSymbol);
-        case SymbolKind::Module: CLONE(DefinitionSymbol);
-        case SymbolKind::Interface: CLONE(DefinitionSymbol);
-        case SymbolKind::ModuleInstance: CLONE(ModuleInstanceSymbol);
-        case SymbolKind::Package: CLONE(PackageSymbol);
-        case SymbolKind::ExplicitImport: CLONE(ExplicitImportSymbol);
-        case SymbolKind::WildcardImport: CLONE(WildcardImportSymbol);
-        case SymbolKind::Program: CLONE(DefinitionSymbol);
-        case SymbolKind::GenerateBlock: CLONE(GenerateBlockSymbol);
-        case SymbolKind::GenerateBlockArray: CLONE(GenerateBlockArraySymbol);
-        case SymbolKind::ProceduralBlock: CLONE(ProceduralBlockSymbol);
-        case SymbolKind::SequentialBlock: CLONE(SequentialBlockSymbol);
-        case SymbolKind::Variable: CLONE(VariableSymbol);
-        case SymbolKind::FormalArgument: CLONE(FormalArgumentSymbol);
-        case SymbolKind::Subroutine: CLONE(SubroutineSymbol);
-        default:
-            THROW_UNREACHABLE;
-    }
-#undef CLONE
-
-    result->parentScope = nullptr;
-    result->nextInScope = nullptr;
-    return *result;
 }
 
 }

@@ -16,6 +16,25 @@
 
 namespace slang {
 
+class Definition {
+public:
+    const ModuleDeclarationSyntax& syntax;
+    string_view name;
+
+    struct ParameterDecl {
+        string_view name;
+        const ExpressionSyntax* initializer = nullptr;
+        SourceLocation location;
+        bool isLocal;
+        bool isPort;
+    };
+
+    span<const ParameterDecl> parameters;
+
+    explicit Definition(const ModuleDeclarationSyntax& syntax) :
+        syntax(syntax), name(syntax.header.name.valueText()) {}
+};
+
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
@@ -38,10 +57,11 @@ public:
     bool isFinalized() const { return finalized; }
 
     /// Gets the definition with the given name, or null if there is no such definition.
-    const DefinitionSymbol* getDefinition(string_view name) const;
+    /// This takes into account the given scope so that nested definitions are found before more global ones.
+    const Definition* getDefinition(string_view name, const Scope& scope) const;
 
-    /// Adds a definition to the map of global definitions.
-    void addDefinition(const DefinitionSymbol& definition);
+    /// Adds a definition to the set of definitions tracked in the compilation.
+    void addDefinition(const ModuleDeclarationSyntax& syntax, const Scope& scope);
 
     /// Gets the package with the give name, or null if there is no such package.
     const PackageSymbol* getPackage(string_view name) const;
@@ -59,9 +79,7 @@ public:
     const Diagnostics& diagnostics() const { return diags; }
 
     /// Report an error at the specified location.
-    Diagnostic& addError(DiagCode code, SourceLocation location) {
-        return diags.add(code, location);
-    }
+    Diagnostic& addError(DiagCode code, SourceLocation location) { return diags.add(code, location); }
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, const Scope& parent);
@@ -130,7 +148,7 @@ private:
     SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
 
     // The name map for global definitions.
-    flat_hash_map<string_view, const DefinitionSymbol*> definitionMap;
+    flat_hash_map<std::tuple<string_view, const Scope*>, std::unique_ptr<Definition>> definitionMap;
 
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.

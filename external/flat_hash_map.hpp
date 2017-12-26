@@ -156,6 +156,12 @@ struct KeyOrValueEquality : functor_storage<bool, key_equal>
         return static_cast<equality_storage &>(*this)(lhs.first, rhs.first);
     }
 };
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4624)
+#endif
+
 template<typename T>
 struct sherwood_v3_entry
 {
@@ -195,6 +201,11 @@ struct sherwood_v3_entry
     static constexpr int8_t special_end_value = 0;
     union { T value; };
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 template<typename T>
 struct sherwood_v3_entry_constexpr
 {

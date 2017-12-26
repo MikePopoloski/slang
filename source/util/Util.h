@@ -91,6 +91,16 @@ inline string_view to_string_view(span<char> text) {
     return string_view(text.data(), text.length());
 }
 
+inline void hash_combine(size_t&) {}
+
+/// Hash combining function, based on the function from Boost.
+template<typename T, typename... Rest>
+inline void hash_combine(size_t& seed, const T& v, Rest... rest) {
+    std::hash<T> hasher;
+    seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    hash_combine(seed, rest...);
+}
+
 namespace assert {
 
 class AssertionException : public std::logic_error {
@@ -101,5 +111,37 @@ public:
 [[noreturn]] void assertFailed(const char* expr, const char* file, int line, const char* func);
 
 }
+
+}
+
+namespace detail {
+
+template<typename Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+struct HashValueImpl {
+    static void apply(size_t& seed, const Tuple& tuple) {
+        HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
+        slang::hash_combine(seed, std::get<Index>(tuple));
+    }
+};
+
+template<typename Tuple>
+struct HashValueImpl<Tuple, 0> {
+    static void apply(size_t& seed, const Tuple& tuple) {
+        slang::hash_combine(seed, std::get<0>(tuple));
+    }
+};
+
+}
+
+namespace std {
+
+template<typename... TT>
+struct hash<std::tuple<TT...>> {
+    size_t operator()(const std::tuple<TT...>& tt) const {
+        size_t seed = 0;
+        detail::HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
+        return seed;
+    }
+};
 
 }

@@ -16,12 +16,13 @@
 #include "parsing/AllSyntax.h"
 #include "symbols/SemanticFacts.h"
 #include "text/SourceLocation.h"
+#include "util/HashMap.h"
 #include "util/Iterator.h"
 #include "util/PointerUnion.h"
 
 namespace slang {
 
-class DefinitionSymbol;
+class Definition;
 class Statement;
 class StatementList;
 class Expression;
@@ -38,7 +39,6 @@ class StatementBodiedScope;
 
 using SymbolList = span<const Symbol* const>;
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
-using ParamOverrideMap = flat_hash_map<const ParameterSymbol*, const ExpressionSyntax*>;
 using Dimensions = span<ConstantRange const>;
 
 enum class SymbolKind {
@@ -57,8 +57,6 @@ enum class SymbolKind {
     TypeAlias,
     ErrorType,
     Parameter,
-    Module,
-    Interface,
     Modport,
     ModuleInstance,
     InterfaceInstance,
@@ -106,10 +104,6 @@ public:
 
     template<typename T>
     const T& as() const { return *static_cast<const T*>(this); }
-
-    /// Makes a clone of the symbol. The cloned symbol has the same properties as
-    /// the original but will not be a member of any scope.
-    Symbol& clone() const;
 
     /// A numeric index that can be used to compare the relative ordering of symbols
     /// within a single lexical scope.
@@ -196,6 +190,8 @@ protected:
     explicit Symbol(SymbolKind kind, string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
 
+    Symbol(const Symbol&) = delete;
+
     Diagnostic& addError(DiagCode code, SourceLocation location) const;
 
 private:
@@ -225,10 +221,6 @@ enum class LookupNameKind {
     /// This has additional rules; specifically, SystemVerilog allows tasks and functions
     /// to be referenced before they are declared.
     Callable,
-
-    /// Name referenced is the target of a hierarchy instantiation. Local scopes will be
-    /// searched for nested modules before looking in the root definitions namespace.
-    Definition,
 
     /// Names referenced as part of a bind instantiation have special rules. For example,
     /// previously imported wildcard names are visible, but the bind lookup itself will
@@ -567,40 +559,29 @@ public:
     static PackageSymbol& fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax);
 };
 
-/// Represents a module, interface, or program declaration.
-class DefinitionSymbol : public Symbol, public Scope {
-public:
-    span<const ParameterSymbol* const> parameters;
-
-    DefinitionSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::Module, name, loc), Scope(compilation, this) {}
-
-    static DefinitionSymbol& fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax);
-
-    void createParamOverrides(const ParameterValueAssignmentSyntax& syntax, ParamOverrideMap& map) const;
-};
-
 /// Base class for module, interface, and program instance symbols.
 class InstanceSymbol : public Symbol, public Scope {
 public:
-    const DefinitionSymbol& definition;
-
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            const Scope& scope, SmallVector<const Symbol*>& results);
 
 protected:
-    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc,
-                   const DefinitionSymbol& definition) :
+    InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(kind, name, loc),
-        Scope(compilation, this),
-        definition(definition) {}
+        Scope(compilation, this) {}
 };
 
 class ModuleInstanceSymbol : public InstanceSymbol {
 public:
-    ModuleInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                         const DefinitionSymbol& definition) :
-        InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc, definition) {}
+    ModuleInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+        InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc) {}
+
+    static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
+                                             const Definition& definition);
+
+    static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
+                                             const Definition& definition,
+                                             HashMapRef<string_view, const ExpressionSyntax*>& paramOverrides);
 };
 
 class SequentialBlockSymbol : public Symbol, public StatementBodiedScope {

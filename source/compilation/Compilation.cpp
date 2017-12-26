@@ -97,23 +97,6 @@ void Compilation::addSyntaxTree(const SyntaxTree& tree) {
     for (auto entry : instances)
         instantiatedNames.emplace(entry);
 
-    // Keep track of any newly created definitions in the root symbol's name map.
-    for (auto symbol : unit->members()) {
-        switch (symbol->kind) {
-            case SymbolKind::Module:
-            case SymbolKind::Interface:
-            case SymbolKind::Program:
-                addDefinition(symbol->as<DefinitionSymbol>());
-                break;
-            case SymbolKind::Package:
-                // Track packages separately; they live in their own namespace.
-                addPackage(symbol->as<PackageSymbol>());
-                break;
-            default:
-                break;
-        }
-    }
-
     root->addMember(*unit);
     compilationUnits.push_back(unit);
 }
@@ -122,16 +105,16 @@ const RootSymbol& Compilation::getRoot() {
     if (!finalized) {
         // Find modules that have no instantiations.
         SmallVectorSized<const ModuleInstanceSymbol*, 4> topList;
-        for (auto& [name, definition] : definitionMap) {
-            if (definition->kind == SymbolKind::Module && instantiatedNames.count(definition->name) == 0) {
-                // TODO: check for no parameters here
-                auto instance = emplace<ModuleInstanceSymbol>(*this, name, definition->location, *definition);
-                root->addMember(*instance);
-                topList.append(instance);
+        for (auto& [key, definition] : definitionMap) {
+            (void)key;
+            const auto& syntax = definition->syntax;
 
-                // Copy in all members from the definition into the instance.
-                for (auto member : instance->definition.members())
-                    instance->addMember(member->clone());
+            if (syntax.kind == SyntaxKind::ModuleDeclaration && instantiatedNames.count(definition->name) == 0) {
+                // TODO: check for no parameters here
+                const auto& instance = ModuleInstanceSymbol::instantiate(*this, definition->name,
+                                                                         syntax.header.name.location(), *definition);
+                root->addMember(instance);
+                topList.append(&instance);
             }
         }
 
@@ -146,15 +129,66 @@ const RootSymbol& Compilation::getRoot() {
     return *root;
 }
 
-const DefinitionSymbol* Compilation::getDefinition(string_view lookupName) const {
-    auto it = definitionMap.find(lookupName);
-    if (it == definitionMap.end())
-        return nullptr;
-    return it->second;
+const Definition* Compilation::getDefinition(string_view lookupName, const Scope& scope) const {
+    const Scope* searchScope = &scope;
+    while (true) {
+        auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
+        if (it != definitionMap.end())
+            return it->second.get();
+
+        if (searchScope->asSymbol().kind == SymbolKind::Root)
+            return nullptr;
+
+        searchScope = searchScope->getParent();
+    }
 }
 
-void Compilation::addDefinition(const DefinitionSymbol& definition) {
-    definitionMap.emplace(definition.name, &definition);
+void Compilation::addDefinition(const ModuleDeclarationSyntax& syntax, const Scope& scope) {
+    auto definition = std::make_unique<Definition>(syntax);
+    if (syntax.header.parameters) {
+        bool lastLocal = false;
+        SmallVectorSized<Definition::ParameterDecl, 8> parameters;
+        for (auto declaration : syntax.header.parameters->declarations) {
+            // It's legal to leave off the parameter keyword in the parameter port list.
+            // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
+            // This isn't allowed in a module body, but the parser will take care of the error for us.
+            bool local = false;
+            if (!declaration->keyword)
+                local = lastLocal;
+            else
+                local = declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            lastLocal = local;
+
+            for (const VariableDeclaratorSyntax* decl : declaration->declarators) {
+                Definition::ParameterDecl param;
+                param.name = decl->name.valueText();
+                param.location = decl->name.location();
+                param.isLocal = local;
+                param.isPort = true;
+
+                if (decl->initializer)
+                    param.initializer = &decl->initializer->expr;
+
+                // TODO: handle defaultType
+
+                // TODO:
+                /* else if (local)
+                addError(DiagCode::LocalParamNoInitializer, declLocation);
+                else if (bodyParam)
+                addError(DiagCode::BodyParamNoInitializer, declLocation);*/
+
+                parameters.append(param);
+            }
+        }
+        definition->parameters = parameters.copy(*this);
+    }
+
+    // Record that the given scope contains this definition. If the scope is a compilation unit, add it to
+    // the root scope instead so that lookups from other compilation units will find it.
+    if (scope.asSymbol().kind == SymbolKind::CompilationUnit)
+        definitionMap.emplace(std::make_tuple(definition->name, root.get()), std::move(definition));
+    else
+        definitionMap.emplace(std::make_tuple(definition->name, &scope), std::move(definition));
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
