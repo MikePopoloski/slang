@@ -10,8 +10,6 @@
 *.orig
 obj/
 [Bb]in
-[Dd]ebug*/
-[Rr]elease*/
 .vs/
 .idea/
 CMakeLists.txt
