@@ -14,21 +14,6 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     CHECK(root.topInstances[1]->name == "D");
 }
 
-TEST_CASE("Bind module implicit", "[binding:modules]") {
-    auto tree = SyntaxTree::fromText(R"(
-module Top #(parameter int foo = 4) ();
-    Leaf l();
-endmodule
-
-module Leaf();
-
-endmodule
-)");
-
-    Compilation compilation;
-    evalModule(tree, compilation);
-}
-
 TEST_CASE("Module parameterization errors", "[binding:modules]") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
@@ -56,9 +41,24 @@ module Leaf #(
 endmodule
 )");
 
-    // TODO:
-    /*RootSymbol root(/&tree);
-    CHECK(root.diagnostics().size() == 15);*/
+    Compilation compilation;
+    evalModule(tree, compilation).members();
+
+    const auto& diags = compilation.diagnostics();
+    REQUIRE(diags.size() == 13);
+    CHECK(diags[0].code == DiagCode::LocalParamNoInitializer);
+    CHECK(diags[1].code == DiagCode::BodyParamNoInitializer);
+    CHECK(diags[2].code == DiagCode::ParamHasNoValue);
+    CHECK(diags[3].code == DiagCode::TooManyParamAssignments);
+    CHECK(diags[4].code == DiagCode::AssignedToLocalPortParam);
+    CHECK(diags[5].code == DiagCode::NoteDeclarationHere);
+    CHECK(diags[6].code == DiagCode::ParamHasNoValue);
+    CHECK(diags[7].code == DiagCode::ParameterDoesNotExist);
+    CHECK(diags[8].code == DiagCode::AssignedToLocalBodyParam);
+    CHECK(diags[9].code == DiagCode::NoteDeclarationHere);
+    CHECK(diags[10].code == DiagCode::DuplicateParamAssignment);
+    CHECK(diags[11].code == DiagCode::NotePreviousUsage);
+    CHECK(diags[12].code == DiagCode::MixingOrderedAndNamedParams);
 }
 
 TEST_CASE("Module children (simple)", "[binding:modules]") {
@@ -80,7 +80,7 @@ endmodule
     const auto& instance = evalModule(tree, compilation);
     const auto& leaf = instance.memberAt<ModuleInstanceSymbol>(0).memberAt<ModuleInstanceSymbol>(0);
     const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
-    CHECK(foo.value->integer() == 4);
+    CHECK(foo.getValue().integer() == 4);
 }
 
 TEST_CASE("Module children (conditional generate)", "[binding:modules]") {
@@ -111,7 +111,7 @@ endmodule
         .memberAt<ModuleInstanceSymbol>(0);
 
     const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
-    CHECK(foo.value->integer() == 1);
+    CHECK(foo.getValue().integer() == 1);
 }
 
 TEST_CASE("Module children (loop generate)", "[binding:modules]") {
@@ -135,7 +135,7 @@ endmodule
     for (uint32_t i = 0; i < 10; i++) {
         const auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<ModuleInstanceSymbol>(1);
         const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
-        CHECK(foo.value->integer() == i);
+        CHECK(foo.getValue().integer() == i);
     }
 }
 
@@ -257,6 +257,6 @@ endpackage
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    const auto& cv = *compilation.getRoot().topInstances[0]->memberAt<ParameterSymbol>(0).value;
+    const auto& cv = compilation.getRoot().topInstances[0]->memberAt<ParameterSymbol>(0).getValue();
     CHECK(cv.integer() == 4);
 }

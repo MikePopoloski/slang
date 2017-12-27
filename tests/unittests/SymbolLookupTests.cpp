@@ -25,7 +25,7 @@ import Foo::x;
     CHECK(result.wasImported());
     REQUIRE(x);
     CHECK(x->kind == SymbolKind::Parameter);
-    CHECK(x->as<ParameterSymbol>().value->integer() == 4);
+    CHECK(x->as<ParameterSymbol>().getValue().integer() == 4);
 }
 
 TEST_CASE("Wildcard import lookup 1", "[symbols:lookup]") {
@@ -53,7 +53,7 @@ endmodule
     const auto& gen_b = top.memberAt<GenerateBlockSymbol>(1);
     const auto& param = gen_b.memberAt<ParameterSymbol>(0);
     CHECK(compilation.diagnostics().empty());
-    CHECK(param.value->integer() == 12);
+    CHECK(param.getValue().integer() == 12);
 
     // Lookup at (2); should return the local parameter
     LookupResult result;
@@ -78,5 +78,5 @@ endmodule
     CHECK(result.wasImported());
     REQUIRE(symbol);
     REQUIRE(symbol->kind == SymbolKind::Parameter);
-    CHECK(symbol->as<ParameterSymbol>().value->integer() == 4);
+    CHECK(symbol->as<ParameterSymbol>().getValue().integer() == 4);
 }

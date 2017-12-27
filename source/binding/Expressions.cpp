@@ -90,7 +90,7 @@ ConstantValue VariableRefExpression::eval(EvalContext& context) const {
 }
 
 ConstantValue ParameterRefExpression::eval(EvalContext&) const {
-    return *symbol.value;
+    return symbol.getValue();
 }
 
 ConstantValue UnaryExpression::eval(EvalContext& context) const {

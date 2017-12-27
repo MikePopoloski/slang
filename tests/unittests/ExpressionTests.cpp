@@ -16,7 +16,7 @@ SVInt testParameter(const std::string& text, int index = 0) {
         WARN(tree.reportDiagnostics());
 
     const ParameterSymbol& param = module.memberAt<ParameterSymbol>(index);
-    return param.value->integer();
+    return param.getValue().integer();
 }
 
 TEST_CASE("Bind parameter", "[binding:expressions]") {

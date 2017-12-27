@@ -38,6 +38,13 @@ project "slang"
 		path.join(ROOT_DIR, "compat/**.h"),
 	}
 
+	configuration { "vs*" }
+		files {
+			path.join(ROOT_DIR, "debug/**.natvis")
+		}
+
+	configuration {}
+
 function testProject(_name)
 	project (_name)
 		kind "ConsoleApp"

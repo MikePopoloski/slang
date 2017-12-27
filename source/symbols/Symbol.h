@@ -22,7 +22,6 @@
 
 namespace slang {
 
-class Definition;
 class Statement;
 class StatementList;
 class Expression;
@@ -40,6 +39,46 @@ class StatementBodiedScope;
 using SymbolList = span<const Symbol* const>;
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 using Dimensions = span<ConstantRange const>;
+
+/// Represents a definition (module, interface, or program) that can be instantiated
+/// to form a node in the design hierarchy.
+class Definition {
+public:
+    /// The syntax that defines the body of the definition.
+    const ModuleDeclarationSyntax& syntax;
+
+    /// The name of the definition.
+    string_view name;
+
+    /// Tracks info about each parameter declaration for later evaluation.
+    struct ParameterDecl {
+        /// The name of the parameter.
+        string_view name;
+
+        /// The syntax describing the parameter's data type. This is evaluated lazily
+        /// into a real type since it may require doing inference from the value.
+        const DataTypeSyntax* type = nullptr;
+
+        /// The default initializer, or null if the parameter has no default.
+        const ExpressionSyntax* initializer = nullptr;
+
+        /// The source location of the parameter.
+        SourceLocation location;
+
+        /// Indicates whether the parameter is a localparam (not overridable).
+        bool isLocal;
+
+        /// Indicates whether the parameter was declared in the header (parameter port list) or
+        /// within the body of the definition itself.
+        bool isPort;
+    };
+
+    /// A list of parameter declarations within the definition.
+    span<const ParameterDecl> parameters;
+
+    explicit Definition(const ModuleDeclarationSyntax& syntax) :
+        syntax(syntax), name(syntax.header.name.valueText()) {}
+};
 
 enum class SymbolKind {
     Unknown,
@@ -151,21 +190,6 @@ public:
     private:
         ScopeOrSymbol parent;
         mutable std::variant<const TResult*, const TSource*> cache;
-    };
-
-    struct LazyConstant : public Lazy<LazyConstant, ConstantValue, ExpressionSyntax> {
-        explicit LazyConstant(ScopeOrSymbol parent);
-        LazyConstant(ScopeOrSymbol parent, const ConstantValue* init) :
-            Lazy<LazyConstant, ConstantValue, ExpressionSyntax>(parent, init) {}
-        LazyConstant(ScopeOrSymbol parent, const ExpressionSyntax& init) :
-            Lazy<LazyConstant, ConstantValue, ExpressionSyntax>(parent, init) {}
-
-        LazyConstant& operator=(const ExpressionSyntax& source);
-        LazyConstant& operator=(ConstantValue result);
-
-    private:
-        friend struct Lazy<LazyConstant, ConstantValue, ExpressionSyntax>;
-        const ConstantValue& evaluate(const Scope& scope, const ExpressionSyntax& source) const;
     };
 
 #define LAZY(name, TResult, TSource)                            \
@@ -579,9 +603,14 @@ public:
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
                                              const Definition& definition);
 
+    struct ParameterMetadata {
+        const Definition::ParameterDecl* decl;
+        const Type* type;
+        ConstantValue value;
+    };
+
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
-                                             const Definition& definition,
-                                             HashMapRef<string_view, const ExpressionSyntax*>& paramOverrides);
+                                             const Definition& definition, span<const ParameterMetadata> parameters);
 };
 
 class SequentialBlockSymbol : public Symbol, public StatementBodiedScope {
@@ -668,20 +697,46 @@ private:
     mutable optional<const PackageSymbol*> package;
 };
 
+/// Represents a parameter value.
 class ParameterSymbol : public Symbol {
 public:
-    LazyConstant defaultValue;
-    LazyConstant value;
-    bool isLocalParam = false;
-    bool isPortParam = false;
-
-    ParameterSymbol(string_view name, SourceLocation loc) :
+    ParameterSymbol(string_view name, SourceLocation loc, bool isLocal_, bool isPort_) :
         Symbol(SymbolKind::Parameter, name, loc),
-        defaultValue(this),
-        value(this) {}
+        isLocal(isLocal_), isPort(isPort_) {}
 
     static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
                            SmallVector<ParameterSymbol*>& results);
+
+    static ParameterSymbol& fromDecl(Compilation& compilation, const Definition::ParameterDecl& decl);
+
+    static std::tuple<const Type*, ConstantValue> evaluate(const DataTypeSyntax& type,
+                                                           const ExpressionSyntax& expr, const Scope& scope);
+
+    void setDeclaredType(const DataTypeSyntax& syntax) { declaredType = &syntax; }
+    const DataTypeSyntax* getDeclaredType() const { return declaredType; }
+
+    const Type& getType() const;
+    void setType(const Type& newType) { type = &newType; }
+
+    const ConstantValue& getValue() const;
+    void setValue(ConstantValue value);
+
+    const ConstantValue* getDefault() const;
+    void setDefault(ConstantValue&& value);
+    void setDefault(const ExpressionSyntax& syntax);
+
+    bool hasDefault() const { return (bool)defaultValue; }
+    bool isLocalParam() const { return isLocal; }
+    bool isPortParam() const { return isPort; }
+    bool isBodyParam() const { return !isPortParam(); }
+
+private:
+    const DataTypeSyntax* declaredType = nullptr;
+    mutable const Type* type = nullptr;
+    mutable const ConstantValue* value = nullptr;
+    mutable PointerUnion<const ConstantValue*, const ExpressionSyntax*> defaultValue;
+    bool isLocal = false;
+    bool isPort = false;
 };
 
 /// Represents a variable declaration (which does not include nets).

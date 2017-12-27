@@ -159,7 +159,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::NotePreviousDefinition] = { "previous definition here", DiagnosticSeverity::Note };
     descriptors[DiagCode::UnknownModule] = { "unknown module named '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::LocalParamNoInitializer] = { "local parameter is missing an initializer", DiagnosticSeverity::Error };
-    descriptors[DiagCode::BodyParamNoInitializer] = { "parameters declaration is missing an initializer", DiagnosticSeverity::Error };
+    descriptors[DiagCode::BodyParamNoInitializer] = { "parameter declaration is missing an initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnpackedDimensionRequired] = { "unpacked dimension is required in array declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnpackedDimensionRequiresConstRange] = { "unpacked dimension requires a constant range", DiagnosticSeverity::Error };
     descriptors[DiagCode::PackedDimRequiresConstantRange] = { "packed dimension requires a constant range", DiagnosticSeverity::Error };

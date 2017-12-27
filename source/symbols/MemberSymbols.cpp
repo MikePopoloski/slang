@@ -36,59 +36,94 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
 
 void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
                                  SmallVector<ParameterSymbol*>& results) {
-
-    bool isLocal = syntax.keyword.kind == TokenKind::LocalParamKeyword;
-
-    for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
-        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), decl->name.location());
-        param->isLocalParam = isLocal;
-
-        if (decl->initializer) {
-            param->defaultValue = decl->initializer->expr;
-            param->value = param->defaultValue;
-        }
-
-        // TODO: handle defaultType
-
-            // TODO:
-           /* else if (local)
-                addError(DiagCode::LocalParamNoInitializer, declLocation);
-            else if (bodyParam)
-                addError(DiagCode::BodyParamNoInitializer, declLocation);*/
+    for (auto decl : syntax.declarators) {
+        auto param = compilation.emplace<ParameterSymbol>(decl->name.valueText(), decl->name.location(), true, false);
+        param->setDeclaredType(syntax.type);
+        if (decl->initializer)
+            param->setDefault(decl->initializer->expr);
+        else
+            compilation.addError(DiagCode::BodyParamNoInitializer, decl->name.location());
 
         results.append(param);
     }
 }
 
-// TODO:
-//void ParameterSymbol::evaluate(const ExpressionSyntax* expr, const Type*& determinedType,
-//                               ConstantValue*& determinedValue, const Scope& scope) const {
-//    ASSERT(expr);
-//
-//    // If no type is given, infer the type from the initializer
-//    if (typeSyntax->kind == SyntaxKind::ImplicitType) {
-//        const auto& bound = Binder(scope).bindConstantExpression(*expr);
-//        determinedType = bound.type;
-//        if (!bound.bad())
-//            determinedValue = getRoot().constantAllocator.emplace(bound.eval());
-//    }
-//    else {
-//        determinedType = &getRoot().compilation.getType(*typeSyntax, scope);
-//        determinedValue = getRoot().constantAllocator.emplace(scope.evaluateConstantAndConvert(*expr, *determinedType, location));
-//    }
-//}
+ParameterSymbol& ParameterSymbol::fromDecl(Compilation& compilation, const Definition::ParameterDecl& decl) {
+    auto param = compilation.emplace<ParameterSymbol>(decl.name, decl.location, decl.isLocal, decl.isPort);
+    param->setDeclaredType(*decl.type);
+    if (decl.initializer)
+        param->setDefault(*decl.initializer);
 
-//VariableSymbol::VariableSymbol(string_view name, const Scope& parent,
-//                               VariableLifetime lifetime, bool isConst) :
-//    Symbol(SymbolKind::Variable, parent, name),
-//    type(&parent), initializer(&parent),
-//    lifetime(lifetime), isConst(isConst) {}
+    return *param;
+}
 
-//VariableSymbol::VariableSymbol(SymbolKind kind, string_view name, const Scope& parent,
-//                               VariableLifetime lifetime, bool isConst) :
-//    Symbol(kind, parent, name),
-//    type(&parent), initializer(&parent),
-//    lifetime(lifetime), isConst(isConst) {}
+std::tuple<const Type*, ConstantValue> ParameterSymbol::evaluate(const DataTypeSyntax& type,
+                                                                 const ExpressionSyntax& expr,
+                                                                 const Scope& scope) {
+    // TODO: handle more cases here
+
+    // If no type is given, infer the type from the initializer.
+    if (type.kind == SyntaxKind::ImplicitType) {
+        const auto& bound = Binder(scope).bindConstantExpression(expr);
+        return std::make_tuple(bound.type, bound.eval());
+    }
+
+    // TODO: better location for converting
+    const Type& t = scope.getCompilation().getType(type, scope);
+    return std::make_tuple(&t, scope.evaluateConstantAndConvert(expr, t, expr.getFirstToken().location()));
+}
+
+const Type& ParameterSymbol::getType() const {
+    // If we have no type set, compute and use the default type.
+    if (!type)
+        getDefault();
+    return type ? *type : ErrorType::Instance;
+}
+
+const ConstantValue& ParameterSymbol::getValue() const {
+    // If we have no value set, compute and use the default value.
+    if (!value)
+        getDefault();
+
+    ASSERT(value);
+    return *value;
+}
+
+void ParameterSymbol::setValue(ConstantValue newValue) {
+    value = getScope()->getCompilation().createConstant(std::move(newValue));
+}
+
+const ConstantValue* ParameterSymbol::getDefault() const {
+    if (!defaultValue)
+        return nullptr;
+
+    if (defaultValue.is<const ExpressionSyntax*>()) {
+        ASSERT(declaredType);
+
+        const Scope* scope = getScope();
+        auto typeAndValue = evaluate(*declaredType, *defaultValue.get<const ExpressionSyntax*>(), *scope);
+        auto cv = scope->getCompilation().createConstant(std::move(std::get<1>(typeAndValue)));
+        defaultValue = cv;
+
+        // If the value of this parameter hasn't yet been overriden, use the default type and value we just computed.
+        if (!type || !value) {
+            type = std::get<0>(typeAndValue);
+            value = cv;
+        }
+    }
+
+    return defaultValue.get<const ConstantValue*>();
+}
+
+void ParameterSymbol::setDefault(ConstantValue&& def) {
+    ASSERT(!defaultValue);
+    defaultValue = getScope()->getCompilation().createConstant(std::move(def));
+}
+
+void ParameterSymbol::setDefault(const ExpressionSyntax& syntax) {
+    ASSERT(!defaultValue);
+    defaultValue = &syntax;
+}
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                                 SmallVector<const VariableSymbol*>& results) {

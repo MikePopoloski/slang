@@ -16,25 +16,6 @@
 
 namespace slang {
 
-class Definition {
-public:
-    const ModuleDeclarationSyntax& syntax;
-    string_view name;
-
-    struct ParameterDecl {
-        string_view name;
-        const ExpressionSyntax* initializer = nullptr;
-        SourceLocation location;
-        bool isLocal;
-        bool isPort;
-    };
-
-    span<const ParameterDecl> parameters;
-
-    explicit Definition(const ModuleDeclarationSyntax& syntax) :
-        syntax(syntax), name(syntax.header.name.valueText()) {}
-};
-
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
@@ -117,6 +98,9 @@ public:
 private:
     SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,
                                            std::initializer_list<const Type*> argTypes);
+
+    void getParamDecls(const ParameterDeclarationSyntax& syntax, bool isPort, bool isLocal,
+                       SmallVector<Definition::ParameterDecl>& parameters);
 
     // These functions are used for traversing the syntax hierarchy and finding all instantiations.
     using NameSet = flat_hash_set<string_view>;

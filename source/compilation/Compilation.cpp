@@ -144,44 +144,32 @@ const Definition* Compilation::getDefinition(string_view lookupName, const Scope
 }
 
 void Compilation::addDefinition(const ModuleDeclarationSyntax& syntax, const Scope& scope) {
-    auto definition = std::make_unique<Definition>(syntax);
-    if (syntax.header.parameters) {
+    SmallVectorSized<Definition::ParameterDecl, 8> parameters;
+    bool hasPortParams = syntax.header.parameters;
+    if (hasPortParams) {
         bool lastLocal = false;
-        SmallVectorSized<Definition::ParameterDecl, 8> parameters;
         for (auto declaration : syntax.header.parameters->declarations) {
             // It's legal to leave off the parameter keyword in the parameter port list.
             // If you do so, we "inherit" the parameter or localparam keyword from the previous entry.
             // This isn't allowed in a module body, but the parser will take care of the error for us.
-            bool local = false;
-            if (!declaration->keyword)
-                local = lastLocal;
-            else
-                local = declaration->keyword.kind == TokenKind::LocalParamKeyword;
-            lastLocal = local;
-
-            for (const VariableDeclaratorSyntax* decl : declaration->declarators) {
-                Definition::ParameterDecl param;
-                param.name = decl->name.valueText();
-                param.location = decl->name.location();
-                param.isLocal = local;
-                param.isPort = true;
-
-                if (decl->initializer)
-                    param.initializer = &decl->initializer->expr;
-
-                // TODO: handle defaultType
-
-                // TODO:
-                /* else if (local)
-                addError(DiagCode::LocalParamNoInitializer, declLocation);
-                else if (bodyParam)
-                addError(DiagCode::BodyParamNoInitializer, declLocation);*/
-
-                parameters.append(param);
-            }
+            if (declaration->keyword)
+                lastLocal = declaration->keyword.kind == TokenKind::LocalParamKeyword;
+            getParamDecls(*declaration, true, lastLocal, parameters);
         }
-        definition->parameters = parameters.copy(*this);
     }
+
+    // Also search through immediate members in the body of the definition for any parameters, as they may
+    // be overridable at instantiation time.
+    for (auto member : syntax.members) {
+        if (member->kind == SyntaxKind::ParameterDeclarationStatement) {
+            const auto& declaration = member->as<ParameterDeclarationStatementSyntax>().parameter;
+            bool isLocal = hasPortParams || declaration.keyword.kind == TokenKind::LocalParamKeyword;
+            getParamDecls(declaration, false, isLocal, parameters);
+        }
+    }
+
+    auto definition = std::make_unique<Definition>(syntax);
+    definition->parameters = parameters.copy(*this);
 
     // Record that the given scope contains this definition. If the scope is a compilation unit, add it to
     // the root scope instead so that lookups from other compilation units will find it.
@@ -189,6 +177,27 @@ void Compilation::addDefinition(const ModuleDeclarationSyntax& syntax, const Sco
         definitionMap.emplace(std::make_tuple(definition->name, root.get()), std::move(definition));
     else
         definitionMap.emplace(std::make_tuple(definition->name, &scope), std::move(definition));
+}
+
+void Compilation::getParamDecls(const ParameterDeclarationSyntax& syntax, bool isPort, bool isLocal,
+                                SmallVector<Definition::ParameterDecl>& parameters) {
+    for (const VariableDeclaratorSyntax* decl : syntax.declarators) {
+        Definition::ParameterDecl param;
+        param.name = decl->name.valueText();
+        param.location = decl->name.location();
+        param.type = &syntax.type;
+        param.isLocal = isLocal;
+        param.isPort = isPort;
+
+        if (decl->initializer)
+            param.initializer = &decl->initializer->expr;
+        else if (!isPort)
+            addError(DiagCode::BodyParamNoInitializer, param.location);
+        else if (isLocal)
+            addError(DiagCode::LocalParamNoInitializer, param.location);
+
+        parameters.append(param);
+    }
 }
 
 const PackageSymbol* Compilation::getPackage(string_view lookupName) const {

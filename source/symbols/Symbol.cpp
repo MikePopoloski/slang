@@ -17,26 +17,6 @@ namespace slang {
 const LookupRefPoint LookupRefPoint::max {nullptr, UINT_MAX};
 const LookupRefPoint LookupRefPoint::min {nullptr, 0};
 
-Symbol::LazyConstant::LazyConstant(ScopeOrSymbol parent) :
-    Lazy(parent, &ConstantValue::Invalid) {}
-
-Symbol::LazyConstant& Symbol::LazyConstant::operator=(const ExpressionSyntax& source) {
-    Lazy<LazyConstant, ConstantValue, ExpressionSyntax>::operator=(source);
-    return *this;
-}
-
-Symbol::LazyConstant& Symbol::LazyConstant::operator=(ConstantValue result) {
-    ConstantValue* p = getScope().getCompilation().createConstant(std::move(result));
-    Lazy<LazyConstant, ConstantValue, ExpressionSyntax>::operator=(p);
-    return *this;
-}
-
-const ConstantValue& Symbol::LazyConstant::evaluate(const Scope& scope,
-                                                    const ExpressionSyntax& syntax) const {
-    ConstantValue v = Binder(scope).bindConstantExpression(syntax).eval();
-    return *scope.getCompilation().createConstant(std::move(v));
-}
-
 Symbol::LazyInitializer::LazyInitializer(ScopeOrSymbol parent) :\
     Lazy(parent, nullptr) {}
 
@@ -175,15 +155,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             SmallVectorSized<ParameterSymbol*, 16> params;
             ParameterSymbol::fromSyntax(compilation,
                                         syntax.as<ParameterDeclarationStatementSyntax>().parameter,
-                                        params);
-            for (auto param : params)
-                addMember(*param);
-            break;
-        }
-        case SyntaxKind::ParameterDeclaration: {
-            SmallVectorSized<ParameterSymbol*, 16> params;
-            ParameterSymbol::fromSyntax(compilation,
-                                        syntax.as<ParameterDeclarationSyntax>(),
                                         params);
             for (auto param : params)
                 addMember(*param);

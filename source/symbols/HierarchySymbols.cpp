@@ -121,46 +121,88 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         }
     }
 
+    // Determine values for all parameters now so that they can be shared between instances.
+    SmallVectorSized<ModuleInstanceSymbol::ParameterMetadata, 8> params;
+    for (const auto& decl : definition->parameters) {
+        std::tuple<const Type*, ConstantValue> typeAndValue(nullptr, nullptr);
+        if (auto it = paramOverrides.find(decl.name); it != paramOverrides.end())
+            typeAndValue = ParameterSymbol::evaluate(*decl.type, *it->second, scope);
+        else if (!decl.initializer && !decl.isLocal && decl.isPort) {
+            auto& diag = compilation.addError(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
+            diag << definition->name;
+            diag << decl.name;
+        }
+
+        params.emplace(ModuleInstanceSymbol::ParameterMetadata { &decl, std::get<0>(typeAndValue),
+                                                                 std::move(std::get<1>(typeAndValue)) });
+    }
+
     for (auto instanceSyntax : syntax.instances) {
         // TODO: other things besides modules
         // TODO: instance arrays
         const auto& instance = ModuleInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
                                                                  instanceSyntax->name.location(), *definition,
-                                                                 paramOverrides);
+                                                                 params);
         results.append(&instance);
     }
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                         SourceLocation loc, const Definition& definition) {
-    SmallHashMap<string_view, const ExpressionSyntax*, 2> paramOverrides;
-    return instantiate(compilation, name, loc, definition, paramOverrides);
+    SmallVectorSized<ModuleInstanceSymbol::ParameterMetadata, 8> params;
+    for (const auto& decl : definition.parameters) {
+        // This function should only be called for definitions where all parameters have defaults.
+        ASSERT(decl.initializer);
+        params.emplace(ModuleInstanceSymbol::ParameterMetadata { &decl, nullptr, nullptr });
+    }
+
+    return instantiate(compilation, name, loc, definition, params);
 }
 
-ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(
-    Compilation& compilation, string_view name, SourceLocation loc, const Definition& definition,
-    HashMapRef<string_view, const ExpressionSyntax*>& paramOverrides) {
+ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
+                                                        SourceLocation loc, const Definition& definition,
+                                                        span<const ParameterMetadata> parameters) {
 
     auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
+    auto paramIt = parameters.begin();
 
-    auto parameterPorts = definition.syntax.header.parameters;
-    if (parameterPorts) {
-        for (auto decl : parameterPorts->declarations) {
-            SmallVectorSized<ParameterSymbol*, 16> params;
-            ParameterSymbol::fromSyntax(compilation, *decl, params);
-            for (auto param : params) {
-                // TODO: does this actually need to be lazy?
-                instance->addMember(*param);
-                if (auto it = paramOverrides.find(param->name); it != paramOverrides.end())
-                    param->value = LazyConstant(static_cast<const Scope*>(instance), *it->second);
+    // Add all port parameters as members first.
+    while (paramIt != parameters.end()) {
+        auto decl = paramIt->decl;
+        if (!decl->isPort)
+            break;
 
-                // TODO: handle missing value / no default
+        auto& param = ParameterSymbol::fromDecl(compilation, *decl);
+        instance->addMember(param);
+
+        if (paramIt->type) {
+            param.setType(*paramIt->type);
+            param.setValue(paramIt->value);
+        }
+        paramIt++;
+    }
+
+    for (auto member : definition.syntax.members) {
+        // If this is a parameter declaration, we should already have metadata for it in our parameters list.
+        // The list is given in declaration order, so we should be be able to move through them incrementally.
+        if (member->kind != SyntaxKind::ParameterDeclarationStatement)
+            instance->addMembers(*member);
+        else {
+            for (auto declarator : member->as<ParameterDeclarationStatementSyntax>().parameter.declarators) {
+                (void)declarator;
+                ASSERT(paramIt != parameters.end());
+
+                auto decl = paramIt->decl;
+                auto& param = ParameterSymbol::fromDecl(compilation, *decl);
+                if (paramIt->type) {
+                    param.setType(*paramIt->type);
+                    param.setValue(paramIt->value);
+                }
+                instance->addMember(param);
+                paramIt++;
             }
         }
     }
-
-    for (auto member : definition.syntax.members)
-        instance->addMembers(*member);
 
     return *instance;
 }
@@ -223,12 +265,15 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         // TODO: scope name
         auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
         auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText(),
-                                                                  syntax.identifier.location());
+                                                                  syntax.identifier.location(),
+                                                                  true /* isLocal */,
+                                                                  false /* isPort */);
         block->addMember(*implicitParam);
         block->addMembers(syntax.block);
         result->addMember(*block);
 
-        implicitParam->value = *genvar;
+        implicitParam->setType(*local.type);
+        implicitParam->setValue(*genvar);
     }
     return *result;
 }
