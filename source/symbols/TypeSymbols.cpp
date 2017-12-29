@@ -203,7 +203,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
     return *result;
 }
 
-bool IntegralType::evaluateConstantDims(Compilation&,
+bool IntegralType::evaluateConstantDims(Compilation& compilation,
                                         const SyntaxList<VariableDimensionSyntax>& dimensions,
                                         SmallVector<ConstantRange>& results, const Scope& scope) {
     for (const VariableDimensionSyntax* dim : dimensions) {
@@ -224,8 +224,8 @@ bool IntegralType::evaluateConstantDims(Compilation&,
         const int MaxRangeBits = 16;
 
         // TODO: errors
-        auto left = scope.evaluateConstant(range.left).coerceInteger(MaxRangeBits);
-        auto right = scope.evaluateConstant(range.right).coerceInteger(MaxRangeBits);
+        auto left = compilation.evaluateConstant(range.left, scope).coerceInteger(MaxRangeBits);
+        auto right = compilation.evaluateConstant(range.right, scope).coerceInteger(MaxRangeBits);
 
         if (!left || !right)
             return false;
@@ -303,7 +303,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             value = { *resultType, current };
         else {
             // TODO: conversion? range / overflow checking? non-constant?
-            value = resultType->evaluateConstant(member->initializer->expr);
+            value = compilation.evaluateConstant(member->initializer->expr, *resultType);
         }
 
         auto ev = compilation.emplace<EnumValueSymbol>(compilation, member->name.valueText(),

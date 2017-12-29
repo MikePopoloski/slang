@@ -17,6 +17,8 @@
 
 namespace slang {
 
+class SyntaxTree;
+
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
@@ -101,6 +103,8 @@ public:
     const Expression& bindExpression(const ExpressionSyntax& syntax, const Scope& scope);
     const Expression& bindAssignment(const Type& lhs, const ExpressionSyntax& rhs,
                                      const Scope& scope, SourceLocation location);
+
+    ConstantValue evaluateConstant(const ExpressionSyntax& syntax, const Scope& scope);
 
 private:
     SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,

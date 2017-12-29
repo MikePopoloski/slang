@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Symbol.h"
+#include "StatementBodiedScope.h"
 
 #include "binding/Statements.h"
 #include "compilation/Compilation.h"

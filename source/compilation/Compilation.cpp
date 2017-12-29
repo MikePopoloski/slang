@@ -343,6 +343,11 @@ const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionS
     return expr;
 }
 
+ConstantValue Compilation::evaluateConstant(const ExpressionSyntax& expr, const Scope& scope) {
+    const auto& bound = bindExpression(expr, scope);
+    return bound.eval();
+}
+
 SubroutineSymbol& Compilation::createSystemFunction(string_view funcName, SystemFunction funcKind,
                                                     std::initializer_list<const Type*> argTypes) {
     auto func = emplace<SubroutineSymbol>(*this, funcName, SourceLocation(), funcKind);

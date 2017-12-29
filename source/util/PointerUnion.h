@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "util/Util.h"
+
 namespace slang {
 
 template<typename T1, typename T2>

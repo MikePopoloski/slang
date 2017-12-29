@@ -209,7 +209,7 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                                      const Scope& parent) {
     // TODO: better error checking
-    const auto& cv = parent.evaluateConstant(syntax.condition);
+    const auto& cv = compilation.evaluateConstant(syntax.condition, parent);
     if (!cv)
         return nullptr;
 
@@ -237,7 +237,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // Initialize the genvar
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
-    const auto& initial = parent.evaluateConstant(syntax.initialExpr);
+    const auto& initial = compilation.evaluateConstant(syntax.initialExpr, parent);
     if (!initial)
         return *result;
 
