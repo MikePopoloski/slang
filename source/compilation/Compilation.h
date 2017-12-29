@@ -65,7 +65,7 @@ public:
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, const Scope& parent);
     const VectorType& getType(uint16_t width, bool isSigned, bool isFourState = true, bool isReg = false);
-    const VectorType& getType(bool isSigned, bool isFourState, bool isReg, span<ConstantRange const> dimensions);
+    //const VectorType& getType(bool isSigned, bool isFourState, bool isReg, span<ConstantRange const> dimensions);
 
     /// Various built-in type symbols for easy access.
     const BuiltInIntegerType& getShortIntType() const { return shortIntType; }
@@ -83,6 +83,7 @@ public:
     const StringType& getStringType() const { return stringType; }
     const CHandleType& getCHandleType() const { return chandleType; }
     const VoidType& getVoidType() const { return voidType; }
+    const NullType& getNullType() const { return nullType; }
     const EventType& getEventType() const { return eventType; }
     const ErrorType& getErrorType() const { return errorType; }
 
@@ -160,6 +161,7 @@ private:
     StringType stringType;
     CHandleType chandleType;
     VoidType voidType;
+    NullType nullType;
     EventType eventType;
     ErrorType errorType;
 };

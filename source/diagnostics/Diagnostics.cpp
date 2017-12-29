@@ -181,7 +181,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadBinaryExpression] = { "invalid operands to binary expression ({} and {})", DiagnosticSeverity::Error };
-    descriptors[DiagCode::BadAssignment] = { "type {} cannot be assigned to variable of type {}", DiagnosticSeverity::Error };
+    descriptors[DiagCode::BadAssignment] = { "type {} cannot be assigned to type {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoImplicitConversion] = { "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?", DiagnosticSeverity::Error };
     descriptors[DiagCode::UndeclaredIdentifier] = { "use of undeclared identifier '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyArguments] = { "too many arguments to subroutine call; expected {} but {} were provided", DiagnosticSeverity::Error };

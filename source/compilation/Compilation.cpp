@@ -40,6 +40,7 @@ Compilation::Compilation() :
     knownTypes[SyntaxKind::StringType] = &stringType;
     knownTypes[SyntaxKind::CHandleType] = &chandleType;
     knownTypes[SyntaxKind::VoidType] = &voidType;
+    knownTypes[SyntaxKind::NullLiteralExpression] = &nullType;
     knownTypes[SyntaxKind::EventType] = &eventType;
     knownTypes[SyntaxKind::Unknown] = &errorType;
 
@@ -217,10 +218,6 @@ CompilationUnitSymbol& Compilation::createScriptScope() {
     return *unit;
 }
 
-static VectorType::ScalarType getScalarType(bool isFourState, bool isReg) {
-    return !isFourState ? VectorType::Bit : isReg ? VectorType::Reg : VectorType::Logic;
-}
-
 const Type& Compilation::getType(SyntaxKind typeKind) const {
     auto it = knownTypes.find(typeKind);
     return it == knownTypes.end() ? errorType : *it->second;
@@ -272,18 +269,16 @@ const VectorType& Compilation::getType(uint16_t width, bool isSigned, bool isFou
     if (it != vectorTypeCache.end())
         return *it->second;
 
-    SmallVectorSized<ConstantRange, 2> dims;
-    dims.append({ width - 1, 0 });
-
-    auto type = emplace<VectorType>(getScalarType(isFourState, isReg), dims.copy(*this), isSigned);
+    auto type = emplace<VectorType>(VectorType::getScalarType(isFourState, isReg),
+                                    ConstantRange { width - 1, 0 }, isSigned);
     vectorTypeCache.emplace_hint(it, key, type);
     return *type;
 }
 
-const VectorType& Compilation::getType(bool isSigned, bool isFourState, bool isReg,
-                                       span<ConstantRange const> dimensions) {
-    return *emplace<VectorType>(getScalarType(isFourState, isReg), dimensions, isSigned);
-}
+//const VectorType& Compilation::getType(bool isSigned, bool isFourState, bool isReg,
+//                                       span<ConstantRange const> dimensions) {
+//    return *emplace<VectorType>(getScalarType(isFourState, isReg), dimensions, isSigned);
+//}
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
     if (index == Scope::DeferredMemberIndex::Invalid)

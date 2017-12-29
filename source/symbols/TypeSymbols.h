@@ -13,6 +13,7 @@ namespace slang {
 /// Base class for all data types in SystemVerilog.
 class Type : public Symbol {
 public:
+    /// Gets the canonical type for this type, which involves unwrapping any type aliases.
     const Type& getCanonicalType() const;
 
     /// Gets the total width of the type in bits. Returns zero if the type
@@ -23,11 +24,24 @@ public:
     /// built-in integer types, packed arrays, packed structures, packed unions, enums, and time types.
     bool isIntegral() const;
 
+    // Indicates whether this is an aggregate type, which includes all unpacked structs, unions, and arrays.
+    bool isAggregate() const;
+
+    /// Indicates whether this is a singular type, which is the opposite of an aggregate type (that is,
+    /// all types except unpacked structs, unions, and arrays).
+    bool isSingular() const { return !isAggregate(); }
+
+    // Indicates whether this is a class type.
+    bool isClass() const { return kind == SymbolKind::ClassType; }
+
     /// Indicates whether this is a floating point type.
     bool isFloating() const { return kind == SymbolKind::FloatingType; }
 
     /// Indicates whether this is the Void type.
     bool isVoid() const { return kind == SymbolKind::VoidType; }
+
+    // Indicates whether this is the null type.
+    bool isNull() const { return kind == SymbolKind::NullType; }
 
     /// Indicates whether this is a C-handle type.
     bool isCHandle() const { return kind == SymbolKind::CHandleType; }
@@ -63,7 +77,7 @@ public:
     /// reverse operation is not necessarily true.
     bool isAssignmentCompatible(const Type& rhs) const;
 
-    /// Determines whether the given is "cast compatible" to this one. This
+    /// Determines whether the given type is "cast compatible" to this one. This
     /// means that the type is either implicitly or explicitly convertible to
     /// this one. Note that the reverse operation is not necessarily true.
     bool isCastCompatible(const Type& rhs) const;
@@ -136,11 +150,10 @@ public:
     BuiltInIntegerType(Kind builtInKind, bool isSigned);
 };
 
-/// Vector types are multibit ranges that represent integer values. All
-/// packed arrays of scalar bits are considered to be vectors.
+/// Vector types are single dimensional multibit ranges that represent integer values.
 class VectorType : public IntegralType {
 public:
-    span<ConstantRange const> dimensions;
+    ConstantRange range;
 
     enum ScalarType {
         Bit,
@@ -148,7 +161,23 @@ public:
         Reg
     } scalarType;
 
-    VectorType(ScalarType scalarType, span<ConstantRange const> dimensions, bool isSigned);
+    VectorType(ScalarType scalarType, ConstantRange range, bool isSigned);
+
+    static ScalarType getScalarType(bool isFourState, bool isReg) {
+        return !isFourState ? VectorType::Bit : isReg ? VectorType::Reg : VectorType::Logic;
+    }   
+};
+
+/// Represents one of the built-in floating point types, which are used for representing real numbers.
+class FloatingType : public Type {
+public:
+    enum Kind {
+        Real,
+        ShortReal,
+        RealTime
+    } floatKind;
+
+    explicit FloatingType(Kind floatKind);
 };
 
 class EnumValueSymbol;
@@ -177,16 +206,13 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
 };
 
-/// Represents one of the built-in floating point types, which are used for representing real numbers.
-class FloatingType : public Type {
+/// Represents a packed array of some simple element type (vectors, packed structures, other packed arrays).
+class PackedArrayType : public IntegralType {
 public:
-    enum Kind {
-        Real,
-        ShortReal,
-        RealTime
-    } floatKind;
+    const Type& elementType;
+    ConstantRange range;
 
-    explicit FloatingType(Kind floatKind);
+    PackedArrayType(const Type& elementType, ConstantRange range);
 };
 
 /// Represents the Void (or lack of a) type. This can be used as the return type of functions
@@ -194,6 +220,13 @@ public:
 class VoidType : public Type {
 public:
     VoidType() : Type(SymbolKind::VoidType, "void", SourceLocation()) {}
+};
+
+/// Represents the Null type. This can be used as a literal for setting class handles and
+/// chandles to null (or the default value).
+class NullType : public Type {
+public:
+    NullType() : Type(SymbolKind::NullType, "null", SourceLocation()) {}
 };
 
 /// Represents storage for pointers passed using the DPI (a "C" compatible handle).

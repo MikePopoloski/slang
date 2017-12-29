@@ -58,11 +58,12 @@ bool getFourState(BuiltInIntegerType::Kind kind) {
     }
 }
 
-uint32_t getWidth(span<ConstantRange const> dims) {
-    uint32_t width = 0;
-    for (const auto& dim : dims)
-        width += dim.width();
-    return width;
+bool getSigned(const Type& type) {
+    return type.isIntegral() && type.as<IntegralType>().isSigned;
+}
+
+bool getFourState(const Type& type) {
+    return type.isIntegral() && type.as<IntegralType>().isFourState;
 }
 
 }
@@ -93,6 +94,17 @@ bool Type::isIntegral() const {
     switch (kind) {
         case SymbolKind::BuiltInIntegerType:
         case SymbolKind::VectorType:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool Type::isAggregate() const {
+    switch (kind) {
+        case SymbolKind::UnpackedArrayType:
+        case SymbolKind::UnpackedStructType:
+        case SymbolKind::UnpackedUnionType:
             return true;
         default:
             return false;
@@ -156,10 +168,7 @@ ConstantRange IntegralType::getBitVectorRange() const {
         return { (int)bitWidth - 1, 0 };
 
     ASSERT(kind == SymbolKind::VectorType);
-
-    const auto& vt = as<VectorType>();
-    ASSERT(vt.dimensions.size() == 1);
-    return vt.dimensions[0];
+    return as<VectorType>().range;
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
@@ -185,9 +194,13 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         int width = dims[0].left + 1;
         return compilation.getType((uint16_t)width, isSigned, isFourState, isReg);
     }
-    else {
-        return compilation.getType(isSigned, isFourState, isReg, dims.copy(compilation));
-    }
+
+    const IntegralType* result = compilation.emplace<VectorType>(VectorType::getScalarType(isFourState, isReg),
+                                                                 dims[0], isSigned);
+    for (uint32_t i = 1; i < dims.size(); i++)
+        result = compilation.emplace<PackedArrayType>(*result, dims[i]);
+
+    return *result;
 }
 
 bool IntegralType::evaluateConstantDims(Compilation&,
@@ -234,11 +247,17 @@ BuiltInIntegerType::BuiltInIntegerType(Kind builtInKind, bool isSigned) :
 {
 }
 
-VectorType::VectorType(ScalarType scalarType_, span<ConstantRange const> dimensions_, bool isSigned) :
-    IntegralType(SymbolKind::VectorType, "", SourceLocation(),
-                 getWidth(dimensions_), isSigned, getFourState((BuiltInIntegerType::Kind)scalarType_)),
-    dimensions(dimensions_),
+VectorType::VectorType(ScalarType scalarType_, ConstantRange range_, bool isSigned_) :
+    IntegralType(SymbolKind::VectorType, "", SourceLocation(), range_.width(),
+                 isSigned_, getFourState((BuiltInIntegerType::Kind)scalarType_)),
+    range(range_),
     scalarType(scalarType_)
+{
+}
+
+FloatingType::FloatingType(Kind floatKind_) :
+    Type(SymbolKind::FloatingType, "", SourceLocation()),
+    floatKind(floatKind_)
 {
 }
 
@@ -303,9 +322,10 @@ EnumValueSymbol::EnumValueSymbol(Compilation& compilation, string_view name, Sou
 {
 }
 
-FloatingType::FloatingType(Kind floatKind_) :
-    Type(SymbolKind::FloatingType, "", SourceLocation()),
-    floatKind(floatKind_)
+PackedArrayType::PackedArrayType(const Type& elementType_, ConstantRange range_) :
+    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), elementType_.getBitWidth() * range.width(),
+                 getSigned(elementType_), getFourState(elementType_)),
+    elementType(elementType_), range(range_)
 {
 }
 
