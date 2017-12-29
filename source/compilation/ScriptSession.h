@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "binding/Binder.h"
 #include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
 
@@ -60,7 +59,7 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-        const auto& bound = Binder(scope).bindConstantExpression(expr);
+        const auto& bound = compilation.bindExpression(expr, scope);
         return bound.eval(evalContext);
     }
 

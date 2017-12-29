@@ -22,8 +22,8 @@ enum class ExpressionKind {
     ParameterRef,
     UnaryOp,
     BinaryOp,
-    TernaryOp,
-    NaryOp,
+    ConditionalOp,
+    Concatenation,
     Select,
     Call
 };
@@ -86,8 +86,8 @@ enum class BinaryOperator {
     ArithmeticRightShiftAssignment,
 };
 
-UnaryOperator getUnaryOperator(const ExpressionSyntax& syntax);
-BinaryOperator getBinaryOperator(const ExpressionSyntax& syntax);
+UnaryOperator getUnaryOperator(SyntaxKind kind);
+BinaryOperator getBinaryOperator(SyntaxKind kind);
 
 /// The base class for all expressions in SystemVerilog.
 class Expression {
@@ -95,14 +95,17 @@ public:
     /// The kind of expression; indicates the type of derived class.
     ExpressionKind kind;
 
-    /// The syntax used to create this expression, if it was parsed from a source file.
-    const ExpressionSyntax* syntax;
-
     /// The type of the expression.
     const Type* type;
 
+    /// The source range of this expression, if it originated from source code.
+    SourceRange sourceRange;
+
     /// Indicates whether the expression is invalid.
     bool bad() const { return kind == ExpressionKind::Invalid; }
+
+    /// Indicates whether the expression evaluates to an lvalue.
+    bool isLValue() const;
 
     /// Propagates the type of the expression down to its children,
     /// according to the rules laid out in the standard.
@@ -126,11 +129,15 @@ public:
     template<typename T>
     T& as() { return *static_cast<T*>(this); }
 
+    static Expression& fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const Scope& scope);
+
 protected:
-    Expression(ExpressionKind kind, const Type& type) :
-        kind(kind), syntax(nullptr), type(&type) {}
-    Expression(ExpressionKind kind, const Type& type, const ExpressionSyntax& syntax) :
-        kind(kind), syntax(&syntax), type(&type) {}
+    Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
+        kind(kind), type(&type), sourceRange(sourceRange) {}
+
+    static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const Scope& scope);
+    static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const Scope& scope);
+    static Expression& bindSelectExpression(Compilation& compilation, const ExpressionSyntax& syntax, Expression& expr, const SelectorSyntax& selector, const Scope& scope);
 };
 
 /// Represents an invalid expression, which is usually generated and inserted
@@ -141,7 +148,7 @@ public:
     const Expression* child;
 
     InvalidExpression(const Expression* child, const Type& type) :
-        Expression(ExpressionKind::Invalid, type), child(child) {}
+        Expression(ExpressionKind::Invalid, type, SourceRange()), child(child) {}
 
     static const InvalidExpression Instance;
 };
@@ -149,12 +156,15 @@ public:
 /// Represents an integer literal.
 class IntegerLiteral : public Expression {
 public:
-    IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value, const ExpressionSyntax& syntax);
+    IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value, SourceRange sourceRange);
 
     SVInt getValue() const { return valueStorage; }
 
     void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax);
 
 private:
     SVIntStorage valueStorage;
@@ -163,13 +173,15 @@ private:
 /// Represents a real number literal.
 class RealLiteral : public Expression {
 public:
-    RealLiteral(const Type& type, double value, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::RealLiteral, type, syntax), value(value) {}
+    RealLiteral(const Type& type, double value, SourceRange sourceRange) :
+        Expression(ExpressionKind::RealLiteral, type, sourceRange), value(value) {}
 
     double getValue() const { return value; }
 
     void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
 private:
     double value;
@@ -178,13 +190,15 @@ private:
 /// Represents an unbased unsized integer literal, which fills all bits in an expression.
 class UnbasedUnsizedIntegerLiteral : public Expression {
 public:
-    UnbasedUnsizedIntegerLiteral(const Type& type, logic_t value, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::UnbasedUnsizedIntegerLiteral, type, syntax), value(value) {}
+    UnbasedUnsizedIntegerLiteral(const Type& type, logic_t value, SourceRange sourceRange) :
+        Expression(ExpressionKind::UnbasedUnsizedIntegerLiteral, type, sourceRange), value(value) {}
 
     logic_t getValue() const { return value; }
 
     void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
 
 private:
     logic_t value;
@@ -195,8 +209,8 @@ class VariableRefExpression : public Expression {
 public:
     const VariableSymbol& symbol;
 
-    VariableRefExpression(const VariableSymbol& symbol, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::VariableRef, *symbol.type, syntax), symbol(symbol) {}
+    VariableRefExpression(const VariableSymbol& symbol, SourceRange sourceRange) :
+        Expression(ExpressionKind::VariableRef, *symbol.type, sourceRange), symbol(symbol) {}
 
     ConstantValue eval(EvalContext& context) const;
 };
@@ -206,8 +220,8 @@ class ParameterRefExpression : public Expression {
 public:
     const ParameterSymbol& symbol;
 
-    ParameterRefExpression(const ParameterSymbol& symbol, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::ParameterRef, symbol.getType(), syntax), symbol(symbol) {}
+    ParameterRefExpression(const ParameterSymbol& symbol, SourceRange sourceRange) :
+        Expression(ExpressionKind::ParameterRef, symbol.getType(), sourceRange), symbol(symbol) {}
 
     ConstantValue eval(EvalContext& context) const;
 };
@@ -217,15 +231,18 @@ class UnaryExpression : public Expression {
 public:
     UnaryOperator op;
 
-    UnaryExpression(const Type& type, Expression& operand, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::UnaryOp, type, syntax),
-        op(getUnaryOperator(syntax)), operand_(&operand) {}
+    UnaryExpression(UnaryOperator op, const Type& type, Expression& operand, SourceRange sourceRange) :
+        Expression(ExpressionKind::UnaryOp, type, sourceRange),
+        op(op), operand_(&operand) {}
 
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }
 
     void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
+                                  const Scope& scope);
 
 private:
     Expression* operand_;
@@ -236,9 +253,9 @@ class BinaryExpression : public Expression {
 public:
     BinaryOperator op;
 
-    BinaryExpression(const Type& type, Expression& left, Expression& right, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::BinaryOp, type, syntax),
-        op(getBinaryOperator(syntax)), left_(&left), right_(&right) {}
+    BinaryExpression(BinaryOperator op, const Type& type, Expression& left, Expression& right, SourceRange sourceRange) :
+        Expression(ExpressionKind::BinaryOp, type, sourceRange),
+        op(op), left_(&left), right_(&right) {}
 
     bool isAssignment() const;
 
@@ -251,16 +268,23 @@ public:
     void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
+    static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
+                                  const Scope& scope);
+    static Expression& fromSyntax(Compilation& compilation, const MultipleConcatenationExpressionSyntax& syntax,
+                                  const Scope& scope);
+
 private:
     Expression* left_;
     Expression* right_;
 };
 
-/// Represents a ternary operator expression (only the conditional operator is ternary).
-class TernaryExpression : public Expression {
+/// Represents a conditional operator expression.
+class ConditionalExpression : public Expression {
 public:
-    TernaryExpression(const Type& type, Expression& pred, Expression& left, Expression& right, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::TernaryOp, type, syntax), pred_(&pred), left_(&left), right_(&right) {}
+    ConditionalExpression(const Type& type, Expression& pred, Expression& left,
+                          Expression& right, SourceRange sourceRange) :
+        Expression(ExpressionKind::ConditionalOp, type, sourceRange),
+        pred_(&pred), left_(&left), right_(&right) {}
 
     const Expression& pred() const { return *pred_; }
     Expression& pred() { return *pred_; }
@@ -273,6 +297,9 @@ public:
 
     void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const ConditionalExpressionSyntax& syntax,
+                                  const Scope& scope);
 
 private:
     Expression* pred_;
@@ -287,8 +314,8 @@ public:
     SyntaxKind kind;
 
     SelectExpression(const Type& type, SyntaxKind kind, Expression& expr, Expression& left,
-                     Expression& right, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::Select, type, syntax), kind(kind),
+                     Expression& right, SourceRange sourceRange) :
+        Expression(ExpressionKind::Select, type, sourceRange), kind(kind),
         expr_(&expr), left_(&left), right_(&right) {}
 
     const Expression& expr() const { return *expr_; }
@@ -308,16 +335,19 @@ private:
     Expression* right_;
 };
 
-/// Represents an expression of unbounded arity (for example, concatenations).
-class NaryExpression : public Expression {
+/// Represents a concatenation expression.
+class ConcatenationExpression : public Expression {
 public:
-    NaryExpression(const Type& type, span<const Expression*> operands, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::NaryOp, type, syntax), operands_(operands) {}
+    ConcatenationExpression(const Type& type, span<const Expression*> operands, SourceRange sourceRange) :
+        Expression(ExpressionKind::Concatenation, type, sourceRange), operands_(operands) {}
 
     span<const Expression* const> operands() const { return operands_; }
     span<const Expression*> operands() { return operands_; }
 
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const ConcatenationExpressionSyntax& syntax,
+                                  const Scope& scope);
 
 private:
     span<const Expression*> operands_;
@@ -328,14 +358,17 @@ class CallExpression : public Expression {
 public:
     const SubroutineSymbol& subroutine;
 
-    CallExpression(const SubroutineSymbol& subroutine, span<const Expression*> arguments, const ExpressionSyntax& syntax) :
-        Expression(ExpressionKind::Call, *subroutine.returnType, syntax),
+    CallExpression(const SubroutineSymbol& subroutine, span<const Expression*> arguments, SourceRange sourceRange) :
+        Expression(ExpressionKind::Call, *subroutine.returnType, sourceRange),
         subroutine(subroutine), arguments_(arguments) {}
 
     span<const Expression* const> arguments() const { return arguments_; }
     span<const Expression*> arguments() { return arguments_; }
 
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
+                                  const Scope& scope);
 
 private:
     span<const Expression*> arguments_;

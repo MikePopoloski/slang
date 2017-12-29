@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #include "Symbol.h"
 
-#include "binding/Binder.h"
 #include "compilation/Compilation.h"
 
 namespace slang {
@@ -63,14 +62,16 @@ std::tuple<const Type*, ConstantValue> ParameterSymbol::evaluate(const DataTypeS
     // TODO: handle more cases here
 
     // If no type is given, infer the type from the initializer.
+    Compilation& comp = scope.getCompilation();
     if (type.kind == SyntaxKind::ImplicitType) {
-        const auto& bound = Binder(scope).bindConstantExpression(expr);
+        const auto& bound = comp.bindExpression(expr, scope);
         return std::make_tuple(bound.type, bound.eval());
     }
 
-    // TODO: better location for converting
-    const Type& t = scope.getCompilation().getType(type, scope);
-    return std::make_tuple(&t, scope.evaluateConstantAndConvert(expr, t, expr.getFirstToken().location()));
+    const Type& t = comp.getType(type, scope);
+    const Expression& assignment = comp.bindAssignment(t, expr, scope, expr.getFirstToken().location());
+
+    return std::make_tuple(&t, assignment.eval());
 }
 
 const Type& ParameterSymbol::getType() const {

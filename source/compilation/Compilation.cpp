@@ -299,6 +299,50 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     return importData[index];
 }
 
+Expression& Compilation::badExpression(const Expression* expr) {
+    return *emplace<InvalidExpression>(expr, getErrorType());
+}
+
+const Expression& Compilation::bindExpression(const ExpressionSyntax& syntax, const Scope& scope) {
+    Expression& expr = Expression::fromSyntax(*this, syntax, scope);
+    expr.propagateType(*expr.type);
+    return expr;
+}
+
+const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionSyntax& rhs,
+                                              const Scope& scope, SourceLocation location) {
+    Expression& expr = Expression::fromSyntax(*this, rhs, scope);
+    if (expr.bad())
+        return expr;
+
+    const Type* type = expr.type;
+    if (!lhs.isAssignmentCompatible(*type)) {
+        DiagCode code = lhs.isCastCompatible(*type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
+        addError(code, location) << rhs.sourceRange();
+        return badExpression(&expr);
+    }
+
+    if (lhs.getBitWidth() > type->getBitWidth()) {
+        if (!lhs.isFloating() && !type->isFloating()) {
+            const auto& rt = type->as<IntegralType>();
+            type = &getType((uint16_t)lhs.getBitWidth(), rt.isSigned, rt.isFourState);
+        }
+        else {
+            if (lhs.getBitWidth() > 32)
+                type = &getRealType();
+            else
+                type = &getShortRealType();
+        }
+        expr.propagateType(*type);
+    }
+    else {
+        // TODO: truncation
+        expr.propagateType(*expr.type);
+    }
+
+    return expr;
+}
+
 SubroutineSymbol& Compilation::createSystemFunction(string_view funcName, SystemFunction funcKind,
                                                     std::initializer_list<const Type*> argTypes) {
     auto func = emplace<SubroutineSymbol>(*this, funcName, SourceLocation(), funcKind);

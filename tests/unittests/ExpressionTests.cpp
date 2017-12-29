@@ -1,6 +1,5 @@
 #include "Test.h"
 
-#include "binding/Binder.h"
 #include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
 
@@ -41,7 +40,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
     REQUIRE(syntax.diagnostics().empty());
 
     // Initialize `i` to 1.
@@ -71,7 +70,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
@@ -96,7 +95,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
@@ -125,7 +124,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = Binder(scope).bindConstantExpression(syntax.root().as<ExpressionSyntax>());
+    const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
     REQUIRE(syntax.diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);

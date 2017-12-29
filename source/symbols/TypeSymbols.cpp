@@ -323,7 +323,7 @@ EnumValueSymbol::EnumValueSymbol(Compilation& compilation, string_view name, Sou
 }
 
 PackedArrayType::PackedArrayType(const Type& elementType_, ConstantRange range_) :
-    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), elementType_.getBitWidth() * range.width(),
+    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), elementType_.getBitWidth() * range_.width(),
                  getSigned(elementType_), getFourState(elementType_)),
     elementType(elementType_), range(range_)
 {

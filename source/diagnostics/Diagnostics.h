@@ -146,6 +146,7 @@ enum class DiagCode : uint8_t {
     NoImplicitConversion,
     UndeclaredIdentifier,
     TooManyArguments,
+    ExpressionNotAssignable,
 
     // statements
     ReturnNotInSubroutine,

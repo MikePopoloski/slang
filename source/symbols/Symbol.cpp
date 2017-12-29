@@ -10,8 +10,6 @@
 #include "diagnostics/Diagnostics.h"
 #include "text/SourceManager.h"
 
-#include "binding/Binder.h"
-
 namespace slang {
 
 const LookupRefPoint LookupRefPoint::max {nullptr, UINT_MAX};
@@ -23,7 +21,7 @@ Symbol::LazyInitializer::LazyInitializer(ScopeOrSymbol parent) :\
 const Expression& Symbol::LazyInitializer::evaluate(const Scope& scope,
                                                     const ExpressionSyntax& syntax) const {
     // TODO: bind assignment-like here
-    return Binder(scope).bindConstantExpression(syntax);
+    return scope.getCompilation().bindExpression(syntax, scope);
 }
 
 Symbol::LazyType::LazyType(ScopeOrSymbol parent) :
@@ -289,14 +287,7 @@ const Symbol* Scope::lookupDirect(string_view searchName) const {
 }
 
 ConstantValue Scope::evaluateConstant(const ExpressionSyntax& expr) const {
-    const auto& bound = Binder(*this).bindConstantExpression(expr);
-    return bound.eval();
-}
-
-ConstantValue Scope::evaluateConstantAndConvert(const ExpressionSyntax& expr, const Type& targetType,
-                                                      SourceLocation errorLocation) const {
-    SourceLocation errLoc = errorLocation ? errorLocation : expr.getFirstToken().location();
-    const auto& bound = Binder(*this).bindAssignmentLikeContext(expr, errLoc, targetType);
+    const auto& bound = compilation.bindExpression(expr, *this);
     return bound.eval();
 }
 

@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "binding/Expressions.h"
 #include "diagnostics/Diagnostics.h"
 #include "symbols/TypeSymbols.h"
 #include "util/BumpAllocator.h"
@@ -95,6 +96,11 @@ public:
 
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
+
+    Expression& badExpression(const Expression* expr);
+    const Expression& bindExpression(const ExpressionSyntax& syntax, const Scope& scope);
+    const Expression& bindAssignment(const Type& lhs, const ExpressionSyntax& rhs,
+                                     const Scope& scope, SourceLocation location);
 
 private:
     SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,

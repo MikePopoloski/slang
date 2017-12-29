@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #include "Symbol.h"
 
-#include "binding/Binder.h"
 #include "compilation/Compilation.h"
 #include "util/HashMap.h"
 
@@ -249,9 +248,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    Binder binder(iterScope);
-    const auto& stopExpr = binder.bindConstantExpression(syntax.stopExpr);
-    const auto& iterExpr = binder.bindConstantExpression(syntax.iterationExpr);
+    const auto& stopExpr = compilation.bindExpression(syntax.stopExpr, iterScope);
+    const auto& iterExpr = compilation.bindExpression(syntax.iterationExpr, iterScope);
 
     // Create storage for the iteration variable.
     EvalContext context;

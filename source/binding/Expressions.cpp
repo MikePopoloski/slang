@@ -6,42 +6,599 @@
 //------------------------------------------------------------------------------
 #include "Expressions.h"
 
-#include "binding/Statements.h"
+#include "compilation/Compilation.h"
 #include "symbols/TypeSymbols.h"
+
+namespace {
+
+using namespace slang;
+
+const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt, bool forceFourState) {
+    int width = std::max(lt->getBitWidth(), rt->getBitWidth());
+    if (lt->isFloating() || rt->isFloating()) {
+        // TODO: The spec is unclear for binary operators what to do if the operands are a shortreal and a larger
+        // integral type. For the conditional operator it is clear that this case should lead to a shortreal, and
+        // it isn't explicitly mentioned for other binary operators
+        if (width >= 64)
+            return &compilation.getRealType();
+        else
+            return &compilation.getShortRealType();
+    }
+    else {
+        const auto& li = lt->as<IntegralType>();
+        const auto& ri = rt->as<IntegralType>();
+        bool isSigned = li.isSigned && ri.isSigned;
+        bool fourState = forceFourState || li.isFourState || ri.isFourState;
+        return &compilation.getType((int16_t)width, isSigned, fourState);
+    }
+}
+
+}
 
 namespace slang {
 
 const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);
 
-bool Expression::evalBool(EvalContext& context) const {
-    ConstantValue result = eval(context);
-    if (!result.isInteger())
-        return false;
-
-    return (bool)(logic_t)result.integer();
+bool Expression::isLValue() const {
+    switch (kind) {
+        case ExpressionKind::ParameterRef:
+        case ExpressionKind::VariableRef:
+        case ExpressionKind::Select:
+            return true;
+        default:
+            return false;
+    }
 }
 
-ConstantValue Expression::eval(EvalContext& context) const {
-    switch (kind) {
-        case ExpressionKind::Invalid: return nullptr;
-        case ExpressionKind::IntegerLiteral: return as<IntegerLiteral>().eval(context);
-        case ExpressionKind::RealLiteral: return as<RealLiteral>().eval(context);
-        case ExpressionKind::UnbasedUnsizedIntegerLiteral: return as<UnbasedUnsizedIntegerLiteral>().eval(context);
-        case ExpressionKind::VariableRef: return as<VariableRefExpression>().eval(context);
-        case ExpressionKind::ParameterRef: return as<ParameterRefExpression>().eval(context);
-        case ExpressionKind::UnaryOp: return as<UnaryExpression>().eval(context);
-        case ExpressionKind::BinaryOp: return as<BinaryExpression>().eval(context);
-        case ExpressionKind::TernaryOp: return as<TernaryExpression>().eval(context);
-        case ExpressionKind::Select: return as<SelectExpression>().eval(context);
-        case ExpressionKind::NaryOp: return as<NaryExpression>().eval(context);
-        case ExpressionKind::Call: return as<CallExpression>().eval(context);
+Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const Scope& scope) {
+    switch (syntax.kind) {
+        case SyntaxKind::NullLiteralExpression:
+        case SyntaxKind::StringLiteralExpression:
+        case SyntaxKind::TimeLiteralExpression:
+        case SyntaxKind::WildcardLiteralExpression:
+        case SyntaxKind::OneStepLiteralExpression:
+            // TODO: unimplemented
+            break;
+        case SyntaxKind::IdentifierName:
+        case SyntaxKind::IdentifierSelectName:
+        case SyntaxKind::ScopedName:
+            return bindName(compilation, syntax.as<NameSyntax>(), scope);
+        case SyntaxKind::RealLiteralExpression:
+            return RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+        case SyntaxKind::IntegerLiteralExpression:
+            return IntegerLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+        case SyntaxKind::UnbasedUnsizedLiteralExpression:
+            return UnbasedUnsizedIntegerLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+        case SyntaxKind::IntegerVectorExpression:
+            return IntegerLiteral::fromSyntax(compilation, syntax.as<IntegerVectorExpressionSyntax>());
+        case SyntaxKind::ParenthesizedExpression:
+            return Expression::fromSyntax(compilation, syntax.as<ParenthesizedExpressionSyntax>().expression, scope);
+        case SyntaxKind::UnaryPlusExpression:
+        case SyntaxKind::UnaryMinusExpression:
+        case SyntaxKind::UnaryBitwiseNotExpression:
+        case SyntaxKind::UnaryBitwiseAndExpression:
+        case SyntaxKind::UnaryBitwiseOrExpression:
+        case SyntaxKind::UnaryBitwiseXorExpression:
+        case SyntaxKind::UnaryBitwiseNandExpression:
+        case SyntaxKind::UnaryBitwiseNorExpression:
+        case SyntaxKind::UnaryBitwiseXnorExpression:
+        case SyntaxKind::UnaryLogicalNotExpression:
+            return UnaryExpression::fromSyntax(compilation, syntax.as<PrefixUnaryExpressionSyntax>(), scope);
+        case SyntaxKind::AddExpression:
+        case SyntaxKind::SubtractExpression:
+        case SyntaxKind::MultiplyExpression:
+        case SyntaxKind::DivideExpression:
+        case SyntaxKind::ModExpression:
+        case SyntaxKind::BinaryAndExpression:
+        case SyntaxKind::BinaryOrExpression:
+        case SyntaxKind::BinaryXorExpression:
+        case SyntaxKind::BinaryXnorExpression:
+        case SyntaxKind::EqualityExpression:
+        case SyntaxKind::InequalityExpression:
+        case SyntaxKind::CaseEqualityExpression:
+        case SyntaxKind::CaseInequalityExpression:
+        case SyntaxKind::GreaterThanEqualExpression:
+        case SyntaxKind::GreaterThanExpression:
+        case SyntaxKind::LessThanEqualExpression:
+        case SyntaxKind::LessThanExpression:
+        case SyntaxKind::WildcardEqualityExpression:
+        case SyntaxKind::WildcardInequalityExpression:
+        case SyntaxKind::LogicalAndExpression:
+        case SyntaxKind::LogicalOrExpression:
+        case SyntaxKind::LogicalImplicationExpression:
+        case SyntaxKind::LogicalEquivalenceExpression:
+        case SyntaxKind::LogicalShiftLeftExpression:
+        case SyntaxKind::LogicalShiftRightExpression:
+        case SyntaxKind::ArithmeticShiftLeftExpression:
+        case SyntaxKind::ArithmeticShiftRightExpression:
+        case SyntaxKind::PowerExpression:
+        case SyntaxKind::AssignmentExpression:
+        case SyntaxKind::AddAssignmentExpression:
+        case SyntaxKind::SubtractAssignmentExpression:
+        case SyntaxKind::MultiplyAssignmentExpression:
+        case SyntaxKind::DivideAssignmentExpression:
+        case SyntaxKind::ModAssignmentExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::XorAssignmentExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            return BinaryExpression::fromSyntax(compilation, syntax.as<BinaryExpressionSyntax>(), scope);
+        case SyntaxKind::InvocationExpression:
+            return CallExpression::fromSyntax(compilation, syntax.as<InvocationExpressionSyntax>(), scope);
+        case SyntaxKind::ConditionalExpression:
+            return ConditionalExpression::fromSyntax(compilation, syntax.as<ConditionalExpressionSyntax>(), scope);
+        case SyntaxKind::ConcatenationExpression:
+            return ConcatenationExpression::fromSyntax(compilation, syntax.as<ConcatenationExpressionSyntax>(),
+                                                       scope);
+        case SyntaxKind::MultipleConcatenationExpression:
+            return BinaryExpression::fromSyntax(compilation, syntax.as<MultipleConcatenationExpressionSyntax>(),
+                                                scope);
+        case SyntaxKind::ElementSelectExpression:
+            return bindSelectExpression(compilation, syntax.as<ElementSelectExpressionSyntax>(), scope);
+        default:
+            THROW_UNREACHABLE;
     }
-    THROW_UNREACHABLE;
+    return scope.getCompilation().badExpression(nullptr);
+}
+
+Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax, const Scope& scope) {
+    if (syntax.kind != SyntaxKind::IdentifierName)
+        return compilation.badExpression(nullptr);
+
+    string_view identifier = syntax.as<IdentifierNameSyntax>().identifier.valueText();
+    LookupResult result;
+    scope.lookup(identifier, result);
+    
+    if (result.getResultKind() != LookupResult::Found) {
+        compilation.addError(DiagCode::UndeclaredIdentifier, syntax.as<IdentifierNameSyntax>().identifier.location()) << identifier;
+        return compilation.badExpression(nullptr);
+    }
+    
+    const Symbol* symbol = result.getFoundSymbol();
+    switch (symbol->kind) {
+        case SymbolKind::Variable:
+        case SymbolKind::FormalArgument:
+            return *compilation.emplace<VariableRefExpression>(symbol->as<VariableSymbol>(), syntax.sourceRange());
+    
+        case SymbolKind::Parameter:
+            return *compilation.emplace<ParameterRefExpression>(symbol->as<ParameterSymbol>(), syntax.sourceRange());
+    
+        default:
+            THROW_UNREACHABLE;
+    }
+}
+
+//Expression& Binder::bindSelectName(const IdentifierSelectNameSyntax& syntax) {
+//    // TODO: once we fully support more complex non-integral types and actual support
+//    // part selects, we need to be able to handle multiple accesses like
+//    // foo[2 : 4][3 : 1][7 : 8] where each access depends on the type of foo, not just the type of the preceding
+//    // expression. For now though, we implement the most simple case:
+//    // foo[SELECT] where foo is an integral type.
+//
+//    ASSERT(syntax.selectors.count() == 1);
+//    ASSERT(syntax.selectors[0]->selector);
+//    // spoof this being just a simple ElementSelectExpression
+//    return bindSelectExpression(syntax,
+//        bindName(*compilation.emplace<IdentifierNameSyntax>(syntax.identifier)), *syntax.selectors[0]->selector);
+//}
+//
+//Expression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
+//    // TODO: only handles packages right now
+//    if (syntax.separator.kind != TokenKind::DoubleColon || syntax.left.kind != SyntaxKind::IdentifierName)
+//        return badExpr(nullptr);
+//
+//    string_view identifier = syntax.left.as<IdentifierNameSyntax>().identifier.valueText();
+//    if (identifier.empty())
+//        return badExpr(nullptr);
+//
+//    auto package = scope.getCompilation().getPackage(identifier);
+//    if (!package)
+//        return badExpr(nullptr);
+//
+//    return Binder(*package).bindName(syntax.right);
+//}
+
+Expression& Expression::bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const Scope& scope) {
+    Expression& expr = Expression::fromSyntax(compilation, syntax.left, scope);
+    expr.propagateType(*expr.type);
+    // TODO: null selector?
+    return bindSelectExpression(compilation, syntax, expr, *syntax.select.selector, scope);
+}
+
+Expression& Expression::bindSelectExpression(Compilation& compilation, const ExpressionSyntax& syntax, Expression& expr, const SelectorSyntax& selector, const Scope& scope) {
+    // if (down), the indices are declares going down, [15:0], so
+    // msb > lsb
+    if (expr.bad())
+        return compilation.badExpression(&expr);
+
+    const auto& integralType = expr.type->as<IntegralType>();
+    bool down = integralType.getBitVectorRange().isLittleEndian();
+    Expression* left = nullptr;
+    Expression* right = nullptr;
+    int width = 0;
+
+    // TODO: errors if things that should be constant expressions aren't actually constant expressions
+    SyntaxKind kind = selector.kind;
+    switch (kind) {
+        case SyntaxKind::BitSelect:
+            left = &Expression::fromSyntax(compilation, selector.as<BitSelectSyntax>().expr, scope);
+            right = left;
+            width = 1;
+            break;
+        case SyntaxKind::SimpleRangeSelect:
+            left = &Expression::fromSyntax(compilation, selector.as<RangeSelectSyntax>().left, scope); // msb
+            right = &Expression::fromSyntax(compilation, selector.as<RangeSelectSyntax>().right, scope); // lsb
+            width = (down ? 1 : -1) * (int)(left->eval().integer().as<int64_t>().value() -
+                    right->eval().integer().as<int64_t>().value());
+            break;
+        case SyntaxKind::AscendingRangeSelect:
+        case SyntaxKind::DescendingRangeSelect:
+            left = &Expression::fromSyntax(compilation, selector.as<RangeSelectSyntax>().left, scope); // msb/lsb
+            right = &Expression::fromSyntax(compilation, selector.as<RangeSelectSyntax>().right, scope); // width
+            width = int(right->eval().integer().as<int64_t>().value());
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+    left->propagateType(*left->type);
+    right->propagateType(*right->type);
+
+    return *compilation.emplace<SelectExpression>(
+        compilation.getType((uint16_t)width, integralType.isSigned, integralType.isFourState),
+        kind,
+        expr,
+        *left,
+        *right,
+        syntax.sourceRange()
+    );
+}
+
+Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
+
+    return *compilation.emplace<IntegerLiteral>(
+        compilation, compilation.getIntType(),
+        syntax.literal.intValue(), syntax.sourceRange()
+    );
+}
+
+Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax) {
+    const SVInt& value = syntax.value.intValue();
+    const Type& type = compilation.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    return *compilation.emplace<IntegerLiteral>(compilation, type, value, syntax.sourceRange());
+}
+
+Expression& RealLiteral::fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::RealLiteralExpression);
+
+    return *compilation.emplace<RealLiteral>(
+        compilation.getRealType(), syntax.literal.realValue(),
+        syntax.sourceRange()
+    );
+}
+
+Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
+                                                     const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::UnbasedUnsizedLiteralExpression);
+
+    // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
+    // context, but can grow to be wider during propagation.
+    logic_t val = syntax.literal.bitValue();
+    return *compilation.emplace<UnbasedUnsizedIntegerLiteral>(
+        compilation.getType(1, false, val.isUnknown()),
+        val, syntax.sourceRange()
+    );
+}
+
+Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
+                                        const Scope& scope) {
+    Expression& operand = Expression::fromSyntax(compilation, syntax.operand, scope);
+    const Type* type = operand.type;
+
+    Expression* result = compilation.emplace<UnaryExpression>(
+        getUnaryOperator(syntax.kind), *type, operand, syntax.sourceRange()
+    );
+
+    if (operand.bad())
+        return compilation.badExpression(result);
+
+    bool good;
+    switch (syntax.kind) {
+        case SyntaxKind::UnaryPlusExpression:
+        case SyntaxKind::UnaryMinusExpression:
+        case SyntaxKind::UnaryLogicalNotExpression:
+            // Supported for both integral and real types.
+            good = type->isIntegral() || type->isFloating();
+            break;
+        case SyntaxKind::UnaryBitwiseNotExpression:
+        case SyntaxKind::UnaryBitwiseAndExpression:
+        case SyntaxKind::UnaryBitwiseOrExpression:
+        case SyntaxKind::UnaryBitwiseXorExpression:
+        case SyntaxKind::UnaryBitwiseNandExpression:
+        case SyntaxKind::UnaryBitwiseNorExpression:
+        case SyntaxKind::UnaryBitwiseXnorExpression:
+            // Supported for integral only. Result type is always a single bit.
+            good = type->isIntegral();
+            result->type = &compilation.getLogicType();
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    if (!good) {
+        auto& diag = compilation.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
+        diag << *type;
+        diag << operand.sourceRange;
+        return compilation.badExpression(result);
+    }
+
+    return *result;
+}
+
+Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
+                                         const Scope& scope) {
+    Expression& lhs = Expression::fromSyntax(compilation, syntax.left, scope);
+    Expression& rhs = Expression::fromSyntax(compilation, syntax.right, scope);
+
+    // TODO: reexamine this
+    lhs.propagateType(*lhs.type);
+    rhs.propagateType(*rhs.type);
+
+    const Type* lt = lhs.type;
+    const Type* rt = rhs.type;
+
+    BinaryExpression* result = compilation.emplace<BinaryExpression>(
+        getBinaryOperator(syntax.kind), *lhs.type,
+        lhs, rhs, syntax.sourceRange()
+    );
+
+    if (lhs.bad() || rhs.bad())
+        return compilation.badExpression(result);
+
+    bool bothIntegral = lt->isIntegral() && rt->isIntegral();
+    bool bothIntOrFloat = (lt->isIntegral() || lt->isFloating()) &&
+                          (rt->isIntegral() || rt->isFloating());
+
+    bool good;
+    switch (syntax.kind) {
+        case SyntaxKind::AddExpression:
+        case SyntaxKind::SubtractExpression:
+        case SyntaxKind::MultiplyExpression:
+        case SyntaxKind::AddAssignmentExpression:
+        case SyntaxKind::SubtractAssignmentExpression:
+        case SyntaxKind::MultiplyAssignmentExpression:
+            good = bothIntOrFloat;
+            result->type = binaryOperatorType(compilation, lt, rt, false);
+            break;
+        case SyntaxKind::BinaryAndExpression:
+        case SyntaxKind::BinaryOrExpression:
+        case SyntaxKind::BinaryXorExpression:
+        case SyntaxKind::BinaryXnorExpression:
+        case SyntaxKind::LogicalShiftLeftExpression:
+        case SyntaxKind::LogicalShiftRightExpression:
+        case SyntaxKind::ArithmeticShiftLeftExpression:
+        case SyntaxKind::ArithmeticShiftRightExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::XorAssignmentExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            good = bothIntegral;
+            result->type = binaryOperatorType(compilation, lt, rt, false);
+            break;
+        case SyntaxKind::DivideExpression:
+        case SyntaxKind::DivideAssignmentExpression:
+        case SyntaxKind::PowerExpression:
+            // Result is forced to 4-state because result can be X.
+            good = bothIntOrFloat;
+            result->type = binaryOperatorType(compilation, lt, rt, true);
+            break;
+        case SyntaxKind::ModExpression:
+        case SyntaxKind::ModAssignmentExpression:
+            // Result is forced to 4-state because result can be X.
+            good = bothIntegral;
+            result->type = binaryOperatorType(compilation, lt, rt, true);
+            break;
+        case SyntaxKind::GreaterThanEqualExpression:
+        case SyntaxKind::GreaterThanExpression:
+        case SyntaxKind::LessThanEqualExpression:
+        case SyntaxKind::LessThanExpression:
+        case SyntaxKind::LogicalAndExpression:
+        case SyntaxKind::LogicalOrExpression:
+        case SyntaxKind::LogicalImplicationExpression:
+        case SyntaxKind::LogicalEquivalenceExpression:
+            // Result is always a single bit.
+            good = bothIntOrFloat;
+            result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
+            break;
+        case SyntaxKind::EqualityExpression:
+        case SyntaxKind::InequalityExpression:
+        case SyntaxKind::WildcardEqualityExpression:
+        case SyntaxKind::WildcardInequalityExpression:
+        case SyntaxKind::CaseEqualityExpression:
+        case SyntaxKind::CaseInequalityExpression:
+            // Two types are comparable if:
+            // - they are both integral or floating
+            // - both classes or null, and assignment compatible
+            // - both chandles or null
+            // - both aggregates and equivalent
+            if (bothIntOrFloat) {
+                good = true;
+                result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
+            }
+            else if (lt->isAggregate() && lt->isEquivalent(*rt)) {
+                // TODO: drill into the aggregate and figure out if it's all 2-state
+                good = true;
+                result->type = &compilation.getLogicType();
+            }
+            else if ((lt->isClass() && lt->isAssignmentCompatible(*rt)) ||
+                     (rt->isClass() && rt->isAssignmentCompatible(*lt))) {
+                good = true;
+                result->type = &compilation.getBitType();
+            }
+            else if ((lt->isCHandle() || lt->isNull()) &&
+                     (rt->isCHandle() || rt->isNull())) {
+                good = true;
+                result->type = &compilation.getBitType();
+            }
+            else {
+                good = false;
+            }
+            break;
+        case SyntaxKind::AssignmentExpression:
+            // No particular restriction on types here. We'll handle
+            // assignability below.
+            good = true;
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    auto location = syntax.operatorToken.location();
+    if (!good) {
+        auto& diag = compilation.addError(DiagCode::BadBinaryExpression, location);
+        diag << *lt << *rt;
+        diag << lhs.sourceRange;
+        diag << rhs.sourceRange;
+        return compilation.badExpression(result);
+    }
+
+    if (result->isAssignment()) {
+        if (!lhs.isLValue()) {
+            auto& diag = compilation.addError(DiagCode::ExpressionNotAssignable, location);
+            diag << lhs.sourceRange;
+            return compilation.badExpression(result);
+        }
+
+        // TODO: check for const assignment
+
+        if (!lt->isAssignmentCompatible(*rt)) {
+            DiagCode code = lt->isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
+            auto& diag = compilation.addError(code, location);
+            diag << *rt << *lt;
+            diag << lhs.sourceRange;
+            diag << rhs.sourceRange;
+            return compilation.badExpression(result);
+        }
+
+        // TODO: unify this with Compilation::bindAssignment
+        if (lt->getBitWidth() > rt->getBitWidth()) {
+            if (!lt->isFloating() && !rt->isFloating()) {
+                const auto& ri = rt->as<IntegralType>();
+                rt = &compilation.getType((uint16_t)lt->getBitWidth(), ri.isSigned, ri.isFourState);
+            }
+            else {
+                if (lt->getBitWidth() > 32)
+                    rt = &compilation.getRealType();
+                else
+                    rt = &compilation.getShortRealType();
+            }
+            rhs.propagateType(*rt);
+        }
+        else {
+            rhs.propagateType(*rhs.type);
+        }
+        result->type = lhs.type;
+    }
+
+    return *result;
+}
+
+Expression& BinaryExpression::fromSyntax(Compilation& compilation,
+                                         const MultipleConcatenationExpressionSyntax& syntax, const Scope& scope) {
+    Expression& left  = Expression::fromSyntax(compilation, syntax.expression, scope);
+    Expression& right = Expression::fromSyntax(compilation, syntax.concatenation, scope);
+    // TODO: check applicability
+    // TODO: left must be compile-time evaluatable, and it must be known in order to
+    // compute the type of a multiple concatenation. Have a nice error when this isn't the case?
+    // TODO: in cases like these, should we bother storing the bound expression? should we at least cache the result
+    // so we don't have to compute it again elsewhere?
+    uint16_t replicationTimes = left.eval().integer().as<uint16_t>().value();
+    const Type& resultType = compilation.getType((uint16_t)right.type->getBitWidth() * replicationTimes, false);
+    return *compilation.emplace<BinaryExpression>(BinaryOperator::Replication, resultType, left,
+                                                  right, syntax.sourceRange());
+}
+
+Expression& ConditionalExpression::fromSyntax(Compilation& compilation, const ConditionalExpressionSyntax& syntax,
+                                              const Scope& scope) {
+    // TODO: handle the pattern matching conditional predicate case, rather than just assuming that it's a simple
+    // expression
+    ASSERT(syntax.predicate.conditions.count() == 1);
+    Expression& pred = Expression::fromSyntax(compilation, syntax.predicate.conditions[0]->expr, scope);
+    Expression& left = Expression::fromSyntax(compilation, syntax.left, scope);
+    Expression& right = Expression::fromSyntax(compilation, syntax.right, scope);
+
+    // TODO: handle non-integral and non-real types properly
+    // force four-state return type for ambiguous condition case
+    const Type* type = binaryOperatorType(compilation, left.type, right.type, true);
+    return *compilation.emplace<ConditionalExpression>(*type, pred, left, right, syntax.sourceRange());
+}
+
+Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
+                                                const ConcatenationExpressionSyntax& syntax, const Scope& scope) {
+    SmallVectorSized<const Expression*, 8> buffer;
+    uint16_t totalWidth = 0;
+    for (auto argSyntax : syntax.expressions) {
+        // All operands are self-determined.
+        Expression& arg = Expression::fromSyntax(compilation, *argSyntax, scope);
+        arg.propagateType(*arg.type);
+        buffer.append(&arg);
+
+        const Type& type = *arg.type;
+        if (!type.isIntegral()) {
+            return compilation.badExpression(compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
+                                                                                          nullptr,
+                                                                                          syntax.sourceRange()));
+        }
+        totalWidth += (uint16_t)type.as<IntegralType>().bitWidth;
+    }
+
+    return *compilation.emplace<ConcatenationExpression>(compilation.getType(totalWidth, false),
+                                                         buffer.copy(compilation), syntax.sourceRange());
+}
+
+Expression& CallExpression::fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
+                                       const Scope& scope) {
+    // TODO: check for something other than a simple name on the LHS
+    auto name = syntax.left.getFirstToken();
+    LookupResult result;
+    result.nameKind = LookupNameKind::Callable;
+    scope.lookup(name.valueText(), result);
+    const Symbol* symbol = result.getFoundSymbol();
+    ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
+
+    auto actualArgs = syntax.arguments->parameters;
+    const SubroutineSymbol& subroutine = symbol->as<SubroutineSymbol>();
+
+    // TODO: handle too few args as well, which requires looking at default values
+    auto formalArgs = subroutine.arguments;
+    if (formalArgs.size() < actualArgs.count()) {
+        auto& diag = compilation.addError(DiagCode::TooManyArguments, name.location());
+        diag << syntax.left.sourceRange();
+        diag << (int)formalArgs.size();
+        diag << actualArgs.count();
+        return compilation.badExpression(nullptr);
+    }
+
+    // TODO: handle named arguments in addition to ordered
+    SmallVectorSized<const Expression*, 8> buffer;
+    for (uint32_t i = 0; i < actualArgs.count(); i++) {
+        const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
+        buffer.append(&compilation.bindAssignment(*formalArgs[i]->type, arg.expr, scope,
+                                                  arg.getFirstToken().location()));
+    }
+
+    return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation), syntax.sourceRange());
 }
 
 IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
-                               const ExpressionSyntax& syntax) :
-    Expression(ExpressionKind::IntegerLiteral, type, syntax),
+                               SourceRange sourceRange) :
+    Expression(ExpressionKind::IntegerLiteral, type, sourceRange),
     valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown())
 {
     if (value.isSingleWord())
@@ -50,67 +607,6 @@ IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVI
         valueStorage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
         memcpy(valueStorage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
     }
-}
-
-ConstantValue IntegerLiteral::eval(EvalContext&) const {
-    uint16_t width = (uint16_t)type->getBitWidth();
-    SVInt result = getValue();
-
-    // TODO: truncation?
-    if (width > result.getBitWidth())
-        result = extend(result, width, type->as<IntegralType>().isSigned);
-    return { *type, result };
-}
-
-ConstantValue RealLiteral::eval(EvalContext&) const {
-    return { *type, value };
-}
-
-ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
-    uint16_t width = (uint16_t)type->getBitWidth();
-    bool isSigned = type->as<IntegralType>().isSigned;
-
-    switch (value.value) {
-        case 0: return { *type, SVInt(width, 0, isSigned) };
-        case 1: {
-            SVInt tmp(width, 0, isSigned);
-            tmp.setAllOnes();
-            return { *type, tmp };
-        }
-        case logic_t::X_VALUE: return { *type, SVInt::createFillX(width, isSigned) };
-        case logic_t::Z_VALUE: return { *type, SVInt::createFillZ(width, isSigned) };
-        default: THROW_UNREACHABLE;
-    }
-}
-
-ConstantValue VariableRefExpression::eval(EvalContext& context) const {
-    ConstantValue* v = context.findLocal(&symbol);
-    ASSERT(v);
-    return *v;
-}
-
-ConstantValue ParameterRefExpression::eval(EvalContext&) const {
-    return symbol.getValue();
-}
-
-ConstantValue UnaryExpression::eval(EvalContext& context) const {
-    SVInt v = operand().eval(context).integer();
-
-#define OP(k, v) case UnaryOperator::k: return { *type, v };
-    switch (op) {
-        OP(Plus, v);
-        OP(Minus, -v);
-        OP(BitwiseNot, ~v);
-        OP(BitwiseAnd, SVInt(v.reductionAnd()));
-        OP(BitwiseOr, SVInt(v.reductionOr()));
-        OP(BitwiseXor, SVInt(v.reductionXor()));
-        OP(BitwiseNand, SVInt(!v.reductionAnd()));
-        OP(BitwiseNor, SVInt(!v.reductionOr()));
-        OP(BitwiseXnor, SVInt(!v.reductionXor()));
-        OP(LogicalNot, SVInt(!v));
-    }
-    THROW_UNREACHABLE;
-#undef OP
 }
 
 bool BinaryExpression::isAssignment() const {
@@ -134,195 +630,6 @@ bool BinaryExpression::isAssignment() const {
     }
 }
 
-ConstantValue BinaryExpression::eval(EvalContext& context) const {
-    SVInt l = left().eval(context).integer();
-    SVInt r = right().eval(context).integer();
-
-    // TODO: more robust lvalue handling
-    ConstantValue* lvalue = nullptr;
-    if (isAssignment()) {
-        lvalue = context.findLocal(&((const VariableRefExpression&)left()).symbol);
-        ASSERT(lvalue);
-    }
-
-#define OP(k, v) case BinaryOperator::k: return { *type, v }
-#define ASSIGN(k, v) case BinaryOperator::k: *lvalue = { *type, v }; return *lvalue
-    switch (op) {
-        OP(Add, l + r);
-        OP(Subtract, l - r);
-        OP(Multiply, l * r);
-        OP(Divide, l / r);
-        OP(Mod, l % r);
-        OP(BinaryAnd, l & r);
-        OP(BinaryOr, l | r);
-        OP(BinaryXor, l ^ r);
-        OP(LogicalShiftLeft, l.shl(r));
-        OP(LogicalShiftRight, l.lshr(r));
-        OP(ArithmeticShiftLeft, l.shl(r));
-        OP(ArithmeticShiftRight, l.ashr(r));
-        OP(BinaryXnor, l.xnor(r));
-        OP(Equality, SVInt(l == r));
-        OP(Inequality, SVInt(l != r));
-        OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
-        OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
-        OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
-        OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
-        OP(GreaterThanEqual, SVInt(l >= r));
-        OP(GreaterThan, SVInt(l > r));
-        OP(LessThanEqual, SVInt(l <= r));
-        OP(LessThan, SVInt(l < r));
-        OP(LogicalAnd, SVInt(l && r));
-        OP(LogicalOr, SVInt(l || r));
-        OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
-        OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
-        OP(Power, l.pow(r));
-        OP(Replication, r.replicate(l));
-        ASSIGN(Assignment, r);
-        ASSIGN(AddAssignment, l + r);
-        ASSIGN(SubtractAssignment, l - r);
-        ASSIGN(MultiplyAssignment, l * r);
-        ASSIGN(DivideAssignment, l / r);
-        ASSIGN(ModAssignment, l % r);
-        ASSIGN(AndAssignment, l & r);
-        ASSIGN(OrAssignment, l | r);
-        ASSIGN(XorAssignment, l ^ r);
-        ASSIGN(LogicalLeftShiftAssignment, l.shl(r));
-        ASSIGN(LogicalRightShiftAssignment, l.lshr(r));
-        ASSIGN(ArithmeticLeftShiftAssignment, l.shl(r));
-        ASSIGN(ArithmeticRightShiftAssignment, l.ashr(r));
-    }
-    THROW_UNREACHABLE;
-#undef OP
-#undef ASSIGN
-}
-
-ConstantValue TernaryExpression::eval(EvalContext& context) const {
-    SVInt cond = pred().eval(context).integer();
-    logic_t pred = (logic_t)cond;
-
-    if (pred.isUnknown()) {
-        // do strange combination operation
-        SVInt l = left().eval(context).integer();
-        SVInt r = right().eval(context).integer();
-        return { *type, SVInt::conditional(cond, l, r) };
-    }
-    else if (pred) {
-        return { *type, left().eval(context).integer() };
-    }
-    else {
-        return { *type, right().eval(context).integer() };
-    }
-}
-
-ConstantValue SelectExpression::eval(EvalContext& context) const {
-    SVInt value = expr().eval(context).integer();
-    ConstantRange range = expr().type->as<IntegralType>().getBitVectorRange();
-
-    SVInt msb = left().eval(context).integer();
-    SVInt lsbOrWidth = right().eval(context).integer();
-
-    if (msb.hasUnknown() || lsbOrWidth.hasUnknown()) {
-        // If any part of an address is unknown, then the whole thing returns
-        // 'x; let's handle this here so everywhere else we can assume the inputs
-        // are normal numbers
-        return { *type, SVInt::createFillX((uint16_t)type->getBitWidth(), false) };
-    }
-
-    // SVInt uses little endian ranges starting from zero; we need to translate from the
-    // actual range used in the declaration of the variable.
-    int16_t actualMsb = int16_t(msb.as<int>().value() - range.lower());
-    if (!range.isLittleEndian())
-        actualMsb = int16_t(range.width() - actualMsb - 1);
-
-    switch (kind) {
-        case SyntaxKind::BitSelect: {
-            return { *type, value.bitSelect(actualMsb, actualMsb) };
-        }
-        case SyntaxKind::SimpleRangeSelect: {
-            int16_t actualLsb = int16_t(lsbOrWidth.as<int>().value() - range.lower());
-            if (!range.isLittleEndian())
-                actualLsb = int16_t(range.width() - actualLsb - 1);
-
-            return { *type, value.bitSelect(actualLsb, actualMsb) };
-        }
-        case SyntaxKind::AscendingRangeSelect: {
-            int16_t width = lsbOrWidth.as<int16_t>().value();
-            return { *type, value.bitSelect(actualMsb, actualMsb + width) };
-        }
-        case SyntaxKind::DescendingRangeSelect: {
-            int16_t width = lsbOrWidth.as<int16_t>().value();
-            return { *type, value.bitSelect(actualMsb - width, actualMsb) };
-        }
-        default:
-            THROW_UNREACHABLE;
-    }
-}
-
-ConstantValue NaryExpression::eval(EvalContext& context) const {
-    SmallVectorSized<SVInt, 8> values;
-    for (auto operand : operands())
-        values.append(operand->eval(context).integer());
-
-    // TODO: add support for other Nary Expressions, like stream concatenation
-    //switch (expr.syntax.kind) {
-      //  case SyntaxKind::ConcatenationExpression: return concatenate(values);
-    //}
-
-    return { *type, concatenate(values) };
-}
-
-ConstantValue CallExpression::eval(EvalContext& context) const {
-    // Evaluate all argument in the current stack frame.
-    SmallVectorSized<ConstantValue, 8> args;
-    for (auto arg : arguments())
-        args.emplace(arg->eval(context));
-
-    // If this is a system function we will just evaluate it directly
-    if (subroutine.systemFunctionKind != SystemFunction::Unknown) {
-        switch (subroutine.systemFunctionKind) {
-            case SystemFunction::Unknown: break;
-            case SystemFunction::clog2: return { *type, SVInt(clog2(args[0].integer())) };
-            case SystemFunction::bits:
-            case SystemFunction::low:
-            case SystemFunction::high:
-            case SystemFunction::left:
-            case SystemFunction::right:
-            case SystemFunction::size:
-            case SystemFunction::increment: {
-                //TODO: add support for things other than integral types
-                const auto& argType = arguments()[0]->type->as<IntegralType>();
-                ConstantRange range = argType.getBitVectorRange();
-                switch (subroutine.systemFunctionKind) {
-                    case SystemFunction::bits:  return { *type, SVInt(argType.bitWidth) };
-                    case SystemFunction::low:   return { *type, SVInt(range.lower()) };
-                    case SystemFunction::high:  return { *type, SVInt(range.upper()) };
-                    case SystemFunction::left:  return { *type, SVInt(range.left) };
-                    case SystemFunction::right: return { *type, SVInt(range.right) };
-                    case SystemFunction::size:  return { *type, SVInt(argType.bitWidth) };
-                    case SystemFunction::increment: return { *type, SVInt(range.isLittleEndian() ? 1 : -1) };
-                    default: THROW_UNREACHABLE;
-                }
-                break;
-            }
-        }
-    }
-
-    // Push a new stack frame, push argument values as locals.
-    context.pushFrame();
-    span<const FormalArgumentSymbol* const> formals = subroutine.arguments;
-    for (uint32_t i = 0; i < formals.size(); i++)
-        context.createLocal(formals[i], args[i]);
-
-    VariableSymbol callValue(subroutine.name, subroutine.location);
-    callValue.type = subroutine.returnType;
-    context.createLocal(&callValue, nullptr);
-
-    subroutine.getBody()->eval(context);
-
-    // Pop the frame and return the value
-    return context.popFrame();
-}
-
 void Expression::propagateType(const Type& newType) {
     // SystemVerilog rules for width propagation are subtle and very specific
     // to each individual operator type. They also mainly only apply to
@@ -342,7 +649,7 @@ void Expression::propagateType(const Type& newType) {
         case ExpressionKind::Call:
         case ExpressionKind::VariableRef:
         case ExpressionKind::ParameterRef:
-        case ExpressionKind::NaryOp:
+        case ExpressionKind::Concatenation:
         case ExpressionKind::Select:
             // all operands are self determined
             type = &newType;
@@ -353,8 +660,8 @@ void Expression::propagateType(const Type& newType) {
         case ExpressionKind::BinaryOp:
             as<BinaryExpression>().propagateType(newType);
             break;
-        case ExpressionKind::TernaryOp:
-            as<TernaryExpression>().propagateType(newType);
+        case ExpressionKind::ConditionalOp:
+            as<ConditionalExpression>().propagateType(newType);
             break;
     }
 }
@@ -469,7 +776,7 @@ void BinaryExpression::propagateType(const Type& newType) {
     }
 }
 
-void TernaryExpression::propagateType(const Type& newType) {
+void ConditionalExpression::propagateType(const Type& newType) {
     // If a type of real is propagated to an expression of a non-real type, the type of the
     // direct sub-expression is changed, but it is not propagated any further down.
     bool doNotPropagateRealDownToNonReal = newType.isFloating() && !type->isFloating();
@@ -482,8 +789,8 @@ void TernaryExpression::propagateType(const Type& newType) {
     }
 }
 
-UnaryOperator getUnaryOperator(const ExpressionSyntax& syntax) {
-    switch (syntax.kind) {
+UnaryOperator getUnaryOperator(SyntaxKind kind) {
+    switch (kind) {
         case SyntaxKind::UnaryPlusExpression: return UnaryOperator::Plus;
         case SyntaxKind::UnaryMinusExpression: return UnaryOperator::Minus;
         case SyntaxKind::UnaryBitwiseNotExpression: return UnaryOperator::BitwiseNot;
@@ -498,8 +805,8 @@ UnaryOperator getUnaryOperator(const ExpressionSyntax& syntax) {
     }
 }
 
-BinaryOperator getBinaryOperator(const ExpressionSyntax& syntax) {
-    switch (syntax.kind) {
+BinaryOperator getBinaryOperator(SyntaxKind kind) {
+    switch (kind) {
         case SyntaxKind::AddExpression: return BinaryOperator::Add;
         case SyntaxKind::SubtractExpression: return BinaryOperator::Subtract;
         case SyntaxKind::MultiplyExpression: return BinaryOperator::Multiply;

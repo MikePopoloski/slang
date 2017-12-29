@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #include "Symbol.h"
 
-#include "binding/Binder.h"
 #include "binding/Statements.h"
 #include "compilation/Compilation.h"
 
@@ -67,29 +66,31 @@ void StatementBodiedScope::bindVariableDecl(const DataDeclarationSyntax& syntax,
 }
 
 Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax& syntax) {
+    Compilation& comp = getCompilation();
     auto stmtLoc = syntax.returnKeyword.location();
     const Symbol* subroutine = asSymbol().findAncestor(SymbolKind::Subroutine);
     if (!subroutine) {
-        getCompilation().addError(DiagCode::ReturnNotInSubroutine, stmtLoc);
+        comp.addError(DiagCode::ReturnNotInSubroutine, stmtLoc);
         return badStmt(nullptr);
     }
 
-    const auto& expr = Binder(*this).bindAssignmentLikeContext(*syntax.returnValue, stmtLoc,
-                                                               *subroutine->as<SubroutineSymbol>().returnType);
-    return *getCompilation().emplace<ReturnStatement>(syntax, &expr);
+    const auto& expr = comp.bindAssignment(*subroutine->as<SubroutineSymbol>().returnType,
+                                           *syntax.returnValue, *this, stmtLoc);
+    return *comp.emplace<ReturnStatement>(syntax, &expr);
 }
 
 Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalStatementSyntax& syntax) {
     ASSERT(syntax.predicate.conditions.count() == 1);
     ASSERT(!syntax.predicate.conditions[0]->matchesClause);
 
-    const auto& cond = Binder(*this).bindSelfDeterminedExpression(syntax.predicate.conditions[0]->expr);
+    Compilation& comp = getCompilation();
+    const auto& cond = comp.bindExpression(syntax.predicate.conditions[0]->expr, *this);
     const auto& ifTrue = bindStatement(syntax.statement);
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause)
         ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>());
 
-    return *getCompilation().emplace<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
+    return *comp.emplace<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
 Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSyntax& syntax) {
@@ -124,12 +125,10 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
         }
     }
 
-    Binder binder(*forScope);
-    const auto& stopExpr = binder.bindSelfDeterminedExpression(syntax.stopExpr);
-
     SmallVectorSized<const Expression*, 2> steps;
+    const auto& stopExpr = comp.bindExpression(syntax.stopExpr, *forScope);
     for (auto step : syntax.steps)
-        steps.append(&binder.bindSelfDeterminedExpression(*step));
+        steps.append(&comp.bindExpression(*step, *forScope));
 
     const auto& bodyStmt = forScope->bindStatement(syntax.statement);
     auto initList = comp.emplace<StatementList>(initializers.copy(comp));
@@ -145,8 +144,9 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
 }
 
 Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStatementSyntax& syntax) {
-    const auto& expr = Binder(*this).bindSelfDeterminedExpression(syntax.expr);
-    return *getCompilation().emplace<ExpressionStatement>(syntax, expr);
+    Compilation& comp = getCompilation();
+    const auto& expr = comp.bindExpression(syntax.expr, *this);
+    return *comp.emplace<ExpressionStatement>(syntax, expr);
 }
 
 Statement& StatementBodiedScope::badStmt(const Statement* stmt) {

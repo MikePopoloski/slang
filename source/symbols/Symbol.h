@@ -428,12 +428,6 @@ public:
     /// A helper method to evaluate a constant in the current scope.
     ConstantValue evaluateConstant(const ExpressionSyntax& expr) const;
 
-    /// A helper method to evaluate a constant in the current scope and then
-    /// convert it to the given destination type. If the conversion fails, the
-    /// returned value will be marked bad.
-    ConstantValue evaluateConstantAndConvert(const ExpressionSyntax& expr, const Type& targetType,
-                                             SourceLocation errorLocation) const;
-
     /// Strongly typed index type which is used in a sideband list in the Compilation object
     /// to store information about deferred members in this scope.
     enum class DeferredMemberIndex : uint32_t { Invalid = 0 };

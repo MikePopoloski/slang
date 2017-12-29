@@ -185,6 +185,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::NoImplicitConversion] = { "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?", DiagnosticSeverity::Error };
     descriptors[DiagCode::UndeclaredIdentifier] = { "use of undeclared identifier '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyArguments] = { "too many arguments to subroutine call; expected {} but {} were provided", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpressionNotAssignable] = { "expression is not assignable", DiagnosticSeverity::Error };
 
     // statements
     descriptors[DiagCode::ReturnNotInSubroutine] = { "return statement is only valid inside task and function blocks", DiagnosticSeverity::Error };
