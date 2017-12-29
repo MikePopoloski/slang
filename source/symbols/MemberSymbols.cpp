@@ -75,7 +75,7 @@ std::tuple<const Type*, ConstantValue> ParameterSymbol::evaluate(const DataTypeS
 
 const Type& ParameterSymbol::getType() const {
     // If we have no type set, compute and use the default type.
-    if (!type)
+    if (!type.hasResult())
         getDefault();
     return type ? *type : ErrorType::Instance;
 }
@@ -106,7 +106,7 @@ const ConstantValue* ParameterSymbol::getDefault() const {
         defaultValue = cv;
 
         // If the value of this parameter hasn't yet been overriden, use the default type and value we just computed.
-        if (!type || !value) {
+        if (!type.hasResult() || !value) {
             type = std::get<0>(typeAndValue);
             value = cv;
         }

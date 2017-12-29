@@ -255,6 +255,8 @@ const Type& Compilation::getType(const DataTypeSyntax& node, const Scope& parent
         case SyntaxKind::CHandleType:
         case SyntaxKind::EventType:
             return getType(node.kind);
+        case SyntaxKind::EnumType:
+            return EnumType::fromSyntax(*this, node.as<EnumTypeSyntax>(), parent);
         default:
             THROW_UNREACHABLE;
     }

@@ -44,6 +44,10 @@ public:
     /// Indicates whether this is the error type.
     bool isError() const { return kind == SymbolKind::ErrorType; }
 
+    /// Indicates whether this is a simple bit vector type, which encompasses
+    /// all built-in integer types as well as single-dimensional vector types.
+    bool isSimpleBitVector() const;
+
     /// Determines whether the given type "matches" this one. For most intents
     /// and purposes, matching types are completely identical.
     bool isMatching(const Type& rhs) const;
@@ -96,10 +100,6 @@ public:
     /// always represented by the BuiltInIntegerType class.
     bool isBuiltIn() const { return kind == SymbolKind::BuiltInIntegerType; }
 
-    /// Indicates whether this is a simple bit vector type, which encompasses
-    /// all built-in integer types as well as single-dimensional vector types.
-    bool isSimpleBitVector() const;
-
     /// If this is a simple bit vector type, returns the address range of
     /// the bits in the vector. Otherwise the behavior is undefined (will assert).
     ConstantRange getBitVectorRange() const;
@@ -151,9 +151,30 @@ public:
     VectorType(ScalarType scalarType, span<ConstantRange const> dimensions, bool isSigned);
 };
 
-/// Represents an enumerated type.
-class EnumType : public IntegralType {
+class EnumValueSymbol;
 
+/// Represents an enumerated type.
+class EnumType : public IntegralType, public Scope {
+public:
+    const IntegralType& baseType;
+
+    EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType, const Scope& scope);
+
+    static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax, const Scope& scope);
+
+    iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
+        return membersOfType<EnumValueSymbol>();
+    }
+};
+
+/// Represents an enumerated value / member.
+class EnumValueSymbol : public Symbol {
+public:
+    const ConstantValue& value;
+
+    EnumValueSymbol(Compilation& compilation, string_view name, SourceLocation loc, ConstantValue value);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
 };
 
 /// Represents one of the built-in floating point types, which are used for representing real numbers.

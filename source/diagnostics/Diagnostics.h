@@ -17,6 +17,7 @@
 namespace slang {
 
 class SourceManager;
+class Type;
 
 /// Complete set of diagnostic codes.
 enum class DiagCode : uint8_t {
@@ -149,6 +150,9 @@ enum class DiagCode : uint8_t {
     // statements
     ReturnNotInSubroutine,
 
+    // types
+    InvalidEnumBase,
+
     // lookups
     //AmbiguousWildcardImport,
     //NoteImportedFrom,
@@ -168,8 +172,9 @@ enum class DiagnosticSeverity {
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    struct Arg : public std::variant<std::string, int> {
-        using std::variant<std::string, int>::variant;
+    using ArgVariantType = std::variant<std::string, int, const Type*>;
+    struct Arg : public ArgVariantType {
+        using ArgVariantType::variant;
         friend std::ostream& operator<<(std::ostream& os, const Arg& arg);
     };
     std::vector<Arg> args;
@@ -187,6 +192,7 @@ public:
     /// Adds an argument to the diagnostic.
     friend Diagnostic& operator<<(Diagnostic& diag, int arg);
     friend Diagnostic& operator<<(Diagnostic& diag, std::string&& arg);
+    friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
     friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);
     friend Diagnostic& operator<<(Diagnostic& diag, SourceRange arg);
 };
@@ -194,7 +200,7 @@ public:
 /// A collection of diagnostics.
 class Diagnostics : public SmallVectorSized<Diagnostic, 8> {
 public:
-    Diagnostics();
+    Diagnostics() = default;
 
     Diagnostics(Diagnostics&& other) noexcept :
         SmallVectorSized<Diagnostic, 8>(std::move(other)) {}

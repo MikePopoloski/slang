@@ -99,6 +99,10 @@ bool Type::isIntegral() const {
     }
 }
 
+bool Type::isSimpleBitVector() const {
+    return kind == SymbolKind::BuiltInIntegerType || kind == SymbolKind::VectorType;
+}
+
 bool Type::isMatching(const Type& rhs) const {
     const Type* l = &getCanonicalType();
     const Type* r = &rhs.getCanonicalType();
@@ -145,10 +149,6 @@ IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc
     Type(kind, name, loc),
     bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_)
 {
-}
-
-bool IntegralType::isSimpleBitVector() const {
-    return isBuiltIn() || (kind == SymbolKind::VectorType && as<VectorType>().dimensions.size() == 1);
 }
 
 ConstantRange IntegralType::getBitVectorRange() const {
@@ -239,6 +239,67 @@ VectorType::VectorType(ScalarType scalarType_, span<ConstantRange const> dimensi
                  getWidth(dimensions_), isSigned, getFourState((BuiltInIntegerType::Kind)scalarType_)),
     dimensions(dimensions_),
     scalarType(scalarType_)
+{
+}
+
+EnumType::EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType_,
+                   const Scope& scope) :
+    IntegralType(SymbolKind::EnumType, "", loc, baseType_.getBitWidth(),
+                 baseType_.isSigned, baseType_.isFourState),
+    Scope(compilation, this),
+    baseType(baseType_)
+{
+    // Enum types don't live as members of the parent scope (they're "owned" by the declaration containing
+    // them) but we hook up the parent pointer so that it can participate in name lookups.
+    setParent(scope);
+}
+
+const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax, const Scope& scope) {
+    const Type* base;
+    if (!syntax.baseType) 
+        base = &compilation.getIntType();
+    else {
+        base = &compilation.getType(*syntax.baseType, scope);
+
+        const Type& canonicalBase = base->getCanonicalType();
+        if (canonicalBase.isError())
+            return canonicalBase;
+
+        if (!canonicalBase.isSimpleBitVector()) {
+            compilation.addError(DiagCode::InvalidEnumBase,
+                                 syntax.baseType->getFirstToken().location()) << *base;
+            return compilation.getErrorType();
+        }
+    }
+
+    const IntegralType& integralBase = base->as<IntegralType>();
+    auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(),
+                                                    integralBase, scope);
+
+    SVInt one((uint16_t)integralBase.bitWidth, 1, integralBase.isSigned);
+    SVInt current((uint16_t)integralBase.bitWidth, 0, integralBase.isSigned);
+    for (auto member : syntax.members) {
+        ConstantValue value;
+        if (!member->initializer)
+            value = { *resultType, current };
+        else {
+            // TODO: conversion? range / overflow checking? non-constant?
+            value = resultType->evaluateConstant(member->initializer->expr);
+        }
+
+        auto ev = compilation.emplace<EnumValueSymbol>(compilation, member->name.valueText(),
+                                                       member->name.location(), std::move(value));
+        resultType->addMember(*ev);
+        current = value.integer() + one;
+    }
+
+    return *resultType;
+}
+
+EnumValueSymbol::EnumValueSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                                 ConstantValue value_) :
+    Symbol(SymbolKind::EnumValue, name, loc),
+    value(*compilation.createConstant(std::move(value_)))
 {
 }
 

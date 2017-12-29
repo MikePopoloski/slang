@@ -91,12 +91,36 @@ void LookupResult::addPotentialImport(const Symbol& import) {
 }
 
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
-    compilation(compilation_), thisSym(thisSym_)
+    compilation(compilation_), thisSym(thisSym_),
+    nameMap(compilation.allocSymbolMap())
 {
-    nameMap = compilation.allocSymbolMap();
 }
 
 void Scope::addMember(const Symbol& symbol) {
+    // For any symbols that expose a type, keep track of it in our
+    // deferred data so that we can include enum values in our member list.
+    const Symbol::LazyType* lazyType = nullptr;
+    switch (symbol.kind) {
+        case SymbolKind::Variable:
+        case SymbolKind::FormalArgument:
+            lazyType = &symbol.as<VariableSymbol>().type;
+            break;
+        case SymbolKind::Subroutine:
+            lazyType = &symbol.as<SubroutineSymbol>().returnType;
+            break;
+        case SymbolKind::Parameter:
+            lazyType = &symbol.as<ParameterSymbol>().getLazyType();
+            break;
+        default:
+            break;
+    }
+
+    if (lazyType) {
+        auto syntax = lazyType->getSourceOrNull();
+        if (syntax && syntax->kind == SyntaxKind::EnumType)
+            getOrAddDeferredData().registerTransparentType(lastMember, *lazyType);
+    }
+
     insertMember(&symbol, lastMember);
 }
 
@@ -196,12 +220,19 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
             locationGood = LookupRefPoint::before(*symbol) < result.referencePoint;
 
         if (locationGood) {
-            // We found the symbol we wanted. If it was an explicit package import, unwrap it first.
-            if (symbol->kind == SymbolKind::ExplicitImport)
-                // TODO: handle missing package import symbol
-                result.setSymbol(*symbol->as<ExplicitImportSymbol>().importedSymbol(), true);
-            else
-                result.setSymbol(*symbol);
+            // We found the symbol we wanted. If it was a wrapped symbol, unwrap it first.
+            switch (symbol->kind) {
+                case SymbolKind::ExplicitImport:
+                    // TODO: handle missing package import symbol
+                    result.setSymbol(*symbol->as<ExplicitImportSymbol>().importedSymbol(), true);
+                    break;
+                case SymbolKind::TransparentMember:
+                    result.setSymbol(symbol->as<TransparentMemberSymbol>().wrapped);
+                    break;
+                default:
+                    result.setSymbol(*symbol);
+                    break;
+            }
             return;
         }
     }
@@ -237,7 +268,7 @@ void Scope::lookup(string_view searchName, LookupResult& result) const {
     }
 
     // Continue up the scope chain.
-    result.referencePoint = LookupRefPoint::before(asSymbol());
+    result.referencePoint = LookupRefPoint::after(asSymbol());
     return getParent()->lookup(searchName, result);
 }
 
@@ -282,7 +313,7 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
         member->nextInScope = std::exchange(firstMember, member);
     }
     else {
-        member->indexInScope = Symbol::Index { (uint32_t)at->indexInScope + 1 };
+        member->indexInScope = Symbol::Index { (uint32_t)at->indexInScope + (at == lastMember) };
         member->nextInScope = std::exchange(at->nextInScope, member);
     }
 
@@ -302,6 +333,19 @@ void Scope::realizeDeferredMembers() const {
     ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
+
+    for (const auto& pair : deferredData.getTransparentTypes()) {
+        const Symbol* insertAt = pair.first;
+        const Type* type = pair.second->get();
+
+        if (type && type->kind == SymbolKind::EnumType) {
+            for (auto value : type->as<EnumType>().values()) {
+                auto wrapped = compilation.emplace<TransparentMemberSymbol>(*value);
+                insertMember(wrapped, insertAt);
+                insertAt = wrapped;
+            }
+        }
+    }
 
     if (deferredData.hasStatement()) {
         auto syntax = deferredData.getStatement();

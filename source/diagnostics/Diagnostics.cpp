@@ -37,6 +37,11 @@ Diagnostic& operator<<(Diagnostic& diag, std::string&& arg) {
     return diag;
 }
 
+Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
+    diag.args.emplace_back(&arg);
+    return diag;
+}
+
 Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
     diag.ranges.push_back(range);
     return diag;
@@ -44,10 +49,7 @@ Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
     return std::visit([&](auto&& t) -> auto& { return os << t; },
-                      static_cast<const std::variant<std::string, int>&>(arg));
-}
-
-Diagnostics::Diagnostics() {
+                      static_cast<const Diagnostic::ArgVariantType&>(arg));
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
@@ -186,6 +188,9 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
 
     // statements
     descriptors[DiagCode::ReturnNotInSubroutine] = { "return statement is only valid inside task and function blocks", DiagnosticSeverity::Error };
+
+    // types
+    descriptors[DiagCode::InvalidEnumBase] = { "", DiagnosticSeverity::Error };
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());

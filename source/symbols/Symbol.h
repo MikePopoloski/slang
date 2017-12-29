@@ -84,6 +84,7 @@ enum class SymbolKind {
     Unknown,
     Root,
     CompilationUnit,
+    TransparentMember,
     BuiltInIntegerType,
     VectorType,
     EnumType,
@@ -179,6 +180,14 @@ public:
             return &result;
         }
 
+        const TSource* getSourceOrNull() const {
+            if (cache.index() == 0)
+                return nullptr;
+            return std::get<1>(cache);
+        }
+
+        bool hasResult() const { return cache.index() == 0 && std::get<0>(cache); }
+
     protected:
         const Scope& getScope() const {
             if (parent.is<const Symbol*>())
@@ -217,6 +226,8 @@ protected:
     Symbol(const Symbol&) = delete;
 
     Diagnostic& addError(DiagCode code, SourceLocation location) const;
+
+    void setParent(const Scope& scope) { parentScope = &scope; }
 
 private:
     friend class Scope;
@@ -419,30 +430,47 @@ public:
     enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
 
     /// Data stored in sideband tables in the Compilation object for deferred members.
-    /// A given scope only ever stores one of the following:
-    /// - A list of syntax nodes that represent deferred members that need to be elaborated
-    ///   before any lookups or iterations are done of members in the scope.
-    /// - Statement syntax (a single node or a list of them) that describes the body
-    ///   of a StatementBodiedScope.
-    struct DeferredMemberData : std::variant<
-        std::vector<std::tuple<const SyntaxNode*, const Symbol*>>,
-        const SyntaxNode*
-    > {
+    class DeferredMemberData {
+    public:
         void addMember(const SyntaxNode& member, const Symbol* insertionPoint) {
-            std::get<0>(*this).emplace_back(&member, insertionPoint);
+            std::get<0>(membersOrStatement).emplace_back(&member, insertionPoint);
         }
 
-        void setStatement(const SyntaxNode& syntax) {
-            std::variant<
-                std::vector<std::tuple<const SyntaxNode*, const Symbol*>>,
-                const SyntaxNode*
-            >::operator=(&syntax);
+        span<std::tuple<const SyntaxNode*, const Symbol*> const> getMembers() const {
+            return std::get<0>(membersOrStatement);
         }
 
-        span<std::tuple<const SyntaxNode*, const Symbol*> const> getMembers() const { return std::get<0>(*this); }
-        const SyntaxNode* getStatement() const { return std::get<1>(*this); }
+        bool hasStatement() const { return membersOrStatement.index() == 1; }
+        void setStatement(const SyntaxNode& syntax) { membersOrStatement = &syntax; }
 
-        bool hasStatement() const { return index() == 1; }
+        const SyntaxNode* getStatement() const {
+            return std::get<1>(membersOrStatement);
+        }
+
+        void registerTransparentType(const Symbol* symbol, const Symbol::LazyType& type) {
+            transparentTypes.emplace(symbol, &type);
+        }
+
+        using TransparentTypeMap = flat_hash_map<const Symbol*, const Symbol::LazyType*>;
+        iterator_range<TransparentTypeMap::const_iterator> getTransparentTypes() const {
+            return { transparentTypes.begin(), transparentTypes.end() };
+        }
+    
+    private:
+        // A given scope only ever stores one of the following:
+        // - A list of syntax nodes that represent deferred members that need to be elaborated
+        //   before any lookups or iterations are done of members in the scope.
+        // - Statement syntax (a single node or a list of them) that describes the body
+        //   of a StatementBodiedScope.
+        std::variant<
+            std::vector<std::tuple<const SyntaxNode*, const Symbol*>>,
+            const SyntaxNode*
+        > membersOrStatement;
+
+        // Some types are special in that their members leak into the surrounding scope; this
+        // set keeps track of all variables, parameters, arguments, etc that have such data types
+        // so that when our list of members is finalized we can include their members as well.
+        TransparentTypeMap transparentTypes;
     };
 
     /// Strongly typed index type which is used in a sideband list in the Compilation object
@@ -472,14 +500,68 @@ public:
             return *this;
         }
 
+        iterator operator++(int) {
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
     private:
+        const Symbol* current;
+    };
+
+    template<typename SpecificType>
+    class specific_symbol_iterator : public iterator_facade<specific_symbol_iterator<SpecificType>,
+                                                            std::forward_iterator_tag,
+                                                            const SpecificType*> {
+    public:
+        specific_symbol_iterator(const Symbol* firstSymbol) :
+            current(firstSymbol)
+        {
+            skipToNext();
+        }
+
+        specific_symbol_iterator& operator=(const specific_symbol_iterator& other) {
+            current = other.current;
+            return *this;
+        }
+
+        bool operator==(const specific_symbol_iterator& other) const { return current == other.current; }
+
+        const SpecificType* operator*() const { return &current->as<SpecificType>(); }
+        const SpecificType* operator*() { return &current->as<SpecificType>(); }
+
+        specific_symbol_iterator& operator++() {
+            current = current->nextInScope;
+            skipToNext();
+            return *this;
+        }
+
+        specific_symbol_iterator operator++(int) {
+            specific_symbol_iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+    private:
+        void skipToNext() {
+            while (current && !SpecificType::isKind(current->kind))
+                current = current->nextInScope;
+        }
+
         const Symbol* current;
     };
 
     /// Gets the members contained in the scope.
     iterator_range<iterator> members() const {
         ensureMembers();
-        return { iterator(firstMember), iterator(nullptr) };
+        return { firstMember, nullptr };
+    }
+
+    template<typename T>
+    iterator_range<specific_symbol_iterator<T>> membersOfType() const {
+        ensureMembers();
+        return { firstMember, nullptr };
     }
 
 protected:
@@ -563,6 +645,18 @@ private:
     Statement& badStmt(const Statement* stmt);
 
     const Statement* body = nullptr;
+};
+
+/// A class that wraps a hoisted transparent type member (such as an enum value)
+/// into a parent scope. Whenever lookup finds one of these symbols, it will be
+/// unwrapped into the underlying symbol instead.
+class TransparentMemberSymbol : public Symbol {
+public:
+    const Symbol& wrapped;
+
+    TransparentMemberSymbol(const Symbol& wrapped_) :
+        Symbol(SymbolKind::TransparentMember, wrapped_.name, wrapped_.location),
+        wrapped(wrapped_) {}
 };
 
 /// The root of a single compilation unit.
@@ -702,7 +796,7 @@ class ParameterSymbol : public Symbol {
 public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal_, bool isPort_) :
         Symbol(SymbolKind::Parameter, name, loc),
-        isLocal(isLocal_), isPort(isPort_) {}
+        type(this), isLocal(isLocal_), isPort(isPort_) {}
 
     static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
                            SmallVector<ParameterSymbol*>& results);
@@ -712,11 +806,13 @@ public:
     static std::tuple<const Type*, ConstantValue> evaluate(const DataTypeSyntax& type,
                                                            const ExpressionSyntax& expr, const Scope& scope);
 
-    void setDeclaredType(const DataTypeSyntax& syntax) { declaredType = &syntax; }
+    void setDeclaredType(const DataTypeSyntax& syntax) { declaredType = &syntax; type = syntax; }
     const DataTypeSyntax* getDeclaredType() const { return declaredType; }
 
     const Type& getType() const;
-    void setType(const Type& newType) { type = &newType; }
+    void setType(const Type& newType) { type = newType; }
+
+    const LazyType& getLazyType() const { return type; }
 
     const ConstantValue& getValue() const;
     void setValue(ConstantValue value);
@@ -732,7 +828,7 @@ public:
 
 private:
     const DataTypeSyntax* declaredType = nullptr;
-    mutable const Type* type = nullptr;
+    mutable LazyType type;
     mutable const ConstantValue* value = nullptr;
     mutable PointerUnion<const ConstantValue*, const ExpressionSyntax*> defaultValue;
     bool isLocal = false;
