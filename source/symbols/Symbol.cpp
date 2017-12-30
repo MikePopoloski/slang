@@ -23,8 +23,8 @@ const Symbol* Symbol::findAncestor(SymbolKind searchKind) const {
     return current;
 }
 
-Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
-    return getScope()->getCompilation().addError(code, location_);
-}
+//Diagnostic& Symbol::addError(DiagCode code, SourceLocation location_) const {
+//    return getScope()->getCompilation().addError(code, location_);
+//}
 
 }

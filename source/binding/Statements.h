@@ -7,6 +7,8 @@
 #pragma once
 
 #include "EvalContext.h"
+#include "symbols/HierarchySymbols.h"
+#include "symbols/MemberSymbols.h"
 
 namespace slang {
 

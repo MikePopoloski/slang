@@ -10,6 +10,7 @@
 
 #include "binding/Expressions.h"
 #include "diagnostics/Diagnostics.h"
+#include "symbols/HierarchySymbols.h"
 #include "symbols/TypeSymbols.h"
 #include "util/BumpAllocator.h"
 #include "util/SafeIndexedVector.h"

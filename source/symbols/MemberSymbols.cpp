@@ -4,9 +4,10 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Symbol.h"
+#include "MemberSymbols.h"
 
 #include "compilation/Compilation.h"
+#include "symbols/HierarchySymbols.h"
 
 namespace slang {
 

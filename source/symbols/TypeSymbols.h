@@ -6,9 +6,14 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "Symbol.h"
+#include "binding/ConstantValue.h"
+#include "parsing/AllSyntax.h"
+#include "symbols/Scope.h"
+#include "symbols/Symbol.h"
 
 namespace slang {
+
+class Compilation;
 
 /// Base class for all data types in SystemVerilog.
 class Type : public Symbol {

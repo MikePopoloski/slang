@@ -4,7 +4,7 @@
 //
 // File is under the MIT license; see LICENSE for details.
 //------------------------------------------------------------------------------
-#include "Symbol.h"
+#include "HierarchySymbols.h"
 
 #include "compilation/Compilation.h"
 #include "util/HashMap.h"

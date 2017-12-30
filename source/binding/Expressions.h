@@ -7,6 +7,7 @@
 #pragma once
 
 #include "binding/EvalContext.h"
+#include "symbols/MemberSymbols.h"
 #include "symbols/TypeSymbols.h"
 
 namespace slang {

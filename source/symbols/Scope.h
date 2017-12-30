@@ -8,14 +8,13 @@
 
 #include "flat_hash_map.hpp"
 
-#include "diagnostics/Diagnostics.h"
+#include "symbols/Symbol.h"
 #include "util/Iterator.h"
 
 namespace slang {
 
 class Compilation;
 class Scope;
-class Symbol;
 class SyntaxNode;
 class WildcardImportSymbol;
 struct LazyType;
