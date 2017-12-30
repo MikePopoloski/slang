@@ -120,6 +120,7 @@ bool Type::isSimpleBitVector() const {
 }
 
 bool Type::isMatching(const Type& rhs) const {
+    // See [6.22.1] for Matching Types.
     const Type* l = &getCanonicalType();
     const Type* r = &rhs.getCanonicalType();
 
@@ -127,33 +128,79 @@ bool Type::isMatching(const Type& rhs) const {
     // This handles all built-in types, which are allocated once and then shared,
     // and also handles simple bit vector types that share the same range, signedness,
     // and four-stateness because we uniquify them in the compilation cache.
+    // This handles checks [6.22.1] (a), (b), (c), (d), (g), and (h).
     if (l == r)
         return true;
 
-    // TODO: check array types here
+    if (l->kind == SymbolKind::VectorType) {
+        // Handle check (f): matching vector types
+        if (r->kind == SymbolKind::VectorType) {
+            const auto& li = l->as<VectorType>();
+            const auto& ri = r->as<VectorType>();
+            return li.isSigned == ri.isSigned && li.isFourState && ri.isFourState && li.range == ri.range;
+        }
+
+        // Swap so that we can handle check (e) below in a commutative way.
+        std::swap(l, r);
+    }
+
+    // Handle check (e): vector type matches corresponding built-in integer type.
+    if (l->kind == SymbolKind::BuiltInIntegerType && r->kind == SymbolKind::VectorType) {
+        const auto& li = l->as<IntegralType>();
+        const auto& ri = r->as<VectorType>();
+        return li.isSigned == ri.isSigned && li.isFourState == ri.isFourState &&
+               ri.range.left == int(li.bitWidth - 1) && ri.range.right == 0;
+    }
+
+    // Handle check (f): matching packed array types
+    if (l->kind == SymbolKind::PackedArrayType && r->kind == SymbolKind::PackedArrayType)
+        return l->as<PackedArrayType>().elementType.isMatching(r->as<PackedArrayType>().elementType);
 
     return false;
 }
 
 bool Type::isEquivalent(const Type& rhs) const {
-    if (isMatching(rhs))
+    // See [6.22.2] for Equivalent Types
+    const Type* l = &getCanonicalType();
+    const Type* r = &rhs.getCanonicalType();
+    if (l->isMatching(*r))
         return true;
 
-    return true;
+    if (l->isIntegral() && r->isIntegral() && !l->isEnum() && !r->isEnum()) {
+        const auto& li = l->as<IntegralType>();
+        const auto& ri = r->as<IntegralType>();
+        return li.isSigned == ri.isSigned && li.isFourState && ri.isFourState && li.bitWidth == ri.bitWidth;
+    }
+
+    return false;
 }
 
 bool Type::isAssignmentCompatible(const Type& rhs) const {
-    if (isEquivalent(rhs))
+    // See [6.22.3] for Assignment Compatible
+    const Type* l = &getCanonicalType();
+    const Type* r = &rhs.getCanonicalType();
+    if (l->isEquivalent(*r))
         return true;
 
-    return true;
+    // Any integral or floating value can be implicitly converted to a packed integer
+    // value or to a floating value.
+    if ((l->isIntegral() && !l->isEnum()) || l->isFloating())
+        return r->isIntegral() || r->isFloating();
+
+    return false;
 }
 
 bool Type::isCastCompatible(const Type& rhs) const {
-    if (isAssignmentCompatible(rhs))
+    // See [6.22.4] for Cast Compatible
+    const Type* l = &getCanonicalType();
+    const Type* r = &rhs.getCanonicalType();
+    if (l->isAssignmentCompatible(*r))
         return true;
 
-    return true;
+    if (l->isEnum())
+        return r->isIntegral() || r->isFloating();
+
+    return false;
 }
 
 std::string Type::toString() const {

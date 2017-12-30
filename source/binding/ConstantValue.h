@@ -85,6 +85,14 @@ struct ConstantRange {
 
     /// Normalizes the range so that it's of the form [msb-lsb, 0] and in little endian bit order.
     ConstantRange normalize() const { return { upper() - lower(), 0 }; }
+
+    bool operator==(const ConstantRange& rhs) const {
+        return left == rhs.left && right == rhs.right;
+    }
+
+    bool operator!=(const ConstantRange& rhs) const {
+        return !(*this == rhs);
+    }
 };
 
 }

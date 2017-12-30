@@ -29,14 +29,17 @@ public:
     /// built-in integer types, packed arrays, packed structures, packed unions, enums, and time types.
     bool isIntegral() const;
 
-    // Indicates whether this is an aggregate type, which includes all unpacked structs, unions, and arrays.
+    /// Indicates whether this is an aggregate type, which includes all unpacked structs, unions, and arrays.
     bool isAggregate() const;
 
     /// Indicates whether this is a singular type, which is the opposite of an aggregate type (that is,
     /// all types except unpacked structs, unions, and arrays).
     bool isSingular() const { return !isAggregate(); }
 
-    // Indicates whether this is a class type.
+    /// Indicates whether this is an enum type.
+    bool isEnum() const { return kind == SymbolKind::EnumType; }
+
+    /// Indicates whether this is a class type.
     bool isClass() const { return kind == SymbolKind::ClassType; }
 
     /// Indicates whether this is a floating point type.
@@ -45,7 +48,7 @@ public:
     /// Indicates whether this is the Void type.
     bool isVoid() const { return kind == SymbolKind::VoidType; }
 
-    // Indicates whether this is the null type.
+    /// Indicates whether this is the null type.
     bool isNull() const { return kind == SymbolKind::NullType; }
 
     /// Indicates whether this is a C-handle type.
