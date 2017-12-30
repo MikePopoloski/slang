@@ -219,14 +219,11 @@ function toolchain(_buildDir, _libDir)
 			"-Wimplicit-fallthrough=5",
 			"-Wsuggest-override",
 			"-Walloc-zero",
---			"-Wshadow",
---			"-Wconversion",
 			"-Wlogical-op",
 			"-Wlogical-not-parentheses",
 			"-Wvla",
 			"-Wnoexcept",
 			"-Wduplicated-cond",
---			"-Wnon-virtual-dtor"
 		}
 		buildoptions_cpp {
 			"-std=c++1z",
@@ -250,7 +247,7 @@ function toolchain(_buildDir, _libDir)
 			"-Wrange-loop-analysis",
 			"-Wpedantic",
 			"-Wconversion",
---			"-Wshadow",
+			"-Wshadow",
 			"-Wno-missing-braces",
 		}
 		buildoptions_cpp {

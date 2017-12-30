@@ -271,8 +271,8 @@ static void findFilesImpl(const Path& path, std::vector<Path>& results, const Ch
 #endif
 
     if (recurse) {
-        for (const auto& dir : directories)
-            findFilesImpl(dir, results, extension, recurse);
+        for (const auto& directory : directories)
+            findFilesImpl(directory, results, extension, recurse);
     }
 }
 

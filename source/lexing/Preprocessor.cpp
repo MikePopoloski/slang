@@ -1251,12 +1251,12 @@ MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentLis
 }
 
 template<typename TFunc>
-void Preprocessor::MacroParser::parseArgumentList(SmallVector<TokenOrSyntax>& buffer, TFunc&& parseItem) {
+void Preprocessor::MacroParser::parseArgumentList(SmallVector<TokenOrSyntax>& results, TFunc&& parseItem) {
     while (true) {
-        buffer.append(parseItem());
+        results.append(parseItem());
 
         if (peek().kind == TokenKind::Comma)
-            buffer.append(consume());
+            results.append(consume());
         else {
             // Just break out of the loop. Our caller will expect
             // that there is a closing parenthesis here.
