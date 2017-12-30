@@ -6,13 +6,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "symbols/Scope.h"
 #include "util/PointerUnion.h"
 
 namespace slang {
 
 class Expression;
-class Scope;
-class Symbol;
 class Type;
 struct DataTypeSyntax;
 struct ExpressionSyntax;

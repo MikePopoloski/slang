@@ -197,9 +197,6 @@ public:
     template<typename T>
     const T& memberAt(uint32_t index) const { return (*std::next(members().begin(), index))->as<T>(); }
 
-    /// A helper method to evaluate a constant in the current scope.
-    //ConstantValue evaluateConstant(const ExpressionSyntax& expr) const;
-
     /// Strongly typed index type which is used in a sideband list in the Compilation object
     /// to store information about deferred members in this scope.
     enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
@@ -300,8 +297,8 @@ public:
 
         bool operator==(const specific_symbol_iterator& other) const { return current == other.current; }
 
-        const SpecificType* operator*() const { return &current->template as<SpecificType>(); }
-        const SpecificType* operator*() { return &current->template as<SpecificType>(); }
+        const SpecificType* operator*() const { return &current->as<SpecificType>(); }
+        const SpecificType* operator*() { return &current->as<SpecificType>(); }
 
         specific_symbol_iterator& operator++() {
             current = current->nextInScope;
