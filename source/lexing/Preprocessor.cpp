@@ -446,7 +446,7 @@ Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted) {
             take = !take;
     }
 
-    branchStack.push_back(BranchEntry(take));
+    branchStack.emplace_back(BranchEntry(take));
 
     return parseBranchDirective(directive, name, take);
 }
@@ -613,7 +613,8 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
 
 Trivia Preprocessor::handleTimescaleDirective(Token directive) {
     Token value, valueUnit, precision, precisionUnit;
-    TimescaleMagnitude valueMagnitude, precisionMagnitude;
+    TimescaleMagnitude valueMagnitude = TimescaleMagnitude::One;
+    TimescaleMagnitude precisionMagnitude = TimescaleMagnitude::One;
     bool foundSpecifiers = expectTimescaleSpecifier(value, valueUnit, valueMagnitude);
 
     auto slash = expect(TokenKind::Slash);

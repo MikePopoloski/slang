@@ -221,7 +221,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     else {
         // The fmtlib API for arg lists isn't very pretty, but it gets the job done
         ASSERT(diagnostic.args.size() < fmt::ArgList::MAX_PACKED_ARGS - 1);
-        typedef fmt::internal::ArgArray<fmt::ArgList::MAX_PACKED_ARGS - 1> ArgArray;
+        using ArgArray = fmt::internal::ArgArray<fmt::ArgList::MAX_PACKED_ARGS - 1>;
         typename ArgArray::Type values;
         uint64_t types = 0;
         for (size_t i = 0; i < diagnostic.args.size(); i++) {

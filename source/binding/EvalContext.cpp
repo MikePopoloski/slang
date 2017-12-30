@@ -15,7 +15,7 @@ EvalContext::EvalContext() {
 ConstantValue* EvalContext::createLocal(const Symbol* symbol, ConstantValue value) {
     ConstantValue& result = stack.top().temporaries[symbol];
     ASSERT(!result);
-    result = value;
+    result = std::move(value);
     return &result;
 }
 

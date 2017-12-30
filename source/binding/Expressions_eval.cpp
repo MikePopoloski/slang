@@ -103,13 +103,11 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
 
     // TODO: more robust lvalue handling
     ConstantValue* lvalue = nullptr;
-    if (isAssignment()) {
+    if (isAssignment())
         lvalue = context.findLocal(&((const VariableRefExpression&)left()).symbol);
-        ASSERT(lvalue);
-    }
 
 #define OP(k, v) case BinaryOperator::k: return { *type, v }
-#define ASSIGN(k, v) case BinaryOperator::k: *lvalue = { *type, v }; return *lvalue
+#define ASSIGN(k, v) case BinaryOperator::k: ASSERT(lvalue); *lvalue = { *type, v }; return *lvalue
     switch (op) {
         OP(Add, l + r);
         OP(Subtract, l - r);
