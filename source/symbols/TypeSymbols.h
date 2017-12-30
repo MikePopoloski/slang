@@ -89,6 +89,8 @@ public:
 
     std::string toString() const;
 
+    static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax, const Scope& scope);
+
 protected:
     Type(SymbolKind kind, string_view name, SourceLocation loc) :
         Symbol(kind, name, loc) {}
@@ -218,6 +220,24 @@ public:
     ConstantRange range;
 
     PackedArrayType(const Type& elementType, ConstantRange range);
+};
+
+/// Represents a packed structure of members.
+class PackedStructType : public IntegralType, public Scope {
+public:
+    PackedStructType(Compilation& compilation, uint32_t bitWidth, bool isSigned, bool isFourState);
+
+    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
+                                  const Scope& scope);
+};
+
+/// Represents an unpacked structure of members.
+class UnpackedStructType : public Type, public Scope {
+public:
+    explicit UnpackedStructType(Compilation& compilation);
+
+    static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
+                                  const Scope& scope);
 };
 
 /// Represents the Void (or lack of a) type. This can be used as the return type of functions

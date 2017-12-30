@@ -94,6 +94,10 @@ bool Type::isIntegral() const {
     switch (kind) {
         case SymbolKind::BuiltInIntegerType:
         case SymbolKind::VectorType:
+        case SymbolKind::EnumType:
+        case SymbolKind::PackedArrayType:
+        case SymbolKind::PackedStructType:
+        case SymbolKind::PackedUnionType:
             return true;
         default:
             return false;
@@ -154,6 +158,47 @@ bool Type::isCastCompatible(const Type& rhs) const {
 
 std::string Type::toString() const {
     return "";
+}
+
+const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node, const Scope& parent) {
+    switch (node.kind) {
+        case SyntaxKind::BitType:
+        case SyntaxKind::LogicType:
+        case SyntaxKind::RegType:
+            return IntegralType::fromSyntax(compilation, node.as<IntegerTypeSyntax>(), parent);
+        case SyntaxKind::ByteType:
+        case SyntaxKind::ShortIntType:
+        case SyntaxKind::IntType:
+        case SyntaxKind::LongIntType:
+        case SyntaxKind::IntegerType:
+        case SyntaxKind::TimeType: {
+            // TODO: signing
+            // TODO: report this error in the parser?
+            //auto& its = syntax.as<IntegerTypeSyntax>();
+            //if (its.dimensions.count() > 0) {
+            //    // Error but don't fail out; just remove the dims and keep trucking
+            //    auto& diag = addError(DiagCode::PackedDimsOnPredefinedType, its.dimensions[0]->openBracket.location());
+            //    diag << getTokenKindText(its.keyword.kind);
+            //}
+            return compilation.getType(node.kind);
+        }
+        case SyntaxKind::RealType:
+        case SyntaxKind::RealTimeType:
+        case SyntaxKind::ShortRealType:
+        case SyntaxKind::StringType:
+        case SyntaxKind::CHandleType:
+        case SyntaxKind::EventType:
+            return compilation.getType(node.kind);
+        case SyntaxKind::EnumType:
+            return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), parent);
+        case SyntaxKind::StructType: {
+            const auto& structUnion = node.as<StructUnionTypeSyntax>();
+            return structUnion.packed ? PackedStructType::fromSyntax(compilation, structUnion, parent) :
+                                        UnpackedStructType::fromSyntax(compilation, structUnion, parent);
+        }
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth_,
@@ -327,6 +372,82 @@ PackedArrayType::PackedArrayType(const Type& elementType_, ConstantRange range_)
                  getSigned(elementType_), getFourState(elementType_)),
     elementType(elementType_), range(range_)
 {
+}
+
+PackedStructType::PackedStructType(Compilation& compilation, uint32_t bitWidth,
+                                   bool isSigned, bool isFourState) :
+    IntegralType(SymbolKind::PackedStructType, "", SourceLocation(), bitWidth, isSigned, isFourState),
+    Scope(compilation, this)
+{
+}
+
+const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
+                                         const Scope& scope) {
+    ASSERT(syntax.packed);
+    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
+    bool isFourState = false;
+    uint32_t bitWidth = 0;
+
+    // We have to look at all the members up front to know our width and four-statedness.
+    SmallVectorSized<const Symbol*, 8> members;
+    for (auto member : syntax.members) {
+        const Type& type = compilation.getType(member->type, scope);
+        if (type.isIntegral()) {
+            isFourState |= type.as<IntegralType>().isFourState;
+        }
+        else if (!type.isError()) {
+            auto& diag = compilation.addError(DiagCode::PackedMemberNotIntegral,
+                                              member->type.getFirstToken().location());
+            diag << type;
+            diag << member->type.sourceRange();
+        }
+
+        for (auto decl : member->declarators) {
+            bitWidth += type.getBitWidth();
+            
+            auto variable = compilation.emplace<VariableSymbol>(decl->name.valueText(), decl->name.location());
+            members.append(variable);
+            variable->type = type;
+
+            if (decl->initializer) {
+                auto& diag = compilation.addError(DiagCode::PackedMemberHasInitializer,
+                                                  decl->initializer->equals.location());
+                diag << decl->initializer->expr.sourceRange();
+            }
+        }
+    }
+
+    auto result = compilation.emplace<PackedStructType>(compilation, bitWidth, isSigned, isFourState);
+    for (auto member : members)
+        result->addMember(*member);
+
+    return *result;
+}
+
+UnpackedStructType::UnpackedStructType(Compilation& compilation) :
+    Type(SymbolKind::UnpackedStructType, "", SourceLocation()),
+    Scope(compilation, this)
+{
+}
+
+const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
+                                           const Scope& scope) {
+    ASSERT(!syntax.packed);
+
+    auto result = compilation.emplace<UnpackedStructType>(compilation);
+    for (auto member : syntax.members) {
+        const Type& type = compilation.getType(member->type, scope);
+        for (auto decl : member->declarators) {
+            auto variable = compilation.emplace<VariableSymbol>(decl->name.valueText(), decl->name.location());
+            result->addMember(*variable);
+
+            variable->type = type;
+            if (decl->initializer)
+                variable->initializer = decl->initializer->expr;
+        }
+    }
+
+    return *result;
 }
 
 }

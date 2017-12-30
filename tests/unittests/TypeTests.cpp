@@ -81,3 +81,34 @@ endmodule
     foshizzle.lookup("BAR", result);
     CHECK(result.getResultKind() == LookupResult::Found);
 }
+
+TEST_CASE("Packed structs") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+
+    struct packed {
+        logic bar;
+        int baz;
+        logic [5:1] bif;
+    } foo;
+
+endmodule
+)");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+
+    const auto& foo = instance.memberAt<VariableSymbol>(0);
+    REQUIRE(foo.type->kind == SymbolKind::PackedStructType);
+
+    const auto& structType = foo.type->as<PackedStructType>();
+    CHECK(structType.bitWidth == 38);
+    CHECK(structType.isFourState);
+    CHECK(!structType.isSigned);
+    CHECK(structType.isIntegral());
+    CHECK(!structType.isAggregate());
+
+    CHECK(structType.lookupDirect("bar"));
+    CHECK(structType.lookupDirect("baz"));
+    CHECK(structType.lookupDirect("bif"));
+}

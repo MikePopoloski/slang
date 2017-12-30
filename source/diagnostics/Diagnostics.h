@@ -138,6 +138,8 @@ enum class DiagCode : uint8_t {
     AssignedToLocalBodyParam,
     ParameterDoesNotExist,
     DuplicateAttribute,
+    PackedMemberNotIntegral,
+    PackedMemberHasInitializer,
 
     // expressions
     BadUnaryExpression,

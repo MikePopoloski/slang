@@ -224,39 +224,7 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
 }
 
 const Type& Compilation::getType(const DataTypeSyntax& node, const Scope& parent) {
-    switch (node.kind) {
-        case SyntaxKind::BitType:
-        case SyntaxKind::LogicType:
-        case SyntaxKind::RegType:
-            return IntegralType::fromSyntax(*this, node.as<IntegerTypeSyntax>(), parent);
-        case SyntaxKind::ByteType:
-        case SyntaxKind::ShortIntType:
-        case SyntaxKind::IntType:
-        case SyntaxKind::LongIntType:
-        case SyntaxKind::IntegerType:
-        case SyntaxKind::TimeType: {
-            // TODO: signing
-            // TODO: report this error in the parser?
-            //auto& its = syntax.as<IntegerTypeSyntax>();
-            //if (its.dimensions.count() > 0) {
-            //    // Error but don't fail out; just remove the dims and keep trucking
-            //    auto& diag = addError(DiagCode::PackedDimsOnPredefinedType, its.dimensions[0]->openBracket.location());
-            //    diag << getTokenKindText(its.keyword.kind);
-            //}
-            return getType(node.kind);
-        }
-        case SyntaxKind::RealType:
-        case SyntaxKind::RealTimeType:
-        case SyntaxKind::ShortRealType:
-        case SyntaxKind::StringType:
-        case SyntaxKind::CHandleType:
-        case SyntaxKind::EventType:
-            return getType(node.kind);
-        case SyntaxKind::EnumType:
-            return EnumType::fromSyntax(*this, node.as<EnumTypeSyntax>(), parent);
-        default:
-            THROW_UNREACHABLE;
-    }
+    return Type::fromSyntax(*this, node, parent);
 }
 
 const VectorType& Compilation::getType(uint16_t width, bool isSigned, bool isFourState, bool isReg) {
