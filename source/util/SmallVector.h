@@ -146,8 +146,8 @@ public:
         return span<T>(dest, len);
     }
 
-    T& operator[](int index) { return data_[index]; }
-    const T& operator[](int index) const { return data_[index]; }
+    T& operator[](size_t index) { return data_[index]; }
+    const T& operator[](size_t index) const { return data_[index]; }
 
     /// Indicates whether we are still "small", which means we are still on the stack.
     bool isSmall() const { return (void*)data_ == (void*)firstElement; }

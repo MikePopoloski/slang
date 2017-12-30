@@ -708,8 +708,8 @@ public:
 
         int32_t operator-(const const_iterator& other) const { return index - other.index; }
 
-        const_iterator& operator+=(int32_t n) { index += n; return *this; }
-        const_iterator& operator-=(int32_t n) { index -= n; return *this; }
+        const_iterator& operator+=(int32_t n) { index += (uint32_t)n; return *this; }
+        const_iterator& operator-=(int32_t n) { index -= (uint32_t)n; return *this; }
 
     private:
         const SeparatedSyntaxList& list;

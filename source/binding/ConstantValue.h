@@ -69,7 +69,7 @@ struct ConstantRange {
     /// the bounds are specified.
     uint32_t width() const {
         int diff = left - right;
-        return (diff < 0 ? -diff : diff) + 1;
+        return uint32_t(diff < 0 ? -diff : diff) + 1;
     }
 
     /// Gets the lower bound of the range, regardless of the order in which

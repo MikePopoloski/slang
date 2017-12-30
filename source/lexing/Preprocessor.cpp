@@ -591,7 +591,7 @@ bool Preprocessor::expectTimescaleSpecifier(Token& value, Token& unit, Timescale
         auto valueInfo = alloc.emplace<Token::Info>(token.trivia(),
             numText, token.location(), token.getInfo()->flags);
         value = Token(TokenKind::IntegerLiteral, valueInfo);
-        valueInfo->setInt(alloc, SVInt(32, (int)token.realValue(), true));
+        valueInfo->setInt(alloc, SVInt(32, (uint64_t)token.realValue(), true));
 
         string_view timeUnitSuffix = timeUnitToSuffix(token.numericFlags().unit());
         Token::Info* unitInfo = alloc.emplace<Token::Info>(token.trivia(),
@@ -1087,7 +1087,7 @@ void Preprocessor::appendBodyToken(SmallVector<Token>& dest, Token token, Source
         }
     }
     // TODO: make sure locations are valid, I've seen unsigned overflow here
-    int delta = token.location().offset() - startLoc.offset();
+    int delta = int(token.location().offset()) - int(startLoc.offset());
     dest.append(token.withLocation(alloc, expansionLoc + delta));
 }
 

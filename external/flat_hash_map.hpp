@@ -219,7 +219,7 @@ struct sherwood_v3_entry_constexpr
     int8_t distance_from_desired = -1;
     typename std::aligned_storage<sizeof(T), alignof(T)>::type bytes = {};
 };
-static constexpr int8_t min_lookups = 4;
+static constexpr uint8_t min_lookups = 4;
 template<typename T>
 struct EntryDefaultTable
 {
@@ -231,9 +231,9 @@ struct EntryDefaultTable
 template<typename T>
 constexpr const sherwood_v3_entry_constexpr<T> EntryDefaultTable<T>::table[min_lookups];
 
-inline int8_t log2(size_t value)
+inline uint8_t log2(size_t value)
 {
-    static constexpr int8_t table[64] =
+    static constexpr uint8_t table[64] =
     {
         63,  0, 58,  1, 59, 47, 53,  2,
         60, 39, 48, 27, 54, 33, 42,  3,
@@ -654,7 +654,7 @@ public:
         auto new_prime_index = hash_policy.next_size_over(num_buckets);
         if (num_buckets == bucket_count())
             return;
-        int8_t new_max_lookups = compute_max_lookups(num_buckets);
+        uint8_t new_max_lookups = compute_max_lookups(num_buckets);
         EntryPointer new_buckets(AllocatorTraits::allocate(*this, num_buckets + new_max_lookups));
         for (EntryPointer it = new_buckets, real_end = it + static_cast<ptrdiff_t>(num_buckets + new_max_lookups - 1); it != real_end; ++it)
         {
@@ -665,7 +665,7 @@ public:
         std::swap(num_slots_minus_one, num_buckets);
         --num_slots_minus_one;
         hash_policy.commit(new_prime_index);
-        int8_t old_max_lookups = max_lookups;
+        uint8_t old_max_lookups = max_lookups;
         max_lookups = new_max_lookups;
         num_elements = 0;
         for (EntryPointer it = new_buckets, end = it + static_cast<ptrdiff_t>(num_buckets + old_max_lookups); it != end; ++it)
@@ -812,13 +812,13 @@ private:
     EntryPointer entries = const_cast<Entry *>(reinterpret_cast<const Entry *>(DefaultTable::table));
     size_t num_slots_minus_one = 0;
     typename HashPolicySelector<ArgumentHash>::type hash_policy;
-    int8_t max_lookups = detailv3::min_lookups - 1;
+    uint8_t max_lookups = detailv3::min_lookups - 1;
     float _max_load_factor = 0.5f;
     size_t num_elements = 0;
 
-    static int8_t compute_max_lookups(size_t num_buckets)
+    static uint8_t compute_max_lookups(size_t num_buckets)
     {
-        int8_t desired = detailv3::log2(num_buckets);
+        uint8_t desired = detailv3::log2(num_buckets);
         return std::max(detailv3::min_lookups, desired);
     }
 
@@ -893,7 +893,7 @@ private:
         rehash(std::max(size_t(4), 2 * bucket_count()));
     }
 
-    void deallocate_data(EntryPointer begin, size_t slots_minus_one, int8_t max_lookups_to_dealloc)
+    void deallocate_data(EntryPointer begin, size_t slots_minus_one, uint8_t max_lookups_to_dealloc)
     {
         if (begin != const_cast<Entry *>(reinterpret_cast<const Entry *>(DefaultTable::table)))
         {

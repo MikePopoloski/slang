@@ -195,7 +195,7 @@ ConstantValue SelectExpression::eval(EvalContext& context) const {
     // actual range used in the declaration of the variable.
     int16_t actualMsb = int16_t(msb.as<int>().value() - range.lower());
     if (!range.isLittleEndian())
-        actualMsb = int16_t(range.width() - actualMsb - 1);
+        actualMsb = int16_t(range.width() - (uint32_t)actualMsb - 1);
 
     switch (kind) {
         case SyntaxKind::BitSelect: {
@@ -204,7 +204,7 @@ ConstantValue SelectExpression::eval(EvalContext& context) const {
         case SyntaxKind::SimpleRangeSelect: {
             int16_t actualLsb = int16_t(lsbOrWidth.as<int>().value() - range.lower());
             if (!range.isLittleEndian())
-                actualLsb = int16_t(range.width() - actualLsb - 1);
+                actualLsb = int16_t(range.width() - (uint32_t)actualLsb - 1);
 
             return { *type, value.bitSelect(actualLsb, actualMsb) };
         }

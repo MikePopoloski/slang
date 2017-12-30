@@ -111,7 +111,7 @@ protected:
 
     HashMapRef(uint32_t capacity) : capacity(capacity) {}
 
-    int probeDistance(size_t hash, uint32_t slotIndex) const {
+    uint32_t probeDistance(size_t hash, uint32_t slotIndex) const {
         return (slotIndex + capacity - (hash & (capacity - 1))) & (capacity - 1);
     }
 
@@ -121,7 +121,7 @@ protected:
     Element* findSlot(const TKey& key) const {
         size_t hash = std::hash<TKey>{}(key);
         uint32_t index = hash & (capacity - 1);
-        int dist = 0;
+        uint32_t dist = 0;
 
         while (true) {
             size_t elemHash = data[index].hash;
@@ -219,7 +219,7 @@ protected:
 
     std::pair<Element*, bool> findOrInsert(size_t hash, const TKey& key) {
         uint32_t index = hash & (this->capacity - 1);
-        int dist = 0;
+        uint32_t dist = 0;
 
         // We'll swap elements as we go along to get better lookup characteristics;
         // this is the "robin hood" aspect of the probing strategy. The very first
@@ -232,7 +232,7 @@ protected:
             // and keep going with the existing element to find a better spot for it.
             // If elemHash is zero, the slot is empty and we can just take it.
             size_t elemHash = this->data[index].hash;
-            int existingDist = this->probeDistance(elemHash, index);
+            uint32_t existingDist = this->probeDistance(elemHash, index);
             if (!this->data[index].valid || existingDist < dist) {
                 std::swap(hash, this->data[index].hash);
                 std::swap(swapPair, this->data[index].pair);

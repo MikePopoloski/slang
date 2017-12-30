@@ -138,7 +138,7 @@ SVInt VectorBuilder::finish() {
         }
     }
     else {
-        int multiplier = 0;
+        uint32_t multiplier = 0;
         switch (literalBase) {
             case LiteralBase::Binary:
                 multiplier = 1;
@@ -155,7 +155,7 @@ SVInt VectorBuilder::finish() {
         // possibly the first (leading) digit. This one has leading zeros in it,
         // so only requires clog2(d+1) bits. If the leading digit is unknown
         // however, we go with the default multiplier amount.
-        int bits = 0;
+        uint32_t bits = 0;
         if (digits.size() > 1)
             bits = (digits.size() - 1) * multiplier;
 
@@ -170,7 +170,7 @@ SVInt VectorBuilder::finish() {
                 bits = SVInt::MAX_BITS;
             }
             if (sizeBits == 0) {
-                return SVInt::fromDigits((uint16_t)std::max(32, bits), literalBase,
+                return SVInt::fromDigits((uint16_t)std::max(32u, bits), literalBase,
                                          signFlag, hasUnknown, digits);
             } else {
                 // we should warn about overflow here, but the spec says it is valid and

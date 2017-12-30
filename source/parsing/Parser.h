@@ -171,8 +171,8 @@ private:
     bool isHierarchyInstantiation();
     bool isNonAnsiPort();
     bool isPlainPortName();
-    bool scanDimensionList(int& index);
-    bool scanQualifiedName(int& index);
+    bool scanDimensionList(uint32_t& index);
+    bool scanQualifiedName(uint32_t& index);
 
     void errorIfAttributes(span<AttributeInstanceSyntax* const> attributes, const char* msg);
 
@@ -222,7 +222,7 @@ private:
     span<TMember* const> parseMemberList(TokenKind endKind, Token& endToken, TParseFunc&& parseFunc);
 
     template<bool(*IsEnd)(TokenKind)>
-    bool scanTypePart(int& index, TokenKind start, TokenKind end);
+    bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);
 
     SyntaxFactory factory;
 
@@ -232,7 +232,7 @@ private:
 };
 
 template<bool(*IsEnd)(TokenKind)>
-bool Parser::scanTypePart(int& index, TokenKind start, TokenKind end) {
+bool Parser::scanTypePart(uint32_t& index, TokenKind start, TokenKind end) {
     int nesting = 1;
     while (true) {
         auto kind = peek(index).kind;

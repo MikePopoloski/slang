@@ -3,7 +3,7 @@
 #include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
 
-SVInt testParameter(const std::string& text, int index = 0) {
+SVInt testParameter(const std::string& text, uint32_t index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";
     auto tree = SyntaxTree::fromText(string_view(fullText));
 

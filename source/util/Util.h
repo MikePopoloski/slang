@@ -88,7 +88,7 @@ namespace slang {
 
 /// Converts a span of characters into a string_view.
 inline string_view to_string_view(span<char> text) {
-    return string_view(text.data(), text.length());
+    return string_view(text.data(), (size_t)text.length());
 }
 
 inline void hash_combine(size_t&) {}

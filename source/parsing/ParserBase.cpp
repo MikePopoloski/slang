@@ -34,7 +34,7 @@ Diagnostic& ParserBase::addError(DiagCode code, SourceLocation location) {
     return getDiagnostics().add(code, location);
 }
 
-Token ParserBase::peek(int offset) {
+Token ParserBase::peek(uint32_t offset) {
     while (window.currentOffset + offset >= window.count)
         window.addNew();
     return window.buffer[window.currentOffset + offset];
@@ -93,7 +93,7 @@ void ParserBase::Window::addNew() {
     if (count >= capacity) {
         // shift tokens to the left if we are too far to the right
         if (currentOffset > (capacity >> 1)) {
-            int shift = count - currentOffset;
+            uint32_t shift = count - currentOffset;
             if (shift > 0)
                 memmove(buffer, buffer + currentOffset, shift * sizeof(Token));
 

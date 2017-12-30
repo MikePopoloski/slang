@@ -282,7 +282,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
         }
         else if (tokenValue > SVInt::MAX_BITS) {
             sizeBits = SVInt::MAX_BITS;
-            addError(DiagCode::LiteralSizeTooLarge, token.location()) << SVInt::MAX_BITS;
+            addError(DiagCode::LiteralSizeTooLarge, token.location()) << (int)SVInt::MAX_BITS;
         }
         else {
             sizeBits = tokenValue.as<uint16_t>().value();
@@ -653,7 +653,7 @@ NameSyntax& Parser::parseNamePart(bool isForEach) {
             return factory.className(identifier, *parameterValues);
         }
         case TokenKind::OpenBracket: {
-            int index = 1;
+            uint32_t index = 1;
             scanTypePart<isSemicolon>(index, TokenKind::OpenBracket, TokenKind::CloseBracket);
             if (!isForEach || peek(index).kind != TokenKind::CloseParenthesis) {
                 SmallVectorSized<ElementSelectSyntax*, 4> buffer;

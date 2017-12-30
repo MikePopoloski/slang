@@ -78,15 +78,15 @@ inline bool isLogicDigit(char c) {
 }
 
 inline uint8_t getDigitValue(char c) {
-    return c - '0';
+    return uint8_t(c - '0');
 }
 
 inline uint8_t getHexDigitValue(char c) {
     if (c <= '9')
-        return c - '0';
+        return uint8_t(c - '0');
     if (c <= 'F')
-        return 10 + c - 'A';
-    return 10 + c - 'a';
+        return uint8_t(10 + c - 'A');
+    return uint8_t(10 + c - 'a');
 }
 
 inline logic_t getLogicCharValue(char c) {

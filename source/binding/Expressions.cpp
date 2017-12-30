@@ -14,7 +14,7 @@ namespace {
 using namespace slang;
 
 const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt, bool forceFourState) {
-    int width = std::max(lt->getBitWidth(), rt->getBitWidth());
+    uint32_t width = std::max(lt->getBitWidth(), rt->getBitWidth());
     if (lt->isFloating() || rt->isFloating()) {
         // TODO: The spec is unclear for binary operators what to do if the operands are a shortreal and a larger
         // integral type. For the conditional operator it is clear that this case should lead to a shortreal, and
@@ -29,7 +29,7 @@ const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const T
         const auto& ri = rt->as<IntegralType>();
         bool isSigned = li.isSigned && ri.isSigned;
         bool fourState = forceFourState || li.isFourState || ri.isFourState;
-        return &compilation.getType((int16_t)width, isSigned, fourState);
+        return &compilation.getType((uint16_t)width, isSigned, fourState);
     }
 }
 
@@ -580,7 +580,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     if (formalArgs.size() < actualArgs.count()) {
         auto& diag = compilation.addError(DiagCode::TooManyArguments, name.location());
         diag << syntax.left.sourceRange();
-        diag << (int)formalArgs.size();
+        diag << formalArgs.size();
         diag << actualArgs.count();
         return compilation.badExpression(nullptr);
     }

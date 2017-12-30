@@ -271,7 +271,7 @@ PortDeclarationSyntax& Parser::parsePortDeclaration(span<AttributeInstanceSyntax
 }
 
 bool Parser::isPlainPortName() {
-    int index = 1;
+    uint32_t index = 1;
     while (peek(index).kind == TokenKind::OpenBracket) {
         index++;
         if (!scanTypePart<isNotInPortReference>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
@@ -300,7 +300,7 @@ bool Parser::isNonAnsiPort() {
 
     // this might be a port name or the start of a data type
     // scan over select expressions until we find out
-    int index = 1;
+    uint32_t index = 1;
     while (true) {
         kind = peek(index++).kind;
         if (kind == TokenKind::Dot) {
@@ -591,7 +591,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
 
     // check for a return type here
     DataTypeSyntax* returnType = nullptr;
-    int index = 0;
+    uint32_t index = 0;
     if (!scanQualifiedName(index))
         returnType = &parseDataType(/* allowImplicit */ true);
     else {
@@ -1439,7 +1439,7 @@ ConstraintItemSyntax& Parser::parseConstraintItem(bool allowBlock) {
             // or the start of a concatenation expression. Descend into the expression until
             // we can find out for sure one way or the other.
             if (allowBlock) {
-                int index = 1;
+                uint32_t index = 1;
                 if (!scanTypePart<isNotInConcatenationExpr>(index, TokenKind::OpenBrace, TokenKind::CloseBrace))
                     return parseConstraintBlock();
             }
@@ -1678,7 +1678,7 @@ DataTypeSyntax& Parser::parseDataType(bool allowImplicit) {
             // identifier is actually the name of something else (like a declaration) and that the
             // type should be implicit. Check if there's another identifier right after us
             // before deciding which one we're looking at.
-            int index = 0;
+            uint32_t index = 0;
             if (scanQualifiedName(index) && scanDimensionList(index) && peek(index).kind == TokenKind::Identifier)
                 return factory.namedType(parseName());
             return factory.implicitType(Token(), nullptr);
@@ -2256,7 +2256,7 @@ bool Parser::isNetDeclaration() {
 }
 
 bool Parser::isVariableDeclaration() {
-    int index = 0;
+    uint32_t index = 0;
     while (peek(index).kind == TokenKind::OpenParenthesisStar) {
         // scan over attributes
         while (true) {
@@ -2332,7 +2332,7 @@ bool Parser::isVariableDeclaration() {
 }
 
 bool Parser::isHierarchyInstantiation() {
-    int index = 0;
+    uint32_t index = 0;
     if (peek(index++).kind != TokenKind::Identifier)
         return false;
 
@@ -2356,7 +2356,7 @@ bool Parser::isHierarchyInstantiation() {
     return peek(index).kind == TokenKind::OpenParenthesis;
 }
 
-bool Parser::scanDimensionList(int& index) {
+bool Parser::scanDimensionList(uint32_t& index) {
     while (peek(index).kind == TokenKind::OpenBracket) {
         index++;
         if (!scanTypePart<isNotInType>(index, TokenKind::OpenBracket, TokenKind::CloseBracket))
@@ -2365,7 +2365,7 @@ bool Parser::scanDimensionList(int& index) {
     return true;
 }
 
-bool Parser::scanQualifiedName(int& index) {
+bool Parser::scanQualifiedName(uint32_t& index) {
     auto next = peek(index);
     if (next.kind != TokenKind::Identifier && next.kind != TokenKind::UnitSystemName)
         return false;

@@ -153,11 +153,11 @@ public:
     explicit SVInt(int64_t value) :
         SVIntStorage(0, true, false)
     {
-        val = value;
+        val = (uint64_t)value;
         if (value < 0)
-            bitWidth = uint16_t(64 - slang::countLeadingOnes64(value) + 1);
+            bitWidth = uint16_t(64 - slang::countLeadingOnes64(val) + 1);
         else
-            bitWidth = uint16_t(64 - slang::countLeadingZeros64(value) + 1);
+            bitWidth = uint16_t(64 - slang::countLeadingZeros64(val) + 1);
         clearUnusedBits();
     }
 
@@ -521,7 +521,7 @@ private:
     uint32_t countLeadingOnesSlowCase() const;
 
     // Get a specific word holding the given bit index.
-    uint64_t getWord(int bitIndex) const { return isSingleWord() ? val : pVal[whichWord(bitIndex)]; }
+    uint64_t getWord(uint32_t bitIndex) const { return isSingleWord() ? val : pVal[whichWord(bitIndex)]; }
 
     // Get the number of bits that are useful in the top word
     void getTopWordMask(uint32_t& bitsInMsw, uint64_t& mask) const;
@@ -534,9 +534,9 @@ private:
     // operation that might have removed the unknown bits in the number.
     void checkUnknown();
 
-    static constexpr int whichWord(int bitIndex) { return bitIndex / BITS_PER_WORD; }
-    static constexpr int whichBit(int bitIndex) { return bitIndex % BITS_PER_WORD; }
-    static constexpr uint64_t maskBit(int bitIndex) { return 1ULL << whichBit(bitIndex); }
+    static constexpr uint32_t whichWord(uint32_t bitIndex) { return bitIndex / BITS_PER_WORD; }
+    static constexpr uint32_t whichBit(uint32_t bitIndex) { return bitIndex % BITS_PER_WORD; }
+    static constexpr uint64_t maskBit(uint32_t bitIndex) { return 1ULL << whichBit(bitIndex); }
 
     // Split an integer's data into 32-bit words.
     static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);
@@ -558,8 +558,8 @@ private:
     // Unsigned modular exponentiation algorithm.
     static SVInt modPow(const SVInt& base, const SVInt& exponent, bool bothSigned);
 
-    static constexpr int getNumWords(uint16_t bitWidth, bool unknown) {
-        uint32_t value = ((uint64_t)bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;
+    static constexpr uint32_t getNumWords(uint16_t bitWidth, bool unknown) {
+        uint32_t value = ((uint32_t)bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;
         return unknown ? value * 2 : value;
     }
 

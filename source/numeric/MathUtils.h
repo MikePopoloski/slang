@@ -24,7 +24,7 @@ inline uint32_t clog2(uint64_t value) {
 #else
     if (value == 0)
         return 0;
-    uint32_t log = sizeof(value) * CHAR_BIT - 1 - __builtin_clzll(value);
+    uint32_t log = sizeof(value) * CHAR_BIT - 1 - (uint32_t)__builtin_clzll(value);
     return (value - (1ULL << log)) ? log + 1 : log;
 #endif
 }
@@ -39,7 +39,7 @@ inline uint32_t countLeadingZeros32(uint32_t value) {
     _BitScanReverse(&index, value);
     return index ^ 31;
 #else
-    return __builtin_clz(value);
+    return (uint32_t)__builtin_clz(value);
 #endif
 }
 
@@ -53,7 +53,7 @@ inline uint32_t countLeadingZeros64(uint64_t value) {
     _BitScanReverse64(&index, value);
     return index ^ 63;
 #else
-    return __builtin_clzll(value);
+    return (uint32_t)__builtin_clzll(value);
 #endif
 }
 
@@ -61,11 +61,11 @@ inline uint32_t countLeadingOnes64(uint64_t value) {
     return countLeadingZeros64(~value);
 }
 
-inline int countPopulation64(uint64_t value) {
+inline uint32_t countPopulation64(uint64_t value) {
 #if defined (_MSC_VER)
-    return (int)__popcnt64(value);
+    return (uint32_t)__popcnt64(value);
 #else
-    return __builtin_popcountll(value);
+    return (uint32_t)__builtin_popcountll(value);
 #endif
 }
 

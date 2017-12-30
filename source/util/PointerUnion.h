@@ -32,7 +32,7 @@ class PointerUnion {
 
     uintptr_t value = 0;
 
-    void set(const void* v, int i) {
+    void set(const void* v, uint32_t i) {
         uintptr_t ptr = reinterpret_cast<uintptr_t>(v);
         ASSERT((ptr & ~PointerMask) == 0);
         value = ptr | (i << IntShift);

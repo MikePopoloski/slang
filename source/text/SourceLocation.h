@@ -58,7 +58,7 @@ public:
     /// Note that there is no error checking to ensure that the location
     /// still points to a valid place in the source.
     SourceLocation operator+(int delta) const {
-        return SourceLocation(bufferID, charOffset + delta);
+        return SourceLocation(bufferID, (uint32_t)((int32_t)charOffset + delta));
     }
 
     SourceLocation operator+(size_t delta) const {
@@ -66,7 +66,7 @@ public:
     }
 
     SourceLocation operator-(int delta) const {
-        return SourceLocation(bufferID, charOffset - delta);
+        return SourceLocation(bufferID, (uint32_t)((int32_t)charOffset - delta));
     }
 
     bool operator==(const SourceLocation& rhs) const {

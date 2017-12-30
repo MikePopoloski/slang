@@ -173,7 +173,7 @@ enum class DiagnosticSeverity {
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using ArgVariantType = std::variant<std::string, int, const Type*>;
+    using ArgVariantType = std::variant<std::string, int64_t, uint64_t, const Type*>;
     struct Arg : public ArgVariantType {
         using ArgVariantType::variant;
         friend std::ostream& operator<<(std::ostream& os, const Arg& arg);
@@ -191,11 +191,22 @@ public:
     Diagnostic(DiagCode code, SourceLocation location);
 
     /// Adds an argument to the diagnostic.
-    friend Diagnostic& operator<<(Diagnostic& diag, int arg);
     friend Diagnostic& operator<<(Diagnostic& diag, std::string&& arg);
     friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
     friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);
     friend Diagnostic& operator<<(Diagnostic& diag, SourceRange arg);
+
+    template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>>>
+    inline friend Diagnostic& operator<<(Diagnostic& diag, T arg) {
+        diag.args.emplace_back((int64_t)arg);
+        return diag;
+    }
+
+    template<typename T, typename = void, typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
+    inline friend Diagnostic& operator<<(Diagnostic& diag, T arg) {
+        diag.args.emplace_back((uint64_t)arg);
+        return diag;
+    }
 };
 
 /// A collection of diagnostics.

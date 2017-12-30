@@ -6,17 +6,17 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-static void lshrNear(uint64_t* dst, uint64_t* src, int words, int amount) {
+static void lshrNear(uint64_t* dst, uint64_t* src, uint32_t words, uint32_t amount) {
     // fast case for logical right shift of a small amount (less than 64 bits)
     uint64_t carry = 0;
-    for (int i = words - 1; i >= 0; i--) {
+    for (int i = int(words - 1); i >= 0; i--) {
         uint64_t temp = src[i];
         dst[i] = (temp >> amount) | carry;
         carry = temp << (64 - amount);
     }
 }
 
-static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, int numWords) {
+static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, uint32_t numWords) {
     // this function is split out so that if we have an unknown value we can reuse the code
     // optimization: move whole words
     if (wordShift == 0) {
@@ -34,7 +34,7 @@ static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t o
     }
 }
 
-static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, int numWords) {
+static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, uint32_t numWords) {
     // this function is split out so that if we have an unknown value we can reuse the code
     for (uint32_t i = start; i < start + offset; i++)
         dst[i] = 0;
@@ -52,13 +52,13 @@ static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t of
 }
 
 static void signExtendCopy(uint64_t* output, const uint64_t* input, uint16_t oldBits,
-                           int oldWords, int newWords) {
+                           uint32_t oldWords, uint32_t newWords) {
     // copy full words over
     memcpy(output, input, sizeof(uint64_t) * oldWords);
 
     // sign-extend the last word
     int lastWordBits = SVInt::BITS_PER_WORD - (((oldBits - 1) % SVInt::BITS_PER_WORD) + 1);
-    output[oldWords - 1] = int64_t(output[oldWords - 1] << lastWordBits) >> lastWordBits;
+    output[oldWords - 1] = uint64_t(int64_t(output[oldWords - 1] << lastWordBits) >> lastWordBits);
 
     // fill the remaining words with the sign bit
     int isNegative = output[oldWords - 1] >> (SVInt::BITS_PER_WORD - 1);
@@ -66,8 +66,8 @@ static void signExtendCopy(uint64_t* output, const uint64_t* input, uint16_t old
 }
 
 // Specialized adder for values <= 64.
-static bool addOne(uint64_t* dst, uint64_t* src, int len, uint64_t value) {
-    for (int i = 0; i < len; i++) {
+static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
+    for (uint32_t i = 0; i < len; i++) {
         dst[i] = value + src[i];
         if (dst[i] < value)
             value = 1;  // carry
@@ -80,8 +80,8 @@ static bool addOne(uint64_t* dst, uint64_t* src, int len, uint64_t value) {
 }
 
 // Specialized subtractor for values <= 64.
-static bool subOne(uint64_t* dst, uint64_t* src, int len, uint64_t value) {
-    for (int i = 0; i < len; i++) {
+static bool subOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
+    for (uint32_t i = 0; i < len; i++) {
         uint64_t x = src[i];
         dst[i] -= value;
         if (value > x)
@@ -96,9 +96,9 @@ static bool subOne(uint64_t* dst, uint64_t* src, int len, uint64_t value) {
 
 // Generalized adder
 NO_SANITIZE("unsigned-integer-overflow")
-static bool addGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, int len) {
+static bool addGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, uint32_t len) {
     bool carry = false;
-    for (int i = 0; i < len; i++) {
+    for (uint32_t i = 0; i < len; i++) {
         uint64_t limit = std::min(x[i], y[i]);
         dst[i] = x[i] + y[i] + carry;
         carry = dst[i] < limit || (carry && dst[i] == limit);
@@ -108,9 +108,9 @@ static bool addGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, int len) {
 
 // Generalized subtractor (x - y)
 NO_SANITIZE("unsigned-integer-overflow")
-static bool subGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, int len) {
+static bool subGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, uint32_t len) {
     bool borrow = false;
-    for (int i = 0; i < len; i++) {
+    for (uint32_t i = 0; i < len; i++) {
         uint64_t tmp = borrow ? x[i] - 1 : x[i];
         borrow = y[i] > tmp || (borrow && x[i] == 0);
         dst[i] = tmp - y[i];
@@ -214,7 +214,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
     u[m + n] = u_carry;
 
     // D2. [Initialize j.]  Set j to m. This is the loop counter over the places.
-    int j = m;
+    uint32_t j = m;
     do {
         // D3. [Calculate q'.].
         //     Set qp = (u[j+n]*b + u[j+n-1]) / v[n-1]. (qp=qprime=q')
@@ -247,7 +247,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
             uint64_t p = qp * uint64_t(v[i]);
             int64_t subres = int64_t(u[j + i]) - borrow - (uint32_t)p;
             u[j + i] = (uint32_t)subres;
-            borrow = (p >> 32) - (subres >> 32);
+            borrow = int64_t(p >> 32) - (subres >> 32);
         }
         bool isNeg = u[j + n] < borrow;
         u[j + n] -= (uint32_t)borrow;
@@ -273,7 +273,7 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
         }
 
         // D7. [Loop on j.]  Decrease j by one. Now if j >= 0, go back to D3.
-    } while (--j >= 0);
+    } while (--j < UINT32_MAX);
 
     // D8. [Unnormalize]. Now q[...] is the desired quotient, and the desired
     // remainder may be obtained by dividing u[...] by d. If r is non-null we
@@ -284,13 +284,13 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
         // shift right here.
         if (shift) {
             uint32_t carry = 0;
-            for (int i = n - 1; i >= 0; i--) {
+            for (int i = int(n - 1); i >= 0; i--) {
                 r[i] = (u[i] >> shift) | carry;
                 carry = u[i] << (32 - shift);
             }
         }
         else {
-            for (int i = n - 1; i >= 0; i--)
+            for (int i = int(n - 1); i >= 0; i--)
                 r[i] = u[i];
         }
     }
@@ -310,9 +310,9 @@ static void copyBits(uint8_t* dest, uint16_t destBitOffset, const uint8_t* src, 
     // Writing to the first byte is a special case, due to the bit offset
     uint8_t bitsToWrite = std::min<uint8_t>((uint8_t)bitLength, (uint8_t)(8 - destBitOffset));
 
-    uint8_t srcByte = srcBitOffset ? (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset)) : *src;
-    *dest = (*dest   & ((1 << destBitOffset) - 1)) + // preserved bits
-            ((srcByte & ((1 << bitsToWrite) - 1)) << destBitOffset); // new bits
+    uint8_t srcByte = srcBitOffset ? uint8_t((*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset))) : *src;
+    *dest = uint8_t((*dest   & ((1 << destBitOffset) - 1)) +                    // preserved bits
+                    ((srcByte & ((1 << bitsToWrite) - 1)) << destBitOffset));   // new bits
 
     // all remaining writes to dest are byte-aligned, but the reads from src
     // may not be
@@ -328,7 +328,7 @@ static void copyBits(uint8_t* dest, uint16_t destBitOffset, const uint8_t* src, 
         bitsToWrite = std::min<uint8_t>((uint8_t)bitLength, 8);
         // get the next 8 bits of src, probably not byte aligned
         // (if bitsToWrite < 8, this could have some extra bits in it
-        srcByte = srcBitOffset ? (*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset)) : *src;
+        srcByte = srcBitOffset ? uint8_t((*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset))) : *src;
 
         // Write srcByte, filling the upper bits with zereos if we have less than
         // a byte left to write.

@@ -22,11 +22,6 @@ static const char* severityToString[] = {
 Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
     code(code), location(location) {}
 
-Diagnostic& operator<<(Diagnostic& diag, int arg) {
-    diag.args.emplace_back(arg);
-    return diag;
-}
-
 Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
     diag.args.emplace_back(std::string(arg));
     return diag;
@@ -231,7 +226,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         uint64_t types = 0;
         for (size_t i = 0; i < diagnostic.args.size(); i++) {
             values[i] = ArgArray::template make<fmt::BasicFormatter<char>>(diagnostic.args[i]);
-            types |= fmt::internal::Arg::CUSTOM << (i * 4);
+            types |= (size_t)fmt::internal::Arg::CUSTOM << (i * 4);
         }
         std::string msg = fmt::format(desc.format, fmt::ArgList(types, values));
         formatDiag(writer, location, diagnostic.ranges, severityToString[(int)desc.severity], msg);

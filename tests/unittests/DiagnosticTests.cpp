@@ -1,6 +1,6 @@
 #include "Test.h"
 
-std::string getDiagnostic(int i) {
+std::string getDiagnostic(size_t i) {
     return DiagnosticWriter(getSourceManager()).report(diagnostics[i]);
 }
 

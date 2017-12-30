@@ -112,18 +112,18 @@ bool Path::readFile(std::vector<char>& buffer) const {
     posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
 
     // TODO: vector does initialization always, which is dumb
-    size_t remaining = sb.st_size;
-    buffer.resize(remaining + 1);
+    off_t remaining = sb.st_size;
+    buffer.resize((size_t)(remaining + 1));
     char* buf = buffer.data();
 
-    while (remaining) {
-        ssize_t r = ::read(fd, buf, remaining);
+    while (remaining > 0) {
+        ssize_t r = ::read(fd, buf, (size_t)remaining);
         if (r == -1) {
             close(fd);
             return false;
         }
         else if (r == 0) {
-            buffer.resize((buf - buffer.data()) + 1);
+            buffer.resize(size_t((buf - buffer.data()) + 1));
             break;
         }
         else {

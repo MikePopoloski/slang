@@ -249,7 +249,7 @@ function toolchain(_buildDir, _libDir)
 			"-Wimplicit-fallthrough",
 			"-Wrange-loop-analysis",
 			"-Wpedantic",
---			"-Wconversion",
+			"-Wconversion",
 --			"-Wshadow",
 			"-Wno-missing-braces",
 		}

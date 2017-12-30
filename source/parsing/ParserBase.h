@@ -27,7 +27,7 @@ protected:
     Diagnostic& addError(DiagCode code, SourceLocation location);
 
     // Helper methods to manipulate the underlying token stream.
-    Token peek(int offset);
+    Token peek(uint32_t offset);
     Token peek();
     bool peek(TokenKind kind);
     Token consume();
@@ -64,9 +64,9 @@ protected:
         Token lastConsumed;
 
         // the current offset within the lookahead buffer
-        int currentOffset = 0;
-        int count = 0;
-        int capacity = 0;
+        uint32_t currentOffset = 0;
+        uint32_t count = 0;
+        uint32_t capacity = 0;
 
         void addNew();
         void moveToNext();

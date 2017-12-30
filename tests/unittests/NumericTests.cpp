@@ -18,7 +18,7 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(value6 == -924);
     CHECK(value7 == "63'hffffffffffffffff"_si);
     CHECK(SVInt(0, true) == 0);
-    CHECK(SVInt(UINT64_MAX, true) == UINT64_MAX);
+    CHECK(SVInt(UINT64_MAX, true) == -1);
 
     CHECK(value5.isNegative());
     value5.setSigned(false);
@@ -187,7 +187,7 @@ TEST_CASE("SVInt to string (and back)", "[numeric]") {
 
 TEST_CASE("Comparison", "[numeric]") {
     CHECK(SVInt(9000) == SVInt(1024, 9000, false));
-    CHECK(SVInt(-4) == (uint64_t)-4);
+    CHECK(SVInt(-4) == -4);
     CHECK(SVInt((uint64_t)-4, false) != SVInt(9999, (uint64_t)-4, true));
     CHECK(SVInt(-4) == SVInt(9999, (uint64_t)-4, true));
     CHECK("12'b101"_si == 5);
@@ -201,7 +201,7 @@ TEST_CASE("Comparison", "[numeric]") {
     CHECK("100'd999989999999999999999999"_si < "120'd999999999999999999999999"_si);
     CHECK("100'sd99999999999999999999999999"_si >= "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si < "-120'sd999999999999977789999"_si);
-    CHECK("100'd99999999999999999999999999"_si >= (uint64_t)-50);
+    CHECK("100'd99999999999999999999999999"_si >= -50);
 
     CHECK(!("-58"_si < "-59"_si));
     CHECK(!("-58"_si < "-58"_si));
@@ -298,7 +298,7 @@ TEST_CASE("Division", "[numeric]") {
     // Division / remainder are very complicated, so split out there tests here.
     CHECK("100'sd99999999999"_si / "-120'sd987654321"_si == SVInt(-101));
     CHECK("100'sd99999999999"_si % "120'sd987654321"_si == SVInt(246913578));
-    CHECK((SVInt(64, (uint64_t)-7, true) % SVInt(64, 3, true)) == (uint64_t)-1);
+    CHECK((SVInt(64, (uint64_t)-7, true) % SVInt(64, 3, true)) == -1);
 
     CHECK_THAT("100"_si / "0"_si, exactlyEquals("32'dx"_si));
     CHECK_THAT("100"_si % "0"_si, exactlyEquals("32'dx"_si));
