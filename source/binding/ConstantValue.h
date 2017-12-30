@@ -22,9 +22,9 @@ public:
     ConstantValue() {}
     ConstantValue(nullptr_t) {}
 
-    ConstantValue(const Type& type, const SVInt& integer) : type(&type), value(integer) {}
-    ConstantValue(const Type& type, SVInt&& integer) : type(&type), value(std::move(integer)) {}
-    ConstantValue(const Type& type, double real) : type(&type), value(real) {}
+    ConstantValue(const SVInt& integer) : value(integer) {}
+    ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
+    ConstantValue(double real) : value(real) {}
 
     ConstantValue(const ConstantValue& other) = default;
     ConstantValue(ConstantValue&& other) noexcept = default;
@@ -40,8 +40,6 @@ public:
     const SVInt& integer() const { return std::get<1>(value); }
     double real() const { return std::get<2>(value); }
 
-    const Type& getType() const { return *type; }
-
     /// Tries to interpret the constant value as an integer, with no unknown bits,
     /// and which fits in the given number of bits. If it does, the value is returned.
     /// Otherwise, a diagnostic is issued.
@@ -51,7 +49,6 @@ public:
     static const ConstantValue Invalid;
 
 private:
-    const Type* type;
     std::variant<std::monostate, SVInt, double> value;
 };
 

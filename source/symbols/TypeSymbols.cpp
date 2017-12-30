@@ -392,7 +392,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     for (auto member : syntax.members) {
         ConstantValue value;
         if (!member->initializer)
-            value = { *resultType, current };
+            value = current;
         else {
             // TODO: conversion? range / overflow checking? non-constant?
             value = compilation.evaluateConstant(member->initializer->expr, *resultType);

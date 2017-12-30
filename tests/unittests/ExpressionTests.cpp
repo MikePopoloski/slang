@@ -45,7 +45,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
 
     // Initialize `i` to 1.
     EvalContext context;
-    auto i = context.createLocal(&local, { compilation.getIntType(), SVInt(1) });
+    auto i = context.createLocal(&local, SVInt(1));
 
     // Evaluate the expression tree.
     bound.eval(context);

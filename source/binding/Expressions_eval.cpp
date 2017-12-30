@@ -43,11 +43,11 @@ ConstantValue IntegerLiteral::eval(EvalContext&) const {
     // TODO: truncation?
     if (width > result.getBitWidth())
         result = extend(result, width, type->as<IntegralType>().isSigned);
-    return { *type, result };
+    return result;
 }
 
 ConstantValue RealLiteral::eval(EvalContext&) const {
-    return { *type, value };
+    return value;
 }
 
 ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
@@ -55,14 +55,14 @@ ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
     bool isSigned = type->as<IntegralType>().isSigned;
 
     switch (value.value) {
-        case 0: return { *type, SVInt(width, 0, isSigned) };
+        case 0: return SVInt(width, 0, isSigned);
         case 1: {
             SVInt tmp(width, 0, isSigned);
             tmp.setAllOnes();
-            return { *type, tmp };
+            return tmp;
         }
-        case logic_t::X_VALUE: return { *type, SVInt::createFillX(width, isSigned) };
-        case logic_t::Z_VALUE: return { *type, SVInt::createFillZ(width, isSigned) };
+        case logic_t::X_VALUE: return SVInt::createFillX(width, isSigned);
+        case logic_t::Z_VALUE: return SVInt::createFillZ(width, isSigned);
         default: THROW_UNREACHABLE;
     }
 }
@@ -80,7 +80,7 @@ ConstantValue ParameterRefExpression::eval(EvalContext&) const {
 ConstantValue UnaryExpression::eval(EvalContext& context) const {
     SVInt v = operand().eval(context).integer();
 
-#define OP(k, v) case UnaryOperator::k: return { *type, v };
+#define OP(k, v) case UnaryOperator::k: return v;
     switch (op) {
         OP(Plus, v);
         OP(Minus, -v);
@@ -106,8 +106,8 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
     if (isAssignment())
         lvalue = context.findLocal(&((const VariableRefExpression&)left()).symbol);
 
-#define OP(k, v) case BinaryOperator::k: return { *type, v }
-#define ASSIGN(k, v) case BinaryOperator::k: ASSERT(lvalue); *lvalue = { *type, v }; return *lvalue
+#define OP(k, v) case BinaryOperator::k: return v
+#define ASSIGN(k, v) case BinaryOperator::k: ASSERT(lvalue); *lvalue = v; return *lvalue
     switch (op) {
         OP(Add, l + r);
         OP(Subtract, l - r);
@@ -165,13 +165,13 @@ ConstantValue ConditionalExpression::eval(EvalContext& context) const {
         // do strange combination operation
         SVInt l = left().eval(context).integer();
         SVInt r = right().eval(context).integer();
-        return { *type, SVInt::conditional(cond, l, r) };
+        return SVInt::conditional(cond, l, r);
     }
     else if (pred) {
-        return { *type, left().eval(context).integer() };
+        return left().eval(context);
     }
     else {
-        return { *type, right().eval(context).integer() };
+        return right().eval(context);
     }
 }
 
@@ -186,7 +186,7 @@ ConstantValue SelectExpression::eval(EvalContext& context) const {
         // If any part of an address is unknown, then the whole thing returns
         // 'x; let's handle this here so everywhere else we can assume the inputs
         // are normal numbers
-        return { *type, SVInt::createFillX((uint16_t)type->getBitWidth(), false) };
+        return SVInt::createFillX((uint16_t)type->getBitWidth(), false);
     }
 
     // SVInt uses little endian ranges starting from zero; we need to translate from the
@@ -197,22 +197,22 @@ ConstantValue SelectExpression::eval(EvalContext& context) const {
 
     switch (kind) {
         case SyntaxKind::BitSelect: {
-            return { *type, value.bitSelect(actualMsb, actualMsb) };
+            return value.bitSelect(actualMsb, actualMsb);
         }
         case SyntaxKind::SimpleRangeSelect: {
             int16_t actualLsb = int16_t(lsbOrWidth.as<int>().value() - range.lower());
             if (!range.isLittleEndian())
                 actualLsb = int16_t(range.width() - (uint32_t)actualLsb - 1);
 
-            return { *type, value.bitSelect(actualLsb, actualMsb) };
+            return value.bitSelect(actualLsb, actualMsb);
         }
         case SyntaxKind::AscendingRangeSelect: {
             int16_t width = lsbOrWidth.as<int16_t>().value();
-            return { *type, value.bitSelect(actualMsb, actualMsb + width) };
+            return value.bitSelect(actualMsb, actualMsb + width);
         }
         case SyntaxKind::DescendingRangeSelect: {
             int16_t width = lsbOrWidth.as<int16_t>().value();
-            return { *type, value.bitSelect(actualMsb - width, actualMsb) };
+            return value.bitSelect(actualMsb - width, actualMsb);
         }
         default:
             THROW_UNREACHABLE;
@@ -229,7 +229,7 @@ ConstantValue ConcatenationExpression::eval(EvalContext& context) const {
     //  case SyntaxKind::ConcatenationExpression: return concatenate(values);
     //}
 
-    return { *type, concatenate(values) };
+    return concatenate(values);
 }
 
 ConstantValue CallExpression::eval(EvalContext& context) const {
@@ -242,7 +242,7 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
     if (subroutine.systemFunctionKind != SystemFunction::Unknown) {
         switch (subroutine.systemFunctionKind) {
             case SystemFunction::Unknown: break;
-            case SystemFunction::clog2: return { *type, SVInt(clog2(args[0].integer())) };
+            case SystemFunction::clog2: return SVInt(clog2(args[0].integer()));
             case SystemFunction::bits:
             case SystemFunction::low:
             case SystemFunction::high:
@@ -254,13 +254,13 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
                 const auto& argType = arguments()[0]->type->as<IntegralType>();
                 ConstantRange range = argType.getBitVectorRange();
                 switch (subroutine.systemFunctionKind) {
-                    case SystemFunction::bits:  return { *type, SVInt(argType.bitWidth) };
-                    case SystemFunction::low:   return { *type, SVInt(range.lower()) };
-                    case SystemFunction::high:  return { *type, SVInt(range.upper()) };
-                    case SystemFunction::left:  return { *type, SVInt(range.left) };
-                    case SystemFunction::right: return { *type, SVInt(range.right) };
-                    case SystemFunction::size:  return { *type, SVInt(argType.bitWidth) };
-                    case SystemFunction::increment: return { *type, SVInt(range.isLittleEndian() ? 1 : -1) };
+                    case SystemFunction::bits:  return SVInt(argType.bitWidth);
+                    case SystemFunction::low:   return SVInt(range.lower());
+                    case SystemFunction::high:  return SVInt(range.upper());
+                    case SystemFunction::left:  return SVInt(range.left);
+                    case SystemFunction::right: return SVInt(range.right);
+                    case SystemFunction::size:  return SVInt(argType.bitWidth);
+                    case SystemFunction::increment: return SVInt(range.isLittleEndian() ? 1 : -1);
                     default: THROW_UNREACHABLE;
                 }
                 break;

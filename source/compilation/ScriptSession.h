@@ -41,7 +41,7 @@ public:
                     if (symbol->initializer)
                         initial = symbol->initializer->eval(evalContext);
                     else
-                        initial = { *symbol->type, SVInt(0) };
+                        initial = SVInt(0);
 
                     evalContext.createLocal(symbol, initial);
                 }
