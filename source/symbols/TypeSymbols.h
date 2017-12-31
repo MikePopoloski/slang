@@ -25,7 +25,7 @@ public:
     /// does not have a statically known size.
     uint32_t getBitWidth() const;
 
-    /// Indicates whether this is an integral type, which include all scalar types,
+    /// Indicates whether this is an integral type, which includes all scalar types,
     /// built-in integer types, packed arrays, packed structures, packed unions, enums, and time types.
     bool isIntegral() const;
 
@@ -35,6 +35,9 @@ public:
     /// Indicates whether this is a singular type, which is the opposite of an aggregate type (that is,
     /// all types except unpacked structs, unions, and arrays).
     bool isSingular() const { return !isAggregate(); }
+
+    /// Indicates whether this is a numeric type, which includes all integral and floating types.
+    bool isNumeric() const { return isIntegral() || isFloating(); }
 
     /// Indicates whether this is an enum type.
     bool isEnum() const { return kind == SymbolKind::EnumType; }

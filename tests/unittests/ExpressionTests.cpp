@@ -101,12 +101,14 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     CHECK(bound.type->getBitWidth() == 20);
     const Expression& rhs = bound.as<BinaryExpression>().right();
     CHECK(rhs.type->getBitWidth() == 20);
+
     const Expression& rrhs = rhs.as<BinaryExpression>().right();
     CHECK(rrhs.type->getBitWidth() == 1);
+
     const Expression& op1 = rrhs.as<BinaryExpression>().left();
     const Expression& shiftExpr = op1.as<BinaryExpression>().left();
-    CHECK(shiftExpr.type->getBitWidth() == 17);
-    CHECK(op1.type->getBitWidth() == 17);
+    CHECK(shiftExpr.type->getBitWidth() == 21);
+    CHECK(op1.type->getBitWidth() == 21);
     const Expression& op2 = rrhs.as<BinaryExpression>().right();
     CHECK(op2.type->getBitWidth() == 21);
 }
@@ -126,22 +128,33 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     scope.addMember(local);
     const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
     REQUIRE(syntax.diagnostics().empty());
-
     CHECK(bound.type->getBitWidth() == 20);
+
     const Expression& rhs = bound.as<BinaryExpression>().right();
     CHECK(rhs.type->getBitWidth() == 20);
+
     const Expression& rrhs = rhs.as<BinaryExpression>().right();
     CHECK(rrhs.type->getBitWidth() == 1);
+
     const Expression& op1 = rrhs.as<BinaryExpression>().left();
-    const Expression& shiftExpr = op1.as<BinaryExpression>().left();
-    CHECK(shiftExpr.type->getBitWidth() == 64);
-    CHECK(shiftExpr.type->isFloating());
+    const ConversionExpression& convExpr = op1.as<BinaryExpression>().left().as<ConversionExpression>();
+    CHECK(convExpr.type->getBitWidth() == 64);
+    CHECK(convExpr.type->isFloating());
+    CHECK(convExpr.conversionKind == ConversionKind::IntToFloat);
+
+    const Expression& shiftExpr = convExpr.operand();
+    CHECK(shiftExpr.type->getBitWidth() == 17);
+    CHECK(shiftExpr.type->isIntegral());
+
     const Expression& rshiftOp = shiftExpr.as<BinaryExpression>().right();
     CHECK(rshiftOp.type->getBitWidth() == 1);
+
     const Expression& lshiftOp = shiftExpr.as<BinaryExpression>().left();
     CHECK(lshiftOp.type->getBitWidth() == 17);
     CHECK(op1.type->getBitWidth() == 64);
     CHECK(op1.type->isFloating());
+
     const Expression& op2 = rrhs.as<BinaryExpression>().right();
-    CHECK(op2.type->getBitWidth() == 21);
+    CHECK(op2.type->getBitWidth() == 64);
+    CHECK(op2.type->isFloating());
 }

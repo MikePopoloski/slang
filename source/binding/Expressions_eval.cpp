@@ -32,6 +32,7 @@ ConstantValue Expression::eval(EvalContext& context) const {
         case ExpressionKind::Select: return as<SelectExpression>().eval(context);
         case ExpressionKind::Concatenation: return as<ConcatenationExpression>().eval(context);
         case ExpressionKind::Call: return as<CallExpression>().eval(context);
+        case ExpressionKind::Conversion: return as<ConversionExpression>().eval(context);
     }
     THROW_UNREACHABLE;
 }
@@ -282,6 +283,18 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
 
     // Pop the frame and return the value
     return context.popFrame();
+}
+
+ConstantValue ConversionExpression::eval(EvalContext& context) const {
+    ConstantValue value = operand().eval(context);
+    switch (conversionKind) {
+        case ConversionKind::IntExtension:
+            ASSERT(value.isInteger() && value.integer().getBitWidth() == operand().type->getBitWidth());
+            return extend(value.integer(), (uint16_t)type->getBitWidth(), type->as<IntegralType>().isSigned);
+
+        default:
+            THROW_UNREACHABLE;
+    }
 }
 
 }

@@ -273,8 +273,7 @@ Expression& Compilation::badExpression(const Expression* expr) {
 
 const Expression& Compilation::bindExpression(const ExpressionSyntax& syntax, const Scope& scope) {
     Expression& expr = Expression::fromSyntax(*this, syntax, scope);
-    expr.propagateType(*expr.type);
-    return expr;
+    return Expression::propagateAndFold(*this, expr, *expr.type);
 }
 
 const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionSyntax& rhs,
@@ -301,14 +300,12 @@ const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionS
             else
                 type = &getShortRealType();
         }
-        expr.propagateType(*type);
     }
     else {
         // TODO: truncation
-        expr.propagateType(*expr.type);
     }
 
-    return expr;
+    return Expression::propagateAndFold(*this, expr, *type);
 }
 
 ConstantValue Compilation::evaluateConstant(const ExpressionSyntax& expr, const Scope& scope) {

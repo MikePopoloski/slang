@@ -26,7 +26,8 @@ enum class ExpressionKind {
     ConditionalOp,
     Concatenation,
     Select,
-    Call
+    Call,
+    Conversion
 };
 
 enum class UnaryOperator {
@@ -87,6 +88,12 @@ enum class BinaryOperator {
     ArithmeticRightShiftAssignment,
 };
 
+enum class ConversionKind {
+    IntToFloat,
+    IntExtension,
+    FloatExtension
+};
+
 UnaryOperator getUnaryOperator(SyntaxKind kind);
 BinaryOperator getBinaryOperator(SyntaxKind kind);
 
@@ -108,10 +115,6 @@ public:
     /// Indicates whether the expression evaluates to an lvalue.
     bool isLValue() const;
 
-    /// Propagates the type of the expression down to its children,
-    /// according to the rules laid out in the standard.
-    void propagateType(const Type& newType);
-
     /// Evaluates the expression under the given evaluation context.
     ConstantValue eval(EvalContext& context) const;
 
@@ -131,6 +134,7 @@ public:
     T& as() { return *static_cast<T*>(this); }
 
     static Expression& fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const Scope& scope);
+    static Expression& propagateAndFold(Compilation& compilation, Expression& expr, const Type& newType);
 
 protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
@@ -139,6 +143,14 @@ protected:
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const Scope& scope);
     static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const Scope& scope);
     static Expression& bindSelectExpression(Compilation& compilation, const ExpressionSyntax& syntax, Expression& expr, const SelectorSyntax& selector, const Scope& scope);
+    static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type,
+                               Expression& expr);
+
+    // Perform type propagation and constant folding of a context-determined subexpression.
+    static void contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType);
+
+    // Perform type propagation and constant folding of a self-determined subexpression.
+    static void selfDetermined(Compilation& compilation, Expression*& expr);
 };
 
 /// Represents an invalid expression, which is usually generated and inserted
@@ -161,11 +173,11 @@ public:
 
     SVInt getValue() const { return valueStorage; }
 
-    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax);
+    static Expression& propagateAndFold(Compilation& compilation, IntegerLiteral& expr, const Type& newType);
 
 private:
     SVIntStorage valueStorage;
@@ -179,10 +191,10 @@ public:
 
     double getValue() const { return value; }
 
-    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& propagateAndFold(Compilation& compilation, RealLiteral& expr, const Type& newType);
 
 private:
     double value;
@@ -196,10 +208,10 @@ public:
 
     logic_t getValue() const { return value; }
 
-    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& propagateAndFold(Compilation& compilation, UnbasedUnsizedIntegerLiteral& expr, const Type& newType);
 
 private:
     logic_t value;
@@ -214,6 +226,8 @@ public:
         Expression(ExpressionKind::VariableRef, *symbol.type, sourceRange), symbol(symbol) {}
 
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& propagateAndFold(Compilation& compilation, VariableRefExpression& expr, const Type& newType);
 };
 
 /// Represents an expression that references a parameter.
@@ -225,6 +239,8 @@ public:
         Expression(ExpressionKind::ParameterRef, symbol.getType(), sourceRange), symbol(symbol) {}
 
     ConstantValue eval(EvalContext& context) const;
+
+    static Expression& propagateAndFold(Compilation& compilation, ParameterRefExpression& expr, const Type& newType);
 };
 
 /// Represents a unary operator expression.
@@ -239,11 +255,12 @@ public:
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }
 
-    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
                                   const Scope& scope);
+
+    static Expression& propagateAndFold(Compilation& compilation, UnaryExpression& expr, const Type& newType);
 
 private:
     Expression* operand_;
@@ -266,13 +283,14 @@ public:
     const Expression& right() const { return *right_; }
     Expression& right() { return *right_; }
 
-    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const Scope& scope);
     static Expression& fromSyntax(Compilation& compilation, const MultipleConcatenationExpressionSyntax& syntax,
                                   const Scope& scope);
+
+    static Expression& propagateAndFold(Compilation& compilation, BinaryExpression& expr, const Type& newType);
 
 private:
     Expression* left_;
@@ -296,11 +314,12 @@ public:
     const Expression& right() const { return *right_; }
     Expression& right() { return *right_; }
 
-    void propagateType(const Type& newType);
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const ConditionalExpressionSyntax& syntax,
                                   const Scope& scope);
+
+    static Expression& propagateAndFold(Compilation& compilation, ConditionalExpression& expr, const Type& newType);
 
 private:
     Expression* pred_;
@@ -350,6 +369,8 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const ConcatenationExpressionSyntax& syntax,
                                   const Scope& scope);
 
+    static Expression& propagateAndFold(Compilation& compilation, ConcatenationExpression& expr, const Type& newType);
+
 private:
     span<const Expression*> operands_;
 };
@@ -371,8 +392,31 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
                                   const Scope& scope);
 
+    static Expression& propagateAndFold(Compilation& compilation, CallExpression& expr, const Type& newType);
+
 private:
     span<const Expression*> arguments_;
+};
+
+/// Represents a type conversion expression.
+class ConversionExpression : public Expression {
+public:
+    ConversionKind conversionKind;
+
+    ConversionExpression(ConversionKind conversionKind, const Type& type, Expression& operand,
+                         SourceRange sourceRange) :
+        Expression(ExpressionKind::Conversion, type, sourceRange),
+        conversionKind(conversionKind), operand_(&operand) {}
+
+    const Expression& operand() const { return *operand_; }
+    Expression& operand() { return *operand_; }
+
+    ConstantValue eval(EvalContext& context) const;
+
+    static Expression& propagateAndFold(Compilation& compilation, ConversionExpression& expr, const Type& newType);
+
+private:
+    Expression* operand_;
 };
 
 }

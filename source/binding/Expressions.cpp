@@ -203,7 +203,6 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
 Expression& Expression::bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const Scope& scope) {
     Expression& expr = Expression::fromSyntax(compilation, syntax.left, scope);
-    expr.propagateType(*expr.type);
     // TODO: null selector?
     return bindSelectExpression(compilation, syntax, expr, *syntax.select.selector, scope);
 }
@@ -243,8 +242,6 @@ Expression& Expression::bindSelectExpression(Compilation& compilation, const Exp
         default:
             THROW_UNREACHABLE;
     }
-    left->propagateType(*left->type);
-    right->propagateType(*right->type);
 
     return *compilation.emplace<SelectExpression>(
         compilation.getType((uint16_t)width, integralType.isSigned, integralType.isFourState),
@@ -254,6 +251,11 @@ Expression& Expression::bindSelectExpression(Compilation& compilation, const Exp
         *right,
         syntax.sourceRange()
     );
+}
+
+Expression& Expression::convert(Compilation& compilation, ConversionKind conversionKind, const Type& type,
+                                Expression& expr) {
+    return *compilation.emplace<ConversionExpression>(conversionKind, type, expr, expr.sourceRange);
 }
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax) {
@@ -311,7 +313,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryLogicalNotExpression:
             // Supported for both integral and real types.
-            good = type->isIntegral() || type->isFloating();
+            good = type->isNumeric();
             break;
         case SyntaxKind::UnaryBitwiseNotExpression:
         case SyntaxKind::UnaryBitwiseAndExpression:
@@ -321,7 +323,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
         case SyntaxKind::UnaryBitwiseNorExpression:
         case SyntaxKind::UnaryBitwiseXnorExpression:
             // Supported for integral only. Result type is always a single bit.
-            good = type->isIntegral();
+            good = type->isNumeric();
             result->type = &compilation.getLogicType();
             break;
         default:
@@ -342,11 +344,6 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
                                          const Scope& scope) {
     Expression& lhs = Expression::fromSyntax(compilation, syntax.left, scope);
     Expression& rhs = Expression::fromSyntax(compilation, syntax.right, scope);
-
-    // TODO: reexamine this
-    lhs.propagateType(*lhs.type);
-    rhs.propagateType(*rhs.type);
-
     const Type* lt = lhs.type;
     const Type* rt = rhs.type;
 
@@ -359,8 +356,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         return compilation.badExpression(result);
 
     bool bothIntegral = lt->isIntegral() && rt->isIntegral();
-    bool bothIntOrFloat = (lt->isIntegral() || lt->isFloating()) &&
-                          (rt->isIntegral() || rt->isFloating());
+    bool bothNumeric = lt->isNumeric() && rt->isNumeric();
 
     bool good;
     switch (syntax.kind) {
@@ -370,7 +366,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::AddAssignmentExpression:
         case SyntaxKind::SubtractAssignmentExpression:
         case SyntaxKind::MultiplyAssignmentExpression:
-            good = bothIntOrFloat;
+            good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, rt, false);
             break;
         case SyntaxKind::BinaryAndExpression:
@@ -395,7 +391,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::DivideAssignmentExpression:
         case SyntaxKind::PowerExpression:
             // Result is forced to 4-state because result can be X.
-            good = bothIntOrFloat;
+            good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, rt, true);
             break;
         case SyntaxKind::ModExpression:
@@ -413,7 +409,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::LogicalImplicationExpression:
         case SyntaxKind::LogicalEquivalenceExpression:
             // Result is always a single bit.
-            good = bothIntOrFloat;
+            good = bothNumeric;
             result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
             break;
         case SyntaxKind::EqualityExpression:
@@ -427,7 +423,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
             // - both classes or null, and assignment compatible
             // - both chandles or null
             // - both aggregates and equivalent
-            if (bothIntOrFloat) {
+            if (bothNumeric) {
                 good = true;
                 result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
             }
@@ -498,10 +494,11 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
                 else
                     rt = &compilation.getShortRealType();
             }
-            rhs.propagateType(*rt);
+            // TODO: return value?
+            Expression::propagateAndFold(compilation, rhs, *rt);
         }
         else {
-            rhs.propagateType(*rhs.type);
+            Expression::propagateAndFold(compilation, rhs, *rhs.type);
         }
         result->type = lhs.type;
     }
@@ -546,7 +543,6 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     for (auto argSyntax : syntax.expressions) {
         // All operands are self-determined.
         Expression& arg = Expression::fromSyntax(compilation, *argSyntax, scope);
-        arg.propagateType(*arg.type);
         buffer.append(&arg);
 
         const Type& type = *arg.type;
@@ -630,66 +626,96 @@ bool BinaryExpression::isAssignment() const {
     }
 }
 
-void Expression::propagateType(const Type& newType) {
-    // SystemVerilog rules for width propagation are subtle and very specific
-    // to each individual operator type. They also mainly only apply to
-    // expressions of integral type (which will be the majority in most designs).
-    switch (kind) {
+Expression& Expression::propagateAndFold(Compilation& compilation, Expression& expr, const Type& newType) {
+    if (expr.type->isError() || newType.isError())
+        return expr;
+
+    // If we're propagating a floating type down to a non-floating type, that operand
+    // will instead be converted in a self-determined context.
+    if (newType.isFloating() && !expr.type->isFloating() && expr.kind != ExpressionKind::Conversion)
+        return convert(compilation, ConversionKind::IntToFloat, newType, expr);
+
+    switch (expr.kind) {
         case ExpressionKind::Invalid:
-            return;
+            return expr;
         case ExpressionKind::IntegerLiteral:
-            as<IntegerLiteral>().propagateType(newType);
-            break;
+            return IntegerLiteral::propagateAndFold(compilation, expr.as<IntegerLiteral>(), newType);
         case ExpressionKind::RealLiteral:
-            as<RealLiteral>().propagateType(newType);
-            break;
+            return RealLiteral::propagateAndFold(compilation, expr.as<RealLiteral>(), newType);
         case ExpressionKind::UnbasedUnsizedIntegerLiteral:
-            as<UnbasedUnsizedIntegerLiteral>().propagateType(newType);
-            break;
+            return UnbasedUnsizedIntegerLiteral::propagateAndFold(
+                compilation,
+                expr.as<UnbasedUnsizedIntegerLiteral>(),
+                newType
+            );
         case ExpressionKind::Call:
         case ExpressionKind::VariableRef:
         case ExpressionKind::ParameterRef:
         case ExpressionKind::Concatenation:
         case ExpressionKind::Select:
-            // all operands are self determined
-            type = &newType;
-            break;
+            return expr;
         case ExpressionKind::UnaryOp:
-            as<UnaryExpression>().propagateType(newType);
-            break;
+            return UnaryExpression::propagateAndFold(compilation, expr.as<UnaryExpression>(), newType);
         case ExpressionKind::BinaryOp:
-            as<BinaryExpression>().propagateType(newType);
-            break;
+            return BinaryExpression::propagateAndFold(compilation, expr.as<BinaryExpression>(), newType);
         case ExpressionKind::ConditionalOp:
-            as<ConditionalExpression>().propagateType(newType);
-            break;
+            return ConditionalExpression::propagateAndFold(compilation, expr.as<ConditionalExpression>(), newType);
+        case ExpressionKind::Conversion:
+            return ConversionExpression::propagateAndFold(compilation, expr.as<ConversionExpression>(), newType);
     }
+    THROW_UNREACHABLE;
 }
 
-void IntegerLiteral::propagateType(const Type& newType) {
-    type = &newType;
+void Expression::contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType) {
+    expr = &Expression::propagateAndFold(compilation, *expr, newType);
 }
 
-void RealLiteral::propagateType(const Type& newType) {
-    type = &newType;
+void Expression::selfDetermined(Compilation& compilation, Expression*& expr) {
+    expr = &Expression::propagateAndFold(compilation, *expr, *expr->type);
 }
 
-void UnbasedUnsizedIntegerLiteral::propagateType(const Type& newType) {
-    type = &newType;
+Expression& IntegerLiteral::propagateAndFold(Compilation& compilation, IntegerLiteral& expr,
+                                             const Type& newType) {
+    ASSERT(newType.isIntegral());
+    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
+
+    if (newType.getBitWidth() != expr.type->getBitWidth())
+        return convert(compilation, ConversionKind::IntExtension, newType, expr);
+
+    expr.type = &newType;
+    return expr;
 }
 
-void UnaryExpression::propagateType(const Type& newType) {
-    // If a type of real is propagated to an expression of a non-real type, the type of the
-    // direct sub-expression is changed, but it is not propagated any further down.
-    bool doNotPropagateRealDownToNonReal = newType.isFloating() && !type->isFloating();
+Expression& RealLiteral::propagateAndFold(Compilation& compilation, RealLiteral& expr,
+                                          const Type& newType) {
+    ASSERT(newType.isFloating());
+    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
 
-    switch (op) {
+    if (newType.getBitWidth() != expr.type->getBitWidth())
+        return convert(compilation, ConversionKind::FloatExtension, newType, expr);
+
+    expr.type = &newType;
+    return expr;
+}
+
+Expression& UnbasedUnsizedIntegerLiteral::propagateAndFold(Compilation&,
+                                                           UnbasedUnsizedIntegerLiteral& expr,
+                                                           const Type& newType) {
+    ASSERT(newType.isIntegral());
+    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
+
+    expr.type = &newType;
+    return expr;
+}
+
+Expression& UnaryExpression::propagateAndFold(Compilation& compilation, UnaryExpression& expr,
+                                              const Type& newType) {
+    switch (expr.op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
-            type = &newType;
-            if (!doNotPropagateRealDownToNonReal)
-                operand().propagateType(newType);
+            expr.type = &newType;
+            contextDetermined(compilation, expr.operand_, newType);
             break;
         case UnaryOperator::BitwiseAnd:
         case UnaryOperator::BitwiseOr:
@@ -698,17 +724,16 @@ void UnaryExpression::propagateType(const Type& newType) {
         case UnaryOperator::BitwiseNor:
         case UnaryOperator::BitwiseXnor:
         case UnaryOperator::LogicalNot:
-            // Type is already set (always 1 bit) and operand is self determined
+            // Type is already set (always 1 bit).
+            selfDetermined(compilation, expr.operand_);
             break;
     }
+    return expr;
 }
 
-void BinaryExpression::propagateType(const Type& newType) {
-    // If a type of real is propagated to an expression of a non-real type, the type of the
-    // direct sub-expression is changed, but it is not propagated any further down.
-    bool doNotPropagateRealDownToNonReal = newType.isFloating() && !type->isFloating();
-
-    switch (op) {
+Expression& BinaryExpression::propagateAndFold(Compilation& compilation, BinaryExpression& expr,
+                                               const Type& newType) {
+    switch (expr.op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
         case BinaryOperator::Multiply:
@@ -718,11 +743,9 @@ void BinaryExpression::propagateType(const Type& newType) {
         case BinaryOperator::BinaryOr:
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
-            type = &newType;
-            if (!doNotPropagateRealDownToNonReal) {
-                left().propagateType(newType);
-                right().propagateType(newType);
-            }
+            expr.type = &newType;
+            contextDetermined(compilation, expr.left_, newType);
+            contextDetermined(compilation, expr.right_, newType);
             break;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
@@ -733,26 +756,32 @@ void BinaryExpression::propagateType(const Type& newType) {
         case BinaryOperator::LessThanEqual:
         case BinaryOperator::LessThan:
         case BinaryOperator::WildcardEquality:
-        case BinaryOperator::WildcardInequality:
-            // Relational expressions are essentially self-detetermined, the logic
-            // for how the left and right operands effect each other is handled
-            // at creation time.
+        case BinaryOperator::WildcardInequality: {
+            // Relational expressions affect each other but don't affect the result type,
+            // which has already been set at 1 bit. Figure out which type to propagate.
+            // TODO: handle non-integer
+            auto nt = binaryOperatorType(compilation, expr.left().type, expr.right().type, false);
+            contextDetermined(compilation, expr.left_, *nt);
+            contextDetermined(compilation, expr.right_, *nt);
             break;
+        }
         case BinaryOperator::LogicalAnd:
         case BinaryOperator::LogicalOr:
         case BinaryOperator::LogicalImplication:
         case BinaryOperator::LogicalEquivalence:
-            // Type is already set (always 1 bit) and operands are self determined
+            // Type is already set (always 1 bit).
+            selfDetermined(compilation, expr.left_);
+            selfDetermined(compilation, expr.right_);
             break;
         case BinaryOperator::LogicalShiftLeft:
         case BinaryOperator::LogicalShiftRight:
         case BinaryOperator::ArithmeticShiftLeft:
         case BinaryOperator::ArithmeticShiftRight:
         case BinaryOperator::Power:
-            // Only the left hand side gets propagated; the rhs is self determined
-            type = &newType;
-            if (!doNotPropagateRealDownToNonReal)
-                left().propagateType(newType);
+            // Only the left hand side gets propagated; the rhs is self determined.
+            expr.type = &newType;
+            contextDetermined(compilation, expr.left_, newType);
+            selfDetermined(compilation, expr.right_);
             break;
         case BinaryOperator::Assignment:
         case BinaryOperator::AddAssignment:
@@ -770,23 +799,28 @@ void BinaryExpression::propagateType(const Type& newType) {
             // Essentially self determined, logic handled at creation time.
             break;
         case BinaryOperator::Replication:
-            // all operands are self determined
-            type = &newType;
+            expr.type = &newType;
             break;
     }
+    return expr;
 }
 
-void ConditionalExpression::propagateType(const Type& newType) {
-    // If a type of real is propagated to an expression of a non-real type, the type of the
-    // direct sub-expression is changed, but it is not propagated any further down.
-    bool doNotPropagateRealDownToNonReal = newType.isFloating() && !type->isFloating();
-
+Expression& ConditionalExpression::propagateAndFold(Compilation& compilation, ConditionalExpression& expr,
+                                                    const Type& newType) {
     // predicate is self determined
-    type = &newType;
-    if (!doNotPropagateRealDownToNonReal) {
-        left().propagateType(newType);
-        right().propagateType(newType);
-    }
+    expr.type = &newType;
+    selfDetermined(compilation, expr.pred_);
+    contextDetermined(compilation, expr.left_, newType);
+    contextDetermined(compilation, expr.right_, newType);
+    return expr;
+}
+
+Expression& ConversionExpression::propagateAndFold(Compilation& compilation, ConversionExpression& expr,
+                                                   const Type& newType) {
+    // predicate is self determined
+    expr.type = &newType;
+    selfDetermined(compilation, expr.operand_);
+    return expr;
 }
 
 UnaryOperator getUnaryOperator(SyntaxKind kind) {

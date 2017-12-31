@@ -160,7 +160,7 @@ TEST_CASE(descr, "[eval]") { \
     auto res = SVInt::fromString(result); \
     /* uncomment for diagonstics: */ \
     /* printf("%s = %s\n", value.toString(LiteralBase::Binary).c_str(), res.toString(LiteralBase::Binary).c_str()); */ \
-    CHECK(exactlyEqual(value, res)); \
+    CHECK_THAT(value, exactlyEquals(res)); \
 }
 
 EVAL_TEST("lshl", "4 << 2", 16);
