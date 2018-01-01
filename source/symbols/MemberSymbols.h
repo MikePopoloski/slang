@@ -29,6 +29,8 @@ public:
     TransparentMemberSymbol(const Symbol& wrapped_) :
         Symbol(SymbolKind::TransparentMember, wrapped_.name, wrapped_.location),
         wrapped(wrapped_) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }
 };
 
 /// Represents an explicit import from a package. This symbol type is
@@ -45,6 +47,8 @@ public:
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ExplicitImport; }
 
 private:
     mutable const PackageSymbol* package_ = nullptr;
@@ -66,6 +70,8 @@ public:
 
     const PackageSymbol* getPackage() const;
 
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::WildcardImport; }
+
 private:
     mutable optional<const PackageSymbol*> package;
 };
@@ -84,6 +90,8 @@ public:
 
     static std::tuple<const Type*, ConstantValue> evaluate(const DataTypeSyntax& type,
                                                            const ExpressionSyntax& expr, const Scope& scope);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 
     void setDeclaredType(const DataTypeSyntax& syntax) { declaredType = &syntax; type = syntax; }
     const DataTypeSyntax* getDeclaredType() const { return declaredType; }
@@ -132,6 +140,10 @@ public:
 
     static VariableSymbol& fromSyntax(Compilation& compilation, const ForVariableDeclarationSyntax& syntax);
 
+    static bool isKind(SymbolKind kind) {
+        return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument;
+    }
+
 protected:
     VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
@@ -155,6 +167,8 @@ public:
         VariableSymbol(SymbolKind::FormalArgument, name, loc, VariableLifetime::Automatic,
                        direction == FormalArgumentDirection::ConstRef),
         direction(direction) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
 };
 
 /// Represents a subroutine (task or function).
@@ -183,6 +197,8 @@ public:
         systemFunctionKind(systemFunction) {}
 
     static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 
     bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
 };

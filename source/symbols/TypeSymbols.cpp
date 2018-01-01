@@ -91,17 +91,7 @@ uint32_t Type::getBitWidth() const {
 }
 
 bool Type::isIntegral() const {
-    switch (kind) {
-        case SymbolKind::BuiltInIntegerType:
-        case SymbolKind::VectorType:
-        case SymbolKind::EnumType:
-        case SymbolKind::PackedArrayType:
-        case SymbolKind::PackedStructType:
-        case SymbolKind::PackedUnionType:
-            return true;
-        default:
-            return false;
-    }
+    return IntegralType::isKind(kind);
 }
 
 bool Type::isAggregate() const {
@@ -253,6 +243,20 @@ IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc
     Type(kind, name, loc),
     bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_)
 {
+}
+
+bool IntegralType::isKind(SymbolKind kind) {
+    switch (kind) {
+        case SymbolKind::BuiltInIntegerType:
+        case SymbolKind::VectorType:
+        case SymbolKind::EnumType:
+        case SymbolKind::PackedArrayType:
+        case SymbolKind::PackedStructType:
+        case SymbolKind::PackedUnionType:
+            return true;
+        default:
+            return false;
+    }
 }
 
 ConstantRange IntegralType::getBitVectorRange() const {

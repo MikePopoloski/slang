@@ -81,10 +81,16 @@ public:
     const Symbol* findAncestor(SymbolKind searchKind) const;
 
     template<typename T>
-    T& as() { return *static_cast<T*>(this); }
+    T& as() {
+        ASSERT(T::isKind(kind)); 
+        return *static_cast<T*>(this);
+    }
 
     template<typename T>
-    const T& as() const { return *static_cast<const T*>(this); }
+    const T& as() const {
+        ASSERT(T::isKind(kind)); 
+        return *static_cast<const T*>(this);
+    }
 
     /// A numeric index that can be used to compare the relative ordering of symbols
     /// within a single lexical scope.

@@ -134,6 +134,8 @@ public:
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
                                   const Scope& scope);
 
+    static bool isKind(SymbolKind kind);
+
 protected:
     IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth,
                  bool isSigned, bool isFourState);
@@ -161,6 +163,8 @@ public:
 
     BuiltInIntegerType(Kind builtInKind);
     BuiltInIntegerType(Kind builtInKind, bool isSigned);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::BuiltInIntegerType; }
 };
 
 /// Vector types are single dimensional multibit ranges that represent integer values.
@@ -178,7 +182,9 @@ public:
 
     static ScalarType getScalarType(bool isFourState, bool isReg) {
         return !isFourState ? VectorType::Bit : isReg ? VectorType::Reg : VectorType::Logic;
-    }   
+    }
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::VectorType; }
 };
 
 /// Represents one of the built-in floating point types, which are used for representing real numbers.
@@ -191,6 +197,8 @@ public:
     } floatKind;
 
     explicit FloatingType(Kind floatKind);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::FloatingType; }
 };
 
 class EnumValueSymbol;
@@ -203,6 +211,7 @@ public:
     EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType, const Scope& scope);
 
     static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax, const Scope& scope);
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
         return membersOfType<EnumValueSymbol>();
@@ -226,6 +235,8 @@ public:
     ConstantRange range;
 
     PackedArrayType(const Type& elementType, ConstantRange range);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
 };
 
 /// Represents a packed structure of members.
@@ -235,6 +246,8 @@ public:
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   const Scope& scope);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedStructType; }
 };
 
 /// Represents an unpacked structure of members.
@@ -251,6 +264,8 @@ public:
 class VoidType : public Type {
 public:
     VoidType() : Type(SymbolKind::VoidType, "void", SourceLocation()) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::VoidType; }
 };
 
 /// Represents the Null type. This can be used as a literal for setting class handles and
@@ -258,18 +273,24 @@ public:
 class NullType : public Type {
 public:
     NullType() : Type(SymbolKind::NullType, "null", SourceLocation()) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::NullType; }
 };
 
 /// Represents storage for pointers passed using the DPI (a "C" compatible handle).
 class CHandleType : public Type {
 public:
     CHandleType() : Type(SymbolKind::CHandleType, "chandle", SourceLocation()) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::CHandleType; }
 };
 
 /// Represents an ASCII string type.
 class StringType : public Type {
 public:
     StringType() : Type(SymbolKind::StringType, "string", SourceLocation()) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::StringType; }
 };
 
 /// Represents a SystemVerilog event handle, which is used for synchronization between
@@ -277,6 +298,8 @@ public:
 class EventType : public Type {
 public:
     EventType() : Type(SymbolKind::EventType, "event", SourceLocation()) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::EventType; }
 };
 
 /// Represents a type alias, which is introduced via a typedef or type parameter.
@@ -288,6 +311,8 @@ class TypeAliasType : public Type {
 class ErrorType : public Type {
 public:
     ErrorType() : Type(SymbolKind::ErrorType, "", SourceLocation()) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ErrorType; }
 
     static const ErrorType Instance;
 };

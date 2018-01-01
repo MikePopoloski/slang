@@ -49,7 +49,7 @@ endmodule
 
     // Try to look up after the parameter but before the function; should fail.
     LookupResult result;
-    result.referencePoint = LookupRefPoint::before(instance.memberAt<ParameterSymbol>(0));
+    result.referencePoint = LookupRefPoint::before(instance.memberAt<TransparentMemberSymbol>(0));
     instance.lookup("SDF", result);
     CHECK(result.getResultKind() == LookupResult::NotFound);
 

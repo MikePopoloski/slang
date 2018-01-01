@@ -39,10 +39,16 @@ public:
     void eval(EvalContext& context) const;
 
     template<typename T>
-    const T& as() const { return *static_cast<const T*>(this); }
+    T& as() {
+        ASSERT(T::isKind(kind));
+        return *static_cast<T*>(this);
+    }
 
     template<typename T>
-    T& as() { return *static_cast<T*>(this); }
+    const T& as() const {
+        ASSERT(T::isKind(kind));
+        return *static_cast<const T*>(this);
+    }
 
 protected:
     explicit Statement(StatementKind kind) :
@@ -61,6 +67,8 @@ public:
     explicit InvalidStatement(const Statement* child) :
         Statement(StatementKind::Invalid), child(child) {}
 
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Invalid; }
+
     static const InvalidStatement Instance;
 };
 
@@ -74,6 +82,7 @@ public:
 
     void eval(EvalContext& context) const;
 
+    static bool isKind(StatementKind kind) { return kind == StatementKind::List; }
     static const StatementList Empty;
 };
 
@@ -86,6 +95,8 @@ public:
         Statement(StatementKind::SequentialBlock), block(block) {}
 
     void eval(EvalContext& context) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::SequentialBlock; }
 };
 
 class ReturnStatement : public Statement {
@@ -96,6 +107,8 @@ public:
         Statement(StatementKind::Return, syntax), expr(expr) {}
 
     void eval(EvalContext& context) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Return; }
 };
 
 class VariableDeclStatement : public Statement {
@@ -106,6 +119,8 @@ public:
         Statement(StatementKind::VariableDeclaration), symbol(symbol) {}
 
     void eval(EvalContext& context) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
 
 class ConditionalStatement : public Statement {
@@ -120,6 +135,8 @@ public:
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
     void eval(EvalContext& context) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::Conditional; }
 };
 
 class ForLoopStatement : public Statement {
@@ -136,6 +153,8 @@ public:
         initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
 
     void eval(EvalContext& context) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ForLoop; }
 };
 
 class ExpressionStatement : public Statement {
@@ -146,6 +165,8 @@ public:
         Statement(StatementKind::ExpressionStatement, syntax), expr(expr) {}
 
     void eval(EvalContext& context) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
 };
 
 }
