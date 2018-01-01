@@ -80,16 +80,25 @@ public:
     /// the given kind, returns this symbol.
     const Symbol* findAncestor(SymbolKind searchKind) const;
 
+    /// Determines whether this symbol also represents a scope.
+    bool isScope() const { return scopeOrNull(); }
+
     template<typename T>
-    T& as() {
-        ASSERT(T::isKind(kind)); 
-        return *static_cast<T*>(this);
+    decltype(auto) as() {
+        if constexpr (std::is_same_v<T, Scope>) {
+            const Scope* scope = scopeOrNull();
+            ASSERT(scope);
+            return *scope;
+        }
+        else {
+            ASSERT(T::isKind(kind)); 
+            return *static_cast<T*>(this);
+        }
     }
 
     template<typename T>
     const T& as() const {
-        ASSERT(T::isKind(kind)); 
-        return *static_cast<const T*>(this);
+        return const_cast<Symbol*>(this)->as<T>();
     }
 
     /// A numeric index that can be used to compare the relative ordering of symbols
@@ -99,6 +108,9 @@ public:
     /// Gets the index of the symbol within its parent scope, which can be used
     /// to determine the relative ordering of scope members.
     Index getIndex() const { return indexInScope; }
+
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
 protected:
     explicit Symbol(SymbolKind kind, string_view name, SourceLocation location) :
@@ -110,6 +122,8 @@ protected:
 
 private:
     friend class Scope;
+
+    const Scope* scopeOrNull() const;
 
     // When a symbol is first added to a scope a pointer to it will be stored here.
     // Along with that pointer, a linked list of members in the scope will be created
