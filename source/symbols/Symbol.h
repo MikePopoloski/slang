@@ -12,6 +12,7 @@
 namespace slang {
 
 class Scope;
+class Type;
 
 enum class SymbolKind {
     Unknown,
@@ -52,7 +53,6 @@ enum class SymbolKind {
     ProceduralBlock,
     SequentialBlock,
     Variable,
-    Instance,
     FormalArgument,
     Subroutine
 };
@@ -82,6 +82,15 @@ public:
 
     /// Determines whether this symbol also represents a scope.
     bool isScope() const { return scopeOrNull(); }
+
+    /// Determines whether this symbol represents a type.
+    bool isType() const;
+
+    /// Determines whether this symbol represents a value.
+    bool isValue() const;
+
+    /// Determines whether this symbol is a module, interface, or program instance.
+    bool isInstance() const;
 
     template<typename T>
     decltype(auto) as() {
@@ -132,6 +141,19 @@ private:
     mutable const Scope* parentScope = nullptr;
     mutable const Symbol* nextInScope = nullptr;
     mutable Index indexInScope {0};
+};
+
+/// A base class for symbols that represent a value (for example a variable or a parameter).
+/// The common functionality is that they all have a type.
+class ValueSymbol : public Symbol {
+public:
+    /// Gets the type of the value.
+    const Type& getType() const;
+
+    static bool isKind(SymbolKind kind);
+
+protected:
+    using Symbol::Symbol;
 };
 
 }

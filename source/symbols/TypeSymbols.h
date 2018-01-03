@@ -96,6 +96,7 @@ public:
     std::string toString() const;
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax, const Scope& scope);
+    static bool isKind(SymbolKind kind);
 
 protected:
     Type(SymbolKind kind, string_view name, SourceLocation loc) :
@@ -219,11 +220,13 @@ public:
 };
 
 /// Represents an enumerated value / member.
-class EnumValueSymbol : public Symbol {
+class EnumValueSymbol : public ValueSymbol {
 public:
+    const Type& type;
     const ConstantValue& value;
 
-    EnumValueSymbol(Compilation& compilation, string_view name, SourceLocation loc, ConstantValue value);
+    EnumValueSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+                    const Type& type, ConstantValue value);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
 };

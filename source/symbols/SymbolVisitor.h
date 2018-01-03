@@ -64,7 +64,6 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         CASE1(ProceduralBlock);
         CASE1(SequentialBlock);
         CASE1(Variable);
-        CASE1(Instance);
         CASE1(FormalArgument);
         CASE1(Subroutine);
 

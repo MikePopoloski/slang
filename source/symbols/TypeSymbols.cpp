@@ -238,6 +238,32 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
     }
 }
 
+bool Type::isKind(SymbolKind kind) {
+    switch (kind) {
+        case SymbolKind::BuiltInIntegerType:
+        case SymbolKind::VectorType:
+        case SymbolKind::FloatingType:
+        case SymbolKind::EnumType:
+        case SymbolKind::PackedArrayType:
+        case SymbolKind::UnpackedArrayType:
+        case SymbolKind::PackedStructType:
+        case SymbolKind::UnpackedStructType:
+        case SymbolKind::PackedUnionType:
+        case SymbolKind::UnpackedUnionType:
+        case SymbolKind::ClassType:
+        case SymbolKind::VoidType:
+        case SymbolKind::NullType:
+        case SymbolKind::CHandleType:
+        case SymbolKind::StringType:
+        case SymbolKind::EventType:
+        case SymbolKind::TypeAlias:
+        case SymbolKind::ErrorType:
+            return true;
+        default:
+            return false;
+    }
+}
+
 IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth_,
                            bool isSigned_, bool isFourState_) :
     Type(kind, name, loc),
@@ -403,7 +429,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
 
         auto ev = compilation.emplace<EnumValueSymbol>(compilation, member->name.valueText(),
-                                                       member->name.location(), std::move(value));
+                                                       member->name.location(), *resultType,
+                                                       std::move(value));
         resultType->addMember(*ev);
         current = value.integer() + one;
     }
@@ -412,9 +439,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 }
 
 EnumValueSymbol::EnumValueSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                                 ConstantValue value_) :
-    Symbol(SymbolKind::EnumValue, name, loc),
-    value(*compilation.createConstant(std::move(value_)))
+                                 const Type& type, ConstantValue value) :
+    ValueSymbol(SymbolKind::EnumValue, name, loc),
+    type(type), value(*compilation.createConstant(std::move(value)))
 {
 }
 

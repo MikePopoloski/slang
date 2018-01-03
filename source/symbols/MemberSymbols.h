@@ -33,9 +33,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }
 };
 
-/// Represents an explicit import from a package. This symbol type is
-/// special in that it won't be returned from a lookup() call; instead
-/// it will be unwrapped into the imported symbol.
+/// Represents an explicit import from a package.
 class ExplicitImportSymbol : public Symbol {
 public:
     string_view packageName;

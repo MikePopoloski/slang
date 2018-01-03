@@ -41,6 +41,8 @@ public:
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                            const Scope& scope, SmallVector<const Symbol*>& results);
 
+    static bool isKind(SymbolKind kind);
+
 protected:
     InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(kind, name, loc),

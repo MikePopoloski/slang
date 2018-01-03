@@ -146,6 +146,17 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
     }
 }
 
+bool InstanceSymbol::isKind(SymbolKind kind) {
+    switch (kind) {
+        case SymbolKind::ModuleInstance:
+        case SymbolKind::InterfaceInstance:
+        case SymbolKind::Program:
+            return true;
+        default:
+            return false;
+    }
+}
+
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
                                                         SourceLocation loc, const Definition& definition) {
     SmallVectorSized<ModuleInstanceSymbol::ParameterMetadata, 8> params;
