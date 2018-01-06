@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "binding/Lookup.h"
+
 TEST_CASE("Enum declaration", "[types]") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
@@ -15,9 +17,9 @@ endmodule
     const auto& instance = evalModule(tree, compilation);
 
     // Make sure the enum value can be looked up in the parent scope.
-    CHECK(instance.lookupDirect("A"));
-    CHECK(instance.lookupDirect("B"));
-    CHECK(instance.lookupDirect("C"));
+    CHECK(instance.find("A"));
+    CHECK(instance.find("B"));
+    CHECK(instance.find("C"));
 
     const auto& someVar = instance.memberAt<VariableSymbol>(3);
     REQUIRE(someVar.type->kind == SymbolKind::EnumType);
@@ -44,42 +46,30 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
 
-    CHECK(instance.lookupDirect("FOO"));
-    CHECK(instance.lookupDirect("BAR"));
+    CHECK(instance.find("FOO"));
+    CHECK(instance.find("BAR"));
 
     // Try to look up after the parameter but before the function; should fail.
-    LookupResult result;
-    result.referencePoint = LookupRefPoint::before(instance.memberAt<TransparentMemberSymbol>(0));
-    instance.lookup("SDF", result);
-    CHECK(result.getResultKind() == LookupResult::NotFound);
+    LookupOperation lookup1("SDF", instance, SourceRange(), LookupContext::before(instance.memberAt<TransparentMemberSymbol>(0)));
+    CHECK(!lookup1.getResult());
 
     const auto& foshizzle = instance.memberAt<SubroutineSymbol>(5);
-    result.clear();
-    result.referencePoint = LookupRefPoint::after(foshizzle);
-    instance.lookup("SDF", result);
-    CHECK(result.getResultKind() == LookupResult::Found);
+    LookupOperation lookup2("SDF", instance, SourceRange(), LookupContext::after(foshizzle));
+    CHECK(lookup2.getResult());
 
     // The formal argument enum should not leak into the containing scope.
-    result.clear();
-    result.referencePoint = LookupRefPoint::endOfScope(instance);
-    instance.lookup("HELLO", result);
-    CHECK(result.getResultKind() == LookupResult::NotFound);
+    LookupOperation lookup3("HELLO", instance, SourceRange(), LookupContext::endOfScope(instance));
+    CHECK(!lookup3.getResult());
 
     // Inside the function we should be able to see everything
-    result.clear();
-    result.referencePoint = LookupRefPoint::endOfScope(foshizzle);
-    foshizzle.lookup("HELLO", result);
-    CHECK(result.getResultKind() == LookupResult::Found);
+    LookupOperation lookup4("HELLO", foshizzle, SourceRange(), LookupContext::endOfScope(foshizzle));
+    CHECK(lookup4.getResult());
 
-    result.clear();
-    result.referencePoint = LookupRefPoint::endOfScope(foshizzle);
-    foshizzle.lookup("SDF", result);
-    CHECK(result.getResultKind() == LookupResult::Found);
+    LookupOperation lookup5("SDF", foshizzle, SourceRange(), LookupContext::endOfScope(foshizzle));
+    CHECK(lookup5.getResult());
 
-    result.clear();
-    result.referencePoint = LookupRefPoint::endOfScope(foshizzle);
-    foshizzle.lookup("BAR", result);
-    CHECK(result.getResultKind() == LookupResult::Found);
+    LookupOperation lookup6("BAR", foshizzle, SourceRange(), LookupContext::endOfScope(foshizzle));
+    CHECK(lookup6.getResult());
 }
 
 TEST_CASE("Packed structs") {
@@ -108,7 +98,7 @@ endmodule
     CHECK(structType.isIntegral());
     CHECK(!structType.isAggregate());
 
-    CHECK(structType.lookupDirect("bar"));
-    CHECK(structType.lookupDirect("baz"));
-    CHECK(structType.lookupDirect("bif"));
+    CHECK(structType.find("bar"));
+    CHECK(structType.find("baz"));
+    CHECK(structType.find("bif"));
 }

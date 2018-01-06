@@ -52,6 +52,12 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
     return back();
 }
 
+Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
+    emplace(code, range.start());
+    back() << range;
+    return back();
+}
+
 DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     sourceManager(sourceManager)
 {
@@ -166,7 +172,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::NotePreviousUsage] = { "previous usage here", DiagnosticSeverity::Note };
     descriptors[DiagCode::ParamHasNoValue] = { "instance of module '{}' does not provide a value for parameter '{}' and it does not have a default value", DiagnosticSeverity::Error };
     descriptors[DiagCode::ModuleUnreferenced] = { "module '{}' is unreferenced and cannot be top level because it has parameters that do not have a default value", DiagnosticSeverity::Error };
-    descriptors[DiagCode::NoteDeclarationHere] = { "{} declaration here", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NoteDeclarationHere] = { "declaration here", DiagnosticSeverity::Note };
     descriptors[DiagCode::TooManyParamAssignments] = { "too many parameter assignments given to instantiation of module '{}' ({} given, expected {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::AssignedToLocalPortParam] = { "can't assign a value to a localparam", DiagnosticSeverity::Error };
     descriptors[DiagCode::AssignedToLocalBodyParam] = { "can't assign a value to a localparam (parameters in the body of a module are implicitly local when you have a parameter port list)", DiagnosticSeverity::Error };
@@ -180,7 +186,6 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::BadBinaryExpression] = { "invalid operands to binary expression ({} and {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadAssignment] = { "type {} cannot be assigned to type {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoImplicitConversion] = { "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?", DiagnosticSeverity::Error };
-    descriptors[DiagCode::UndeclaredIdentifier] = { "use of undeclared identifier '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyArguments] = { "too many arguments to subroutine call; expected {} but {} were provided", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpressionNotAssignable] = { "expression is not assignable", DiagnosticSeverity::Error };
 
@@ -189,6 +194,13 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
 
     // types
     descriptors[DiagCode::InvalidEnumBase] = { "", DiagnosticSeverity::Error };
+
+    // lookups
+    descriptors[DiagCode::AmbiguousWildcardImport] = { "multiple imports found for identifier '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::NoteImportedFrom] = { "imported from here", DiagnosticSeverity::Note };
+    descriptors[DiagCode::ImportNameCollision] = { "import of '{}' collides with an existing declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UndeclaredIdentifier] = { "use of undeclared identifier '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnknownClassOrPackage] = { "unknown class or package '{}'", DiagnosticSeverity::Error };
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());

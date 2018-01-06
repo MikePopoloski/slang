@@ -79,7 +79,7 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
     const auto& leaf = instance.memberAt<ModuleInstanceSymbol>(0).memberAt<ModuleInstanceSymbol>(0);
-    const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
+    const auto& foo = leaf.find<ParameterSymbol>("foo");
     CHECK(foo.getValue().integer() == 4);
 }
 
@@ -110,7 +110,7 @@ endmodule
         .memberAt<GenerateBlockSymbol>(1)
         .memberAt<ModuleInstanceSymbol>(0);
 
-    const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
+    const auto& foo = leaf.find<ParameterSymbol>("foo");
     CHECK(foo.getValue().integer() == 1);
 }
 
@@ -134,7 +134,7 @@ endmodule
 
     for (uint32_t i = 0; i < 10; i++) {
         const auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<ModuleInstanceSymbol>(1);
-        const auto& foo = leaf.lookupDirect<ParameterSymbol>("foo");
+        const auto& foo = leaf.find<ParameterSymbol>("foo");
         CHECK(foo.getValue().integer() == i);
     }
 }

@@ -146,7 +146,6 @@ enum class DiagCode : uint8_t {
     BadBinaryExpression,
     BadAssignment,
     NoImplicitConversion,
-    UndeclaredIdentifier,
     TooManyArguments,
     ExpressionNotAssignable,
 
@@ -157,8 +156,12 @@ enum class DiagCode : uint8_t {
     InvalidEnumBase,
 
     // lookups
-    //AmbiguousWildcardImport,
-    //NoteImportedFrom,
+    AmbiguousWildcardImport,
+    NoteImportedFrom,
+    ImportNameCollision,
+    UndeclaredIdentifier,
+    UnknownClassOrPackage,
+    //UnknownMember,
 
     MaxValue
 };
@@ -222,6 +225,7 @@ public:
 
     /// Adds a new diagnostic to the collection.
     Diagnostic& add(DiagCode code, SourceLocation location);
+    Diagnostic& add(DiagCode code, SourceRange range);
 };
 
 class DiagnosticWriter {

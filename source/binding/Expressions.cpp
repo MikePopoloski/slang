@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "Expressions.h"
 
+#include "binding/Lookup.h"
 #include "compilation/Compilation.h"
 #include "symbols/TypeSymbols.h"
 
@@ -148,16 +149,14 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     if (syntax.kind != SyntaxKind::IdentifierName)
         return compilation.badExpression(nullptr);
 
-    string_view identifier = syntax.as<IdentifierNameSyntax>().identifier.valueText();
-    LookupResult result;
-    scope.lookup(identifier, result);
-    
-    if (result.getResultKind() != LookupResult::Found) {
-        compilation.addError(DiagCode::UndeclaredIdentifier, syntax.as<IdentifierNameSyntax>().identifier.location()) << identifier;
+    string_view name = syntax.as<IdentifierNameSyntax>().identifier.valueText();
+    LookupOperation lookup(name, scope, SourceRange());
+    const Symbol* symbol = lookup.getResult();
+    if (!symbol) {
+        compilation.addError(DiagCode::UndeclaredIdentifier, syntax.as<IdentifierNameSyntax>().identifier.location()) << name;
         return compilation.badExpression(nullptr);
     }
     
-    const Symbol* symbol = result.getFoundSymbol();
     switch (symbol->kind) {
         case SymbolKind::Variable:
         case SymbolKind::FormalArgument:
@@ -562,10 +561,8 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
                                        const Scope& scope) {
     // TODO: check for something other than a simple name on the LHS
     auto name = syntax.left.getFirstToken();
-    LookupResult result;
-    result.nameKind = LookupNameKind::Callable;
-    scope.lookup(name.valueText(), result);
-    const Symbol* symbol = result.getFoundSymbol();
+    LookupOperation lookup(name.valueText(), scope, SourceRange(), LookupContext::max, LookupNameKind::Callable);
+    const Symbol* symbol = lookup.getResult();
     ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
 
     auto actualArgs = syntax.arguments->parameters;

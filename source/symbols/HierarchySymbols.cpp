@@ -97,7 +97,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                     // Can't assign to localparams, so this is an error.
                     DiagCode code = param.isPort ? DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam;
                     compilation.addError(code, arg->name.location());
-                    compilation.addError(DiagCode::NoteDeclarationHere, param.location) << string_view("parameter");
+                    compilation.addError(DiagCode::NoteDeclarationHere, param.location);
                     continue;
                 }
 

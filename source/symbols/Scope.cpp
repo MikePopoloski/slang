@@ -11,50 +11,6 @@
 
 namespace slang {
 
-const LookupRefPoint LookupRefPoint::max{ nullptr, UINT_MAX };
-const LookupRefPoint LookupRefPoint::min{ nullptr, 0 };
-
-LookupRefPoint LookupRefPoint::before(const Symbol& symbol) {
-    return LookupRefPoint(symbol.getScope(), (uint32_t)symbol.getIndex());
-}
-
-LookupRefPoint LookupRefPoint::after(const Symbol& symbol) {
-    return LookupRefPoint(symbol.getScope(), (uint32_t)symbol.getIndex() + 1);
-}
-
-LookupRefPoint LookupRefPoint::startOfScope(const Scope& scope) {
-    return LookupRefPoint(&scope, 0);
-}
-
-LookupRefPoint LookupRefPoint::endOfScope(const Scope& scope) {
-    return LookupRefPoint(&scope, UINT32_MAX);
-}
-
-bool LookupRefPoint::operator<(const LookupRefPoint& other) const {
-    return index < other.index;
-}
-
-void LookupResult::clear() {
-    nameKind = LookupNameKind::Local;
-    referencePoint = LookupRefPoint::max;
-    resultKind = NotFound;
-    resultWasImported = false;
-    symbol = nullptr;
-    imports.clear();
-}
-
-void LookupResult::setSymbol(const Symbol& found, bool wasImported) {
-    symbol = &found;
-    resultWasImported = wasImported;
-    resultKind = Found;
-}
-
-void LookupResult::addPotentialImport(const Symbol& import) {
-    if (!imports.empty())
-        resultKind = AmbiguousImport;
-    imports.append(&import);
-}
-
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_),
     nameMap(compilation.allocSymbolMap())
@@ -180,73 +136,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
     }
 }
 
-void Scope::lookup(string_view searchName, LookupResult& result) const {
-    // First do a direct search and see if we find anything.
-    ensureMembers();
-    auto it = nameMap->find(searchName);
-    if (it != nameMap->end()) {
-        // If this is a local or scoped lookup, check that we can access
-        // the symbol (it must be declared before usage). Callables can be
-        // referenced anywhere in the scope, so the location doesn't matter for them.
-        bool locationGood = true;
-        const Symbol* symbol = it->second;
-        if (result.referencePointMatters())
-            locationGood = LookupRefPoint::before(*symbol) < result.referencePoint;
-
-        if (locationGood) {
-            // We found the symbol we wanted. If it was a wrapped symbol, unwrap it first.
-            switch (symbol->kind) {
-                case SymbolKind::ExplicitImport:
-                    // TODO: handle missing package import symbol
-                    result.setSymbol(*symbol->as<ExplicitImportSymbol>().importedSymbol(), true);
-                    break;
-                case SymbolKind::TransparentMember:
-                    result.setSymbol(symbol->as<TransparentMemberSymbol>().wrapped);
-                    break;
-                default:
-                    result.setSymbol(*symbol);
-                    break;
-            }
-            return;
-        }
-    }
-
-    // If we got here, we didn't find a viable symbol locally. Try looking in
-    // any wildcard imports we may have.
-    SmallVectorSized<std::tuple<const WildcardImportSymbol*, const Symbol*>, 4> importResults;
-    for (auto import : compilation.queryImports(importDataIndex)) {
-        if (result.referencePoint < LookupRefPoint::after(*import))
-            break;
-
-        // TODO: handle missing package
-        auto symbol = import->getPackage()->lookupDirect(searchName);
-        if (symbol) {
-            importResults.append(std::make_tuple(import, symbol));
-            result.addPotentialImport(*symbol);
-        }
-    }
-
-    if (!importResults.empty()) {
-        if (importResults.size() == 1)
-            result.setSymbol(*std::get<1>(importResults[0]), true);
-        return;
-    }
-
-    if (thisSym->kind == SymbolKind::Root) {
-        // For scoped lookups, if we reach the root without finding anything,
-        // look for a package.
-        // TODO: handle missing package
-        if (result.nameKind == LookupNameKind::Scoped)
-            result.setSymbol(*compilation.getPackage(searchName));
-        return;
-    }
-
-    // Continue up the scope chain.
-    result.referencePoint = LookupRefPoint::after(asSymbol());
-    return getParent()->lookup(searchName, result);
-}
-
-const Symbol* Scope::lookupDirect(string_view searchName) const {
+const Symbol* Scope::find(string_view searchName) const {
     // If the parser added a missing identifier token, it already issued an
     // appropriate error. This check here makes it easier to silently continue
     // in that case without checking every time someone wants to do a lookup.
@@ -254,12 +144,16 @@ const Symbol* Scope::lookupDirect(string_view searchName) const {
         return nullptr;
 
     // Just do a simple lookup and return the result if we have one.
-    // One wrinkle is that we should not include any imported symbols.
     ensureMembers();
-    auto result = nameMap->find(searchName);
-    if (result != nameMap->end() && result->second->kind != SymbolKind::ExplicitImport)
-        return result->second;
-    return nullptr;
+    auto it = nameMap->find(searchName);
+    if (it == nameMap->end())
+        return nullptr;
+    
+    return it->second;
+}
+
+span<const WildcardImportSymbol* const> Scope::getImports() const {
+    return compilation.queryImports(importDataIndex);
 }
 
 Scope::DeferredMemberData& Scope::getOrAddDeferredData() {

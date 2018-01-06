@@ -243,11 +243,6 @@ const VectorType& Compilation::getType(uint16_t width, bool isSigned, bool isFou
     return *type;
 }
 
-//const VectorType& Compilation::getType(bool isSigned, bool isFourState, bool isReg,
-//                                       span<ConstantRange const> dimensions) {
-//    return *emplace<VectorType>(getScalarType(isFourState, isReg), dimensions, isSigned);
-//}
-
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
     if (index == Scope::DeferredMemberIndex::Invalid)
         index = deferredData.emplace();

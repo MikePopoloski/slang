@@ -21,9 +21,9 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
         initialized = true;
 
         package_ = getScope()->getCompilation().getPackage(packageName);
-        // TODO: errors
+        // TODO: errors, explicit imports, transparent members?
         if (package_)
-            import = package_->lookupDirect(importName);
+            import = package_->find(importName);
     }
     return import;
 }
