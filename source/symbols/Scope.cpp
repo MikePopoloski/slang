@@ -11,6 +11,32 @@
 
 namespace slang {
 
+const LookupLocation LookupLocation::max{ nullptr, UINT_MAX };
+const LookupLocation LookupLocation::min{ nullptr, 0 };
+
+LookupLocation LookupLocation::before(const Symbol& symbol) {
+    return LookupLocation(symbol.getScope(), (uint32_t)symbol.getIndex());
+}
+
+LookupLocation LookupLocation::after(const Symbol& symbol) {
+    return LookupLocation(symbol.getScope(), (uint32_t)symbol.getIndex() + 1);
+}
+
+bool LookupLocation::operator<(const LookupLocation& other) const {
+    return index < other.index;
+}
+
+bool LookupResult::hasError() const {
+    // We have an error if we have any diagnostics or if there was a missing explicit import.
+    return !diagnostics.empty() || (!found && wasImported);
+}
+
+void LookupResult::clear() {
+    found = nullptr;
+    wasImported = false;
+    diagnostics.clear();
+}
+
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_),
     nameMap(compilation.allocSymbolMap())
@@ -136,24 +162,117 @@ void Scope::addMembers(const SyntaxNode& syntax) {
     }
 }
 
-const Symbol* Scope::find(string_view searchName) const {
-    // If the parser added a missing identifier token, it already issued an
-    // appropriate error. This check here makes it easier to silently continue
-    // in that case without checking every time someone wants to do a lookup.
-    if (searchName.empty())
-        return nullptr;
-
+const Symbol* Scope::find(string_view name) const {
     // Just do a simple lookup and return the result if we have one.
     ensureMembers();
-    auto it = nameMap->find(searchName);
+    auto it = nameMap->find(name);
     if (it == nameMap->end())
         return nullptr;
     
-    return it->second;
+    // Unwrap the symbol if it's a transparent member. Don't return imported
+    // symbols; this function is for querying direct members only.
+    const Symbol* symbol = it->second;
+    switch (symbol->kind) {
+        case SymbolKind::ExplicitImport: return nullptr;
+        case SymbolKind::TransparentMember: return &symbol->as<TransparentMemberSymbol>().wrapped;
+        default: return symbol;
+    }
 }
 
-span<const WildcardImportSymbol* const> Scope::getImports() const {
-    return compilation.queryImports(importDataIndex);
+void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
+                              SourceRange sourceRange, LookupResult& result) const {
+    // If the parser added a missing identifier token, it already issued an
+    // appropriate error. This check here makes it easier to silently continue
+    // in that case without checking every time someone wants to do a lookup.
+    ensureMembers();
+    if (name.empty())
+        return;
+
+    // Try a simple name lookup to see if we find anything.
+    const Symbol* symbol = nullptr;
+    if (auto it = nameMap->find(name); it != nameMap->end()) {
+        // If the lookup is for a local name, check that we can access the symbol (it must be
+        // declared before use). Callables and block names can be referenced anywhere in the scope,
+        // so the location doesn't matter for them.
+        symbol = it->second;
+        bool locationGood = true;
+        if (nameKind == LookupNameKind::Local)
+            locationGood = LookupLocation::before(*symbol) < location;
+
+        if (locationGood) {
+            // Unwrap the symbol if it's hidden behind an import or hoisted enum member.
+            switch (symbol->kind) {
+                case SymbolKind::ExplicitImport:
+                    result.found = symbol->as<ExplicitImportSymbol>().importedSymbol();
+                    result.wasImported = true;
+                    break;
+                case SymbolKind::TransparentMember:
+                    result.found = &symbol->as<TransparentMemberSymbol>().wrapped;
+                    break;
+                default:
+                    result.found = symbol;
+                    break;
+            }
+            return;
+        }
+    }
+
+    // Look through any wildcard imports prior to the lookup point and see if their packages
+    // contain the name we're looking for.
+    struct Import {
+        const Symbol* imported;
+        const WildcardImportSymbol* import;
+    };
+    SmallVectorSized<Import, 8> imports;
+
+    for (auto import : compilation.queryImports(importDataIndex)) {
+        if (location < LookupLocation::after(*import))
+            break;
+
+        auto package = import->getPackage();
+        if (!package)
+            continue;
+
+        const Symbol* imported = package->find(name);
+        if (imported)
+            imports.emplace(Import { imported, import });
+    }
+
+    if (!imports.empty()) {
+        if (imports.size() > 1) {
+            result.diagnostics.add(DiagCode::AmbiguousWildcardImport, sourceRange) << name;
+            for (const auto& pair : imports) {
+                result.diagnostics.add(DiagCode::NoteImportedFrom, pair.import->location);
+                result.diagnostics.add(DiagCode::NoteDeclarationHere, pair.imported->location);
+            }
+            return;
+        }
+
+        if (symbol) {
+            result.diagnostics.add(DiagCode::ImportNameCollision, sourceRange) << name;
+            result.diagnostics.add(DiagCode::NoteDeclarationHere, symbol->location);
+            result.diagnostics.add(DiagCode::NoteImportedFrom, imports[0].import->location);
+            result.diagnostics.add(DiagCode::NoteDeclarationHere, imports[0].imported->location);
+        }
+
+        result.wasImported = true;
+        result.found = imports[0].imported;
+        return;
+    }
+
+    // Continue up the scope chain via our parent.
+    auto nextScope = getParent();
+    if (!nextScope)
+        return;
+
+    location = LookupLocation::after(asSymbol());
+    return nextScope->lookupUnqualified(name, location, nameKind, sourceRange, result);
+}
+
+const Symbol* Scope::lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind) const {
+    LookupResult result;
+    lookupUnqualified(name, location, nameKind, SourceRange(), result);
+    return result.found;
 }
 
 Scope::DeferredMemberData& Scope::getOrAddDeferredData() {

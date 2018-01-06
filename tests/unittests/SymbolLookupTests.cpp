@@ -1,6 +1,5 @@
 #include "Test.h"
 
-#include "binding/Lookup.h"
 #include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
 
@@ -18,13 +17,13 @@ import Foo::x;
 
     const CompilationUnitSymbol* unit = compilation.getRoot().compilationUnits[0];
 
-    LookupOperation lookup("x", *unit, SourceRange());
-    const Symbol* x = lookup.getResult();
+    LookupResult result;
+    unit->lookupUnqualified("x", LookupLocation::max, LookupNameKind::Local, SourceRange(), result);
 
-    CHECK(lookup.wasImported());
-    REQUIRE(x);
-    CHECK(x->kind == SymbolKind::Parameter);
-    CHECK(x->as<ParameterSymbol>().getValue().integer() == 4);
+    CHECK(result.wasImported);
+    REQUIRE(result.found);
+    CHECK(result.found->kind == SymbolKind::Parameter);
+    CHECK(result.found->as<ParameterSymbol>().getValue().integer() == 4);
 }
 
 TEST_CASE("Wildcard import lookup 1", "[symbols:lookup]") {
@@ -55,20 +54,21 @@ endmodule
     CHECK(param.getValue().integer() == 12);
 
     // Lookup at (1); should return the local parameter
-    LookupOperation lookup1("x", gen_b, SourceRange(), LookupContext::after(param));
-    const Symbol* symbol = lookup1.getResult();
+    LookupResult result;
+    gen_b.lookupUnqualified("x", LookupLocation::after(param), LookupNameKind::Local, SourceRange(), result);
 
-    CHECK(!lookup1.wasImported());
+    const Symbol* symbol = result.found;
+    CHECK(!result.wasImported);
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol == &param);
     CHECK(compilation.diagnostics().empty());
 
     // Lookup at (2); should return the package parameter
-    LookupOperation lookup2("x", gen_b, SourceRange(), LookupContext::before(param));
-    symbol = lookup2.getResult();
+    gen_b.lookupUnqualified("x", LookupLocation::before(param), LookupNameKind::Local, SourceRange(), result);
+    symbol = result.found;
 
-    CHECK(lookup2.wasImported());
+    CHECK(result.wasImported);
     REQUIRE(symbol);
     REQUIRE(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol->as<ParameterSymbol>().getValue().integer() == 4);

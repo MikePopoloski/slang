@@ -21,6 +21,74 @@ struct LazyType;
 
 using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 
+/// Specifies possible kinds of lookups that can be done.
+enum class LookupNameKind {
+    /// A lookup of a simple name, starting in the local scope. The lookup location is
+    /// used to qualify accessible signals. Imports from packages are considered.
+    Local,
+
+    /// The lookup is for the first part of a scoped name. This first performs
+    /// the equivalent of a Local lookup; if no symbol is found using that method,
+    /// it will search for a package with the given name.
+    Scoped,
+
+    /// A lookup for a simple name that is part of a callable expression (task or function).
+    /// This has additional rules; specifically, SystemVerilog allows tasks and functions
+    /// to be referenced before they are declared.
+    Callable,
+
+    /// Names referenced as part of a bind instantiation have special rules. For example,
+    /// previously imported wildcard names are visible, but the bind lookup itself will
+    /// not cause non-imported wildcard names to become visible even if they match.
+    BindTarget
+};
+
+/// This type denotes the ordering of symbols within a particular scope, for the purposes of
+/// determining whether a found symbol is visible compared to the given location.
+/// For example, variables cannot be referenced before they are declared.
+class LookupLocation {
+public:
+    LookupLocation() = default;
+
+    /// Places a location just before the given symbol in its parent scope.
+    static LookupLocation before(const Symbol& symbol);
+
+    /// Places a location just after the given symbol in its parent scope.
+    static LookupLocation after(const Symbol& symbol);
+
+    /// A special location that should always compare after any other.
+    static const LookupLocation max;
+
+    /// A special location that should always compare before any other.
+    static const LookupLocation min;
+
+    bool operator==(const LookupLocation& other) const {
+        return scope == other.scope && index == other.index;
+    }
+
+    bool operator!=(const LookupLocation& other) const { return !(*this == other); }
+    bool operator<(const LookupLocation& other) const;
+
+private:
+    friend class Scope;
+
+    LookupLocation(const Scope* scope_, uint32_t index) :
+        scope(scope_), index(index) {}
+
+    const Scope* scope = nullptr;
+    uint32_t index = 0;
+};
+
+struct LookupResult {
+    const Symbol* found = nullptr;
+    Diagnostics diagnostics;
+    bool wasImported = false;
+
+    bool hasError() const;
+
+    void clear();
+};
+
 /// Base class for scopes that can contain child symbols and look them up by name.
 class Scope {
 public:
@@ -40,7 +108,11 @@ public:
         return sym->as<T>();
     }
 
-    span<const WildcardImportSymbol* const> getImports() const;
+    void lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
+                           SourceRange sourceRange, LookupResult& result) const;
+
+    const Symbol* lookupUnqualified(string_view name, LookupLocation location = LookupLocation::max,
+                                    LookupNameKind nameKind = LookupNameKind::Local) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified type.
     /// If the type does not match, this will assert.

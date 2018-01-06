@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #include "Expressions.h"
 
-#include "binding/Lookup.h"
 #include "compilation/Compilation.h"
 #include "symbols/TypeSymbols.h"
 
@@ -150,8 +149,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         return compilation.badExpression(nullptr);
 
     string_view name = syntax.as<IdentifierNameSyntax>().identifier.valueText();
-    LookupOperation lookup(name, scope, SourceRange());
-    const Symbol* symbol = lookup.getResult();
+    const Symbol* symbol = scope.lookupUnqualified(name);
     if (!symbol) {
         compilation.addError(DiagCode::UndeclaredIdentifier, syntax.as<IdentifierNameSyntax>().identifier.location()) << name;
         return compilation.badExpression(nullptr);
@@ -561,8 +559,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
                                        const Scope& scope) {
     // TODO: check for something other than a simple name on the LHS
     auto name = syntax.left.getFirstToken();
-    LookupOperation lookup(name.valueText(), scope, SourceRange(), LookupContext::max, LookupNameKind::Callable);
-    const Symbol* symbol = lookup.getResult();
+    const Symbol* symbol = scope.lookupUnqualified(name.valueText(), LookupLocation::max, LookupNameKind::Callable);
     ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
 
     auto actualArgs = syntax.arguments->parameters;

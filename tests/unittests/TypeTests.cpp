@@ -1,7 +1,5 @@
 #include "Test.h"
 
-#include "binding/Lookup.h"
-
 TEST_CASE("Enum declaration", "[types]") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
@@ -50,26 +48,18 @@ endmodule
     CHECK(instance.find("BAR"));
 
     // Try to look up after the parameter but before the function; should fail.
-    LookupOperation lookup1("SDF", instance, SourceRange(), LookupContext::before(instance.memberAt<TransparentMemberSymbol>(0)));
-    CHECK(!lookup1.getResult());
+    CHECK(!instance.lookupUnqualified("SDF", LookupLocation::before(instance.memberAt<TransparentMemberSymbol>(0))));
 
     const auto& foshizzle = instance.memberAt<SubroutineSymbol>(5);
-    LookupOperation lookup2("SDF", instance, SourceRange(), LookupContext::after(foshizzle));
-    CHECK(lookup2.getResult());
+    CHECK(instance.lookupUnqualified("SDF", LookupLocation::after(foshizzle)));
 
     // The formal argument enum should not leak into the containing scope.
-    LookupOperation lookup3("HELLO", instance, SourceRange(), LookupContext::endOfScope(instance));
-    CHECK(!lookup3.getResult());
+    CHECK(!instance.lookupUnqualified("HELLO"));
 
     // Inside the function we should be able to see everything
-    LookupOperation lookup4("HELLO", foshizzle, SourceRange(), LookupContext::endOfScope(foshizzle));
-    CHECK(lookup4.getResult());
-
-    LookupOperation lookup5("SDF", foshizzle, SourceRange(), LookupContext::endOfScope(foshizzle));
-    CHECK(lookup5.getResult());
-
-    LookupOperation lookup6("BAR", foshizzle, SourceRange(), LookupContext::endOfScope(foshizzle));
-    CHECK(lookup6.getResult());
+    CHECK(foshizzle.lookupUnqualified("HELLO"));
+    CHECK(foshizzle.lookupUnqualified("SDF"));
+    CHECK(foshizzle.lookupUnqualified("BAR"));
 }
 
 TEST_CASE("Packed structs") {
