@@ -488,26 +488,19 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         return compilation.badExpression(result);
 
     const Type& valueType = value.type->getCanonicalType();
-    switch (valueType.kind) {
-        case SymbolKind::VectorType:
-            result->type = &valueType.as<VectorType>().getElementType(compilation);
-            break;
-        case SymbolKind::PackedArrayType:
-            result->type = &valueType.as<PackedArrayType>().elementType;
-            break;
-        default: {
-            if (!valueType.isIntegral()) {
-                compilation.addError(DiagCode::BadIndexExpression, value.sourceRange) << *value.type;
-                return compilation.badExpression(result);
-            }
-            const IntegralType& it = valueType.as<IntegralType>();
-            if (it.isScalar()) {
-                compilation.addError(DiagCode::CannotIndexScalar, value.sourceRange);
-                return compilation.badExpression(result);
-            }
-            result->type = it.isFourState ? &compilation.getLogicType() : &compilation.getBitType();
-            break;
-        }
+    if (!valueType.isIntegral()) {
+        compilation.addError(DiagCode::BadIndexExpression, value.sourceRange) << *value.type;
+        return compilation.badExpression(result);
+    }
+    else if (valueType.isScalar()) {
+        compilation.addError(DiagCode::CannotIndexScalar, value.sourceRange);
+        return compilation.badExpression(result);
+    }
+    else if (valueType.kind == SymbolKind::PackedArrayType) {
+        result->type = &valueType.as<PackedArrayType>().elementType;
+    }
+    else {
+        result->type = valueType.isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
     }
 
     if (!selector.type->getCanonicalType().isIntegral()) {

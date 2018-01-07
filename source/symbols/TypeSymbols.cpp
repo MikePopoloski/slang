@@ -13,57 +13,40 @@ namespace {
 
 using namespace slang;
 
-uint32_t getWidth(BuiltInIntegerType::Kind kind) {
+uint32_t getWidth(PredefinedIntegerType::Kind kind) {
     switch (kind) {
-        case BuiltInIntegerType::Bit: return 1;
-        case BuiltInIntegerType::Logic: return 1;
-        case BuiltInIntegerType::Reg: return 1;
-        case BuiltInIntegerType::ShortInt: return 16;
-        case BuiltInIntegerType::Int: return 32;
-        case BuiltInIntegerType::LongInt: return 64;
-        case BuiltInIntegerType::Byte: return 8;
-        case BuiltInIntegerType::Integer: return 32;
-        case BuiltInIntegerType::Time: return 64;
+        case PredefinedIntegerType::ShortInt: return 16;
+        case PredefinedIntegerType::Int: return 32;
+        case PredefinedIntegerType::LongInt: return 64;
+        case PredefinedIntegerType::Byte: return 8;
+        case PredefinedIntegerType::Integer: return 32;
+        case PredefinedIntegerType::Time: return 64;
         default: THROW_UNREACHABLE;
     }
 }
 
-bool getSigned(BuiltInIntegerType::Kind kind) {
+bool getSigned(PredefinedIntegerType::Kind kind) {
     switch (kind) {
-        case BuiltInIntegerType::Bit: return false;
-        case BuiltInIntegerType::Logic: return false;
-        case BuiltInIntegerType::Reg: return false;
-        case BuiltInIntegerType::ShortInt: return true;
-        case BuiltInIntegerType::Int: return true;
-        case BuiltInIntegerType::LongInt: return true;
-        case BuiltInIntegerType::Byte: return true;
-        case BuiltInIntegerType::Integer: return true;
-        case BuiltInIntegerType::Time: return false;
+        case PredefinedIntegerType::ShortInt: return true;
+        case PredefinedIntegerType::Int: return true;
+        case PredefinedIntegerType::LongInt: return true;
+        case PredefinedIntegerType::Byte: return true;
+        case PredefinedIntegerType::Integer: return true;
+        case PredefinedIntegerType::Time: return false;
         default: THROW_UNREACHABLE;
     }
 }
 
-bool getFourState(BuiltInIntegerType::Kind kind) {
+bool getFourState(PredefinedIntegerType::Kind kind) {
     switch (kind) {
-        case BuiltInIntegerType::Bit: return false;
-        case BuiltInIntegerType::Logic: return true;
-        case BuiltInIntegerType::Reg: return true;
-        case BuiltInIntegerType::ShortInt: return false;
-        case BuiltInIntegerType::Int: return false;
-        case BuiltInIntegerType::LongInt: return false;
-        case BuiltInIntegerType::Byte: return false;
-        case BuiltInIntegerType::Integer: return true;
-        case BuiltInIntegerType::Time: return true;
+        case PredefinedIntegerType::ShortInt: return false;
+        case PredefinedIntegerType::Int: return false;
+        case PredefinedIntegerType::LongInt: return false;
+        case PredefinedIntegerType::Byte: return false;
+        case PredefinedIntegerType::Integer: return true;
+        case PredefinedIntegerType::Time: return true;
         default: THROW_UNREACHABLE;
     }
-}
-
-bool getSigned(const Type& type) {
-    return type.isIntegral() && type.as<IntegralType>().isSigned;
-}
-
-bool getFourState(const Type& type) {
-    return type.isIntegral() && type.as<IntegralType>().isFourState;
 }
 
 }
@@ -71,10 +54,6 @@ bool getFourState(const Type& type) {
 namespace slang {
 
 const ErrorType ErrorType::Instance;
-
-const Type& Type::getCanonicalType() const {
-    return *this;
-}
 
 uint32_t Type::getBitWidth() const {
     if (isIntegral())
@@ -88,6 +67,14 @@ uint32_t Type::getBitWidth() const {
         }
     }
     return 0;
+}
+
+bool Type::isSigned() const {
+    return isIntegral() && as<IntegralType>().isSigned;
+}
+
+bool Type::isFourState() const {
+    return isIntegral() && as<IntegralType>().isFourState;
 }
 
 bool Type::isIntegral() const {
@@ -106,7 +93,10 @@ bool Type::isAggregate() const {
 }
 
 bool Type::isSimpleBitVector() const {
-    return kind == SymbolKind::BuiltInIntegerType || kind == SymbolKind::VectorType;
+    if (isPredefinedInteger() || isScalar())
+        return true;
+
+    return kind == SymbolKind::PackedArrayType && as<PackedArrayType>().elementType.isScalar();
 }
 
 bool Type::isMatching(const Type& rhs) const {
@@ -122,24 +112,12 @@ bool Type::isMatching(const Type& rhs) const {
     if (l == r)
         return true;
 
-    if (l->kind == SymbolKind::VectorType) {
-        // Handle check (f): matching vector types
-        if (r->kind == SymbolKind::VectorType) {
-            const auto& li = l->as<VectorType>();
-            const auto& ri = r->as<VectorType>();
-            return li.isSigned == ri.isSigned && li.isFourState && ri.isFourState && li.range == ri.range;
-        }
-
-        // Swap so that we can handle check (e) below in a commutative way.
-        std::swap(l, r);
-    }
-
-    // Handle check (e): vector type matches corresponding built-in integer type.
-    if (l->kind == SymbolKind::BuiltInIntegerType && r->kind == SymbolKind::VectorType) {
+    // Handle check (e) and (f): matching predefined integers and matching vector types
+    if (l->isSimpleBitVector() && r->isSimpleBitVector()) {
         const auto& li = l->as<IntegralType>();
-        const auto& ri = r->as<VectorType>();
-        return li.isSigned == ri.isSigned && li.isFourState == ri.isFourState &&
-               ri.range.left == int(li.bitWidth - 1) && ri.range.right == 0;
+        const auto& ri = r->as<IntegralType>();
+        return li.isSigned == ri.isSigned && li.isFourState && ri.isFourState &&
+               li.getBitVectorRange() == ri.getBitVectorRange();
     }
 
     // Handle check (f): matching packed array types
@@ -240,8 +218,8 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
 
 bool Type::isKind(SymbolKind kind) {
     switch (kind) {
-        case SymbolKind::BuiltInIntegerType:
-        case SymbolKind::VectorType:
+        case SymbolKind::PredefinedIntegerType:
+        case SymbolKind::ScalarType:
         case SymbolKind::FloatingType:
         case SymbolKind::EnumType:
         case SymbolKind::PackedArrayType:
@@ -273,8 +251,8 @@ IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc
 
 bool IntegralType::isKind(SymbolKind kind) {
     switch (kind) {
-        case SymbolKind::BuiltInIntegerType:
-        case SymbolKind::VectorType:
+        case SymbolKind::PredefinedIntegerType:
+        case SymbolKind::ScalarType:
         case SymbolKind::EnumType:
         case SymbolKind::PackedArrayType:
         case SymbolKind::PackedStructType:
@@ -286,11 +264,10 @@ bool IntegralType::isKind(SymbolKind kind) {
 }
 
 ConstantRange IntegralType::getBitVectorRange() const {
-    if (isBuiltIn())
+    if (isPredefinedInteger() || isScalar())
         return { (int)bitWidth - 1, 0 };
 
-    ASSERT(kind == SymbolKind::VectorType);
-    return as<VectorType>().range;
+    return as<PackedArrayType>().range;
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
@@ -317,9 +294,8 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         return compilation.getType((uint16_t)width, isSigned, isFourState, isReg);
     }
 
-    const IntegralType* result = compilation.emplace<VectorType>(VectorType::getScalarType(isFourState, isReg),
-                                                                 dims[0], isSigned);
-    for (uint32_t i = 1; i < dims.size(); i++)
+    const IntegralType* result = &compilation.getScalarType(isFourState, isReg);
+    for (uint32_t i = 0; i < dims.size(); i++)
         result = compilation.emplace<PackedArrayType>(*result, dims[i]);
 
     return *result;
@@ -357,33 +333,27 @@ bool IntegralType::evaluateConstantDims(Compilation& compilation,
     return true;
 }
 
-BuiltInIntegerType::BuiltInIntegerType(Kind builtInKind) :
-    BuiltInIntegerType(builtInKind, getSigned(builtInKind))
+PredefinedIntegerType::PredefinedIntegerType(Kind integerKind) :
+    PredefinedIntegerType(integerKind, getSigned(integerKind))
 {
 }
 
-BuiltInIntegerType::BuiltInIntegerType(Kind builtInKind, bool isSigned) :
-    IntegralType(SymbolKind::BuiltInIntegerType, "", SourceLocation(),
-                 getWidth(builtInKind), isSigned, getFourState(builtInKind)),
-    integerKind(builtInKind)
+PredefinedIntegerType::PredefinedIntegerType(Kind integerKind, bool isSigned) :
+    IntegralType(SymbolKind::PredefinedIntegerType, "", SourceLocation(),
+                 getWidth(integerKind), isSigned, getFourState(integerKind)),
+    integerKind(integerKind)
 {
 }
 
-VectorType::VectorType(ScalarType scalarType_, ConstantRange range_, bool isSigned_) :
-    IntegralType(SymbolKind::VectorType, "", SourceLocation(), range_.width(),
-                 isSigned_, getFourState((BuiltInIntegerType::Kind)scalarType_)),
-    range(range_),
-    scalarType(scalarType_)
+ScalarType::ScalarType(Kind scalarKind) :
+    ScalarType(scalarKind, false)
 {
 }
 
-const Type& VectorType::getElementType(Compilation& compilation) const {
-    switch (scalarType) {
-        case Bit: return compilation.getBitType();
-        case Logic: return compilation.getLogicType();
-        case Reg: return compilation.getRegType();
-        default: THROW_UNREACHABLE;
-    }
+ScalarType::ScalarType(Kind scalarKind, bool isSigned) :
+    IntegralType(SymbolKind::ScalarType, "", SourceLocation(), 1, isSigned, scalarKind != Kind::Bit),
+    scalarKind(scalarKind)
+{
 }
 
 FloatingType::FloatingType(Kind floatKind_) :
@@ -454,10 +424,10 @@ EnumValueSymbol::EnumValueSymbol(Compilation& compilation, string_view name, Sou
 {
 }
 
-PackedArrayType::PackedArrayType(const Type& elementType_, ConstantRange range_) :
-    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), elementType_.getBitWidth() * range_.width(),
-                 getSigned(elementType_), getFourState(elementType_)),
-    elementType(elementType_), range(range_)
+PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
+    IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), elementType.getBitWidth() * range.width(),
+                 elementType.isSigned(), elementType.isFourState()),
+    elementType(elementType), range(range)
 {
 }
 

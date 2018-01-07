@@ -40,8 +40,8 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         CASE1(Root);
         CASE1(CompilationUnit);
         CASE1(TransparentMember);
-        CASE2(BuiltInIntegerType);
-        CASE2(VectorType);
+        CASE2(PredefinedIntegerType);
+        CASE2(ScalarType);
         CASE2(FloatingType);
         CASE2(EnumType);
         CASE1(EnumValue);

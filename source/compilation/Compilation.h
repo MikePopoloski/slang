@@ -69,18 +69,19 @@ public:
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, const Scope& parent);
-    const VectorType& getType(uint16_t width, bool isSigned, bool isFourState = true, bool isReg = false);
+    const PackedArrayType& getType(uint16_t width, bool isSigned, bool isFourState = true, bool isReg = false);
+    const ScalarType& getScalarType(bool isFourState, bool isReg = false);
 
     /// Various built-in type symbols for easy access.
-    const BuiltInIntegerType& getShortIntType() const { return shortIntType; }
-    const BuiltInIntegerType& getIntType() const { return intType; }
-    const BuiltInIntegerType& getLongIntType() const { return longIntType; }
-    const BuiltInIntegerType& getByteType() const { return byteType; }
-    const BuiltInIntegerType& getBitType() const { return bitType; }
-    const BuiltInIntegerType& getLogicType() const { return logicType; }
-    const BuiltInIntegerType& getRegType() const { return regType; }
-    const BuiltInIntegerType& getIntegerType() const { return integerType; }
-    const BuiltInIntegerType& getTimeType() const { return timeType; }
+    const ScalarType& getBitType() const { return bitType; }
+    const ScalarType& getLogicType() const { return logicType; }
+    const ScalarType& getRegType() const { return regType; }
+    const PredefinedIntegerType& getShortIntType() const { return shortIntType; }
+    const PredefinedIntegerType& getIntType() const { return intType; }
+    const PredefinedIntegerType& getLongIntType() const { return longIntType; }
+    const PredefinedIntegerType& getByteType() const { return byteType; }
+    const PredefinedIntegerType& getIntegerType() const { return integerType; }
+    const PredefinedIntegerType& getTimeType() const { return timeType; }
     const FloatingType& getRealType() const { return realType; }
     const FloatingType& getRealTimeType() const { return realTimeType; }
     const FloatingType& getShortRealType() const { return shortRealType; }
@@ -151,21 +152,21 @@ private:
     flat_hash_map<string_view, const PackageSymbol*> packageMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
-    flat_hash_map<uint32_t, const VectorType*> vectorTypeCache;
+    flat_hash_map<uint32_t, const PackedArrayType*> vectorTypeCache;
 
     // Map from syntax kinds to the built-in types.
     flat_hash_map<SyntaxKind, const Type*> knownTypes;
 
     // Instances of all the built-in types.
-    BuiltInIntegerType shortIntType;
-    BuiltInIntegerType intType;
-    BuiltInIntegerType longIntType;
-    BuiltInIntegerType byteType;
-    BuiltInIntegerType bitType;
-    BuiltInIntegerType logicType;
-    BuiltInIntegerType regType;
-    BuiltInIntegerType integerType;
-    BuiltInIntegerType timeType;
+    ScalarType bitType;
+    ScalarType logicType;
+    ScalarType regType;
+    PredefinedIntegerType shortIntType;
+    PredefinedIntegerType intType;
+    PredefinedIntegerType longIntType;
+    PredefinedIntegerType byteType;
+    PredefinedIntegerType integerType;
+    PredefinedIntegerType timeType;
     FloatingType realType;
     FloatingType realTimeType;
     FloatingType shortRealType;

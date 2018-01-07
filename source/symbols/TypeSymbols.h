@@ -19,15 +19,18 @@ class Compilation;
 class Type : public Symbol {
 public:
     /// Gets the canonical type for this type, which involves unwrapping any type aliases.
-    const Type& getCanonicalType() const;
+    const Type& getCanonicalType() const { return *canonical; }
 
-    /// Gets the total width of the type in bits. Returns zero if the type
-    /// does not have a statically known size.
+    /// Gets the total width of the type in bits. Returns zero if the type does not have a statically known size.
     uint32_t getBitWidth() const;
 
-    /// Indicates whether this is an integral type, which includes all scalar types,
-    /// built-in integer types, packed arrays, packed structures, packed unions, enums, and time types.
-    bool isIntegral() const;
+    /// Indicates whether the type can represent negative numeric values. For non-numeric types, this
+    /// always returns false.
+    bool isSigned() const;
+
+    /// Indicates whether the type can represent unknown and high impedance numeric values. For non-numeric
+    /// types, this always returns false.
+    bool isFourState() const;
 
     /// Indicates whether this is an aggregate type, which includes all unpacked structs, unions, and arrays.
     bool isAggregate() const;
@@ -35,6 +38,20 @@ public:
     /// Indicates whether this is a singular type, which is the opposite of an aggregate type (that is,
     /// all types except unpacked structs, unions, and arrays).
     bool isSingular() const { return !isAggregate(); }
+
+    /// Indicates whether this is an integral type, which includes all scalar types, predefined integer types,
+    /// packed arrays, packed structures, packed unions, and enum types.
+    bool isIntegral() const;
+
+    /// Indicates whether this is a scalar integral type (bit, logic, or reg).
+    bool isScalar() const { return kind == SymbolKind::ScalarType; }
+
+    /// Indicates whether this is a predefined integer type.
+    bool isPredefinedInteger() const { return kind == SymbolKind::PredefinedIntegerType; }
+
+    /// Indicates whether this is a simple bit vector type, which encompasses all predefined integer
+    /// types as well as scalar and vector types.
+    bool isSimpleBitVector() const;
 
     /// Indicates whether this is a numeric type, which includes all integral and floating types.
     bool isNumeric() const { return isIntegral() || isFloating(); }
@@ -69,10 +86,6 @@ public:
     /// Indicates whether this is the error type.
     bool isError() const { return kind == SymbolKind::ErrorType; }
 
-    /// Indicates whether this is a simple bit vector type, which encompasses
-    /// all built-in integer types as well as single-dimensional vector types.
-    bool isSimpleBitVector() const;
-
     /// Determines whether the given type "matches" this one. For most intents
     /// and purposes, matching types are completely identical.
     bool isMatching(const Type& rhs) const;
@@ -100,11 +113,13 @@ public:
 
 protected:
     Type(SymbolKind kind, string_view name, SourceLocation loc) :
-        Symbol(kind, name, loc) {}
+        Symbol(kind, name, loc), canonical(this) {}
+
+    const Type* canonical;
 };
 
-/// A base class for integral types, which include all scalar types, built-in integer types,
-/// packed arrays, packed structures, packed unions, enums, and time types.
+/// A base class for integral types, which include all scalar types, predefined integer types,
+/// packed arrays, packed structures, packed unions, and enum types.
 class IntegralType : public Type {
 public:
     /// The total width of the type in bits.
@@ -115,18 +130,6 @@ public:
 
     /// Indicates whether the integer is composed of 4-state bits or 2-state bits.
     bool isFourState;
-
-    /// Indicates whether this is a scalar type; that is, one bit wide. Scalar
-    /// types are always represented by the BuiltInIntegerType class.
-    bool isScalar() const { return isBuiltIn() && bitWidth == 1; }
-
-    /// Indicates whether this is a vector type; vector types are more than one
-    /// bit wide and are represented by the VectorType class.
-    bool isVector() const { return !isScalar(); }
-
-    /// Indicates whether this is a built-in integer type; these types are
-    /// always represented by the BuiltInIntegerType class.
-    bool isBuiltIn() const { return kind == SymbolKind::BuiltInIntegerType; }
 
     /// If this is a simple bit vector type, returns the address range of
     /// the bits in the vector. Otherwise the behavior is undefined (will assert).
@@ -146,14 +149,25 @@ protected:
                                      SmallVector<ConstantRange>& results, const Scope& scope);
 };
 
-/// Represents the built-in integer types, which are essentially predefined vector types.
-class BuiltInIntegerType : public IntegralType {
+/// Represents the single-bit scalar types.
+class ScalarType : public IntegralType {
 public:
     enum Kind {
-        // Note: the first three members here need to match the order in ScalarType
         Bit,
         Logic,
-        Reg,
+        Reg
+    } scalarKind;
+
+    ScalarType(Kind scalarKind);
+    ScalarType(Kind scalarKind, bool isSigned);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ScalarType; }
+};
+
+/// Represents the predefined integer types, which are essentially predefined vector types.
+class PredefinedIntegerType : public IntegralType {
+public:
+    enum Kind {
         ShortInt,
         Int,
         LongInt,
@@ -162,35 +176,13 @@ public:
         Time
     } integerKind;
 
-    BuiltInIntegerType(Kind builtInKind);
-    BuiltInIntegerType(Kind builtInKind, bool isSigned);
+    PredefinedIntegerType(Kind integerKind);
+    PredefinedIntegerType(Kind integerKind, bool isSigned);
 
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::BuiltInIntegerType; }
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::PredefinedIntegerType; }
 };
 
-/// Vector types are single dimensional multibit ranges that represent integer values.
-class VectorType : public IntegralType {
-public:
-    ConstantRange range;
-
-    enum ScalarType {
-        Bit,
-        Logic,
-        Reg
-    } scalarType;
-
-    VectorType(ScalarType scalarType, ConstantRange range, bool isSigned);
-
-    const Type& getElementType(Compilation& compilation) const;
-
-    static ScalarType getScalarType(bool isFourState, bool isReg) {
-        return !isFourState ? VectorType::Bit : isReg ? VectorType::Reg : VectorType::Logic;
-    }
-
-    static bool isKind(SymbolKind kind) { return kind == SymbolKind::VectorType; }
-};
-
-/// Represents one of the built-in floating point types, which are used for representing real numbers.
+/// Represents one of the predefined floating point types, which are used for representing real numbers.
 class FloatingType : public Type {
 public:
     enum Kind {

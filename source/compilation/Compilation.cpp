@@ -11,15 +11,15 @@
 namespace slang {
 
 Compilation::Compilation() :
-    shortIntType(BuiltInIntegerType::ShortInt),
-    intType(BuiltInIntegerType::Int),
-    longIntType(BuiltInIntegerType::LongInt),
-    byteType(BuiltInIntegerType::Byte),
-    bitType(BuiltInIntegerType::Bit),
-    logicType(BuiltInIntegerType::Logic),
-    regType(BuiltInIntegerType::Reg),
-    integerType(BuiltInIntegerType::Integer),
-    timeType(BuiltInIntegerType::Time),
+    bitType(ScalarType::Bit),
+    logicType(ScalarType::Logic),
+    regType(ScalarType::Reg),
+    shortIntType(PredefinedIntegerType::ShortInt),
+    intType(PredefinedIntegerType::Int),
+    longIntType(PredefinedIntegerType::LongInt),
+    byteType(PredefinedIntegerType::Byte),
+    integerType(PredefinedIntegerType::Integer),
+    timeType(PredefinedIntegerType::Time),
     realType(FloatingType::Real),
     realTimeType(FloatingType::RealTime),
     shortRealType(FloatingType::ShortReal)
@@ -227,7 +227,7 @@ const Type& Compilation::getType(const DataTypeSyntax& node, const Scope& parent
     return Type::fromSyntax(*this, node, parent);
 }
 
-const VectorType& Compilation::getType(uint16_t width, bool isSigned, bool isFourState, bool isReg) {
+const PackedArrayType& Compilation::getType(uint16_t width, bool isSigned, bool isFourState, bool isReg) {
     uint32_t key = width;
     key |= uint64_t(isSigned) << 16;
     key |= uint64_t(isFourState) << 17;
@@ -237,10 +237,13 @@ const VectorType& Compilation::getType(uint16_t width, bool isSigned, bool isFou
     if (it != vectorTypeCache.end())
         return *it->second;
 
-    auto type = emplace<VectorType>(VectorType::getScalarType(isFourState, isReg),
-                                    ConstantRange { width - 1, 0 }, isSigned);
+    auto type = emplace<PackedArrayType>(getScalarType(isFourState, isReg), ConstantRange { width - 1, 0 });
     vectorTypeCache.emplace_hint(it, key, type);
     return *type;
+}
+
+const ScalarType& Compilation::getScalarType(bool isFourState, bool isReg) {
+    return !isFourState ? getBitType() : isReg ? getRegType() : getLogicType();
 }
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
