@@ -12,6 +12,7 @@ TEST_CASE("Finding top level", "[binding:decls]") {
     REQUIRE(root.topInstances.size() == 2);
     CHECK(root.topInstances[0]->name == "C");
     CHECK(root.topInstances[1]->name == "D");
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Module parameterization errors", "[binding:modules]") {
@@ -81,6 +82,7 @@ endmodule
     const auto& leaf = instance.memberAt<ModuleInstanceSymbol>(0).memberAt<ModuleInstanceSymbol>(0);
     const auto& foo = leaf.find<ParameterSymbol>("foo");
     CHECK(foo.getValue().integer() == 4);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Module children (conditional generate)", "[binding:modules]") {
@@ -112,6 +114,7 @@ endmodule
 
     const auto& foo = leaf.find<ParameterSymbol>("foo");
     CHECK(foo.getValue().integer() == 1);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Module children (loop generate)", "[binding:modules]") {
@@ -137,6 +140,7 @@ endmodule
         const auto& foo = leaf.find<ParameterSymbol>("foo");
         CHECK(foo.getValue().integer() == i);
     }
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Interface instantiation", "[binding:modules]") {
@@ -166,6 +170,7 @@ endmodule
     // TODO:
     Compilation compilation;
     evalModule(tree, compilation);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("always_comb", "[binding:modules]") {
@@ -206,6 +211,8 @@ endmodule
     const auto& variable = instance.memberAt<VariableSymbol>(4);
     CHECK(variable.type->isIntegral());
     CHECK(variable.name == "arr1");
+
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Function declaration", "[binding:modules]") {
@@ -242,22 +249,24 @@ endmodule
     REQUIRE(returnStmt.kind == StatementKind::Return);
     CHECK(!returnStmt.expr->bad());
     CHECK(returnStmt.expr->type->getBitWidth() == 32);
+
+    NO_COMPILATION_ERRORS;
 }
 
-// TODO: uncomment this
-//TEST_CASE("Package declaration", "[symbols]") {
-//    auto tree = SyntaxTree::fromText(R"(
-//module Top;
-//    parameter int blah = Foo::x;
-//endmodule
-//
-//package Foo;
-//    parameter int x = 4;
-//endpackage
-//)");
-//
-//    Compilation compilation;
-//    compilation.addSyntaxTree(tree);
-//    const auto& cv = compilation.getRoot().topInstances[0]->memberAt<ParameterSymbol>(0).getValue();
-//    CHECK(cv.integer() == 4);
-//}
+TEST_CASE("Package declaration", "[symbols]") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+    parameter int blah = Foo::x;
+endmodule
+
+package Foo;
+    parameter int x = 4;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    const auto& cv = compilation.getRoot().topInstances[0]->memberAt<ParameterSymbol>(0).getValue();
+    CHECK(cv.integer() == 4);
+    NO_COMPILATION_ERRORS;
+}

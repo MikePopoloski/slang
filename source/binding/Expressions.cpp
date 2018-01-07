@@ -61,8 +61,9 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
             break;
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
+            return bindSimpleName(compilation, syntax, scope);
         case SyntaxKind::ScopedName:
-            return bindName(compilation, syntax.as<NameSyntax>(), scope);
+            return bindQualifiedName(compilation, syntax.as<ScopedNameSyntax>(), scope);
         case SyntaxKind::RealLiteralExpression:
             return RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
         case SyntaxKind::IntegerLiteralExpression:
@@ -142,30 +143,6 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
             THROW_UNREACHABLE;
     }
     return scope.getCompilation().badExpression(nullptr);
-}
-
-Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax, const Scope& scope) {
-    if (syntax.kind != SyntaxKind::IdentifierName)
-        return compilation.badExpression(nullptr);
-
-    string_view name = syntax.as<IdentifierNameSyntax>().identifier.valueText();
-    const Symbol* symbol = scope.lookupUnqualified(name);
-    if (!symbol) {
-        compilation.addError(DiagCode::UndeclaredIdentifier, syntax.as<IdentifierNameSyntax>().identifier.location()) << name;
-        return compilation.badExpression(nullptr);
-    }
-    
-    switch (symbol->kind) {
-        case SymbolKind::Variable:
-        case SymbolKind::FormalArgument:
-            return *compilation.emplace<VariableRefExpression>(symbol->as<VariableSymbol>(), syntax.sourceRange());
-    
-        case SymbolKind::Parameter:
-            return *compilation.emplace<ParameterRefExpression>(symbol->as<ParameterSymbol>(), syntax.sourceRange());
-    
-        default:
-            THROW_UNREACHABLE;
-    }
 }
 
 //Expression& Binder::bindSelectName(const IdentifierSelectNameSyntax& syntax) {

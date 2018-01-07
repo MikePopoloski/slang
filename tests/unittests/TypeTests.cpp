@@ -29,6 +29,7 @@ endmodule
     CHECK((*values++)->value.integer() == 5);
 
     // TODO: test (and implement) all the restrictions on enum and enum values
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Enum value leakage") {
@@ -60,6 +61,7 @@ endmodule
     CHECK(foshizzle.lookupUnqualified("HELLO"));
     CHECK(foshizzle.lookupUnqualified("SDF"));
     CHECK(foshizzle.lookupUnqualified("BAR"));
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Packed structs") {
@@ -91,4 +93,5 @@ endmodule
     CHECK(structType.find("bar"));
     CHECK(structType.find("baz"));
     CHECK(structType.find("bif"));
+    NO_COMPILATION_ERRORS;
 }

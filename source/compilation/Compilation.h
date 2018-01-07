@@ -65,6 +65,7 @@ public:
 
     /// Report an error at the specified location.
     Diagnostic& addError(DiagCode code, SourceLocation location) { return diags.add(code, location); }
+    Diagnostic& addError(DiagCode code, SourceRange sourceRange) { return diags.add(code, sourceRange); }
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, const Scope& parent);

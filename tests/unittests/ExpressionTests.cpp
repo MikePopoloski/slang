@@ -54,6 +54,7 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     // Run it again, results should be as you'd expect
     bound.eval(context);
     CHECK(i->integer() == 7);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Check type propagation", "[binding:expressions]") {
@@ -80,6 +81,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     CHECK(op1.type->getBitWidth() == 20);
     const Expression& op2 = rhs.as<BinaryExpression>().right();
     CHECK(op2.type->getBitWidth() == 20);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Check type propagation 2", "[binding:expressions]") {
@@ -111,6 +113,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     CHECK(op1.type->getBitWidth() == 21);
     const Expression& op2 = rrhs.as<BinaryExpression>().right();
     CHECK(op2.type->getBitWidth() == 21);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Check type propagation real", "[binding:expressions]") {
@@ -157,4 +160,5 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     const Expression& op2 = rrhs.as<BinaryExpression>().right();
     CHECK(op2.type->getBitWidth() == 64);
     CHECK(op2.type->isFloating());
+    NO_COMPILATION_ERRORS;
 }

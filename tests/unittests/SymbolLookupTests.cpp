@@ -24,6 +24,7 @@ import Foo::x;
     REQUIRE(result.found);
     CHECK(result.found->kind == SymbolKind::Parameter);
     CHECK(result.found->as<ParameterSymbol>().getValue().integer() == 4);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Wildcard import lookup 1", "[symbols:lookup]") {
@@ -72,4 +73,5 @@ endmodule
     REQUIRE(symbol);
     REQUIRE(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol->as<ParameterSymbol>().getValue().integer() == 4);
+    NO_COMPILATION_ERRORS;
 }

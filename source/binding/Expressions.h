@@ -146,11 +146,13 @@ protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
-    static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const Scope& scope);
+    static Expression& bindSimpleName(Compilation& compilation, const ExpressionSyntax& syntax, const Scope& scope);
+    static Expression& bindQualifiedName(Compilation& compilation, const ScopedNameSyntax& syntax, const Scope& scope);
+    static Expression& bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax);
+
     static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const Scope& scope);
     static Expression& bindSelectExpression(Compilation& compilation, const ExpressionSyntax& syntax, Expression& expr, const SelectorSyntax& selector, const Scope& scope);
-    static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type,
-                               Expression& expr);
+    static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.
     static void contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType);

@@ -170,6 +170,7 @@ public:
     /// Token was sourced from a preprocessor directive (include, macro, etc)
     bool isFromPreprocessor() const { return (info->flags & TokenFlags::IsFromPreprocessor) != 0; }
 
+    SourceRange range() const;
     SourceLocation location() const { return info->location; }
     span<Trivia const> trivia() const { return info->trivia; }
     const Info* getInfo() const { return info; }

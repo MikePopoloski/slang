@@ -203,6 +203,10 @@ string_view Token::rawText() const {
     }
 }
 
+SourceRange Token::range() const {
+    return SourceRange(location(), location() + rawText().length());
+}
+
 void Token::writeTo(SmallVector<char>& buffer, uint8_t writeFlags) const {
     if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
         return;

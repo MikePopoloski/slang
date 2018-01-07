@@ -23,7 +23,11 @@ using namespace slang;
 
 #define CHECK_DIAGNOSTICS_EMPTY do {\
     if (!diagnostics.empty()) FAIL_CHECK(DiagnosticWriter(getSourceManager()).report(diagnostics)); \
-} while(0)
+} while (0)
+
+#define NO_COMPILATION_ERRORS do {\
+    if (!compilation.diagnostics().empty()) FAIL_CHECK(DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(compilation.diagnostics())); \
+} while (0)
 
 inline std::string findTestDir() {
     auto path = Path::getCurrentDirectory();
