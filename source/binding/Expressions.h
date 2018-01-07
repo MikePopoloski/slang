@@ -25,9 +25,10 @@ enum class ExpressionKind {
     BinaryOp,
     ConditionalOp,
     Concatenation,
-    Select,
+    ElementSelect,
+    RangeSelect,
     Call,
-    Conversion
+    Conversion,
 };
 
 enum class UnaryOperator {
@@ -86,6 +87,12 @@ enum class BinaryOperator {
     LogicalRightShiftAssignment,
     ArithmeticLeftShiftAssignment,
     ArithmeticRightShiftAssignment,
+};
+
+enum class RangeSelectionKind {
+    Simple,
+    IndexedUp,
+    IndexedDown
 };
 
 enum class ConversionKind {
@@ -151,7 +158,6 @@ protected:
     static Expression& bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax);
 
     static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const Scope& scope);
-    static Expression& bindSelectExpression(Compilation& compilation, const ExpressionSyntax& syntax, Expression& expr, const SelectorSyntax& selector, const Scope& scope);
     static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.
@@ -348,19 +354,43 @@ private:
     Expression* right_;
 };
 
-/// Represents a variable selection expression.
-class SelectExpression : public Expression {
+/// Represents a single element selection expression.
+class ElementSelectExpression : public Expression {
 public:
-    // TODO: get rid of this
-    SyntaxKind kind;
+    ElementSelectExpression(const Type& type, Expression& value, Expression& selector, SourceRange sourceRange) :
+        Expression(ExpressionKind::ElementSelect, type, sourceRange),
+        value_(&value), selector_(&selector) {}
 
-    SelectExpression(const Type& type, SyntaxKind kind, Expression& expr, Expression& left,
-                     Expression& right, SourceRange sourceRange) :
-        Expression(ExpressionKind::Select, type, sourceRange), kind(kind),
-        expr_(&expr), left_(&left), right_(&right) {}
+    const Expression& value() const { return *value_; }
+    Expression& value() { return *value_; }
 
-    const Expression& expr() const { return *expr_; }
-    Expression& expr() { return *expr_; }
+    const Expression& selector() const { return *selector_; }
+    Expression& selector() { return *selector_; }
+
+    ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, Expression& value,
+                                  const ExpressionSyntax& syntax, const Scope& scope);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
+
+private:
+    Expression* value_;
+    Expression* selector_;
+};
+
+/// Represents a range selection expression.
+class RangeSelectExpression : public Expression {
+public:
+    RangeSelectionKind selectionKind;
+
+    RangeSelectExpression(RangeSelectionKind selectionKind, const Type& type, Expression& value,
+                          Expression& left, Expression& right, SourceRange sourceRange) :
+        Expression(ExpressionKind::RangeSelect, type, sourceRange),
+        selectionKind(selectionKind), value_(&value), left_(&left), right_(&right) {}
+
+    const Expression& value() const { return *value_; }
+    Expression& value() { return *value_; }
 
     const Expression& left() const { return *left_; }
     Expression& left() { return *left_; }
@@ -370,10 +400,13 @@ public:
 
     ConstantValue eval(EvalContext& context) const;
 
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Select; }
+    static Expression& fromSyntax(Compilation& compilation, Expression& value,
+                                  const RangeSelectSyntax& syntax, const Scope& scope);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
 private:
-    Expression* expr_;
+    Expression* value_;
     Expression* left_;
     Expression* right_;
 };

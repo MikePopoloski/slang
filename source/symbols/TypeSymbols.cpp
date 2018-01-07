@@ -377,6 +377,15 @@ VectorType::VectorType(ScalarType scalarType_, ConstantRange range_, bool isSign
 {
 }
 
+const Type& VectorType::getElementType(Compilation& compilation) const {
+    switch (scalarType) {
+        case Bit: return compilation.getBitType();
+        case Logic: return compilation.getLogicType();
+        case Reg: return compilation.getRegType();
+        default: THROW_UNREACHABLE;
+    }
+}
+
 FloatingType::FloatingType(Kind floatKind_) :
     Type(SymbolKind::FloatingType, "", SourceLocation()),
     floatKind(floatKind_)

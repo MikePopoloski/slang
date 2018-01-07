@@ -118,7 +118,7 @@ public:
 
     /// Indicates whether this is a scalar type; that is, one bit wide. Scalar
     /// types are always represented by the BuiltInIntegerType class.
-    bool isScalar() const { return bitWidth == 1; }
+    bool isScalar() const { return isBuiltIn() && bitWidth == 1; }
 
     /// Indicates whether this is a vector type; vector types are more than one
     /// bit wide and are represented by the VectorType class.
@@ -180,6 +180,8 @@ public:
     } scalarType;
 
     VectorType(ScalarType scalarType, ConstantRange range, bool isSigned);
+
+    const Type& getElementType(Compilation& compilation) const;
 
     static ScalarType getScalarType(bool isFourState, bool isReg) {
         return !isFourState ? VectorType::Bit : isReg ? VectorType::Reg : VectorType::Logic;

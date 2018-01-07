@@ -43,7 +43,8 @@ bool Expression::isLValue() const {
     switch (kind) {
         case ExpressionKind::ParameterRef:
         case ExpressionKind::VariableRef:
-        case ExpressionKind::Select:
+        case ExpressionKind::ElementSelect:
+        case ExpressionKind::RangeSelect:
             return true;
         default:
             return false;
@@ -175,56 +176,24 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
 //    return Binder(*package).bindName(syntax.right);
 //}
 
-Expression& Expression::bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const Scope& scope) {
-    Expression& expr = Expression::fromSyntax(compilation, syntax.left, scope);
+Expression& Expression::bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax,
+                                             const Scope& scope) {
+    Expression& value = Expression::fromSyntax(compilation, syntax.left, scope);
+
     // TODO: null selector?
-    return bindSelectExpression(compilation, syntax, expr, *syntax.select.selector, scope);
-}
-
-Expression& Expression::bindSelectExpression(Compilation& compilation, const ExpressionSyntax& syntax, Expression& expr, const SelectorSyntax& selector, const Scope& scope) {
-    // if (down), the indices are declares going down, [15:0], so
-    // msb > lsb
-    if (expr.bad())
-        return compilation.badExpression(&expr);
-
-    const auto& integralType = expr.type->as<IntegralType>();
-    bool down = integralType.getBitVectorRange().isLittleEndian();
-    Expression* left = nullptr;
-    Expression* right = nullptr;
-    int width = 0;
-
-    // TODO: errors if things that should be constant expressions aren't actually constant expressions
-    SyntaxKind kind = selector.kind;
-    switch (kind) {
+    const SelectorSyntax* selector = syntax.select.selector;
+    switch (selector->kind) {
         case SyntaxKind::BitSelect:
-            left = &Expression::fromSyntax(compilation, selector.as<BitSelectSyntax>().expr, scope);
-            right = left;
-            width = 1;
-            break;
+            return ElementSelectExpression::fromSyntax(compilation, value,
+                                                       selector->as<BitSelectSyntax>().expr, scope);
         case SyntaxKind::SimpleRangeSelect:
-            left = &Expression::fromSyntax(compilation, selector.as<RangeSelectSyntax>().left, scope); // msb
-            right = &Expression::fromSyntax(compilation, selector.as<RangeSelectSyntax>().right, scope); // lsb
-            width = (down ? 1 : -1) * (int)(left->eval().integer().as<int64_t>().value() -
-                    right->eval().integer().as<int64_t>().value());
-            break;
         case SyntaxKind::AscendingRangeSelect:
         case SyntaxKind::DescendingRangeSelect:
-            left = &Expression::fromSyntax(compilation, selector.as<RangeSelectSyntax>().left, scope); // msb/lsb
-            right = &Expression::fromSyntax(compilation, selector.as<RangeSelectSyntax>().right, scope); // width
-            width = int(right->eval().integer().as<int64_t>().value());
-            break;
+            return RangeSelectExpression::fromSyntax(compilation, value,
+                                                     selector->as<RangeSelectSyntax>(), scope);
         default:
             THROW_UNREACHABLE;
     }
-
-    return *compilation.emplace<SelectExpression>(
-        compilation.getType((uint16_t)width, integralType.isSigned, integralType.isFourState),
-        kind,
-        expr,
-        *left,
-        *right,
-        syntax.sourceRange()
-    );
 }
 
 Expression& Expression::convert(Compilation& compilation, ConversionKind conversionKind, const Type& type,
@@ -510,6 +479,76 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation, const Co
     return *compilation.emplace<ConditionalExpression>(*type, pred, left, right, syntax.sourceRange());
 }
 
+Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
+                                                const ExpressionSyntax& syntax, const Scope& scope) {
+    Expression& selector = Expression::fromSyntax(compilation, syntax, scope);
+    auto result = compilation.emplace<ElementSelectExpression>(compilation.getErrorType(), value,
+                                                               selector, syntax.sourceRange());
+    if (value.bad())
+        return compilation.badExpression(result);
+
+    const Type& valueType = value.type->getCanonicalType();
+    switch (valueType.kind) {
+        case SymbolKind::VectorType:
+            result->type = &valueType.as<VectorType>().getElementType(compilation);
+            break;
+        case SymbolKind::PackedArrayType:
+            result->type = &valueType.as<PackedArrayType>().elementType;
+            break;
+        default: {
+            if (!valueType.isIntegral()) {
+                compilation.addError(DiagCode::BadIndexExpression, value.sourceRange) << *value.type;
+                return compilation.badExpression(result);
+            }
+            const IntegralType& it = valueType.as<IntegralType>();
+            if (it.isScalar()) {
+                compilation.addError(DiagCode::CannotIndexScalar, value.sourceRange);
+                return compilation.badExpression(result);
+            }
+            result->type = it.isFourState ? &compilation.getLogicType() : &compilation.getBitType();
+            break;
+        }
+    }
+
+    if (!selector.type->getCanonicalType().isIntegral()) {
+        compilation.addError(DiagCode::IndexMustBeIntegral, selector.sourceRange);
+        return compilation.badExpression(result);
+    }
+
+    return *result;
+}
+
+Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
+                                              const RangeSelectSyntax& syntax, const Scope& scope) {
+    Expression& left = Expression::fromSyntax(compilation, syntax.left, scope);
+    Expression& right = Expression::fromSyntax(compilation, syntax.right, scope);
+    
+    RangeSelectionKind selectionKind;
+    switch (syntax.kind) {
+        case SyntaxKind::SimpleRangeSelect: selectionKind = RangeSelectionKind::Simple; break;
+        case SyntaxKind::AscendingRangeSelect: selectionKind = RangeSelectionKind::IndexedUp; break;
+        case SyntaxKind::DescendingRangeSelect: selectionKind = RangeSelectionKind::IndexedDown; break;
+        default: THROW_UNREACHABLE;
+    }
+
+    auto result = compilation.emplace<RangeSelectExpression>(selectionKind, compilation.getErrorType(), value,
+                                                             left, right, syntax.sourceRange());
+    if (value.bad())
+        return compilation.badExpression(result);
+
+    // TODO: clean this up
+    bool down = value.type->as<IntegralType>().getBitVectorRange().isLittleEndian();
+    int width;
+    if (selectionKind == RangeSelectionKind::Simple)
+        width = (down ? 1 : -1) * (int)(left.eval().integer().as<int64_t>().value() -
+                                        right.eval().integer().as<int64_t>().value());
+    else
+        width = int(right.eval().integer().as<int64_t>().value());
+
+    result->type = &compilation.getType((uint16_t)width, false);
+    return *result;
+}
+
 Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                                                 const ConcatenationExpressionSyntax& syntax, const Scope& scope) {
     SmallVectorSized<const Expression*, 8> buffer;
@@ -623,7 +662,8 @@ Expression& Expression::propagateAndFold(Compilation& compilation, Expression& e
         case ExpressionKind::VariableRef:
         case ExpressionKind::ParameterRef:
         case ExpressionKind::Concatenation:
-        case ExpressionKind::Select:
+        case ExpressionKind::ElementSelect:
+        case ExpressionKind::RangeSelect:
             return expr;
         case ExpressionKind::UnaryOp:
             return UnaryExpression::propagateAndFold(compilation, expr.as<UnaryExpression>(), newType);

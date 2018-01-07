@@ -29,7 +29,8 @@ ConstantValue Expression::eval(EvalContext& context) const {
         case ExpressionKind::UnaryOp: return as<UnaryExpression>().eval(context);
         case ExpressionKind::BinaryOp: return as<BinaryExpression>().eval(context);
         case ExpressionKind::ConditionalOp: return as<ConditionalExpression>().eval(context);
-        case ExpressionKind::Select: return as<SelectExpression>().eval(context);
+        case ExpressionKind::ElementSelect: return as<ElementSelectExpression>().eval(context);
+        case ExpressionKind::RangeSelect: return as<RangeSelectExpression>().eval(context);
         case ExpressionKind::Concatenation: return as<ConcatenationExpression>().eval(context);
         case ExpressionKind::Call: return as<CallExpression>().eval(context);
         case ExpressionKind::Conversion: return as<ConversionExpression>().eval(context);
@@ -176,9 +177,30 @@ ConstantValue ConditionalExpression::eval(EvalContext& context) const {
     }
 }
 
-ConstantValue SelectExpression::eval(EvalContext& context) const {
-    SVInt value = expr().eval(context).integer();
-    ConstantRange range = expr().type->as<IntegralType>().getBitVectorRange();
+ConstantValue ElementSelectExpression::eval(EvalContext& context) const {
+    SVInt v = value().eval(context).integer();
+    SVInt index = selector().eval(context).integer();
+    ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
+
+    if (index.hasUnknown()) {
+        // If any part of an address is unknown, then the whole thing returns
+        // 'x; let's handle this here so everywhere else we can assume the inputs
+        // are normal numbers
+        return SVInt::createFillX((uint16_t)type->getBitWidth(), false);
+    }
+
+    // SVInt uses little endian ranges starting from zero; we need to translate from the
+    // actual range used in the declaration of the variable.
+    int16_t actualIndex = int16_t(index.as<int>().value() - range.lower());
+    if (!range.isLittleEndian())
+        actualIndex = int16_t(range.width() - (uint32_t)actualIndex - 1);
+
+    return v.bitSelect(actualIndex, actualIndex);
+}
+
+ConstantValue RangeSelectExpression::eval(EvalContext& context) const {
+    SVInt v = value().eval(context).integer();
+    ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
 
     SVInt msb = left().eval(context).integer();
     SVInt lsbOrWidth = right().eval(context).integer();
@@ -196,24 +218,21 @@ ConstantValue SelectExpression::eval(EvalContext& context) const {
     if (!range.isLittleEndian())
         actualMsb = int16_t(range.width() - (uint32_t)actualMsb - 1);
 
-    switch (kind) {
-        case SyntaxKind::BitSelect: {
-            return value.bitSelect(actualMsb, actualMsb);
-        }
-        case SyntaxKind::SimpleRangeSelect: {
+    switch (selectionKind) {
+        case RangeSelectionKind::Simple: {
             int16_t actualLsb = int16_t(lsbOrWidth.as<int>().value() - range.lower());
             if (!range.isLittleEndian())
                 actualLsb = int16_t(range.width() - (uint32_t)actualLsb - 1);
 
-            return value.bitSelect(actualLsb, actualMsb);
+            return v.bitSelect(actualLsb, actualMsb);
         }
-        case SyntaxKind::AscendingRangeSelect: {
+        case RangeSelectionKind::IndexedUp: {
             int16_t width = lsbOrWidth.as<int16_t>().value();
-            return value.bitSelect(actualMsb, actualMsb + width);
+            return v.bitSelect(actualMsb, actualMsb + width);
         }
-        case SyntaxKind::DescendingRangeSelect: {
+        case RangeSelectionKind::IndexedDown: {
             int16_t width = lsbOrWidth.as<int16_t>().value();
-            return value.bitSelect(actualMsb - width, actualMsb);
+            return v.bitSelect(actualMsb - width, actualMsb);
         }
         default:
             THROW_UNREACHABLE;

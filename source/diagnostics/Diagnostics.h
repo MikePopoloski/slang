@@ -144,6 +144,9 @@ enum class DiagCode : uint8_t {
     // expressions
     BadUnaryExpression,
     BadBinaryExpression,
+    BadIndexExpression,
+    CannotIndexScalar,
+    IndexMustBeIntegral,
     BadAssignment,
     NoImplicitConversion,
     TooManyArguments,
