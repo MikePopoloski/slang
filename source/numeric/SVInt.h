@@ -120,7 +120,6 @@ public:
 };
 
 // TODO:
-// - Correct behavior when indexing outside the bounds of the value
 // - Use a 32-bit value for bitWidth to allow for full sized intermediaries
 
 ///
@@ -152,29 +151,27 @@ public:
             initSlowCase(bit);
     }
 
-    /// Construct from a given signed 64-bit value. Uses only the bits necessary to hold the value.
-    explicit SVInt(int64_t value) :
-        SVIntStorage(0, true, false)
+    /// Construct from a given integer value. Uses only the bits necessary to hold the value.
+    template<typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>>>
+    SVInt(T value) :
+        SVIntStorage(0, false, false)
     {
         val = (uint64_t)value;
-        if (value < 0)
-            bitWidth = bitwidth_t(64 - slang::countLeadingOnes64(val) + 1);
-        else
-            bitWidth = bitwidth_t(64 - slang::countLeadingZeros64(val) + 1);
-        clearUnusedBits();
-    }
-
-    /// Construct from a given 64-bit value. Uses only the bits necessary to hold the value.
-    NO_SANITIZE("unsigned-integer-overflow")
-    explicit SVInt(uint64_t value, bool isSigned) :
-        SVIntStorage(clog2(value + 1), isSigned, false)
-    {
-        val = value;
-        if (bitWidth == 0) {
-            if (value == 0)
-                bitWidth = 1;
+        if constexpr (IsSignedHelper<T>::type::value) {
+            signFlag = true;
+            if (value < 0)
+                bitWidth = bitwidth_t(64 - slang::countLeadingOnes64(val) + 1);
             else
-                bitWidth = 64;
+                bitWidth = bitwidth_t(64 - slang::countLeadingZeros64(val) + 1);
+        }
+        else {
+            bitWidth = clog2(value + 1);
+            if (bitWidth == 0) {
+                if (value == 0)
+                    bitWidth = 1;
+                else
+                    bitWidth = 64;
+            }
         }
         clearUnusedBits();
     }
@@ -448,7 +445,7 @@ public:
     static logic_t logicalImplication(const SVInt& lhs, const SVInt& rhs);
 
     /// Implements logical equivalence: lhs <-> rhs. This is equivalent to ((lhs -> rhs) && (rhs -> lhs)).
-    static logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs) ;
+    static logic_t logicalEquivalence(const SVInt& lhs, const SVInt& rhs);
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
@@ -462,34 +459,6 @@ public:
 
     /// Concatenation operator
     friend SVInt concatenate(span<SVInt const> operands);
-
-    /// Optimized operators that work with direct integer values.
-    friend logic_t operator==(const SVInt& lhs, int64_t rhs) {
-        if (lhs.hasUnknown())
-            return logic_t::x;
-        auto l = lhs.as<int64_t>();
-        return l ? logic_t(*l == rhs) : logic_t(false);
-    }
-
-    friend logic_t operator==(int64_t lhs, const SVInt& rhs) { return rhs == lhs; }
-    friend logic_t operator!=(const SVInt& lhs, int64_t rhs) { return !(lhs == rhs); }
-    friend logic_t operator!=(int64_t lhs, const SVInt& rhs) { return !(rhs == lhs); }
-
-    friend logic_t operator<(const SVInt& lhs, int64_t rhs) {
-        if (lhs.hasUnknown())
-            return logic_t::x;
-        auto l = lhs.as<int64_t>();
-        return l ? logic_t(*l < rhs) : logic_t(false);
-    }
-
-    friend logic_t operator<=(const SVInt& lhs, int64_t rhs) { return (lhs < rhs) || (lhs == rhs); }
-    friend logic_t operator>(const SVInt& lhs, int64_t rhs) { return !(lhs <= rhs); }
-    friend logic_t operator>=(const SVInt& lhs, int64_t rhs) { return !(lhs < rhs); }
-
-    friend logic_t operator<(int64_t lhs, const SVInt& rhs) { return rhs >= lhs; }
-    friend logic_t operator<=(int64_t lhs, const SVInt& rhs) { return rhs > lhs; }
-    friend logic_t operator>(int64_t lhs, const SVInt& rhs) { return rhs <= lhs; }
-    friend logic_t operator>=(int64_t lhs, const SVInt& rhs) { return rhs < lhs; }
 
     enum {
         MAX_BITS = (1 << 24) - 1,
@@ -565,6 +534,14 @@ private:
     }
 
     static constexpr uint64_t Seed = 0x3765936aa9a6c480; // chosen by fair dice roll
+
+    template<typename T, typename = void>
+    struct IsSignedHelper { using type = std::is_signed<T>; };
+
+    template<typename T>
+    struct IsSignedHelper<T, std::enable_if_t<std::is_enum_v<T>>> {
+        using type = std::is_signed<std::underlying_type_t<T>>;
+    };
 };
 
 inline logic_t operator||(const SVInt& lhs, logic_t rhs) { return lhs != 0 || rhs; }

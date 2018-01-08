@@ -5,7 +5,7 @@
 TEST_CASE("Construction", "[numeric]") {
     SVInt value1;
     SVInt value2(924);
-    SVInt value3(924, false);
+    SVInt value3(924u);
     SVInt value4(61, 924, false);
     SVInt value5(69, (uint64_t)-924, true);
     SVInt value6(-924);
@@ -17,8 +17,8 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(value4 == value3);
     CHECK(value6 == -924);
     CHECK(value7 == "63'hffffffffffffffff"_si);
-    CHECK(SVInt(0, true) == 0);
-    CHECK(SVInt(UINT64_MAX, true) == -1);
+    CHECK(SVInt(0) == 0);
+    CHECK(SVInt(int64_t(UINT64_MAX)) == -1);
 
     CHECK(value5.isNegative());
     value5.setSigned(false);
@@ -188,7 +188,7 @@ TEST_CASE("SVInt to string (and back)", "[numeric]") {
 TEST_CASE("Comparison", "[numeric]") {
     CHECK(SVInt(9000) == SVInt(1024, 9000, false));
     CHECK(SVInt(-4) == -4);
-    CHECK(SVInt((uint64_t)-4, false) != SVInt(9999, (uint64_t)-4, true));
+    CHECK(SVInt((uint64_t)-4) != SVInt(9999, (uint64_t)-4, true));
     CHECK(SVInt(-4) == SVInt(9999, (uint64_t)-4, true));
     CHECK("12'b101"_si == 5);
     CHECK("12'b101"_si != 10);

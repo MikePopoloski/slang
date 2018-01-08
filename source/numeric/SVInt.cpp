@@ -20,8 +20,8 @@ namespace slang {
 const logic_t logic_t::x {logic_t::X_VALUE};
 const logic_t logic_t::z {logic_t::Z_VALUE};
 
-const SVInt SVInt::Zero {0, false};
-const SVInt SVInt::One {1, false};
+const SVInt SVInt::Zero = 0u;
+const SVInt SVInt::One = 1u;
 
 bool literalBaseFromChar(char base, LiteralBase& result) {
     switch (base) {
