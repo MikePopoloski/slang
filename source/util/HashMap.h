@@ -203,7 +203,7 @@ public:
     TValue& operator[](TKey&& key) { return emplace(std::move(key)).first->second; }
 
     HashMapRef<TKey, TValue> copy(BumpAllocator& alloc) const {
-        uint8_t* newData = (uint8_t*)alloc.allocate(sizeof(Element) * this->capacity, alignof(Element));
+        byte* newData = alloc.allocate(sizeof(Element) * this->capacity, alignof(Element));
         memcpy(newData, this->data, this->capacity * sizeof(Element));
         return HashMapRef<TKey, TValue>((Element*)newData, this->len, this->capacity);
     }
