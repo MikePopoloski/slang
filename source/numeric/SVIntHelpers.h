@@ -296,46 +296,87 @@ static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_
     }
 }
 
-// Like memcpy, but at the bit level instead of bytes
-// i.e if destBitOffset % 8 == bitLength % 8 == 0, this is
-// equivalent to memcpy(dest + destBitOffset / 8, src, bitLength / 8)
-static void copyBits(uint8_t* dest, uint16_t destBitOffset, const uint8_t* src, uint16_t bitLength, uint16_t srcBitOffset = 0) {
-    if (bitLength == 0) return;
-    // Get the first byte we want to write to, and the reamaining bits are a bit offset
-    dest += destBitOffset / 8;
-    destBitOffset %= 8;
-    src += srcBitOffset / 8;
-    srcBitOffset %= 8;
+// Does a word-by-word copy, but using bit offsets and lengths.
+static void bitcpy(uint64_t* dest, uint32_t destOffset, const uint64_t* src, uint32_t length, uint32_t srcOffset = 0) {
+    if (length == 0)
+        return;
 
-    // Writing to the first byte is a special case, due to the bit offset
-    uint8_t bitsToWrite = std::min<uint8_t>((uint8_t)bitLength, (uint8_t)(8 - destBitOffset));
+    // Get the first word we want to write to, and the remaining bits are an offset.
+    const uint32_t BitsPerWord = SVInt::BITS_PER_WORD;
+    dest += destOffset / BitsPerWord; destOffset %= BitsPerWord;
+    src += srcOffset / BitsPerWord; srcOffset %= BitsPerWord;
 
-    uint8_t srcByte = srcBitOffset ? uint8_t((*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset))) : *src;
-    *dest = uint8_t((*dest   & ((1 << destBitOffset) - 1)) +                    // preserved bits
-                    ((srcByte & ((1 << bitsToWrite) - 1)) << destBitOffset));   // new bits
+    // Writing to the first word is a special case, due to the bit offset
+    if (destOffset) {
+        uint32_t bitsToWrite = std::min(length, BitsPerWord - destOffset);
+        length -= bitsToWrite;
 
-    // all remaining writes to dest are byte-aligned, but the reads from src
-    // may not be
-    srcBitOffset += bitsToWrite;
-    bitLength -= bitsToWrite;
-    while (bitLength > 0) {
-        // advance dest one byte, and src the proper number of bits
-        ++dest;
-        src += srcBitOffset / 8;
-        srcBitOffset %= 8;
+        uint64_t srcWord;
+        if (srcOffset) {
+            // Be careful not to read past the bounds of the array.
+            srcWord = *src >> srcOffset;
+            if (BitsPerWord - srcOffset < bitsToWrite)
+                srcWord |= src[1] << (BitsPerWord - srcOffset);
+        }
+        else {
+            srcWord = *src;
+        }
 
-        // Number of bits we are writing to this byte
-        bitsToWrite = std::min<uint8_t>((uint8_t)bitLength, 8);
-        // get the next 8 bits of src, probably not byte aligned
-        // (if bitsToWrite < 8, this could have some extra bits in it
-        srcByte = srcBitOffset ? uint8_t((*src >> srcBitOffset) + (src[1] << (8 - srcBitOffset))) : *src;
+        *dest = (*dest    & ((1ull << destOffset) - 1)) |                  // preserved bits
+                ((srcWord & ((1ull << bitsToWrite) - 1)) << destOffset);   // new bits
 
-        // Write srcByte, filling the upper bits with zereos if we have less than
-        // a byte left to write.
-        *dest = srcByte & ((1 << bitsToWrite) - 1); // new bits
+        dest++;
+        srcOffset += bitsToWrite;
+        src += srcOffset / BitsPerWord; srcOffset %= BitsPerWord;
+    }
 
-        bitLength -= bitsToWrite;
-        srcBitOffset += bitsToWrite;
+    // Do a bulk copy of whole words, with all writes to dest word-aligned.
+    for (uint32_t i = 0; i < length / BitsPerWord; i++) {
+        *dest = srcOffset ? (*src >> srcOffset) | (src[1] << (BitsPerWord - srcOffset)) : *src;
+        dest++; src++;
+    }
+
+    // Handle leftover bits in the final word.
+    if (length %= BitsPerWord) {
+        uint64_t mask = (1ull << length) - 1;
+        uint64_t srcWord;
+        if (srcOffset) {
+            // Be careful not to read past the bounds of the array.
+            srcWord = *src >> srcOffset;
+            if (BitsPerWord - srcOffset < length)
+                srcWord |= src[1] << (BitsPerWord - srcOffset);
+        }
+        else {
+            srcWord = *src;
+        }
+
+        *dest = (*dest & ~mask) | (srcWord & mask);
     }
 }
 
+// Sets all of the bits in the given range to one.
+static void setBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
+    if (length == 0)
+        return;
+
+    // Get the first word we want to write to, and the remaining bits are an offset.
+    const uint32_t BitsPerWord = SVInt::BITS_PER_WORD;
+    dest += destOffset / BitsPerWord; destOffset %= BitsPerWord;
+
+    // Writing to the first word is a special case, due to the bit offset
+    if (destOffset) {
+        uint32_t bitsToWrite = std::min(length, BitsPerWord - destOffset);
+        length -= bitsToWrite;
+
+        *dest |= ((1ull << bitsToWrite) - 1) << destOffset;
+        dest++;
+    }
+
+    // Do a bulk set of whole words, with all writes to dest word-aligned.
+    for (uint32_t i = 0; i < length / BitsPerWord; i++)
+        *dest++ = UINT64_MAX;
+
+    // Handle leftover bits in the final word.
+    if (length %= BitsPerWord)
+        *dest |= (1ull << length) - 1;
+}

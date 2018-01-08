@@ -16,7 +16,7 @@ VectorBuilder::VectorBuilder(Diagnostics& diagnostics) :
 {
 }
 
-void VectorBuilder::start(LiteralBase base, uint16_t size, bool isSigned, SourceLocation location) {
+void VectorBuilder::start(LiteralBase base, bitwidth_t size, bool isSigned, SourceLocation location) {
     literalBase = base;
     sizeBits = size;
     firstLocation = location;
@@ -155,7 +155,7 @@ SVInt VectorBuilder::finish() {
         // possibly the first (leading) digit. This one has leading zeros in it,
         // so only requires clog2(d+1) bits. If the leading digit is unknown
         // however, we go with the default multiplier amount.
-        uint32_t bits = 0;
+        bitwidth_t bits = 0;
         if (digits.size() > 1)
             bits = (digits.size() - 1) * multiplier;
 
@@ -170,7 +170,7 @@ SVInt VectorBuilder::finish() {
                 bits = SVInt::MAX_BITS;
             }
             if (sizeBits == 0) {
-                return SVInt::fromDigits((uint16_t)std::max(32u, bits), literalBase,
+                return SVInt::fromDigits(std::max(32u, bits), literalBase,
                                          signFlag, hasUnknown, digits);
             } else {
                 // we should warn about overflow here, but the spec says it is valid and

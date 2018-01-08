@@ -195,7 +195,7 @@ ConstantValue ElementSelectExpression::eval(EvalContext& context) const {
     if (!range.isLittleEndian())
         actualIndex = int16_t(range.width() - (uint32_t)actualIndex - 1);
 
-    return v.bitSelect(actualIndex, actualIndex);
+    return SVInt(v[actualIndex]);
 }
 
 ConstantValue RangeSelectExpression::eval(EvalContext& context) const {
@@ -224,15 +224,15 @@ ConstantValue RangeSelectExpression::eval(EvalContext& context) const {
             if (!range.isLittleEndian())
                 actualLsb = int16_t(range.width() - (uint32_t)actualLsb - 1);
 
-            return v.bitSelect(actualLsb, actualMsb);
+            return v(actualMsb, actualLsb);
         }
         case RangeSelectionKind::IndexedUp: {
             int16_t width = lsbOrWidth.as<int16_t>().value();
-            return v.bitSelect(actualMsb, actualMsb + width);
+            return v(actualMsb + width, actualMsb);
         }
         case RangeSelectionKind::IndexedDown: {
             int16_t width = lsbOrWidth.as<int16_t>().value();
-            return v.bitSelect(actualMsb - width, actualMsb);
+            return v(actualMsb, actualMsb - width);
         }
         default:
             THROW_UNREACHABLE;

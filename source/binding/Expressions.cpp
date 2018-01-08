@@ -212,7 +212,7 @@ Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const LiteralEx
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax) {
     const SVInt& value = syntax.value.intValue();
-    const Type& type = compilation.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    const Type& type = compilation.getType((uint16_t)value.getBitWidth(), value.isSigned(), value.hasUnknown());
     return *compilation.emplace<IntegerLiteral>(compilation, type, value, syntax.sourceRange());
 }
 

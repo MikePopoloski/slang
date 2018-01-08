@@ -24,7 +24,7 @@ public:
     VectorBuilder(Diagnostics& diagnostics);
 
     /// Start a new integer literal.
-    void start(LiteralBase base, uint16_t size, bool isSigned, SourceLocation location);
+    void start(LiteralBase base, bitwidth_t size, bool isSigned, SourceLocation location);
 
     /// Add another token to the literal.
     void append(Token token);
@@ -38,7 +38,7 @@ private:
     Diagnostics& diagnostics;
     SmallVectorSized<logic_t, 16> digits;
     SourceLocation firstLocation;
-    uint16_t sizeBits = 0;
+    bitwidth_t sizeBits = 0;
     LiteralBase literalBase = LiteralBase::Binary;
     bool signFlag = false;
     bool hasUnknown = false;

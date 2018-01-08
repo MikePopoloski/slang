@@ -261,7 +261,7 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
 ExpressionSyntax& Parser::parseIntegerExpression() {
     Token sizeToken;
     Token baseToken;
-    uint16_t sizeBits = 0;
+    bitwidth_t sizeBits = 0;
 
     auto token = consume();
     if (token.kind == TokenKind::IntegerBase)
@@ -285,7 +285,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
             addError(DiagCode::LiteralSizeTooLarge, token.location()) << (int)SVInt::MAX_BITS;
         }
         else {
-            sizeBits = tokenValue.as<uint16_t>().value();
+            sizeBits = tokenValue.as<bitwidth_t>().value();
         }
     }
 
