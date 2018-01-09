@@ -1435,13 +1435,13 @@ void SVInt::checkUnknown() {
 }
 
 SVInt SVInt::createFillX(bitwidth_t bitWidth, bool isSigned) {
-    SVInt result(new uint64_t[getNumWords(bitWidth, true)], bitWidth, isSigned, true);
+    SVInt result = SVInt::allocUninitialized(bitWidth, isSigned, true);
     result.setAllX();
     return result;
 }
 
 SVInt SVInt::createFillZ(bitwidth_t bitWidth, bool isSigned) {
-    SVInt result(new uint64_t[getNumWords(bitWidth, true)], bitWidth, isSigned, true);
+    SVInt result = SVInt::allocUninitialized(bitWidth, isSigned, true);
     result.setAllZ();
     return result;
 }

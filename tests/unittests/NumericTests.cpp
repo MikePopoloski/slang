@@ -273,6 +273,12 @@ TEST_CASE("Arithmetic", "[numeric]") {
     CHECK(v6 == -2);
 
     CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
+
+    // Test huge values
+    SVInt v7 = ("16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si.shl(16777000) +
+               "16777215'd1234"_si.shl(16777206))(16777214, 16777000);
+    CHECK(v7.toString(LiteralBase::Decimal) == "215'd47111210086086240918128115148156713906029950526455712219410726911");
+    CHECK(v7.toString(LiteralBase::Hex) == "215'h728560c56c16d0b0be23da38038624767fffffffffffffffffffff");
 }
 
 void testDiv(SVInt a, SVInt b, SVInt c) {

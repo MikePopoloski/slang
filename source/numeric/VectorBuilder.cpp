@@ -120,7 +120,7 @@ void VectorBuilder::append(Token token) {
 
 SVInt VectorBuilder::finish() {
     if (!valid)
-        return SVInt(0);
+        return 0;
 
     if (digits.empty())
         digits.append(logic_t(0));
@@ -132,7 +132,7 @@ SVInt VectorBuilder::finish() {
                 value += d.value;
                 if (value > UINT32_MAX) {
                     diagnostics.add(DiagCode::DecimalLiteralOverflow, firstLocation);
-                    return SVInt(0);
+                    return 0;
                 }
             }
         }

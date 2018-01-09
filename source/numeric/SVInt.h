@@ -186,6 +186,7 @@ public:
         // valid within another concatenation. For now we drop this check altogehter, but it
         // might be a good check to have in general
         //ASSERT(bitWidth);
+        ASSERT(bitWidth <= MAX_BITS);
         if (isSingleWord())
             val = value;
         else

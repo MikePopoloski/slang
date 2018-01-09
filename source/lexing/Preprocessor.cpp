@@ -1174,7 +1174,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, Sm
         case MacroIntrinsic::Line: {
             uint32_t lineNum = sourceManager.getLineNumber(usageSite.location());
             text.appendRange(std::to_string(lineNum)); // not the most efficient, but whatever
-            info->setInt(alloc, SVInt(lineNum));
+            info->setInt(alloc, lineNum);
             info->rawText = to_string_view(text.copy(alloc));
 
             // Use appendBodyToken so that implicit concatenation will occur if something else
