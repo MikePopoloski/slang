@@ -12,6 +12,7 @@
 
 #include "text/CharInfo.h"
 #include "util/Hash.h"
+#include "util/TempBuffer.h"
 
 namespace slang {
 
@@ -853,14 +854,13 @@ SVInt& SVInt::operator*=(const SVInt& rhs) {
 
             // allocate result space and do the multiply
             uint32_t destWords = lhsWords + rhsWords;
-            uint64_t* dst = new uint64_t[destWords];
-            mul(dst, pVal, lhsWords, rhs.pVal, rhsWords);
+            TempBuffer<uint64_t, 128> dst(destWords);
+            mul(dst.get(), pVal, lhsWords, rhs.pVal, rhsWords);
 
             // copy the result back into *this
             setAllZeros();
             uint32_t wordsToCopy = destWords >= getNumWords() ? getNumWords() : destWords;
-            memcpy(pVal, dst, wordsToCopy * WORD_SIZE);
-            delete[] dst;
+            memcpy(pVal, dst.get(), wordsToCopy * WORD_SIZE);
         }
         clearUnusedBits();
     }
@@ -1482,25 +1482,12 @@ void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32
     uint32_t extraWords = (lhsWords * 2) - divisorWords;
     uint32_t dividendWords = divisorWords + extraWords;
 
-    uint32_t scratch[128];
-    uint32_t* u = nullptr;
-    uint32_t* v = nullptr;
-    uint32_t* q = nullptr;
-    uint32_t* r = nullptr;
-    if ((remainder ? 4 : 3) * divisorWords + 2 * extraWords + 1 <= 128) {
-        u = scratch;
-        v = u + dividendWords + 1;
-        q = v + divisorWords;
-        if (remainder)
-            r = q + dividendWords;
-    }
-    else {
-        u = new uint32_t[dividendWords + 1];
-        v = new uint32_t[divisorWords];
-        q = new uint32_t[dividendWords];
-        if (remainder)
-            r = new uint32_t[divisorWords];
-    }
+    size_t totalWordsNeeded = (remainder ? 4 : 3) * divisorWords + 2 * extraWords + 1;
+    TempBuffer<uint32_t, 128> scratch(totalWordsNeeded);
+    uint32_t* u = scratch.get();
+    uint32_t* v = u + dividendWords + 1;
+    uint32_t* q = v + divisorWords;
+    uint32_t* r = remainder ? q + dividendWords : nullptr;
 
     // Initialize the dividend and divisor
     memset(u, 0, (dividendWords + 1) * sizeof(uint32_t));
@@ -1562,14 +1549,6 @@ void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32
     bool bothSigned = lhs.signFlag && rhs.signFlag;
     buildDivideResult(quotient, q, lhs.bitWidth, bothSigned, lhsWords);
     buildDivideResult(remainder, r, rhs.bitWidth, bothSigned, rhsWords);
-
-    // cleanup
-    if (u != scratch) {
-        delete[] u;
-        delete[] v;
-        delete[] q;
-        delete[] r;
-    }
 }
 
 SVInt SVInt::udiv(const SVInt& lhs, const SVInt& rhs, bool bothSigned) {
