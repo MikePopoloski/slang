@@ -11,6 +11,7 @@
 
 #include "numeric/MathUtils.h"
 #include "util/BumpAllocator.h"
+#include "util/Util.h"
 
 namespace slang {
 
