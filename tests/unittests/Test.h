@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sstream>
+
 #include "Catch/catch.hpp"
 
 #include "binding/Expressions.h"
