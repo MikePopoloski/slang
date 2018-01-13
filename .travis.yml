@@ -10,8 +10,8 @@ matrix:
     - env: BUILD_TARGET=linux-clang BUILD_FLAGS="--sanitizer=undefined,address"
 
 before_install:
-  - docker pull mpopoloski/slang:1.0
-  - docker run -itd --name build mpopoloski/slang:1.0
+  - docker pull mpopoloski/slang:1.1
+  - docker run -itd --name build mpopoloski/slang:1.1
   - docker exec build git clone https://github.com/MikePopoloski/slang.git
 
 install:

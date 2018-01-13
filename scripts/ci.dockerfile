@@ -14,7 +14,8 @@ RUN apt-get update && apt-get install -y \
 	clang-5.0 \
 	clang-tidy-5.0
 
-RUN wget -O /tmp/cppcheck.tar.gz && \
+RUN wget -O /tmp/cppcheck.tar.gz \
 	http://github.com/danmar/cppcheck/releases/download/1.81/cppcheck-1.81.tar.gz && \
-	tar xvzf /tmp/cppcheck.tar.gz && \
+	mkdir -p /tmp/cppcheck && \
+	tar xvzf /tmp/cppcheck.tar.gz -C /tmp/cppcheck --strip-components=1 && \
 	make -j 4 -C /tmp/cppcheck
