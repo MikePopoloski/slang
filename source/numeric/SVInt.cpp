@@ -1142,14 +1142,15 @@ logic_t SVInt::operator[](const SVInt& index) const {
 }
 
 logic_t SVInt::operator[](int32_t index) const {
-    if (index < 0 || bitwidth_t(index) >= bitWidth)
+    bitwidth_t bi = bitwidth_t(index);
+    if (index < 0 || bi >= bitWidth)
         return logic_t::x;
 
-    bool bit = (maskBit(index) & (isSingleWord() ? val : pVal[whichWord(index)])) != 0;
+    bool bit = (maskBit(bi) & (isSingleWord() ? val : pVal[whichWord(bi)])) != 0;
     if (!unknownFlag)
         return logic_t(bit);
 
-    bool unknownBit = (maskBit(index) & pVal[whichWord(index) + getNumWords(bitWidth, false)]) != 0;
+    bool unknownBit = (maskBit(bi) & pVal[whichWord(bi) + getNumWords(bitWidth, false)]) != 0;
     if (!unknownBit)
         return logic_t(bit);
 
@@ -1167,7 +1168,7 @@ SVInt SVInt::operator()(int32_t msb, int32_t lsb) const {
     }
 
     // variables to keep track of out-of-bounds accesses
-    uint32_t frontOOB = lsb < 0 ? -lsb : 0;
+    uint32_t frontOOB = lsb < 0 ? -uint32_t(lsb) : 0;
     uint32_t backOOB = bitwidth_t(msb) >= bitWidth ? bitwidth_t(msb - bitWidth + 1) : 0;
     bool anyOOB = frontOOB || backOOB;
     if (isSingleWord() && !anyOOB) {
@@ -1663,7 +1664,7 @@ SVInt SVInt::modPow(const SVInt& base, const SVInt& exponent, bool bothSigned) {
     // Truncate the result down to fit into the final bit width; we know
     // since we've been reducing at each step that none of the truncated
     // bits will be significant.
-    SVInt result = value(bits - 1, 0);
+    SVInt result = value(int32_t(bits - 1), 0);
     result.setSigned(bothSigned);
     return result;
 }

@@ -14,6 +14,7 @@
 #include <string_view>                  // for std::string_view
 #include <utility>                      // for many random utility functions
 
+using std::byte;
 using std::int8_t;
 using std::int16_t;
 using std::int32_t;

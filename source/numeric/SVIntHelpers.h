@@ -51,17 +51,17 @@ static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t of
     }
 }
 
-static void signExtendCopy(uint64_t* output, const uint64_t* input, uint16_t oldBits,
+static void signExtendCopy(uint64_t* output, const uint64_t* input, bitwidth_t oldBits,
                            uint32_t oldWords, uint32_t newWords) {
     // copy full words over
     memcpy(output, input, sizeof(uint64_t) * oldWords);
 
     // sign-extend the last word
-    int lastWordBits = SVInt::BITS_PER_WORD - (((oldBits - 1) % SVInt::BITS_PER_WORD) + 1);
+    bitwidth_t lastWordBits = SVInt::BITS_PER_WORD - (((oldBits - 1) % SVInt::BITS_PER_WORD) + 1);
     output[oldWords - 1] = uint64_t(int64_t(output[oldWords - 1] << lastWordBits) >> lastWordBits);
 
     // fill the remaining words with the sign bit
-    int isNegative = output[oldWords - 1] >> (SVInt::BITS_PER_WORD - 1);
+    bool isNegative = output[oldWords - 1] >> (SVInt::BITS_PER_WORD - 1);
     memset(output + oldWords, isNegative ? -1 : 0, (newWords - oldWords) * sizeof(uint64_t));
 }
 
