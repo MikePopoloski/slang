@@ -1168,7 +1168,7 @@ SVInt SVInt::operator()(int32_t msb, int32_t lsb) const {
     }
 
     // variables to keep track of out-of-bounds accesses
-    uint32_t frontOOB = lsb < 0 ? -uint32_t(lsb) : 0;
+    uint32_t frontOOB = lsb < 0 ? uint32_t(-lsb) : 0;
     uint32_t backOOB = bitwidth_t(msb) >= bitWidth ? bitwidth_t(msb - bitWidth + 1) : 0;
     bool anyOOB = frontOOB || backOOB;
     if (isSingleWord() && !anyOOB) {

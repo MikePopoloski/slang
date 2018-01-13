@@ -18,7 +18,7 @@ install:
   - docker exec build /bin/sh -c "cd slang && tools/bin/linux/genie --gcc=$BUILD_TARGET $BUILD_FLAGS gmake"
 
 script:
-  - ci_env=`bash <(curl -s https://codecov.io/env)`
+  - export ci_env=`bash <(curl -s https://codecov.io/env)`
   - if [ "$BUILD_TARGET" == "linux-clang" ]; then docker exec build slang/scripts/build_clang.sh; fi
   - if [ "$BUILD_TARGET" == "linux-gcc" ]; then docker exec build $ci_env slang/scripts/build_gcc.sh; fi
 
