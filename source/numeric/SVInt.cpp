@@ -1179,7 +1179,11 @@ SVInt SVInt::operator()(int32_t msb, int32_t lsb) const {
 
     // core part of the method: copy over the proper number of bits
     uint32_t validSelectWidth = selectWidth - frontOOB - backOOB;
-    SVInt result = SVInt::allocZeroed(selectWidth, signFlag, unknownFlag || anyOOB);
+    SVInt result;
+    if (selectWidth > 64 || unknownFlag || anyOOB)
+        result = SVInt::allocZeroed(selectWidth, signFlag, unknownFlag || anyOOB);
+    else
+        result = SVInt(selectWidth, 0, signFlag);
     bitcpy(result.getRawData(), frontOOB, getRawData(), validSelectWidth, frontOOB ? 0 : uint32_t(lsb));
 
     if (unknownFlag) {
@@ -1234,10 +1238,12 @@ SVInt SVInt::conditional(const SVInt& condition, const SVInt& lhs, const SVInt& 
 }
 
 SVInt SVInt::allocUninitialized(bitwidth_t bits, bool signFlag, bool unknownFlag) {
+    ASSERT(bits > 64 || unknownFlag);
     return SVInt(new uint64_t[getNumWords(bits, unknownFlag)], bits, signFlag, unknownFlag);
 }
 
 SVInt SVInt::allocZeroed(bitwidth_t bits, bool signFlag, bool unknownFlag) {
+    ASSERT(bits > 64 || unknownFlag);
     return SVInt(new uint64_t[getNumWords(bits, unknownFlag)](), bits, signFlag, unknownFlag);
 }
 
