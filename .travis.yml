@@ -1,38 +1,32 @@
 language: cpp
-sudo: false
-dist: trusty
+sudo: required
+
+services:
+  - docker
 
 matrix:
   include:
-    - env: BUILD_TARGET=linux-gcc
-    - env: BUILD_TARGET=linux-clang
+    - env: BUILD_TARGET=linux-gcc BUILD_FLAGS="--with-coverage"
+    - env: BUILD_TARGET=linux-clang BUILD_FLAGS="--sanitizer=undefined,address"
 
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise
-    packages:
-      - gcc-7
-      - g++-7
-      - clang-5.0
-      - clang-tidy-5.0
+before_install:
+  - docker pull mpopoloski/slang:1.0
+  - docker run -itd --name build mpopoloski/slang:1.0
+  - docker exec build git clone https://github.com/MikePopoloski/slang.git
 
 install:
-  - source scripts/travis_install.sh
+  - docker exec build slang/tools/bin/linux/genie --gcc=$BUILD_TARGET $BUILD_FLAGS gmake
 
 script:
-  - if [ "$BUILD_TARGET" == "linux-clang" ]; then make -C build/projects/gmake-linux-clang -j 4; build/linux64_clang/bin/unittestsDebug; fi
-  - if [ "$BUILD_TARGET" == "linux-gcc" ]; then make -C build/projects/gmake-linux -j 4; build/linux64_gcc/bin/unittestsDebug; fi
-  - if [ "$BUILD_TARGET" == "linux-gcc" ]; then scripts/cppcheck.sh; fi
-  - if [ "$BUILD_TARGET" == "linux-clang" ]; then scripts/clangtidy.sh; fi
+  - if [ "$BUILD_TARGET" == "linux-clang" ]; then docker exec build slang/scripts/build_clang.sh; fi
+  - if [ "$BUILD_TARGET" == "linux-gcc" ]; then docker exec build slang/scripts/build_gcc.sh; fi
 
 branches:
   only:
     - /.*/
 
 git:
-  depth: 3
+  depth: 1
 
-after_success:
-  - bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'
+#after_success:
+#  - bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload'
