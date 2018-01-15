@@ -35,10 +35,6 @@ static void lshrFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t o
 }
 
 static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t offset, uint32_t start, uint32_t numWords) {
-    // this function is split out so that if we have an unknown value we can reuse the code
-    for (uint32_t i = start; i < start + offset; i++)
-        dst[i] = 0;
-
     // optimization: move whole words
     if (wordShift == 0) {
         for (uint32_t i = start + offset; i < start + numWords; i++)
@@ -49,6 +45,9 @@ static void shlFar(uint64_t* dst, uint64_t* src, uint32_t wordShift, uint32_t of
             dst[i] = src[i - offset] << wordShift | src[i - offset - 1] >> (SVInt::BITS_PER_WORD - wordShift);
         dst[start + offset] = src[start] << wordShift;
     }
+
+    for (uint32_t i = start; i < start + offset; i++)
+        dst[i] = 0;
 }
 
 static void signExtendCopy(uint64_t* output, const uint64_t* input, bitwidth_t oldBits,
@@ -96,7 +95,7 @@ static bool subOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
 
 // Generalized adder
 NO_SANITIZE("unsigned-integer-overflow")
-static bool addGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, uint32_t len) {
+static bool addGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
     bool carry = false;
     for (uint32_t i = 0; i < len; i++) {
         uint64_t limit = std::min(x[i], y[i]);
@@ -108,7 +107,7 @@ static bool addGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, uint32_t len) {
 
 // Generalized subtractor (x - y)
 NO_SANITIZE("unsigned-integer-overflow")
-static bool subGeneral(uint64_t* dst, uint64_t* x, uint64_t* y, uint32_t len) {
+static bool subGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
     bool borrow = false;
     for (uint32_t i = 0; i < len; i++) {
         uint64_t tmp = borrow ? x[i] - 1 : x[i];
@@ -146,7 +145,7 @@ static uint64_t mulTerm(uint64_t x, uint64_t ly, uint64_t hy, uint64_t& carry) {
 }
 
 // Multiply an integer array by a single uint64
-static uint64_t mulOne(uint64_t* dst, uint64_t* x, uint32_t len, uint64_t y) {
+static uint64_t mulOne(uint64_t* dst, const uint64_t* x, uint32_t len, uint64_t y) {
     uint64_t ly = y & 0xffffffffULL;
     uint64_t hy = y >> 32;
     uint64_t carry = 0;
@@ -155,9 +154,16 @@ static uint64_t mulOne(uint64_t* dst, uint64_t* x, uint32_t len, uint64_t y) {
     return carry;
 }
 
+static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y, uint32_t ylen);
+
 // Generalized multiplier
 NO_SANITIZE("unsigned-integer-overflow")
-static void mul(uint64_t* dst, uint64_t* x, uint32_t xlen, uint64_t* y, uint32_t ylen) {
+static void mul(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y, uint32_t ylen) {
+    if (xlen > 7 && ylen > 7) {
+        mulKaratsuba(dst, x, xlen, y, ylen);
+        return;
+    }
+
     dst[xlen] = mulOne(dst, x, xlen, y[0]);
     for (uint32_t i = 1; i < ylen; i++) {
         uint64_t ly = y[i] & 0xffffffffULL;
@@ -171,6 +177,69 @@ static void mul(uint64_t* dst, uint64_t* x, uint32_t xlen, uint64_t* y, uint32_t
         }
         dst[i + xlen] = carry;
     }
+}
+
+static void unevenAdd(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y, uint32_t ylen) {
+    if (xlen < ylen) {
+        std::swap(xlen, ylen);
+        std::swap(x, y);
+    }
+
+    uint32_t i;
+    uint8_t carry = 0;
+    for (i = 0; i < ylen; ++i) {
+        unsigned long long result;
+        carry = _addcarry_u64(carry, x[i], y[i], &result);
+        dst[i] = result;
+    }
+    for (; i < xlen; ++i) {
+        unsigned long long result;
+        carry = _addcarry_u64(carry, x[i], 0, &result);
+        dst[i] = result;
+    }
+    dst[i] = carry;
+}
+
+static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y, uint32_t ylen) {
+    if (xlen > ylen) {
+        std::swap(x, y);
+        std::swap(xlen, ylen);
+    }
+
+    uint32_t shift = ylen >> 1;
+
+    uint32_t xlSize = std::min(xlen, shift);
+    uint32_t xhSize = xlen - xlSize;
+    const uint64_t* xl = x;
+    const uint64_t* xh = x + xlSize;
+
+    uint32_t ylSize = std::min(ylen, shift);
+    uint32_t yhSize = ylen - ylSize;
+    const uint64_t* yl = y;
+    const uint64_t* yh = y + ylSize;
+
+    TempBuffer<uint64_t, 128> t1(xlen + ylen); t1.fill(0);
+    mul(t1.get(), xh, xhSize, yh, yhSize);
+    memset(dst, 0, (xlen + ylen) * sizeof(uint64_t));
+    memcpy(dst + 2 * shift, t1.get(), (xhSize + yhSize) * sizeof(uint64_t));
+
+    TempBuffer<uint64_t, 128> t2(xlen + ylen); t2.fill(0);
+    mul(t2.get(), xl, xlSize, yl, ylSize);
+    memcpy(dst, t2.get(), (xlSize + ylSize) * sizeof(uint64_t));
+
+    uint32_t remaining = xlen + ylen - shift;
+    subGeneral(dst + shift, dst + shift, t2.get(), remaining);
+    subGeneral(dst + shift, dst + shift, t1.get(), remaining);
+
+    t1.fill(0); unevenAdd(t1.get(), xh, xhSize, xl, xlSize);
+    t2.fill(0); unevenAdd(t2.get(), yh, yhSize, yl, ylSize);
+
+    ASSERT(std::max(xlSize, xhSize) + 1 + std::max(ylSize, yhSize) + 1 < xlen + ylen);
+
+    TempBuffer<uint64_t, 128> t3(xlen + ylen); t3.fill(0);
+    mul(t3.get(), t1.get(), std::max(xlSize, xhSize) + 1, t2.get(), std::max(ylSize, yhSize) + 1);
+
+    addGeneral(dst + shift, dst + shift, t3.get(), remaining);
 }
 
 // Implementation of Knuth's Algorithm D (Division of nonnegative integers)

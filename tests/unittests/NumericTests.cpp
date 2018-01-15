@@ -385,6 +385,15 @@ TEST_CASE("Power", "[numeric]") {
     CHECK("-3"_si.pow("4"_si) == "81"_si);
     CHECK(SVInt(64, 3, false).pow(SVInt(918245)) == "64'd12951281834385883507"_si);
     CHECK(SVInt(99, 3, false).pow("123'd786578657865786587657658765"_si) == "99'd179325900022335079144376663507"_si);
+
+    CHECK("512'd90871234987239847"_si.pow("512'd9872389712392373"_si).lshr(400) == "512'd3290136519027357223933765911149590"_si);
+
+    // Test huge values. This test is pretty slow so only enable it when building from the CI server.
+#ifdef CI_BUILD
+    SVInt v = "16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si.shl(7000);
+    v = v.pow(1234)(9000000, 8994500);
+    CHECK(v == "5500'd64053931454776197655165648478290003146695"_si);
+#endif
 }
 
 TEST_CASE("Shifting", "[numeric]") {

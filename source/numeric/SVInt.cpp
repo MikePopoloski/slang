@@ -451,7 +451,7 @@ SVInt SVInt::lshr(bitwidth_t amount) const {
         return SVInt(bitWidth, val >> amount, signFlag);
 
     // handle the small shift case
-    SVInt result = allocUninitialized(bitWidth, signFlag, unknownFlag);
+    SVInt result = allocZeroed(bitWidth, signFlag, unknownFlag);
     if (amount < BITS_PER_WORD && !unknownFlag)
         lshrNear(result.pVal, pVal, getNumWords(), amount);
     else {
@@ -1624,30 +1624,40 @@ SVInt SVInt::modPow(const SVInt& base, const SVInt& exponent, bool bothSigned) {
     //
     // The result value will have the same bit width as the lhs. That's the value we'll
     // be using as the modulus in the (a * b) mod m equation.
-    // Allocate a temporary result value that has 2x the number of bits so that we can
+    // Allocate a temporary scratch buffer that has 2x the number of bits so that we can
     // handle any possible intermediate multiply.
-    bitwidth_t bits = base.bitWidth;
-    ASSERT(MAX_BITS - bits > bits);
-    SVInt value(bits * 2, 1, false);
-    SVInt baseCopy = zeroExtend(base, bits * 2);
+    TempBuffer<uint64_t, 128> scratch(getNumWords(base.bitWidth * 2, false));
+    SVInt baseCopy = base;
+    SVInt result(base.bitWidth, 1, false);
 
-    // Because the mod in this case is always a power of two, set up a mask
-    // that we'll AND with instead of the more costly remainder operation.
-    SVInt mask(bits, 0, false);
-    mask.setAllOnes();
-    mask = zeroExtend(mask, bits * 2);
+    auto mulReduce = [&](const SVInt& left, const SVInt& right, SVInt& result) {
+        bitwidth_t lhsBits = left.getActiveBits();
+        bitwidth_t rhsBits = right.getActiveBits();
+        uint32_t lhsWords = !lhsBits ? 0 : whichWord(lhsBits - 1) + 1;
+        uint32_t rhsWords = !rhsBits ? 0 : whichWord(rhsBits - 1) + 1;
+
+        scratch.fill(0);
+        mul(scratch.get(), left.getRawData(), lhsWords, right.getRawData(), rhsWords);
+
+        uint32_t destWords = lhsWords + rhsWords;
+        if (destWords >= result.getNumWords()) {
+            memcpy(result.getRawData(), scratch.get(), result.getNumWords() * sizeof(uint64_t));
+            result.clearUnusedBits();
+        }
+        else {
+            memcpy(result.getRawData(), scratch.get(), destWords * sizeof(uint64_t));
+            result.clearUnusedBits();
+        }
+    };
 
     // Loop through each bit of the exponent.
     uint32_t exponentWords = exponent.getNumWords();
     for (uint32_t i = 0; i < exponentWords - 1; i++) {
         uint64_t word = exponent.getRawData()[i];
         for (int j = 0; j < BITS_PER_WORD; j++) {
-            if (word & 0x1) {
-                value *= baseCopy;
-                value &= mask;
-            }
-            baseCopy *= baseCopy;
-            baseCopy &= mask;
+            if (word & 0x1)
+                mulReduce(result, baseCopy, result);
+            mulReduce(baseCopy, baseCopy, baseCopy);
             word >>= 1;
         }
     }
@@ -1656,21 +1666,13 @@ SVInt SVInt::modPow(const SVInt& base, const SVInt& exponent, bool bothSigned) {
     // when the rest of the exponent bits are zero
     uint64_t word = exponent.getRawData()[exponentWords - 1];
     while (word) {
-        if (word & 0x1) {
-            value *= baseCopy;
-            value &= mask;
-        }
-        if (word != 1) {
-            baseCopy *= baseCopy;
-            baseCopy &= mask;
-        }
+        if (word & 0x1)
+            mulReduce(result, baseCopy, result);
+        if (word != 1)
+            mulReduce(baseCopy, baseCopy, baseCopy);
         word >>= 1;
     }
 
-    // Truncate the result down to fit into the final bit width; we know
-    // since we've been reducing at each step that none of the truncated
-    // bits will be significant.
-    SVInt result = value(int32_t(bits - 1), 0);
     result.setSigned(bothSigned);
     return result;
 }

@@ -25,6 +25,10 @@ public:
         }
     }
 
+    void fill(uint8_t b) {
+        memset(ptr, b, size * sizeof(T));
+    }
+
     ~TempBuffer() {
         if (size > StackCount)
             delete[] ptr;

@@ -119,9 +119,6 @@ public:
     bool unknownFlag : 1;       // whether we have at least one X or Z value in the number
 };
 
-// TODO:
-// - Use a 32-bit value for bitWidth to allow for full sized intermediaries
-
 ///
 /// SystemVerilog arbitrary precision integer type.
 /// This type is designed to implement all of the operations supported by SystemVerilog
