@@ -6,7 +6,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <immintrin.h>
+#ifdef __GNUC__
+#include <x86intrin.h>
+#endif
 
 namespace slang {
 
