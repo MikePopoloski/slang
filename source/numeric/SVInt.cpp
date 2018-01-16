@@ -1188,7 +1188,7 @@ SVInt SVInt::operator()(int32_t msb, int32_t lsb) const {
     if (unknownFlag) {
         // copy over preexisting unknown data
         uint32_t words = getNumWords(selectWidth, false);
-        bitcpy(result.getRawData() + words, frontOOB, pVal + getNumWords() / 2, validSelectWidth);
+        bitcpy(result.getRawData() + words, frontOOB, pVal + getNumWords() / 2, validSelectWidth, frontOOB ? 0 : uint32_t(lsb));
     }
 
     // If we had any out of bounds accesses, fill them with x's.
@@ -1380,7 +1380,7 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
     bitwidth_t count = slang::countLeadingOnes64(pVal[i] << shift);
     if (count == bitsInMsw) {
         for (i--; i >= 0; i--) {
-            if (pVal[i] == (uint64_t)-1)
+            if (pVal[i] == UINT64_MAX)
                 count += BITS_PER_WORD;
             else {
                 count += slang::countLeadingOnes64(pVal[i]);

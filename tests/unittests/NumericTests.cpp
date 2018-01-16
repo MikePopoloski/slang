@@ -10,6 +10,8 @@ TEST_CASE("Construction", "[numeric]") {
     SVInt value5(69, (uint64_t)-924, true);
     SVInt value6(-924);
     SVInt value7(63, UINT64_MAX, false);
+    SVInt valueA = UINT64_MAX;
+    SVInt valueB(logic_t::z);
 
     CHECK(value1 == 0);
     CHECK(value2 != value1);
@@ -85,7 +87,15 @@ TEST_CASE("Construction", "[numeric]") {
     value9 = value11;
     CHECK_THAT(value9, exactlyEquals(value11));
 
+    value10 = "99999'd999999999999999999999999999999999999999999999999999"_si;
+    CHECK(value10 == "99999'd999999999999999999999999999999999999999999999999999"_si);
+
     CHECK_THAT("13'b1100xZ?01"_si[2], exactlyEquals(logic_t::z));
+    CHECK_THAT("13'b1100xZ?01"_si[-1], exactlyEquals(logic_t::x));
+    CHECK_THAT("13'b1100xZ?01"_si[99], exactlyEquals(logic_t::x));
+    CHECK_THAT("13'b1100xZ?01"_si[SVInt(8)], exactlyEquals(logic_t(1)));
+    CHECK_THAT("13'b1100xZ?01"_si["999'd929293939393939393939"_si], exactlyEquals(logic_t::x));
+    CHECK_THAT("13'b1100xZ?01"_si(8, 2), exactlyEquals("7'b1100xZz"_si));
 
     // extra digits should truncate from the left
     CHECK("4'hxxffa"_si == 10);
@@ -167,6 +177,7 @@ TEST_CASE("SVInt to string (and back)", "[numeric]") {
     checkRoundTrip("32", LiteralBase::Decimal);
     checkRoundTrip("-999989", LiteralBase::Decimal);
     checkRoundTrip("12'b101x101z1", LiteralBase::Binary);
+    checkRoundTrip("999999999", LiteralBase::Decimal);
 
     std::ostringstream ss;
     ss << "96'd192834"_si;
@@ -202,6 +213,13 @@ TEST_CASE("Comparison", "[numeric]") {
     CHECK("100'sd99999999999999999999999999"_si >= "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si < "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si >= -50);
+
+    CHECK(bool("100'd1234"_si && "100'd09809345"_si));
+    CHECK(bool("100'd1234"_si || "100'd0"_si));
+    CHECK(bool(logic_t::x || "100'd1"_si));
+
+    CHECK(SVInt::logicalEquivalence("1234"_si, "98765"_si));
+    CHECK(SVInt::logicalImplication("0"_si, "98765"_si));
 
     CHECK(!("-58"_si < "-59"_si));
     CHECK(!("-58"_si < "-58"_si));
@@ -271,6 +289,10 @@ TEST_CASE("Arithmetic", "[numeric]") {
     SVInt v6 = "-87'sd38"_si;
     v6 %= "3"_si;
     CHECK(v6 == -2);
+
+    SVInt v8 = "87'sd38"_si;
+    v8 %= "-3"_si;
+    CHECK(v8 == 2);
 
     CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
 
@@ -418,6 +440,7 @@ TEST_CASE("Shifting", "[numeric]") {
 
     CHECK_THAT("52'hffxx"_si.shl(4), exactlyEquals("52'hffxx0"_si));
     CHECK_THAT("100'b11xxxZ00101"_si.lshr(7), exactlyEquals("20'b11xx"_si));
+    CHECK_THAT("100'b111010110010Z"_si.lshr(1), exactlyEquals("100'b111010110010"_si));
     CHECK_THAT("100'b1x"_si.shl(SVInt(logic_t::x)), exactlyEquals("100'bx"_si));
     CHECK_THAT("100'b1x"_si.lshr(SVInt(logic_t::x)), exactlyEquals("100'bx"_si));
     CHECK_THAT("100'sb1x"_si.ashr(SVInt(logic_t::x)), exactlyEquals("100'bx"_si));
@@ -433,8 +456,10 @@ TEST_CASE("Bitwise", "[numeric]") {
     CHECK_THAT(~"6'b101011"_si, exactlyEquals("6'b010100"_si));
 
     CHECK(("100'b101"_si | "120'b001"_si) == "120'b101"_si);
+    CHECK(("100'b101"_si & "120'b001"_si) == "120'b001"_si);
     CHECK(("100'b101"_si ^ "120'b001"_si) == "120'b100"_si);
     CHECK(("8"_si | "4"_si) == 12);
+    CHECK(("8"_si & "4"_si) == 0);
     CHECK(("8"_si ^ "4"_si) == "32'b1100"_si);
 
     CHECK_THAT("65'b110"_si.xnor("12'b101"_si), exactlyEquals("65'h1fffffffffffffffc"_si));
@@ -457,7 +482,10 @@ TEST_CASE("Bitwise", "[numeric]") {
 TEST_CASE("SVInt misc functions", "[numeric]") {
     CHECK("100'b111"_si.countLeadingZeros() == 97);
     CHECK("128'hffff000000000000ffff000000000000"_si.countLeadingOnes() == 16);
+    CHECK("128'hffffffffffffffff000000000000ffff"_si.countLeadingOnes() == 64);
     CHECK("128'hffff000000000000ffff000000000000"_si.countPopulation() == 32);
     CHECK(clog2("900'd982134098123403498298103"_si) == 80);
     CHECK(clog2(SVInt::Zero) == 0);
+
+    CHECK_THAT(signExtend("11'bx101011x01z"_si, 15), exactlyEquals("15'bxxxxx101011x01z"_si));
 }
