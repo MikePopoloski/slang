@@ -6,6 +6,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <immintrin.h>
+
+namespace slang {
+
 static void lshrNear(uint64_t* dst, uint64_t* src, uint32_t words, uint32_t amount) {
     // fast case for logical right shift of a small amount (less than 64 bits)
     uint64_t carry = 0;
@@ -448,4 +452,6 @@ static void setBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
     // Handle leftover bits in the final word.
     if (length %= BitsPerWord)
         *dest |= (1ull << length) - 1;
+}
+
 }
