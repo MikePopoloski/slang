@@ -1249,7 +1249,7 @@ SVInt SVInt::allocZeroed(bitwidth_t bits, bool signFlag, bool unknownFlag) {
 void SVInt::initSlowCase(logic_t bit) {
     pVal = new uint64_t[getNumWords()]();   // allocation is zero cleared
     pVal[1] = 1;
-    if (bit == logic_t::z)
+    if (exactlyEqual(bit, logic_t::z))
         pVal[0] = 1;
 }
 

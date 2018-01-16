@@ -72,41 +72,40 @@ static void signExtendCopy(uint64_t* output, const uint64_t* input, bitwidth_t o
 
 // Specialized adder for values <= 64.
 static bool addOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
+    uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
-        dst[i] = value + src[i];
-        if (dst[i] < value)
-            value = 1;  // carry
-        else {
-            value = 0;
+        unsigned long long result;
+        carry = _addcarry_u64(carry, src[i], value, &result);
+        dst[i] = result;
+
+        if (!carry)
             break;
-        }
     }
-    return value != 0;
+    return carry;
 }
 
 // Specialized subtractor for values <= 64.
 static bool subOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
+    uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
-        uint64_t x = src[i];
-        dst[i] -= value;
-        if (value > x)
-            value = 1;  // borrow
-        else {
-            value = 0;
+        unsigned long long result;
+        borrow = _subborrow_u64(borrow, src[i], value, &result);
+        dst[i] = result;
+
+        if (!borrow)
             break;
-        }
     }
-    return value != 0;
+    return borrow;
 }
 
 // Generalized adder
 NO_SANITIZE("unsigned-integer-overflow")
 static bool addGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
-    bool carry = false;
+    uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
-        uint64_t limit = std::min(x[i], y[i]);
-        dst[i] = x[i] + y[i] + carry;
-        carry = dst[i] < limit || (carry && dst[i] == limit);
+        unsigned long long result;
+        carry = _addcarry_u64(carry, x[i], y[i], &result);
+        dst[i] = result;
     }
     return carry;
 }
@@ -114,49 +113,36 @@ static bool addGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint
 // Generalized subtractor (x - y)
 NO_SANITIZE("unsigned-integer-overflow")
 static bool subGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
-    bool borrow = false;
+    uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
-        uint64_t tmp = borrow ? x[i] - 1 : x[i];
-        borrow = y[i] > tmp || (borrow && x[i] == 0);
-        dst[i] = tmp - y[i];
+        unsigned long long result;
+        borrow = _subborrow_u64(borrow, x[i], y[i], &result);
+        dst[i] = result;
     }
     return borrow;
 }
 
 // One term of a multiply operation
 NO_SANITIZE("unsigned-integer-overflow")
-static uint64_t mulTerm(uint64_t x, uint64_t ly, uint64_t hy, uint64_t& carry) {
-    uint64_t lx = x & 0xffffffffULL;
-    uint64_t hx = x >> 32;
-    uint64_t result = carry + lx * ly;
-
-    // hasCarry:
-    // - if 0, no carry
-    // - if 1, has carry
-    // - if 2, no carry and result is 0
-    int hasCarry = 0;
-    hasCarry = (result < carry) ? 1 : 0;
-    carry = (hasCarry ? (1ULL << 32) : 0) + hx * ly + (result >> 32);
-    hasCarry = (!carry && hasCarry) ? 1 : (!carry ? 2 : 0);
-
-    carry += (lx * hy) & 0xffffffffULL;
-    result = (carry << 32) | (result & 0xffffffffULL);
-
-    uint64_t bias = 0;
-    if ((!carry && hasCarry != 2) || hasCarry == 1)
-        bias = 1ULL << 32;
-
-    carry = bias + (carry >> 32) + ((lx * hy) >> 32) + (hx * hy);
-    return result;
+static uint64_t mulTerm(uint64_t x, uint64_t y, uint64_t& carry) {
+#ifdef _MSC_VER
+    uint64_t high;
+    uint64_t low = _umul128(x, y, &high);
+    carry = high + _addcarry_u64(0, low, carry, &low);
+    return low;
+#else
+    using uint128_t = unsigned __int128;
+    uint128_t p = uint128_t(x) * uint128_t(y) + carry;
+    carry = uint64_t(p >> 64);
+    return uint64_t(p);
+#endif
 }
 
 // Multiply an integer array by a single uint64
 static uint64_t mulOne(uint64_t* dst, const uint64_t* x, uint32_t len, uint64_t y) {
-    uint64_t ly = y & 0xffffffffULL;
-    uint64_t hy = y >> 32;
     uint64_t carry = 0;
     for (uint32_t i = 0; i < len; ++i)
-        dst[i] = mulTerm(x[i], ly, hy, carry);
+        dst[i] = mulTerm(x[i], y, carry);
     return carry;
 }
 
@@ -172,14 +158,13 @@ static void mul(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t*
 
     dst[xlen] = mulOne(dst, x, xlen, y[0]);
     for (uint32_t i = 1; i < ylen; i++) {
-        uint64_t ly = y[i] & 0xffffffffULL;
-        uint64_t hy = y[i] >> 32;
         uint64_t carry = 0;
         for (uint32_t j = 0; j < xlen; j++) {
-            uint64_t result = mulTerm(x[j], ly, hy, carry);
-            dst[i + j] += result;
-            if (dst[i + j] < result)
-                carry++;
+            unsigned long long result;
+            uint8_t c = _addcarry_u64(0, mulTerm(x[j], y[i], carry), dst[i + j], &result);
+
+            dst[i + j] = result;
+            carry += c;
         }
         dst[i + xlen] = carry;
     }

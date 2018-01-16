@@ -21,6 +21,7 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(value7 == "63'hffffffffffffffff"_si);
     CHECK(SVInt(0) == 0);
     CHECK(SVInt(int64_t(UINT64_MAX)) == -1);
+    CHECK_THAT(valueB[0], exactlyEquals(logic_t::z));
 
     CHECK(value5.isNegative());
     value5.setSigned(false);
@@ -87,8 +88,9 @@ TEST_CASE("Construction", "[numeric]") {
     value9 = value11;
     CHECK_THAT(value9, exactlyEquals(value11));
 
-    value10 = "99999'd999999999999999999999999999999999999999999999999999"_si;
-    CHECK(value10 == "99999'd999999999999999999999999999999999999999999999999999"_si);
+    SVInt value12 = "99999'd999999999999999999999999999999999999999999999999999"_si;
+    value10 = value12;
+    CHECK(value10 == value12);
 
     CHECK_THAT("13'b1100xZ?01"_si[2], exactlyEquals(logic_t::z));
     CHECK_THAT("13'b1100xZ?01"_si[-1], exactlyEquals(logic_t::x));
@@ -438,6 +440,8 @@ TEST_CASE("Shifting", "[numeric]") {
     CHECK("129'd12341234"_si.ashr(0) == "129'd12341234"_si);
     CHECK("129'sd12341234"_si.ashr(0) == "129'd12341234"_si);
 
+    CHECK("598'd1234"_si.shl(64).lshr(64) == "598'd1234"_si);
+
     CHECK_THAT("52'hffxx"_si.shl(4), exactlyEquals("52'hffxx0"_si));
     CHECK_THAT("100'b11xxxZ00101"_si.lshr(7), exactlyEquals("20'b11xx"_si));
     CHECK_THAT("100'b111010110010Z"_si.lshr(1), exactlyEquals("100'b111010110010"_si));
@@ -482,10 +486,12 @@ TEST_CASE("Bitwise", "[numeric]") {
 TEST_CASE("SVInt misc functions", "[numeric]") {
     CHECK("100'b111"_si.countLeadingZeros() == 97);
     CHECK("128'hffff000000000000ffff000000000000"_si.countLeadingOnes() == 16);
-    CHECK("128'hffffffffffffffff000000000000ffff"_si.countLeadingOnes() == 64);
+    CHECK("128'hffffffffffffffffffffffffffffffff"_si.countLeadingOnes() == 128);
     CHECK("128'hffff000000000000ffff000000000000"_si.countPopulation() == 32);
     CHECK(clog2("900'd982134098123403498298103"_si) == 80);
     CHECK(clog2(SVInt::Zero) == 0);
+
+    CHECK(slang::countLeadingZeros32(0) == 32);
 
     CHECK_THAT(signExtend("11'bx101011x01z"_si, 15), exactlyEquals("15'bxxxxx101011x01z"_si));
 }
