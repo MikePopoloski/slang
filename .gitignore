@@ -9,7 +9,8 @@
 *.swp
 *.orig
 obj/
-[Bb]in
+[Bb]in/*
+!scripts/bin/l
 .vs/
 .idea/
 CMakeLists.txt
