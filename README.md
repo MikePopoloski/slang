@@ -23,31 +23,31 @@ You need a compiler for your platform that supports C++17. The tests run under V
 
 #### Windows
 ```
-tools/bin/windows/genie vs2017
-msbuild build/projects/vs2017/slang.sln
+scripts\bin\windows\genie vs2017
+msbuild build\projects\vs2017\slang.sln
 ```
 
 #### Linux - GCC
 ```
-tools/bin/linux/genie --gcc=linux-gcc gmake
+scripts/bin/linux/genie --gcc=linux-gcc gmake
 make -C build/projects/gmake-linux -j 8
 ```
 
 #### Linux - Clang
 ```
-tools/bin/linux/genie --gcc=linux-clang gmake
+scripts/bin/linux/genie --gcc=linux-clang gmake
 make -C build/projects/gmake-linux-clang -j 8
 ```
 
 #### OSX - Xcode
 ```
-tools/bin/osx/genie --xcode=osx xcode4
+scripts/bin/osx/genie --xcode=osx xcode4
 open build/projects/xcode4-osx/slang.xcworkspace
 ```
 
 #### OSX - GCC
 ```
 brew install gcc
-tools/bin/osx/genie --gcc=linux-gcc gmake
+scripts/bin/osx/genie --gcc=linux-gcc gmake
 make -C build/projects/gmake-linux -j 8
 ```
