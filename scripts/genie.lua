@@ -62,6 +62,25 @@ function testProject(_name)
 		}
 end
 
+function toolProject(_name)
+	project (_name)
+		kind "ConsoleApp"
+		includedirs {
+			path.join(ROOT_DIR, "source"),
+			path.join(ROOT_DIR, "external"),
+			ROOT_DIR,
+		}
+		files {
+			path.join(ROOT_DIR, "tools", _name, "**.cpp"),
+			path.join(ROOT_DIR, "tools", _name, "**.h"),
+		}
+		links {
+			"slang"
+		}
+end
+
 group "tests"
 testProject('unittests')
-testProject('depmap')
+
+group "tools"
+toolProject('depmap')
