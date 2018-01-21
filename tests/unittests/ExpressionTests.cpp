@@ -11,8 +11,8 @@ SVInt testParameter(const std::string& text, uint32_t index = 0) {
     compilation.addSyntaxTree(tree);
 
     const auto& module = *compilation.getRoot().topInstances[0];
-    if (!tree.diagnostics().empty())
-        WARN(tree.reportDiagnostics());
+    if (!tree->diagnostics().empty())
+        WARN(tree->reportDiagnostics());
 
     const ParameterSymbol& param = module.memberAt<ParameterSymbol>(index);
     return param.getValue().integer();
@@ -34,14 +34,14 @@ TEST_CASE("Evaluate assignment expression", "[binding:expressions") {
     Compilation compilation;
     auto& scope = compilation.createScriptScope();
 
-    auto varToken = syntax.root().getFirstToken();
+    auto varToken = syntax->root().getFirstToken();
     VariableSymbol local { varToken.valueText(), varToken.location() };
     local.type = compilation.getIntType();
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
-    REQUIRE(syntax.diagnostics().empty());
+    const auto& bound = compilation.bindExpression(syntax->root().as<ExpressionSyntax>(), scope);
+    REQUIRE(syntax->diagnostics().empty());
 
     // Initialize `i` to 1.
     EvalContext context;
@@ -65,14 +65,14 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     Compilation compilation;
     auto& scope = compilation.createScriptScope();
 
-    auto varToken = syntax.root().getFirstToken();
+    auto varToken = syntax->root().getFirstToken();
     VariableSymbol local { varToken.valueText(), varToken.location() };
     local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
-    REQUIRE(syntax.diagnostics().empty());
+    const auto& bound = compilation.bindExpression(syntax->root().as<ExpressionSyntax>(), scope);
+    REQUIRE(syntax->diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
     const Expression& rhs = bound.as<BinaryExpression>().right();
@@ -91,14 +91,14 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     auto& scope = compilation.createScriptScope();
 
     // Fabricate a symbol for the `i` variable
-    auto varToken = syntax.root().getFirstToken();
+    auto varToken = syntax->root().getFirstToken();
     VariableSymbol local { varToken.valueText(), varToken.location() };
     local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
-    REQUIRE(syntax.diagnostics().empty());
+    const auto& bound = compilation.bindExpression(syntax->root().as<ExpressionSyntax>(), scope);
+    REQUIRE(syntax->diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
     const Expression& rhs = bound.as<BinaryExpression>().right();
@@ -123,14 +123,14 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     auto& scope = compilation.createScriptScope();
 
     // Fabricate a symbol for the `i` variable
-    auto varToken = syntax.root().getFirstToken();
+    auto varToken = syntax->root().getFirstToken();
     VariableSymbol local { varToken.valueText(), varToken.location() };
     local.type = compilation.getType(20, false);
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    const auto& bound = compilation.bindExpression(syntax.root().as<ExpressionSyntax>(), scope);
-    REQUIRE(syntax.diagnostics().empty());
+    const auto& bound = compilation.bindExpression(syntax->root().as<ExpressionSyntax>(), scope);
+    REQUIRE(syntax->diagnostics().empty());
     CHECK(bound.type->getBitWidth() == 20);
 
     const Expression& rhs = bound.as<BinaryExpression>().right();

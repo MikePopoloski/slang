@@ -27,10 +27,9 @@ class Compilation : public BumpAllocator {
 public:
     Compilation();
 
-    /// Adds a syntax tree to the compilation. Note that the syntax tree must outlive
-    /// the compilation object. If the compilation has already been finalized by
-    /// calling @a getRoot this call will throw an exception.
-    void addSyntaxTree(const SyntaxTree& tree);
+    /// Adds a syntax tree to the compilation. If the compilation has already been finalized
+    /// by calling @a getRoot this call will throw an exception.
+    void addSyntaxTree(std::shared_ptr<SyntaxTree> tree);
 
     /// Gets the root of the design. The first time you call this method all top-level
     /// instances will be elaborated and the compilation finalized. After that you can
@@ -132,6 +131,9 @@ private:
 
     // A list of compilation units that have been added to the compilation.
     std::vector<const CompilationUnitSymbol*> compilationUnits;
+
+    // Storage for syntax trees that have been added to the compilation.
+    std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
 
     // Specialized allocators for types that are not trivially destructible.
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;

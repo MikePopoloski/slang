@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <memory>
+
 #include "diagnostics/Diagnostics.h"
 #include "lexing/Preprocessor.h"
 #include "text/SourceManager.h"
@@ -30,21 +32,21 @@ public:
     SyntaxTree& operator=(const SyntaxTree&) = delete;
 
     /// Creates a syntax tree from a full compilation unit.
-    static SyntaxTree fromFile(string_view path) {
+    static std::shared_ptr<SyntaxTree> fromFile(string_view path) {
         return fromFile(path, getDefaultSourceManager());
     }
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
-    static SyntaxTree fromText(string_view text, BufferID existingBuffer = BufferID()) {
+    static std::shared_ptr<SyntaxTree> fromText(string_view text, BufferID existingBuffer = BufferID()) {
         return fromText(text, getDefaultSourceManager(), existingBuffer);
     }
 
-    static SyntaxTree fromFile(string_view path, SourceManager& sourceManager) {
+    static std::shared_ptr<SyntaxTree> fromFile(string_view path, SourceManager& sourceManager) {
         return create(sourceManager, sourceManager.readSource(path), false);
     }
 
-    static SyntaxTree fromText(string_view text, SourceManager& sourceManager,
-                               BufferID existingBuffer = BufferID()) {
+    static std::shared_ptr<SyntaxTree> fromText(string_view text, SourceManager& sourceManager,
+                                                BufferID existingBuffer = BufferID()) {
         SourceBuffer buffer = existingBuffer ?
             sourceManager.appendText(existingBuffer, text) : sourceManager.assignText(text);
 
@@ -87,15 +89,21 @@ private:
         rootNode(root), sourceMan(sourceManager),
         alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)), bufferID_(bufferID) {}
 
-    static SyntaxTree create(SourceManager& sourceManager, SourceBuffer source, bool guess) {
+    static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source, bool guess) {
         BumpAllocator alloc;
         Diagnostics diagnostics;
         Preprocessor preprocessor(sourceManager, alloc, diagnostics);
         preprocessor.pushSource(source);
 
         Parser parser(preprocessor);
-        return SyntaxTree(guess ? &parser.parseGuess() : &parser.parseCompilationUnit(),
-                          sourceManager, std::move(alloc), std::move(diagnostics), source.id);
+
+        return std::shared_ptr<SyntaxTree>(new SyntaxTree(
+            guess ? &parser.parseGuess() : &parser.parseCompilationUnit(),
+            sourceManager,
+            std::move(alloc),
+            std::move(diagnostics),
+            source.id
+        ));
     }
 
     const SyntaxNode* rootNode;

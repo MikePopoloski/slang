@@ -63,12 +63,12 @@ Compilation::Compilation() :
     root->addMember(createSystemFunction("$increment", SystemFunction::increment, { &trivialIntType }));
 }
 
-void Compilation::addSyntaxTree(const SyntaxTree& tree) {
+void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     if (finalized)
         throw std::logic_error("The compilation has already been finalized");
 
     auto unit = emplace<CompilationUnitSymbol>(*this);
-    const SyntaxNode& node = tree.root();
+    const SyntaxNode& node = tree->root();
     NameSet instances;
 
     if (node.kind == SyntaxKind::CompilationUnit) {
@@ -100,6 +100,7 @@ void Compilation::addSyntaxTree(const SyntaxTree& tree) {
 
     root->addMember(*unit);
     compilationUnits.push_back(unit);
+    syntaxTrees.emplace_back(std::move(tree));
 }
 
 const RootSymbol& Compilation::getRoot() {

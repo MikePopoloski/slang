@@ -20,7 +20,7 @@ public:
     ConstantValue eval(const std::string& text) {
         syntaxTrees.emplace_back(SyntaxTree::fromText(string_view(text)));
 
-        const auto& node = syntaxTrees.back().root();
+        const auto& node = syntaxTrees.back()->root();
         switch (node.kind) {
             case SyntaxKind::ParameterDeclarationStatement:
             case SyntaxKind::FunctionDeclaration:
@@ -28,11 +28,11 @@ public:
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::HierarchyInstantiation:
-                scope.addMembers(syntaxTrees.back().root());
+                scope.addMembers(node);
                 return nullptr;
             case SyntaxKind::DataDeclaration: {
                 SmallVectorSized<const VariableSymbol*, 2> symbols;
-                VariableSymbol::fromSyntax(compilation, syntaxTrees.back().root().as<DataDeclarationSyntax>(), symbols);
+                VariableSymbol::fromSyntax(compilation, node.as<DataDeclarationSyntax>(), symbols);
 
                 for (auto symbol : symbols) {
                     scope.addMember(*symbol);
@@ -73,11 +73,11 @@ public:
         if (syntaxTrees.empty())
             return "";
 
-        return DiagnosticWriter(syntaxTrees[0].sourceManager()).report(diagnostics);
+        return DiagnosticWriter(syntaxTrees[0]->sourceManager()).report(diagnostics);
     }
 
 private:
-    std::vector<SyntaxTree> syntaxTrees;
+    std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
     BumpAllocator alloc;
     Diagnostics diagnostics;
     Compilation compilation;

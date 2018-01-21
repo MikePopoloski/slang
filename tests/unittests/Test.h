@@ -137,13 +137,13 @@ inline const ExpressionSyntax& parseExpression(const std::string& text) {
     return parser.parseExpression();
 }
 
-inline const ModuleInstanceSymbol& evalModule(SyntaxTree& syntax, Compilation& compilation) {
+inline const ModuleInstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax, Compilation& compilation) {
     compilation.addSyntaxTree(syntax);
     const RootSymbol& root = compilation.getRoot();
 
     REQUIRE(root.topInstances.size() > 0);
-    if (!syntax.diagnostics().empty())
-        WARN(syntax.reportDiagnostics());
+    if (!syntax->diagnostics().empty())
+        WARN(syntax->reportDiagnostics());
 
     return *root.topInstances[0];
 }
