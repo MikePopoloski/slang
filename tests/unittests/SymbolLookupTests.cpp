@@ -51,7 +51,7 @@ endmodule
     const auto& top = *compilation.getRoot().topInstances[0];
     const auto& gen_b = top.memberAt<GenerateBlockSymbol>(1);
     const auto& param = gen_b.memberAt<ParameterSymbol>(0);
-    CHECK(compilation.diagnostics().empty());
+    CHECK(compilation.getSemanticDiagnostics().empty());
     CHECK(param.getValue().integer() == 12);
 
     // Lookup at (1); should return the local parameter
@@ -63,7 +63,7 @@ endmodule
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol == &param);
-    CHECK(compilation.diagnostics().empty());
+    CHECK(compilation.getSemanticDiagnostics().empty());
 
     // Lookup at (2); should return the package parameter
     gen_b.lookupUnqualified("x", LookupLocation::before(param), LookupNameKind::Local, SourceRange(), result);

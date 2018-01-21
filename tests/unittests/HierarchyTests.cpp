@@ -29,15 +29,16 @@ module Top;
     Leaf #(.unset(10)) l9(); // no errors on this one
 endmodule
 
+// TODO: handle implicit types here?
 module Leaf #(
     int foo = 4,
-    bar = 9,
-    localparam baz,
-    parameter bizz = baz,
-    parameter unset
+    int bar = 9,
+    localparam int baz,
+    parameter int bizz = baz,
+    parameter int unset
     )();
 
-    parameter localp;
+    parameter int localp;
 
 endmodule
 )");
@@ -45,7 +46,7 @@ endmodule
     Compilation compilation;
     evalModule(tree, compilation).members();
 
-    const auto& diags = compilation.diagnostics();
+    const auto& diags = compilation.getSemanticDiagnostics();
     REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == DiagCode::LocalParamNoInitializer);
     CHECK(diags[1].code == DiagCode::BodyParamNoInitializer);

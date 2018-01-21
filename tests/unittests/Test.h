@@ -28,7 +28,8 @@ using namespace slang;
 } while (0)
 
 #define NO_COMPILATION_ERRORS do {\
-    if (!compilation.diagnostics().empty()) FAIL_CHECK(DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(compilation.diagnostics())); \
+    Diagnostics diags = compilation.getAllDiagnostics(); \
+    if (!diags.empty()) FAIL_CHECK(DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(diags)); \
 } while (0)
 
 inline std::string findTestDir() {

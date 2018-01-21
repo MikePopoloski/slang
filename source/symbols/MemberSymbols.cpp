@@ -86,9 +86,7 @@ const ConstantValue& ParameterSymbol::getValue() const {
     // If we have no value set, compute and use the default value.
     if (!value)
         getDefault();
-
-    ASSERT(value);
-    return *value;
+    return value ? *value : ConstantValue::Invalid;
 }
 
 void ParameterSymbol::setValue(ConstantValue newValue) {

@@ -71,7 +71,7 @@ Expression& Expression::bindSimpleName(Compilation& compilation, const Expressio
     scope.lookupUnqualified(nameToken.valueText(), LookupLocation::max, LookupNameKind::Local, nameToken.range(), result);
 
     if (result.hasError()) {
-        compilation.diagnostics().appendRange(result.diagnostics);
+        compilation.addDiagnostics(result.diagnostics);
         return compilation.badExpression(nullptr);
     }
 
@@ -126,7 +126,7 @@ Expression& Expression::bindQualifiedName(Compilation& compilation, const Scoped
         scope.lookupUnqualified(nameToken.valueText(), LookupLocation::max, LookupNameKind::Local, nameToken.range(), result);
 
         if (result.hasError()) {
-            compilation.diagnostics().appendRange(result.diagnostics);
+            compilation.addDiagnostics(result.diagnostics);
             return compilation.badExpression(nullptr);
         }
         

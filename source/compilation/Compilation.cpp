@@ -7,6 +7,25 @@
 #include "Compilation.h"
 
 #include "parsing/SyntaxTree.h"
+#include "symbols/SymbolVisitor.h"
+
+namespace {
+
+using namespace slang;
+
+// This visitor is used to touch every node in the AST to ensure that all lazily
+// evaluated members have been realized and we have recorded every diagnostic.
+struct DiagnosticVisitor : public SymbolVisitor<DiagnosticVisitor> {
+    using SymbolVisitor<DiagnosticVisitor>::visit;
+
+    void visit(const ValueSymbol& value) { value.getType(); }
+    void visit(const ExplicitImportSymbol& symbol) { symbol.importedSymbol(); }
+    void visit(const WildcardImportSymbol& symbol) { symbol.getPackage(); }
+    void visit(const SubroutineSymbol& symbol) { symbol.returnType.get(); }
+    void visit(const VariableSymbol& symbol) { symbol.type.get(); symbol.initializer.get(); }
+};
+
+}
 
 namespace slang {
 
@@ -101,6 +120,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     root->addMember(*unit);
     compilationUnits.push_back(unit);
     syntaxTrees.emplace_back(std::move(tree));
+    forcedDiagnostics = false;
 }
 
 const RootSymbol& Compilation::getRoot() {
@@ -217,6 +237,36 @@ CompilationUnitSymbol& Compilation::createScriptScope() {
     auto unit = emplace<CompilationUnitSymbol>(*this);
     root->addMember(*unit);
     return *unit;
+}
+
+Diagnostics Compilation::getParseDiagnostics() {
+    Diagnostics results;
+    for (const auto& tree : syntaxTrees)
+        results.appendRange(tree->diagnostics());
+    return results;
+}
+
+Diagnostics Compilation::getSemanticDiagnostics() {
+    // If we haven't already done so, touch every symbol, scope, statement,
+    // and expression tree so that we can be sure we have all the diagnostics.
+    if (!forcedDiagnostics) {
+        DiagnosticVisitor visitor;
+        getRoot().visit(visitor);
+    }
+
+    Diagnostics results;
+    results.appendRange(diags);
+    return results;
+}
+
+Diagnostics Compilation::getAllDiagnostics() {
+    Diagnostics results = getParseDiagnostics();
+    results.appendRange(getSemanticDiagnostics());
+    return results;
+}
+
+void Compilation::addDiagnostics(const Diagnostics& diagnostics) {
+    diags.appendRange(diagnostics);
 }
 
 const Type& Compilation::getType(SyntaxKind typeKind) const {

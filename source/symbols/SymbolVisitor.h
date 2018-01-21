@@ -18,11 +18,11 @@ namespace slang {
 template<typename TDerived>
 class SymbolVisitor {
 public:
+    void visit(const Symbol&) {}
+
     template<typename T>
-    void visit(const T& symbol) {
-        if constexpr (std::is_base_of_v<Scope, T>()) {
-            visitScope(*static_cast<const Scope*>(&symbol));
-        }
+    typename std::enable_if_t<std::is_base_of_v<Scope, T>> visit(const T& symbol) {
+        visitScope(*static_cast<const Scope*>(&symbol));
     }
 
     void visitScope(const Scope& scope) {

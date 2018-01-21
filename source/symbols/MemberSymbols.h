@@ -75,10 +75,10 @@ private:
 };
 
 /// Represents a parameter value.
-class ParameterSymbol : public Symbol {
+class ParameterSymbol : public ValueSymbol {
 public:
     ParameterSymbol(string_view name, SourceLocation loc, bool isLocal_, bool isPort_) :
-        Symbol(SymbolKind::Parameter, name, loc),
+        ValueSymbol(SymbolKind::Parameter, name, loc),
         type(this), isLocal(isLocal_), isPort(isPort_) {}
 
     static void fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
@@ -121,7 +121,7 @@ private:
 };
 
 /// Represents a variable declaration (which does not include nets).
-class VariableSymbol : public Symbol {
+class VariableSymbol : public ValueSymbol {
 public:
     LazyType type;
     LazyInitializer initializer;
@@ -145,7 +145,7 @@ public:
 protected:
     VariableSymbol(SymbolKind childKind, string_view name, SourceLocation loc,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
-        Symbol(childKind, name, loc),
+        ValueSymbol(childKind, name, loc),
         type(this),
         initializer(this),
         lifetime(lifetime),

@@ -59,12 +59,23 @@ public:
     /// script scope won't affect which modules are determined to be top-level instances.
     CompilationUnitSymbol& createScriptScope();
 
-    Diagnostics& diagnostics() { return diags; }
-    const Diagnostics& diagnostics() const { return diags; }
+    /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
+    Diagnostics getParseDiagnostics();
+
+    /// Gets the diagnostics produced during semantic analysis, including the binding of
+    /// symbols, type checking, and name lookup. Note that this will force evaluation of
+    /// any symbols or expressions that were still waiting for lazy evaluation.
+    Diagnostics getSemanticDiagnostics();
+
+    /// Gets all of the diagnostics produced during compilation.
+    Diagnostics getAllDiagnostics();
 
     /// Report an error at the specified location.
     Diagnostic& addError(DiagCode code, SourceLocation location) { return diags.add(code, location); }
     Diagnostic& addError(DiagCode code, SourceRange sourceRange) { return diags.add(code, sourceRange); }
+
+    /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
+    void addDiagnostics(const Diagnostics& diagnostics);
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, const Scope& parent);
@@ -123,6 +134,7 @@ private:
     Diagnostics diags;
     std::unique_ptr<RootSymbol> root;
     bool finalized = false;
+    bool forcedDiagnostics = false;
 
     // A set of names that are instantiated anywhere in the design. This is used to
     // determine which modules should be top-level instances (because nobody ever
