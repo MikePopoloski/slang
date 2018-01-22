@@ -290,6 +290,40 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
     info->location = location;
     info->flags = TokenFlags::Missing;
 
+    switch (kind) {
+        case TokenKind::Identifier:
+            info->extra = IdentifierType::Unknown;
+            break;
+        case TokenKind::SystemIdentifier:
+            info->extra = IdentifierType::System;
+            break;
+        case TokenKind::IncludeFileName:
+        case TokenKind::StringLiteral:
+            info->extra = string_view("");
+            break;
+        case TokenKind::Directive:
+        case TokenKind::MacroUsage:
+            info->extra = SyntaxKind::Unknown;
+            break;
+        case TokenKind::IntegerLiteral:
+            info->setInt(alloc, 0);
+            break;
+        case TokenKind::IntegerBase:
+            info->setNumFlags(LiteralBase::Decimal, false);
+            break;
+        case TokenKind::UnbasedUnsizedLiteral:
+            info->setBit(logic_t::x);
+            break;
+        case TokenKind::RealLiteral:
+            info->setReal(0.0);
+            break;
+        case TokenKind::TimeLiteral:
+            info->setTimeUnit(TimeUnit::Seconds);
+            break;
+        default:
+            break;
+    }
+
     return Token(kind, info);
 }
 
