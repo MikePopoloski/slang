@@ -250,6 +250,7 @@ Diagnostics Compilation::getSemanticDiagnostics() {
     // If we haven't already done so, touch every symbol, scope, statement,
     // and expression tree so that we can be sure we have all the diagnostics.
     if (!forcedDiagnostics) {
+        forcedDiagnostics = true;
         DiagnosticVisitor visitor;
         getRoot().visit(visitor);
     }

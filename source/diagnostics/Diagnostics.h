@@ -233,7 +233,7 @@ public:
 
 class DiagnosticWriter {
 public:
-    DiagnosticWriter(SourceManager& sourceManager);
+    explicit DiagnosticWriter(SourceManager& sourceManager);
 
     /// Sets the message to use for the given diagnostic.
     void setMessage(DiagCode code, std::string format);

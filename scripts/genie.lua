@@ -84,3 +84,4 @@ testProject('unittests')
 
 group "tools"
 toolProject('depmap')
+toolProject('driver')
