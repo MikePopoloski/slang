@@ -566,7 +566,7 @@ span<SyntaxNode* const> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         else if (isPossibleStatement(kind))
             newNode = &parseStatement();
         else {
-            skipToken(error ? std::nullopt : std::make_optional(DiagCode::InvalidTokenInSequentialBlock));
+            skipToken(error ? std::nullopt : std::make_optional(DiagCode::ExpectedStatement));
             error = true;
         }
 

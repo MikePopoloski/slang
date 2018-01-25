@@ -118,8 +118,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ImplicitNotAllowed] = { "expected data type (implicit type name not allowed)", DiagnosticSeverity::Error };
     descriptors[DiagCode::MultipleTypesInDeclaration] = { "multiple types given in single declaration; this is not allowed in SystemVerilog", DiagnosticSeverity::Error };
     descriptors[DiagCode::ColonShouldBeDot] = { "misplaced colon; did you mean to use a dot?", DiagnosticSeverity::Error };
-    descriptors[DiagCode::InvalidTokenInMemberList] = { "invalid token in member list", DiagnosticSeverity::Error };
-    descriptors[DiagCode::InvalidTokenInSequentialBlock] = { "invalid token in sequential block", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpectedMember] = { "expected member", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedStatement] = { "expected statement", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedParameterPort] = { "expected parameter declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedNonAnsiPort] = { "expected non-ansi port declaration", DiagnosticSeverity::Error };

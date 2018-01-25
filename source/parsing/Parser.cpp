@@ -343,7 +343,7 @@ MemberSyntax* Parser::parseMember() {
                 SmallVectorSized<MemberSyntax*, 2> buffer;
                 buffer.append(&parseGenerateBlock());
                 return &factory.generateRegion(attributes, keyword, buffer.copy(alloc),
-                                                       expect(TokenKind::EndGenerateKeyword));
+                                               expect(TokenKind::EndGenerateKeyword));
             }
 
             Token endgenerate;
@@ -495,7 +495,7 @@ span<TMember* const> Parser::parseMemberList(TokenKind endKind, Token& endToken,
         auto member = parseFunc();
         if (!member) {
             // couldn't parse anything, skip a token and try again
-            skipToken(error ? std::nullopt : std::make_optional(DiagCode::InvalidTokenInMemberList));
+            skipToken(error ? std::nullopt : std::make_optional(DiagCode::ExpectedMember));
             error = true;
         }
         else {
@@ -803,7 +803,6 @@ MemberSyntax& Parser::parseGenerateBlock() {
 
             // If there was some syntax error that caused parseMember to return null, fabricate an empty
             // member here and let our caller sort it out.
-            addError(DiagCode::InvalidTokenInMemberList, peek().location());
             return factory.emptyMember(nullptr, nullptr, Token());
         }
 

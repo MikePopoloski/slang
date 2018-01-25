@@ -157,6 +157,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                                                                   kind));
             break;
         }
+        case SyntaxKind::EmptyMember:
+            break;
         default:
             THROW_UNREACHABLE;
     }
