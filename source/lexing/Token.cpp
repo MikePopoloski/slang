@@ -363,7 +363,7 @@ Token Token::createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Toke
     bool report = true;
     if (!diagnostics.empty()) {
         const Diagnostic& diag = diagnostics.back();
-        if (diag.location == location &&
+        if ((diag.location == location || diag.location == actual.location()) &&
             (diag.code == DiagCode::ExpectedIdentifier ||
              diag.code == DiagCode::ExpectedToken)) {
             report = false;

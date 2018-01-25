@@ -22,16 +22,18 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty) {
         case TokenKind::UniqueKeyword:
         case TokenKind::Unique0Keyword:
         case TokenKind::PriorityKeyword: {
-            auto modifier = consume();
-            switch (peek().kind) {
+            switch (peek(1).kind) {
                 case TokenKind::IfKeyword:
-                    return parseConditionalStatement(label, attributes, modifier);
+                    return parseConditionalStatement(label, attributes, consume());
                 case TokenKind::CaseKeyword:
                 case TokenKind::CaseXKeyword:
-                case TokenKind::CaseZKeyword:
+                case TokenKind::CaseZKeyword: {
+                    auto modifier = consume();
                     return parseCaseStatement(label, attributes, modifier, consume());
+                }
                 default: {
-                    addError(DiagCode::ExpectedIfOrCase, skipToken()) << getTokenKindText(modifier.kind);
+                    addError(DiagCode::ExpectedIfOrCase, peek(1).location()) << getTokenKindText(peek().kind);
+                    skipToken(std::nullopt);
                     return factory.emptyStatement(label, attributes, Token());
                 }
             }
@@ -564,11 +566,8 @@ span<SyntaxNode* const> Parser::parseBlockItems(TokenKind endKind, Token& end) {
         else if (isPossibleStatement(kind))
             newNode = &parseStatement();
         else {
-            auto location = skipToken();
-            if (!error) {
-                addError(DiagCode::InvalidTokenInSequentialBlock, location);
-                error = true;
-            }
+            skipToken(error ? std::nullopt : std::make_optional(DiagCode::InvalidTokenInSequentialBlock));
+            error = true;
         }
 
         if (newNode) {

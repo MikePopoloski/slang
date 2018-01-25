@@ -79,6 +79,7 @@ enum class DiagCode : uint8_t {
     // parser
     ExpectedIdentifier,
     ExpectedToken,
+    MisplacedTrailingSeparator,
     ImplicitNotAllowed,
     MultipleTypesInDeclaration,
     ColonShouldBeDot,
@@ -110,12 +111,15 @@ enum class DiagCode : uint8_t {
     ExpectedClassScope,
     NoLabelOnSemicolon,
     DeferredDelayMustBeZero,
-    AttributesNotSupported,
     InvalidGenvarIterExpression,
     ExpectedGenvarIterVar,
     ConstFunctionPortRequiresRef,
     ExpectedClockingSkew,
     ExpectedDPISpecString,
+    AttributesOnEmpty,
+    AttributesOnClassParam,
+    AttributesOnGenerateRegion,
+    AttributesOnTimeDecl,
 
     // declarations
     DuplicateDefinition,
@@ -199,7 +203,6 @@ public:
     Diagnostic(DiagCode code, SourceLocation location);
 
     /// Adds an argument to the diagnostic.
-    friend Diagnostic& operator<<(Diagnostic& diag, std::string&& arg);
     friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
     friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);
     friend Diagnostic& operator<<(Diagnostic& diag, SourceRange arg);

@@ -33,7 +33,7 @@ protected:
     Token consume();
     Token consumeIf(TokenKind kind);
     Token expect(TokenKind kind);
-    SourceLocation skipToken();
+    void skipToken(std::optional<DiagCode> diagCode);
 
     /// Helper class that maintains a sliding window of tokens, with lookahead.
     class Window {
@@ -141,16 +141,23 @@ protected:
             return;
         }
 
-        // If the very first token isn't expected and there is already an
-        // error issued at this location, just bail out of list parsing.
+        // If the very first token isn't expected just bail out of list parsing.
         if (!IsExpected(current.kind)) {
-            Diagnostics& diagnostics = getDiagnostics();
-            if (!diagnostics.empty() && diagnostics.back().code == DiagCode::ExpectedToken &&
-                diagnostics.back().location == current.location()) {
+            // If there's already an error here don't report another; otherwise use
+            // the provided diagnostic code to report an error.
+            auto location = window.lastConsumed ?
+                            window.lastConsumed.location() + window.lastConsumed.rawText().length() :
+                            current.location();
 
-                closeToken = Token::createMissing(alloc, closeKind, current.location());
-                return;
+            Diagnostics& diagnostics = getDiagnostics();
+            if (diagnostics.empty() || diagnostics.back().code != DiagCode::ExpectedToken ||
+                (diagnostics.back().location != location && diagnostics.back().location != current.location())) {
+
+                addError(code, location);
             }
+
+            closeToken = Token::createMissing(alloc, closeKind, current.location());
+            return;
         }
 
         while (true) {
@@ -163,6 +170,14 @@ protected:
 
                     if (IsExpected(current.kind)) {
                         buffer.append(expect(separatorKind));
+
+                        if (IsEnd(peek().kind)) {
+                            // Specific check for misplaced trailing separators here.
+                            auto& diag = addError(DiagCode::MisplacedTrailingSeparator, window.lastConsumed.location());
+                            diag << getTokenKindText(window.lastConsumed.kind);
+                            break;
+                        }
+
                         buffer.append(parseItem(false));
                         continue;
                     }
@@ -183,24 +198,18 @@ protected:
 
     template<bool(*IsExpected)(TokenKind), bool(*IsAbort)(TokenKind)>
     SkipAction skipBadTokens(DiagCode code) {
-        auto result = SkipAction::Continue;
         auto current = peek();
-        bool error = false;
+        bool first = true;
 
         while (!IsExpected(current.kind)) {
-            if (!error) {
-                addError(code, current.location());
-                error = true;
-            }
+            if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind))
+                return SkipAction::Abort;
 
-            if (current.kind == TokenKind::EndOfFile || IsAbort(current.kind)) {
-                result = SkipAction::Abort;
-                break;
-            }
-            skipToken();
+            skipToken(first ? std::make_optional(code) : std::nullopt);
             current = peek();
+            first = false;
         }
-        return result;
+        return SkipAction::Continue;
     }
 
 private:

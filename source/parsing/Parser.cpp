@@ -332,7 +332,7 @@ MemberSyntax* Parser::parseMember() {
 
     switch (peek().kind) {
         case TokenKind::GenerateKeyword: {
-            errorIfAttributes(attributes, "a generate region");
+            errorIfAttributes(attributes, DiagCode::AttributesOnGenerateRegion);
             auto keyword = consume();
 
             // It's definitely not legal to have a generate block here on its own (without an if or for loop)
@@ -353,7 +353,7 @@ MemberSyntax* Parser::parseMember() {
         }
         case TokenKind::TimeUnitKeyword:
         case TokenKind::TimePrecisionKeyword:
-            errorIfAttributes(attributes, "a time units declaration");
+            errorIfAttributes(attributes, DiagCode::AttributesOnTimeDecl);
             return &parseTimeUnitsDeclaration(attributes);
         case TokenKind::ModuleKeyword:
         case TokenKind::MacromoduleKeyword:
@@ -495,11 +495,8 @@ span<TMember* const> Parser::parseMemberList(TokenKind endKind, Token& endToken,
         auto member = parseFunc();
         if (!member) {
             // couldn't parse anything, skip a token and try again
-            auto location = skipToken();
-            if (!error) {
-                addError(DiagCode::InvalidTokenInMemberList, location);
-                error = true;
-            }
+            skipToken(error ? std::nullopt : std::make_optional(DiagCode::InvalidTokenInMemberList));
+            error = true;
         }
         else {
             members.append(member);
@@ -928,7 +925,7 @@ MemberSyntax* Parser::parseClassMember() {
     if (isVariableDeclaration()) {
         auto& decl = parseVariableDeclaration(nullptr);
         if (decl.kind == SyntaxKind::ParameterDeclarationStatement)
-            errorIfAttributes(attributes, "a class parameter");
+            errorIfAttributes(attributes, DiagCode::AttributesOnClassParam);
         return &factory.classPropertyDeclaration(attributes, qualifiers, decl);
     }
 
@@ -961,7 +958,7 @@ MemberSyntax* Parser::parseClassMember() {
         case TokenKind::CoverGroupKeyword:
             return &parseCovergroupDeclaration(attributes);
         case TokenKind::Semicolon:
-            errorIfAttributes(attributes, "an empty member");
+            errorIfAttributes(attributes, DiagCode::AttributesOnEmpty);
             return &factory.emptyMember(attributes, qualifiers, consume());
         default:
             break;
@@ -1143,7 +1140,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
     }
 
     if (peek(TokenKind::Semicolon)) {
-        errorIfAttributes(attributes, "an empty item");
+        errorIfAttributes(attributes, DiagCode::AttributesOnEmpty);
         return &factory.emptyMember(attributes, nullptr, consume());
     }
 
@@ -2391,9 +2388,9 @@ bool Parser::scanQualifiedName(uint32_t& index) {
     return true;
 }
 
-void Parser::errorIfAttributes(span<AttributeInstanceSyntax* const> attributes, const char* msg) {
+void Parser::errorIfAttributes(span<AttributeInstanceSyntax* const> attributes, DiagCode code) {
     if (!attributes.empty())
-        addError(DiagCode::AttributesNotSupported, peek().location()) << string_view(msg, (uint32_t)strlen(msg));
+        addError(code, peek().location());
 }
 
 void Parser::throwIfTooDeep() {

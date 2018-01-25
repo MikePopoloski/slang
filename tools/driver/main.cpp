@@ -12,7 +12,8 @@
 
 using namespace slang;
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+try {
     std::vector<std::string> sourceFiles;
 
     CLI::App cmd("SystemVerilog compiler");
@@ -37,4 +38,10 @@ int main(int argc, char** argv) {
     Diagnostics diagnostics = compilation.getAllDiagnostics();
     DiagnosticWriter writer(sourceManager);
     printf("%s\n", writer.report(diagnostics).c_str());
+
+    return 0;
+}
+catch (const std::exception& e) {
+    printf("Caught exception: %s\n", e.what());
+    return 1;
 }

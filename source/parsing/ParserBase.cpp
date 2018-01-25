@@ -82,11 +82,13 @@ Token ParserBase::expect(TokenKind kind) {
     return result;
 }
 
-SourceLocation ParserBase::skipToken() {
+void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     auto token = peek();
     skippedTokens.append(token);
     window.moveToNext();
-    return token.location();
+
+    if (diagCode)
+        addError(*diagCode, token.location()) << token.range();
 }
 
 void ParserBase::Window::addNew() {

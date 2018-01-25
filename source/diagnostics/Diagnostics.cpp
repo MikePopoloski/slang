@@ -27,11 +27,6 @@ Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
     return diag;
 }
 
-Diagnostic& operator<<(Diagnostic& diag, std::string&& arg) {
-    diag.args.emplace_back(std::move(arg));
-    return diag;
-}
-
 Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
     diag.args.emplace_back(&arg);
     return diag;
@@ -119,6 +114,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     // parser
     descriptors[DiagCode::ExpectedIdentifier] = { "expected identifier", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedToken] = { "expected '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::MisplacedTrailingSeparator] = { "misplaced trailing '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::ImplicitNotAllowed] = { "expected data type (implicit type name not allowed)", DiagnosticSeverity::Error };
     descriptors[DiagCode::MultipleTypesInDeclaration] = { "multiple types given in single declaration; this is not allowed in SystemVerilog", DiagnosticSeverity::Error };
     descriptors[DiagCode::ColonShouldBeDot] = { "misplaced colon; did you mean to use a dot?", DiagnosticSeverity::Error };
@@ -150,12 +146,15 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ExpectedClassScope] = { "expected class scope before new keyword", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoLabelOnSemicolon] = { "labels are not allowed on empty semicolon", DiagnosticSeverity::Error };
     descriptors[DiagCode::DeferredDelayMustBeZero] = { "deferred assertion delay must be zero", DiagnosticSeverity::Error };
-    descriptors[DiagCode::AttributesNotSupported] = { "attributes are not allowed to be attached to {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::InvalidGenvarIterExpression] = { "invalid genvar iteration expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedGenvarIterVar] = { "expected genvar iteration variable", DiagnosticSeverity::Error };
     descriptors[DiagCode::ConstFunctionPortRequiresRef] = { "'const' in subroutine formal port requires 'ref' direction specifier", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedClockingSkew] = { "expected clocking skew", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpectedDPISpecString] = { "expected DPI spec string", DiagnosticSeverity::Error };
+    descriptors[DiagCode::AttributesOnEmpty] = { "attributes are not allowed on an empty item", DiagnosticSeverity::Error };
+    descriptors[DiagCode::AttributesOnClassParam] = { "attributes are not allowed on a class parameter", DiagnosticSeverity::Error };
+    descriptors[DiagCode::AttributesOnGenerateRegion] = { "attributes are not allowed on a generate region", DiagnosticSeverity::Error };
+    descriptors[DiagCode::AttributesOnTimeDecl] = { "attributes are not allowed on a time units declaration", DiagnosticSeverity::Error };
 
     // declarations
     descriptors[DiagCode::DuplicateDefinition] = { "duplicate {} definition '{}'", DiagnosticSeverity::Error };
@@ -388,10 +387,10 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
         writer.write("\n{}\n", line);
 
         // Highlight any ranges and print the caret location.
-        std::string buffer(line.length(), ' ');
+        std::string buffer(std::max(line.length(), (size_t)col), ' ');
 
         // handle tabs to get proper alignment on a terminal
-        for (uint32_t i = 0; i < buffer.length(); ++i) {
+        for (uint32_t i = 0; i < line.length(); ++i) {
             if (line[i] == '\t')
                 buffer[i] = '\t';
         }

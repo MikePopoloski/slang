@@ -174,7 +174,7 @@ private:
     bool scanDimensionList(uint32_t& index);
     bool scanQualifiedName(uint32_t& index);
 
-    void errorIfAttributes(span<AttributeInstanceSyntax* const> attributes, const char* msg);
+    void errorIfAttributes(span<AttributeInstanceSyntax* const> attributes, DiagCode code);
 
     class DepthGuard {
       public:
