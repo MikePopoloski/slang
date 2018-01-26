@@ -113,6 +113,9 @@ public:
     /// The type of the expression.
     const Type* type;
 
+    /// The value of the expression, if it's constant. Otherwise nullptr.
+    const ConstantValue* constant = nullptr;
+
     /// The source range of this expression, if it originated from source code.
     SourceRange sourceRange;
 

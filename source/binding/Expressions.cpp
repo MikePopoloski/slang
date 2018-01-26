@@ -638,36 +638,54 @@ Expression& Expression::propagateAndFold(Compilation& compilation, Expression& e
     if (newType.isFloating() && !expr.type->isFloating() && expr.kind != ExpressionKind::Conversion)
         return convert(compilation, ConversionKind::IntToFloat, newType, expr);
 
+    Expression* result;
     switch (expr.kind) {
         case ExpressionKind::Invalid:
-            return expr;
+            result = &expr;
+            break;
         case ExpressionKind::IntegerLiteral:
-            return IntegerLiteral::propagateAndFold(compilation, expr.as<IntegerLiteral>(), newType);
+            result = &IntegerLiteral::propagateAndFold(compilation, expr.as<IntegerLiteral>(), newType);
+            break;
         case ExpressionKind::RealLiteral:
-            return RealLiteral::propagateAndFold(compilation, expr.as<RealLiteral>(), newType);
+            result = &RealLiteral::propagateAndFold(compilation, expr.as<RealLiteral>(), newType);
+            break;
         case ExpressionKind::UnbasedUnsizedIntegerLiteral:
-            return UnbasedUnsizedIntegerLiteral::propagateAndFold(
+            result = &UnbasedUnsizedIntegerLiteral::propagateAndFold(
                 compilation,
                 expr.as<UnbasedUnsizedIntegerLiteral>(),
                 newType
             );
+            break;
         case ExpressionKind::Call:
         case ExpressionKind::VariableRef:
         case ExpressionKind::ParameterRef:
         case ExpressionKind::Concatenation:
         case ExpressionKind::ElementSelect:
         case ExpressionKind::RangeSelect:
-            return expr;
+            result = &expr;
+            break;
         case ExpressionKind::UnaryOp:
-            return UnaryExpression::propagateAndFold(compilation, expr.as<UnaryExpression>(), newType);
+            result = &UnaryExpression::propagateAndFold(compilation, expr.as<UnaryExpression>(), newType);
+            break;
         case ExpressionKind::BinaryOp:
-            return BinaryExpression::propagateAndFold(compilation, expr.as<BinaryExpression>(), newType);
+            result = &BinaryExpression::propagateAndFold(compilation, expr.as<BinaryExpression>(), newType);
+            break;
         case ExpressionKind::ConditionalOp:
-            return ConditionalExpression::propagateAndFold(compilation, expr.as<ConditionalExpression>(), newType);
+            result = &ConditionalExpression::propagateAndFold(compilation, expr.as<ConditionalExpression>(), newType);
+            break;
         case ExpressionKind::Conversion:
-            return ConversionExpression::propagateAndFold(compilation, expr.as<ConversionExpression>(), newType);
+            result = &ConversionExpression::propagateAndFold(compilation, expr.as<ConversionExpression>(), newType);
+            break;
+        default:
+            THROW_UNREACHABLE;
     }
-    THROW_UNREACHABLE;
+
+    // Try to fold any constant values.
+    ASSERT(!result->constant);
+    ConstantValue value = result->eval();
+    if (value)
+        result->constant = compilation.createConstant(std::move(value));
+    return *result;
 }
 
 void Expression::contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType) {

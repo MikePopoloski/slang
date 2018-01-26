@@ -19,6 +19,10 @@ bool Expression::evalBool(EvalContext& context) const {
 }
 
 ConstantValue Expression::eval(EvalContext& context) const {
+    // If the expression is already known to be constant just return the value we have.
+    if (constant)
+        return *constant;
+
     switch (kind) {
         case ExpressionKind::Invalid: return nullptr;
         case ExpressionKind::IntegerLiteral: return as<IntegerLiteral>().eval(context);
@@ -71,8 +75,9 @@ ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
 
 ConstantValue VariableRefExpression::eval(EvalContext& context) const {
     ConstantValue* v = context.findLocal(&symbol);
-    ASSERT(v);
-    return *v;
+
+    // TODO: report error if not constant
+    return v ? *v : nullptr;
 }
 
 ConstantValue ParameterRefExpression::eval(EvalContext&) const {
@@ -100,8 +105,17 @@ ConstantValue UnaryExpression::eval(EvalContext& context) const {
 }
 
 ConstantValue BinaryExpression::eval(EvalContext& context) const {
-    SVInt l = left().eval(context).integer();
-    SVInt r = right().eval(context).integer();
+    ConstantValue cvl = left().eval(context);
+    ConstantValue cvr = right().eval(context);
+    if (!cvl || !cvr)
+        return nullptr;
+
+    // TODO: handle non-integer
+    if (!cvl.isInteger() || !cvr.isInteger())
+        return nullptr;
+
+    SVInt l = cvl.integer();
+    SVInt r = cvr.integer();
 
     // TODO: more robust lvalue handling
     ConstantValue* lvalue = nullptr;
@@ -255,8 +269,12 @@ ConstantValue ConcatenationExpression::eval(EvalContext& context) const {
 ConstantValue CallExpression::eval(EvalContext& context) const {
     // Evaluate all argument in the current stack frame.
     SmallVectorSized<ConstantValue, 8> args;
-    for (auto arg : arguments())
-        args.emplace(arg->eval(context));
+    for (auto arg : arguments()) {
+        ConstantValue v = arg->eval(context);
+        if (!v)
+            return nullptr;
+        args.emplace(std::move(v));
+    }
 
     // If this is a system function we will just evaluate it directly
     if (subroutine.systemFunctionKind != SystemFunction::Unknown) {
@@ -307,9 +325,16 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
 ConstantValue ConversionExpression::eval(EvalContext& context) const {
     ConstantValue value = operand().eval(context);
     switch (conversionKind) {
+        case ConversionKind::IntToFloat:
+            // TODO: make this more robust
+            return (double)value.integer().as<int64_t>().value();
+
         case ConversionKind::IntExtension:
             ASSERT(value.isInteger() && value.integer().getBitWidth() == operand().type->getBitWidth());
             return extend(value.integer(), (uint16_t)type->getBitWidth(), type->as<IntegralType>().isSigned);
+
+        case ConversionKind::FloatExtension:
+            return value;
 
         default:
             THROW_UNREACHABLE;
