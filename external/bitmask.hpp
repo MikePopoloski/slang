@@ -121,7 +121,7 @@ namespace bitmask_lib {
         // When evaluated at compile time emits a compilation error if condition is not true.
         // Invokes the standard assert at run time.
         #define bitmask_constexpr_assert(cond) \
-            ((void)((cond) ? 0 : (bitmask_lib::bitmask_detail::constexpr_assert_failed([](){ assert(!#cond);}), 0)))
+            ((void)((cond) ? 0 : (bitmask_lib::bitmask_detail::constexpr_assert_failed([](){ assert(false && #cond);}), 0)))
 
         template<class T>
         inline constexpr T checked_value(T value, T mask)
