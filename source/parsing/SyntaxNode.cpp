@@ -8,7 +8,7 @@
 
 namespace slang {
 
-void SyntaxNode::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
+void SyntaxNode::writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags) const {
     uint32_t childCount = getChildCount();
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
@@ -22,7 +22,7 @@ void SyntaxNode::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
     }
 }
 
-std::string SyntaxNode::toString(uint8_t flags) const {
+std::string SyntaxNode::toString(bitmask<SyntaxToStringFlags> flags) const {
     SmallVectorSized<char, 256> buffer;
     writeTo(buffer, flags);
     return std::string(buffer.begin(), buffer.end());

@@ -1049,9 +1049,10 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
                     // In that case we want to fabricate the correct directive token here.
                     Token first = begin->withTrivia(alloc, token.trivia());
                     if (token.kind == TokenKind::Directive) {
-                        Token grave { TokenKind::Directive, alloc.emplace<Token::Info>(
-                            first.trivia(), "`", first.location(), 0) };
-
+                        Token grave {
+                            TokenKind::Directive,
+                            alloc.emplace<Token::Info>(first.trivia(), "`", first.location())
+                        };
                         first = Lexer::concatenateTokens(alloc, grave, first);
                     }
 
@@ -1156,7 +1157,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, Token usageSite, Sm
     // Take the location and trivia from the usage site; the source text we're
     // going to make up here doesn't actually exist and shouldn't be shown to the
     // user as an "expanded from here" note.
-    auto info = alloc.emplace<Token::Info>(usageSite.trivia(), "", usageSite.location(), 0);
+    auto info = alloc.emplace<Token::Info>(usageSite.trivia(), "", usageSite.location());
 
     // Create a buffer to hold the raw text for the new tokens we will fabricate.
     SmallVectorSized<char, 64> text;

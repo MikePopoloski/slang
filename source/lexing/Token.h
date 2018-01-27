@@ -11,6 +11,7 @@
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"
 #include "util/StringTable.h"
+#include "util/Util.h"
 
 namespace slang {
 
@@ -22,25 +23,23 @@ class SyntaxNode;
 class Token;
 
 /// Various flags that we track on the token.
-struct TokenFlags {
-    enum {
-        None = 0,
-        Missing = 1,
-        IsFromPreprocessor = 2
-    };
+enum class TokenFlags : uint8_t {
+    None = 0,
+    Missing = 1,
+    IsFromPreprocessor = 2
 };
+BITMASK_DEFINE_MAX_ELEMENT(TokenFlags, IsFromPreprocessor);
 
 /// Various flags used to control conversion to string.
-struct SyntaxToStringFlags {
-    enum {
-        None = 0x0,
-        IncludeTrivia = 0x1,
-        IncludeMissing = 0x2,
-        IncludePreprocessed = 0x4,
-        IncludeSkipped = 0x8,
-        IncludeDirectives = 0x10
-    };
+enum class SyntaxToStringFlags : uint8_t {
+    None = 0x0,
+    IncludeTrivia = 0x1,
+    IncludeMissing = 0x2,
+    IncludePreprocessed = 0x4,
+    IncludeSkipped = 0x8,
+    IncludeDirectives = 0x10
 };
+BITMASK_DEFINE_MAX_ELEMENT(SyntaxToStringFlags, IncludeDirectives);
 
 /// Various flags for numeric tokens.
 struct NumericTokenFlags {
@@ -89,7 +88,7 @@ public:
     Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
 
     /// Writes the trivia's text to the given buffer.
-    void writeTo(SmallVector<char>& buffer, uint8_t flags = 0) const;
+    void writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags = SyntaxToStringFlags::None) const;
 
     /// If this trivia is tracking a skipped syntax node, return that now.
     SyntaxNode* syntax() const;
@@ -140,10 +139,11 @@ public:
         std::variant<string_view, SyntaxKind, IdentifierType, NumericLiteralInfo> extra;
 
         /// Various token flags.
-        uint8_t flags;
+        bitmask<TokenFlags> flags;
 
         Info();
-        Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, int flags);
+        Info(span<Trivia const> trivia, string_view rawText, SourceLocation location,
+             bitmask<TokenFlags> flags = TokenFlags::None);
 
         void setBit(logic_t value);
         void setReal(double value);
@@ -183,11 +183,11 @@ public:
     string_view rawText() const;
 
     /// Convenience method that wraps writeTo and builds an std::string.
-    std::string toString(uint8_t flags = 0) const;
+    std::string toString(bitmask<SyntaxToStringFlags> flags = SyntaxToStringFlags::None) const;
 
     /// Write the string representation of the token to the given buffer.
     /// flags control what exactly gets written.
-    void writeTo(SmallVector<char>& buffer, uint8_t flags) const;
+    void writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags) const;
 
     /// Data accessors for specific kinds of tokens.
     /// These will generally assert if the kind is wrong.

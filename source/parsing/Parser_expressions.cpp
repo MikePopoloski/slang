@@ -311,7 +311,7 @@ ExpressionSyntax& Parser::parseIntegerExpression() {
 
     string_view rawText(first.rawText().data(), length);
 
-    auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location(), 0);
+    auto info = alloc.emplace<Token::Info>(first.trivia(), rawText, first.location());
     info->setInt(alloc, vectorBuilder.finish());
 
     return factory.integerVectorExpression(sizeToken, baseToken, Token(TokenKind::IntegerLiteral, info));

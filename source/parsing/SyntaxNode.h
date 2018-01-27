@@ -552,10 +552,10 @@ public:
     SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
     /// Utility method to wrap writeTo and generate an std::string.
-    std::string toString(uint8_t flags = 0) const;
+    std::string toString(bitmask<SyntaxToStringFlags> flags = SyntaxToStringFlags::None) const;
 
     /// Write the node and all of its children to a string.
-    void writeTo(SmallVector<char>& buffer, uint8_t flags) const;
+    void writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags) const;
 
     /// Get the first leaf token in this subtree.
     Token getFirstToken() const;

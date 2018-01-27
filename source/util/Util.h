@@ -85,6 +85,9 @@ using gsl::make_span;
   #define NO_SANITIZE(warningName)
 #endif
 
+#include "bitmask.hpp"
+using bitmask_lib::bitmask;
+
 namespace slang {
 
 /// Converts a span of characters into a string_view.

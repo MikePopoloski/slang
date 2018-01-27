@@ -26,7 +26,7 @@ SyntaxNode* Trivia::syntax() const {
     return syntaxNode;
 }
 
-void Trivia::writeTo(SmallVector<char>& buffer, uint8_t flags) const {
+void Trivia::writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags) const {
     switch (kind) {
         case TriviaKind::Directive:
             if (flags & SyntaxToStringFlags::IncludeDirectives)
@@ -66,8 +66,8 @@ Token::Info::Info() :
 {
 }
 
-Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, int flags) :
-    trivia(trivia), rawText(rawText), location(location), flags((uint8_t)flags)
+Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, bitmask<TokenFlags> flags) :
+    trivia(trivia), rawText(rawText), location(location), flags(flags)
 {
 }
 
@@ -207,7 +207,7 @@ SourceRange Token::range() const {
     return SourceRange(location(), location() + rawText().length());
 }
 
-void Token::writeTo(SmallVector<char>& buffer, uint8_t writeFlags) const {
+void Token::writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> writeFlags) const {
     if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
         return;
 
@@ -222,7 +222,7 @@ void Token::writeTo(SmallVector<char>& buffer, uint8_t writeFlags) const {
     buffer.appendRange(rawText());
 }
 
-std::string Token::toString(uint8_t writeFlags) const {
+std::string Token::toString(bitmask<SyntaxToStringFlags> writeFlags) const {
     SmallVectorSized<char, 256> buffer;
     writeTo(buffer, writeFlags);
     return std::string(buffer.begin(), buffer.end());
