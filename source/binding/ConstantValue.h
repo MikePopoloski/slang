@@ -44,7 +44,7 @@ public:
     /// and which fits in the given number of bits. If it does, the value is returned.
     /// Otherwise, a diagnostic is issued.
     optional<int> coerceInteger(uint32_t maxBits, Diagnostics* diagnostics = nullptr,
-                                SourceLocation location = SourceLocation());
+                                SourceLocation location = SourceLocation()) const;
 
     static const ConstantValue Invalid;
 

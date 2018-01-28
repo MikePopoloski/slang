@@ -54,7 +54,7 @@ DownwardLookupResult lookupDownward(span<const NameSyntax* const> nameParts, con
 
 namespace slang {
 
-Expression& Expression::bindSimpleName(Compilation& compilation, const ExpressionSyntax& syntax, const Scope& scope) {
+Expression& Expression::bindSimpleName(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context) {
     Token nameToken;
     switch (syntax.kind) {
         case SyntaxKind::IdentifierName:
@@ -68,7 +68,8 @@ Expression& Expression::bindSimpleName(Compilation& compilation, const Expressio
     }
 
     LookupResult result;
-    scope.lookupUnqualified(nameToken.valueText(), LookupLocation::max, LookupNameKind::Local, nameToken.range(), result);
+    context.scope.lookupUnqualified(nameToken.valueText(), context.lookupLocation, context.lookupKind,
+                                    nameToken.range(), result);
 
     if (result.hasError()) {
         compilation.addDiagnostics(result.diagnostics);
@@ -84,7 +85,7 @@ Expression& Expression::bindSimpleName(Compilation& compilation, const Expressio
     return bindSymbol(compilation, *symbol, syntax);
 }
 
-Expression& Expression::bindQualifiedName(Compilation& compilation, const ScopedNameSyntax& syntax, const Scope& scope) {
+Expression& Expression::bindQualifiedName(Compilation& compilation, const ScopedNameSyntax& syntax, const BindContext& context) {
     // Split the name into easier to manage chunks. The parser will always produce a left-recursive
     // name tree, so that's all we'll bother to handle.
     int colonParts = 0;
@@ -123,7 +124,8 @@ Expression& Expression::bindQualifiedName(Compilation& compilation, const Scoped
 
         // Try to find the prefix as a class using unqualified name lookup rules.
         LookupResult result;
-        scope.lookupUnqualified(nameToken.valueText(), LookupLocation::max, LookupNameKind::Local, nameToken.range(), result);
+        context.scope.lookupUnqualified(nameToken.valueText(), context.lookupLocation, context.lookupKind,
+                                        nameToken.range(), result);
 
         if (result.hasError()) {
             compilation.addDiagnostics(result.diagnostics);
@@ -136,7 +138,7 @@ Expression& Expression::bindQualifiedName(Compilation& compilation, const Scoped
         }
         
         // Otherwise, it should be a package name.
-        const PackageSymbol* package = scope.getCompilation().getPackage(nameToken.valueText());
+        const PackageSymbol* package = compilation.getPackage(nameToken.valueText());
         if (!package) {
             compilation.addError(DiagCode::UnknownClassOrPackage, nameToken.range()) << nameToken.valueText();
             return compilation.badExpression(nullptr);

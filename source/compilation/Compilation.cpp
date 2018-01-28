@@ -321,14 +321,14 @@ Expression& Compilation::badExpression(const Expression* expr) {
     return *emplace<InvalidExpression>(expr, getErrorType());
 }
 
-const Expression& Compilation::bindExpression(const ExpressionSyntax& syntax, const Scope& scope) {
-    Expression& expr = Expression::fromSyntax(*this, syntax, scope);
+const Expression& Compilation::bindExpression(const ExpressionSyntax& syntax, const BindContext& context) {
+    Expression& expr = Expression::fromSyntax(*this, syntax, context);
     return Expression::propagateAndFold(*this, expr, *expr.type);
 }
 
-const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionSyntax& rhs,
-                                              const Scope& scope, SourceLocation location) {
-    Expression& expr = Expression::fromSyntax(*this, rhs, scope);
+const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionSyntax& rhs, SourceLocation location,
+                                              const BindContext& context) {
+    Expression& expr = Expression::fromSyntax(*this, rhs, context);
     if (expr.bad())
         return expr;
 
@@ -356,11 +356,6 @@ const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionS
     }
 
     return Expression::propagateAndFold(*this, expr, *type);
-}
-
-ConstantValue Compilation::evaluateConstant(const ExpressionSyntax& expr, const Scope& scope) {
-    const auto& bound = bindExpression(expr, scope);
-    return bound.eval();
 }
 
 SubroutineSymbol& Compilation::createSystemFunction(string_view funcName, SystemFunction funcKind,

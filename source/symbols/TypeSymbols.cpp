@@ -322,13 +322,19 @@ bool IntegralType::evaluateConstantDims(Compilation& compilation,
         const int MaxRangeBits = 16;
 
         // TODO: errors
-        auto left = compilation.evaluateConstant(range.left, scope).coerceInteger(MaxRangeBits);
-        auto right = compilation.evaluateConstant(range.right, scope).coerceInteger(MaxRangeBits);
-
-        if (!left || !right)
+        const auto& left = compilation.bindExpression(range.left, BindContext(scope, LookupLocation::max,
+                                                                              BindFlags::RequireConstant));
+        const auto& right = compilation.bindExpression(range.right, BindContext(scope, LookupLocation::max,
+                                                                                BindFlags::RequireConstant));
+        if (!left.constant || !right.constant)
             return false;
 
-        results.emplace(ConstantRange { *left, *right });
+        auto cl = left.constant->coerceInteger(MaxRangeBits);
+        auto cr = right.constant->coerceInteger(MaxRangeBits);
+        if (!cl || !cr)
+            return false;
+
+        results.emplace(ConstantRange { *cl, *cr });
     }
     return true;
 }
@@ -404,7 +410,14 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             value = current;
         else {
             // TODO: conversion? range / overflow checking? non-constant?
-            value = compilation.evaluateConstant(member->initializer->expr, *resultType);
+            const auto& init = compilation.bindExpression(member->initializer->expr,
+                                                          BindContext(*resultType, LookupLocation::max,
+                                                                      BindFlags::RequireConstant));
+
+            if (!init.constant)
+                value = current;
+            else
+                value = *init.constant;
         }
 
         auto ev = compilation.emplace<EnumValueSymbol>(compilation, member->name.valueText(),

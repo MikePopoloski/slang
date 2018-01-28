@@ -220,12 +220,13 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                                      const Scope& parent) {
     // TODO: better error checking
-    const auto& cv = compilation.evaluateConstant(syntax.condition, parent);
-    if (!cv)
+    const auto& cond = compilation.bindExpression(syntax.condition, BindContext(parent, LookupLocation::max,
+                                                                                BindFlags::RequireConstant));
+    if (!cond.constant)
         return nullptr;
 
     // TODO: handle named block, location
-    const SVInt& value = cv.integer();
+    const SVInt& value = cond.constant->integer();
     if ((logic_t)value) {
         auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
         block->addMembers(syntax.block);
@@ -248,8 +249,9 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // Initialize the genvar
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
-    const auto& initial = compilation.evaluateConstant(syntax.initialExpr, parent);
-    if (!initial)
+    const auto& initial = compilation.bindExpression(syntax.initialExpr, BindContext(parent, LookupLocation::max,
+                                                                                     BindFlags::RequireConstant));
+    if (!initial.constant)
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
@@ -259,12 +261,12 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    const auto& stopExpr = compilation.bindExpression(syntax.stopExpr, iterScope);
-    const auto& iterExpr = compilation.bindExpression(syntax.iterationExpr, iterScope);
+    const auto& stopExpr = compilation.bindExpression(syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& iterExpr = compilation.bindExpression(syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
 
     // Create storage for the iteration variable.
     EvalContext context;
-    auto genvar = context.createLocal(&local, initial);
+    auto genvar = context.createLocal(&local, *initial.constant);
 
     // Generate blocks!
     SmallVectorSized<const Symbol*, 16> arrayEntries;

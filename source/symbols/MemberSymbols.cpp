@@ -65,12 +65,14 @@ std::tuple<const Type*, ConstantValue> ParameterSymbol::evaluate(const DataTypeS
     // If no type is given, infer the type from the initializer.
     Compilation& comp = scope.getCompilation();
     if (type.kind == SyntaxKind::ImplicitType) {
-        const auto& bound = comp.bindExpression(expr, scope);
+        const auto& bound = comp.bindExpression(expr, BindContext(scope, LookupLocation::max,
+                                                                  BindFlags::RequireConstant));
         return std::make_tuple(bound.type, bound.eval());
     }
 
     const Type& t = comp.getType(type, scope);
-    const Expression& assignment = comp.bindAssignment(t, expr, scope, expr.getFirstToken().location());
+    const Expression& assignment = comp.bindAssignment(t, expr, expr.getFirstToken().location(),
+                                                       BindContext(scope, LookupLocation::max, BindFlags::RequireConstant));
 
     return std::make_tuple(&t, assignment.eval());
 }

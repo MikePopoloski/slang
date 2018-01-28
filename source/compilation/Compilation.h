@@ -112,11 +112,9 @@ public:
     span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
 
     Expression& badExpression(const Expression* expr);
-    const Expression& bindExpression(const ExpressionSyntax& syntax, const Scope& scope);
-    const Expression& bindAssignment(const Type& lhs, const ExpressionSyntax& rhs,
-                                     const Scope& scope, SourceLocation location);
-
-    ConstantValue evaluateConstant(const ExpressionSyntax& syntax, const Scope& scope);
+    const Expression& bindExpression(const ExpressionSyntax& syntax, const BindContext& context);
+    const Expression& bindAssignment(const Type& lhs, const ExpressionSyntax& rhs, SourceLocation location,
+                                     const BindContext& context);
 
 private:
     SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,

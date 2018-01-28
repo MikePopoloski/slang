@@ -75,7 +75,7 @@ Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax
     }
 
     const auto& expr = comp.bindAssignment(*subroutine->as<SubroutineSymbol>().returnType,
-                                           *syntax.returnValue, *this, stmtLoc);
+                                           *syntax.returnValue, stmtLoc, BindContext(*this, LookupLocation::max));
     return *comp.emplace<ReturnStatement>(syntax, &expr);
 }
 
@@ -84,7 +84,8 @@ Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalState
     ASSERT(!syntax.predicate.conditions[0]->matchesClause);
 
     Compilation& comp = getCompilation();
-    const auto& cond = comp.bindExpression(syntax.predicate.conditions[0]->expr, *this);
+    const auto& cond = comp.bindExpression(syntax.predicate.conditions[0]->expr,
+                                           BindContext(*this, LookupLocation::max));
     const auto& ifTrue = bindStatement(syntax.statement);
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause)
@@ -126,9 +127,9 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
     }
 
     SmallVectorSized<const Expression*, 2> steps;
-    const auto& stopExpr = comp.bindExpression(syntax.stopExpr, *forScope);
+    const auto& stopExpr = comp.bindExpression(syntax.stopExpr, BindContext(*forScope, LookupLocation::max));
     for (auto step : syntax.steps)
-        steps.append(&comp.bindExpression(*step, *forScope));
+        steps.append(&comp.bindExpression(*step, BindContext(*forScope, LookupLocation::max)));
 
     const auto& bodyStmt = forScope->bindStatement(syntax.statement);
     auto initList = comp.emplace<StatementList>(initializers.copy(comp));
@@ -145,7 +146,7 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
 
 Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStatementSyntax& syntax) {
     Compilation& comp = getCompilation();
-    const auto& expr = comp.bindExpression(syntax.expr, *this);
+    const auto& expr = comp.bindExpression(syntax.expr, BindContext(*this, LookupLocation::max));
     return *comp.emplace<ExpressionStatement>(syntax, expr);
 }
 

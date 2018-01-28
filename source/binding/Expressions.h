@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "binding/BindContext.h"
 #include "binding/EvalContext.h"
 #include "symbols/MemberSymbols.h"
 #include "symbols/TypeSymbols.h"
@@ -149,18 +150,18 @@ public:
         return *static_cast<const T*>(this);
     }
 
-    static Expression& fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const Scope& scope);
+    static Expression& fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
     static Expression& propagateAndFold(Compilation& compilation, Expression& expr, const Type& newType);
 
 protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
-    static Expression& bindSimpleName(Compilation& compilation, const ExpressionSyntax& syntax, const Scope& scope);
-    static Expression& bindQualifiedName(Compilation& compilation, const ScopedNameSyntax& syntax, const Scope& scope);
+    static Expression& bindSimpleName(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
+    static Expression& bindQualifiedName(Compilation& compilation, const ScopedNameSyntax& syntax, const BindContext& context);
     static Expression& bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax);
 
-    static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const Scope& scope);
+    static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const BindContext& context);
     static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.
@@ -285,7 +286,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
-                                  const Scope& scope);
+                                  const BindContext& context);
 
     static Expression& propagateAndFold(Compilation& compilation, UnaryExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnaryOp; }
@@ -314,9 +315,9 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
-                                  const Scope& scope);
+                                  const BindContext& context);
     static Expression& fromSyntax(Compilation& compilation, const MultipleConcatenationExpressionSyntax& syntax,
-                                  const Scope& scope);
+                                  const BindContext& context);
 
     static Expression& propagateAndFold(Compilation& compilation, BinaryExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
@@ -346,7 +347,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const ConditionalExpressionSyntax& syntax,
-                                  const Scope& scope);
+                                  const BindContext& context);
 
     static Expression& propagateAndFold(Compilation& compilation, ConditionalExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ConditionalOp; }
@@ -373,7 +374,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
-                                  const ExpressionSyntax& syntax, const Scope& scope);
+                                  const ExpressionSyntax& syntax, const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
@@ -404,7 +405,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
-                                  const RangeSelectSyntax& syntax, const Scope& scope);
+                                  const RangeSelectSyntax& syntax, const BindContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
@@ -426,7 +427,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const ConcatenationExpressionSyntax& syntax,
-                                  const Scope& scope);
+                                  const BindContext& context);
 
     static Expression& propagateAndFold(Compilation& compilation, ConcatenationExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
@@ -450,7 +451,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
-                                  const Scope& scope);
+                                  const BindContext& context);
 
     static Expression& propagateAndFold(Compilation& compilation, CallExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }

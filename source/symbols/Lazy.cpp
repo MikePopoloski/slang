@@ -17,7 +17,7 @@ LazyInitializer::LazyInitializer(ScopeOrSymbol parent) :
 
 const Expression& LazyInitializer::evaluate(const Scope& scope, const ExpressionSyntax& syntax) const {
     // TODO: bind assignment-like here
-    return scope.getCompilation().bindExpression(syntax, scope);
+    return scope.getCompilation().bindExpression(syntax, BindContext(scope, LookupLocation::max));
 }
 
 LazyType::LazyType(ScopeOrSymbol parent) :
