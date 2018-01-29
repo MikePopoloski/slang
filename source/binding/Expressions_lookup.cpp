@@ -56,13 +56,17 @@ namespace slang {
 
 Expression& Expression::bindSimpleName(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context) {
     Token nameToken;
+    const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
     switch (syntax.kind) {
         case SyntaxKind::IdentifierName:
             nameToken = syntax.as<IdentifierNameSyntax>().identifier;
             break;
-        case SyntaxKind::IdentifierSelectName:
-            //nameToken = syntax.as<IdentifierSelectNameSyntax>().identifier;
-            //break;
+        case SyntaxKind::IdentifierSelectName: {
+            const auto& selectSyntax = syntax.as<IdentifierSelectNameSyntax>();
+            nameToken = selectSyntax.identifier;
+            selectors = &selectSyntax.selectors;
+            break;
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -94,7 +98,13 @@ Expression& Expression::bindSimpleName(Compilation& compilation, const Expressio
         return compilation.badExpression(nullptr);
     }
 
-    return bindSymbol(compilation, *symbol, syntax);
+    Expression* expr = &bindSymbol(compilation, *symbol, syntax);
+    if (selectors) {
+        for (auto selector : *selectors)
+            expr = &bindSelector(compilation, *expr, *selector, context);
+    }
+
+    return *expr;
 }
 
 Expression& Expression::bindQualifiedName(Compilation& compilation, const ScopedNameSyntax& syntax, const BindContext& context) {

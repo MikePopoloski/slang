@@ -162,6 +162,7 @@ protected:
     static Expression& bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax);
 
     static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const BindContext& context);
+    static Expression& bindSelector(Compilation& compilation, Expression& value, const ElementSelectSyntax& syntax, const BindContext& context);
     static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.

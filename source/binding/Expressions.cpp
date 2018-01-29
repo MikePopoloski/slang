@@ -146,20 +146,6 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
     return compilation.badExpression(nullptr);
 }
 
-//Expression& Binder::bindSelectName(const IdentifierSelectNameSyntax& syntax) {
-//    // TODO: once we fully support more complex non-integral types and actual support
-//    // part selects, we need to be able to handle multiple accesses like
-//    // foo[2 : 4][3 : 1][7 : 8] where each access depends on the type of foo, not just the type of the preceding
-//    // expression. For now though, we implement the most simple case:
-//    // foo[SELECT] where foo is an integral type.
-//
-//    ASSERT(syntax.selectors.count() == 1);
-//    ASSERT(syntax.selectors[0]->selector);
-//    // spoof this being just a simple ElementSelectExpression
-//    return bindSelectExpression(syntax,
-//        bindName(*compilation.emplace<IdentifierNameSyntax>(syntax.identifier)), *syntax.selectors[0]->selector);
-//}
-//
 //Expression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
 //    // TODO: only handles packages right now
 //    if (syntax.separator.kind != TokenKind::DoubleColon || syntax.left.kind != SyntaxKind::IdentifierName)
@@ -179,9 +165,13 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
 Expression& Expression::bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax,
                                              const BindContext& context) {
     Expression& value = Expression::fromSyntax(compilation, syntax.left, context);
+    return bindSelector(compilation, value, syntax.select, context);
+}
 
+Expression& Expression::bindSelector(Compilation& compilation, Expression& value, const ElementSelectSyntax& syntax,
+                                     const BindContext& context) {
     // TODO: null selector?
-    const SelectorSyntax* selector = syntax.select.selector;
+    const SelectorSyntax* selector = syntax.selector;
     switch (selector->kind) {
         case SyntaxKind::BitSelect:
             return ElementSelectExpression::fromSyntax(compilation, value,

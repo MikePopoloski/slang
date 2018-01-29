@@ -213,11 +213,17 @@ ConstantValue ElementSelectExpression::eval(EvalContext& context) const {
 }
 
 ConstantValue RangeSelectExpression::eval(EvalContext& context) const {
-    SVInt v = value().eval(context).integer();
+    ConstantValue cv = value().eval(context);
+    ConstantValue cl = left().eval(context);
+    ConstantValue cr = right().eval(context);
+    if (!cv || !cl || !cr)
+        return nullptr;
+
+    SVInt v = cv.integer();
     ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
 
-    SVInt msb = left().eval(context).integer();
-    SVInt lsbOrWidth = right().eval(context).integer();
+    SVInt msb = cl.integer();
+    SVInt lsbOrWidth = cr.integer();
 
     if (msb.hasUnknown() || lsbOrWidth.hasUnknown()) {
         // If any part of an address is unknown, then the whole thing returns

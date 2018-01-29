@@ -208,34 +208,33 @@ EVAL_TEST_EX("xpadding", "5'bx01", "5'bxxx01");
 EVAL_TEST_EX("zpadding", "5'bz01", "5'bzzz01");
 EVAL_TEST_EX("really long zpadding", "68'bz0000", "68'hzzzzzzzzzzzzzzzzz0");
 
-// TODO: uncomment this
-//TEST_CASE("bit select weird indexes", "[eval]") {
-//    // The above bit select cases test the "normal" case where vectors are specified
-//    // with [N : 0]. Here we test "up-vectors" and non-zero lower bounds.
-//    ScriptSession session;
-//    session.eval("logic [0 : 15] up_vect = 5'b10111;");
-//
-//    auto value = session.eval("up_vect[12:14]").integer();
-//    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
-//
-//    value = session.eval("up_vect[12 -: 2]").integer();
-//    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
-//
-//    value = session.eval("up_vect[14 +: 2]").integer();
-//    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
-//
-//    session.eval("logic [20 : 5] down_vect = 5'd25");
-//
-//    value = session.eval("down_vect[8:5]").integer();
-//
-//    CHECK(exactlyEqual(value, SVInt::fromString("4'd9")));
-//
-//    value = session.eval("down_vect[5 +: 3]").integer();
-//    CHECK(value == 9);
-//
-//    value = session.eval("down_vect[8 -: 3]").integer();
-//    CHECK(value == 9);
-//}
+TEST_CASE("bit select weird indexes", "[eval]") {
+    // The above bit select cases test the "normal" case where vectors are specified
+    // with [N : 0]. Here we test "up-vectors" and non-zero lower bounds.
+    ScriptSession session;
+    session.eval("logic [0 : 15] up_vect = 5'b10111;");
+
+    auto value = session.eval("up_vect[12:14]").integer();
+    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
+
+    value = session.eval("up_vect[12 -: 2]").integer();
+    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
+
+    value = session.eval("up_vect[14 +: 2]").integer();
+    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
+
+    session.eval("logic [20 : 5] down_vect = 5'd25");
+
+    value = session.eval("down_vect[8:5]").integer();
+
+    CHECK(exactlyEqual(value, SVInt::fromString("4'd9")));
+
+    value = session.eval("down_vect[5 +: 3]").integer();
+    CHECK(value == 9);
+
+    value = session.eval("down_vect[8 -: 3]").integer();
+    CHECK(value == 9);
+}
 
 TEST_CASE("dimension based system functions", "[eval]") {
     ScriptSession session;
