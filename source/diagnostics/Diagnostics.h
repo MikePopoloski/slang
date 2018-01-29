@@ -167,6 +167,7 @@ enum class DiagCode : uint8_t {
     ImportNameCollision,
     UndeclaredIdentifier,
     UnknownClassOrPackage,
+    UsedBeforeDeclared,
     //UnknownMember,
 
     MaxValue

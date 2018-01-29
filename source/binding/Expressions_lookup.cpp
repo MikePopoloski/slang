@@ -67,6 +67,10 @@ Expression& Expression::bindSimpleName(Compilation& compilation, const Expressio
             THROW_UNREACHABLE;
     }
 
+    // If the parser added a missing identifier token, it already issued an appropriate error.
+    if (nameToken.valueText().empty())
+        return compilation.badExpression(nullptr);
+
     LookupResult result;
     context.scope.lookupUnqualified(nameToken.valueText(), context.lookupLocation, context.lookupKind,
                                     nameToken.range(), result);
@@ -78,7 +82,15 @@ Expression& Expression::bindSimpleName(Compilation& compilation, const Expressio
 
     const Symbol* symbol = result.found;
     if (!symbol) {
-        compilation.addError(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+        // Attempt to give a more helpful error if the variable exists in scope but is declared after the lookup location.
+        symbol = context.scope.find(nameToken.valueText());
+        if (symbol) {
+            compilation.addError(DiagCode::UsedBeforeDeclared, nameToken.range()) << nameToken.valueText();
+            compilation.addError(DiagCode::NoteDeclarationHere, symbol->location);
+        }
+        else {
+            compilation.addError(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+        }
         return compilation.badExpression(nullptr);
     }
 

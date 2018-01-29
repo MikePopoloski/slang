@@ -202,6 +202,7 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::ImportNameCollision] = { "import of '{}' collides with an existing declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::UndeclaredIdentifier] = { "use of undeclared identifier '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownClassOrPackage] = { "unknown class or package '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UsedBeforeDeclared] = { "identifier '{}' used before its declaration", DiagnosticSeverity::Error };
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());

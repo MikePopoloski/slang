@@ -183,9 +183,6 @@ const Symbol* Scope::find(string_view name) const {
 
 void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
                               SourceRange sourceRange, LookupResult& result) const {
-    // If the parser added a missing identifier token, it already issued an
-    // appropriate error. This check here makes it easier to silently continue
-    // in that case without checking every time someone wants to do a lookup.
     ensureMembers();
     if (name.empty())
         return;
