@@ -59,6 +59,13 @@ protected:
             return *parent.get<const Scope*>();
     }
 
+    const Symbol& getSymbol() const {
+        if (parent.is<const Symbol*>())
+            return *parent.get<const Symbol*>();
+        else
+            return parent.get<const Scope*>()->asSymbol();
+    }
+
 private:
     ScopeOrSymbol parent;
     mutable std::variant<const TResult*, const TSource*> cache;

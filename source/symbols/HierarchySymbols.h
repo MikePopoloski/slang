@@ -39,7 +39,7 @@ public:
 class InstanceSymbol : public Symbol, public Scope {
 public:
     static void fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
-                           const Scope& scope, SmallVector<const Symbol*>& results);
+                           LookupLocation location, const Scope& scope, SmallVector<const Symbol*>& results);
 
     static bool isKind(SymbolKind kind);
 
@@ -103,7 +103,7 @@ public:
     /// Creates a generate block from the given if-generate syntax node. Note that
     /// this can return null if the condition is false and there is no else block.
     static GenerateBlockSymbol* fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
-                                           const Scope& parent);
+                                           LookupLocation location, const Scope& parent);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenerateBlock; }
 };
@@ -117,7 +117,8 @@ public:
 
     /// Creates a generate block array from the given loop-generate syntax node.
     static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation,
-                                                const LoopGenerateSyntax& syntax, const Scope& parent);
+                                                const LoopGenerateSyntax& syntax,
+                                                LookupLocation location, const Scope& parent);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenerateBlockArray; }
 };

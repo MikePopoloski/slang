@@ -20,7 +20,7 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
 }
 
 void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
-                                const Scope& scope, SmallVector<const Symbol*>& results) {
+                                LookupLocation location, const Scope& scope, SmallVector<const Symbol*>& results) {
     
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
     if (!definition) {
@@ -77,8 +77,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
 
             // Make sure there aren't extra param assignments for non-existent params.
             if (orderedIndex < orderedParams.size()) {
-                auto location = orderedParams[orderedIndex]->getFirstToken().location();
-                auto& diag = compilation.addError(DiagCode::TooManyParamAssignments, location);
+                auto loc = orderedParams[orderedIndex]->getFirstToken().location();
+                auto& diag = compilation.addError(DiagCode::TooManyParamAssignments, loc);
                 diag << definition->name;
                 diag << orderedParams.size();
                 diag << orderedIndex;
@@ -125,7 +125,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
     for (const auto& decl : definition->parameters) {
         std::tuple<const Type*, ConstantValue> typeAndValue(nullptr, nullptr);
         if (auto it = paramOverrides.find(decl.name); it != paramOverrides.end())
-            typeAndValue = ParameterSymbol::evaluate(*decl.type, *it->second, scope);
+            typeAndValue = ParameterSymbol::evaluate(*decl.type, *it->second, location, scope);
         else if (!decl.initializer && !decl.isLocal && decl.isPort) {
             auto& diag = compilation.addError(DiagCode::ParamHasNoValue, syntax.getFirstToken().location());
             diag << definition->name;
@@ -218,9 +218,9 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
 }
 
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
-                                                     const Scope& parent) {
+                                                     LookupLocation location, const Scope& parent) {
     // TODO: better error checking
-    const auto& cond = compilation.bindExpression(syntax.condition, BindContext(parent, LookupLocation::max,
+    const auto& cond = compilation.bindExpression(syntax.condition, BindContext(parent, location,
                                                                                 BindFlags::RequireConstant));
     if (!cond.constant)
         return nullptr;
@@ -242,6 +242,7 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
 
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
                                                                const LoopGenerateSyntax& syntax,
+                                                               LookupLocation location,
                                                                const Scope& parent) {
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
     // we need to do a lookup to make sure we have the actual genvar.
@@ -249,7 +250,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // Initialize the genvar
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
-    const auto& initial = compilation.bindExpression(syntax.initialExpr, BindContext(parent, LookupLocation::max,
+    const auto& initial = compilation.bindExpression(syntax.initialExpr, BindContext(parent, location,
                                                                                      BindFlags::RequireConstant));
     if (!initial.constant)
         return *result;

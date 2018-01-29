@@ -17,14 +17,14 @@ LazyInitializer::LazyInitializer(ScopeOrSymbol parent) :
 
 const Expression& LazyInitializer::evaluate(const Scope& scope, const ExpressionSyntax& syntax) const {
     // TODO: bind assignment-like here
-    return scope.getCompilation().bindExpression(syntax, BindContext(scope, LookupLocation::max));
+    return scope.getCompilation().bindExpression(syntax, BindContext(scope, LookupLocation::before(getSymbol())));
 }
 
 LazyType::LazyType(ScopeOrSymbol parent) :
     Lazy(parent, &ErrorType::Instance) {}
 
 const Type& LazyType::evaluate(const Scope& scope, const DataTypeSyntax& syntax) const {
-    return scope.getCompilation().getType(syntax, scope);
+    return scope.getCompilation().getType(syntax, LookupLocation::before(getSymbol()), scope);
 }
 
 }

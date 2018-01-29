@@ -108,7 +108,8 @@ public:
 
     std::string toString() const;
 
-    static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax, const Scope& scope);
+    static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
+                                  LookupLocation location, const Scope& scope);
     static bool isKind(SymbolKind kind);
 
 protected:
@@ -136,7 +137,7 @@ public:
     ConstantRange getBitVectorRange() const;
 
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                  const Scope& scope);
+                                  LookupLocation location, const Scope& scope);
 
     static bool isKind(SymbolKind kind);
 
@@ -146,7 +147,8 @@ protected:
 
     static bool evaluateConstantDims(Compilation& compilation,
                                      const SyntaxList<VariableDimensionSyntax>& dimensions,
-                                     SmallVector<ConstantRange>& results, const Scope& scope);
+                                     SmallVector<ConstantRange>& results,
+                                     LookupLocation location, const Scope& scope);
 };
 
 /// Represents the single-bit scalar types.
@@ -205,7 +207,8 @@ public:
 
     EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType, const Scope& scope);
 
-    static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax, const Scope& scope);
+    static const Type& fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
+                                  LookupLocation location, const Scope& scope);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
     iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
@@ -242,7 +245,7 @@ public:
     PackedStructType(Compilation& compilation, uint32_t bitWidth, bool isSigned, bool isFourState);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  const Scope& scope);
+                                  LookupLocation location, const Scope& scope);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedStructType; }
 };
@@ -253,7 +256,7 @@ public:
     explicit UnpackedStructType(Compilation& compilation);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                  const Scope& scope);
+                                  LookupLocation location, const Scope& scope);
 };
 
 /// Represents the Void (or lack of a) type. This can be used as the return type of functions

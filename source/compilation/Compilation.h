@@ -78,7 +78,7 @@ public:
     void addDiagnostics(const Diagnostics& diagnostics);
 
     const Type& getType(SyntaxKind kind) const;
-    const Type& getType(const DataTypeSyntax& node, const Scope& parent);
+    const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent);
     const PackedArrayType& getType(uint16_t width, bool isSigned, bool isFourState = true, bool isReg = false);
     const ScalarType& getScalarType(bool isFourState, bool isReg = false);
 

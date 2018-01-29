@@ -175,12 +175,13 @@ std::string Type::toString() const {
     return "";
 }
 
-const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node, const Scope& parent) {
+const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node, LookupLocation location,
+                             const Scope& parent) {
     switch (node.kind) {
         case SyntaxKind::BitType:
         case SyntaxKind::LogicType:
         case SyntaxKind::RegType:
-            return IntegralType::fromSyntax(compilation, node.as<IntegerTypeSyntax>(), parent);
+            return IntegralType::fromSyntax(compilation, node.as<IntegerTypeSyntax>(), location, parent);
         case SyntaxKind::ByteType:
         case SyntaxKind::ShortIntType:
         case SyntaxKind::IntType:
@@ -205,11 +206,12 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::EventType:
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
-            return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), parent);
+            return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), location, parent);
         case SyntaxKind::StructType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
-            return structUnion.packed ? PackedStructType::fromSyntax(compilation, structUnion, parent) :
-                                        UnpackedStructType::fromSyntax(compilation, structUnion, parent);
+            return structUnion.packed ?
+                PackedStructType::fromSyntax(compilation, structUnion, location, parent) :
+                UnpackedStructType::fromSyntax(compilation, structUnion, location, parent);
         }
         default:
             THROW_UNREACHABLE;
@@ -271,14 +273,14 @@ ConstantRange IntegralType::getBitVectorRange() const {
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
-                                     const Scope& scope) {
+                                     LookupLocation location, const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
     bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool isFourState = syntax.kind != SyntaxKind::BitType;
 
     SmallVectorSized<ConstantRange, 4> dims;
-    if (!evaluateConstantDims(compilation, syntax.dimensions, dims, scope))
+    if (!evaluateConstantDims(compilation, syntax.dimensions, dims, location, scope))
         return compilation.getErrorType();
 
     // TODO: review this whole mess
@@ -303,7 +305,8 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
 
 bool IntegralType::evaluateConstantDims(Compilation& compilation,
                                         const SyntaxList<VariableDimensionSyntax>& dimensions,
-                                        SmallVector<ConstantRange>& results, const Scope& scope) {
+                                        SmallVector<ConstantRange>& results,
+                                        LookupLocation location, const Scope& scope) {
     for (const VariableDimensionSyntax* dim : dimensions) {
         const SelectorSyntax* selector;
         if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
@@ -322,10 +325,9 @@ bool IntegralType::evaluateConstantDims(Compilation& compilation,
         const int MaxRangeBits = 16;
 
         // TODO: errors
-        const auto& left = compilation.bindExpression(range.left, BindContext(scope, LookupLocation::max,
-                                                                              BindFlags::RequireConstant));
-        const auto& right = compilation.bindExpression(range.right, BindContext(scope, LookupLocation::max,
-                                                                                BindFlags::RequireConstant));
+        BindContext context(scope, location, BindFlags::RequireConstant);
+        const auto& left = compilation.bindExpression(range.left, context);
+        const auto& right = compilation.bindExpression(range.right, context);
         if (!left.constant || !right.constant)
             return false;
 
@@ -380,12 +382,13 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const IntegralT
     setParent(scope);
 }
 
-const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax, const Scope& scope) {
+const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
+                                 LookupLocation location, const Scope& scope) {
     const Type* base;
     if (!syntax.baseType) 
         base = &compilation.getIntType();
     else {
-        base = &compilation.getType(*syntax.baseType, scope);
+        base = &compilation.getType(*syntax.baseType, location, scope);
 
         const Type& canonicalBase = base->getCanonicalType();
         if (canonicalBase.isError())
@@ -404,16 +407,19 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
     SVInt one((uint16_t)integralBase.bitWidth, 1, integralBase.isSigned);
     SVInt current((uint16_t)integralBase.bitWidth, 0, integralBase.isSigned);
+    const Symbol* previousMember = nullptr;
+
     for (auto member : syntax.members) {
         ConstantValue value;
         if (!member->initializer)
             value = current;
         else {
             // TODO: conversion? range / overflow checking? non-constant?
-            const auto& init = compilation.bindExpression(member->initializer->expr,
-                                                          BindContext(*resultType, LookupLocation::max,
-                                                                      BindFlags::RequireConstant));
+            BindContext context(*resultType,
+                                previousMember ? LookupLocation::after(*previousMember) : LookupLocation::min,
+                                BindFlags::RequireConstant);
 
+            const auto& init = compilation.bindExpression(member->initializer->expr, context);
             if (!init.constant)
                 value = current;
             else
@@ -425,6 +431,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                                                        std::move(value));
         resultType->addMember(*ev);
         current = value.integer() + one;
+        previousMember = ev; 
     }
 
     return *resultType;
@@ -452,7 +459,7 @@ PackedStructType::PackedStructType(Compilation& compilation, uint32_t bitWidth,
 }
 
 const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                         const Scope& scope) {
+                                         LookupLocation location, const Scope& scope) {
     ASSERT(syntax.packed);
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool isFourState = false;
@@ -461,7 +468,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
     // We have to look at all the members up front to know our width and four-statedness.
     SmallVectorSized<const Symbol*, 8> members;
     for (auto member : syntax.members) {
-        const Type& type = compilation.getType(member->type, scope);
+        const Type& type = compilation.getType(member->type, location, scope);
         if (type.isIntegral()) {
             isFourState |= type.as<IntegralType>().isFourState;
         }
@@ -501,12 +508,12 @@ UnpackedStructType::UnpackedStructType(Compilation& compilation) :
 }
 
 const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
-                                           const Scope& scope) {
+                                           LookupLocation location, const Scope& scope) {
     ASSERT(!syntax.packed);
 
     auto result = compilation.emplace<UnpackedStructType>(compilation);
     for (auto member : syntax.members) {
-        const Type& type = compilation.getType(member->type, scope);
+        const Type& type = compilation.getType(member->type, location, scope);
         for (auto decl : member->declarators) {
             auto variable = compilation.emplace<VariableSymbol>(decl->name.valueText(), decl->name.location());
             result->addMember(*variable);

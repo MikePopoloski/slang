@@ -268,6 +268,8 @@ protected:
     /// Gets or creates deferred member data in the Compilation object's sideband table.
     DeferredMemberData& getOrAddDeferredData();
 
+    const Symbol* getLastMember() const { return lastMember; }
+
 private:
     // Inserts the given member symbol into our own list of members, right after
     // the given symbol. If `at` is null, it will insert at the head of the list.

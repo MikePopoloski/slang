@@ -275,8 +275,8 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
     return it == knownTypes.end() ? errorType : *it->second;
 }
 
-const Type& Compilation::getType(const DataTypeSyntax& node, const Scope& parent) {
-    return Type::fromSyntax(*this, node, parent);
+const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent) {
+    return Type::fromSyntax(*this, node, location, parent);
 }
 
 const PackedArrayType& Compilation::getType(uint16_t width, bool isSigned, bool isFourState, bool isReg) {

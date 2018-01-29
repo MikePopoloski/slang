@@ -23,33 +23,47 @@ void StatementBodiedScope::bindBody(const SyntaxNode& syntax) {
     if (syntax.kind == SyntaxKind::List)
         setBody(&bindStatementList((const SyntaxList<SyntaxNode>&)syntax));
     else
-        setBody(&bindStatement((const StatementSyntax&)syntax));
+        setBody(&bindStatement((const StatementSyntax&)syntax, BindContext(*this, LookupLocation::max)));
 }
 
-Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax) {
+Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax, const BindContext& context) {
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
-            return bindReturnStatement((const ReturnStatementSyntax&)syntax);
+            return bindReturnStatement((const ReturnStatementSyntax&)syntax, context);
         case SyntaxKind::ConditionalStatement:
-            return bindConditionalStatement((const ConditionalStatementSyntax&)syntax);
+            return bindConditionalStatement((const ConditionalStatementSyntax&)syntax, context);
         case SyntaxKind::ForLoopStatement:
-            return bindForLoopStatement((const ForLoopStatementSyntax&)syntax);
+            return bindForLoopStatement((const ForLoopStatementSyntax&)syntax, context);
         case SyntaxKind::ExpressionStatement:
-            return bindExpressionStatement((const ExpressionStatementSyntax&)syntax);
+            return bindExpressionStatement((const ExpressionStatementSyntax&)syntax, context);
         default:
             THROW_UNREACHABLE;
     }
 }
 
 Statement& StatementBodiedScope::bindStatementList(const SyntaxList<SyntaxNode>& items) {
+    BindContext context(*this, LookupLocation::min);
+    const Symbol* last = getLastMember();
+    if (last)
+        context.lookupLocation = LookupLocation::after(*last);
+
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto item : items) {
-        if (isStatement(item->kind))
-            buffer.append(&bindStatement(item->as<StatementSyntax>()));
-        else if (item->kind == SyntaxKind::DataDeclaration)
+        if (isStatement(item->kind)) {
+            buffer.append(&bindStatement(item->as<StatementSyntax>(), context));
+        }
+        else if (item->kind == SyntaxKind::DataDeclaration) {
             bindVariableDecl(item->as<DataDeclarationSyntax>(), buffer);
-        else
+
+            // We've added members, so update our lookup position so that future
+            // statements can find them.
+            last = getLastMember();
+            if (last)
+                context.lookupLocation = LookupLocation::after(*last);
+        }
+        else {
             THROW_UNREACHABLE;
+        }
     }
 
     return *getCompilation().emplace<StatementList>(buffer.copy(getCompilation()));
@@ -59,13 +73,15 @@ void StatementBodiedScope::bindVariableDecl(const DataDeclarationSyntax& syntax,
                                             SmallVector<const Statement*>& statements) {
     SmallVectorSized<const VariableSymbol*, 4> variables;
     VariableSymbol::fromSyntax(getCompilation(), syntax, variables);
+
     for (auto variable : variables) {
         addMember(*variable);
         statements.append(getCompilation().emplace<VariableDeclStatement>(*variable));
     }
 }
 
-Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax& syntax) {
+Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax& syntax,
+                                                     const BindContext& context) {
     Compilation& comp = getCompilation();
     auto stmtLoc = syntax.returnKeyword.location();
     const Symbol* subroutine = asSymbol().findAncestor(SymbolKind::Subroutine);
@@ -75,32 +91,34 @@ Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax
     }
 
     const auto& expr = comp.bindAssignment(*subroutine->as<SubroutineSymbol>().returnType,
-                                           *syntax.returnValue, stmtLoc, BindContext(*this, LookupLocation::max));
+                                           *syntax.returnValue, stmtLoc, context);
     return *comp.emplace<ReturnStatement>(syntax, &expr);
 }
 
-Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalStatementSyntax& syntax) {
+Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalStatementSyntax& syntax,
+                                                          const BindContext& context) {
     ASSERT(syntax.predicate.conditions.count() == 1);
     ASSERT(!syntax.predicate.conditions[0]->matchesClause);
 
     Compilation& comp = getCompilation();
-    const auto& cond = comp.bindExpression(syntax.predicate.conditions[0]->expr,
-                                           BindContext(*this, LookupLocation::max));
-    const auto& ifTrue = bindStatement(syntax.statement);
+    const auto& cond = comp.bindExpression(syntax.predicate.conditions[0]->expr, context);
+    const auto& ifTrue = bindStatement(syntax.statement, context);
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause)
-        ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>());
+        ifFalse = &bindStatement(syntax.elseClause->clause.as<StatementSyntax>(), context);
 
     return *comp.emplace<ConditionalStatement>(syntax, cond, ifTrue, ifFalse);
 }
 
-Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSyntax& syntax) {
+Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSyntax& syntax, const BindContext& context) {
     // If the initializers here involve doing variable declarations, then the spec says we create
     // an implicit sequential block and do the declaration there. Otherwise we'll just
     // end up returning the for statement directly.
     StatementBodiedScope* forScope = this;
     SequentialBlockStatement* implicitBlockStmt = nullptr;
     SmallVectorSized<const Statement*, 4> initializers;
+    std::optional<BindContext> nestedContext;
+    const BindContext* forContext = &context;
 
     Compilation& comp = getCompilation();
     if (!syntax.initializers.empty() && syntax.initializers[0]->kind == SyntaxKind::ForVariableDeclaration) {
@@ -109,6 +127,8 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
 
         addMember(*implicitBlock);
         forScope = implicitBlock;
+        nestedContext.emplace(*forScope, LookupLocation::max);
+        forContext = &nestedContext.value();
 
         for (auto initializer : syntax.initializers) {
             // If one entry is a variable declaration, they should all be. Checked by the parser.
@@ -122,16 +142,16 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
     else {
         for (auto initializer : syntax.initializers) {
             ASSERT(isStatement(initializer->kind));
-            initializers.append(&bindStatement(initializer->as<StatementSyntax>()));
+            initializers.append(&bindStatement(initializer->as<StatementSyntax>(), *forContext));
         }
     }
 
     SmallVectorSized<const Expression*, 2> steps;
-    const auto& stopExpr = comp.bindExpression(syntax.stopExpr, BindContext(*forScope, LookupLocation::max));
+    const auto& stopExpr = comp.bindExpression(syntax.stopExpr, *forContext);
     for (auto step : syntax.steps)
-        steps.append(&comp.bindExpression(*step, BindContext(*forScope, LookupLocation::max)));
+        steps.append(&comp.bindExpression(*step, *forContext));
 
-    const auto& bodyStmt = forScope->bindStatement(syntax.statement);
+    const auto& bodyStmt = forScope->bindStatement(syntax.statement, *forContext);
     auto initList = comp.emplace<StatementList>(initializers.copy(comp));
     auto loop = comp.emplace<ForLoopStatement>(syntax, *initList, &stopExpr, steps.copy(comp), bodyStmt);
 
@@ -144,9 +164,10 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
     return *loop;
 }
 
-Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStatementSyntax& syntax) {
+Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStatementSyntax& syntax,
+                                                         const BindContext& context) {
     Compilation& comp = getCompilation();
-    const auto& expr = comp.bindExpression(syntax.expr, BindContext(*this, LookupLocation::max));
+    const auto& expr = comp.bindExpression(syntax.expr, context);
     return *comp.emplace<ExpressionStatement>(syntax, expr);
 }
 

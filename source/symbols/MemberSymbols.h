@@ -87,7 +87,9 @@ public:
     static ParameterSymbol& fromDecl(Compilation& compilation, const Definition::ParameterDecl& decl);
 
     static std::tuple<const Type*, ConstantValue> evaluate(const DataTypeSyntax& type,
-                                                           const ExpressionSyntax& expr, const Scope& scope);
+                                                           const ExpressionSyntax& expr,
+                                                           LookupLocation location,
+                                                           const Scope& scope);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Parameter; }
 

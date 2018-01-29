@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "binding/BindContext.h"
 #include "parsing/AllSyntax.h"
 #include "symbols/Scope.h"
 
@@ -35,12 +36,12 @@ private:
     void bindBody(const SyntaxNode& syntax);
     void bindVariableDecl(const DataDeclarationSyntax& syntax, SmallVector<const Statement*>& statements);
 
-    Statement& bindStatement(const StatementSyntax& syntax);
     Statement& bindStatementList(const SyntaxList<SyntaxNode>& items);
-    Statement& bindReturnStatement(const ReturnStatementSyntax& syntax);
-    Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax);
-    Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax);
-    Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax);
+    Statement& bindStatement(const StatementSyntax& syntax, const BindContext& context);
+    Statement& bindReturnStatement(const ReturnStatementSyntax& syntax, const BindContext& context);
+    Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax, const BindContext& context);
+    Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax, const BindContext& context);
+    Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax, const BindContext& context);
 
     Statement& badStmt(const Statement* stmt);
 

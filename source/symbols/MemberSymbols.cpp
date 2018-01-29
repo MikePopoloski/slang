@@ -59,20 +59,20 @@ ParameterSymbol& ParameterSymbol::fromDecl(Compilation& compilation, const Defin
 
 std::tuple<const Type*, ConstantValue> ParameterSymbol::evaluate(const DataTypeSyntax& type,
                                                                  const ExpressionSyntax& expr,
+                                                                 LookupLocation location,
                                                                  const Scope& scope) {
     // TODO: handle more cases here
 
     // If no type is given, infer the type from the initializer.
     Compilation& comp = scope.getCompilation();
     if (type.kind == SyntaxKind::ImplicitType) {
-        const auto& bound = comp.bindExpression(expr, BindContext(scope, LookupLocation::max,
-                                                                  BindFlags::RequireConstant));
+        const auto& bound = comp.bindExpression(expr, BindContext(scope, location, BindFlags::RequireConstant));
         return std::make_tuple(bound.type, bound.eval());
     }
 
-    const Type& t = comp.getType(type, scope);
+    const Type& t = comp.getType(type, location, scope);
     const Expression& assignment = comp.bindAssignment(t, expr, expr.getFirstToken().location(),
-                                                       BindContext(scope, LookupLocation::max, BindFlags::RequireConstant));
+                                                       BindContext(scope, location, BindFlags::RequireConstant));
 
     return std::make_tuple(&t, assignment.eval());
 }
@@ -103,7 +103,8 @@ const ConstantValue* ParameterSymbol::getDefault() const {
         ASSERT(declaredType);
 
         const Scope* scope = getScope();
-        auto typeAndValue = evaluate(*declaredType, *defaultValue.get<const ExpressionSyntax*>(), *scope);
+        auto typeAndValue = evaluate(*declaredType, *defaultValue.get<const ExpressionSyntax*>(),
+                                     LookupLocation::before(*this), *scope);
         auto cv = scope->getCompilation().createConstant(std::move(std::get<1>(typeAndValue)));
         defaultValue = cv;
 

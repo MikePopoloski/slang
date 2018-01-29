@@ -334,12 +334,13 @@ void Scope::realizeDeferredMembers() const {
         static_cast<StatementBodiedScope*>(const_cast<Scope*>(this))->bindBody(*syntax);
     }
     else {
-        for (auto[node, insertionPoint] : deferredData.getMembers()) {
+        for (auto [node, insertionPoint] : deferredData.getMembers()) {
+            LookupLocation location = insertionPoint ? LookupLocation::after(*insertionPoint) : LookupLocation::min;
             switch (node->kind) {
                 case SyntaxKind::HierarchyInstantiation: {
                     SmallVectorSized<const Symbol*, 8> symbols;
                     InstanceSymbol::fromSyntax(compilation, node->as<HierarchyInstantiationSyntax>(),
-                                               *this, symbols);
+                                               location, *this, symbols);
 
                     const Symbol* last = insertionPoint;
                     for (auto symbol : symbols) {
@@ -350,7 +351,9 @@ void Scope::realizeDeferredMembers() const {
                 }
                 case SyntaxKind::IfGenerate: {
                     auto block = GenerateBlockSymbol::fromSyntax(compilation,
-                                                                 node->as<IfGenerateSyntax>(), *this);
+                                                                 node->as<IfGenerateSyntax>(),
+                                                                 location,
+                                                                 *this);
                     if (block)
                         insertMember(block, insertionPoint);
                     break;
@@ -358,6 +361,7 @@ void Scope::realizeDeferredMembers() const {
                 case SyntaxKind::LoopGenerate: {
                     const auto& block = GenerateBlockArraySymbol::fromSyntax(compilation,
                                                                              node->as<LoopGenerateSyntax>(),
+                                                                             location,
                                                                              *this);
                     insertMember(&block, insertionPoint);
                     break;
