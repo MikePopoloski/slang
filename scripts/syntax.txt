@@ -486,13 +486,13 @@ token name
 list<VariableDimensionSyntax> dimensions
 token semi
 
-TypedefKeywordDeclarationSyntax base=MemberSyntax kind=TypedefKeywordDeclaration
+ForwardTypedefDeclarationSyntax base=MemberSyntax kind=ForwardTypedefDeclaration
 token typedefKeyword
 token keyword
 token name
 token semi
 
-TypedefInterfaceClassDeclarationSyntax base=MemberSyntax kind=TypedefInterfaceClassDeclaration
+ForwardInterfaceClassTypedefDeclarationSyntax base=MemberSyntax kind=ForwardInterfaceClassTypedefDeclaration
 token typedefKeyword
 token interfaceKeyword
 token classKeyword

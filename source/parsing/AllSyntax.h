@@ -2144,18 +2144,18 @@ protected:
     }
 };
 
-struct TypedefKeywordDeclarationSyntax : public MemberSyntax {
+struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
     Token typedefKeyword;
     Token keyword;
     Token name;
     Token semi;
 
-    TypedefKeywordDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi) :
-        MemberSyntax(SyntaxKind::TypedefKeywordDeclaration, attributes), typedefKeyword(typedefKeyword), keyword(keyword), name(name), semi(semi)
+    ForwardTypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi) :
+        MemberSyntax(SyntaxKind::ForwardTypedefDeclaration, attributes), typedefKeyword(typedefKeyword), keyword(keyword), name(name), semi(semi)
     {}
 
-    TypedefKeywordDeclarationSyntax(const TypedefKeywordDeclarationSyntax&) = delete;
-    TypedefKeywordDeclarationSyntax& operator=(const TypedefKeywordDeclarationSyntax&) = delete;
+    ForwardTypedefDeclarationSyntax(const ForwardTypedefDeclarationSyntax&) = delete;
+    ForwardTypedefDeclarationSyntax& operator=(const ForwardTypedefDeclarationSyntax&) = delete;
 
     static bool isKind(SyntaxKind kind);
 
@@ -2172,19 +2172,19 @@ protected:
     }
 };
 
-struct TypedefInterfaceClassDeclarationSyntax : public MemberSyntax {
+struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
     Token typedefKeyword;
     Token interfaceKeyword;
     Token classKeyword;
     Token name;
     Token semi;
 
-    TypedefInterfaceClassDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi) :
-        MemberSyntax(SyntaxKind::TypedefInterfaceClassDeclaration, attributes), typedefKeyword(typedefKeyword), interfaceKeyword(interfaceKeyword), classKeyword(classKeyword), name(name), semi(semi)
+    ForwardInterfaceClassTypedefDeclarationSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi) :
+        MemberSyntax(SyntaxKind::ForwardInterfaceClassTypedefDeclaration, attributes), typedefKeyword(typedefKeyword), interfaceKeyword(interfaceKeyword), classKeyword(classKeyword), name(name), semi(semi)
     {}
 
-    TypedefInterfaceClassDeclarationSyntax(const TypedefInterfaceClassDeclarationSyntax&) = delete;
-    TypedefInterfaceClassDeclarationSyntax& operator=(const TypedefInterfaceClassDeclarationSyntax&) = delete;
+    ForwardInterfaceClassTypedefDeclarationSyntax(const ForwardInterfaceClassTypedefDeclarationSyntax&) = delete;
+    ForwardInterfaceClassTypedefDeclarationSyntax& operator=(const ForwardInterfaceClassTypedefDeclarationSyntax&) = delete;
 
     static bool isKind(SyntaxKind kind);
 
@@ -6839,8 +6839,8 @@ public:
     VariableDeclaratorSyntax& variableDeclarator(Token name, SyntaxList<VariableDimensionSyntax> dimensions, EqualsValueClauseSyntax* initializer);
     DataDeclarationSyntax& dataDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi);
     TypedefDeclarationSyntax& typedefDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, DataTypeSyntax& type, Token name, SyntaxList<VariableDimensionSyntax> dimensions, Token semi);
-    TypedefKeywordDeclarationSyntax& typedefKeywordDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi);
-    TypedefInterfaceClassDeclarationSyntax& typedefInterfaceClassDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi);
+    ForwardTypedefDeclarationSyntax& forwardTypedefDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token keyword, Token name, Token semi);
+    ForwardInterfaceClassTypedefDeclarationSyntax& forwardInterfaceClassTypedefDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token typedefKeyword, Token interfaceKeyword, Token classKeyword, Token name, Token semi);
     ChargeStrengthSyntax& chargeStrength(Token openParen, Token strength, Token closeParen);
     DriveStrengthSyntax& driveStrength(Token openParen, Token strength0, Token comma, Token strength1, Token closeParen);
     NetDeclarationSyntax& netDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, Token netType, NetStrengthSyntax* strength, Token expansionHint, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi);
@@ -7199,8 +7199,8 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::VariableDeclarator: SyntaxNode::dispatch(v, *(const VariableDeclaratorSyntax*)node); break;
         case SyntaxKind::DataDeclaration: SyntaxNode::dispatch(v, *(const DataDeclarationSyntax*)node); break;
         case SyntaxKind::TypedefDeclaration: SyntaxNode::dispatch(v, *(const TypedefDeclarationSyntax*)node); break;
-        case SyntaxKind::TypedefKeywordDeclaration: SyntaxNode::dispatch(v, *(const TypedefKeywordDeclarationSyntax*)node); break;
-        case SyntaxKind::TypedefInterfaceClassDeclaration: SyntaxNode::dispatch(v, *(const TypedefInterfaceClassDeclarationSyntax*)node); break;
+        case SyntaxKind::ForwardTypedefDeclaration: SyntaxNode::dispatch(v, *(const ForwardTypedefDeclarationSyntax*)node); break;
+        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: SyntaxNode::dispatch(v, *(const ForwardInterfaceClassTypedefDeclarationSyntax*)node); break;
         case SyntaxKind::ChargeStrength: SyntaxNode::dispatch(v, *(const ChargeStrengthSyntax*)node); break;
         case SyntaxKind::DriveStrength: SyntaxNode::dispatch(v, *(const DriveStrengthSyntax*)node); break;
         case SyntaxKind::NetDeclaration: SyntaxNode::dispatch(v, *(const NetDeclarationSyntax*)node); break;

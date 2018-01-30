@@ -1723,7 +1723,7 @@ MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax* con
                 if (peek(1).kind == TokenKind::Identifier && peek(2).kind == TokenKind::Semicolon) {
                     auto keyword = consume();
                     auto name = consume();
-                    return factory.typedefKeywordDeclaration(
+                    return factory.forwardTypedefDeclaration(
                         attributes,
                         typedefKeyword,
                         keyword,
@@ -1735,7 +1735,7 @@ MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax* con
                 auto interfaceKeyword = consume();
                 auto classKeyword = expect(TokenKind::ClassKeyword);
                 auto name = expect(TokenKind::Identifier);
-                return factory.typedefInterfaceClassDeclaration(
+                return factory.forwardInterfaceClassTypedefDeclaration(
                     attributes,
                     typedefKeyword,
                     interfaceKeyword,
@@ -1746,7 +1746,7 @@ MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax* con
             case TokenKind::Identifier:
                 if (peek(1).kind == TokenKind::Semicolon) {
                     auto name = consume();
-                    return factory.typedefKeywordDeclaration(
+                    return factory.forwardTypedefDeclaration(
                         attributes,
                         typedefKeyword,
                         Token(),

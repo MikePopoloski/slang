@@ -304,6 +304,8 @@ public:
 
 /// Represents a type alias, which is introduced via a typedef or type parameter.
 class TypeAliasType : public Type {
+public:
+
 };
 
 /// An empty type symbol that indicates an error occurred while trying to
