@@ -143,6 +143,9 @@ enum class DiagCode : uint8_t {
     DuplicateAttribute,
     PackedMemberNotIntegral,
     PackedMemberHasInitializer,
+    Redefinition,
+    RedefinitionDifferentType,
+    RedefinitionDifferentSymbolKind,
 
     // expressions
     BadUnaryExpression,

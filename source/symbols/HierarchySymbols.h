@@ -18,7 +18,7 @@ namespace slang {
 class CompilationUnitSymbol : public Symbol, public Scope {
 public:
     explicit CompilationUnitSymbol(Compilation& compilation) :
-        Symbol(SymbolKind::CompilationUnit, "$unit", SourceLocation()),
+        Symbol(SymbolKind::CompilationUnit, "", SourceLocation()),
         Scope(compilation, this) {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CompilationUnit; }

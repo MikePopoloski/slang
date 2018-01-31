@@ -295,8 +295,31 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
         lastMember = member;
 
     member->parentScope = this;
-    if (!member->name.empty())
-        nameMap->emplace(member->name, member);
+    if (!member->name.empty()) {
+        auto pair = nameMap->emplace(member->name, member);
+        if (!pair.second) {
+            // We have a name collision; the second one will be ignored (not inserted into the map), but we should
+            // try to give the user a helpful error message.
+            const Symbol* existing = pair.first->second;
+            if (existing->isValue() && member->isValue()) {
+                const Type& memberType = member->as<ValueSymbol>().getType();
+                const Type& existingType = existing->as<ValueSymbol>().getType();
+                if (memberType.isMatching(existingType))
+                    compilation.addError(DiagCode::Redefinition, member->location) << member->name;
+                else {
+                    auto& diag = compilation.addError(DiagCode::RedefinitionDifferentType, member->location);
+                    diag << member->name << memberType << existingType;
+                }
+            }
+            else if (existing->kind != member->kind) {
+                compilation.addError(DiagCode::RedefinitionDifferentSymbolKind, member->location) << member->name;
+            }
+            else {
+                compilation.addError(DiagCode::Redefinition, member->location) << member->name;
+            }
+            compilation.addError(DiagCode::NotePreviousDefinition, existing->location);
+        }
+    }
 }
 
 void Scope::addDeferredMember(const SyntaxNode& member) {

@@ -178,6 +178,10 @@ DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
     descriptors[DiagCode::DuplicateAttribute] = { "duplicate attribute definition '{}'; taking last value", DiagnosticSeverity::Warning };
     descriptors[DiagCode::PackedMemberNotIntegral] = { "packed members must be of integral type (type is {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::PackedMemberHasInitializer] = { "packed members can not have initializers", DiagnosticSeverity::Error };
+    descriptors[DiagCode::Redefinition] = { "redefinition of '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::RedefinitionDifferentType] = { "redefinition of '{}'", DiagnosticSeverity::Error };
+    descriptors[DiagCode::RedefinitionDifferentType] = { "redefinition of '{}' with a different type: {} vs {}", DiagnosticSeverity::Error };
+    descriptors[DiagCode::RedefinitionDifferentSymbolKind] = { "redefinition of '{}' as different kind of symbol", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };
@@ -298,7 +302,7 @@ bool DiagnosticWriter::sortDiagnostics(const Diagnostic& x, const Diagnostic& y)
 string_view DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {
     string_view text = sourceManager.getSourceText(location.buffer());
     if (text.empty())
-        return nullptr;
+        return "";
 
     const char* start = text.data() + location.offset() - (col - 1);
     const char* curr = start;
