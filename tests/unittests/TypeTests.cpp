@@ -95,3 +95,79 @@ endmodule
     CHECK(structType.find("bif"));
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Typedefs") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+
+    typedef logic [3:0] foo_t;
+    foo_t f;
+
+    typedef struct packed { logic b; } bar_t;
+    bar_t b;
+
+    typedef enum { SDF, BAZ } enum_t;
+    parameter enum_t e = BAZ;
+
+endmodule
+)");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+
+    const auto& f = instance.memberAt<VariableSymbol>(1);
+    const Type& type = f.type->getCanonicalType();
+    REQUIRE(type.kind == SymbolKind::PackedArrayType);
+    REQUIRE(type.isMatching(*instance.memberAt<TypeAliasType>(0).targetType));
+
+    const Type& barType = instance.memberAt<VariableSymbol>(3).type->getCanonicalType();
+    CHECK(barType.getBitWidth() == 1);
+    CHECK(barType.isFourState());
+
+    CHECK(instance.memberAt<ParameterSymbol>(7).getValue().integer() == 1);
+
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Forwarding typedefs") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+
+    // Forward declared enum
+    typedef enum e1_t;
+    e1_t e1;
+    typedef enum logic [4:0] { SDF, FOO } e1_t;
+    
+    // Forward declared struct, multiple forward declarations
+    typedef struct s1_t;
+    s1_t s;
+    typedef struct s1_t;
+    typedef s1_t;
+    typedef struct packed { logic [9:0] l; } s1_t;
+
+    // Typedef first, then forward decls
+    typedef struct packed { logic r; } s2_t;
+    typedef s2_t;
+    typedef struct s2_t;
+
+endmodule
+)");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+
+    const auto& e = instance.memberAt<VariableSymbol>(1);
+    const Type& type = e.type->getCanonicalType();
+    REQUIRE(type.kind == SymbolKind::EnumType);
+    CHECK(type.getBitWidth() == 5);
+
+    const Type& s1_t = instance.memberAt<VariableSymbol>(6).type->getCanonicalType();
+    CHECK(s1_t.getBitWidth() == 10);
+
+    const auto& s2_t = instance.find<TypeAliasType>("s2_t");
+    REQUIRE(s2_t.getFirstForwardDecl());
+    REQUIRE(s2_t.getFirstForwardDecl()->getNextForwardDecl());
+    REQUIRE(!s2_t.getFirstForwardDecl()->getNextForwardDecl()->getNextForwardDecl());
+
+    NO_COMPILATION_ERRORS;
+}

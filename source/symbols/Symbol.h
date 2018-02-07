@@ -38,6 +38,7 @@ enum class SymbolKind {
     EventType,
     TypeAlias,
     ErrorType,
+    ForwardingTypedef,
     Parameter,
     Modport,
     ModuleInstance,

@@ -41,8 +41,7 @@ const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance
 
 bool Expression::isLValue() const {
     switch (kind) {
-        case ExpressionKind::ParameterRef:
-        case ExpressionKind::VariableRef:
+        case ExpressionKind::NamedValue:
         case ExpressionKind::ElementSelect:
         case ExpressionKind::RangeSelect:
             return true;
@@ -650,8 +649,7 @@ Expression& Expression::propagateAndFold(Compilation& compilation, Expression& e
             );
             break;
         case ExpressionKind::Call:
-        case ExpressionKind::VariableRef:
-        case ExpressionKind::ParameterRef:
+        case ExpressionKind::NamedValue:
         case ExpressionKind::Concatenation:
         case ExpressionKind::ElementSelect:
         case ExpressionKind::RangeSelect:

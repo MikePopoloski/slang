@@ -28,8 +28,7 @@ ConstantValue Expression::eval(EvalContext& context) const {
         case ExpressionKind::IntegerLiteral: return as<IntegerLiteral>().eval(context);
         case ExpressionKind::RealLiteral: return as<RealLiteral>().eval(context);
         case ExpressionKind::UnbasedUnsizedIntegerLiteral: return as<UnbasedUnsizedIntegerLiteral>().eval(context);
-        case ExpressionKind::VariableRef: return as<VariableRefExpression>().eval(context);
-        case ExpressionKind::ParameterRef: return as<ParameterRefExpression>().eval(context);
+        case ExpressionKind::NamedValue: return as<NamedValueExpression>().eval(context);
         case ExpressionKind::UnaryOp: return as<UnaryExpression>().eval(context);
         case ExpressionKind::BinaryOp: return as<BinaryExpression>().eval(context);
         case ExpressionKind::ConditionalOp: return as<ConditionalExpression>().eval(context);
@@ -73,15 +72,17 @@ ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
     }
 }
 
-ConstantValue VariableRefExpression::eval(EvalContext& context) const {
-    ConstantValue* v = context.findLocal(&symbol);
-
-    // TODO: report error if not constant
-    return v ? *v : nullptr;
-}
-
-ConstantValue ParameterRefExpression::eval(EvalContext&) const {
-    return symbol.getValue();
+ConstantValue NamedValueExpression::eval(EvalContext& context) const {
+    switch (symbol.kind) {
+        case SymbolKind::Parameter:
+            return symbol.as<ParameterSymbol>().getValue();
+        case SymbolKind::EnumValue:
+            return symbol.as<EnumValueSymbol>().value;
+        default:
+            ConstantValue* v = context.findLocal(&symbol);
+            // TODO: report error if not constant
+            return v ? *v : nullptr;
+    }
 }
 
 ConstantValue UnaryExpression::eval(EvalContext& context) const {
@@ -120,7 +121,7 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
     // TODO: more robust lvalue handling
     ConstantValue* lvalue = nullptr;
     if (isAssignment())
-        lvalue = context.findLocal(&((const VariableRefExpression&)left()).symbol);
+        lvalue = context.findLocal(&((const NamedValueExpression&)left()).symbol);
 
 #define OP(k, v) case BinaryOperator::k: return v
 #define ASSIGN(k, v) case BinaryOperator::k: ASSERT(lvalue); *lvalue = v; return *lvalue

@@ -8,6 +8,7 @@
 
 #include "binding/ConstantValue.h"
 #include "parsing/AllSyntax.h"
+#include "symbols/Lazy.h"
 #include "symbols/Scope.h"
 #include "symbols/Symbol.h"
 
@@ -19,7 +20,7 @@ class Compilation;
 class Type : public Symbol {
 public:
     /// Gets the canonical type for this type, which involves unwrapping any type aliases.
-    const Type& getCanonicalType() const { return *canonical; }
+    const Type& getCanonicalType() const { if (!canonical) resolveCanonical(); return *canonical; }
 
     /// Gets the total width of the type in bits. Returns zero if the type does not have a statically known size.
     uint32_t getBitWidth() const;
@@ -116,7 +117,10 @@ protected:
     Type(SymbolKind kind, string_view name, SourceLocation loc) :
         Symbol(kind, name, loc), canonical(this) {}
 
-    const Type* canonical;
+    mutable const Type* canonical;
+
+private:
+    void resolveCanonical() const;
 };
 
 /// A base class for integral types, which include all scalar types, predefined integer types,
@@ -302,10 +306,62 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EventType; }
 };
 
+/// A forward declaration of a user-defined type name. A given type name can have
+/// an arbitrary number of forward declarations in the same scope, so each symbol
+/// forms a linked list, headed by the actual type definition.
+class ForwardingTypedefSymbol : public Symbol {
+public:
+    enum Category {
+        None,
+        Enum,
+        Struct,
+        Union,
+        Class,
+        InterfaceClass
+    } category;
+
+    ForwardingTypedefSymbol(string_view name, SourceLocation loc, Category category) :
+        Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
+
+    static const ForwardingTypedefSymbol& fromSyntax(Compilation& compilation,
+                                                     const ForwardTypedefDeclarationSyntax& syntax);
+    static const ForwardingTypedefSymbol& fromSyntax(Compilation& compilation,
+                                                     const ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
+
+    void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
+    const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ForwardingTypedef; }
+
+private:
+    mutable const ForwardingTypedefSymbol* next = nullptr;
+};
+
 /// Represents a type alias, which is introduced via a typedef or type parameter.
 class TypeAliasType : public Type {
 public:
+    LazyType targetType;
 
+    TypeAliasType(string_view name, SourceLocation loc) :
+        Type(SymbolKind::TypeAlias, name, loc),
+        targetType(this)
+    {
+        canonical = nullptr;
+    }
+
+    static const TypeAliasType& fromSyntax(Compilation& compilation, const TypedefDeclarationSyntax& syntax);
+
+    void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
+    const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }
+
+    /// Checks all forward declarations for validity when considering the target type
+    /// of this alias. Any inconsistencies will issue diagnostics.
+    void checkForwardDecls() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeAlias; }
+
+private:
+    mutable const ForwardingTypedefSymbol* firstForward = nullptr;
 };
 
 /// An empty type symbol that indicates an error occurred while trying to

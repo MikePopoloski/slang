@@ -213,6 +213,14 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                 PackedStructType::fromSyntax(compilation, structUnion, location, parent) :
                 UnpackedStructType::fromSyntax(compilation, structUnion, location, parent);
         }
+        case SyntaxKind::NamedType: {
+            // TODO: handle all kinds of scoped names here
+            // TODO: handle error cases, etc
+            Token name = node.as<NamedTypeSyntax>().name.as<IdentifierNameSyntax>().identifier;
+            const Symbol* symbol = parent.lookupUnqualified(name.valueText(), location);
+            ASSERT(symbol && symbol->isType());
+            return symbol->as<Type>();
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -242,6 +250,11 @@ bool Type::isKind(SymbolKind kind) {
         default:
             return false;
     }
+}
+
+void Type::resolveCanonical() const {
+    ASSERT(kind == SymbolKind::TypeAlias);
+    canonical = as<TypeAliasType>().targetType.get();
 }
 
 IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth_,
@@ -525,6 +538,51 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
     }
 
     return *result;
+}
+
+const ForwardingTypedefSymbol&
+ForwardingTypedefSymbol::fromSyntax(Compilation& compilation, const ForwardTypedefDeclarationSyntax& syntax) {
+    Category category;
+    switch (syntax.keyword.kind) {
+        case TokenKind::EnumKeyword: category = Category::Enum; break;
+        case TokenKind::StructKeyword: category = Category::Struct; break;
+        case TokenKind::UnionKeyword: category = Category::Union; break;
+        case TokenKind::ClassKeyword: category = Category::Class; break;
+        default: category = Category::None; break;
+    }
+    return *compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
+                                                         syntax.name.location(),
+                                                         category);
+}
+
+const ForwardingTypedefSymbol&
+ForwardingTypedefSymbol::fromSyntax(Compilation& compilation,
+                                    const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
+    return *compilation.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
+                                                         syntax.name.location(),
+                                                         Category::InterfaceClass);
+}
+
+void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
+    if (!next)
+        next = &decl;
+    else
+        next->addForwardDecl(decl);
+}
+
+const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,
+                                               const TypedefDeclarationSyntax& syntax) {
+    // TODO: unpacked dimensions
+    auto result = compilation.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
+    result->targetType = syntax.type;
+    return *result;
+}
+
+void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
+    if (!firstForward)
+        firstForward = &decl;
+    else
+        firstForward->addForwardDecl(decl);
 }
 
 }

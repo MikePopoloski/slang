@@ -33,41 +33,42 @@ public:
 
 template<typename TVisitor, typename... Args>
 decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
-#define CASE1(k) case SymbolKind::k: return visitor.visit(*static_cast<const k##Symbol*>(this), std::forward<Args>(args)...)
-#define CASE2(k) case SymbolKind::k: return visitor.visit(*static_cast<const k*>(this), std::forward<Args>(args)...)
+#define SYMBOL(k) case SymbolKind::k: return visitor.visit(*static_cast<const k##Symbol*>(this), std::forward<Args>(args)...)
+#define TYPE(k) case SymbolKind::k: return visitor.visit(*static_cast<const k*>(this), std::forward<Args>(args)...)
     switch (kind) {
         case SymbolKind::Unknown: return visitor.visit(*this, std::forward<Args>(args)...);
-        CASE1(Root);
-        CASE1(CompilationUnit);
-        CASE1(TransparentMember);
-        CASE2(PredefinedIntegerType);
-        CASE2(ScalarType);
-        CASE2(FloatingType);
-        CASE2(EnumType);
-        CASE1(EnumValue);
-        CASE2(PackedArrayType);
-        CASE2(PackedStructType);
-        CASE2(UnpackedStructType);
-        CASE2(VoidType);
-        CASE2(NullType);
-        CASE2(CHandleType);
-        CASE2(StringType);
-        CASE2(EventType);
-        CASE2(ErrorType);
-        CASE1(Parameter);
-        CASE1(ModuleInstance);
-        CASE1(Package);
-        CASE1(ExplicitImport);
-        CASE1(WildcardImport);
-        CASE1(GenerateBlock);
-        CASE1(GenerateBlockArray);
-        CASE1(ProceduralBlock);
-        CASE1(SequentialBlock);
-        CASE1(Variable);
-        CASE1(FormalArgument);
-        CASE1(Subroutine);
-
-        case SymbolKind::TypeAlias: THROW_UNREACHABLE;
+        case SymbolKind::TypeAlias: return visitor.visit(*static_cast<const TypeAliasType*>(this), std::forward<Args>(args)...);
+        SYMBOL(Root);
+        SYMBOL(CompilationUnit);
+        SYMBOL(TransparentMember);
+        SYMBOL(EnumValue);
+        SYMBOL(ForwardingTypedef);
+        SYMBOL(Parameter);
+        SYMBOL(ModuleInstance);
+        SYMBOL(Package);
+        SYMBOL(ExplicitImport);
+        SYMBOL(WildcardImport);
+        SYMBOL(GenerateBlock);
+        SYMBOL(GenerateBlockArray);
+        SYMBOL(ProceduralBlock);
+        SYMBOL(SequentialBlock);
+        SYMBOL(Variable);
+        SYMBOL(FormalArgument);
+        SYMBOL(Subroutine);
+        TYPE(PredefinedIntegerType);
+        TYPE(ScalarType);
+        TYPE(FloatingType);
+        TYPE(EnumType);
+        TYPE(PackedArrayType);
+        TYPE(PackedStructType);
+        TYPE(UnpackedStructType);
+        TYPE(VoidType);
+        TYPE(NullType);
+        TYPE(CHandleType);
+        TYPE(StringType);
+        TYPE(EventType);
+        TYPE(ErrorType);
+            
         case SymbolKind::UnpackedArrayType: THROW_UNREACHABLE;
         case SymbolKind::PackedUnionType: THROW_UNREACHABLE;
         case SymbolKind::UnpackedUnionType: THROW_UNREACHABLE;
@@ -78,8 +79,8 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         case SymbolKind::Attribute: THROW_UNREACHABLE;
         case SymbolKind::Genvar: THROW_UNREACHABLE;
     }
-#undef CASE2
-#undef CASE1
+#undef TYPE
+#undef SYMBOL
     THROW_UNREACHABLE;
 }
 

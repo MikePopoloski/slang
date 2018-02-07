@@ -175,17 +175,10 @@ Expression& Expression::bindQualifiedName(Compilation& compilation, const Scoped
 }
 
 Expression& Expression::bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax) {
-    switch (symbol.kind) {
-        case SymbolKind::Variable:
-        case SymbolKind::FormalArgument:
-            return *compilation.emplace<VariableRefExpression>(symbol.as<VariableSymbol>(), syntax.sourceRange());
+    if (symbol.isValue())
+        return *compilation.emplace<NamedValueExpression>(symbol.as<ValueSymbol>(), syntax.sourceRange());
 
-        case SymbolKind::Parameter:
-            return *compilation.emplace<ParameterRefExpression>(symbol.as<ParameterSymbol>(), syntax.sourceRange());
-
-        default:
-            THROW_UNREACHABLE;
-    }
+    THROW_UNREACHABLE;
 }
 
 }

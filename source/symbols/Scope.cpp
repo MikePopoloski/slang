@@ -53,7 +53,7 @@ const Scope* Scope::getParent() const {
 }
 
 void Scope::addMember(const Symbol& symbol) {
-    // For any symbols that expose a type, keep track of it in our
+    // For any symbols that expose a type to the surrounding scope, keep track of it in our
     // deferred data so that we can include enum values in our member list.
     const LazyType* lazyType = nullptr;
     switch (symbol.kind) {
@@ -66,6 +66,9 @@ void Scope::addMember(const Symbol& symbol) {
             break;
         case SymbolKind::Parameter:
             lazyType = &symbol.as<ParameterSymbol>().getLazyType();
+            break;
+        case SymbolKind::TypeAlias:
+            lazyType = &symbol.as<TypeAliasType>().targetType;
             break;
         default:
             break;
@@ -159,6 +162,15 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::EmptyMember:
             break;
+        case SyntaxKind::TypedefDeclaration:
+            addMember(TypeAliasType::fromSyntax(compilation, syntax.as<TypedefDeclarationSyntax>()));
+            break;
+        case SyntaxKind::ForwardTypedefDeclaration:
+            addMember(ForwardingTypedefSymbol::fromSyntax(compilation, syntax.as<ForwardTypedefDeclarationSyntax>()));
+            break;
+        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
+            addMember(ForwardingTypedefSymbol::fromSyntax(compilation, syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>()));
+            break;
         default:
             THROW_UNREACHABLE;
     }
@@ -176,6 +188,7 @@ const Symbol* Scope::find(string_view name) const {
     const Symbol* symbol = it->second;
     switch (symbol->kind) {
         case SymbolKind::ExplicitImport: return nullptr;
+        case SymbolKind::ForwardingTypedef: return nullptr;
         case SymbolKind::TransparentMember: return &symbol->as<TransparentMemberSymbol>().wrapped;
         default: return symbol;
     }
@@ -195,8 +208,17 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
         // so the location doesn't matter for them.
         symbol = it->second;
         bool locationGood = true;
-        if (nameKind == LookupNameKind::Local)
+        if (nameKind == LookupNameKind::Local) {
             locationGood = LookupLocation::before(*symbol) < location;
+            if (!locationGood && symbol->kind == SymbolKind::TypeAlias) {
+                // A type alias can have forward definitions, so check those locations as well.
+                // The forward decls form a linked list that are always ordered by location,
+                // so we only need to check the first one.
+                const ForwardingTypedefSymbol* forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
+                if (forward)
+                    locationGood = LookupLocation::before(*forward) < location;
+            }
+        }
 
         if (locationGood) {
             // Unwrap the symbol if it's hidden behind an import or hoisted enum member.
@@ -207,6 +229,10 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
                     break;
                 case SymbolKind::TransparentMember:
                     result.found = &symbol->as<TransparentMemberSymbol>().wrapped;
+                    break;
+                case SymbolKind::ForwardingTypedef:
+                    // If we find a forwarding typedef, the actual typedef was never defined. Just ignore it,
+                    // we'll issue a better error later.
                     break;
                 default:
                     result.found = symbol;
@@ -298,26 +324,43 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
     if (!member->name.empty()) {
         auto pair = nameMap->emplace(member->name, member);
         if (!pair.second) {
-            // We have a name collision; the second one will be ignored (not inserted into the map), but we should
-            // try to give the user a helpful error message.
+            // We have a name collision; first check if this is ok (forwarding typedefs share a name with
+            // the actual typedef) and if not give the user a helpful error message.
             const Symbol* existing = pair.first->second;
-            if (existing->isValue() && member->isValue()) {
-                const Type& memberType = member->as<ValueSymbol>().getType();
-                const Type& existingType = existing->as<ValueSymbol>().getType();
-                if (memberType.isMatching(existingType))
-                    compilation.addError(DiagCode::Redefinition, member->location) << member->name;
-                else {
-                    auto& diag = compilation.addError(DiagCode::RedefinitionDifferentType, member->location);
-                    diag << member->name << memberType << existingType;
-                }
+            if (existing->kind == SymbolKind::TypeAlias && member->kind == SymbolKind::ForwardingTypedef) {
+                // Just add this forwarding typedef to a deferred list so we can process them once we
+                // know the kind of symbol the alias points to.
+                existing->as<TypeAliasType>().addForwardDecl(member->as<ForwardingTypedefSymbol>());
             }
-            else if (existing->kind != member->kind) {
-                compilation.addError(DiagCode::RedefinitionDifferentSymbolKind, member->location) << member->name;
+            else if (existing->kind == SymbolKind::ForwardingTypedef &&
+                     member->kind == SymbolKind::ForwardingTypedef) {
+                // Found another forwarding typedef; link it to the previous one.
+                existing->as<ForwardingTypedefSymbol>().addForwardDecl(member->as<ForwardingTypedefSymbol>());
+            }
+            else if (existing->kind == SymbolKind::ForwardingTypedef && member->kind == SymbolKind::TypeAlias) {
+                // We found the actual type for a previous forwarding declaration. Replace it in the name map.
+                member->as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
+                pair.first->second = member;
             }
             else {
-                compilation.addError(DiagCode::Redefinition, member->location) << member->name;
+                if (existing->isValue() && member->isValue()) {
+                    const Type& memberType = member->as<ValueSymbol>().getType();
+                    const Type& existingType = existing->as<ValueSymbol>().getType();
+                    if (memberType.isMatching(existingType))
+                        compilation.addError(DiagCode::Redefinition, member->location) << member->name;
+                    else {
+                        auto& diag = compilation.addError(DiagCode::RedefinitionDifferentType, member->location);
+                        diag << member->name << memberType << existingType;
+                    }
+                }
+                else if (existing->kind != member->kind) {
+                    compilation.addError(DiagCode::RedefinitionDifferentSymbolKind, member->location) << member->name;
+                }
+                else {
+                    compilation.addError(DiagCode::Redefinition, member->location) << member->name;
+                }
+                compilation.addError(DiagCode::NotePreviousDefinition, existing->location);
             }
-            compilation.addError(DiagCode::NotePreviousDefinition, existing->location);
         }
     }
 }

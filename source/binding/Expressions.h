@@ -20,8 +20,7 @@ enum class ExpressionKind {
     IntegerLiteral,
     RealLiteral,
     UnbasedUnsizedIntegerLiteral,
-    VariableRef,
-    ParameterRef,
+    NamedValue,
     UnaryOp,
     BinaryOp,
     ConditionalOp,
@@ -244,32 +243,18 @@ private:
     logic_t value;
 };
 
-/// Represents an expression that references a variable.
-class VariableRefExpression : public Expression {
+/// Represents an expression that references a named value.
+class NamedValueExpression : public Expression {
 public:
-    const VariableSymbol& symbol;
+    const ValueSymbol& symbol;
 
-    VariableRefExpression(const VariableSymbol& symbol, SourceRange sourceRange) :
-        Expression(ExpressionKind::VariableRef, *symbol.type, sourceRange), symbol(symbol) {}
+    NamedValueExpression(const ValueSymbol& symbol, SourceRange sourceRange) :
+        Expression(ExpressionKind::NamedValue, symbol.getType(), sourceRange), symbol(symbol) {}
 
     ConstantValue eval(EvalContext& context) const;
 
-    static Expression& propagateAndFold(Compilation& compilation, VariableRefExpression& expr, const Type& newType);
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::VariableRef; }
-};
-
-/// Represents an expression that references a parameter.
-class ParameterRefExpression : public Expression {
-public:
-    const ParameterSymbol& symbol;
-
-    ParameterRefExpression(const ParameterSymbol& symbol, SourceRange sourceRange) :
-        Expression(ExpressionKind::ParameterRef, symbol.getType(), sourceRange), symbol(symbol) {}
-
-    ConstantValue eval(EvalContext& context) const;
-
-    static Expression& propagateAndFold(Compilation& compilation, ParameterRefExpression& expr, const Type& newType);
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ParameterRef; }
+    static Expression& propagateAndFold(Compilation& compilation, NamedValueExpression& expr, const Type& newType);
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 };
 
 /// Represents a unary operator expression.
