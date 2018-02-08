@@ -22,6 +22,11 @@ static const char* severityToString[] = {
 Diagnostic::Diagnostic(DiagCode code, SourceLocation location) :
     code(code), location(location) {}
 
+Diagnostic& Diagnostic::addNote(DiagCode noteCode, SourceLocation noteLocation) {
+    notes.emplace_back(noteCode, noteLocation);
+    return notes.back();
+}
+
 Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
     diag.args.emplace_back(std::string(arg));
     return diag;
@@ -48,17 +53,19 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
-    emplace(code, range.start());
-    back() << range;
-    return back();
+    return add(code, range.start()) << range;
 }
 
 void Diagnostics::sort(const SourceManager& sourceManager) {
-    std::stable_sort(begin(), end(), [&sourceManager](auto& x, auto& y) {
+    auto compare = [&sourceManager](auto& x, auto& y) {
         SourceLocation xl = sourceManager.getFullyExpandedLoc(x.location);
         SourceLocation yl = sourceManager.getFullyExpandedLoc(y.location);
         return xl < yl;
-    });
+    };
+
+    std::stable_sort(begin(), end(), compare);
+    for (auto& diag : *this)
+        std::stable_sort(diag.notes.begin(), diag.notes.end(), compare);
 }
 
 DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
@@ -267,6 +274,9 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
         formatDiag(writer, sourceManager.getOriginalLoc(location), std::vector<SourceRange>(),
                    "note", "expanded from here");
     }
+
+    for (const Diagnostic& note : diagnostic.notes)
+        writer << report(note);
 
     return writer.str();
 }

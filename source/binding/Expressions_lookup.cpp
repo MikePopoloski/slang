@@ -89,8 +89,9 @@ Expression& Expression::bindSimpleName(Compilation& compilation, const Expressio
         // Attempt to give a more helpful error if the variable exists in scope but is declared after the lookup location.
         symbol = context.scope.find(nameToken.valueText());
         if (symbol) {
-            compilation.addError(DiagCode::UsedBeforeDeclared, nameToken.range()) << nameToken.valueText();
-            compilation.addError(DiagCode::NoteDeclarationHere, symbol->location);
+            auto& diag = compilation.addError(DiagCode::UsedBeforeDeclared, nameToken.range());
+            diag << nameToken.valueText();
+            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
         }
         else {
             compilation.addError(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();

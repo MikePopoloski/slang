@@ -265,19 +265,19 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
 
     if (!imports.empty()) {
         if (imports.size() > 1) {
-            result.diagnostics.add(DiagCode::AmbiguousWildcardImport, sourceRange) << name;
+            auto& diag = result.diagnostics.add(DiagCode::AmbiguousWildcardImport, sourceRange) << name;
             for (const auto& pair : imports) {
-                result.diagnostics.add(DiagCode::NoteImportedFrom, pair.import->location);
-                result.diagnostics.add(DiagCode::NoteDeclarationHere, pair.imported->location);
+                diag.addNote(DiagCode::NoteImportedFrom, pair.import->location);
+                diag.addNote(DiagCode::NoteDeclarationHere, pair.imported->location);
             }
             return;
         }
 
         if (symbol) {
-            result.diagnostics.add(DiagCode::ImportNameCollision, sourceRange) << name;
-            result.diagnostics.add(DiagCode::NoteDeclarationHere, symbol->location);
-            result.diagnostics.add(DiagCode::NoteImportedFrom, imports[0].import->location);
-            result.diagnostics.add(DiagCode::NoteDeclarationHere, imports[0].imported->location);
+            auto& diag = result.diagnostics.add(DiagCode::ImportNameCollision, sourceRange) << name;
+            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+            diag.addNote(DiagCode::NoteImportedFrom, imports[0].import->location);
+            diag.addNote(DiagCode::NoteDeclarationHere, imports[0].imported->location);
         }
 
         result.wasImported = true;
@@ -343,23 +343,28 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
                 pair.first->second = member;
             }
             else {
+                Diagnostic* diag;
                 if (existing->isValue() && member->isValue()) {
                     const Type& memberType = member->as<ValueSymbol>().getType();
                     const Type& existingType = existing->as<ValueSymbol>().getType();
-                    if (memberType.isMatching(existingType))
-                        compilation.addError(DiagCode::Redefinition, member->location) << member->name;
+                    if (memberType.isMatching(existingType)) {
+                        diag = &compilation.addError(DiagCode::Redefinition, member->location);
+                        (*diag) << member->name;
+                    }
                     else {
-                        auto& diag = compilation.addError(DiagCode::RedefinitionDifferentType, member->location);
-                        diag << member->name << memberType << existingType;
+                        diag = &compilation.addError(DiagCode::RedefinitionDifferentType, member->location);
+                        (*diag) << member->name << memberType << existingType;
                     }
                 }
                 else if (existing->kind != member->kind) {
-                    compilation.addError(DiagCode::RedefinitionDifferentSymbolKind, member->location) << member->name;
+                    diag = &compilation.addError(DiagCode::RedefinitionDifferentSymbolKind, member->location);
+                    (*diag) << member->name;
                 }
                 else {
-                    compilation.addError(DiagCode::Redefinition, member->location) << member->name;
+                    diag = &compilation.addError(DiagCode::Redefinition, member->location);
+                    (*diag) << member->name;
                 }
-                compilation.addError(DiagCode::NotePreviousDefinition, existing->location);
+                diag->addNote(DiagCode::NotePreviousDefinition, existing->location);
             }
         }
     }

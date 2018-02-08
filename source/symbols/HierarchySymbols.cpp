@@ -56,8 +56,9 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 const NamedArgumentSyntax& nas = paramBase->as<NamedArgumentSyntax>();
                 auto pair = namedParams.emplace(nas.name.valueText(), std::make_pair(&nas, false));
                 if (!pair.second) {
-                    compilation.addError(DiagCode::DuplicateParamAssignment, nas.name.location()) << nas.name.valueText();
-                    compilation.addError(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
+                    auto& diag = compilation.addError(DiagCode::DuplicateParamAssignment, nas.name.location());
+                    diag << nas.name.valueText();
+                    diag.addNote(DiagCode::NotePreviousUsage, pair.first->second.first->name.location());
                 }
             }
         }
@@ -96,8 +97,8 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
                 if (param.isLocal) {
                     // Can't assign to localparams, so this is an error.
                     DiagCode code = param.isPort ? DiagCode::AssignedToLocalPortParam : DiagCode::AssignedToLocalBodyParam;
-                    compilation.addError(code, arg->name.location());
-                    compilation.addError(DiagCode::NoteDeclarationHere, param.location);
+                    auto& diag = compilation.addError(code, arg->name.location());
+                    diag.addNote(DiagCode::NoteDeclarationHere, param.location);
                     continue;
                 }
 

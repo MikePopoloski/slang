@@ -56,20 +56,24 @@ endmodule
     CHECK(it->name == "l9"); it++;
 
     Diagnostics diags = compilation.getSemanticDiagnostics();
-    REQUIRE(diags.size() == 13);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == DiagCode::ParamHasNoValue);
     CHECK(diags[1].code == DiagCode::TooManyParamAssignments);
     CHECK(diags[2].code == DiagCode::ParamHasNoValue);
     CHECK(diags[3].code == DiagCode::AssignedToLocalPortParam);
     CHECK(diags[4].code == DiagCode::ParameterDoesNotExist);
     CHECK(diags[5].code == DiagCode::AssignedToLocalBodyParam);
-    CHECK(diags[6].code == DiagCode::NotePreviousUsage);
-    CHECK(diags[7].code == DiagCode::DuplicateParamAssignment);
-    CHECK(diags[8].code == DiagCode::MixingOrderedAndNamedParams);
-    CHECK(diags[9].code == DiagCode::LocalParamNoInitializer);
-    CHECK(diags[10].code == DiagCode::NoteDeclarationHere);
-    CHECK(diags[11].code == DiagCode::BodyParamNoInitializer);
-    CHECK(diags[12].code == DiagCode::NoteDeclarationHere);
+    CHECK(diags[6].code == DiagCode::DuplicateParamAssignment);
+    CHECK(diags[7].code == DiagCode::MixingOrderedAndNamedParams);
+    CHECK(diags[8].code == DiagCode::LocalParamNoInitializer);
+    CHECK(diags[9].code == DiagCode::BodyParamNoInitializer);
+
+    REQUIRE(diags[3].notes.size() == 1);
+    REQUIRE(diags[5].notes.size() == 1);
+    REQUIRE(diags[6].notes.size() == 1);
+    CHECK(diags[3].notes[0].code == DiagCode::NoteDeclarationHere);
+    CHECK(diags[5].notes[0].code == DiagCode::NoteDeclarationHere);
+    CHECK(diags[6].notes[0].code == DiagCode::NotePreviousUsage);
 }
 
 TEST_CASE("Module children (simple)", "[binding:modules]") {

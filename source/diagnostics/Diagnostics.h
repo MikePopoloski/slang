@@ -195,6 +195,7 @@ public:
     };
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
+    std::vector<Diagnostic> notes;
 
     /// The specific kind of diagnostic that was issued.
     DiagCode code;
@@ -204,6 +205,9 @@ public:
 
     /// Constructs a new Diagnostic entry with the given code and location.
     Diagnostic(DiagCode code, SourceLocation location);
+
+    /// Adds a new note to the diagnostic at the given source location.
+    Diagnostic& addNote(DiagCode code, SourceLocation location);
 
     /// Adds an argument to the diagnostic.
     friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
