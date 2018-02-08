@@ -232,14 +232,19 @@ public:
         SmallVectorSized<Diagnostic, 8>(std::move(other)) {}
     Diagnostics& operator=(Diagnostics&& other) = default;
 
-    /// Adds a new diagnostic to the collection.
+    /// Adds a new diagnostic to the collection, pointing to the given source location.
     Diagnostic& add(DiagCode code, SourceLocation location);
+
+    /// Adds a new diagnostic to the collection, highlighting the given source range.
     Diagnostic& add(DiagCode code, SourceRange range);
+
+    /// Sorts the diagnostics in the collection based on source file and line number.
+    void sort(const SourceManager& sourceManager);
 };
 
 class DiagnosticWriter {
 public:
-    explicit DiagnosticWriter(SourceManager& sourceManager);
+    explicit DiagnosticWriter(const SourceManager& sourceManager);
 
     /// Sets the message to use for the given diagnostic.
     void setMessage(DiagCode code, std::string format);
@@ -255,11 +260,10 @@ public:
 
     /// Writes a report for all of the diagnostics in the given collection.
     /// Note that this modifies the collection by sorting it.
-    std::string report(Diagnostics& diagnostics);
+    std::string report(const Diagnostics& diagnostics);
 
 private:
     string_view getBufferLine(SourceLocation location, uint32_t col);
-    bool sortDiagnostics(const Diagnostic& x, const Diagnostic& y);
     void getIncludeStack(BufferID buffer, std::deque<SourceLocation>& stack);
     void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col, string_view sourceLine, std::string& buffer);
 
@@ -267,7 +271,7 @@ private:
     void formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,
                     const char* severity, const std::string& msg);
 
-    SourceManager& sourceManager;
+    const SourceManager& sourceManager;
 
     // Little structure to hold a diagnostic's format and severity.
     struct Descriptor {

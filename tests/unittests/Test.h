@@ -24,6 +24,7 @@ extern Diagnostics diagnostics;
 using namespace slang;
 
 #define CHECK_DIAGNOSTICS_EMPTY do {\
+    diagnostics.sort(getSourceManager()); \
     if (!diagnostics.empty()) FAIL_CHECK(DiagnosticWriter(getSourceManager()).report(diagnostics)); \
 } while (0)
 

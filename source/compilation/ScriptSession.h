@@ -73,6 +73,7 @@ public:
         if (syntaxTrees.empty())
             return "";
 
+        diagnostics.sort(syntaxTrees[0]->sourceManager());
         return DiagnosticWriter(syntaxTrees[0]->sourceManager()).report(diagnostics);
     }
 

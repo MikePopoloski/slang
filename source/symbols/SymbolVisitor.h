@@ -26,8 +26,8 @@ public:
     }
 
     void visitScope(const Scope& scope) {
-        for (auto member : scope.members())
-            member->visit(*static_cast<TDerived*>(this));
+        for (const auto& member : scope.members())
+            member.visit(*static_cast<TDerived*>(this));
     }
 };
 

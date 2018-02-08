@@ -59,6 +59,10 @@ public:
     /// script scope won't affect which modules are determined to be top-level instances.
     CompilationUnitSymbol& createScriptScope();
 
+    /// Gets the source manager associated with the compilation. If no syntax trees have
+    /// been added to the design this method will return null.
+    const SourceManager* getSourceManager() const { return sourceManager; }
+
     /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
     Diagnostics getParseDiagnostics();
 
@@ -102,14 +106,7 @@ public:
     const EventType& getEventType() const { return eventType; }
     const ErrorType& getErrorType() const { return errorType; }
 
-    SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
-
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
-
-    Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
-
-    void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
-    span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
 
     Expression& badExpression(const Expression* expr);
     const Expression& bindExpression(const ExpressionSyntax& syntax, const BindContext& context);
@@ -123,6 +120,13 @@ private:
     void getParamDecls(const ParameterDeclarationSyntax& syntax, bool isPort, bool isLocal,
                        SmallVector<Definition::ParameterDecl>& parameters);
 
+    // These functions are called by Scopes to create and track various members.
+    friend class Scope;
+    SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
+    Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
+    void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
+    span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
+
     // These functions are used for traversing the syntax hierarchy and finding all instantiations.
     using NameSet = flat_hash_set<string_view>;
     static void findInstantiations(const ModuleDeclarationSyntax& module,
@@ -131,6 +135,7 @@ private:
 
     Diagnostics diags;
     std::unique_ptr<RootSymbol> root;
+    const SourceManager* sourceManager = nullptr;
     bool finalized = false;
     bool forcedDiagnostics = false;
 

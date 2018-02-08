@@ -19,7 +19,7 @@ class StatementList;
 class StatementBodiedScope : public Scope {
 public:
     const Statement* getBody() const {
-        ensureMembers();
+        ensureElaborated();
         return body;
     }
 

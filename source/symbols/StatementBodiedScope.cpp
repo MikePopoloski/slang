@@ -12,11 +12,11 @@
 namespace slang {
 
 void StatementBodiedScope::setBody(const StatementSyntax& syntax) {
-    getOrAddDeferredData().setStatement(syntax);
+    setStatement(syntax);
 }
 
 void StatementBodiedScope::setBody(const SyntaxList<SyntaxNode>& syntax) {
-    getOrAddDeferredData().setStatement(syntax);
+    setStatement(syntax);
 }
 
 void StatementBodiedScope::bindBody(const SyntaxNode& syntax) {

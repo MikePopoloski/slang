@@ -53,7 +53,15 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
     return back();
 }
 
-DiagnosticWriter::DiagnosticWriter(SourceManager& sourceManager) :
+void Diagnostics::sort(const SourceManager& sourceManager) {
+    std::stable_sort(begin(), end(), [&sourceManager](auto& x, auto& y) {
+        SourceLocation xl = sourceManager.getFullyExpandedLoc(x.location);
+        SourceLocation yl = sourceManager.getFullyExpandedLoc(y.location);
+        return xl < yl;
+    });
+}
+
+DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     sourceManager(sourceManager)
 {
     // lexer
@@ -263,11 +271,7 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     return writer.str();
 }
 
-std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
-    // first sort diagnostics by file so that we can cut down
-    // on the amount of include information we print out
-    std::stable_sort(diagnostics.begin(), diagnostics.end(), [this](auto& x, auto& y) { return this->sortDiagnostics(x, y); });
-
+std::string DiagnosticWriter::report(const Diagnostics& diagnostics) {
     std::deque<SourceLocation> includeStack;
     BufferID lastBuffer;
     fmt::MemoryWriter writer;
@@ -290,13 +294,6 @@ std::string DiagnosticWriter::report(Diagnostics& diagnostics) {
         writer << report(diag);
     }
     return writer.str();
-}
-
-bool DiagnosticWriter::sortDiagnostics(const Diagnostic& x, const Diagnostic& y) {
-    // start by expanding out macro locations
-    SourceLocation xl = sourceManager.getFullyExpandedLoc(x.location);
-    SourceLocation yl = sourceManager.getFullyExpandedLoc(y.location);
-    return xl.buffer() < yl.buffer();
 }
 
 string_view DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {

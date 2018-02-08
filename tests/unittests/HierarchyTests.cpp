@@ -44,23 +44,32 @@ endmodule
 )");
 
     Compilation compilation;
-    evalModule(tree, compilation).members();
+    auto it = evalModule(tree, compilation).membersOfType<ModuleInstanceSymbol>().begin();
+    CHECK(it->name == "l1"); it++;
+    CHECK(it->name == "l2"); it++;
+    CHECK(it->name == "l3"); it++;
+    CHECK(it->name == "l4"); it++;
+    CHECK(it->name == "l5"); it++;
+    CHECK(it->name == "l6"); it++;
+    CHECK(it->name == "l7"); it++;
+    CHECK(it->name == "l8"); it++;
+    CHECK(it->name == "l9"); it++;
 
-    const auto& diags = compilation.getSemanticDiagnostics();
+    Diagnostics diags = compilation.getSemanticDiagnostics();
     REQUIRE(diags.size() == 13);
-    CHECK(diags[0].code == DiagCode::LocalParamNoInitializer);
-    CHECK(diags[1].code == DiagCode::BodyParamNoInitializer);
+    CHECK(diags[0].code == DiagCode::ParamHasNoValue);
+    CHECK(diags[1].code == DiagCode::TooManyParamAssignments);
     CHECK(diags[2].code == DiagCode::ParamHasNoValue);
-    CHECK(diags[3].code == DiagCode::TooManyParamAssignments);
-    CHECK(diags[4].code == DiagCode::AssignedToLocalPortParam);
-    CHECK(diags[5].code == DiagCode::NoteDeclarationHere);
-    CHECK(diags[6].code == DiagCode::ParamHasNoValue);
-    CHECK(diags[7].code == DiagCode::ParameterDoesNotExist);
-    CHECK(diags[8].code == DiagCode::AssignedToLocalBodyParam);
-    CHECK(diags[9].code == DiagCode::NoteDeclarationHere);
-    CHECK(diags[10].code == DiagCode::DuplicateParamAssignment);
-    CHECK(diags[11].code == DiagCode::NotePreviousUsage);
-    CHECK(diags[12].code == DiagCode::MixingOrderedAndNamedParams);
+    CHECK(diags[3].code == DiagCode::AssignedToLocalPortParam);
+    CHECK(diags[4].code == DiagCode::ParameterDoesNotExist);
+    CHECK(diags[5].code == DiagCode::AssignedToLocalBodyParam);
+    CHECK(diags[6].code == DiagCode::NotePreviousUsage);
+    CHECK(diags[7].code == DiagCode::DuplicateParamAssignment);
+    CHECK(diags[8].code == DiagCode::MixingOrderedAndNamedParams);
+    CHECK(diags[9].code == DiagCode::LocalParamNoInitializer);
+    CHECK(diags[10].code == DiagCode::NoteDeclarationHere);
+    CHECK(diags[11].code == DiagCode::BodyParamNoInitializer);
+    CHECK(diags[12].code == DiagCode::NoteDeclarationHere);
 }
 
 TEST_CASE("Module children (simple)", "[binding:modules]") {

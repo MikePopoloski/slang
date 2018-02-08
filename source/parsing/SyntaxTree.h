@@ -58,6 +58,7 @@ public:
 
     /// Helper function to get the set of diagnostics as a human-friendly string.
     std::string reportDiagnostics() {
+        diagnosticsBuffer.sort(sourceMan);
         return DiagnosticWriter(sourceMan).report(diagnosticsBuffer);
     }
 

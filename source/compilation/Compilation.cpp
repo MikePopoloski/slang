@@ -86,6 +86,13 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     if (finalized)
         throw std::logic_error("The compilation has already been finalized");
 
+    if (&tree->sourceManager() != sourceManager) {
+        if (!sourceManager)
+            sourceManager = &tree->sourceManager();
+        else
+            throw std::logic_error("All syntax trees added to the compilation must use the same source manager");
+    }
+
     auto unit = emplace<CompilationUnitSymbol>(*this);
     const SyntaxNode& node = tree->root();
     NameSet instances;
@@ -243,6 +250,9 @@ Diagnostics Compilation::getParseDiagnostics() {
     Diagnostics results;
     for (const auto& tree : syntaxTrees)
         results.appendRange(tree->diagnostics());
+
+    if (sourceManager)
+        results.sort(*sourceManager);
     return results;
 }
 
@@ -257,12 +267,19 @@ Diagnostics Compilation::getSemanticDiagnostics() {
 
     Diagnostics results;
     results.appendRange(diags);
+
+    if (sourceManager)
+        results.sort(*sourceManager);
+
     return results;
 }
 
 Diagnostics Compilation::getAllDiagnostics() {
     Diagnostics results = getParseDiagnostics();
     results.appendRange(getSemanticDiagnostics());
+
+    if (sourceManager)
+        results.sort(*sourceManager);
     return results;
 }
 

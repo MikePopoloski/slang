@@ -178,7 +178,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
 
 const Symbol* Scope::find(string_view name) const {
     // Just do a simple lookup and return the result if we have one.
-    ensureMembers();
+    ensureElaborated();
     auto it = nameMap->find(name);
     if (it == nameMap->end())
         return nullptr;
@@ -196,7 +196,7 @@ const Symbol* Scope::find(string_view name) const {
 
 void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
                               SourceRange sourceRange, LookupResult& result) const {
-    ensureMembers();
+    ensureElaborated();
     if (name.empty())
         return;
 
@@ -369,8 +369,11 @@ void Scope::addDeferredMember(const SyntaxNode& member) {
     getOrAddDeferredData().addMember(member, lastMember);
 }
 
-void Scope::realizeDeferredMembers() const {
-    ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
+void Scope::elaborate() const {
+    isElaborated = true;
+    if (deferredMemberIndex == DeferredMemberIndex::Invalid)
+        return;
+
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
 
@@ -379,8 +382,8 @@ void Scope::realizeDeferredMembers() const {
         const Type* type = pair.second->get();
 
         if (type && type->kind == SymbolKind::EnumType) {
-            for (auto value : type->as<EnumType>().values()) {
-                auto wrapped = compilation.emplace<TransparentMemberSymbol>(*value);
+            for (const auto& value : type->as<EnumType>().values()) {
+                auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
                 insertMember(wrapped, insertAt);
                 insertAt = wrapped;
             }
@@ -397,7 +400,8 @@ void Scope::realizeDeferredMembers() const {
         static_cast<StatementBodiedScope*>(const_cast<Scope*>(this))->bindBody(*syntax);
     }
     else {
-        for (auto [node, insertionPoint] : deferredData.getMembers()) {
+        auto deferred = deferredData.getMembers();
+        for (auto [node, insertionPoint] : make_range(deferred.rbegin(), deferred.rend())) {
             LookupLocation location = insertionPoint ? LookupLocation::after(*insertionPoint) : LookupLocation::min;
             switch (node->kind) {
                 case SyntaxKind::HierarchyInstantiation: {

@@ -28,6 +28,9 @@ private:
     TIterator m_end;
 };
 
+template<typename T>
+iterator_range<T> make_range(T begin, T end) { return iterator_range<T>(begin, end); }
+
 // Note: Design mostly taken from llvm's iterator.h.
 
 /// Base class that hides most of the iterator boilerplate from you.

@@ -77,6 +77,12 @@ public:
         return !(*this == rhs);
     }
 
+    bool operator<(const SourceLocation& rhs) const {
+        if (bufferID != rhs.bufferID)
+            return bufferID < rhs.bufferID;
+        return charOffset < rhs.charOffset;
+    }
+
 private:
     BufferID bufferID;
     uint32_t charOffset;

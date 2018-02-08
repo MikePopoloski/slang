@@ -24,9 +24,9 @@ endmodule
     const auto& et = someVar.type->as<EnumType>();
 
     auto values = et.values().begin();
-    CHECK((*values++)->value.integer() == 0);
-    CHECK((*values++)->value.integer() == 4);
-    CHECK((*values++)->value.integer() == 5);
+    CHECK(values->value.integer() == 0); values++;
+    CHECK(values->value.integer() == 4); values++;
+    CHECK(values->value.integer() == 5); values++;
 
     // TODO: test (and implement) all the restrictions on enum and enum values
     NO_COMPILATION_ERRORS;

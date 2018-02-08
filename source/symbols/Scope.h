@@ -89,18 +89,31 @@ struct LookupResult {
     void clear();
 };
 
-/// Base class for scopes that can contain child symbols and look them up by name.
+/// Base class for symbols that represent a name scope; that is, they contain children and can
+/// participate in name lookup.
 class Scope {
 public:
+    /// Adds a symbol as a member to the scope.
     void addMember(const Symbol& symbol);
+
+    /// Creates and adds one or more member symbols to the scope from the given syntax node.
     void addMembers(const SyntaxNode& syntax);
 
+    /// Gets the parent scope of this scope.
     const Scope* getParent() const;
     const Symbol& asSymbol() const { return *thisSym; }
+
+    /// Gets the compilation that contains this scope.
     Compilation& getCompilation() const { return compilation; }
 
+    /// Finds a direct child member with the given name. This won't return anything weird like
+    /// forwarding typdefs or imported symbols, but will return things like transparent enum members.
+    /// If no symbol is found with the given name, nullptr is returned.
     const Symbol* find(string_view name) const;
 
+    /// Finds a direct child member with the given name. This won't return anything weird like
+    /// forwarding typdefs or imported symbols, but will return things like transparent enum members.
+    /// This method expects that the symbol will be found and be of the given type `T`.
     template<typename T>
     const T& find(string_view name) const {
         const Symbol* sym = find(name);
@@ -115,15 +128,115 @@ public:
                                     LookupNameKind nameKind = LookupNameKind::Local) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified type.
-    /// If the type does not match, this will assert.
+    /// This expects (and asserts) that the member at the given index is of the specified type `T`.
     template<typename T>
-    const T& memberAt(uint32_t index) const { return (*std::next(members().begin(), index))->as<T>(); }
+    const T& memberAt(uint32_t index) const { return std::next(members().begin(), index)->as<T>(); }
 
-    /// Strongly typed index type which is used in a sideband list in the Compilation object
-    /// to store information about deferred members in this scope.
+    /// An iterator for members in the scope.
+    class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Symbol> {
+    public:
+        iterator(const Symbol* firstSymbol) : current(firstSymbol) {}
+
+        iterator& operator=(const iterator& other) {
+            current = other.current;
+            return *this;
+        }
+
+        bool operator==(const iterator& other) const { return current == other.current; }
+
+        const Symbol& operator*() const { return *current; }
+        const Symbol& operator*() { return *current; }
+
+        iterator& operator++();
+
+        iterator operator++(int) {
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+    private:
+        const Symbol* current;
+    };
+
+    template<typename SpecificType>
+    class specific_symbol_iterator : public iterator_facade<specific_symbol_iterator<SpecificType>,
+                                                            std::forward_iterator_tag,
+                                                            const SpecificType> {
+    public:
+        specific_symbol_iterator(const Symbol* firstSymbol) :
+            current(firstSymbol)
+        {
+            skipToNext();
+        }
+
+        specific_symbol_iterator& operator=(const specific_symbol_iterator& other) {
+            current = other.current;
+            return *this;
+        }
+
+        bool operator==(const specific_symbol_iterator& other) const { return current == other.current; }
+
+        const SpecificType& operator*() const { return current->as<SpecificType>(); }
+        const SpecificType& operator*() { return current->as<SpecificType>(); }
+
+        specific_symbol_iterator& operator++() {
+            current = current->nextInScope;
+            skipToNext();
+            return *this;
+        }
+
+        specific_symbol_iterator operator++(int) {
+            specific_symbol_iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+    private:
+        void skipToNext() {
+            while (current && !SpecificType::isKind(current->kind))
+                current = current->nextInScope;
+        }
+
+        const Symbol* current;
+    };
+
+    /// Gets an iterator to the members contained in the scope.
+    iterator_range<iterator> members() const {
+        ensureElaborated();
+        return { firstMember, nullptr };
+    }
+
+    /// Gets an iterator to all of the members of the given type contained in the scope.
+    template<typename T>
+    iterator_range<specific_symbol_iterator<T>> membersOfType() const {
+        ensureElaborated();
+        return { firstMember, nullptr };
+    }
+
+protected:
+    Scope(Compilation& compilation_, const Symbol* thisSym_);
+
+    /// Before we access any members to do lookups or return iterators, make sure
+    /// the scope is fully elaborated.
+    void ensureElaborated() const { if (!isElaborated) elaborate(); }
+
+    void setStatement(const SyntaxNode& syntax) { getOrAddDeferredData().setStatement(syntax); }
+
+    const Symbol* getLastMember() const { return lastMember; }
+
+private:
+    friend class Compilation;
+
+    // Strongly typed index type which is used in a sideband list in the Compilation object
+    // to store information about deferred members in this scope.
     enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
 
-    /// Data stored in sideband tables in the Compilation object for deferred members.
+    // Strongly typed index type which is used in a sideband list in the Compilation object
+    // to store information about wildcard imports in this scope.
+    enum class ImportDataIndex : uint32_t { Invalid = 0 };
+
+    // Data stored in sideband tables in the Compilation object for deferred members.
     class DeferredMemberData {
     public:
         void addMember(const SyntaxNode& member, const Symbol* insertionPoint) {
@@ -167,110 +280,9 @@ public:
         TransparentTypeMap transparentTypes;
     };
 
-    /// Strongly typed index type which is used in a sideband list in the Compilation object
-    /// to store information about wildcard imports in this scope.
-    enum class ImportDataIndex : uint32_t { Invalid = 0 };
-
-    /// Sideband collection of wildcard imports stored in the Compilation object.
+    // Sideband collection of wildcard imports stored in the Compilation object.
     using ImportData = std::vector<const WildcardImportSymbol*>;
 
-    /// An iterator for members in the scope.
-    class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Symbol*> {
-    public:
-        iterator(const Symbol* firstSymbol) : current(firstSymbol) {}
-
-        iterator& operator=(const iterator& other) {
-            current = other.current;
-            return *this;
-        }
-
-        bool operator==(const iterator& other) const { return current == other.current; }
-
-        const Symbol* operator*() const { return current; }
-        const Symbol* operator*() { return current; }
-
-        iterator& operator++();
-
-        iterator operator++(int) {
-            iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-    private:
-        const Symbol* current;
-    };
-
-    template<typename SpecificType>
-    class specific_symbol_iterator : public iterator_facade<specific_symbol_iterator<SpecificType>,
-                                                            std::forward_iterator_tag,
-                                                            const SpecificType*> {
-    public:
-        specific_symbol_iterator(const Symbol* firstSymbol) :
-            current(firstSymbol)
-        {
-            skipToNext();
-        }
-
-        specific_symbol_iterator& operator=(const specific_symbol_iterator& other) {
-            current = other.current;
-            return *this;
-        }
-
-        bool operator==(const specific_symbol_iterator& other) const { return current == other.current; }
-
-        const SpecificType* operator*() const { return &current->as<SpecificType>(); }
-        const SpecificType* operator*() { return &current->as<SpecificType>(); }
-
-        specific_symbol_iterator& operator++() {
-            current = current->nextInScope;
-            skipToNext();
-            return *this;
-        }
-
-        specific_symbol_iterator operator++(int) {
-            specific_symbol_iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-    private:
-        void skipToNext() {
-            while (current && !SpecificType::isKind(current->kind))
-                current = current->nextInScope;
-        }
-
-        const Symbol* current;
-    };
-
-    /// Gets the members contained in the scope.
-    iterator_range<iterator> members() const {
-        ensureMembers();
-        return { firstMember, nullptr };
-    }
-
-    template<typename T>
-    iterator_range<specific_symbol_iterator<T>> membersOfType() const {
-        ensureMembers();
-        return { firstMember, nullptr };
-    }
-
-protected:
-    Scope(Compilation& compilation_, const Symbol* thisSym_);
-
-    /// Before we access any members to do lookups or return iterators, make sure
-    /// we don't have any deferred members to take care of first.
-    void ensureMembers() const {
-        if (deferredMemberIndex != DeferredMemberIndex::Invalid)
-            realizeDeferredMembers();
-    }
-
-    /// Gets or creates deferred member data in the Compilation object's sideband table.
-    DeferredMemberData& getOrAddDeferredData();
-
-    const Symbol* getLastMember() const { return lastMember; }
-
-private:
     // Inserts the given member symbol into our own list of members, right after
     // the given symbol. If `at` is null, it will insert at the head of the list.
     void insertMember(const Symbol* member, const Symbol* at) const;
@@ -278,9 +290,12 @@ private:
     // Adds a syntax node to the list of deferred members in the scope.
     void addDeferredMember(const SyntaxNode& member);
 
+    // Gets or creates deferred member data in the Compilation object's sideband table.
+    DeferredMemberData& getOrAddDeferredData();
+
     // Elaborates all deferred members and then releases the entry from the
     // Compilation object's sideband table.
-    void realizeDeferredMembers() const;
+    void elaborate() const;
 
     // The compilation that owns this scope.
     Compilation& compilation;
@@ -290,6 +305,10 @@ private:
 
     // The map of names to members that can be looked up within this scope.
     SymbolMap* nameMap;
+
+    // Tracks whether we've performed final elaboration on this scope; that has to happen
+    // before any members are looked up or iterated.
+    mutable bool isElaborated = false;
 
     // A linked list of member symbols in the scope. These are mutable because a
     // scope might have only deferred members, and realization of deferred members
