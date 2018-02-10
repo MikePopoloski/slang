@@ -224,6 +224,7 @@ function toolchain(_buildDir, _libDir)
 			"-Wvla",
 			"-Wnoexcept",
 			"-Wduplicated-cond",
+			"-Wtype-limits"
 		}
 		buildoptions_cpp {
 			"-std=c++1z",

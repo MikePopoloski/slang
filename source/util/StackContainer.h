@@ -32,7 +32,7 @@ public:
     template<typename U> struct rebind { using other = StackAllocator<U, N>; };
 
     T* allocate(size_t n) {
-        if (N - (storage->ptr - storage->getBuffer()) >= n) {
+        if (N - size_t(storage->ptr - storage->getBuffer()) >= n) {
             T* result = storage->ptr;
             storage->ptr += n;
             return result;
@@ -54,8 +54,8 @@ public:
         }
     }
 
-    template<typename T, size_t N, class U, size_t M>
-    friend bool operator==(const StackAllocator<T, N>& x, const StackAllocator<U, M>& y) noexcept;
+    template<typename T1, size_t N1, class T2, size_t N2>
+    friend bool operator==(const StackAllocator<T1, N1>& x, const StackAllocator<T2, N2>& y) noexcept;
 
 private:
     template<typename U, size_t M>
