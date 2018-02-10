@@ -106,7 +106,7 @@ BinaryOperator getBinaryOperator(SyntaxKind kind);
 
 /// The base class for all expressions in SystemVerilog.
 class Expression {
-public:    
+public:
     /// The kind of expression; indicates the type of derived class.
     ExpressionKind kind;
 

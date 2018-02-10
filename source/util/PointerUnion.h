@@ -22,10 +22,10 @@ class PointerUnion {
 
         // The mask used to extract the pointer value.
         PointerMask = ~(uintptr_t)(((intptr_t)1 << NumPointerBitsAvailable) - 1),
-        
+
         // The number of bits to shift to get the discriminator value.
         IntShift = NumPointerBitsAvailable - IntBits,
-        
+
         // The mask used to extract the discriminator.
         IntMask = (uintptr_t)(((intptr_t)1 << IntBits) - 1)
     };

@@ -505,7 +505,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                                               const RangeSelectSyntax& syntax, const BindContext& context) {
     Expression& left = Expression::fromSyntax(compilation, syntax.left, context);
     Expression& right = Expression::fromSyntax(compilation, syntax.right, context);
-    
+
     RangeSelectionKind selectionKind;
     switch (syntax.kind) {
         case SyntaxKind::SimpleRangeSelect: selectionKind = RangeSelectionKind::Simple; break;

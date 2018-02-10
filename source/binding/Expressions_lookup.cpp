@@ -24,7 +24,7 @@ DownwardLookupResult lookupDownward(span<const NameSyntax* const> nameParts, con
     const NameSyntax* const final = nameParts[nameParts.size() - 1];
     const Scope* current = &scope;
     const Symbol* found = nullptr;
-    
+
     for (auto part : nameParts) {
         const Symbol* symbol;
         switch (part->kind) {
@@ -34,10 +34,10 @@ DownwardLookupResult lookupDownward(span<const NameSyntax* const> nameParts, con
             default:
                 THROW_UNREACHABLE;
         }
-    
+
         if (!symbol)
             return { found, part };
-    
+
         found = symbol;
         if (part != final) {
             // This needs to be a scope, otherwise we can't do a lookup within it.
@@ -46,7 +46,7 @@ DownwardLookupResult lookupDownward(span<const NameSyntax* const> nameParts, con
             current = &found->as<Scope>();
         }
     }
-    
+
     return { found, nullptr };
 }
 
@@ -154,12 +154,12 @@ Expression& Expression::bindQualifiedName(Compilation& compilation, const Scoped
             compilation.addDiagnostics(result.diagnostics);
             return compilation.badExpression(nullptr);
         }
-        
+
         if (result.found) {
             // TODO: handle classes
             THROW_UNREACHABLE;
         }
-        
+
         // Otherwise, it should be a package name.
         const PackageSymbol* package = compilation.getPackage(nameToken.valueText());
         if (!package) {
