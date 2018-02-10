@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "SourceManager.h"
 
-#include "util/HashMap.h"
+#include "util/StackContainer.h"
 
 namespace slang {
 
@@ -127,13 +127,13 @@ bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocatio
     };
 
     // Otherwise we have to build the full include / expansion chain and compare.
-    SmallHashMap<BufferID, uint32_t, 16> leftChain;
+    SmallMap<BufferID, uint32_t, 16> leftChain;
     do {
         leftChain.emplace(left.buffer(), left.offset());
     }
     while (left.buffer() != right.buffer() && !moveUp(left));
 
-    SmallHashMap<BufferID, uint32_t, 16>::iterator it;
+    SmallMap<BufferID, uint32_t, 16>::iterator it;
     while ((it = leftChain.find(right.buffer())) == leftChain.end()) {
         if (moveUp(right))
             break;

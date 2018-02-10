@@ -7,7 +7,7 @@
 #include "HierarchySymbols.h"
 
 #include "compilation/Compilation.h"
-#include "util/HashMap.h"
+#include "util/StackContainer.h"
 
 namespace slang {
 
@@ -28,7 +28,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         return;
     }
 
-    SmallHashMap<string_view, const ExpressionSyntax*, 8> paramOverrides;
+    SmallMap<string_view, const ExpressionSyntax*, 8> paramOverrides;
     if (syntax.parameters) {
         // Build up data structures to easily index the parameter assignments. We need to handle
         // both ordered assignment as well as named assignment, though a specific instance can only
@@ -36,7 +36,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
         bool hasParamAssignments = false;
         bool orderedAssignments = true;
         SmallVectorSized<const OrderedArgumentSyntax*, 8> orderedParams;
-        SmallHashMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
+        SmallMap<string_view, std::pair<const NamedArgumentSyntax*, bool>, 8> namedParams;
 
         // TODO: syntax node names here are dumb
         for (auto paramBase : syntax.parameters->parameters.parameters) {

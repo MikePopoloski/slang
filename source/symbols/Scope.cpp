@@ -8,7 +8,7 @@
 
 #include "compilation/Compilation.h"
 #include "symbols/Symbol.h"
-#include "util/HashMap.h"
+#include "util/StackContainer.h"
 
 namespace slang {
 
@@ -451,10 +451,10 @@ void Scope::elaborate() const {
         }
     }
 
-    SmallHashMap<string_view, bool, 4> observedForwardDecls;
+    SmallSet<string_view, 4> observedForwardDecls;
     for (auto symbol : deferredData.getForwardingTypedefs()) {
         // Ignore duplicate entries.
-        if (symbol->name.empty() || !observedForwardDecls.emplace(symbol->name, true).second)
+        if (symbol->name.empty() || !observedForwardDecls.emplace(symbol->name).second)
             continue;
 
         // Try to do a lookup by name; if the program is well-formed we'll find the
