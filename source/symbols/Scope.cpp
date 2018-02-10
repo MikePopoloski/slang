@@ -8,6 +8,7 @@
 
 #include "compilation/Compilation.h"
 #include "symbols/Symbol.h"
+#include "util/HashMap.h"
 
 namespace slang {
 
@@ -165,12 +166,21 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::TypedefDeclaration:
             addMember(TypeAliasType::fromSyntax(compilation, syntax.as<TypedefDeclarationSyntax>()));
             break;
-        case SyntaxKind::ForwardTypedefDeclaration:
-            addMember(ForwardingTypedefSymbol::fromSyntax(compilation, syntax.as<ForwardTypedefDeclarationSyntax>()));
+        case SyntaxKind::ForwardTypedefDeclaration: {
+            const auto& symbol = ForwardingTypedefSymbol::fromSyntax(compilation, syntax.as<ForwardTypedefDeclarationSyntax>());
+            addMember(symbol);
+            getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
-        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
-            addMember(ForwardingTypedefSymbol::fromSyntax(compilation, syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>()));
+        }
+        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
+            const auto& symbol = ForwardingTypedefSymbol::fromSyntax(
+                compilation,
+                syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>()
+            );
+            addMember(symbol);
+            getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
+        }
         default:
             THROW_UNREACHABLE;
     }
@@ -375,10 +385,7 @@ void Scope::addDeferredMember(const SyntaxNode& member) {
 }
 
 void Scope::elaborate() const {
-    isElaborated = true;
-    if (deferredMemberIndex == DeferredMemberIndex::Invalid)
-        return;
-
+    ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
 
@@ -442,6 +449,23 @@ void Scope::elaborate() const {
                     THROW_UNREACHABLE;
             }
         }
+    }
+
+    SmallHashMap<string_view, bool, 4> observedForwardDecls;
+    for (auto symbol : deferredData.getForwardingTypedefs()) {
+        // Ignore duplicate entries.
+        if (symbol->name.empty() || !observedForwardDecls.emplace(symbol->name, true).second)
+            continue;
+
+        // Try to do a lookup by name; if the program is well-formed we'll find the
+        // corresponding full typedef. If we don't, issue an error.
+        auto it = nameMap->find(symbol->name);
+        ASSERT(it != nameMap->end());
+
+        if (it->second->kind == SymbolKind::TypeAlias)
+            it->second->as<TypeAliasType>().checkForwardDecls();
+        else
+            compilation.addError(DiagCode::UnresolvedForwardTypedef, symbol->location) << symbol->name;
     }
 }
 

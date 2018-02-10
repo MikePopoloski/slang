@@ -585,4 +585,38 @@ void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
         firstForward->addForwardDecl(decl);
 }
 
+void TypeAliasType::checkForwardDecls() const {
+    ForwardingTypedefSymbol::Category category;
+    switch (targetType->kind) {
+        case SymbolKind::PackedStructType:
+        case SymbolKind::UnpackedStructType:
+            category = ForwardingTypedefSymbol::Struct;
+            break;
+        case SymbolKind::EnumType:
+            category = ForwardingTypedefSymbol::Enum;
+            break;
+        default:
+            return;
+    }
+
+    const ForwardingTypedefSymbol* forward = firstForward;
+    while (forward) {
+        if (forward->category != ForwardingTypedefSymbol::None && forward->category != category) {
+            auto& diag = getScope()->getCompilation().addError(DiagCode::ForwardTypedefDoesNotMatch,
+                                                               forward->location);
+            switch (forward->category) {
+                case ForwardingTypedefSymbol::Enum: diag << "enum"; break;
+                case ForwardingTypedefSymbol::Struct: diag << "struct"; break;
+                case ForwardingTypedefSymbol::Union: diag << "union"; break;
+                case ForwardingTypedefSymbol::Class: diag << "class"; break;
+                case ForwardingTypedefSymbol::InterfaceClass: diag << "interface class"; break;
+                default: THROW_UNREACHABLE;
+            }
+            diag.addNote(DiagCode::NoteDeclarationHere, location);
+            return;
+        }
+        forward = forward->getNextForwardDecl();
+    }
+}
+
 }

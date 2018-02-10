@@ -197,6 +197,8 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::RedefinitionDifferentType] = { "redefinition of '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::RedefinitionDifferentType] = { "redefinition of '{}' with a different type: {} vs {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::RedefinitionDifferentSymbolKind] = { "redefinition of '{}' as different kind of symbol", DiagnosticSeverity::Error };
+    descriptors[DiagCode::UnresolvedForwardTypedef] = { "forward typedef '{}' does not resolve to a data type", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ForwardTypedefDoesNotMatch] = { "forward typedef basic type '{}' does not match declaration", DiagnosticSeverity::Error };
 
     // expressions
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };
@@ -410,6 +412,7 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
             highlightRange(range, loc, col, line, buffer);
 
         buffer[col - 1] = '^';
+        buffer.erase(buffer.find_last_not_of(' ') + 1);
         writer << buffer;
     }
     writer << '\n';

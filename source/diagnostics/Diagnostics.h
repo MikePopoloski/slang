@@ -146,6 +146,8 @@ enum class DiagCode : uint8_t {
     Redefinition,
     RedefinitionDifferentType,
     RedefinitionDifferentSymbolKind,
+    UnresolvedForwardTypedef,
+    ForwardTypedefDoesNotMatch,
 
     // expressions
     BadUnaryExpression,

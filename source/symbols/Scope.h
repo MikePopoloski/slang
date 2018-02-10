@@ -14,6 +14,7 @@
 namespace slang {
 
 class Compilation;
+class ForwardingTypedefSymbol;
 class Scope;
 class SyntaxNode;
 class WildcardImportSymbol;
@@ -219,7 +220,7 @@ protected:
 
     /// Before we access any members to do lookups or return iterators, make sure
     /// the scope is fully elaborated.
-    void ensureElaborated() const { if (!isElaborated) elaborate(); }
+    void ensureElaborated() const { if (deferredMemberIndex != DeferredMemberIndex::Invalid) elaborate(); }
 
     void setStatement(const SyntaxNode& syntax) { getOrAddDeferredData().setStatement(syntax); }
 
@@ -263,6 +264,12 @@ private:
             return { transparentTypes.begin(), transparentTypes.end() };
         }
 
+        void addForwardingTypedef(const ForwardingTypedefSymbol& symbol) {
+            forwardingTypedefs.push_back(&symbol);
+        }
+
+        span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const { return forwardingTypedefs; }
+
     private:
         // A given scope only ever stores one of the following:
         // - A list of syntax nodes that represent deferred members that need to be elaborated
@@ -278,6 +285,10 @@ private:
         // set keeps track of all variables, parameters, arguments, etc that have such data types
         // so that when our list of members is finalized we can include their members as well.
         TransparentTypeMap transparentTypes;
+
+        // Track a list of forwarding typedefs declared in the scope; once we've fully elaborated
+        // we'll go back and make sure they're actually valid.
+        std::vector<const ForwardingTypedefSymbol*> forwardingTypedefs;
     };
 
     // Sideband collection of wildcard imports stored in the Compilation object.
@@ -305,10 +316,6 @@ private:
 
     // The map of names to members that can be looked up within this scope.
     SymbolMap* nameMap;
-
-    // Tracks whether we've performed final elaboration on this scope; that has to happen
-    // before any members are looked up or iterated.
-    mutable bool isElaborated = false;
 
     // A linked list of member symbols in the scope. These are mutable because a
     // scope might have only deferred members, and realization of deferred members

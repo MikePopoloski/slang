@@ -197,11 +197,17 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc, Sou
 }
 
 SourceBuffer SourceManager::assignText(string_view text, SourceLocation includedFrom) {
-    // Generate a placeholder name for this "file"
-    return assignText(string_view("<unnamed_buffer" + std::to_string(unnamedBufferCount++) + ">"), text, includedFrom);
+    return assignText("", text, includedFrom);
 }
 
 SourceBuffer SourceManager::assignText(string_view path, string_view text, SourceLocation includedFrom) {
+    std::string temp;
+    if (path.empty()) {
+        using namespace std::literals;
+        temp = "<unnamed_buffer"s + std::to_string(unnamedBufferCount++) + ">"s;
+        path = temp;
+    }
+
     std::vector<char> buffer;
     buffer.insert(buffer.end(), text.begin(), text.end());
     if (buffer.empty() || buffer.back() != '\0')

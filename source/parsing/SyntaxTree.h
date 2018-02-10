@@ -37,8 +37,9 @@ public:
     }
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
-    static std::shared_ptr<SyntaxTree> fromText(string_view text, BufferID existingBuffer = BufferID()) {
-        return fromText(text, getDefaultSourceManager(), existingBuffer);
+    static std::shared_ptr<SyntaxTree> fromText(string_view text, string_view name = "",
+                                                BufferID existingBuffer = BufferID()) {
+        return fromText(text, getDefaultSourceManager(), name, existingBuffer);
     }
 
     static std::shared_ptr<SyntaxTree> fromFile(string_view path, SourceManager& sourceManager) {
@@ -46,9 +47,9 @@ public:
     }
 
     static std::shared_ptr<SyntaxTree> fromText(string_view text, SourceManager& sourceManager,
-                                                BufferID existingBuffer = BufferID()) {
+                                                string_view name = "", BufferID existingBuffer = BufferID()) {
         SourceBuffer buffer = existingBuffer ?
-            sourceManager.appendText(existingBuffer, text) : sourceManager.assignText(text);
+            sourceManager.appendText(existingBuffer, text) : sourceManager.assignText(name, text);
 
         return create(sourceManager, buffer, true);
     }

@@ -171,3 +171,52 @@ endmodule
 
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Forwarding typedef errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top;
+
+    // These have no actual type and should error.
+    typedef enum e1_t;
+    typedef e2;
+
+    // Forward declare but get the base type wrong.
+    typedef struct s1_t;
+    typedef s1_t;
+
+    typedef enum { SDF } s1_t;
+
+    typedef struct s1_t;
+
+endmodule
+)", "source");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+    CHECK(instance.find("e1_t") == nullptr);
+    CHECK(instance.find("e2") == nullptr);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == DiagCode::UnresolvedForwardTypedef);
+    CHECK(diags[1].code == DiagCode::UnresolvedForwardTypedef);
+    CHECK(diags[2].code == DiagCode::ForwardTypedefDoesNotMatch);
+
+    std::string msg = DiagnosticWriter{*compilation.getSourceManager()}.report(diags);
+    msg = "\n" + msg;
+
+    CHECK(msg == R"(
+source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
+    typedef enum e1_t;
+                 ^
+source:6:13: error: forward typedef 'e2' does not resolve to a data type
+    typedef e2;
+            ^
+source:9:20: error: forward typedef basic type 'struct' does not match declaration
+    typedef struct s1_t;
+                   ^
+source:12:26: note: declaration here
+    typedef enum { SDF } s1_t;
+                         ^
+)");
+}
