@@ -584,6 +584,23 @@ bool isPossibleAnsiPort(TokenKind kind) {
     }
 }
 
+bool isPossibleModportPort(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenParenthesisStar:
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
+        case TokenKind::ClockingKeyword:
+        case TokenKind::ImportKeyword:
+        case TokenKind::ExportKeyword:
+        case TokenKind::Comma:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool isPossibleFunctionPort(TokenKind kind) {
     switch (kind) {
         case TokenKind::Identifier:

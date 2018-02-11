@@ -521,9 +521,105 @@ TimeUnitsDeclarationSyntax& Parser::parseTimeUnitsDeclaration(span<AttributeInst
     return factory.timeUnitsDeclaration(attributes, keyword, time, divider, expect(TokenKind::Semicolon));
 }
 
+MemberSyntax& Parser::parseModportSubroutinePortList(span<AttributeInstanceSyntax* const> attributes) {
+    auto importExport = consume();
+
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    while (true) {
+        if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
+            auto& proto = parseFunctionPrototype();
+            buffer.append(&factory.modportSubroutinePort(proto));
+        }
+        else {
+            auto name = expect(TokenKind::Identifier);
+            buffer.append(&factory.modportNamedPort(name));
+            if (name.isMissing())
+                break;
+        }
+
+        if (!peek(TokenKind::Comma) || (peek(1).kind != TokenKind::FunctionKeyword &&
+                                        peek(1).kind != TokenKind::TaskKeyword &&
+                                        peek(1).kind != TokenKind::Identifier)) {
+            break;
+        }
+
+        buffer.append(consume());
+    }
+
+    return factory.modportSubroutinePortList(attributes, importExport, buffer.copy(alloc));
+}
+
+MemberSyntax& Parser::parseModportPort() {
+    auto attributes = parseAttributes();
+
+    switch (peek().kind) {
+        case TokenKind::ClockingKeyword: {
+            auto clocking = consume();
+            return factory.modportClockingPort(attributes, clocking, expect(TokenKind::Identifier));
+        }
+        case TokenKind::ImportKeyword:
+        case TokenKind::ExportKeyword:
+            return parseModportSubroutinePortList(attributes);
+        case TokenKind::InputKeyword:
+        case TokenKind::OutputKeyword:
+        case TokenKind::InOutKeyword:
+        case TokenKind::RefKeyword:
+            break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    auto direction = consume();
+
+    SmallVectorSized<TokenOrSyntax, 8> buffer;
+    while (true) {
+        if (peek(TokenKind::Dot)) {
+            auto dot = consume();
+            auto name = expect(TokenKind::Identifier);
+            auto openParen = expect(TokenKind::OpenParenthesis);
+
+            ExpressionSyntax* expr = nullptr;
+            if (!peek(TokenKind::CloseParenthesis))
+                expr = &parsePrimaryExpression();
+
+            buffer.append(&factory.modportExplicitPort(dot, name, openParen, expr,
+                                                       expect(TokenKind::CloseParenthesis)));
+        }
+        else {
+            auto name = expect(TokenKind::Identifier);
+            buffer.append(&factory.modportNamedPort(name));
+            if (name.isMissing())
+                break;
+        }
+
+        if (!peek(TokenKind::Comma) || (peek(1).kind != TokenKind::Dot &&
+                                        peek(1).kind != TokenKind::Identifier)) {
+            break;
+        }
+
+        buffer.append(consume());
+    }
+
+    return factory.modportSimplePortList(attributes, direction, buffer.copy(alloc));
+}
+
 ModportItemSyntax& Parser::parseModportItem() {
     auto name = expect(TokenKind::Identifier);
-    auto& ports = parseAnsiPortList(expect(TokenKind::OpenParenthesis));
+
+    Token openParen, closeParen;
+    span<TokenOrSyntax const> items;
+    parseSeparatedList<isPossibleModportPort, isEndOfParenList>(
+        TokenKind::OpenParenthesis,
+        TokenKind::CloseParenthesis,
+        TokenKind::Comma,
+        openParen,
+        items,
+        closeParen,
+        DiagCode::ExpectedModportPort,
+        [this](bool) { return &parseModportPort(); }
+    );
+
+    auto& ports = factory.ansiPortList(openParen, items, closeParen);
     return factory.modportItem(name, ports);
 }
 
@@ -619,17 +715,17 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(bool allowTasks) {
         }
     }
 
-    auto semi = expect(TokenKind::Semicolon);
-    return factory.functionPrototype(keyword, lifetime, returnType, name, portList, semi);
+    return factory.functionPrototype(keyword, lifetime, returnType, name, portList);
 }
 
 FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(span<AttributeInstanceSyntax* const> attributes, SyntaxKind functionKind, TokenKind endKind) {
     Token end;
     auto& prototype = parseFunctionPrototype();
+    auto semi = expect(TokenKind::Semicolon);
     auto items = parseBlockItems(endKind, end);
     auto endBlockName = parseNamedBlockClause();
 
-    return factory.functionDeclaration(functionKind, attributes, prototype, items, end, endBlockName);
+    return factory.functionDeclaration(functionKind, attributes, prototype, semi, items, end, endBlockName);
 }
 
 GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(span<AttributeInstanceSyntax* const> attributes) {
@@ -929,8 +1025,10 @@ MemberSyntax* Parser::parseClassMember() {
     }
 
     if (kind == TokenKind::TaskKeyword || kind == TokenKind::FunctionKeyword) {
-        if (isPureOrExtern)
-            return &factory.classMethodPrototype(attributes, qualifiers, parseFunctionPrototype());
+        if (isPureOrExtern) {
+            auto& proto = parseFunctionPrototype();
+            return &factory.classMethodPrototype(attributes, qualifiers, proto, expect(TokenKind::Semicolon));
+        }
         else {
             auto declKind = kind == TokenKind::TaskKeyword ? SyntaxKind::TaskDeclaration : SyntaxKind::FunctionDeclaration;
             auto endKind = kind == TokenKind::TaskKeyword ? TokenKind::EndTaskKeyword : TokenKind::EndFunctionKeyword;
@@ -1937,7 +2035,8 @@ DPIImportExportSyntax& Parser::parseDPIImportExport(span<AttributeInstanceSyntax
         equals = expect(TokenKind::Equals);
     }
     auto& method = parseFunctionPrototype(property.kind != TokenKind::PureKeyword);
-    return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals, method);
+    auto semi = expect(TokenKind::Semicolon);
+    return factory.dPIImportExport(attributes, keyword, stringLiteral, property, name, equals, method, semi);
 }
 
 AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(TokenKind declarationKind) {

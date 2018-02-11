@@ -1083,10 +1083,10 @@ token lifetime
 DataTypeSyntax? returnType
 NameSyntax name
 FunctionPortListSyntax? portList
-token semi
 
 FunctionDeclarationSyntax base=MemberSyntax
 FunctionPrototypeSyntax prototype
+token semi
 list<SyntaxNode> items
 token end
 NamedBlockClauseSyntax? endBlockName
@@ -1168,6 +1168,7 @@ FunctionDeclarationSyntax declaration
 ClassMethodPrototypeSyntax base=MemberSyntax kind=ClassMethodPrototype
 tokenlist qualifiers
 FunctionPrototypeSyntax prototype
+token semi
 
 ContinuousAssignSyntax base=MemberSyntax kind=ContinuousAssign
 token assign
@@ -1182,6 +1183,34 @@ DefParamSyntax base=MemberSyntax kind=DefParam
 token defparam
 separated_list<DefParamAssignmentSyntax> assignments
 token semi
+
+ModportClockingPortSyntax base=MemberSyntax kind=ModportClockingPort
+token clocking
+token name
+
+ModportPortSyntax final=false
+empty
+
+ModportNamedPortSyntax base=ModportPortSyntax kind=ModportNamedPort
+token name
+
+ModportExplicitPortSyntax base=ModportPortSyntax kind=ModportExplicitPort
+token dot
+token name
+token openParen
+ExpressionSyntax? expr
+token closeParen
+
+ModportSimplePortListSyntax base=MemberSyntax kind=ModportSimplePortList
+token direction
+separated_list<ModportPortSyntax> ports
+
+ModportSubroutinePortSyntax base=ModportPortSyntax kind=ModportSubroutinePort
+FunctionPrototypeSyntax prototype
+
+ModportSubroutinePortListSyntax base=MemberSyntax kind=ModportSubroutinePortList
+token importExport
+separated_list<ModportPortSyntax> ports
 
 ModportItemSyntax kind=ModportItem
 token name
@@ -1230,6 +1259,7 @@ token property
 token name
 token equals
 FunctionPrototypeSyntax method
+token semi
 
 // ----- CONSTRAINTS -----
 

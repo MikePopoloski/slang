@@ -425,6 +425,12 @@ enum class SyntaxKind : uint16_t {
     ContinuousAssign,
     DefParamAssignment,
     DefParam,
+    ModportClockingPort,
+    ModportNamedPort,
+    ModportExplicitPort,
+    ModportSimplePortList,
+    ModportSubroutinePort,
+    ModportSubroutinePortList,
     ModportItem,
     ModportDeclaration,
     ClockingSkew,
@@ -520,6 +526,7 @@ bool isNotInParameterList(TokenKind kind);
 bool isPossiblePropertyPortItem(TokenKind kind);
 bool isPossibleAnsiPort(TokenKind kind);
 bool isPossibleNonAnsiPort(TokenKind kind);
+bool isPossibleModportPort(TokenKind kind);
 bool isPossibleFunctionPort(TokenKind kind);
 bool isPossibleParameter(TokenKind kind);
 bool isPossiblePortConnection(TokenKind kind);

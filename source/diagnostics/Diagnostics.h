@@ -88,6 +88,7 @@ enum class DiagCode : uint8_t {
     ExpectedParameterPort,
     ExpectedNonAnsiPort,
     ExpectedAnsiPort,
+    ExpectedModportPort,
     ExpectedFunctionPort,
     ExpectedAssertionItemPort,
     ExpectedForInitializer,

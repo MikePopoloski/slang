@@ -106,6 +106,8 @@ private:
     ModuleHeaderSyntax& parseModuleHeader();
     ParameterPortListSyntax* parseParameterPortList();
     ModuleDeclarationSyntax& parseModule(span<AttributeInstanceSyntax* const> attributes);
+    MemberSyntax& parseModportSubroutinePortList(span<AttributeInstanceSyntax* const> attributes);
+    MemberSyntax& parseModportPort();
     ModportItemSyntax& parseModportItem();
     ModportDeclarationSyntax& parseModportDeclaration(span<AttributeInstanceSyntax* const> attributes);
     NonAnsiPortSyntax& parseNonAnsiPort();
