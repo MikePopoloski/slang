@@ -160,8 +160,6 @@ string_view Token::valueText() const {
                     return "";
             }
             break;
-        case TokenKind::SystemIdentifier:
-            return info->rawText;
         case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:
             return info->stringText();
@@ -183,7 +181,6 @@ string_view Token::rawText() const {
         switch (kind) {
             case TokenKind::Unknown:
             case TokenKind::Identifier:
-            case TokenKind::SystemIdentifier:
             case TokenKind::IncludeFileName:
             case TokenKind::StringLiteral:
             case TokenKind::IntegerLiteral:
@@ -249,7 +246,7 @@ NumericTokenFlags Token::numericFlags() const {
 }
 
 IdentifierType Token::identifierType() const {
-    if (kind == TokenKind::Identifier || kind == TokenKind::SystemIdentifier)
+    if (kind == TokenKind::Identifier)
         return info->idType();
     return IdentifierType::Unknown;
 }
@@ -293,9 +290,6 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
     switch (kind) {
         case TokenKind::Identifier:
             info->extra = IdentifierType::Unknown;
-            break;
-        case TokenKind::SystemIdentifier:
-            info->extra = IdentifierType::System;
             break;
         case TokenKind::IncludeFileName:
         case TokenKind::StringLiteral:

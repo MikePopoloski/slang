@@ -245,7 +245,7 @@ TEST_CASE("Escaped Identifiers", "[lexer]") {
 TEST_CASE("System Identifiers", "[lexer]") {
     auto& text = "$hello";
     Token token = lexToken(text);
-    CHECK(token.kind == TokenKind::SystemIdentifier);
+    CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
     CHECK(token.valueText() == text);
     CHECK(token.identifierType() == IdentifierType::System);
@@ -253,7 +253,7 @@ TEST_CASE("System Identifiers", "[lexer]") {
 
     auto& text2 = "$45__hello";
     Token token2 = lexToken(text2);
-    CHECK(token2.kind == TokenKind::SystemIdentifier);
+    CHECK(token2.kind == TokenKind::Identifier);
     CHECK(token2.toString(SyntaxToStringFlags::IncludeTrivia) == text2);
     CHECK(token2.valueText() == text2);
     CHECK(token2.identifierType() == IdentifierType::System);
@@ -582,7 +582,7 @@ TEST_CASE("Directive continuation", "[lexer]") {
     const DefineDirectiveSyntax& define = t.syntax()->as<DefineDirectiveSyntax>();
     REQUIRE(define.body.count() == 3);
     CHECK(define.body[2].valueText() == "baz");
-    
+
     CHECK_DIAGNOSTICS_EMPTY;
 }
 

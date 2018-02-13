@@ -329,7 +329,6 @@ bool isPossibleExpression(TokenKind kind) {
         case TokenKind::TimeLiteral:
         case TokenKind::NullKeyword:
         case TokenKind::Dollar:
-        case TokenKind::SystemIdentifier:
         case TokenKind::LocalKeyword:
         case TokenKind::OpenParenthesis:
         case TokenKind::OpenBrace:
@@ -383,7 +382,6 @@ bool isPossibleStatement(TokenKind kind) {
         case TokenKind::SuperKeyword:
         case TokenKind::UnitSystemName:
         case TokenKind::RootSystemName:
-        case TokenKind::SystemIdentifier:
         case TokenKind::OpenBrace:
         case TokenKind::ApostropheOpenBrace:
         case TokenKind::AssignKeyword:

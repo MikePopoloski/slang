@@ -244,7 +244,6 @@ enum class TokenKind : uint16_t {
     Unknown,
     EndOfFile,
     Identifier,
-    SystemIdentifier,
     StringLiteral,
     IntegerLiteral,
     IntegerBase,

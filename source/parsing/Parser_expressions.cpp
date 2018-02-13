@@ -171,11 +171,6 @@ ExpressionSyntax& Parser::parsePrimaryExpression() {
         case TokenKind::IntegerBase:
             expr = &parseIntegerExpression();
             break;
-        case TokenKind::SystemIdentifier: {
-            auto identifier = consume();
-            expr = &factory.keywordName(SyntaxKind::SystemName, identifier);
-            break;
-        }
         case TokenKind::OpenParenthesis: {
             auto openParen = consume();
             expr = &parseMinTypMaxExpression();

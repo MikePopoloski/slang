@@ -641,7 +641,7 @@ TokenKind Lexer::lexDollarSign(Token::Info* info) {
         return kind;
 
     info->extra = IdentifierType::System;
-    return TokenKind::SystemIdentifier;
+    return TokenKind::Identifier;
 }
 
 TokenKind Lexer::lexDirective(Token::Info* info) {
