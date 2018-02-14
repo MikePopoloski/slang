@@ -214,7 +214,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                 UnpackedStructType::fromSyntax(compilation, structUnion, location, parent);
         }
         case SyntaxKind::NamedType:
-            return lookupNamedType(node.as<NamedTypeSyntax>().name, location, parent);
+            return lookupNamedType(compilation, node.as<NamedTypeSyntax>().name, location, parent);
         default:
             THROW_UNREACHABLE;
     }
@@ -251,12 +251,23 @@ void Type::resolveCanonical() const {
     canonical = as<TypeAliasType>().targetType.get();
 }
 
-const Type& Type::lookupNamedType(const NameSyntax& syntax, LookupLocation location, const Scope& parent) {
+const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& syntax, LookupLocation location,
+                                  const Scope& parent) {
     LookupResult result;
     parent.lookupName(syntax, location, LookupNameKind::Type, result);
 
+    if (result.hasError())
+        compilation.addDiagnostics(result.diagnostics);
+
     const Symbol* symbol = result.found;
-    ASSERT(symbol && symbol->isType());
+    if (!symbol)
+        return compilation.getErrorType();
+
+    if (!symbol->isType()) {
+        compilation.addError(DiagCode::NotAType, syntax.sourceRange()) << symbol->name;
+        return compilation.getErrorType();
+    }
+
     return symbol->as<Type>();
 }
 

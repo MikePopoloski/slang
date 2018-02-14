@@ -10,6 +10,25 @@
 #include "symbols/Symbol.h"
 #include "util/StackContainer.h"
 
+namespace {
+
+using namespace slang;
+
+bool respectsLookupLocation(LookupNameKind kind) {
+    switch (kind) {
+        case LookupNameKind::Variable:
+        case LookupNameKind::Type:
+        case LookupNameKind::TypedefTarget:
+        case LookupNameKind::BindTarget:
+            return true;
+        case LookupNameKind::Callable:
+            return false;
+    }
+    THROW_UNREACHABLE;
+}
+
+}
+
 namespace slang {
 
 const LookupLocation LookupLocation::max{ nullptr, UINT_MAX };
@@ -444,7 +463,7 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
         // so the location doesn't matter for them.
         symbol = it->second;
         bool locationGood = true;
-        if (nameKind == LookupNameKind::Variable) {
+        if (respectsLookupLocation(nameKind)) {
             locationGood = LookupLocation::before(*symbol) < location;
             if (!locationGood && symbol->kind == SymbolKind::TypeAlias) {
                 // A type alias can have forward definitions, so check those locations as well.

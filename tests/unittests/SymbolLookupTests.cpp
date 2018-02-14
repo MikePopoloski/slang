@@ -115,7 +115,7 @@ endmodule
 TEST_CASE("Package references", "[symbols:lookup]") {
     auto tree = SyntaxTree::fromText(R"(
 package ComplexPkg;
-    typedef struct {shortreal i, r;} Complex;
+    typedef struct packed {shortint i, r;} Complex;
 
     typedef enum { FALSE, TRUE } bool_t;
 endpackage
@@ -147,9 +147,8 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    // Diagnostics diags = compilation.getAllDiagnostics();
-    // WARN(DiagnosticWriter{*compilation.getSourceManager()}.report(diags));
-    // REQUIRE(diags.size() == 2);
-    // CHECK(diags[0].code == DiagCode::UndeclaredIdentifier);
-    // CHECK(diags[1].code == DiagCode::UndeclaredIdentifier);
+    Diagnostics diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == DiagCode::UndeclaredIdentifier);
+    //CHECK(diags[1].code == DiagCode::UndeclaredIdentifier);
 }

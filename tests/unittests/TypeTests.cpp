@@ -215,7 +215,7 @@ source:6:13: error: forward typedef 'e2' does not resolve to a data type
 source:9:20: error: forward typedef basic type 'struct' does not match declaration
     typedef struct s1_t;
                    ^
-source:12:26: note: declaration here
+source:12:26: note: declared here
     typedef enum { SDF } s1_t;
                          ^
 )");

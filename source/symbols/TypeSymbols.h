@@ -122,7 +122,8 @@ protected:
 private:
     void resolveCanonical() const;
 
-    static const Type& lookupNamedType(const NameSyntax& syntax, LookupLocation location, const Scope& parent);
+    static const Type& lookupNamedType(Compilation& compilation, const NameSyntax& syntax,
+                                       LookupLocation location, const Scope& parent);
 };
 
 /// A base class for integral types, which include all scalar types, predefined integer types,

@@ -355,7 +355,7 @@ const Expression& Compilation::bindExpression(const ExpressionSyntax& syntax, co
 const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionSyntax& rhs, SourceLocation location,
                                               const BindContext& context) {
     Expression& expr = Expression::fromSyntax(*this, rhs, context);
-    if (expr.bad())
+    if (expr.bad() || lhs.isError())
         return expr;
 
     const Type* type = expr.type;

@@ -186,7 +186,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NotePreviousUsage] = { "previous usage here", DiagnosticSeverity::Note };
     descriptors[DiagCode::ParamHasNoValue] = { "instance of module '{}' does not provide a value for parameter '{}' and it does not have a default value", DiagnosticSeverity::Error };
     descriptors[DiagCode::ModuleUnreferenced] = { "module '{}' is unreferenced and cannot be top level because it has parameters that do not have a default value", DiagnosticSeverity::Error };
-    descriptors[DiagCode::NoteDeclarationHere] = { "declaration here", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NoteDeclarationHere] = { "declared here", DiagnosticSeverity::Note };
     descriptors[DiagCode::TooManyParamAssignments] = { "too many parameter assignments given to instantiation of module '{}' ({} given, expected {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::AssignedToLocalPortParam] = { "can't assign a value to a localparam", DiagnosticSeverity::Error };
     descriptors[DiagCode::AssignedToLocalBodyParam] = { "can't assign a value to a localparam (parameters in the body of a module are implicitly local when you have a parameter port list)", DiagnosticSeverity::Error };
@@ -225,6 +225,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::UndeclaredIdentifier] = { "use of undeclared identifier '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownClassOrPackage] = { "unknown class or package '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::UsedBeforeDeclared] = { "identifier '{}' used before its declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::NotAType] = { "'{}' is not a type", DiagnosticSeverity::Error };
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());

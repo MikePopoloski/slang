@@ -120,7 +120,7 @@ public:
     SourceRange sourceRange;
 
     /// Indicates whether the expression is invalid.
-    bool bad() const { return kind == ExpressionKind::Invalid; }
+    bool bad() const;
 
     /// Indicates whether the expression evaluates to an lvalue.
     bool isLValue() const;

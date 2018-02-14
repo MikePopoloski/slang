@@ -39,6 +39,10 @@ namespace slang {
 
 const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);
 
+bool Expression::bad() const {
+    return kind == ExpressionKind::Invalid || !type || type->isError();
+}
+
 bool Expression::isLValue() const {
     switch (kind) {
         case ExpressionKind::NamedValue:
