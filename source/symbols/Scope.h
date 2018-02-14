@@ -8,6 +8,7 @@
 
 #include "flat_hash_map.hpp"
 
+#include "parsing/AllSyntax.h"
 #include "symbols/Symbol.h"
 #include "util/Iterator.h"
 
@@ -16,7 +17,6 @@ namespace slang {
 class Compilation;
 class ForwardingTypedefSymbol;
 class Scope;
-class SyntaxNode;
 class WildcardImportSymbol;
 struct LazyType;
 
@@ -24,19 +24,22 @@ using SymbolMap = flat_hash_map<string_view, const Symbol*>;
 
 /// Specifies possible kinds of lookups that can be done.
 enum class LookupNameKind {
-    /// A lookup of a simple name, starting in the local scope. The lookup location is
-    /// used to qualify accessible signals. Imports from packages are considered.
-    Local,
-
-    /// The lookup is for the first part of a scoped name. This first performs
-    /// the equivalent of a Local lookup; if no symbol is found using that method,
-    /// it will search for a package with the given name.
-    Scoped,
+    /// A lookup of a simple variable name, starting in the local scope. The lookup location
+    /// is used to qualify accessible signals. Imports from packages are considered.
+    Variable,
 
     /// A lookup for a simple name that is part of a callable expression (task or function).
     /// This has additional rules; specifically, SystemVerilog allows tasks and functions
     /// to be referenced before they are declared.
     Callable,
+
+    /// A lookup for a named data type. These names cannot be hierarchical but can be
+    /// package or class scoped.
+    Type,
+
+    /// A lookup for the target of a typedef. This is similar to looking up any other type
+    /// name, but has an additional allowance for dotting into interface port members.
+    TypedefTarget,
 
     /// Names referenced as part of a bind instantiation have special rules. For example,
     /// previously imported wildcard names are visible, but the bind lookup itself will
@@ -82,6 +85,7 @@ private:
 
 struct LookupResult {
     const Symbol* found = nullptr;
+    const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
     Diagnostics diagnostics;
     bool wasImported = false;
 
@@ -122,11 +126,11 @@ public:
         return sym->as<T>();
     }
 
-    void lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
-                           SourceRange sourceRange, LookupResult& result) const;
+    void lookupName(const NameSyntax& syntax, LookupLocation location,
+                    LookupNameKind nameKind, LookupResult& result) const;
 
-    const Symbol* lookupUnqualified(string_view name, LookupLocation location = LookupLocation::max,
-                                    LookupNameKind nameKind = LookupNameKind::Local) const;
+    const Symbol* lookupName(string_view name, LookupLocation location = LookupLocation::max,
+                             LookupNameKind nameKind = LookupNameKind::Variable) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified type.
     /// This expects (and asserts) that the member at the given index is of the specified type `T`.
@@ -307,6 +311,15 @@ private:
     // Elaborates all deferred members and then releases the entry from the
     // Compilation object's sideband table.
     void elaborate() const;
+
+    // Performs an unqualified lookup in this scope, then recursively up the parent
+    // chain until we reach root or the symbol is found.
+    void lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
+                           SourceRange sourceRange, LookupResult& result) const;
+
+    // Performs a qualified lookup in this scope using all of the various language rules for name resolution.
+    void lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
+                         LookupNameKind nameKind, LookupResult& result) const;
 
     // The compilation that owns this scope.
     Compilation& compilation;

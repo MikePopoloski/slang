@@ -71,7 +71,9 @@ using std::uintptr_t;
   #define ASSERT(cond) do { (void)sizeof(cond); } while (false)
 #endif
 
-#define THROW_UNREACHABLE throw std::logic_error("Default case should be unreachable!")
+#define THROW_UNREACHABLE \
+  throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + \
+                         ": " + "Default case should be unreachable!")
 
 #include "gsl/gsl"
 

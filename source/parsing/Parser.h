@@ -28,7 +28,7 @@ public:
     /// Parse a whole compilation unit.
     CompilationUnitSyntax& parseCompilationUnit();
 
-    /// Parse an expression / statement / module / class.
+    /// Parse an expression / statement / module / class / name.
     /// These are mostly for testing; only use if you know that the
     /// source stream is currently looking at one of these.
     ExpressionSyntax& parseExpression();
@@ -36,6 +36,7 @@ public:
     ModuleDeclarationSyntax& parseModule();
     ClassDeclarationSyntax& parseClass();
     MemberSyntax* parseMember();
+    NameSyntax& parseName();
 
     /// Generalized node parse function that tries to figure out what we're
     /// looking at and parse that specifically. A normal batch compile won't call
@@ -57,7 +58,7 @@ private:
     ExpressionSyntax& parseOpenRangeElement();
     ElementSelectSyntax& parseElementSelect();
     SelectorSyntax* parseElementSelector();
-    NameSyntax& parseName(bool isForEach = false);
+    NameSyntax& parseName(bool isForEach);
     NameSyntax& parseNamePart(bool isForEach);
     ParameterValueAssignmentSyntax* parseParameterValueAssignment();
     ArgumentListSyntax& parseArgumentList();

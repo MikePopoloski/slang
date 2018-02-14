@@ -213,14 +213,8 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
                 PackedStructType::fromSyntax(compilation, structUnion, location, parent) :
                 UnpackedStructType::fromSyntax(compilation, structUnion, location, parent);
         }
-        case SyntaxKind::NamedType: {
-            // TODO: handle all kinds of scoped names here
-            // TODO: handle error cases, etc
-            Token name = node.as<NamedTypeSyntax>().name.as<IdentifierNameSyntax>().identifier;
-            const Symbol* symbol = parent.lookupUnqualified(name.valueText(), location);
-            ASSERT(symbol && symbol->isType());
-            return symbol->as<Type>();
-        }
+        case SyntaxKind::NamedType:
+            return lookupNamedType(node.as<NamedTypeSyntax>().name, location, parent);
         default:
             THROW_UNREACHABLE;
     }
@@ -255,6 +249,15 @@ bool Type::isKind(SymbolKind kind) {
 void Type::resolveCanonical() const {
     ASSERT(kind == SymbolKind::TypeAlias);
     canonical = as<TypeAliasType>().targetType.get();
+}
+
+const Type& Type::lookupNamedType(const NameSyntax& syntax, LookupLocation location, const Scope& parent) {
+    LookupResult result;
+    parent.lookupName(syntax, location, LookupNameKind::Type, result);
+
+    const Symbol* symbol = result.found;
+    ASSERT(symbol && symbol->isType());
+    return symbol->as<Type>();
 }
 
 IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth_,
@@ -398,7 +401,7 @@ EnumType::EnumType(Compilation& compilation, SourceLocation loc, const IntegralT
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
                                  LookupLocation location, const Scope& scope) {
     const Type* base;
-    if (!syntax.baseType) 
+    if (!syntax.baseType)
         base = &compilation.getIntType();
     else {
         base = &compilation.getType(*syntax.baseType, location, scope);
@@ -444,7 +447,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                                                        std::move(value));
         resultType->addMember(*ev);
         current = value.integer() + one;
-        previousMember = ev; 
+        previousMember = ev;
     }
 
     return *resultType;
@@ -494,7 +497,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
 
         for (auto decl : member->declarators) {
             bitWidth += type.getBitWidth();
-            
+
             auto variable = compilation.emplace<VariableSymbol>(decl->name.valueText(), decl->name.location());
             members.append(variable);
             variable->type = type;

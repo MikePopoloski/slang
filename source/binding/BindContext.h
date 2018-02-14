@@ -19,7 +19,7 @@ BITMASK_DEFINE_MAX_ELEMENT(BindFlags, RequireConstant);
 
 struct BindContext {
     const Scope& scope;
-    LookupNameKind lookupKind = LookupNameKind::Local;
+    LookupNameKind lookupKind = LookupNameKind::Variable;
     LookupLocation lookupLocation;
     BindFlags flags;
 

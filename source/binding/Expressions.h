@@ -156,8 +156,7 @@ protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
-    static Expression& bindSimpleName(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
-    static Expression& bindQualifiedName(Compilation& compilation, const ScopedNameSyntax& syntax, const BindContext& context);
+    static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context);
     static Expression& bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax);
 
     static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const BindContext& context);

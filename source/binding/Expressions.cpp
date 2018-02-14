@@ -61,9 +61,8 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
             break;
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
-            return bindSimpleName(compilation, syntax, context);
         case SyntaxKind::ScopedName:
-            return bindQualifiedName(compilation, syntax.as<ScopedNameSyntax>(), context);
+            return bindName(compilation, syntax.as<NameSyntax>(), context);
         case SyntaxKind::RealLiteralExpression:
             return RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
         case SyntaxKind::IntegerLiteralExpression:
@@ -145,21 +144,32 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
     return compilation.badExpression(nullptr);
 }
 
-//Expression& Binder::bindScopedName(const ScopedNameSyntax& syntax) {
-//    // TODO: only handles packages right now
-//    if (syntax.separator.kind != TokenKind::DoubleColon || syntax.left.kind != SyntaxKind::IdentifierName)
-//        return badExpr(nullptr);
-//
-//    string_view identifier = syntax.left.as<IdentifierNameSyntax>().identifier.valueText();
-//    if (identifier.empty())
-//        return badExpr(nullptr);
-//
-//    auto package = scope.getCompilation().getPackage(identifier);
-//    if (!package)
-//        return badExpr(nullptr);
-//
-//    return Binder(*package).bindName(syntax.right);
-//}
+Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context) {
+    LookupResult result;
+    context.scope.lookupName(syntax, context.lookupLocation, context.lookupKind, result);
+
+    if (result.hasError())
+        compilation.addDiagnostics(result.diagnostics);
+
+    const Symbol* symbol = result.found;
+    if (!symbol)
+        return compilation.badExpression(nullptr);
+
+    Expression* expr = &bindSymbol(compilation, *symbol, syntax);
+    if (result.selectors) {
+        for (auto selector : *result.selectors)
+            expr = &bindSelector(compilation, *expr, *selector, context);
+    }
+
+    return *expr;
+}
+
+Expression& Expression::bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax) {
+    if (symbol.isValue())
+        return *compilation.emplace<NamedValueExpression>(symbol.as<ValueSymbol>(), syntax.sourceRange());
+
+    THROW_UNREACHABLE;
+}
 
 Expression& Expression::bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax,
                                              const BindContext& context) {
@@ -559,7 +569,12 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
                                        const BindContext& context) {
     // TODO: check for something other than a simple name on the LHS
     auto name = syntax.left.getFirstToken();
-    const Symbol* symbol = context.scope.lookupUnqualified(name.valueText(), LookupLocation::max, LookupNameKind::Callable);
+
+    // TODO: name syntax on the LHS in parser?
+    LookupResult result;
+    context.scope.lookupName(syntax.left.as<NameSyntax>(), context.lookupLocation, LookupNameKind::Callable, result);
+
+    const Symbol* symbol = result.found;
     ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
 
     auto actualArgs = syntax.arguments->parameters;

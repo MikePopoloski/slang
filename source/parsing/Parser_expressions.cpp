@@ -606,6 +606,10 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs) {
     }
 }
 
+NameSyntax& Parser::parseName() {
+    return parseName(false);
+}
+
 NameSyntax& Parser::parseName(bool isForEach) {
     NameSyntax* name = &parseNamePart(isForEach);
 

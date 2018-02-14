@@ -192,7 +192,7 @@ const Symbol* Scope::find(string_view name) const {
     auto it = nameMap->find(name);
     if (it == nameMap->end())
         return nullptr;
-    
+
     // Unwrap the symbol if it's a transparent member. Don't return imported
     // symbols; this function is for querying direct members only.
     const Symbol* symbol = it->second;
@@ -204,109 +204,70 @@ const Symbol* Scope::find(string_view name) const {
     }
 }
 
-void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
-                              SourceRange sourceRange, LookupResult& result) const {
-    ensureElaborated();
-    if (name.empty())
-        return;
-
-    // Try a simple name lookup to see if we find anything.
-    const Symbol* symbol = nullptr;
-    if (auto it = nameMap->find(name); it != nameMap->end()) {
-        // If the lookup is for a local name, check that we can access the symbol (it must be
-        // declared before use). Callables and block names can be referenced anywhere in the scope,
-        // so the location doesn't matter for them.
-        symbol = it->second;
-        bool locationGood = true;
-        if (nameKind == LookupNameKind::Local) {
-            locationGood = LookupLocation::before(*symbol) < location;
-            if (!locationGood && symbol->kind == SymbolKind::TypeAlias) {
-                // A type alias can have forward definitions, so check those locations as well.
-                // The forward decls form a linked list that are always ordered by location,
-                // so we only need to check the first one.
-                const ForwardingTypedefSymbol* forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
-                if (forward)
-                    locationGood = LookupLocation::before(*forward) < location;
-            }
-        }
-
-        if (locationGood) {
-            // Unwrap the symbol if it's hidden behind an import or hoisted enum member.
-            switch (symbol->kind) {
-                case SymbolKind::ExplicitImport:
-                    result.found = symbol->as<ExplicitImportSymbol>().importedSymbol();
-                    result.wasImported = true;
-                    break;
-                case SymbolKind::TransparentMember:
-                    result.found = &symbol->as<TransparentMemberSymbol>().wrapped;
-                    break;
-                case SymbolKind::ForwardingTypedef:
-                    // If we find a forwarding typedef, the actual typedef was never defined. Just ignore it,
-                    // we'll issue a better error later.
-                    break;
-                default:
-                    result.found = symbol;
-                    break;
-            }
-            return;
-        }
-    }
-
-    // Look through any wildcard imports prior to the lookup point and see if their packages
-    // contain the name we're looking for.
-    struct Import {
-        const Symbol* imported;
-        const WildcardImportSymbol* import;
-    };
-    SmallVectorSized<Import, 8> imports;
-
-    for (auto import : compilation.queryImports(importDataIndex)) {
-        if (location < LookupLocation::after(*import))
+void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, LookupNameKind nameKind,
+                       LookupResult& result) const {
+    Token nameToken;
+    const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
+    switch (syntax.kind) {
+        case SyntaxKind::IdentifierName:
+            nameToken = syntax.as<IdentifierNameSyntax>().identifier;
             break;
-
-        auto package = import->getPackage();
-        if (!package)
-            continue;
-
-        const Symbol* imported = package->find(name);
-        if (imported)
-            imports.emplace(Import { imported, import });
-    }
-
-    if (!imports.empty()) {
-        if (imports.size() > 1) {
-            auto& diag = result.diagnostics.add(DiagCode::AmbiguousWildcardImport, sourceRange) << name;
-            for (const auto& pair : imports) {
-                diag.addNote(DiagCode::NoteImportedFrom, pair.import->location);
-                diag.addNote(DiagCode::NoteDeclarationHere, pair.imported->location);
-            }
+        case SyntaxKind::IdentifierSelectName: {
+            const auto& selectSyntax = syntax.as<IdentifierSelectNameSyntax>();
+            nameToken = selectSyntax.identifier;
+            selectors = &selectSyntax.selectors;
+            break;
+        }
+        case SyntaxKind::ScopedName:
+            // Handle qualified names completely separately.
+            lookupQualified(syntax.as<ScopedNameSyntax>(), location, nameKind, result);
             return;
-        }
-
-        if (symbol) {
-            auto& diag = result.diagnostics.add(DiagCode::ImportNameCollision, sourceRange) << name;
-            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
-            diag.addNote(DiagCode::NoteImportedFrom, imports[0].import->location);
-            diag.addNote(DiagCode::NoteDeclarationHere, imports[0].imported->location);
-        }
-
-        result.wasImported = true;
-        result.found = imports[0].imported;
-        return;
+        default:
+            THROW_UNREACHABLE;
     }
 
-    // Continue up the scope chain via our parent.
-    auto nextScope = getParent();
-    if (!nextScope)
+    // If the parser added a missing identifier token, it already issued an appropriate error.
+    if (nameToken.valueText().empty())
         return;
 
-    location = LookupLocation::after(asSymbol());
-    return nextScope->lookupUnqualified(name, location, nameKind, sourceRange, result);
+    // Perform the lookup.
+    lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);
+    result.selectors = selectors;
+
+    const Symbol* symbol = result.found;
+    if (!symbol && !result.hasError()) {
+        // Attempt to give a more helpful error if the symbol exists in scope but is declared after
+        // the lookup location. Only do this if the symbol is of the kind we were expecting to find.
+        bool usedBeforeDeclared = false;
+        symbol = find(nameToken.valueText());
+        if (symbol) {
+            switch (nameKind) {
+                case LookupNameKind::Variable:
+                    usedBeforeDeclared = symbol->isValue();
+                    break;
+                case LookupNameKind::Type:
+                case LookupNameKind::TypedefTarget:
+                    usedBeforeDeclared = symbol->isType();
+                    break;
+                case LookupNameKind::Callable:
+                case LookupNameKind::BindTarget:
+                    break;
+            }
+        }
+
+        if (!usedBeforeDeclared)
+            result.diagnostics.add(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+        else {
+            auto& diag = result.diagnostics.add(DiagCode::UsedBeforeDeclared, nameToken.range());
+            diag << nameToken.valueText();
+            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+        }
+    }
 }
 
-const Symbol* Scope::lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind) const {
+const Symbol* Scope::lookupName(string_view name, LookupLocation location, LookupNameKind nameKind) const {
     LookupResult result;
-    lookupUnqualified(name, location, nameKind, SourceRange(), result);
+    lookupName(compilation.parseName(name), location, nameKind, result);
     return result.found;
 }
 
@@ -466,6 +427,209 @@ void Scope::elaborate() const {
             it->second->as<TypeAliasType>().checkForwardDecls();
         else
             compilation.addError(DiagCode::UnresolvedForwardTypedef, symbol->location) << symbol->name;
+    }
+}
+
+void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupNameKind nameKind,
+                              SourceRange sourceRange, LookupResult& result) const {
+    ensureElaborated();
+    if (name.empty())
+        return;
+
+    // Try a simple name lookup to see if we find anything.
+    const Symbol* symbol = nullptr;
+    if (auto it = nameMap->find(name); it != nameMap->end()) {
+        // If the lookup is for a local name, check that we can access the symbol (it must be
+        // declared before use). Callables and block names can be referenced anywhere in the scope,
+        // so the location doesn't matter for them.
+        symbol = it->second;
+        bool locationGood = true;
+        if (nameKind == LookupNameKind::Variable) {
+            locationGood = LookupLocation::before(*symbol) < location;
+            if (!locationGood && symbol->kind == SymbolKind::TypeAlias) {
+                // A type alias can have forward definitions, so check those locations as well.
+                // The forward decls form a linked list that are always ordered by location,
+                // so we only need to check the first one.
+                const ForwardingTypedefSymbol* forward = symbol->as<TypeAliasType>().getFirstForwardDecl();
+                if (forward)
+                    locationGood = LookupLocation::before(*forward) < location;
+            }
+        }
+
+        if (locationGood) {
+            // Unwrap the symbol if it's hidden behind an import or hoisted enum member.
+            switch (symbol->kind) {
+                case SymbolKind::ExplicitImport:
+                    result.found = symbol->as<ExplicitImportSymbol>().importedSymbol();
+                    result.wasImported = true;
+                    break;
+                case SymbolKind::TransparentMember:
+                    result.found = &symbol->as<TransparentMemberSymbol>().wrapped;
+                    break;
+                case SymbolKind::ForwardingTypedef:
+                    // If we find a forwarding typedef, the actual typedef was never defined. Just ignore it,
+                    // we'll issue a better error later.
+                    break;
+                default:
+                    result.found = symbol;
+                    break;
+            }
+            return;
+        }
+    }
+
+    // Look through any wildcard imports prior to the lookup point and see if their packages
+    // contain the name we're looking for.
+    struct Import {
+        const Symbol* imported;
+        const WildcardImportSymbol* import;
+    };
+    SmallVectorSized<Import, 8> imports;
+
+    for (auto import : compilation.queryImports(importDataIndex)) {
+        if (location < LookupLocation::after(*import))
+            break;
+
+        auto package = import->getPackage();
+        if (!package)
+            continue;
+
+        const Symbol* imported = package->find(name);
+        if (imported)
+            imports.emplace(Import { imported, import });
+    }
+
+    if (!imports.empty()) {
+        if (imports.size() > 1) {
+            auto& diag = result.diagnostics.add(DiagCode::AmbiguousWildcardImport, sourceRange) << name;
+            for (const auto& pair : imports) {
+                diag.addNote(DiagCode::NoteImportedFrom, pair.import->location);
+                diag.addNote(DiagCode::NoteDeclarationHere, pair.imported->location);
+            }
+            return;
+        }
+
+        if (symbol) {
+            auto& diag = result.diagnostics.add(DiagCode::ImportNameCollision, sourceRange) << name;
+            diag.addNote(DiagCode::NoteDeclarationHere, symbol->location);
+            diag.addNote(DiagCode::NoteImportedFrom, imports[0].import->location);
+            diag.addNote(DiagCode::NoteDeclarationHere, imports[0].imported->location);
+        }
+
+        result.wasImported = true;
+        result.found = imports[0].imported;
+        return;
+    }
+
+    // Continue up the scope chain via our parent.
+    auto nextScope = getParent();
+    if (!nextScope)
+        return;
+
+    location = LookupLocation::after(asSymbol());
+    return nextScope->lookupUnqualified(name, location, nameKind, sourceRange, result);
+}
+
+namespace {
+
+using namespace slang;
+
+// A downward lookup starts from a given scope and tries to match pieces of a name with subsequent members
+// of scopes. If the entire path matches, the found member will be returned. Otherwise, the last name piece
+// we looked up will be returned, along with whatever symbol was last found.
+struct DownwardLookupResult {
+    const Symbol* found;
+    const NameSyntax* last;
+};
+
+DownwardLookupResult lookupDownward(span<const NameSyntax* const> nameParts, const Scope& scope) {
+    const NameSyntax* const final = nameParts[nameParts.size() - 1];
+    const Scope* current = &scope;
+    const Symbol* found = nullptr;
+
+    for (auto part : nameParts) {
+        const Symbol* symbol;
+        switch (part->kind) {
+            case SyntaxKind::IdentifierName:
+                symbol = current->find(part->as<IdentifierNameSyntax>().identifier.valueText());
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        if (!symbol)
+            return { found, part };
+
+        found = symbol;
+        if (part != final) {
+            // This needs to be a scope, otherwise we can't do a lookup within it.
+            if (!found->isScope())
+                return { found, part };
+            current = &found->as<Scope>();
+        }
+    }
+
+    return { found, nullptr };
+}
+
+}
+
+void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
+                            LookupNameKind nameKind, LookupResult& result) const {
+    // Split the name into easier to manage chunks. The parser will always produce a left-recursive
+    // name tree, so that's all we'll bother to handle.
+    int colonParts = 0;
+    SmallVectorSized<const NameSyntax*, 8> nameParts;
+    const ScopedNameSyntax* scoped = &syntax;
+    while (true) {
+        nameParts.append(&scoped->right);
+        if (scoped->separator.kind == TokenKind::Dot)
+            colonParts = 0;
+        else
+            colonParts++;
+
+        if (scoped->left.kind == SyntaxKind::ScopedName)
+            scoped = &scoped->left.as<ScopedNameSyntax>();
+        else
+            break;
+    }
+
+    const NameSyntax* first = &scoped->left;
+
+    // If we are starting with a colon separator, always do a downwards name resolution. If the prefix name can
+    // be resolved normally, we have a class scope, otherwise it's a package lookup. See [23.7.1]
+    if (colonParts) {
+        Token nameToken;
+        switch (first->kind) {
+            case SyntaxKind::IdentifierName:
+                nameToken = first->as<IdentifierNameSyntax>().identifier;
+                break;
+            case SyntaxKind::IdentifierSelectName:
+                //nameToken = first->as<IdentifierSelectNameSyntax>().identifier;
+                //break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
+        // Try to find the prefix as a class using unqualified name lookup rules.
+        lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);
+        if (result.hasError())
+            return;
+
+        if (result.found) {
+            // TODO: handle classes
+            THROW_UNREACHABLE;
+        }
+
+        // Otherwise, it should be a package name.
+        const PackageSymbol* package = compilation.getPackage(nameToken.valueText());
+        if (!package) {
+            result.diagnostics.add(DiagCode::UnknownClassOrPackage, nameToken.range()) << nameToken.valueText();
+            return;
+        }
+
+        auto downward = lookupDownward(nameParts, *package);
+        result.found = downward.found;
     }
 }
 

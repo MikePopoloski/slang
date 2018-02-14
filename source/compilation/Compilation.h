@@ -53,6 +53,10 @@ public:
     /// Adds a package to the map of global packages.
     void addPackage(const PackageSymbol& package);
 
+    /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
+    /// This is mostly for testing and API purposes; normal compilation never does this.
+    const NameSyntax& parseName(string_view name);
+
     /// Creates a new compilation unit within the design that can be modified dynamically,
     /// which is useful in runtime scripting scenarios. Note that this call will succeed
     /// even if the design has been finalized, but in that case any instantiations in the

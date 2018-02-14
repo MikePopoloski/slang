@@ -240,6 +240,15 @@ void Compilation::addPackage(const PackageSymbol& package) {
     packageMap.emplace(package.name, &package);
 }
 
+const NameSyntax& Compilation::parseName(string_view name) {
+    SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
+    Preprocessor preprocessor(sourceMan, *this, diags);
+    preprocessor.pushSource(sourceMan.assignText(name));
+
+    Parser parser(preprocessor);
+    return parser.parseName();
+}
+
 CompilationUnitSymbol& Compilation::createScriptScope() {
     auto unit = emplace<CompilationUnitSymbol>(*this);
     root->addMember(*unit);

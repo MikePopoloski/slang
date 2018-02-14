@@ -35,7 +35,7 @@ endmodule
 TEST_CASE("Enum value leakage") {
     auto tree = SyntaxTree::fromText(R"(
 module Top #(enum { FOO, BAR } asdf = BAR) ();
-    
+
     function enum {SDF, KJH} foshizzle(enum logic [1:0] { HELLO, GOODBYE } p);
     endfunction
 
@@ -49,18 +49,18 @@ endmodule
     CHECK(instance.find("BAR"));
 
     // Try to look up after the parameter but before the function; should fail.
-    CHECK(!instance.lookupUnqualified("SDF", LookupLocation::before(instance.memberAt<TransparentMemberSymbol>(0))));
+    CHECK(!instance.lookupName("SDF", LookupLocation::before(instance.memberAt<TransparentMemberSymbol>(0))));
 
     const auto& foshizzle = instance.memberAt<SubroutineSymbol>(5);
-    CHECK(instance.lookupUnqualified("SDF", LookupLocation::after(foshizzle)));
+    CHECK(instance.lookupName("SDF", LookupLocation::after(foshizzle)));
 
     // The formal argument enum should not leak into the containing scope.
-    CHECK(!instance.lookupUnqualified("HELLO"));
+    CHECK(!instance.lookupName("HELLO"));
 
     // Inside the function we should be able to see everything
-    CHECK(foshizzle.lookupUnqualified("HELLO"));
-    CHECK(foshizzle.lookupUnqualified("SDF"));
-    CHECK(foshizzle.lookupUnqualified("BAR"));
+    CHECK(foshizzle.lookupName("HELLO"));
+    CHECK(foshizzle.lookupName("SDF"));
+    CHECK(foshizzle.lookupName("BAR"));
     NO_COMPILATION_ERRORS;
 }
 
@@ -137,7 +137,7 @@ module Top;
     typedef enum e1_t;
     e1_t e1;
     typedef enum logic [4:0] { SDF, FOO } e1_t;
-    
+
     // Forward declared struct, multiple forward declarations
     typedef struct s1_t;
     s1_t s;
