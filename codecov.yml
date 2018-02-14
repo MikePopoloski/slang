@@ -15,6 +15,7 @@ coverage:
   ignore:
     - "external/*"
     - "tests/*"
+    - "tools/*"
     - "source/parsing/AllSyntax.h"
     - "source/parsing/AllSyntax.cpp"
 
