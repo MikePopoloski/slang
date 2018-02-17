@@ -10,7 +10,7 @@
 #include "diagnostics/Diagnostics.h"
 #include "symbols/HierarchySymbols.h"
 #include "symbols/MemberSymbols.h"
-#include "symbols/SymbolVisitor.h"
+#include "symbols/ASTVisitor.h"
 #include "symbols/TypeSymbols.h"
 #include "text/SourceManager.h"
 

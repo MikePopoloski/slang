@@ -50,6 +50,9 @@ public:
         return *static_cast<const T*>(this);
     }
 
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+
 protected:
     explicit Statement(StatementKind kind) :
         kind(kind), syntax(nullptr) {}

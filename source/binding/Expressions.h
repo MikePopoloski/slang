@@ -149,6 +149,9 @@ public:
         return *static_cast<const T*>(this);
     }
 
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+
     static Expression& fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
     static Expression& propagateAndFold(Compilation& compilation, Expression& expr, const Type& newType);
 
