@@ -145,7 +145,7 @@ template<typename... TT>
 struct hash<std::tuple<TT...>> {
     size_t operator()(const std::tuple<TT...>& tt) const {
         size_t seed = 0;
-        detail::HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
+        ::detail::HashValueImpl<std::tuple<TT...>>::apply(seed, tt);
         return seed;
     }
 };
