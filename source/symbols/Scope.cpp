@@ -327,6 +327,11 @@ void Scope::insertMember(const Symbol* member, const Symbol* at) const {
                 member->as<TypeAliasType>().addForwardDecl(existing->as<ForwardingTypedefSymbol>());
                 pair.first->second = member;
             }
+            else if (existing->kind == SymbolKind::ExplicitImport && member->kind == SymbolKind::ExplicitImport &&
+                     existing->as<ExplicitImportSymbol>().packageName ==
+                     member->as<ExplicitImportSymbol>().packageName) {
+                // Duplicate explicit imports are specifically allowed, so just ignore the other one.
+            }
             else {
                 Diagnostic* diag;
                 if (existing->isValue() && member->isValue()) {

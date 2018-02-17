@@ -138,6 +138,7 @@ module top;
 
     initial begin
         import ComplexPkg::FALSE;
+        import ComplexPkg::FALSE;
         b = FALSE;
     end
 
