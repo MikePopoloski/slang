@@ -23,19 +23,21 @@ void StatementBodiedScope::bindBody(const SyntaxNode& syntax) {
     if (syntax.kind == SyntaxKind::List)
         setBody(&bindStatementList((const SyntaxList<SyntaxNode>&)syntax));
     else
-        setBody(&bindStatement((const StatementSyntax&)syntax, BindContext(*this, LookupLocation::max)));
+        setBody(&bindStatement(syntax.as<StatementSyntax>(), BindContext(*this, LookupLocation::max)));
 }
 
 Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax, const BindContext& context) {
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
-            return bindReturnStatement((const ReturnStatementSyntax&)syntax, context);
+            return bindReturnStatement(syntax.as<ReturnStatementSyntax>(), context);
         case SyntaxKind::ConditionalStatement:
-            return bindConditionalStatement((const ConditionalStatementSyntax&)syntax, context);
+            return bindConditionalStatement(syntax.as<ConditionalStatementSyntax>(), context);
         case SyntaxKind::ForLoopStatement:
-            return bindForLoopStatement((const ForLoopStatementSyntax&)syntax, context);
+            return bindForLoopStatement(syntax.as<ForLoopStatementSyntax>(), context);
         case SyntaxKind::ExpressionStatement:
-            return bindExpressionStatement((const ExpressionStatementSyntax&)syntax, context);
+            return bindExpressionStatement(syntax.as<ExpressionStatementSyntax>(), context);
+        case SyntaxKind::SequentialBlockStatement:
+            return bindBlockStatement(syntax.as<BlockStatementSyntax>(), context);
         default:
             THROW_UNREACHABLE;
     }
@@ -43,27 +45,19 @@ Statement& StatementBodiedScope::bindStatement(const StatementSyntax& syntax, co
 
 Statement& StatementBodiedScope::bindStatementList(const SyntaxList<SyntaxNode>& items) {
     BindContext context(*this, LookupLocation::min);
-    const Symbol* last = getLastMember();
-    if (last)
-        context.lookupLocation = LookupLocation::after(*last);
-
     SmallVectorSized<const Statement*, 8> buffer;
     for (auto item : items) {
-        if (isStatement(item->kind)) {
-            buffer.append(&bindStatement(item->as<StatementSyntax>(), context));
-        }
-        else if (item->kind == SyntaxKind::DataDeclaration) {
-            bindVariableDecl(item->as<DataDeclarationSyntax>(), buffer);
+        // Each bindStatement call can potentially add more members to our scope, so keep
+        // updating our lookup location so that future expressions can bind to them.
+        if (const Symbol* last = getLastMember())
+            context.lookupLocation = LookupLocation::after(*last);
 
-            // We've added members, so update our lookup position so that future
-            // statements can find them.
-            last = getLastMember();
-            if (last)
-                context.lookupLocation = LookupLocation::after(*last);
-        }
-        else {
+        if (isStatement(item->kind))
+            buffer.append(&bindStatement(item->as<StatementSyntax>(), context));
+        else if (item->kind == SyntaxKind::DataDeclaration)
+            bindVariableDecl(item->as<DataDeclarationSyntax>(), buffer);
+        else
             THROW_UNREACHABLE;
-        }
     }
 
     return *getCompilation().emplace<StatementList>(buffer.copy(getCompilation()));
@@ -169,6 +163,13 @@ Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStateme
     Compilation& comp = getCompilation();
     const auto& expr = comp.bindExpression(syntax.expr, context);
     return *comp.emplace<ExpressionStatement>(syntax, expr);
+}
+
+Statement& StatementBodiedScope::bindBlockStatement(const BlockStatementSyntax& syntax, const BindContext&) {
+    Compilation& comp = getCompilation();
+    auto& symbol = SequentialBlockSymbol::fromSyntax(comp, syntax);
+    addMember(symbol);
+    return *comp.emplace<SequentialBlockStatement>(symbol);
 }
 
 Statement& StatementBodiedScope::badStmt(const Statement* stmt) {

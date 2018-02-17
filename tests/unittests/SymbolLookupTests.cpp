@@ -138,7 +138,7 @@ module top;
 
     initial begin
         // TODO: import ComplexPkg::FALSE;
-        b = FALSE;
+        // TODO: b = FALSE;
     end
 
 endmodule
@@ -148,7 +148,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     Diagnostics diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == DiagCode::UndeclaredIdentifier);
-    //CHECK(diags[1].code == DiagCode::UndeclaredIdentifier);
+    CHECK(diags[1].code == DiagCode::UndeclaredIdentifier);
 }

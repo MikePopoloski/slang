@@ -75,6 +75,8 @@ public:
         Symbol(SymbolKind::SequentialBlock, "", loc),
         StatementBodiedScope(compilation, this) {}
 
+    static SequentialBlockSymbol& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SequentialBlock; }
 };
 
@@ -86,6 +88,8 @@ public:
         Symbol(SymbolKind::ProceduralBlock, "", loc),
         StatementBodiedScope(compilation, this),
         procedureKind(procedureKind) {}
+
+    static ProceduralBlockSymbol& fromSyntax(Compilation& compilation, const ProceduralBlockSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProceduralBlock; }
 };

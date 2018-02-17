@@ -42,6 +42,7 @@ private:
     Statement& bindConditionalStatement(const ConditionalStatementSyntax& syntax, const BindContext& context);
     Statement& bindForLoopStatement(const ForLoopStatementSyntax& syntax, const BindContext& context);
     Statement& bindExpressionStatement(const ExpressionStatementSyntax& syntax, const BindContext& context);
+    Statement& bindBlockStatement(const BlockStatementSyntax& syntax, const BindContext& context);
 
     Statement& badStmt(const Statement* stmt);
 

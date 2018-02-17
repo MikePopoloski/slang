@@ -172,14 +172,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysLatchBlock:
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
-        case SyntaxKind::FinalBlock: {
-            const auto& blockSyntax = syntax.as<ProceduralBlockSyntax>();
-            auto kind = SemanticFacts::getProceduralBlockKind(blockSyntax.kind);
-            addMember(*compilation.emplace<ProceduralBlockSymbol>(compilation,
-                                                                  blockSyntax.keyword.location(),
-                                                                  kind));
+        case SyntaxKind::FinalBlock:
+            addMember(ProceduralBlockSymbol::fromSyntax(compilation, syntax.as<ProceduralBlockSyntax>()));
             break;
-        }
         case SyntaxKind::EmptyMember:
             break;
         case SyntaxKind::TypedefDeclaration:

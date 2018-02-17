@@ -218,6 +218,23 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
     return *instance;
 }
 
+SequentialBlockSymbol& SequentialBlockSymbol::fromSyntax(Compilation& compilation,
+                                                         const BlockStatementSyntax& syntax) {
+    auto result = compilation.emplace<SequentialBlockSymbol>(compilation, syntax.begin.location());
+    result->setBody(syntax.items);
+    return *result;
+}
+
+ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilation,
+                                                         const ProceduralBlockSyntax& syntax) {
+    auto kind = SemanticFacts::getProceduralBlockKind(syntax.kind);
+    auto result = compilation.emplace<ProceduralBlockSymbol>(compilation,
+                                                             syntax.keyword.location(),
+                                                             kind);
+    result->setBody(syntax.statement);
+    return *result;
+}
+
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                                      LookupLocation location, const Scope& parent) {
     // TODO: better error checking
