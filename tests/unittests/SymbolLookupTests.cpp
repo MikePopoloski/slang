@@ -137,8 +137,8 @@ module top;
     end
 
     initial begin
-        // TODO: import ComplexPkg::FALSE;
-        // TODO: b = FALSE;
+        import ComplexPkg::FALSE;
+        b = FALSE;
     end
 
 endmodule

@@ -1811,76 +1811,84 @@ MemberSyntax& Parser::parseNetDeclaration(span<AttributeInstanceSyntax* const> a
 }
 
 MemberSyntax& Parser::parseVariableDeclaration(span<AttributeInstanceSyntax* const> attributes) {
-    if (peek(TokenKind::TypedefKeyword)) {
-        auto typedefKeyword = consume();
-        switch (peek().kind) {
-            case TokenKind::EnumKeyword:
-            case TokenKind::StructKeyword:
-            case TokenKind::UnionKeyword:
-            case TokenKind::ClassKeyword:
-                if (peek(1).kind == TokenKind::Identifier && peek(2).kind == TokenKind::Semicolon) {
-                    auto keyword = consume();
-                    auto name = consume();
-                    return factory.forwardTypedefDeclaration(
+    switch (peek().kind) {
+        case TokenKind::TypedefKeyword: {
+            auto typedefKeyword = consume();
+            switch (peek().kind) {
+                case TokenKind::EnumKeyword:
+                case TokenKind::StructKeyword:
+                case TokenKind::UnionKeyword:
+                case TokenKind::ClassKeyword:
+                    if (peek(1).kind == TokenKind::Identifier &&
+                        peek(2).kind == TokenKind::Semicolon) {
+
+                        auto keyword = consume();
+                        auto name = consume();
+                        return factory.forwardTypedefDeclaration(
+                            attributes,
+                            typedefKeyword,
+                            keyword,
+                            name,
+                            consume());
+                    }
+                    break;
+                case TokenKind::InterfaceKeyword: {
+                    auto interfaceKeyword = consume();
+                    auto classKeyword = expect(TokenKind::ClassKeyword);
+                    auto name = expect(TokenKind::Identifier);
+                    return factory.forwardInterfaceClassTypedefDeclaration(
                         attributes,
                         typedefKeyword,
-                        keyword,
+                        interfaceKeyword,
+                        classKeyword,
                         name,
-                        consume());
+                        expect(TokenKind::Semicolon));
                 }
-                break;
-            case TokenKind::InterfaceKeyword: {
-                auto interfaceKeyword = consume();
-                auto classKeyword = expect(TokenKind::ClassKeyword);
-                auto name = expect(TokenKind::Identifier);
-                return factory.forwardInterfaceClassTypedefDeclaration(
-                    attributes,
-                    typedefKeyword,
-                    interfaceKeyword,
-                    classKeyword,
-                    name,
-                    expect(TokenKind::Semicolon));
+                case TokenKind::Identifier:
+                    if (peek(1).kind == TokenKind::Semicolon) {
+                        auto name = consume();
+                        return factory.forwardTypedefDeclaration(
+                            attributes,
+                            typedefKeyword,
+                            Token(),
+                            name,
+                            consume());
+                    }
+                    break;
+                default:
+                    break;
             }
-            case TokenKind::Identifier:
-                if (peek(1).kind == TokenKind::Semicolon) {
-                    auto name = consume();
-                    return factory.forwardTypedefDeclaration(
-                        attributes,
-                        typedefKeyword,
-                        Token(),
-                        name,
-                        consume());
-                }
-                break;
-            default:
-                break;
+            auto& type = parseDataType(/* allowImplicit */ false);
+            auto name = expect(TokenKind::Identifier);
+            auto dims = parseDimensionList();
+            return factory.typedefDeclaration(
+                attributes,
+                typedefKeyword,
+                type,
+                name,
+                dims,
+                expect(TokenKind::Semicolon));
         }
-        auto& type = parseDataType(/* allowImplicit */ false);
-        auto name = expect(TokenKind::Identifier);
-        auto dims = parseDimensionList();
-        return factory.typedefDeclaration(
-            attributes,
-            typedefKeyword,
-            type,
-            name,
-            dims,
-            expect(TokenKind::Semicolon));
-    }
-
-    if (peek(TokenKind::ParameterKeyword) || peek(TokenKind::LocalParamKeyword)) {
-        Token semi;
-        auto keyword = consume();
-        auto& type = parseDataType(/* allowImplicit */ true);
-        auto& parameter = factory.parameterDeclaration(keyword, type, parseVariableDeclarators(semi));
-        return factory.parameterDeclarationStatement(attributes, parameter, semi);
-    }
-
-    if (peek(TokenKind::LetKeyword)) {
-        auto let = consume();
-        auto identifier = expect(TokenKind::Identifier);
-        auto portList = parseAssertionItemPortList(TokenKind::LetKeyword);
-        auto& initializer = factory.equalsValueClause(expect(TokenKind::Equals), parseExpression());
-        return factory.letDeclaration(attributes, let, identifier, portList, initializer, expect(TokenKind::Semicolon));
+        case TokenKind::ParameterKeyword:
+        case TokenKind::LocalParamKeyword: {
+            Token semi;
+            auto keyword = consume();
+            auto& type = parseDataType(/* allowImplicit */ true);
+            auto& parameter = factory.parameterDeclaration(keyword, type, parseVariableDeclarators(semi));
+            return factory.parameterDeclarationStatement(attributes, parameter, semi);
+        }
+        case TokenKind::LetKeyword: {
+            auto let = consume();
+            auto identifier = expect(TokenKind::Identifier);
+            auto portList = parseAssertionItemPortList(TokenKind::LetKeyword);
+            auto& initializer = factory.equalsValueClause(expect(TokenKind::Equals), parseExpression());
+            return factory.letDeclaration(attributes, let, identifier, portList, initializer,
+                                          expect(TokenKind::Semicolon));
+        }
+        case TokenKind::ImportKeyword:
+            return parseImportDeclaration(attributes);
+        default:
+            break;
     }
 
     // TODO: other kinds of declarations besides data
@@ -2381,6 +2389,7 @@ bool Parser::isVariableDeclaration() {
         case TokenKind::ParameterKeyword:
         case TokenKind::BindKeyword:
         case TokenKind::LetKeyword:
+        case TokenKind::ImportKeyword:
             return true;
 
         // this could be a virtual interface, a virtual class declaration, or a virtual function

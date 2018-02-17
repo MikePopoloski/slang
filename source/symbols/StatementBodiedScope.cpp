@@ -52,12 +52,22 @@ Statement& StatementBodiedScope::bindStatementList(const SyntaxList<SyntaxNode>&
         if (const Symbol* last = getLastMember())
             context.lookupLocation = LookupLocation::after(*last);
 
-        if (isStatement(item->kind))
-            buffer.append(&bindStatement(item->as<StatementSyntax>(), context));
-        else if (item->kind == SyntaxKind::DataDeclaration)
-            bindVariableDecl(item->as<DataDeclarationSyntax>(), buffer);
-        else
-            THROW_UNREACHABLE;
+        switch (item->kind) {
+            case SyntaxKind::DataDeclaration:
+                bindVariableDecl(item->as<DataDeclarationSyntax>(), buffer);
+                break;
+            case SyntaxKind::TypedefDeclaration:
+            case SyntaxKind::ForwardTypedefDeclaration:
+            case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
+            case SyntaxKind::PackageImportDeclaration:
+                addMembers(*item);
+                break;
+            default:
+                if (isStatement(item->kind))
+                    buffer.append(&bindStatement(item->as<StatementSyntax>(), context));
+                else
+                    THROW_UNREACHABLE;
+        }
     }
 
     return *getCompilation().emplace<StatementList>(buffer.copy(getCompilation()));
