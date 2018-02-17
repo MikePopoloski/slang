@@ -45,38 +45,6 @@ public:
         }
     }
 
-    void visitDefault(const StatementList& stmt) {
-        for (auto child : stmt.list)
-            child->visit(DERIVED);
-    }
-
-    void visitDefault(const ReturnStatement& stmt) {
-        if (stmt.expr)
-            stmt.expr->visit(DERIVED);
-    }
-
-    void visitDefault(const ConditionalStatement& stmt) {
-        stmt.cond.visit(DERIVED);
-        stmt.ifTrue.visit(DERIVED);
-        if (stmt.ifFalse)
-            stmt.ifFalse->visit(DERIVED);
-    }
-
-    void visitDefault(const ForLoopStatement& stmt) {
-        stmt.initializers.visit(DERIVED);
-        if (stmt.stopExpr)
-            stmt.stopExpr->visit(DERIVED);
-
-        for (auto step : stmt.steps)
-            step->visit(DERIVED);
-
-        stmt.body.visit(DERIVED);
-    }
-
-    void visitDefault(const ExpressionStatement& stmt) {
-        stmt.expr.visit(DERIVED);
-    }
-
 #undef DERIVED
 
     struct tag;
