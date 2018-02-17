@@ -122,7 +122,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
     }
 
     // Determine values for all parameters now so that they can be shared between instances.
-    SmallVectorSized<ModuleInstanceSymbol::ParameterMetadata, 8> params;
+    SmallVectorSized<ParameterMetadata, 8> params;
     for (const auto& decl : definition->parameters) {
         std::tuple<const Type*, ConstantValue> typeAndValue(nullptr, nullptr);
         if (auto it = paramOverrides.find(decl.name); it != paramOverrides.end())
@@ -133,17 +133,26 @@ void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstant
             diag << decl.name;
         }
 
-        params.emplace(ModuleInstanceSymbol::ParameterMetadata { &decl, std::get<0>(typeAndValue),
-                                                                 std::move(std::get<1>(typeAndValue)) });
+        params.emplace(ParameterMetadata { &decl, std::get<0>(typeAndValue), std::move(std::get<1>(typeAndValue)) });
     }
 
     for (auto instanceSyntax : syntax.instances) {
-        // TODO: other things besides modules
+        const Symbol* inst;
+        switch (definition->syntax.kind) {
+            case SyntaxKind::ModuleDeclaration:
+                inst = &ModuleInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
+                                                          instanceSyntax->name.location(), *definition, params);
+                break;
+            case SyntaxKind::InterfaceDeclaration:
+                inst = &InterfaceInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
+                                                             instanceSyntax->name.location(), *definition, params);
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
+
         // TODO: instance arrays
-        const auto& instance = ModuleInstanceSymbol::instantiate(compilation, instanceSyntax->name.valueText(),
-                                                                 instanceSyntax->name.location(), *definition,
-                                                                 params);
-        results.append(&instance);
+        results.append(inst);
     }
 }
 
@@ -158,33 +167,16 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
     }
 }
 
-ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                        SourceLocation loc, const Definition& definition) {
-    SmallVectorSized<ModuleInstanceSymbol::ParameterMetadata, 8> params;
-    for (const auto& decl : definition.parameters) {
-        // This function should only be called for definitions where all parameters have defaults.
-        ASSERT(decl.initializer);
-        params.emplace(ModuleInstanceSymbol::ParameterMetadata { &decl, nullptr, nullptr });
-    }
-
-    return instantiate(compilation, name, loc, definition, params);
-}
-
-ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
-                                                        SourceLocation loc, const Definition& definition,
-                                                        span<const ParameterMetadata> parameters) {
-
-    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
-    auto paramIt = parameters.begin();
-
+void InstanceSymbol::populate(const Definition& definition, span<const ParameterMetadata> parameters) {
     // Add all port parameters as members first.
+    auto paramIt = parameters.begin();
     while (paramIt != parameters.end()) {
         auto decl = paramIt->decl;
         if (!decl->isPort)
             break;
 
-        auto& param = ParameterSymbol::fromDecl(compilation, *decl);
-        instance->addMember(param);
+        auto& param = ParameterSymbol::fromDecl(getCompilation(), *decl);
+        addMember(param);
 
         if (paramIt->type) {
             param.setType(*paramIt->type);
@@ -197,24 +189,52 @@ ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation
         // If this is a parameter declaration, we should already have metadata for it in our parameters list.
         // The list is given in declaration order, so we should be be able to move through them incrementally.
         if (member->kind != SyntaxKind::ParameterDeclarationStatement)
-            instance->addMembers(*member);
+            addMembers(*member);
         else {
             for (auto declarator : member->as<ParameterDeclarationStatementSyntax>().parameter.declarators) {
                 (void)declarator;
                 ASSERT(paramIt != parameters.end());
 
                 auto decl = paramIt->decl;
-                auto& param = ParameterSymbol::fromDecl(compilation, *decl);
+                auto& param = ParameterSymbol::fromDecl(getCompilation(), *decl);
                 if (paramIt->type) {
                     param.setType(*paramIt->type);
                     param.setValue(paramIt->value);
                 }
-                instance->addMember(param);
+                addMember(param);
                 paramIt++;
             }
         }
     }
+}
 
+ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
+                                                        SourceLocation loc, const Definition& definition) {
+    SmallVectorSized<ParameterMetadata, 8> params;
+    for (const auto& decl : definition.parameters) {
+        // This function should only be called for definitions where all parameters have defaults.
+        ASSERT(decl.initializer);
+        params.emplace(ParameterMetadata { &decl, nullptr, nullptr });
+    }
+
+    return instantiate(compilation, name, loc, definition, params);
+}
+
+ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,
+                                                        SourceLocation loc, const Definition& definition,
+                                                        span<const ParameterMetadata> parameters) {
+
+    auto instance = compilation.emplace<ModuleInstanceSymbol>(compilation, name, loc);
+    instance->populate(definition, parameters);
+    return *instance;
+}
+
+InterfaceInstanceSymbol& InterfaceInstanceSymbol::instantiate(Compilation& compilation, string_view name,
+                                                              SourceLocation loc, const Definition& definition,
+                                                              span<const ParameterMetadata> parameters) {
+
+    auto instance = compilation.emplace<InterfaceInstanceSymbol>(compilation, name, loc);
+    instance->populate(definition, parameters);
     return *instance;
 }
 

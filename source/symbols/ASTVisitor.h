@@ -92,6 +92,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(ForwardingTypedef);
         SYMBOL(Parameter);
         SYMBOL(ModuleInstance);
+        SYMBOL(InterfaceInstance);
         SYMBOL(Package);
         SYMBOL(ExplicitImport);
         SYMBOL(WildcardImport);
@@ -121,7 +122,6 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         case SymbolKind::UnpackedUnionType: THROW_UNREACHABLE;
         case SymbolKind::ClassType: THROW_UNREACHABLE;
         case SymbolKind::Modport: THROW_UNREACHABLE;
-        case SymbolKind::InterfaceInstance: THROW_UNREACHABLE;
         case SymbolKind::Program: THROW_UNREACHABLE;
         case SymbolKind::Attribute: THROW_UNREACHABLE;
         case SymbolKind::Genvar: THROW_UNREACHABLE;

@@ -43,10 +43,18 @@ public:
 
     static bool isKind(SymbolKind kind);
 
+    struct ParameterMetadata {
+        const Definition::ParameterDecl* decl;
+        const Type* type;
+        ConstantValue value;
+    };
+
 protected:
     InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(kind, name, loc),
         Scope(compilation, this) {}
+
+    void populate(const Definition& definition, span<const ParameterMetadata> parameters);
 };
 
 class ModuleInstanceSymbol : public InstanceSymbol {
@@ -57,16 +65,21 @@ public:
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
                                              const Definition& definition);
 
-    struct ParameterMetadata {
-        const Definition::ParameterDecl* decl;
-        const Type* type;
-        ConstantValue value;
-    };
-
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
                                              const Definition& definition, span<const ParameterMetadata> parameters);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModuleInstance; }
+};
+
+class InterfaceInstanceSymbol : public InstanceSymbol {
+public:
+    InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
+        InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc) {}
+
+    static InterfaceInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
+                                                const Definition& definition, span<const ParameterMetadata> parameters);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfaceInstance; }
 };
 
 class SequentialBlockSymbol : public Symbol, public StatementBodiedScope {
