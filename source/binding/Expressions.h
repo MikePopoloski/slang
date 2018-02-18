@@ -166,6 +166,8 @@ protected:
     static Expression& bindSelector(Compilation& compilation, Expression& value, const ElementSelectSyntax& syntax, const BindContext& context);
     static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
+    static Expression& badExpr(Compilation& compilation, const Expression* expr);
+
     // Perform type propagation and constant folding of a context-determined subexpression.
     static void contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType);
 

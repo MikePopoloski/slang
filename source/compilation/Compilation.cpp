@@ -341,10 +341,6 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     return importData[index];
 }
 
-Expression& Compilation::badExpression(const Expression* expr) {
-    return *emplace<InvalidExpression>(expr, getErrorType());
-}
-
 const Expression& Compilation::bindExpression(const ExpressionSyntax& syntax, const BindContext& context) {
     Expression& expr = Expression::fromSyntax(*this, syntax, context);
     return Expression::propagateAndFold(*this, expr, *expr.type);
@@ -360,7 +356,7 @@ const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionS
     if (!lhs.isAssignmentCompatible(*type)) {
         DiagCode code = lhs.isCastCompatible(*type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
         addError(code, location) << rhs.sourceRange();
-        return badExpression(&expr);
+        return *emplace<InvalidExpression>(&expr, getErrorType());
     }
 
     if (lhs.getBitWidth() > type->getBitWidth()) {

@@ -145,7 +145,7 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
         default:
             THROW_UNREACHABLE;
     }
-    return compilation.badExpression(nullptr);
+    return badExpr(compilation, nullptr);
 }
 
 Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context) {
@@ -157,7 +157,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
     const Symbol* symbol = result.found;
     if (!symbol)
-        return compilation.badExpression(nullptr);
+        return badExpr(compilation, nullptr);
 
     Expression* expr = &bindSymbol(compilation, *symbol, syntax);
     if (result.selectors) {
@@ -202,6 +202,10 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
 Expression& Expression::convert(Compilation& compilation, ConversionKind conversionKind, const Type& type,
                                 Expression& expr) {
     return *compilation.emplace<ConversionExpression>(conversionKind, type, expr, expr.sourceRange);
+}
+
+Expression& Expression::badExpr(Compilation& compilation, const Expression* expr) {
+    return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
 }
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax) {
@@ -251,7 +255,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
     );
 
     if (operand.bad())
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
 
     bool good;
     switch (syntax.kind) {
@@ -280,7 +284,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
         auto& diag = compilation.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
     }
 
     return *result;
@@ -299,7 +303,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
     );
 
     if (lhs.bad() || rhs.bad())
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
 
     bool bothIntegral = lt->isIntegral() && rt->isIntegral();
     bool bothNumeric = lt->isNumeric() && rt->isNumeric();
@@ -407,14 +411,14 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         diag << *lt << *rt;
         diag << lhs.sourceRange;
         diag << rhs.sourceRange;
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
     }
 
     if (result->isAssignment()) {
         if (!lhs.isLValue()) {
             auto& diag = compilation.addError(DiagCode::ExpressionNotAssignable, location);
             diag << lhs.sourceRange;
-            return compilation.badExpression(result);
+            return badExpr(compilation, result);
         }
 
         // TODO: check for const assignment
@@ -425,7 +429,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
             diag << *rt << *lt;
             diag << lhs.sourceRange;
             diag << rhs.sourceRange;
-            return compilation.badExpression(result);
+            return badExpr(compilation, result);
         }
 
         // TODO: unify this with Compilation::bindAssignment
@@ -489,16 +493,16 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     auto result = compilation.emplace<ElementSelectExpression>(compilation.getErrorType(), value,
                                                                selector, syntax.sourceRange());
     if (value.bad())
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
 
     const Type& valueType = value.type->getCanonicalType();
     if (!valueType.isIntegral()) {
         compilation.addError(DiagCode::BadIndexExpression, value.sourceRange) << *value.type;
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
     }
     else if (valueType.isScalar()) {
         compilation.addError(DiagCode::CannotIndexScalar, value.sourceRange);
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
     }
     else if (valueType.kind == SymbolKind::PackedArrayType) {
         result->type = &valueType.as<PackedArrayType>().elementType;
@@ -509,7 +513,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 
     if (!selector.type->getCanonicalType().isIntegral()) {
         compilation.addError(DiagCode::IndexMustBeIntegral, selector.sourceRange);
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
     }
 
     return *result;
@@ -531,7 +535,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     auto result = compilation.emplace<RangeSelectExpression>(selectionKind, compilation.getErrorType(), value,
                                                              left, right, syntax.sourceRange());
     if (value.bad())
-        return compilation.badExpression(result);
+        return badExpr(compilation, result);
 
     // TODO: clean this up
     bool down = value.type->as<IntegralType>().getBitVectorRange().isLittleEndian();
@@ -558,9 +562,8 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 
         const Type& type = *arg.type;
         if (!type.isIntegral()) {
-            return compilation.badExpression(compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
-                                                                                          nullptr,
-                                                                                          syntax.sourceRange()));
+            return badExpr(compilation, compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
+                                                                                     nullptr, syntax.sourceRange()));
         }
         totalWidth += (uint16_t)type.as<IntegralType>().bitWidth;
     }
@@ -591,7 +594,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
         diag << syntax.left.sourceRange();
         diag << formalArgs.size();
         diag << actualArgs.count();
-        return compilation.badExpression(nullptr);
+        return badExpr(compilation, nullptr);
     }
 
     // TODO: handle named arguments in addition to ordered
