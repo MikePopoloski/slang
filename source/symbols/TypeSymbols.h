@@ -23,7 +23,7 @@ public:
     const Type& getCanonicalType() const { if (!canonical) resolveCanonical(); return *canonical; }
 
     /// Gets the total width of the type in bits. Returns zero if the type does not have a statically known size.
-    uint32_t getBitWidth() const;
+    bitwidth_t getBitWidth() const;
 
     /// Indicates whether the type can represent negative numeric values. For non-numeric types, this
     /// always returns false.
@@ -131,7 +131,7 @@ private:
 class IntegralType : public Type {
 public:
     /// The total width of the type in bits.
-    uint32_t bitWidth;
+    bitwidth_t bitWidth;
 
     /// Indicates whether or not the integer participates in signed arithmetic.
     bool isSigned;
@@ -149,7 +149,7 @@ public:
     static bool isKind(SymbolKind kind);
 
 protected:
-    IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth,
+    IntegralType(SymbolKind kind, string_view name, SourceLocation loc, bitwidth_t bitWidth,
                  bool isSigned, bool isFourState);
 
     static bool evaluateConstantDims(Compilation& compilation,
@@ -249,7 +249,7 @@ public:
 /// Represents a packed structure of members.
 class PackedStructType : public IntegralType, public Scope {
 public:
-    PackedStructType(Compilation& compilation, uint32_t bitWidth, bool isSigned, bool isFourState);
+    PackedStructType(Compilation& compilation, bitwidth_t bitWidth, bool isSigned, bool isFourState);
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope);

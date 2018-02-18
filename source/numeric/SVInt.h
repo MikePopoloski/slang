@@ -113,10 +113,14 @@ public:
         uint64_t* pVal; // value used when bits > 64
     };
 
+    enum {
+        BITWIDTH_BITS = 24
+    };
+
     // 32-bits of control data
-    bitwidth_t bitWidth : 24;   // number of bits in the integer
-    bool signFlag : 1;          // whether the number should be treated as signed
-    bool unknownFlag : 1;       // whether we have at least one X or Z value in the number
+    bitwidth_t bitWidth : BITWIDTH_BITS;    // number of bits in the integer
+    bool signFlag : 1;                      // whether the number should be treated as signed
+    bool unknownFlag : 1;                   // whether we have at least one X or Z value in the number
 };
 
 ///
@@ -461,7 +465,8 @@ public:
     enum {
         MAX_BITS = (1 << 24) - 1,
         BITS_PER_WORD = sizeof(uint64_t) * CHAR_BIT,
-        WORD_SIZE = sizeof(uint64_t)
+        WORD_SIZE = sizeof(uint64_t),
+        BITWIDTH_BITS = SVIntStorage::BITWIDTH_BITS
     };
 
     static const SVInt Zero;

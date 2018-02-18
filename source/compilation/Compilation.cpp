@@ -303,17 +303,18 @@ const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation loca
     return Type::fromSyntax(*this, node, location, parent);
 }
 
-const PackedArrayType& Compilation::getType(uint16_t width, bool isSigned, bool isFourState, bool isReg) {
+const PackedArrayType& Compilation::getType(bitwidth_t width, bool isSigned, bool isFourState, bool isReg) {
+    ASSERT(width > 0);
     uint32_t key = width;
-    key |= uint64_t(isSigned) << 16;
-    key |= uint64_t(isFourState) << 17;
-    key |= uint64_t(isReg) << 18;
+    key |= uint32_t(isSigned) << SVInt::BITWIDTH_BITS;
+    key |= uint32_t(isFourState) << (SVInt::BITWIDTH_BITS + 1);
+    key |= uint32_t(isReg) << (SVInt::BITWIDTH_BITS + 2);
 
     auto it = vectorTypeCache.find(key);
     if (it != vectorTypeCache.end())
         return *it->second;
 
-    auto type = emplace<PackedArrayType>(getScalarType(isFourState, isReg), ConstantRange { width - 1, 0 });
+    auto type = emplace<PackedArrayType>(getScalarType(isFourState, isReg), ConstantRange { int32_t(width - 1), 0 });
     vectorTypeCache.emplace_hint(it, key, type);
     return *type;
 }
@@ -362,7 +363,7 @@ const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionS
     if (lhs.getBitWidth() > type->getBitWidth()) {
         if (!lhs.isFloating() && !type->isFloating()) {
             const auto& rt = type->as<IntegralType>();
-            type = &getType((uint16_t)lhs.getBitWidth(), rt.isSigned, rt.isFourState);
+            type = &getType(lhs.getBitWidth(), rt.isSigned, rt.isFourState);
         }
         else {
             if (lhs.getBitWidth() > 32)

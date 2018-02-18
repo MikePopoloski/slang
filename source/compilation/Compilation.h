@@ -87,7 +87,7 @@ public:
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent);
-    const PackedArrayType& getType(uint16_t width, bool isSigned, bool isFourState = true, bool isReg = false);
+    const PackedArrayType& getType(bitwidth_t width, bool isSigned, bool isFourState = true, bool isReg = false);
     const ScalarType& getScalarType(bool isFourState, bool isReg = false);
 
     /// Various built-in type symbols for easy access.

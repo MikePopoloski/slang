@@ -13,7 +13,7 @@ namespace {
 
 using namespace slang;
 
-uint32_t getWidth(PredefinedIntegerType::Kind kind) {
+bitwidth_t getWidth(PredefinedIntegerType::Kind kind) {
     switch (kind) {
         case PredefinedIntegerType::ShortInt: return 16;
         case PredefinedIntegerType::Int: return 32;
@@ -55,7 +55,7 @@ namespace slang {
 
 const ErrorType ErrorType::Instance;
 
-uint32_t Type::getBitWidth() const {
+bitwidth_t Type::getBitWidth() const {
     if (isIntegral())
         return as<IntegralType>().bitWidth;
     if (isFloating()) {
@@ -271,7 +271,7 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
     return symbol->as<Type>();
 }
 
-IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, uint32_t bitWidth_,
+IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, bitwidth_t bitWidth_,
                            bool isSigned_, bool isFourState_) :
     Type(kind, name, loc),
     bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_)
@@ -294,7 +294,7 @@ bool IntegralType::isKind(SymbolKind kind) {
 
 ConstantRange IntegralType::getBitVectorRange() const {
     if (isPredefinedInteger() || isScalar())
-        return { (int)bitWidth - 1, 0 };
+        return { int32_t(bitWidth - 1), 0 };
 
     return as<PackedArrayType>().range;
 }
@@ -320,7 +320,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
         int width = dims[0].left + 1;
-        return compilation.getType((uint16_t)width, isSigned, isFourState, isReg);
+        return compilation.getType(width, isSigned, isFourState, isReg);
     }
 
     const IntegralType* result = &compilation.getScalarType(isFourState, isReg);
@@ -432,8 +432,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(),
                                                     integralBase, scope);
 
-    SVInt one((uint16_t)integralBase.bitWidth, 1, integralBase.isSigned);
-    SVInt current((uint16_t)integralBase.bitWidth, 0, integralBase.isSigned);
+    SVInt one(integralBase.bitWidth, 1, integralBase.isSigned);
+    SVInt current(integralBase.bitWidth, 0, integralBase.isSigned);
     const Symbol* previousMember = nullptr;
 
     for (auto member : syntax.members) {
@@ -478,7 +478,7 @@ PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
 {
 }
 
-PackedStructType::PackedStructType(Compilation& compilation, uint32_t bitWidth,
+PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth,
                                    bool isSigned, bool isFourState) :
     IntegralType(SymbolKind::PackedStructType, "", SourceLocation(), bitWidth, isSigned, isFourState),
     Scope(compilation, this)
@@ -490,7 +490,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
     ASSERT(syntax.packed);
     bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool isFourState = false;
-    uint32_t bitWidth = 0;
+    bitwidth_t bitWidth = 0;
 
     // We have to look at all the members up front to know our width and four-statedness.
     SmallVectorSized<const Symbol*, 8> members;

@@ -59,23 +59,23 @@ private:
 /// SystemVerilog places tighter bounds on possible ranges anyway so it shouldn't be an issue.
 ///
 struct ConstantRange {
-    int left;
-    int right;
+    int32_t left;
+    int32_t right;
 
     /// Gets the width of the range, regardless of the order in which
     /// the bounds are specified.
-    uint32_t width() const {
+    bitwidth_t width() const {
         int diff = left - right;
-        return uint32_t(diff < 0 ? -diff : diff) + 1;
+        return bitwidth_t(diff < 0 ? -diff : diff) + 1;
     }
 
     /// Gets the lower bound of the range, regardless of the order in which
     /// the bounds are specified.
-    int lower() const { return std::min(left, right); }
+    int32_t lower() const { return std::min(left, right); }
 
     /// Gets the upper bound of the range, regardless of the order in which
     /// the bounds are specified.
-    int upper() const { return std::max(left, right); }
+    int32_t upper() const { return std::max(left, right); }
 
     /// "Little endian" bit order is when the msb is >= the lsb.
     bool isLittleEndian() const { return left >= right; }
