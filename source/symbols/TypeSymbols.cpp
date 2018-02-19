@@ -56,10 +56,11 @@ namespace slang {
 const ErrorType ErrorType::Instance;
 
 bitwidth_t Type::getBitWidth() const {
-    if (isIntegral())
-        return as<IntegralType>().bitWidth;
-    if (isFloating()) {
-        switch (as<FloatingType>().floatKind) {
+    const Type& ct = getCanonicalType();
+    if (ct.isIntegral())
+        return ct.as<IntegralType>().bitWidth;
+    if (ct.isFloating()) {
+        switch (ct.as<FloatingType>().floatKind) {
             case FloatingType::Real: return 64;
             case FloatingType::RealTime: return 64;
             case FloatingType::ShortReal: return 32;
@@ -70,19 +71,22 @@ bitwidth_t Type::getBitWidth() const {
 }
 
 bool Type::isSigned() const {
-    return isIntegral() && as<IntegralType>().isSigned;
+    const Type& ct = getCanonicalType();
+    return ct.isIntegral() && ct.as<IntegralType>().isSigned;
 }
 
 bool Type::isFourState() const {
-    return isIntegral() && as<IntegralType>().isFourState;
+    const Type& ct = getCanonicalType();
+    return ct.isIntegral() && ct.as<IntegralType>().isFourState;
 }
 
 bool Type::isIntegral() const {
-    return IntegralType::isKind(kind);
+    const Type& ct = getCanonicalType();
+    return IntegralType::isKind(ct.kind);
 }
 
 bool Type::isAggregate() const {
-    switch (kind) {
+    switch (getCanonicalType().kind) {
         case SymbolKind::UnpackedArrayType:
         case SymbolKind::UnpackedStructType:
         case SymbolKind::UnpackedUnionType:
@@ -93,10 +97,11 @@ bool Type::isAggregate() const {
 }
 
 bool Type::isSimpleBitVector() const {
-    if (isPredefinedInteger() || isScalar())
+    const Type& ct = getCanonicalType();
+    if (ct.isPredefinedInteger() || ct.isScalar())
         return true;
 
-    return kind == SymbolKind::PackedArrayType && as<PackedArrayType>().elementType.isScalar();
+    return ct.kind == SymbolKind::PackedArrayType && ct.as<PackedArrayType>().elementType.isScalar();
 }
 
 bool Type::isMatching(const Type& rhs) const {
@@ -248,7 +253,11 @@ bool Type::isKind(SymbolKind kind) {
 
 void Type::resolveCanonical() const {
     ASSERT(kind == SymbolKind::TypeAlias);
-    canonical = as<TypeAliasType>().targetType.get();
+    canonical = this;
+    do {
+        canonical = canonical->as<TypeAliasType>().targetType.get();
+    }
+    while (canonical->isAlias());
 }
 
 const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& syntax, LookupLocation location,

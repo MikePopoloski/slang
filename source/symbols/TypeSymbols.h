@@ -17,6 +17,12 @@ namespace slang {
 class Compilation;
 
 /// Base class for all data types in SystemVerilog.
+///
+/// Note that this can actually be an alias for some other type (such as with typedefs or
+/// type parameters). Each type knows its "canonical" type, which in the case of most types
+/// points to itself and for type aliases points to the fully unwrapped target type. Most
+/// methods on this class that query traits drill down to the canonical type.
+///
 class Type : public Symbol {
 public:
     /// Gets the canonical type for this type, which involves unwrapping any type aliases.
@@ -45,10 +51,10 @@ public:
     bool isIntegral() const;
 
     /// Indicates whether this is a scalar integral type (bit, logic, or reg).
-    bool isScalar() const { return kind == SymbolKind::ScalarType; }
+    bool isScalar() const { return getCanonicalType().kind == SymbolKind::ScalarType; }
 
     /// Indicates whether this is a predefined integer type.
-    bool isPredefinedInteger() const { return kind == SymbolKind::PredefinedIntegerType; }
+    bool isPredefinedInteger() const { return getCanonicalType().kind == SymbolKind::PredefinedIntegerType; }
 
     /// Indicates whether this is a simple bit vector type, which encompasses all predefined integer
     /// types as well as scalar and vector types.
@@ -58,34 +64,35 @@ public:
     bool isNumeric() const { return isIntegral() || isFloating(); }
 
     /// Indicates whether this is an enum type.
-    bool isEnum() const { return kind == SymbolKind::EnumType; }
+    bool isEnum() const { return getCanonicalType().kind == SymbolKind::EnumType; }
 
     /// Indicates whether this is a class type.
-    bool isClass() const { return kind == SymbolKind::ClassType; }
+    bool isClass() const { return getCanonicalType().kind == SymbolKind::ClassType; }
 
     /// Indicates whether this is a floating point type.
-    bool isFloating() const { return kind == SymbolKind::FloatingType; }
+    bool isFloating() const { return getCanonicalType().kind == SymbolKind::FloatingType; }
 
     /// Indicates whether this is the Void type.
-    bool isVoid() const { return kind == SymbolKind::VoidType; }
+    bool isVoid() const { return getCanonicalType().kind == SymbolKind::VoidType; }
 
     /// Indicates whether this is the null type.
-    bool isNull() const { return kind == SymbolKind::NullType; }
+    bool isNull() const { return getCanonicalType().kind == SymbolKind::NullType; }
 
     /// Indicates whether this is a C-handle type.
-    bool isCHandle() const { return kind == SymbolKind::CHandleType; }
+    bool isCHandle() const { return getCanonicalType().kind == SymbolKind::CHandleType; }
 
     /// Indicates whether this is a string type.
-    bool isString() const { return kind == SymbolKind::StringType; }
+    bool isString() const { return getCanonicalType().kind == SymbolKind::StringType; }
 
     /// Indicates whether this is an event type.
-    bool isEvent() const { return kind == SymbolKind::EventType; }
+    bool isEvent() const { return getCanonicalType().kind == SymbolKind::EventType; }
 
     /// Indicates whether this is a type alias.
+    /// Note that unlike other methods, this one does not unwrap to the canonical type.
     bool isAlias() const { return kind == SymbolKind::TypeAlias; }
 
     /// Indicates whether this is the error type.
-    bool isError() const { return kind == SymbolKind::ErrorType; }
+    bool isError() const { return getCanonicalType().kind == SymbolKind::ErrorType; }
 
     /// Determines whether the given type "matches" this one. For most intents
     /// and purposes, matching types are completely identical.
