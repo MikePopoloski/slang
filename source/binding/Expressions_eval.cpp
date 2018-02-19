@@ -35,6 +35,7 @@ ConstantValue Expression::eval(EvalContext& context) const {
         case ExpressionKind::ElementSelect: return as<ElementSelectExpression>().eval(context);
         case ExpressionKind::RangeSelect: return as<RangeSelectExpression>().eval(context);
         case ExpressionKind::Concatenation: return as<ConcatenationExpression>().eval(context);
+        case ExpressionKind::Replication: return as<ReplicationExpression>().eval(context);
         case ExpressionKind::Call: return as<CallExpression>().eval(context);
         case ExpressionKind::Conversion: return as<ConversionExpression>().eval(context);
     }
@@ -154,7 +155,6 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
         OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
         OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
         OP(Power, l.pow(r));
-        OP(Replication, r.replicate(l));
         ASSIGN(Assignment, r);
         ASSIGN(AddAssignment, l + r);
         ASSIGN(SubtractAssignment, l - r);
@@ -262,8 +262,17 @@ ConstantValue RangeSelectExpression::eval(EvalContext& context) const {
 
 ConstantValue ConcatenationExpression::eval(EvalContext& context) const {
     SmallVectorSized<SVInt, 8> values;
-    for (auto operand : operands())
-        values.append(operand->eval(context).integer());
+    for (auto operand : operands()) {
+        // Skip zero-width replication operands.
+        if (operand->type->isVoid())
+            continue;
+
+        ConstantValue v = operand->eval(context);
+        if (!v)
+            return nullptr;
+
+        values.append(v.integer());
+    }
 
     // TODO: add support for other Nary Expressions, like stream concatenation
     //switch (expr.syntax.kind) {
@@ -271,6 +280,18 @@ ConstantValue ConcatenationExpression::eval(EvalContext& context) const {
     //}
 
     return concatenate(values);
+}
+
+ConstantValue ReplicationExpression::eval(EvalContext& context) const {
+    if (type->isVoid())
+        return SVInt(0);
+
+    ConstantValue v = concat().eval(context);
+    ConstantValue c = count().eval(context);
+    if (!v || !c)
+        return nullptr;
+
+    return v.integer().replicate(c.integer());
 }
 
 ConstantValue CallExpression::eval(EvalContext& context) const {

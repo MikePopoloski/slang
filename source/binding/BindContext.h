@@ -13,18 +13,26 @@ namespace slang {
 
 enum class BindFlags : uint8_t {
     None = 0,
-    RequireConstant = 1
+    Constant = 1,
+    IntegralConstant = 2,
+    InsideConcatenation = 4
 };
-BITMASK_DEFINE_MAX_ELEMENT(BindFlags, RequireConstant);
+BITMASK_DEFINE_MAX_ELEMENT(BindFlags, InsideConcatenation);
 
 struct BindContext {
     const Scope& scope;
     LookupNameKind lookupKind = LookupNameKind::Variable;
     LookupLocation lookupLocation;
-    BindFlags flags;
+    bitmask<BindFlags> flags;
 
-    BindContext(const Scope& scope, LookupLocation lookupLocation, BindFlags flags = BindFlags::None) :
+    BindContext(const Scope& scope, LookupLocation lookupLocation, bitmask<BindFlags> flags = BindFlags::None) :
         scope(scope), lookupLocation(lookupLocation), flags(flags) {}
+
+    BindContext withFlags(bitmask<BindFlags> addedFlags) const {
+        BindContext result(*this);
+        result.flags |= addedFlags;
+        return result;
+    }
 };
 
 }

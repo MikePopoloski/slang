@@ -13,24 +13,38 @@ namespace {
 
 using namespace slang;
 
-const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt, bool forceFourState) {
-    uint32_t width = std::max(lt->getBitWidth(), rt->getBitWidth());
-    if (lt->isFloating() || rt->isFloating()) {
-        // TODO: The spec is unclear for binary operators what to do if the operands are a shortreal and a larger
-        // integral type. For the conditional operator it is clear that this case should lead to a shortreal, and
-        // it isn't explicitly mentioned for other binary operators
-        if (width >= 64)
-            return &compilation.getRealType();
-        else
-            return &compilation.getShortRealType();
+const Type* binaryOperatorType(Compilation& compilation, const Type* lhs, const Type* rhs, bool forceFourState) {
+    // Figure out what the result type of an arithmetic binary operator should be. The rules are:
+    // - If either operand is real, the result is real
+    // - Otherwise, if either operand is shortreal, the result is shortreal
+    // - Otherwise, result is integral with the following properties:
+    //      - Bit width is max(lhs, rhs)
+    //      - If either operand is four state (or if we force it), the result is four state
+    //      - If either operand is unsigned, the result is unsigned
+    const Type& lt = lhs->getCanonicalType();
+    const Type& rt = rhs->getCanonicalType();
+    const Type* result;
+    if (lt.isFloating() || rt.isFloating()) {
+        if ((lt.isFloating() && lt.getBitWidth() == 64) ||
+            (rt.isFloating() && rt.getBitWidth() == 64)) {
+            result = &compilation.getRealType();
+        }
+        else {
+            result = &compilation.getShortRealType();
+        }
     }
     else {
-        const auto& li = lt->as<IntegralType>();
-        const auto& ri = rt->as<IntegralType>();
-        bool isSigned = li.isSigned && ri.isSigned;
-        bool fourState = forceFourState || li.isFourState || ri.isFourState;
-        return &compilation.getType((uint16_t)width, isSigned, fourState);
+        result = &compilation.getType(std::max(lt.getBitWidth(), rt.getBitWidth()),
+                                      lt.isSigned() && rt.isSigned(),
+                                      forceFourState || lt.isFourState() || rt.isFourState());
     }
+
+    // Attempt to preserve any type aliases passed in when selecting the result.
+    if (lt.isMatching(*result))
+        return lhs;
+    if (rt.isMatching(*result))
+        return rhs;
+    return result;
 }
 
 }
@@ -138,8 +152,8 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
             return ConcatenationExpression::fromSyntax(compilation, syntax.as<ConcatenationExpressionSyntax>(),
                                                        context);
         case SyntaxKind::MultipleConcatenationExpression:
-            return BinaryExpression::fromSyntax(compilation, syntax.as<MultipleConcatenationExpressionSyntax>(),
-                                                context);
+            return ReplicationExpression::fromSyntax(compilation, syntax.as<MultipleConcatenationExpressionSyntax>(),
+                                                     context);
         case SyntaxKind::ElementSelectExpression:
             return bindSelectExpression(compilation, syntax.as<ElementSelectExpressionSyntax>(), context);
         default:
@@ -219,7 +233,7 @@ Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const LiteralEx
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax) {
     const SVInt& value = syntax.value.intValue();
-    const Type& type = compilation.getType((uint16_t)value.getBitWidth(), value.isSigned(), value.hasUnknown());
+    const Type& type = compilation.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
     return *compilation.emplace<IntegerLiteral>(compilation, type, value, syntax.sourceRange());
 }
 
@@ -273,8 +287,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
         case SyntaxKind::UnaryBitwiseNorExpression:
         case SyntaxKind::UnaryBitwiseXnorExpression:
             // Supported for integral only. Result type is always a single bit.
-            good = type->isNumeric();
-            result->type = &compilation.getLogicType();
+            good = type->isIntegral();
+            result->type = type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
             break;
         default:
             THROW_UNREACHABLE;
@@ -456,22 +470,6 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
     return *result;
 }
 
-Expression& BinaryExpression::fromSyntax(Compilation& compilation,
-                                         const MultipleConcatenationExpressionSyntax& syntax,
-                                         const BindContext& context) {
-    Expression& left  = Expression::fromSyntax(compilation, syntax.expression, context);
-    Expression& right = Expression::fromSyntax(compilation, syntax.concatenation, context);
-    // TODO: check applicability
-    // TODO: left must be compile-time evaluatable, and it must be known in order to
-    // compute the type of a multiple concatenation. Have a nice error when this isn't the case?
-    // TODO: in cases like these, should we bother storing the bound expression? should we at least cache the result
-    // so we don't have to compute it again elsewhere?
-    uint16_t replicationTimes = left.eval().integer().as<uint16_t>().value();
-    const Type& resultType = compilation.getType((uint16_t)right.type->getBitWidth() * replicationTimes, false);
-    return *compilation.emplace<BinaryExpression>(BinaryOperator::Replication, resultType, left,
-                                                  right, syntax.sourceRange());
-}
-
 Expression& ConditionalExpression::fromSyntax(Compilation& compilation, const ConditionalExpressionSyntax& syntax,
                                               const BindContext& context) {
     // TODO: handle the pattern matching conditional predicate case, rather than just assuming that it's a simple
@@ -553,23 +551,94 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
 Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                                                 const ConcatenationExpressionSyntax& syntax,
                                                 const BindContext& context) {
+    bool errored = false;
+    bool isFourState = false;
+    bitwidth_t totalWidth = 0;
     SmallVectorSized<const Expression*, 8> buffer;
-    uint16_t totalWidth = 0;
-    for (auto argSyntax : syntax.expressions) {
-        // All operands are self-determined.
-        Expression& arg = Expression::fromSyntax(compilation, *argSyntax, context);
-        buffer.append(&arg);
 
-        const Type& type = *arg.type;
-        if (!type.isIntegral()) {
-            return badExpr(compilation, compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
-                                                                                     nullptr, syntax.sourceRange()));
+    for (auto argSyntax : syntax.expressions) {
+        // Replications inside of concatenations have a special feature that allows them to have a width of zero.
+        // Check now if we're going to be binding a replication and if so set an additional flag so that it knows
+        // it's ok to have that zero count.
+        Expression* arg;
+        if (argSyntax->kind == SyntaxKind::MultipleConcatenationExpression)
+            arg = &selfDetermined(compilation, *argSyntax, context.withFlags(BindFlags::InsideConcatenation));
+        else
+            arg = &selfDetermined(compilation, *argSyntax, context);
+        buffer.append(arg);
+
+        if (arg->bad()) {
+            errored = true;
+            break;
         }
-        totalWidth += (uint16_t)type.as<IntegralType>().bitWidth;
+
+        const Type& type = *arg->type;
+        if (type.isVoid() && argSyntax->kind == SyntaxKind::MultipleConcatenationExpression)
+            continue;
+
+        if (!type.isIntegral()) {
+            errored = true;
+            compilation.addError(DiagCode::BadConcatExpression, arg->sourceRange);
+            continue;
+        }
+
+        bitwidth_t newWidth = totalWidth + type.getBitWidth();
+        if (newWidth < totalWidth) {
+            errored = true;
+            compilation.addError(DiagCode::ValueExceedsMaxBitWidth, syntax.sourceRange()) << (int)SVInt::MAX_BITS;
+            break;
+        }
+        totalWidth = newWidth;
+
+        if (type.isFourState())
+            isFourState = true;
     }
 
-    return *compilation.emplace<ConcatenationExpression>(compilation.getType(totalWidth, false),
+    if (errored) {
+        return badExpr(compilation, compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
+                                                                                 nullptr, syntax.sourceRange()));
+    }
+
+    return *compilation.emplace<ConcatenationExpression>(compilation.getType(totalWidth, false, isFourState),
                                                          buffer.copy(compilation), syntax.sourceRange());
+}
+
+Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
+                                              const MultipleConcatenationExpressionSyntax& syntax,
+                                              const BindContext& context) {
+    Expression& left = selfDetermined(compilation, syntax.expression,
+                                      context.withFlags(BindFlags::IntegralConstant));
+    Expression& right = selfDetermined(compilation, syntax.concatenation, context);
+
+    auto result = compilation.emplace<ReplicationExpression>(compilation.getErrorType(), left,
+                                                             right, syntax.sourceRange());
+
+    // If left was not a constant we already issued an error, so just bail out.
+    if (left.bad() || right.bad() || !left.constant || !left.constant->isInteger())
+        return badExpr(compilation, result);
+
+    const SVInt& value = left.constant->integer();
+    if (!compilation.checkNoUnknowns(value, left.sourceRange) ||
+        !compilation.checkPositive(value, left.sourceRange))
+        return badExpr(compilation, result);
+
+    if (value == 0) {
+        if ((context.flags & BindFlags::InsideConcatenation) == 0) {
+            compilation.addError(DiagCode::ReplicationZeroOutsideConcat, left.sourceRange);
+            return badExpr(compilation, result);
+        }
+
+        // Use a placeholder type here to indicate to the parent concatenation that this had a zero width.
+        result->type = &compilation.getVoidType();
+        return *result;
+    }
+
+    auto width = compilation.checkValidBitWidth(value * right.type->getBitWidth(), syntax.sourceRange());
+    if (!width)
+        return badExpr(compilation, result);
+
+    result->type = &compilation.getType(*width, false, right.type->isFourState());
+    return *result;
 }
 
 Expression& CallExpression::fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
@@ -673,6 +742,7 @@ Expression& Expression::propagateAndFold(Compilation& compilation, Expression& e
         case ExpressionKind::Call:
         case ExpressionKind::NamedValue:
         case ExpressionKind::Concatenation:
+        case ExpressionKind::Replication:
         case ExpressionKind::ElementSelect:
         case ExpressionKind::RangeSelect:
             result = &expr;
@@ -707,6 +777,12 @@ void Expression::contextDetermined(Compilation& compilation, Expression*& expr, 
 
 void Expression::selfDetermined(Compilation& compilation, Expression*& expr) {
     expr = &Expression::propagateAndFold(compilation, *expr, *expr->type);
+}
+
+Expression& Expression::selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
+                                       const BindContext& context) {
+    Expression& expr = Expression::fromSyntax(compilation, syntax, context);
+    return Expression::propagateAndFold(compilation, expr, *expr.type);
 }
 
 Expression& IntegerLiteral::propagateAndFold(Compilation& compilation, IntegerLiteral& expr,
@@ -833,9 +909,6 @@ Expression& BinaryExpression::propagateAndFold(Compilation& compilation, BinaryE
         case BinaryOperator::ArithmeticRightShiftAssignment:
             // Essentially self determined, logic handled at creation time.
             break;
-        case BinaryOperator::Replication:
-            expr.type = &newType;
-            break;
     }
     return expr;
 }
@@ -904,7 +977,6 @@ BinaryOperator getBinaryOperator(SyntaxKind kind) {
         case SyntaxKind::ArithmeticShiftLeftExpression: return BinaryOperator::ArithmeticShiftLeft;
         case SyntaxKind::ArithmeticShiftRightExpression: return BinaryOperator::ArithmeticShiftRight;
         case SyntaxKind::PowerExpression: return BinaryOperator::Power;
-        case SyntaxKind::MultipleConcatenationExpression: return BinaryOperator::Replication;
         case SyntaxKind::AssignmentExpression: return BinaryOperator::Assignment;
         case SyntaxKind::AddAssignmentExpression: return BinaryOperator::AddAssignment;
         case SyntaxKind::SubtractAssignmentExpression: return BinaryOperator::SubtractAssignment;

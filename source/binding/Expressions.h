@@ -25,6 +25,7 @@ enum class ExpressionKind {
     BinaryOp,
     ConditionalOp,
     Concatenation,
+    Replication,
     ElementSelect,
     RangeSelect,
     Call,
@@ -73,7 +74,6 @@ enum class BinaryOperator {
     ArithmeticShiftLeft,
     ArithmeticShiftRight,
     Power,
-    Replication,
     Assignment,
     AddAssignment,
     SubtractAssignment,
@@ -173,6 +173,8 @@ protected:
 
     // Perform type propagation and constant folding of a self-determined subexpression.
     static void selfDetermined(Compilation& compilation, Expression*& expr);
+    [[nodiscard]] static Expression& selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
+                                                    const BindContext& context);
 };
 
 /// Represents an invalid expression, which is usually generated and inserted
@@ -306,8 +308,6 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
-    static Expression& fromSyntax(Compilation& compilation, const MultipleConcatenationExpressionSyntax& syntax,
-                                  const BindContext& context);
 
     static Expression& propagateAndFold(Compilation& compilation, BinaryExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
@@ -424,6 +424,32 @@ public:
 
 private:
     span<const Expression*> operands_;
+};
+
+/// Represents a replication expression.
+class ReplicationExpression : public Expression {
+public:
+    ReplicationExpression(const Type& type, Expression& count, Expression& concat, SourceRange sourceRange) :
+        Expression(ExpressionKind::Replication, type, sourceRange),
+        count_(&count), concat_(&concat) {}
+
+    const Expression& count() const { return *count_; }
+    Expression& count() { return *count_; }
+
+    const Expression& concat() const { return *concat_; }
+    Expression& concat() { return *concat_; }
+
+    ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const MultipleConcatenationExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static Expression& propagateAndFold(Compilation& compilation, ReplicationExpression& expr, const Type& newType);
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Replication; }
+
+private:
+    Expression* count_;
+    Expression* concat_;
 };
 
 /// Represents a subroutine call.

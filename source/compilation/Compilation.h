@@ -116,6 +116,10 @@ public:
     const Expression& bindAssignment(const Type& lhs, const ExpressionSyntax& rhs, SourceLocation location,
                                      const BindContext& context);
 
+    bool checkNoUnknowns(const SVInt& value, SourceRange range);
+    bool checkPositive(const SVInt& value, SourceRange range);
+    optional<bitwidth_t> checkValidBitWidth(const SVInt& value, SourceRange range);
+
 private:
     SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,
                                            std::initializer_list<const Type*> argTypes);

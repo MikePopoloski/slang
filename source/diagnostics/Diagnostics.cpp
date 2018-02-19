@@ -105,6 +105,9 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::SignedIntegerOverflow] = { "signed integer overflows 32 bits", DiagnosticSeverity::Error };
     descriptors[DiagCode::DecimalLiteralOverflow] = { "decimal literal overflows 32 bits", DiagnosticSeverity::Error };
     descriptors[DiagCode::VectorLiteralOverflow] = { "vector literal too large for the given number of bits", DiagnosticSeverity::Warning };
+    descriptors[DiagCode::ValueMustNotBeUnknown] = { "value must not have any unknown bits", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ValueMustBePositive] = { "value must be positive", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ValueExceedsMaxBitWidth] = { "value exceeds maximum vector width ({} bits)", DiagnosticSeverity::Error };
 
     // preprocessor
     descriptors[DiagCode::CouldNotOpenIncludeFile] = { "could not find or open include file", DiagnosticSeverity::Error };
@@ -205,12 +208,14 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::BadUnaryExpression] = { "invalid operand type {} to unary expression", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadBinaryExpression] = { "invalid operands to binary expression ({} and {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadIndexExpression] = { "value of type {} cannot be indexed", DiagnosticSeverity::Error };
+    descriptors[DiagCode::BadConcatExpression] = { "invalid operand type {} in concatenation", DiagnosticSeverity::Error };
     descriptors[DiagCode::CannotIndexScalar] = { "scalar type cannot be indexed", DiagnosticSeverity::Error };
     descriptors[DiagCode::IndexMustBeIntegral] = { "index expression must be integral", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadAssignment] = { "value of type {} cannot be assigned to type {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoImplicitConversion] = { "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyArguments] = { "too many arguments to subroutine call; expected {} but {} were provided", DiagnosticSeverity::Error };
     descriptors[DiagCode::ExpressionNotAssignable] = { "expression is not assignable", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ReplicationZeroOutsideConcat] = { "replication constant can only be zero inside of a concatenation", DiagnosticSeverity::Error };
 
     // statements
     descriptors[DiagCode::ReturnNotInSubroutine] = { "return statement is only valid inside task and function blocks", DiagnosticSeverity::Error };

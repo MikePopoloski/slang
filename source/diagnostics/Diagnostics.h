@@ -55,6 +55,9 @@ enum class DiagCode : uint8_t {
     SignedIntegerOverflow,
     DecimalLiteralOverflow,
     VectorLiteralOverflow,
+    ValueMustNotBeUnknown,
+    ValueMustBePositive,
+    ValueExceedsMaxBitWidth,
 
     // preprocessor
     CouldNotOpenIncludeFile,
@@ -154,12 +157,14 @@ enum class DiagCode : uint8_t {
     BadUnaryExpression,
     BadBinaryExpression,
     BadIndexExpression,
+    BadConcatExpression,
     CannotIndexScalar,
     IndexMustBeIntegral,
     BadAssignment,
     NoImplicitConversion,
     TooManyArguments,
     ExpressionNotAssignable,
+    ReplicationZeroOutsideConcat,
 
     // statements
     ReturnNotInSubroutine,

@@ -352,7 +352,7 @@ bool IntegralType::evaluateConstantDims(Compilation& compilation,
         const int MaxRangeBits = 16;
 
         // TODO: errors
-        BindContext context(scope, location, BindFlags::RequireConstant);
+        BindContext context(scope, location, BindFlags::Constant);
         const auto& left = compilation.bindExpression(range.left, context);
         const auto& right = compilation.bindExpression(range.right, context);
         if (!left.constant || !right.constant)
@@ -444,7 +444,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             // TODO: conversion? range / overflow checking? non-constant?
             BindContext context(*resultType,
                                 previousMember ? LookupLocation::after(*previousMember) : LookupLocation::min,
-                                BindFlags::RequireConstant);
+                                BindFlags::Constant);
 
             const auto& init = compilation.bindExpression(member->initializer->expr, context);
             if (!init.constant)

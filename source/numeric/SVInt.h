@@ -182,12 +182,7 @@ public:
     SVInt(bitwidth_t bits, uint64_t value, bool isSigned) :
         SVIntStorage(bits, isSigned, false)
     {
-        // TODO: clean this up
-        // 0-bit SVInts are valid only as the result of a zero-width concatenation, which is only
-        // valid within another concatenation. For now we drop this check altogehter, but it
-        // might be a good check to have in general
-        //ASSERT(bitWidth);
-        ASSERT(bitWidth <= MAX_BITS);
+        ASSERT(bits > 0 && bits <= MAX_BITS);
         if (isSingleWord())
             val = value;
         else

@@ -379,6 +379,29 @@ const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionS
     return Expression::propagateAndFold(*this, expr, *type);
 }
 
+bool Compilation::checkNoUnknowns(const SVInt& value, SourceRange range) {
+    if (value.hasUnknown()) {
+        addError(DiagCode::ValueMustNotBeUnknown, range);
+        return false;
+    }
+    return true;
+}
+
+bool Compilation::checkPositive(const SVInt& value, SourceRange range) {
+    if (value.isSigned() && value.isNegative()) {
+        addError(DiagCode::ValueMustBePositive, range);
+        return false;
+    }
+    return true;
+}
+
+optional<bitwidth_t> Compilation::checkValidBitWidth(const SVInt& value, SourceRange range) {
+    auto result = value.as<bitwidth_t>();
+    if (!result)
+        addError(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
+    return result;
+}
+
 SubroutineSymbol& Compilation::createSystemFunction(string_view funcName, SystemFunction funcKind,
                                                     std::initializer_list<const Type*> argTypes) {
     auto func = emplace<SubroutineSymbol>(*this, funcName, SourceLocation(), funcKind);

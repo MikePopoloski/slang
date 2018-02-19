@@ -259,7 +259,7 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
                                                      LookupLocation location, const Scope& parent) {
     // TODO: better error checking
     const auto& cond = compilation.bindExpression(syntax.condition, BindContext(parent, location,
-                                                                                BindFlags::RequireConstant));
+                                                                                BindFlags::Constant));
     if (!cond.constant)
         return nullptr;
 
@@ -289,7 +289,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     // Initialize the genvar
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
     const auto& initial = compilation.bindExpression(syntax.initialExpr, BindContext(parent, location,
-                                                                                     BindFlags::RequireConstant));
+                                                                                     BindFlags::Constant));
     if (!initial.constant)
         return *result;
 
