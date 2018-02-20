@@ -161,6 +161,7 @@ decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) const {
         CASE(BinaryOp, BinaryExpression);
         CASE(ConditionalOp, ConditionalExpression);
         CASE(Concatenation, ConcatenationExpression);
+        CASE(Replication, ReplicationExpression);
         CASE(ElementSelect, ElementSelectExpression);
         CASE(RangeSelect, RangeSelectExpression);
         CASE(Call, CallExpression);
