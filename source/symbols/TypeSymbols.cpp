@@ -329,7 +329,7 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
         int width = dims[0].left + 1;
-        return compilation.getType(width, isSigned, isFourState, isReg);
+        return compilation.getType(bitwidth_t(width), isSigned, isFourState, isReg);
     }
 
     const IntegralType* result = &compilation.getScalarType(isFourState, isReg);
