@@ -195,6 +195,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
         }
+        case SyntaxKind::GenerateRegion:
+            for (auto member : syntax.as<GenerateRegionSyntax>().members)
+                addMembers(*member);
+            break;
         default:
             THROW_UNREACHABLE;
     }
