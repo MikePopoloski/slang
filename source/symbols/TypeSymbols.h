@@ -195,6 +195,8 @@ public:
     PredefinedIntegerType(Kind integerKind);
     PredefinedIntegerType(Kind integerKind, bool isSigned);
 
+    static bool isDefaultSigned(Kind integerKind);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PredefinedIntegerType; }
 };
 

@@ -791,6 +791,10 @@ class Buffer {
     ptr_[size_++] = value;
   }
 
+  void pop_back() {
+    size_--;
+  }
+
   /** Appends data to the end of the buffer. */
   template <typename U>
   void append(const U *begin, const U *end);
@@ -2781,6 +2785,10 @@ class BasicWriter {
     BasicFormatter<Char>(args, *this).format(format);
   }
   FMT_VARIADIC_VOID(write, BasicCStringRef<Char>)
+
+  void pop_back() {
+    buffer_.pop_back();
+  }
 
   BasicWriter &operator<<(int value) {
     write_decimal(value);

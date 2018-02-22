@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "binding/Expressions.h"
 #include "binding/Statements.h"
 
 #include "HierarchySymbols.h"

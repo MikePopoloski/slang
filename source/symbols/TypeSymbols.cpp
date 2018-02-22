@@ -9,6 +9,8 @@
 #include "binding/ConstantValue.h"
 #include "compilation/Compilation.h"
 
+#include "TypePrinter.h"
+
 namespace {
 
 using namespace slang;
@@ -177,7 +179,9 @@ bool Type::isCastCompatible(const Type& rhs) const {
 }
 
 std::string Type::toString() const {
-    return "";
+    TypePrinter printer;
+    printer.append(*this);
+    return printer.toString();
 }
 
 const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& node, LookupLocation location,
@@ -387,6 +391,10 @@ PredefinedIntegerType::PredefinedIntegerType(Kind integerKind, bool isSigned) :
                  getWidth(integerKind), isSigned, getFourState(integerKind)),
     integerKind(integerKind)
 {
+}
+
+bool PredefinedIntegerType::isDefaultSigned(Kind integerKind) {
+    return getSigned(integerKind);
 }
 
 ScalarType::ScalarType(Kind scalarKind) :
