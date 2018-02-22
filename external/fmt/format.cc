@@ -41,7 +41,16 @@
 #endif
 
 #if FMT_USE_WINDOWS_H
-#  include "compat/windows.h"
+# if !defined(FMT_HEADER_ONLY) && !defined(WIN32_LEAN_AND_MEAN)
+#  define WIN32_LEAN_AND_MEAN
+# endif
+# if defined(NOMINMAX) || defined(FMT_WIN_MINMAX)
+#  include <windows.h>
+# else
+#  define NOMINMAX
+#  include <windows.h>
+#  undef NOMINMAX
+# endif
 #endif
 
 #if FMT_EXCEPTIONS

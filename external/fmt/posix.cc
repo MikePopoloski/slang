@@ -24,7 +24,7 @@
 # ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN
 # endif
-# include "compat/windows.h"
+# include <windows.h>
 # include <io.h>
 
 # define O_CREAT _O_CREAT
