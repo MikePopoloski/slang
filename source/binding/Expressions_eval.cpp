@@ -367,6 +367,9 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
 
 ConstantValue ConversionExpression::eval(EvalContext& context) const {
     ConstantValue value = operand().eval(context);
+    if (!value)
+        return nullptr;
+
     switch (conversionKind) {
         case ConversionKind::IntToFloat:
             // TODO: make this more robust

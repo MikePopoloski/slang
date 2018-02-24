@@ -195,6 +195,7 @@ TEST_CASE("Expression types") {
     declare("shortreal sr;");
     declare("struct packed { logic a; bit b; } sp;");
     declare("struct { logic a; bit b; } su;");
+    declare("reg reg1, reg2;");
 
     CHECK(typeof("l + pa") == "logic[15:0]");
     CHECK(typeof("sl - pa") == "logic[15:0]");
@@ -203,6 +204,11 @@ TEST_CASE("Expression types") {
     CHECK(typeof("b1 / i") == "logic[31:0]"); // divide always produces 4 state
     CHECK(typeof("\"asdfg\"") == "bit[39:0]");
     CHECK(typeof("b1 ** (9234'd234)") == "logic[8:0]"); // self determined from lhs
+    CHECK(typeof("r + sr") == "real");
+    CHECK(typeof("sr + sr") == "shortreal");
+    CHECK(typeof("l + r") == "real");
+    CHECK(typeof("l + sr") == "shortreal");
+    CHECK(typeof("reg1 + reg2") == "reg");
 
     NO_COMPILATION_ERRORS;
 }
