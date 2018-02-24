@@ -563,7 +563,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     else
         width = int(right.eval().integer().as<int64_t>().value());
 
-    result->type = &compilation.getType((uint16_t)width, false);
+    result->type = &compilation.getType((uint16_t)width, IntegralFlags::Unsigned);
     return *result;
 }
 
