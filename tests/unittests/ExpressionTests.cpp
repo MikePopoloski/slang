@@ -68,7 +68,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
 
     auto varToken = syntax->root().getFirstToken();
     VariableSymbol local { varToken.valueText(), varToken.location() };
-    local.type = compilation.getType(20, false);
+    local.type = compilation.getType(20, IntegralFlags::Unsigned);
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
@@ -95,7 +95,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax->root().getFirstToken();
     VariableSymbol local { varToken.valueText(), varToken.location() };
-    local.type = compilation.getType(20, false);
+    local.type = compilation.getType(20, IntegralFlags::Unsigned);
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
@@ -128,7 +128,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     // Fabricate a symbol for the `i` variable
     auto varToken = syntax->root().getFirstToken();
     VariableSymbol local { varToken.valueText(), varToken.location() };
-    local.type = compilation.getType(20, false);
+    local.type = compilation.getType(20, IntegralFlags::Unsigned);
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
