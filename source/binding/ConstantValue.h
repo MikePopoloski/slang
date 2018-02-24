@@ -70,7 +70,7 @@ struct ConstantRange {
     /// Gets the width of the range, regardless of the order in which
     /// the bounds are specified.
     bitwidth_t width() const {
-        int diff = left - right;
+        int32_t diff = left - right;
         return bitwidth_t(diff < 0 ? -diff : diff) + 1;
     }
 

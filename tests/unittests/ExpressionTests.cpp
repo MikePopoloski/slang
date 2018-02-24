@@ -202,6 +202,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("b1 * i") == "bit[31:0]"); // 2 state result
     CHECK(typeof("b1 / i") == "logic[31:0]"); // divide always produces 4 state
     CHECK(typeof("\"asdfg\"") == "bit[39:0]");
+    CHECK(typeof("b1 ** (9234'd234)") == "logic[8:0]"); // self determined from lhs
 
     NO_COMPILATION_ERRORS;
 }

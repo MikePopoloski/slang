@@ -374,27 +374,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
             good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, rt, false);
             break;
-        case SyntaxKind::BinaryAndExpression:
-        case SyntaxKind::BinaryOrExpression:
-        case SyntaxKind::BinaryXorExpression:
-        case SyntaxKind::BinaryXnorExpression:
-        case SyntaxKind::LogicalShiftLeftExpression:
-        case SyntaxKind::LogicalShiftRightExpression:
-        case SyntaxKind::ArithmeticShiftLeftExpression:
-        case SyntaxKind::ArithmeticShiftRightExpression:
-        case SyntaxKind::AndAssignmentExpression:
-        case SyntaxKind::OrAssignmentExpression:
-        case SyntaxKind::XorAssignmentExpression:
-        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
-        case SyntaxKind::LogicalRightShiftAssignmentExpression:
-        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
-        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
-            good = bothIntegral;
-            result->type = binaryOperatorType(compilation, lt, rt, false);
-            break;
         case SyntaxKind::DivideExpression:
         case SyntaxKind::DivideAssignmentExpression:
-        case SyntaxKind::PowerExpression:
             // Result is forced to 4-state because result can be X.
             good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, rt, true);
@@ -402,8 +383,37 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::ModExpression:
         case SyntaxKind::ModAssignmentExpression:
             // Result is forced to 4-state because result can be X.
+            // Different from divide because only integers are allowed.
             good = bothIntegral;
             result->type = binaryOperatorType(compilation, lt, rt, true);
+            break;
+        case SyntaxKind::BinaryAndExpression:
+        case SyntaxKind::BinaryOrExpression:
+        case SyntaxKind::BinaryXorExpression:
+        case SyntaxKind::BinaryXnorExpression:
+        case SyntaxKind::AndAssignmentExpression:
+        case SyntaxKind::OrAssignmentExpression:
+        case SyntaxKind::XorAssignmentExpression:
+            good = bothIntegral;
+            result->type = binaryOperatorType(compilation, lt, rt, false);
+            break;
+        case SyntaxKind::LogicalShiftLeftExpression:
+        case SyntaxKind::LogicalShiftRightExpression:
+        case SyntaxKind::ArithmeticShiftLeftExpression:
+        case SyntaxKind::ArithmeticShiftRightExpression:
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
+        case SyntaxKind::LogicalRightShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            good = bothIntegral;
+            result->type = lt;
+            break;
+        case SyntaxKind::PowerExpression:
+            // Result is forced to 4-state because result can be X.
+            // The call to binaryOperatorType is not typo-ed; we pass lhs type for both parameters on purpose.
+            // The result of the power operator is determined only by the lhs.
+            good = bothNumeric;
+            result->type = binaryOperatorType(compilation, lt, lt, true);
             break;
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
