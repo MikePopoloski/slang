@@ -157,6 +157,8 @@ decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) const {
         CASE(IntegerLiteral, IntegerLiteral);
         CASE(RealLiteral, RealLiteral);
         CASE(UnbasedUnsizedIntegerLiteral, UnbasedUnsizedIntegerLiteral);
+        CASE(NullLiteral, NullLiteral);
+        CASE(StringLiteral, StringLiteral);
         CASE(NamedValue, NamedValueExpression);
         CASE(UnaryOp, UnaryExpression);
         CASE(BinaryOp, BinaryExpression);

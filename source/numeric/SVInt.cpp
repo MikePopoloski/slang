@@ -1265,6 +1265,19 @@ void SVInt::initSlowCase(uint64_t value) {
     }
 }
 
+void SVInt::initSlowCase(span<const byte> bytes) {
+    if (isSingleWord()) {
+        val = 0;
+        memcpy(&val, bytes.data(), std::min<size_t>(WORD_SIZE, (size_t)bytes.size()));
+    }
+    else {
+        uint32_t words = getNumWords();
+        pVal = new uint64_t[words]();   // allocation is zero cleared
+        memcpy(pVal, bytes.data(), std::min<size_t>(words * WORD_SIZE, (size_t)bytes.size()));
+    }
+    clearUnusedBits();
+}
+
 void SVInt::initSlowCase(const SVIntStorage& other) {
     uint32_t words = getNumWords();
     pVal = new uint64_t[words];

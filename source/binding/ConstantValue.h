@@ -19,12 +19,16 @@ class Type;
 ///
 class ConstantValue {
 public:
+    /// This type represents the null value (class handles, etc) in expressions.
+    struct NullPlaceholder : std::monostate {};
+
     ConstantValue() {}
     ConstantValue(nullptr_t) {}
 
     ConstantValue(const SVInt& integer) : value(integer) {}
     ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
     ConstantValue(double real) : value(real) {}
+    ConstantValue(NullPlaceholder nul) : value(nul) {}
 
     ConstantValue(const ConstantValue& other) = default;
     ConstantValue(ConstantValue&& other) noexcept = default;
@@ -36,6 +40,7 @@ public:
 
     bool isInteger() const { return value.index() == 1; }
     bool isReal() const { return value.index() == 2; }
+    bool isNullHandle() const { return value.index() == 3; }
 
     const SVInt& integer() const { return std::get<1>(value); }
     double real() const { return std::get<2>(value); }
@@ -49,7 +54,7 @@ public:
     static const ConstantValue Invalid;
 
 private:
-    std::variant<std::monostate, SVInt, double> value;
+    std::variant<std::monostate, SVInt, double, NullPlaceholder> value;
 };
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative

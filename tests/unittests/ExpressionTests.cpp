@@ -18,21 +18,6 @@ SVInt testParameter(const std::string& text, uint32_t index = 0) {
     return param.getValue().integer();
 }
 
-void addMember(Scope& scope, const std::string& source) {
-    auto tree = SyntaxTree::fromText(string_view(source));
-    scope.getCompilation().addSyntaxTree(tree);
-    scope.addMembers(tree->root());
-}
-
-std::string checkType(const Scope& scope, const std::string& source) {
-    auto tree = SyntaxTree::fromText(string_view(source));
-    BindContext context(scope, LookupLocation::max);
-    return scope
-        .getCompilation()
-        .bindExpression(tree->root().as<ExpressionSyntax>(), context)
-        .type->toString();
-}
-
 TEST_CASE("Bind parameter", "[binding:expressions]") {
     CHECK(testParameter("parameter foo = 4;") == 4);
     CHECK(testParameter("parameter foo = 4 + 5;") == 9);
@@ -185,21 +170,38 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
 TEST_CASE("Expression types") {
     Compilation compilation;
     auto& scope = compilation.createScriptScope();
-    addMember(scope, "logic [7:0] l;");
-    addMember(scope, "logic signed [7:0] sl;");
-    addMember(scope, "logic [7:0][3:2] pa;");
-    addMember(scope, "bit [2:10] b1;");
-    addMember(scope, "int i;");
-    addMember(scope, "real r;");
-    addMember(scope, "shortreal sr;");
-    addMember(scope, "struct packed { logic a; bit b; } sp;");
-    addMember(scope, "struct { logic a; bit b; } su;");
 
-    CHECK(checkType(scope, "l + pa") == "logic[15:0]");
-    CHECK(checkType(scope, "sl - pa") == "logic[15:0]");
-    CHECK(checkType(scope, "sl * 16'sd5") == "logic signed[15:0]"); // both signed, result is signed
-    CHECK(checkType(scope, "b1 * i") == "bit[31:0]"); // 2 state result
-    CHECK(checkType(scope, "b1 / i") == "logic[31:0]"); // divide always produces 4 state
+    auto declare = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        scope.getCompilation().addSyntaxTree(tree);
+        scope.addMembers(tree->root());
+    };
+
+    auto typeof = [&](const std::string& source) {
+        auto tree = SyntaxTree::fromText(string_view(source));
+        BindContext context(scope, LookupLocation::max);
+        return scope
+            .getCompilation()
+            .bindExpression(tree->root().as<ExpressionSyntax>(), context)
+            .type->toString();
+    };
+
+    declare("logic [7:0] l;");
+    declare("logic signed [7:0] sl;");
+    declare("logic [7:0][3:2] pa;");
+    declare("bit [2:10] b1;");
+    declare("int i;");
+    declare("real r;");
+    declare("shortreal sr;");
+    declare("struct packed { logic a; bit b; } sp;");
+    declare("struct { logic a; bit b; } su;");
+
+    CHECK(typeof("l + pa") == "logic[15:0]");
+    CHECK(typeof("sl - pa") == "logic[15:0]");
+    CHECK(typeof("sl * 16'sd5") == "logic signed[15:0]"); // both signed, result is signed
+    CHECK(typeof("b1 * i") == "bit[31:0]"); // 2 state result
+    CHECK(typeof("b1 / i") == "logic[31:0]"); // divide always produces 4 state
+    CHECK(typeof("\"asdfg\"") == "bit[39:0]");
 
     NO_COMPILATION_ERRORS;
 }

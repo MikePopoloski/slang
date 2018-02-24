@@ -20,6 +20,8 @@ enum class ExpressionKind {
     IntegerLiteral,
     RealLiteral,
     UnbasedUnsizedIntegerLiteral,
+    NullLiteral,
+    StringLiteral,
     NamedValue,
     UnaryOp,
     BinaryOp,
@@ -247,6 +249,38 @@ public:
 
 private:
     logic_t value;
+};
+
+/// Represents a null literal.
+class NullLiteral : public Expression {
+public:
+    NullLiteral(const Type& type, SourceRange sourceRange) :
+        Expression(ExpressionKind::NullLiteral, type, sourceRange) {}
+
+    ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NullLiteral; }
+};
+
+/// Represents a string literal.
+class StringLiteral : public Expression {
+public:
+    StringLiteral(const Type& type, string_view value, SourceRange sourceRange) :
+        Expression(ExpressionKind::StringLiteral, type, sourceRange), value(value) {}
+
+    string_view getValue() const { return value; }
+
+    ConstantValue eval(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& propagateAndFold(Compilation& compilation, StringLiteral& expr, const Type& newType);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::StringLiteral; }
+
+private:
+    string_view value;
 };
 
 /// Represents an expression that references a named value.

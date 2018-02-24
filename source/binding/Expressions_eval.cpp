@@ -28,6 +28,8 @@ ConstantValue Expression::eval(EvalContext& context) const {
         case ExpressionKind::IntegerLiteral: return as<IntegerLiteral>().eval(context);
         case ExpressionKind::RealLiteral: return as<RealLiteral>().eval(context);
         case ExpressionKind::UnbasedUnsizedIntegerLiteral: return as<UnbasedUnsizedIntegerLiteral>().eval(context);
+        case ExpressionKind::NullLiteral: return as<NullLiteral>().eval(context);
+        case ExpressionKind::StringLiteral: return as<StringLiteral>().eval(context);
         case ExpressionKind::NamedValue: return as<NamedValueExpression>().eval(context);
         case ExpressionKind::UnaryOp: return as<UnaryExpression>().eval(context);
         case ExpressionKind::BinaryOp: return as<BinaryExpression>().eval(context);
@@ -71,6 +73,19 @@ ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
         case logic_t::Z_VALUE: return SVInt::createFillZ(width, isSigned);
         default: THROW_UNREACHABLE;
     }
+}
+
+ConstantValue NullLiteral::eval(EvalContext&) const {
+    return ConstantValue::NullPlaceholder{};
+}
+
+ConstantValue StringLiteral::eval(EvalContext&) const {
+    // TODO: truncation / resizing?
+    if (value.empty())
+        return SVInt(8, 0, false);
+
+    // TODO: store SVInt locally
+    return SVInt(type->getBitWidth(), as_bytes(make_span(value)), false);
 }
 
 ConstantValue NamedValueExpression::eval(EvalContext& context) const {

@@ -126,6 +126,13 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK_THROWS("300'df"_si);
     CHECK_THROWS("300'of"_si);
     CHECK_THROWS(SVInt::fromDigits(1, LiteralBase::Decimal, false, false, nullptr));
+
+    // Create from memory pointer.
+    uint64_t mem1 = 0x234907862346ff;
+    CHECK(SVInt(61, make_span((byte*)&mem1, 8), false).as<uint64_t>() == mem1);
+
+    char mem2[128] = "asdfkljhaw4rkjb234890uKLJNSDF  K@#*)U?:hjn";
+    CHECK(SVInt(128 * 8, make_span((byte*)mem2, 128), false)(263, 256).as<char>() == '@');
 }
 
 TEST_CASE("logic_t operators", "[numeric]") {

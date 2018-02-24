@@ -190,6 +190,14 @@ public:
         clearUnusedBits();
     }
 
+    /// Construct from numeric data already in memory as a range of bytes.
+    SVInt(bitwidth_t bits, span<const byte> bytes, bool isSigned)  :
+        SVIntStorage(bits, isSigned, false)
+    {
+        ASSERT(bits > 0 && bits <= MAX_BITS);
+        initSlowCase(bytes);
+    }
+
     ~SVInt() {
         if (!isSingleWord())
             delete[] pVal;
@@ -478,6 +486,7 @@ private:
     // Initialization routines for various cases.
     void initSlowCase(logic_t bit);
     void initSlowCase(uint64_t value);
+    void initSlowCase(span<const byte> bytes);
     void initSlowCase(const SVIntStorage& other);
 
     uint64_t* getRawData() { return isSingleWord() ? &val : pVal; }

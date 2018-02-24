@@ -85,7 +85,9 @@ bool Expression::isLValue() const {
 Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context) {
     switch (syntax.kind) {
         case SyntaxKind::NullLiteralExpression:
+            return NullLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
         case SyntaxKind::StringLiteralExpression:
+            return StringLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
         case SyntaxKind::TimeLiteralExpression:
         case SyntaxKind::WildcardLiteralExpression:
         case SyntaxKind::OneStepLiteralExpression:
@@ -278,6 +280,24 @@ Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
         compilation.getType(1, val.isUnknown() ? IntegralFlags::FourState : IntegralFlags::TwoState),
         val, syntax.sourceRange()
     );
+}
+
+Expression& NullLiteral::fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::NullLiteralExpression);
+    return *compilation.emplace<NullLiteral>(compilation.getNullType(), syntax.sourceRange());
+}
+
+Expression& StringLiteral::fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax) {
+    ASSERT(syntax.kind == SyntaxKind::StringLiteralExpression);
+
+    // The standard does not say what the type width should be when the literal is empty
+    // (since you can't have a zero-width integer) so let's pretend there's a null byte there.
+    // TODO: overflow of literal
+    string_view value = syntax.literal.valueText();
+    bitwidth_t width = value.empty() ? 8 : bitwidth_t(value.size()) * 8;
+    const auto& type = compilation.getType(width, IntegralFlags::Unsigned);
+
+    return *compilation.emplace<StringLiteral>(type, value, syntax.sourceRange());
 }
 
 Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
@@ -758,12 +778,16 @@ Expression& Expression::propagateAndFold(Compilation& compilation, Expression& e
                 newType
             );
             break;
+        case ExpressionKind::StringLiteral:
+            result = &StringLiteral::propagateAndFold(compilation, expr.as<StringLiteral>(), newType);
+            break;
         case ExpressionKind::Call:
         case ExpressionKind::NamedValue:
         case ExpressionKind::Concatenation:
         case ExpressionKind::Replication:
         case ExpressionKind::ElementSelect:
         case ExpressionKind::RangeSelect:
+        case ExpressionKind::NullLiteral:
             result = &expr;
             break;
         case ExpressionKind::UnaryOp:
@@ -833,6 +857,19 @@ Expression& UnbasedUnsizedIntegerLiteral::propagateAndFold(Compilation&,
                                                            const Type& newType) {
     ASSERT(newType.isIntegral());
     ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
+
+    expr.type = &newType;
+    return expr;
+}
+
+Expression& StringLiteral::propagateAndFold(Compilation&, StringLiteral& expr,
+                                            const Type& newType) {
+    ASSERT(newType.isIntegral());
+    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
+
+    // TODO:
+    /*if (newType.getBitWidth() != expr.type->getBitWidth())
+        return convert(compilation, ConversionKind::IntExtension, newType, expr);*/
 
     expr.type = &newType;
     return expr;
