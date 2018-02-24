@@ -16,6 +16,27 @@ namespace slang {
 
 class Compilation;
 
+/// Specifies possible traits for integral types.
+enum class IntegralFlags : uint8_t {
+    /// The type is unsigned. This is the default.
+    Unsigned = 0,
+
+    /// The type is two state. This is the default.
+    TwoState = 0,
+
+    /// The type is signed.
+    Signed = 1,
+
+    /// The type is four state.
+    FourState = 2,
+
+    /// The type used the 'reg' keyword instead of 'logic'; they are
+    /// semantically identical but preserve the distinction to allow
+    /// more useful messaging.
+    Reg = 4
+};
+BITMASK_DEFINE_MAX_ELEMENT(IntegralFlags, Reg);
+
 /// Base class for all data types in SystemVerilog.
 ///
 /// Note that this can actually be an alias for some other type (such as with typedefs or
@@ -114,6 +135,10 @@ public:
     /// this one. Note that the reverse operation is not necessarily true.
     bool isCastCompatible(const Type& rhs) const;
 
+    /// Gets a combination of flags for integral types; for non-integral types,
+    /// this returns all zeros.
+    bitmask<IntegralFlags> getIntegralFlags() const;
+
     std::string toString() const;
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
@@ -149,6 +174,9 @@ public:
     /// If this is a simple bit vector type, returns the address range of
     /// the bits in the vector. Otherwise the behavior is undefined (will assert).
     ConstantRange getBitVectorRange() const;
+
+    /// Indicates whether the underlying type was declared using the 'reg' keyword.
+    bool isDeclaredReg() const;
 
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope);

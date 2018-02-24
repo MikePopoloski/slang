@@ -31,6 +31,9 @@ Compilation::Compilation() :
     bitType(ScalarType::Bit),
     logicType(ScalarType::Logic),
     regType(ScalarType::Reg),
+    signedBitType(ScalarType::Bit, true),
+    signedLogicType(ScalarType::Logic, true),
+    signedRegType(ScalarType::Reg, true),
     shortIntType(PredefinedIntegerType::ShortInt),
     intType(PredefinedIntegerType::Int),
     longIntType(PredefinedIntegerType::LongInt),
@@ -61,6 +64,15 @@ Compilation::Compilation() :
     knownTypes[SyntaxKind::EventType] = &eventType;
     knownTypes[SyntaxKind::Unknown] = &errorType;
 
+    // Scalar types are indexed by bit flags.
+    auto registerScalar = [this](auto& type) { scalarTypeTable[type.getIntegralFlags().bits() & 0x7] = &type; };
+    registerScalar(bitType);
+    registerScalar(logicType);
+    registerScalar(regType);
+    registerScalar(signedBitType);
+    registerScalar(signedLogicType);
+    registerScalar(signedRegType);
+
     root.reset(new RootSymbol(*this));
 
     // Register known system functions with the root symbol.
@@ -70,7 +82,7 @@ Compilation::Compilation() :
     // assignment like context
     // TODO: add support for all these operands on data_types, not just expressions,
     // and add support for things like unpacked arrays
-    const auto& trivialIntType = getType(1, false, true);
+    const auto& trivialIntType = getType(1, IntegralFlags::FourState);
     root->addMember(createSystemFunction("$bits", SystemFunction::bits, { &trivialIntType }));
     root->addMember(createSystemFunction("$left", SystemFunction::left, { &trivialIntType }));
     root->addMember(createSystemFunction("$right", SystemFunction::right, { &trivialIntType }));
@@ -303,24 +315,23 @@ const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation loca
     return Type::fromSyntax(*this, node, location, parent);
 }
 
-const PackedArrayType& Compilation::getType(bitwidth_t width, bool isSigned, bool isFourState, bool isReg) {
+const PackedArrayType& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags) {
     ASSERT(width > 0);
     uint32_t key = width;
-    key |= uint32_t(isSigned) << SVInt::BITWIDTH_BITS;
-    key |= uint32_t(isFourState) << (SVInt::BITWIDTH_BITS + 1);
-    key |= uint32_t(isReg) << (SVInt::BITWIDTH_BITS + 2);
-
+    key |= uint32_t(flags.bits()) << SVInt::BITWIDTH_BITS;
     auto it = vectorTypeCache.find(key);
     if (it != vectorTypeCache.end())
         return *it->second;
 
-    auto type = emplace<PackedArrayType>(getScalarType(isFourState, isReg), ConstantRange { int32_t(width - 1), 0 });
+    auto type = emplace<PackedArrayType>(getScalarType(flags), ConstantRange { int32_t(width - 1), 0 });
     vectorTypeCache.emplace_hint(it, key, type);
     return *type;
 }
 
-const ScalarType& Compilation::getScalarType(bool isFourState, bool isReg) {
-    return !isFourState ? getBitType() : isReg ? getRegType() : getLogicType();
+const ScalarType& Compilation::getScalarType(bitmask<IntegralFlags> flags) {
+    ScalarType* ptr = scalarTypeTable[flags.bits() & 0x7];
+    ASSERT(ptr);
+    return *ptr;
 }
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
@@ -361,10 +372,8 @@ const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionS
     }
 
     if (lhs.getBitWidth() > type->getBitWidth()) {
-        if (!lhs.isFloating() && !type->isFloating()) {
-            const auto& rt = type->as<IntegralType>();
-            type = &getType(lhs.getBitWidth(), rt.isSigned, rt.isFourState);
-        }
+        if (!lhs.isFloating() && !type->isFloating())
+            type = &getType(lhs.getBitWidth(), type->getIntegralFlags());
         else {
             if (lhs.getBitWidth() > 32)
                 type = &getRealType();

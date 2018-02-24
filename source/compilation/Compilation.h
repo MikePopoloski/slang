@@ -87,8 +87,8 @@ public:
 
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent);
-    const PackedArrayType& getType(bitwidth_t width, bool isSigned, bool isFourState = true, bool isReg = false);
-    const ScalarType& getScalarType(bool isFourState, bool isReg = false);
+    const PackedArrayType& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
+    const ScalarType& getScalarType(bitmask<IntegralFlags> flags);
 
     /// Various built-in type symbols for easy access.
     const ScalarType& getBitType() const { return bitType; }
@@ -181,10 +181,17 @@ private:
     // Map from syntax kinds to the built-in types.
     flat_hash_map<SyntaxKind, const Type*> knownTypes;
 
+    // A table to look up scalar types based on combinations of the three flags: signed, fourstate, reg
+    // Two of the entries are not valid and will be nullptr (!fourstate & reg).
+    ScalarType* scalarTypeTable[8] {nullptr};
+
     // Instances of all the built-in types.
     ScalarType bitType;
     ScalarType logicType;
     ScalarType regType;
+    ScalarType signedBitType;
+    ScalarType signedLogicType;
+    ScalarType signedRegType;
     PredefinedIntegerType shortIntType;
     PredefinedIntegerType intType;
     PredefinedIntegerType longIntType;

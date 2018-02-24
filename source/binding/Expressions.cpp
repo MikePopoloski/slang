@@ -13,7 +13,7 @@ namespace {
 
 using namespace slang;
 
-const Type* binaryOperatorType(Compilation& compilation, const Type* lhs, const Type* rhs, bool forceFourState) {
+const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt, bool forceFourState) {
     // Figure out what the result type of an arithmetic binary operator should be. The rules are:
     // - If either operand is real, the result is real
     // - Otherwise, if either operand is shortreal, the result is shortreal
@@ -21,12 +21,10 @@ const Type* binaryOperatorType(Compilation& compilation, const Type* lhs, const 
     //      - Bit width is max(lhs, rhs)
     //      - If either operand is four state (or if we force it), the result is four state
     //      - If either operand is unsigned, the result is unsigned
-    const Type& lt = lhs->getCanonicalType();
-    const Type& rt = rhs->getCanonicalType();
     const Type* result;
-    if (lt.isFloating() || rt.isFloating()) {
-        if ((lt.isFloating() && lt.getBitWidth() == 64) ||
-            (rt.isFloating() && rt.getBitWidth() == 64)) {
+    if (lt->isFloating() || rt->isFloating()) {
+        if ((lt->isFloating() && lt->getBitWidth() == 64) ||
+            (rt->isFloating() && rt->getBitWidth() == 64)) {
             result = &compilation.getRealType();
         }
         else {
@@ -34,16 +32,32 @@ const Type* binaryOperatorType(Compilation& compilation, const Type* lhs, const 
         }
     }
     else {
-        result = &compilation.getType(std::max(lt.getBitWidth(), rt.getBitWidth()),
-                                      lt.isSigned() && rt.isSigned(),
-                                      forceFourState || lt.isFourState() || rt.isFourState());
+        bitwidth_t width = std::max(lt->getBitWidth(), rt->getBitWidth());
+
+        bitmask<IntegralFlags> lf = lt->getIntegralFlags();
+        bitmask<IntegralFlags> rf = rt->getIntegralFlags();
+
+        bitmask<IntegralFlags> flags;
+        if ((lf & IntegralFlags::Signed) && (rf & IntegralFlags::Signed))
+            flags |= IntegralFlags::Signed;
+        if (forceFourState || (lf & IntegralFlags::FourState) || (rf & IntegralFlags::FourState))
+            flags |= IntegralFlags::FourState;
+        if ((lf & IntegralFlags::Reg) && (rf & IntegralFlags::Reg))
+            flags |= IntegralFlags::Reg;
+
+        // If the width is 1, try to preserve whether this was a packed array with a width of 1
+        // or a plain scalar type with no dimensions specified.
+        if (width == 1 && (lt->isScalar() || rt->isScalar()))
+            result = &compilation.getScalarType(flags);
+        else
+            result = &compilation.getType(width, flags);
     }
 
     // Attempt to preserve any type aliases passed in when selecting the result.
-    if (lt.isMatching(*result))
-        return lhs;
-    if (rt.isMatching(*result))
-        return rhs;
+    if (lt->isMatching(*result))
+        return lt;
+    if (rt->isMatching(*result))
+        return rt;
     return result;
 }
 
@@ -233,7 +247,14 @@ Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const LiteralEx
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax) {
     const SVInt& value = syntax.value.intValue();
-    const Type& type = compilation.getType(value.getBitWidth(), value.isSigned(), value.hasUnknown());
+
+    bitmask<IntegralFlags> flags;
+    if (value.isSigned())
+        flags |= IntegralFlags::Signed;
+    if (value.hasUnknown())
+        flags |= IntegralFlags::FourState;
+
+    const Type& type = compilation.getType(value.getBitWidth(), flags);
     return *compilation.emplace<IntegerLiteral>(compilation, type, value, syntax.sourceRange());
 }
 
@@ -254,7 +275,7 @@ Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
     // context, but can grow to be wider during propagation.
     logic_t val = syntax.literal.bitValue();
     return *compilation.emplace<UnbasedUnsizedIntegerLiteral>(
-        compilation.getType(1, false, val.isUnknown()),
+        compilation.getType(1, val.isUnknown() ? IntegralFlags::FourState : IntegralFlags::TwoState),
         val, syntax.sourceRange()
     );
 }
@@ -448,10 +469,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
 
         // TODO: unify this with Compilation::bindAssignment
         if (lt->getBitWidth() > rt->getBitWidth()) {
-            if (!lt->isFloating() && !rt->isFloating()) {
-                const auto& ri = rt->as<IntegralType>();
-                rt = &compilation.getType((uint16_t)lt->getBitWidth(), ri.isSigned, ri.isFourState);
-            }
+            if (!lt->isFloating() && !rt->isFloating())
+                rt = &compilation.getType(lt->getBitWidth(), rt->getIntegralFlags());
             else {
                 if (lt->getBitWidth() > 32)
                     rt = &compilation.getRealType();
@@ -552,7 +571,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                                                 const ConcatenationExpressionSyntax& syntax,
                                                 const BindContext& context) {
     bool errored = false;
-    bool isFourState = false;
+    bitmask<IntegralFlags> flags;
     bitwidth_t totalWidth = 0;
     SmallVectorSized<const Expression*, 8> buffer;
 
@@ -591,7 +610,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         totalWidth = newWidth;
 
         if (type.isFourState())
-            isFourState = true;
+            flags |= IntegralFlags::FourState;
     }
 
     if (errored) {
@@ -599,7 +618,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                                                                                  nullptr, syntax.sourceRange()));
     }
 
-    return *compilation.emplace<ConcatenationExpression>(compilation.getType(totalWidth, false, isFourState),
+    return *compilation.emplace<ConcatenationExpression>(compilation.getType(totalWidth, flags),
                                                          buffer.copy(compilation), syntax.sourceRange());
 }
 
@@ -637,7 +656,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     if (!width)
         return badExpr(compilation, result);
 
-    result->type = &compilation.getType(*width, false, right.type->isFourState());
+    result->type = &compilation.getType(*width, right.type->isFourState() ? IntegralFlags::FourState : IntegralFlags::TwoState);
     return *result;
 }
 

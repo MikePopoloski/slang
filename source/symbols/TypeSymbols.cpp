@@ -178,6 +178,22 @@ bool Type::isCastCompatible(const Type& rhs) const {
     return false;
 }
 
+bitmask<IntegralFlags> Type::getIntegralFlags() const {
+    bitmask<IntegralFlags> flags;
+    if (!isIntegral())
+        return flags;
+
+    const IntegralType& it = getCanonicalType().as<IntegralType>();
+    if (it.isSigned)
+        flags |= IntegralFlags::Signed;
+    if (it.isFourState)
+        flags |= IntegralFlags::FourState;
+    if (it.isDeclaredReg())
+        flags |= IntegralFlags::Reg;
+
+    return flags;
+}
+
 std::string Type::toString() const {
     TypePrinter printer;
     printer.append(*this);
@@ -312,16 +328,31 @@ ConstantRange IntegralType::getBitVectorRange() const {
     return as<PackedArrayType>().range;
 }
 
+bool IntegralType::isDeclaredReg() const {
+    const Type* type = this;
+    while (type->kind == SymbolKind::PackedArrayType)
+        type = &type->as<PackedArrayType>().elementType.getCanonicalType();
+
+    if (type->isScalar())
+        return type->as<ScalarType>().scalarKind == ScalarType::Reg;
+
+    return false;
+}
+
 const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
                                      LookupLocation location, const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
-    bool isReg = syntax.keyword.kind == TokenKind::RegKeyword;
-    bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
-    bool isFourState = syntax.kind != SyntaxKind::BitType;
-
     SmallVectorSized<ConstantRange, 4> dims;
     if (!evaluateConstantDims(compilation, syntax.dimensions, dims, location, scope))
         return compilation.getErrorType();
+
+    bitmask<IntegralFlags> flags;
+    if (syntax.keyword.kind == TokenKind::RegKeyword)
+        flags |= IntegralFlags::Reg;
+    if (syntax.signing.kind == TokenKind::SignedKeyword)
+        flags |= IntegralFlags::Signed;
+    if (syntax.kind != SyntaxKind::BitType)
+        flags |= IntegralFlags::FourState;
 
     // TODO: review this whole mess
 
@@ -333,10 +364,10 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         // if we have the common case of only one dimension and lsb == 0
         // then we can use the shared representation
         int width = dims[0].left + 1;
-        return compilation.getType(bitwidth_t(width), isSigned, isFourState, isReg);
+        return compilation.getType(bitwidth_t(width), flags);
     }
 
-    const IntegralType* result = &compilation.getScalarType(isFourState, isReg);
+    const IntegralType* result = &compilation.getScalarType(flags);
     for (uint32_t i = 0; i < dims.size(); i++)
         result = compilation.emplace<PackedArrayType>(*result, dims[i]);
 
