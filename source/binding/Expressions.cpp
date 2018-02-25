@@ -305,10 +305,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
     Expression& operand = Expression::fromSyntax(compilation, syntax.operand, context);
     const Type* type = operand.type;
 
-    Expression* result = compilation.emplace<UnaryExpression>(
-        getUnaryOperator(syntax.kind), *type, operand, syntax.sourceRange()
-    );
-
+    Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
+                                                              operand, syntax.sourceRange());
     if (operand.bad())
         return badExpr(compilation, result);
 
@@ -316,9 +314,14 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
     switch (syntax.kind) {
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
-        case SyntaxKind::UnaryLogicalNotExpression:
-            // Supported for both integral and real types.
+            // Supported for both integral and real types. Result is same as input type.
             good = type->isNumeric();
+            result->type = type;
+            break;
+        case SyntaxKind::UnaryLogicalNotExpression:
+            // Supported for both integral and real types. Result is a single bit.
+            good = type->isNumeric();
+            result->type = type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
             break;
         case SyntaxKind::UnaryBitwiseNotExpression:
         case SyntaxKind::UnaryBitwiseAndExpression:
@@ -352,11 +355,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
     const Type* lt = lhs.type;
     const Type* rt = rhs.type;
 
-    BinaryExpression* result = compilation.emplace<BinaryExpression>(
-        getBinaryOperator(syntax.kind), *lhs.type,
-        lhs, rhs, syntax.sourceRange()
-    );
-
+    auto result = compilation.emplace<BinaryExpression>(getBinaryOperator(syntax.kind), *lhs.type,
+                                                        lhs, rhs, syntax.sourceRange());
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 

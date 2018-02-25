@@ -102,7 +102,12 @@ ConstantValue NamedValueExpression::eval(EvalContext& context) const {
 }
 
 ConstantValue UnaryExpression::eval(EvalContext& context) const {
-    SVInt v = operand().eval(context).integer();
+    ConstantValue cv = operand().eval(context);
+    if (!cv)
+        return nullptr;
+
+    // TODO: handle non-integer
+    SVInt v = cv.integer();
 
 #define OP(k, v) case UnaryOperator::k: return v;
     switch (op) {

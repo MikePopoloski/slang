@@ -197,18 +197,31 @@ TEST_CASE("Expression types") {
     declare("struct { logic a; bit b; } su;");
     declare("reg reg1, reg2;");
 
+    // Literals / misc
+    CHECK(typeof("\"asdfg\"") == "bit[39:0]");
+    CHECK(typeof("reg1 + reg2") == "reg");
+
+    // Unary operators
+    CHECK(typeof("+i") == "int");
+    CHECK(typeof("-sp") == "struct packed{logic a;bit b;}");
+    CHECK(typeof("!r") == "bit");
+    CHECK(typeof("~r") == "<error>");
+    CHECK(typeof("&l") == "logic");
+    CHECK(typeof("~^b1") == "bit");
+
+    // Binary operators
     CHECK(typeof("l + pa") == "logic[15:0]");
     CHECK(typeof("sl - pa") == "logic[15:0]");
     CHECK(typeof("sl * 16'sd5") == "logic signed[15:0]"); // both signed, result is signed
     CHECK(typeof("b1 * i") == "bit[31:0]"); // 2 state result
     CHECK(typeof("b1 / i") == "logic[31:0]"); // divide always produces 4 state
-    CHECK(typeof("\"asdfg\"") == "bit[39:0]");
     CHECK(typeof("b1 ** (9234'd234)") == "logic[8:0]"); // self determined from lhs
     CHECK(typeof("r + sr") == "real");
     CHECK(typeof("sr + sr") == "shortreal");
     CHECK(typeof("l + r") == "real");
     CHECK(typeof("l + sr") == "shortreal");
-    CHECK(typeof("reg1 + reg2") == "reg");
 
-    NO_COMPILATION_ERRORS;
+    Diagnostics diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == DiagCode::BadUnaryExpression);
 }
