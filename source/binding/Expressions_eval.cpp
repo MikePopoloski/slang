@@ -7,6 +7,29 @@
 #include "Expressions.h"
 
 #include "binding/Statements.h"
+#include "symbols/ASTVisitor.h"
+
+namespace {
+
+using namespace slang;
+
+struct EvalVisitor {
+    template<typename T>
+    ConstantValue visit(const T& expr, EvalContext& context) {
+        // If the expression is already known to be constant just return the value we have.
+        if (expr.constant)
+            return *expr.constant;
+
+        // Otherwise evaluate and return that.
+        return expr.evalImpl(context);
+    }
+
+    ConstantValue visitInvalid(const Expression&) {
+        return nullptr;
+    }
+};
+
+}
 
 namespace slang {
 
@@ -19,32 +42,11 @@ bool Expression::evalBool(EvalContext& context) const {
 }
 
 ConstantValue Expression::eval(EvalContext& context) const {
-    // If the expression is already known to be constant just return the value we have.
-    if (constant)
-        return *constant;
-
-    switch (kind) {
-        case ExpressionKind::Invalid: return nullptr;
-        case ExpressionKind::IntegerLiteral: return as<IntegerLiteral>().eval(context);
-        case ExpressionKind::RealLiteral: return as<RealLiteral>().eval(context);
-        case ExpressionKind::UnbasedUnsizedIntegerLiteral: return as<UnbasedUnsizedIntegerLiteral>().eval(context);
-        case ExpressionKind::NullLiteral: return as<NullLiteral>().eval(context);
-        case ExpressionKind::StringLiteral: return as<StringLiteral>().eval(context);
-        case ExpressionKind::NamedValue: return as<NamedValueExpression>().eval(context);
-        case ExpressionKind::UnaryOp: return as<UnaryExpression>().eval(context);
-        case ExpressionKind::BinaryOp: return as<BinaryExpression>().eval(context);
-        case ExpressionKind::ConditionalOp: return as<ConditionalExpression>().eval(context);
-        case ExpressionKind::ElementSelect: return as<ElementSelectExpression>().eval(context);
-        case ExpressionKind::RangeSelect: return as<RangeSelectExpression>().eval(context);
-        case ExpressionKind::Concatenation: return as<ConcatenationExpression>().eval(context);
-        case ExpressionKind::Replication: return as<ReplicationExpression>().eval(context);
-        case ExpressionKind::Call: return as<CallExpression>().eval(context);
-        case ExpressionKind::Conversion: return as<ConversionExpression>().eval(context);
-    }
-    THROW_UNREACHABLE;
+    EvalVisitor visitor;
+    return visit(visitor, context);
 }
 
-ConstantValue IntegerLiteral::eval(EvalContext&) const {
+ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     uint16_t width = (uint16_t)type->getBitWidth();
     SVInt result = getValue();
 
@@ -54,11 +56,11 @@ ConstantValue IntegerLiteral::eval(EvalContext&) const {
     return result;
 }
 
-ConstantValue RealLiteral::eval(EvalContext&) const {
+ConstantValue RealLiteral::evalImpl(EvalContext&) const {
     return value;
 }
 
-ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
+ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
     uint16_t width = (uint16_t)type->getBitWidth();
     bool isSigned = type->as<IntegralType>().isSigned;
 
@@ -75,11 +77,11 @@ ConstantValue UnbasedUnsizedIntegerLiteral::eval(EvalContext&) const {
     }
 }
 
-ConstantValue NullLiteral::eval(EvalContext&) const {
+ConstantValue NullLiteral::evalImpl(EvalContext&) const {
     return ConstantValue::NullPlaceholder{};
 }
 
-ConstantValue StringLiteral::eval(EvalContext&) const {
+ConstantValue StringLiteral::evalImpl(EvalContext&) const {
     // TODO: truncation / resizing?
     if (value.empty())
         return SVInt(8, 0, false);
@@ -88,7 +90,7 @@ ConstantValue StringLiteral::eval(EvalContext&) const {
     return SVInt(type->getBitWidth(), as_bytes(make_span(value)), false);
 }
 
-ConstantValue NamedValueExpression::eval(EvalContext& context) const {
+ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
     switch (symbol.kind) {
         case SymbolKind::Parameter:
             return symbol.as<ParameterSymbol>().getValue();
@@ -101,7 +103,7 @@ ConstantValue NamedValueExpression::eval(EvalContext& context) const {
     }
 }
 
-ConstantValue UnaryExpression::eval(EvalContext& context) const {
+ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = operand().eval(context);
     if (!cv)
         return nullptr;
@@ -126,7 +128,7 @@ ConstantValue UnaryExpression::eval(EvalContext& context) const {
 #undef OP
 }
 
-ConstantValue BinaryExpression::eval(EvalContext& context) const {
+ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
     ConstantValue cvl = left().eval(context);
     ConstantValue cvr = right().eval(context);
     if (!cvl || !cvr)
@@ -194,7 +196,7 @@ ConstantValue BinaryExpression::eval(EvalContext& context) const {
 #undef ASSIGN
 }
 
-ConstantValue ConditionalExpression::eval(EvalContext& context) const {
+ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
     SVInt cond = pred().eval(context).integer();
     logic_t pred = (logic_t)cond;
 
@@ -212,7 +214,7 @@ ConstantValue ConditionalExpression::eval(EvalContext& context) const {
     }
 }
 
-ConstantValue ElementSelectExpression::eval(EvalContext& context) const {
+ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     SVInt v = value().eval(context).integer();
     SVInt index = selector().eval(context).integer();
     ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
@@ -233,7 +235,7 @@ ConstantValue ElementSelectExpression::eval(EvalContext& context) const {
     return SVInt(v[actualIndex]);
 }
 
-ConstantValue RangeSelectExpression::eval(EvalContext& context) const {
+ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     ConstantValue cv = value().eval(context);
     ConstantValue cl = left().eval(context);
     ConstantValue cr = right().eval(context);
@@ -280,7 +282,7 @@ ConstantValue RangeSelectExpression::eval(EvalContext& context) const {
     }
 }
 
-ConstantValue ConcatenationExpression::eval(EvalContext& context) const {
+ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
     SmallVectorSized<SVInt, 8> values;
     for (auto operand : operands()) {
         // Skip zero-width replication operands.
@@ -302,7 +304,7 @@ ConstantValue ConcatenationExpression::eval(EvalContext& context) const {
     return concatenate(values);
 }
 
-ConstantValue ReplicationExpression::eval(EvalContext& context) const {
+ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
     if (type->isVoid())
         return SVInt(0);
 
@@ -314,7 +316,7 @@ ConstantValue ReplicationExpression::eval(EvalContext& context) const {
     return v.integer().replicate(c.integer());
 }
 
-ConstantValue CallExpression::eval(EvalContext& context) const {
+ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     // Evaluate all argument in the current stack frame.
     SmallVectorSized<ConstantValue, 8> args;
     for (auto arg : arguments()) {
@@ -370,7 +372,7 @@ ConstantValue CallExpression::eval(EvalContext& context) const {
     return context.popFrame();
 }
 
-ConstantValue ConversionExpression::eval(EvalContext& context) const {
+ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     ConstantValue value = operand().eval(context);
     if (!value)
         return nullptr;

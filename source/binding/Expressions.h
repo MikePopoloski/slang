@@ -207,7 +207,7 @@ public:
 
     SVInt getValue() const { return valueStorage; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax);
@@ -227,7 +227,7 @@ public:
 
     double getValue() const { return value; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& propagateType(Compilation& compilation, RealLiteral& expr, const Type& newType);
@@ -246,7 +246,7 @@ public:
 
     logic_t getValue() const { return value; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& propagateType(Compilation& compilation, UnbasedUnsizedIntegerLiteral& expr, const Type& newType);
@@ -263,7 +263,7 @@ public:
     NullLiteral(const Type& type, SourceRange sourceRange) :
         Expression(ExpressionKind::NullLiteral, type, sourceRange) {}
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& propagateType(Compilation& compilation, NullLiteral& expr, const Type& newType);
@@ -279,7 +279,7 @@ public:
 
     string_view getValue() const { return value; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& propagateType(Compilation& compilation, StringLiteral& expr, const Type& newType);
@@ -298,7 +298,7 @@ public:
     NamedValueExpression(const ValueSymbol& symbol, SourceRange sourceRange) :
         Expression(ExpressionKind::NamedValue, symbol.getType(), sourceRange), symbol(symbol) {}
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& propagateType(Compilation& compilation, NamedValueExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
@@ -316,7 +316,7 @@ public:
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
                                   const BindContext& context);
@@ -345,7 +345,7 @@ public:
     const Expression& right() const { return *right_; }
     Expression& right() { return *right_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
@@ -375,7 +375,7 @@ public:
     const Expression& right() const { return *right_; }
     Expression& right() { return *right_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const ConditionalExpressionSyntax& syntax,
                                   const BindContext& context);
@@ -402,7 +402,7 @@ public:
     const Expression& selector() const { return *selector_; }
     Expression& selector() { return *selector_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const ExpressionSyntax& syntax, const BindContext& context);
@@ -434,7 +434,7 @@ public:
     const Expression& right() const { return *right_; }
     Expression& right() { return *right_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const RangeSelectSyntax& syntax, const BindContext& context);
@@ -457,7 +457,7 @@ public:
     span<const Expression* const> operands() const { return operands_; }
     span<const Expression*> operands() { return operands_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const ConcatenationExpressionSyntax& syntax,
                                   const BindContext& context);
@@ -482,7 +482,7 @@ public:
     const Expression& concat() const { return *concat_; }
     Expression& concat() { return *concat_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const MultipleConcatenationExpressionSyntax& syntax,
                                   const BindContext& context);
@@ -507,7 +507,7 @@ public:
     span<const Expression* const> arguments() const { return arguments_; }
     span<const Expression*> arguments() { return arguments_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
                                   const BindContext& context);
@@ -532,7 +532,7 @@ public:
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }
 
-    ConstantValue eval(EvalContext& context) const;
+    ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& propagateType(Compilation& compilation, ConversionExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
