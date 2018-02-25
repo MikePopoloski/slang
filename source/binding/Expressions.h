@@ -113,7 +113,7 @@ public:
     ExpressionKind kind;
 
     /// The type of the expression.
-    const Type* type;
+    not_null<const Type*> type;
 
     /// The value of the expression, if it's constant. Otherwise nullptr.
     const ConstantValue* constant = nullptr;

@@ -79,6 +79,7 @@ using std::uintptr_t;
 
 using gsl::span;
 using gsl::make_span;
+using gsl::not_null;
 
 // Compiler-specific macros for warnings and suppressions
 #ifdef __clang__
