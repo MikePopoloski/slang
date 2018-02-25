@@ -354,8 +354,7 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
 }
 
 const Expression& Compilation::bindExpression(const ExpressionSyntax& syntax, const BindContext& context) {
-    Expression& expr = Expression::fromSyntax(*this, syntax, context);
-    return Expression::propagateAndFold(*this, expr, *expr.type);
+    return Expression::selfDetermined(*this, syntax, context);
 }
 
 const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionSyntax& rhs, SourceLocation location,
@@ -385,7 +384,9 @@ const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionS
         // TODO: truncation
     }
 
-    return Expression::propagateAndFold(*this, expr, *type);
+    Expression* e = &expr;
+    Expression::contextDetermined(*this, e, *type);
+    return *e;
 }
 
 bool Compilation::checkNoUnknowns(const SVInt& value, SourceRange range) {

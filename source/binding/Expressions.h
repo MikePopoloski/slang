@@ -152,12 +152,16 @@ public:
     }
 
     template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args);
+
+    template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
     static Expression& fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
-    static Expression& propagateAndFold(Compilation& compilation, Expression& expr, const Type& newType);
 
 protected:
+    friend class Compilation;
+
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
@@ -177,6 +181,8 @@ protected:
     static void selfDetermined(Compilation& compilation, Expression*& expr);
     [[nodiscard]] static Expression& selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
                                                     const BindContext& context);
+
+    struct PropagationVisitor;
 };
 
 /// Represents an invalid expression, which is usually generated and inserted
@@ -205,7 +211,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
     static Expression& fromSyntax(Compilation& compilation, const IntegerVectorExpressionSyntax& syntax);
-    static Expression& propagateAndFold(Compilation& compilation, IntegerLiteral& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, IntegerLiteral& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::IntegerLiteral; }
 
@@ -224,7 +230,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& propagateAndFold(Compilation& compilation, RealLiteral& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, RealLiteral& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RealLiteral; }
 
@@ -243,7 +249,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& propagateAndFold(Compilation& compilation, UnbasedUnsizedIntegerLiteral& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, UnbasedUnsizedIntegerLiteral& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnbasedUnsizedIntegerLiteral; }
 
@@ -260,6 +266,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
+    static Expression& propagateType(Compilation& compilation, NullLiteral& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NullLiteral; }
 };
@@ -275,7 +282,7 @@ public:
     ConstantValue eval(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax);
-    static Expression& propagateAndFold(Compilation& compilation, StringLiteral& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, StringLiteral& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::StringLiteral; }
 
@@ -293,7 +300,7 @@ public:
 
     ConstantValue eval(EvalContext& context) const;
 
-    static Expression& propagateAndFold(Compilation& compilation, NamedValueExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, NamedValueExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
 };
 
@@ -314,7 +321,7 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateAndFold(Compilation& compilation, UnaryExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, UnaryExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::UnaryOp; }
 
 private:
@@ -343,7 +350,7 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateAndFold(Compilation& compilation, BinaryExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, BinaryExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
 
 private:
@@ -373,7 +380,7 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const ConditionalExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateAndFold(Compilation& compilation, ConditionalExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, ConditionalExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ConditionalOp; }
 
 private:
@@ -399,6 +406,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const ExpressionSyntax& syntax, const BindContext& context);
+    static Expression& propagateType(Compilation& compilation, ElementSelectExpression& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
@@ -430,6 +438,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value,
                                   const RangeSelectSyntax& syntax, const BindContext& context);
+    static Expression& propagateType(Compilation& compilation, RangeSelectExpression& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
@@ -453,7 +462,7 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const ConcatenationExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateAndFold(Compilation& compilation, ConcatenationExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, ConcatenationExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Concatenation; }
 
 private:
@@ -478,7 +487,7 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const MultipleConcatenationExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateAndFold(Compilation& compilation, ReplicationExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, ReplicationExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Replication; }
 
 private:
@@ -503,7 +512,7 @@ public:
     static Expression& fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
                                   const BindContext& context);
 
-    static Expression& propagateAndFold(Compilation& compilation, CallExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, CallExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
 
 private:
@@ -525,7 +534,7 @@ public:
 
     ConstantValue eval(EvalContext& context) const;
 
-    static Expression& propagateAndFold(Compilation& compilation, ConversionExpression& expr, const Type& newType);
+    static Expression& propagateType(Compilation& compilation, ConversionExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
 private:

@@ -238,6 +238,19 @@ Expression& Expression::badExpr(Compilation& compilation, const Expression* expr
     return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
 }
 
+IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
+                               SourceRange sourceRange) :
+    Expression(ExpressionKind::IntegerLiteral, type, sourceRange),
+    valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown())
+{
+    if (value.isSingleWord())
+        valueStorage.val = *value.getRawData();
+    else {
+        valueStorage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
+        memcpy(valueStorage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
+    }
+}
+
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation, const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
 
@@ -410,7 +423,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
             break;
         case SyntaxKind::PowerExpression:
             // Result is forced to 4-state because result can be X.
-            // The call to binaryOperatorType is not typo-ed; we pass lhs type for both parameters on purpose.
+            // The call to binaryOperatorType is not a typo; we pass the lhs type for both parameters on purpose.
             // The result of the power operator is determined only by the lhs.
             good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, lt, true);
@@ -418,7 +431,18 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
         case SyntaxKind::LessThanEqualExpression:
-        case SyntaxKind::LessThanExpression:
+        case SyntaxKind::LessThanExpression: {
+            // Result is always a single bit.
+            good = bothNumeric;
+            result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
+
+            // Result type is fixed but the two operands affect each other as they would in
+            // other context-determined operators.
+            auto nt = binaryOperatorType(compilation, lt, rt, false);
+            contextDetermined(compilation, result->left_, *nt);
+            contextDetermined(compilation, result->right_, *nt);
+            break;
+        }
         case SyntaxKind::LogicalAndExpression:
         case SyntaxKind::LogicalOrExpression:
         case SyntaxKind::LogicalImplicationExpression:
@@ -441,6 +465,12 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
             if (bothNumeric) {
                 good = true;
                 result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
+
+                // Result type is fixed but the two operands affect each other as they would in
+                // other context-determined operators.
+                auto nt = binaryOperatorType(compilation, lt, rt, false);
+                contextDetermined(compilation, result->left_, *nt);
+                contextDetermined(compilation, result->right_, *nt);
             }
             else if (lt->isAggregate() && lt->isEquivalent(*rt)) {
                 // TODO: drill into the aggregate and figure out if it's all 2-state
@@ -508,10 +538,12 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
                     rt = &compilation.getShortRealType();
             }
             // TODO: return value?
-            Expression::propagateAndFold(compilation, rhs, *rt);
+            Expression* r = &rhs;
+            contextDetermined(compilation, r, *rt);
         }
         else {
-            Expression::propagateAndFold(compilation, rhs, *rhs.type);
+            Expression* r = &rhs;
+            selfDetermined(compilation, r);
         }
         result->type = lhs.type;
     }
@@ -727,19 +759,6 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation), syntax.sourceRange());
 }
 
-IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
-                               SourceRange sourceRange) :
-    Expression(ExpressionKind::IntegerLiteral, type, sourceRange),
-    valueStorage(value.getBitWidth(), value.isSigned(), value.hasUnknown())
-{
-    if (value.isSingleWord())
-        valueStorage.val = *value.getRawData();
-    else {
-        valueStorage.pVal = (uint64_t*)alloc.allocate(sizeof(uint64_t) * value.getNumWords(), alignof(uint64_t));
-        memcpy(valueStorage.pVal, value.getRawData(), sizeof(uint64_t) * value.getNumWords());
-    }
-}
-
 bool BinaryExpression::isAssignment() const {
     switch (op) {
         case BinaryOperator::Assignment:
@@ -759,242 +778,6 @@ bool BinaryExpression::isAssignment() const {
         default:
             return false;
     }
-}
-
-Expression& Expression::propagateAndFold(Compilation& compilation, Expression& expr, const Type& newType) {
-    if (expr.type->isError() || newType.isError())
-        return expr;
-
-    // If we're propagating a floating type down to a non-floating type, that operand
-    // will instead be converted in a self-determined context.
-    if (newType.isFloating() && !expr.type->isFloating() && expr.kind != ExpressionKind::Conversion)
-        return convert(compilation, ConversionKind::IntToFloat, newType, expr);
-
-    Expression* result;
-    switch (expr.kind) {
-        case ExpressionKind::Invalid:
-            result = &expr;
-            break;
-        case ExpressionKind::IntegerLiteral:
-            result = &IntegerLiteral::propagateAndFold(compilation, expr.as<IntegerLiteral>(), newType);
-            break;
-        case ExpressionKind::RealLiteral:
-            result = &RealLiteral::propagateAndFold(compilation, expr.as<RealLiteral>(), newType);
-            break;
-        case ExpressionKind::UnbasedUnsizedIntegerLiteral:
-            result = &UnbasedUnsizedIntegerLiteral::propagateAndFold(
-                compilation,
-                expr.as<UnbasedUnsizedIntegerLiteral>(),
-                newType
-            );
-            break;
-        case ExpressionKind::StringLiteral:
-            result = &StringLiteral::propagateAndFold(compilation, expr.as<StringLiteral>(), newType);
-            break;
-        case ExpressionKind::Call:
-        case ExpressionKind::NamedValue:
-        case ExpressionKind::Concatenation:
-        case ExpressionKind::Replication:
-        case ExpressionKind::ElementSelect:
-        case ExpressionKind::RangeSelect:
-        case ExpressionKind::NullLiteral:
-            result = &expr;
-            break;
-        case ExpressionKind::UnaryOp:
-            result = &UnaryExpression::propagateAndFold(compilation, expr.as<UnaryExpression>(), newType);
-            break;
-        case ExpressionKind::BinaryOp:
-            result = &BinaryExpression::propagateAndFold(compilation, expr.as<BinaryExpression>(), newType);
-            break;
-        case ExpressionKind::ConditionalOp:
-            result = &ConditionalExpression::propagateAndFold(compilation, expr.as<ConditionalExpression>(), newType);
-            break;
-        case ExpressionKind::Conversion:
-            result = &ConversionExpression::propagateAndFold(compilation, expr.as<ConversionExpression>(), newType);
-            break;
-        default:
-            THROW_UNREACHABLE;
-    }
-
-    // Try to fold any constant values.
-    ASSERT(!result->constant);
-    ConstantValue value = result->eval();
-    if (value)
-        result->constant = compilation.createConstant(std::move(value));
-    return *result;
-}
-
-void Expression::contextDetermined(Compilation& compilation, Expression*& expr, const Type& newType) {
-    expr = &Expression::propagateAndFold(compilation, *expr, newType);
-}
-
-void Expression::selfDetermined(Compilation& compilation, Expression*& expr) {
-    expr = &Expression::propagateAndFold(compilation, *expr, *expr->type);
-}
-
-Expression& Expression::selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
-                                       const BindContext& context) {
-    Expression& expr = Expression::fromSyntax(compilation, syntax, context);
-    return Expression::propagateAndFold(compilation, expr, *expr.type);
-}
-
-Expression& IntegerLiteral::propagateAndFold(Compilation& compilation, IntegerLiteral& expr,
-                                             const Type& newType) {
-    ASSERT(newType.isIntegral());
-    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
-
-    if (newType.getBitWidth() != expr.type->getBitWidth())
-        return convert(compilation, ConversionKind::IntExtension, newType, expr);
-
-    expr.type = &newType;
-    return expr;
-}
-
-Expression& RealLiteral::propagateAndFold(Compilation& compilation, RealLiteral& expr,
-                                          const Type& newType) {
-    ASSERT(newType.isFloating());
-    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
-
-    if (newType.getBitWidth() != expr.type->getBitWidth())
-        return convert(compilation, ConversionKind::FloatExtension, newType, expr);
-
-    expr.type = &newType;
-    return expr;
-}
-
-Expression& UnbasedUnsizedIntegerLiteral::propagateAndFold(Compilation&,
-                                                           UnbasedUnsizedIntegerLiteral& expr,
-                                                           const Type& newType) {
-    ASSERT(newType.isIntegral());
-    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
-
-    expr.type = &newType;
-    return expr;
-}
-
-Expression& StringLiteral::propagateAndFold(Compilation&, StringLiteral& expr,
-                                            const Type& newType) {
-    ASSERT(newType.isIntegral());
-    ASSERT(newType.getBitWidth() >= expr.type->getBitWidth());
-
-    // TODO:
-    /*if (newType.getBitWidth() != expr.type->getBitWidth())
-        return convert(compilation, ConversionKind::IntExtension, newType, expr);*/
-
-    expr.type = &newType;
-    return expr;
-}
-
-Expression& UnaryExpression::propagateAndFold(Compilation& compilation, UnaryExpression& expr,
-                                              const Type& newType) {
-    switch (expr.op) {
-        case UnaryOperator::Plus:
-        case UnaryOperator::Minus:
-        case UnaryOperator::BitwiseNot:
-            expr.type = &newType;
-            contextDetermined(compilation, expr.operand_, newType);
-            break;
-        case UnaryOperator::BitwiseAnd:
-        case UnaryOperator::BitwiseOr:
-        case UnaryOperator::BitwiseXor:
-        case UnaryOperator::BitwiseNand:
-        case UnaryOperator::BitwiseNor:
-        case UnaryOperator::BitwiseXnor:
-        case UnaryOperator::LogicalNot:
-            // Type is already set (always 1 bit).
-            selfDetermined(compilation, expr.operand_);
-            break;
-    }
-    return expr;
-}
-
-Expression& BinaryExpression::propagateAndFold(Compilation& compilation, BinaryExpression& expr,
-                                               const Type& newType) {
-    switch (expr.op) {
-        case BinaryOperator::Add:
-        case BinaryOperator::Subtract:
-        case BinaryOperator::Multiply:
-        case BinaryOperator::Divide:
-        case BinaryOperator::Mod:
-        case BinaryOperator::BinaryAnd:
-        case BinaryOperator::BinaryOr:
-        case BinaryOperator::BinaryXor:
-        case BinaryOperator::BinaryXnor:
-            expr.type = &newType;
-            contextDetermined(compilation, expr.left_, newType);
-            contextDetermined(compilation, expr.right_, newType);
-            break;
-        case BinaryOperator::Equality:
-        case BinaryOperator::Inequality:
-        case BinaryOperator::CaseEquality:
-        case BinaryOperator::CaseInequality:
-        case BinaryOperator::GreaterThanEqual:
-        case BinaryOperator::GreaterThan:
-        case BinaryOperator::LessThanEqual:
-        case BinaryOperator::LessThan:
-        case BinaryOperator::WildcardEquality:
-        case BinaryOperator::WildcardInequality: {
-            // Relational expressions affect each other but don't affect the result type,
-            // which has already been set at 1 bit. Figure out which type to propagate.
-            // TODO: handle non-integer
-            auto nt = binaryOperatorType(compilation, expr.left().type, expr.right().type, false);
-            contextDetermined(compilation, expr.left_, *nt);
-            contextDetermined(compilation, expr.right_, *nt);
-            break;
-        }
-        case BinaryOperator::LogicalAnd:
-        case BinaryOperator::LogicalOr:
-        case BinaryOperator::LogicalImplication:
-        case BinaryOperator::LogicalEquivalence:
-            // Type is already set (always 1 bit).
-            selfDetermined(compilation, expr.left_);
-            selfDetermined(compilation, expr.right_);
-            break;
-        case BinaryOperator::LogicalShiftLeft:
-        case BinaryOperator::LogicalShiftRight:
-        case BinaryOperator::ArithmeticShiftLeft:
-        case BinaryOperator::ArithmeticShiftRight:
-        case BinaryOperator::Power:
-            // Only the left hand side gets propagated; the rhs is self determined.
-            expr.type = &newType;
-            contextDetermined(compilation, expr.left_, newType);
-            selfDetermined(compilation, expr.right_);
-            break;
-        case BinaryOperator::Assignment:
-        case BinaryOperator::AddAssignment:
-        case BinaryOperator::SubtractAssignment:
-        case BinaryOperator::MultiplyAssignment:
-        case BinaryOperator::DivideAssignment:
-        case BinaryOperator::ModAssignment:
-        case BinaryOperator::AndAssignment:
-        case BinaryOperator::OrAssignment:
-        case BinaryOperator::XorAssignment:
-        case BinaryOperator::LogicalLeftShiftAssignment:
-        case BinaryOperator::LogicalRightShiftAssignment:
-        case BinaryOperator::ArithmeticLeftShiftAssignment:
-        case BinaryOperator::ArithmeticRightShiftAssignment:
-            // Essentially self determined, logic handled at creation time.
-            break;
-    }
-    return expr;
-}
-
-Expression& ConditionalExpression::propagateAndFold(Compilation& compilation, ConditionalExpression& expr,
-                                                    const Type& newType) {
-    // predicate is self determined
-    expr.type = &newType;
-    selfDetermined(compilation, expr.pred_);
-    contextDetermined(compilation, expr.left_, newType);
-    contextDetermined(compilation, expr.right_, newType);
-    return expr;
-}
-
-Expression& ConversionExpression::propagateAndFold(Compilation& compilation, ConversionExpression& expr,
-                                                   const Type& newType) {
-    // predicate is self determined
-    expr.type = &newType;
-    selfDetermined(compilation, expr.operand_);
-    return expr;
 }
 
 UnaryOperator getUnaryOperator(SyntaxKind kind) {

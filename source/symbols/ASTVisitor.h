@@ -149,11 +149,16 @@ decltype(auto) Statement::visit(TVisitor& visitor, Args&&... args) const {
     THROW_UNREACHABLE;
 }
 
-template<typename TVisitor, typename... Args>
-decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) const {
-#define CASE(k, n) case ExpressionKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
-    switch (kind) {
-        case ExpressionKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
+namespace detail {
+
+template<typename TExpression, typename TVisitor, typename... Args>
+decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... args) {
+#define CASE(k, n) case ExpressionKind::k: return visitor.visit(\
+                        *static_cast<std::conditional_t<std::is_const_v<TExpression>, const n*, n*>>(expr),\
+                            std::forward<Args>(args)...)
+
+    switch (expr->kind) {
+        case ExpressionKind::Invalid: return visitor.visitInvalid(*expr);
         CASE(IntegerLiteral, IntegerLiteral);
         CASE(RealLiteral, RealLiteral);
         CASE(UnbasedUnsizedIntegerLiteral, UnbasedUnsizedIntegerLiteral);
@@ -172,6 +177,18 @@ decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) const {
     }
 #undef CASE
     THROW_UNREACHABLE;
+}
+
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) const {
+    return detail::visitExpression(this, visitor, std::forward<Args>(args)...);
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) Expression::visit(TVisitor& visitor, Args&&... args) {
+    return detail::visitExpression(this, visitor, std::forward<Args>(args)...);
 }
 
 }
