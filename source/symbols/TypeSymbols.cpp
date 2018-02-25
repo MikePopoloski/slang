@@ -397,8 +397,8 @@ bool IntegralType::evaluateConstantDims(Compilation& compilation,
 
         // TODO: errors
         BindContext context(scope, location, BindFlags::Constant);
-        const auto& left = compilation.bindExpression(range.left, context);
-        const auto& right = compilation.bindExpression(range.right, context);
+        const auto& left = Expression::bind(compilation, range.left, context);
+        const auto& right = Expression::bind(compilation, range.right, context);
         if (!left.constant || !right.constant)
             return false;
 
@@ -494,7 +494,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                                 previousMember ? LookupLocation::after(*previousMember) : LookupLocation::min,
                                 BindFlags::Constant);
 
-            const auto& init = compilation.bindExpression(member->initializer->expr, context);
+            const auto& init = Expression::bind(compilation, member->initializer->expr, context);
             if (!init.constant)
                 value = current;
             else

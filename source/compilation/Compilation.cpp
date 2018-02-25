@@ -353,42 +353,6 @@ span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataInd
     return importData[index];
 }
 
-const Expression& Compilation::bindExpression(const ExpressionSyntax& syntax, const BindContext& context) {
-    return Expression::selfDetermined(*this, syntax, context);
-}
-
-const Expression& Compilation::bindAssignment(const Type& lhs, const ExpressionSyntax& rhs, SourceLocation location,
-                                              const BindContext& context) {
-    Expression& expr = Expression::fromSyntax(*this, rhs, context);
-    if (expr.bad() || lhs.isError())
-        return expr;
-
-    const Type* type = expr.type;
-    if (!lhs.isAssignmentCompatible(*type)) {
-        DiagCode code = lhs.isCastCompatible(*type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        addError(code, location) << rhs.sourceRange();
-        return *emplace<InvalidExpression>(&expr, getErrorType());
-    }
-
-    if (lhs.getBitWidth() > type->getBitWidth()) {
-        if (!lhs.isFloating() && !type->isFloating())
-            type = &getType(lhs.getBitWidth(), type->getIntegralFlags());
-        else {
-            if (lhs.getBitWidth() > 32)
-                type = &getRealType();
-            else
-                type = &getShortRealType();
-        }
-    }
-    else {
-        // TODO: truncation
-    }
-
-    Expression* e = &expr;
-    Expression::contextDetermined(*this, e, *type);
-    return *e;
-}
-
 bool Compilation::checkNoUnknowns(const SVInt& value, SourceRange range) {
     if (value.hasUnknown()) {
         addError(DiagCode::ValueMustNotBeUnknown, range);

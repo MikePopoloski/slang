@@ -112,10 +112,6 @@ public:
 
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
 
-    const Expression& bindExpression(const ExpressionSyntax& syntax, const BindContext& context);
-    const Expression& bindAssignment(const Type& lhs, const ExpressionSyntax& rhs, SourceLocation location,
-                                     const BindContext& context);
-
     bool checkNoUnknowns(const SVInt& value, SourceRange range);
     bool checkPositive(const SVInt& value, SourceRange range);
     optional<bitwidth_t> checkValidBitWidth(const SVInt& value, SourceRange range);

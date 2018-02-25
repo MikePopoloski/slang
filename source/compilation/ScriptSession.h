@@ -59,7 +59,7 @@ public:
     }
 
     ConstantValue evalExpression(const ExpressionSyntax& expr) {
-        const auto& bound = compilation.bindExpression(expr, BindContext(scope, LookupLocation::max));
+        const auto& bound = Expression::bind(compilation, expr, BindContext(scope, LookupLocation::max));
         return bound.eval(evalContext);
     }
 

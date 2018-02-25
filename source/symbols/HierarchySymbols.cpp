@@ -258,8 +258,8 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilatio
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                                      LookupLocation location, const Scope& parent) {
     // TODO: better error checking
-    const auto& cond = compilation.bindExpression(syntax.condition, BindContext(parent, location,
-                                                                                BindFlags::Constant));
+    const auto& cond = Expression::bind(compilation, syntax.condition, BindContext(parent, location,
+                                                                                   BindFlags::Constant));
     if (!cond.constant)
         return nullptr;
 
@@ -288,8 +288,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // Initialize the genvar
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
-    const auto& initial = compilation.bindExpression(syntax.initialExpr, BindContext(parent, location,
-                                                                                     BindFlags::Constant));
+    const auto& initial = Expression::bind(compilation, syntax.initialExpr, BindContext(parent, location,
+                                                                                        BindFlags::Constant));
     if (!initial.constant)
         return *result;
 
@@ -300,8 +300,8 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    const auto& stopExpr = compilation.bindExpression(syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
-    const auto& iterExpr = compilation.bindExpression(syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& stopExpr = Expression::bind(compilation, syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& iterExpr = Expression::bind(compilation, syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
 
     // Create storage for the iteration variable.
     EvalContext context;

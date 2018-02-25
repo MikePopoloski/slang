@@ -121,6 +121,14 @@ public:
     /// The source range of this expression, if it originated from source code.
     SourceRange sourceRange;
 
+    /// Binds an expression tree from the given syntax nodes.
+    static const Expression& bind(Compilation& compilation, const ExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    /// Binds an assignment-like expression from the given syntax nodes.
+    static const Expression& bind(Compilation& compilation, const Type& lhs, const ExpressionSyntax& rhs,
+                                  SourceLocation location, const BindContext& context);
+
     /// Indicates whether the expression is invalid.
     bool bad() const;
 
@@ -157,13 +165,11 @@ public:
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
-    static Expression& fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
-
 protected:
-    friend class Compilation;
-
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
+
+    static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context);
     static Expression& bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax);

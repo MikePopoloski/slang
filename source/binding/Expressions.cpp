@@ -67,6 +67,43 @@ namespace slang {
 
 const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);
 
+const Expression& Expression::bind(Compilation& compilation, const ExpressionSyntax& syntax,
+                                   const BindContext& context) {
+    return selfDetermined(compilation, syntax, context);
+}
+
+const Expression& Expression::bind(Compilation& compilation, const Type& lhs, const ExpressionSyntax& rhs,
+                                   SourceLocation location, const BindContext& context) {
+    Expression& expr = create(compilation, rhs, context);
+    if (expr.bad() || lhs.isError())
+        return expr;
+
+    const Type* type = expr.type;
+    if (!lhs.isAssignmentCompatible(*type)) {
+        DiagCode code = lhs.isCastCompatible(*type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
+        compilation.addError(code, location) << rhs.sourceRange();
+        return *compilation.emplace<InvalidExpression>(&expr, compilation.getErrorType());
+    }
+
+    if (lhs.getBitWidth() > type->getBitWidth()) {
+        if (!lhs.isFloating() && !type->isFloating())
+            type = &compilation.getType(lhs.getBitWidth(), type->getIntegralFlags());
+        else {
+            if (lhs.getBitWidth() > 32)
+                type = &compilation.getRealType();
+            else
+                type = &compilation.getShortRealType();
+        }
+    }
+    else {
+        // TODO: truncation
+    }
+
+    Expression* e = &expr;
+    Expression::contextDetermined(compilation, e, *type);
+    return *e;
+}
+
 bool Expression::bad() const {
     return kind == ExpressionKind::Invalid || type->isError();
 }
@@ -82,7 +119,7 @@ bool Expression::isLValue() const {
     }
 }
 
-Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context) {
+Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context) {
     switch (syntax.kind) {
         case SyntaxKind::NullLiteralExpression:
             return NullLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
@@ -106,7 +143,7 @@ Expression& Expression::fromSyntax(Compilation& compilation, const ExpressionSyn
         case SyntaxKind::IntegerVectorExpression:
             return IntegerLiteral::fromSyntax(compilation, syntax.as<IntegerVectorExpressionSyntax>());
         case SyntaxKind::ParenthesizedExpression:
-            return Expression::fromSyntax(compilation, syntax.as<ParenthesizedExpressionSyntax>().expression, context);
+            return create(compilation, syntax.as<ParenthesizedExpressionSyntax>().expression, context);
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryBitwiseNotExpression:
@@ -207,7 +244,7 @@ Expression& Expression::bindSymbol(Compilation& compilation, const Symbol& symbo
 
 Expression& Expression::bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax,
                                              const BindContext& context) {
-    Expression& value = Expression::fromSyntax(compilation, syntax.left, context);
+    Expression& value = create(compilation, syntax.left, context);
     return bindSelector(compilation, value, syntax.select, context);
 }
 
@@ -315,7 +352,7 @@ Expression& StringLiteral::fromSyntax(Compilation& compilation, const LiteralExp
 
 Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
                                         const BindContext& context) {
-    Expression& operand = Expression::fromSyntax(compilation, syntax.operand, context);
+    Expression& operand = create(compilation, syntax.operand, context);
     const Type* type = operand.type;
 
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
@@ -363,8 +400,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
 
 Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
                                          const BindContext& context) {
-    Expression& lhs = Expression::fromSyntax(compilation, syntax.left, context);
-    Expression& rhs = Expression::fromSyntax(compilation, syntax.right, context);
+    Expression& lhs = create(compilation, syntax.left, context);
+    Expression& rhs = create(compilation, syntax.right, context);
     const Type* lt = lhs.type;
     const Type* rt = rhs.type;
 
@@ -556,9 +593,9 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation, const Co
     // TODO: handle the pattern matching conditional predicate case, rather than just assuming that it's a simple
     // expression
     ASSERT(syntax.predicate.conditions.count() == 1);
-    Expression& pred = Expression::fromSyntax(compilation, syntax.predicate.conditions[0]->expr, context);
-    Expression& left = Expression::fromSyntax(compilation, syntax.left, context);
-    Expression& right = Expression::fromSyntax(compilation, syntax.right, context);
+    Expression& pred = create(compilation, syntax.predicate.conditions[0]->expr, context);
+    Expression& left = create(compilation, syntax.left, context);
+    Expression& right = create(compilation, syntax.right, context);
 
     // TODO: handle non-integral and non-real types properly
     // force four-state return type for ambiguous condition case
@@ -568,7 +605,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation, const Co
 
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                                 const ExpressionSyntax& syntax, const BindContext& context) {
-    Expression& selector = Expression::fromSyntax(compilation, syntax, context);
+    Expression& selector = create(compilation, syntax, context);
     auto result = compilation.emplace<ElementSelectExpression>(compilation.getErrorType(), value,
                                                                selector, syntax.sourceRange());
     if (value.bad())
@@ -600,8 +637,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                               const RangeSelectSyntax& syntax, const BindContext& context) {
-    Expression& left = Expression::fromSyntax(compilation, syntax.left, context);
-    Expression& right = Expression::fromSyntax(compilation, syntax.right, context);
+    Expression& left = create(compilation, syntax.left, context);
+    Expression& right = create(compilation, syntax.right, context);
 
     RangeSelectionKind selectionKind;
     switch (syntax.kind) {
@@ -751,9 +788,8 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     SmallVectorSized<const Expression*, 8> buffer;
     for (uint32_t i = 0; i < actualArgs.count(); i++) {
         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-        buffer.append(&compilation.bindAssignment(*formalArgs[i]->type, arg.expr,
-                                                  arg.getFirstToken().location(),
-                                                  context));
+        buffer.append(&Expression::bind(compilation, *formalArgs[i]->type, arg.expr,
+                                        arg.getFirstToken().location(), context));
     }
 
     return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation), syntax.sourceRange());

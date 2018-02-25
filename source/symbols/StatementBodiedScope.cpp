@@ -94,8 +94,8 @@ Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax
         return badStmt(nullptr);
     }
 
-    const auto& expr = comp.bindAssignment(*subroutine->as<SubroutineSymbol>().returnType,
-                                           *syntax.returnValue, stmtLoc, context);
+    const auto& expr = Expression::bind(comp, *subroutine->as<SubroutineSymbol>().returnType,
+                                        *syntax.returnValue, stmtLoc, context);
     return *comp.emplace<ReturnStatement>(syntax, &expr);
 }
 
@@ -105,7 +105,7 @@ Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalState
     ASSERT(!syntax.predicate.conditions[0]->matchesClause);
 
     Compilation& comp = getCompilation();
-    const auto& cond = comp.bindExpression(syntax.predicate.conditions[0]->expr, context);
+    const auto& cond = Expression::bind(comp, syntax.predicate.conditions[0]->expr, context);
     const auto& ifTrue = bindStatement(syntax.statement, context);
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause)
@@ -151,9 +151,9 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
     }
 
     SmallVectorSized<const Expression*, 2> steps;
-    const auto& stopExpr = comp.bindExpression(syntax.stopExpr, *forContext);
+    const auto& stopExpr = Expression::bind(comp, syntax.stopExpr, *forContext);
     for (auto step : syntax.steps)
-        steps.append(&comp.bindExpression(*step, *forContext));
+        steps.append(&Expression::bind(comp, *step, *forContext));
 
     const auto& bodyStmt = forScope->bindStatement(syntax.statement, *forContext);
     auto initList = comp.emplace<StatementList>(initializers.copy(comp));
@@ -171,7 +171,7 @@ Statement& StatementBodiedScope::bindForLoopStatement(const ForLoopStatementSynt
 Statement& StatementBodiedScope::bindExpressionStatement(const ExpressionStatementSyntax& syntax,
                                                          const BindContext& context) {
     Compilation& comp = getCompilation();
-    const auto& expr = comp.bindExpression(syntax.expr, context);
+    const auto& expr = Expression::bind(comp, syntax.expr, context);
     return *comp.emplace<ExpressionStatement>(syntax, expr);
 }
 
