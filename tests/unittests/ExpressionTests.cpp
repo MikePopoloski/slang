@@ -222,6 +222,14 @@ TEST_CASE("Expression types") {
     CHECK(typeof("pa <<< b1") == "logic[7:0][3:2]");
     CHECK(typeof("b1 >> b1") == "bit[2:10]");
     CHECK(typeof("b1 >> sl") == "logic[8:0]");
+    CHECK(typeof("sp == l") == "logic");
+    CHECK(typeof("b1 == b1") == "bit");
+    CHECK(typeof("b1 != l") == "logic");
+    CHECK(typeof("b1 === b1") == "bit");
+    CHECK(typeof("b1 !== l") == "bit");
+    CHECK(typeof("r ==? b1") == "bit");
+    CHECK(typeof("b1 ==? r") == "bit");
+    CHECK(typeof("l ==? r") == "logic");
 
     Diagnostics diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);

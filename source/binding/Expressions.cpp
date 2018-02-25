@@ -518,7 +518,22 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
             // - both aggregates and equivalent
             if (bothNumeric) {
                 good = true;
-                result->type = singleBitType(compilation, lt, rt);
+
+                // For equality and inequality, result is four state if either operand is four state.
+                // For case equality and case inequality, result is never four state.
+                // For wildcard equality / inequality, result is four state only if lhs is four state.
+                if (syntax.kind == SyntaxKind::EqualityExpression ||
+                    syntax.kind == SyntaxKind::InequalityExpression) {
+                    result->type = singleBitType(compilation, lt, rt);
+                }
+                else if (syntax.kind == SyntaxKind::CaseEqualityExpression ||
+                         syntax.kind == SyntaxKind::CaseInequalityExpression) {
+                    result->type = &compilation.getBitType();
+                }
+                else {
+                    result->type = lt->isFourState() ? &compilation.getLogicType() :
+                                                       &compilation.getBitType();
+                }
 
                 // Result type is fixed but the two operands affect each other as they would in
                 // other context-determined operators.
