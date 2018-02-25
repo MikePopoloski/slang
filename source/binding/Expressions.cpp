@@ -61,6 +61,20 @@ const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const T
     return result;
 }
 
+const Type* forceFourState(Compilation& compilation, const Type* type) {
+    if (type->isFloating() || type->isFourState())
+        return type;
+
+    // Use the logic in binaryOperatorType to create a type with the correct size and sign.
+    return binaryOperatorType(compilation, type, type, true);
+}
+
+const Type* singleBitType(Compilation& compilation, const Type* lt, const Type* rt) {
+    if (lt->isFourState() || rt->isFourState())
+        return &compilation.getLogicType();
+    return &compilation.getBitType();
+}
+
 }
 
 namespace slang {
@@ -455,15 +469,18 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
+            // The result is always the same type as the lhs, except that if the rhs is
+            // four state then the lhs also becomes four state.
             good = bothIntegral;
-            result->type = lt;
+            if (rt->isFourState())
+                result->type = forceFourState(compilation, lt);
+            else
+                result->type = lt;
             break;
         case SyntaxKind::PowerExpression:
             // Result is forced to 4-state because result can be X.
-            // The call to binaryOperatorType is not a typo; we pass the lhs type for both parameters on purpose.
-            // The result of the power operator is determined only by the lhs.
             good = bothNumeric;
-            result->type = binaryOperatorType(compilation, lt, lt, true);
+            result->type = forceFourState(compilation, lt);
             break;
         case SyntaxKind::GreaterThanEqualExpression:
         case SyntaxKind::GreaterThanExpression:
@@ -471,7 +488,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::LessThanExpression: {
             // Result is always a single bit.
             good = bothNumeric;
-            result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
+            result->type = singleBitType(compilation, lt, rt);
 
             // Result type is fixed but the two operands affect each other as they would in
             // other context-determined operators.
@@ -486,7 +503,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::LogicalEquivalenceExpression:
             // Result is always a single bit.
             good = bothNumeric;
-            result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
+            result->type = singleBitType(compilation, lt, rt);
             break;
         case SyntaxKind::EqualityExpression:
         case SyntaxKind::InequalityExpression:
@@ -501,7 +518,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
             // - both aggregates and equivalent
             if (bothNumeric) {
                 good = true;
-                result->type = bothIntegral ? &compilation.getLogicType() : &compilation.getBitType();
+                result->type = singleBitType(compilation, lt, rt);
 
                 // Result type is fixed but the two operands affect each other as they would in
                 // other context-determined operators.

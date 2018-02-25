@@ -217,8 +217,14 @@ TEST_CASE("Expression types") {
     CHECK(typeof("sr + sr") == "shortreal");
     CHECK(typeof("l + r") == "real");
     CHECK(typeof("l + sr") == "shortreal");
+    CHECK(typeof("sp < r") == "logic");
+    CHECK(typeof("su < r") == "<error>");
+    CHECK(typeof("pa <<< b1") == "logic[7:0][3:2]");
+    CHECK(typeof("b1 >> b1") == "bit[2:10]");
+    CHECK(typeof("b1 >> sl") == "logic[8:0]");
 
     Diagnostics diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == DiagCode::BadUnaryExpression);
+    CHECK(diags[1].code == DiagCode::BadBinaryExpression);
 }
