@@ -30,6 +30,7 @@ enum class ExpressionKind {
     Replication,
     ElementSelect,
     RangeSelect,
+    MemberAccess,
     Call,
     Conversion,
 };
@@ -462,6 +463,28 @@ private:
     Expression* value_;
     Expression* left_;
     Expression* right_;
+};
+
+/// Represents an access of a structure variable's members.
+class MemberAccessExpression : public Expression {
+public:
+    string_view memberName;
+
+    MemberAccessExpression(const Type& type, Expression& value, string_view memberName, SourceRange sourceRange) :
+        Expression(ExpressionKind::MemberAccess, type, sourceRange),
+        value_(&value), memberName(memberName) {}
+
+    const Expression& value() const { return *value_; }
+    Expression& value() { return *value_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+
+    static Expression& propagateType(Compilation&, MemberAccessExpression& expr, const Type&) { return expr; }
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MemberAccess; }
+
+private:
+    Expression* value_;
 };
 
 /// Represents a concatenation expression.

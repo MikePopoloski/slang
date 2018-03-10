@@ -172,6 +172,7 @@ decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... a
         CASE(Replication, ReplicationExpression);
         CASE(ElementSelect, ElementSelectExpression);
         CASE(RangeSelect, RangeSelectExpression);
+        CASE(MemberAccess, MemberAccessExpression);
         CASE(Call, CallExpression);
         CASE(Conversion, ConversionExpression);
     }

@@ -165,6 +165,7 @@ enum class DiagCode : uint8_t {
     TooManyArguments,
     ExpressionNotAssignable,
     ReplicationZeroOutsideConcat,
+    MemberAccessNotStructUnion,
 
     // statements
     ReturnNotInSubroutine,
@@ -180,7 +181,7 @@ enum class DiagCode : uint8_t {
     UnknownClassOrPackage,
     UsedBeforeDeclared,
     NotAType,
-    //UnknownMember,
+    UnknownMember,
 
     MaxValue
 };

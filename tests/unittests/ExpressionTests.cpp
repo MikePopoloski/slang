@@ -231,6 +231,10 @@ TEST_CASE("Expression types") {
     CHECK(typeof("b1 ==? r") == "bit");
     CHECK(typeof("l ==? r") == "logic");
 
+    // Member access
+    declare("struct packed { logic [13:0] a; bit b; } foo;");
+    CHECK(typeof("foo.a") == "logic[13:0]");
+
     Diagnostics diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == DiagCode::BadUnaryExpression);

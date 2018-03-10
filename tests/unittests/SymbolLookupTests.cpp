@@ -283,3 +283,20 @@ endmodule
     CHECK(diags[2].code == DiagCode::Redefinition);
     CHECK(diags[3].code == DiagCode::ImportNameCollision);
 }
+
+
+TEST_CASE("Member access", "[symbols:lookup]") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic a; logic b; } foo;
+
+    initial begin
+        foo.a = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

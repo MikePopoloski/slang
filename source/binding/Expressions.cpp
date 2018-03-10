@@ -127,6 +127,7 @@ bool Expression::isLValue() const {
         case ExpressionKind::NamedValue:
         case ExpressionKind::ElementSelect:
         case ExpressionKind::RangeSelect:
+        case ExpressionKind::MemberAccess:
             return true;
         default:
             return false;
@@ -249,6 +250,36 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     if (result.selectors) {
         for (auto selector : *result.selectors)
             expr = &bindSelector(compilation, *expr, *selector, context);
+    }
+
+    // Drill down into member accesses.
+    for (auto nameSyntax : result.memberSelects) {
+        // TODO: array selectors
+        string_view name = nameSyntax->as<IdentifierNameSyntax>().identifier.valueText();
+        if (name.empty() || expr->bad())
+            return badExpr(compilation, expr);
+
+        if (!expr->type->isScope()) {
+            // TODO: dot operator location
+            auto& diag = compilation.addError(DiagCode::MemberAccessNotStructUnion, nameSyntax->sourceRange());
+            diag << *expr->type;
+            return badExpr(compilation, expr);
+        }
+
+        const Symbol* member = expr->type->as<Scope>().find(name);
+        if (!member) {
+            auto& diag = compilation.addError(DiagCode::UnknownMember, nameSyntax->sourceRange());
+            diag << expr->sourceRange;
+            diag << name;
+            diag << *expr->type;
+            return badExpr(compilation, expr);
+        }
+
+        // TODO: add a field symbol type
+        // TODO: source range of the member access
+        const ValueSymbol& value = member->as<ValueSymbol>();
+
+        expr = compilation.emplace<MemberAccessExpression>(value.getType(), *expr, name, nameSyntax->sourceRange());
     }
 
     return *expr;

@@ -300,6 +300,11 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     }
 }
 
+ConstantValue MemberAccessExpression::evalImpl(EvalContext&) const {
+    // TODO: implement
+    return nullptr;
+}
+
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
     SmallVectorSized<SVInt, 8> values;
     for (auto operand : operands()) {

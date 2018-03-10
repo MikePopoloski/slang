@@ -86,6 +86,7 @@ private:
 struct LookupResult {
     const Symbol* found = nullptr;
     const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
+    SmallVectorSized<const NameSyntax*, 4> memberSelects; 
     Diagnostics diagnostics;
     bool wasImported = false;
 

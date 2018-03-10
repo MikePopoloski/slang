@@ -617,28 +617,27 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             break;
     }
 
+    Token nameToken;
     const NameSyntax* first = &scoped->left;
+    switch (first->kind) {
+        case SyntaxKind::IdentifierName:
+            nameToken = first->as<IdentifierNameSyntax>().identifier;
+            break;
+        case SyntaxKind::IdentifierSelectName:
+            //nameToken = first->as<IdentifierSelectNameSyntax>().identifier;
+            //break;
+        default:
+            THROW_UNREACHABLE;
+    }
+
+    // Start by trying to find the first name segment using normal unqualified lookup.
+    lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);
+    if (result.hasError())
+        return;
 
     // If we are starting with a colon separator, always do a downwards name resolution. If the prefix name can
     // be resolved normally, we have a class scope, otherwise it's a package lookup. See [23.7.1]
     if (colonParts) {
-        Token nameToken;
-        switch (first->kind) {
-            case SyntaxKind::IdentifierName:
-                nameToken = first->as<IdentifierNameSyntax>().identifier;
-                break;
-            case SyntaxKind::IdentifierSelectName:
-                //nameToken = first->as<IdentifierSelectNameSyntax>().identifier;
-                //break;
-            default:
-                THROW_UNREACHABLE;
-        }
-
-        // Try to find the prefix as a class using unqualified name lookup rules.
-        lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);
-        if (result.hasError())
-            return;
-
         if (result.found) {
             // TODO: handle classes
             THROW_UNREACHABLE;
@@ -653,6 +652,25 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
 
         auto downward = lookupDownward(nameParts, *package);
         result.found = downward.found;
+        return;
+    }
+
+    // Otherwise we have a dotted name; [23.7] lists the possible cases:
+    // 1. The name resolves to a value symbol. The dotted name is a member select.
+    // 2. The name resolves to a local scope. The dotted name is a hierarchical reference.
+    // 3. The name resolves to an imported scope. The dotted name is a hierarchical reference,
+    //    but with an added restriction that only a direct downward lookup from the package is allowed.
+    // 4. The name is not found; it's considered a hierarchical reference and participates in
+    //    upwards name resolution.
+    if (result.found) {
+        if (result.found->isValue()) {
+            // The remainder of the names are member selects.
+            result.memberSelects.appendRange(nameParts);
+            return;
+        }
+
+        // TODO: handle scopes
+        THROW_UNREACHABLE;
     }
 }
 
