@@ -472,7 +472,7 @@ public:
 
     MemberAccessExpression(const Type& type, Expression& value, string_view memberName, SourceRange sourceRange) :
         Expression(ExpressionKind::MemberAccess, type, sourceRange),
-        value_(&value), memberName(memberName) {}
+        memberName(memberName), value_(&value) {}
 
     const Expression& value() const { return *value_; }
     Expression& value() { return *value_; }
