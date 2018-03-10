@@ -155,6 +155,9 @@ protected:
 
     mutable const Type* canonical;
 
+    static optional<ConstantRange> evaluateDimension(Compilation& compilation, const SelectorSyntax& syntax,
+                                                     LookupLocation location, const Scope& scope);
+
 private:
     void resolveCanonical() const;
 
@@ -190,11 +193,6 @@ public:
 protected:
     IntegralType(SymbolKind kind, string_view name, SourceLocation loc, bitwidth_t bitWidth,
                  bool isSigned, bool isFourState);
-
-    static bool evaluateConstantDims(Compilation& compilation,
-                                     const SyntaxList<VariableDimensionSyntax>& dimensions,
-                                     SmallVector<ConstantRange>& results,
-                                     LookupLocation location, const Scope& scope);
 };
 
 /// Represents the single-bit scalar types.

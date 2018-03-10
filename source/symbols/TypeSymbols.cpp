@@ -310,7 +310,64 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
         return compilation.getErrorType();
     }
 
-    return symbol->as<Type>();
+    const Type* finalType = &symbol->as<Type>();
+    for (const auto& selector : result.selectors) {
+        // TODO: handle dotted selectors
+        // TODO: empty selector syntax?
+        const ElementSelectSyntax* selectSyntax = std::get<const ElementSelectSyntax*>(selector);
+        auto dim = evaluateDimension(compilation, *selectSyntax->selector, location, parent);
+        if (!dim)
+            return compilation.getErrorType();
+
+        finalType = compilation.emplace<PackedArrayType>(*finalType, *dim);
+    }
+
+    return *finalType;
+}
+
+optional<ConstantRange> Type::evaluateDimension(Compilation& compilation, const SelectorSyntax& syntax,
+                                                LookupLocation location, const Scope& scope) {
+    if (syntax.kind != SyntaxKind::SimpleRangeSelect) {
+        compilation.addError(DiagCode::PackedDimRequiresConstantRange, syntax.sourceRange());
+        return std::nullopt;
+    }
+
+    BindContext context(scope, location, BindFlags::IntegralConstant);
+    auto checkVal = [&](const ExpressionSyntax& s) -> optional<int32_t> {
+        const auto& expr = Expression::bind(compilation, s, context);
+        if (!expr.constant || !expr.constant->isInteger())
+            return std::nullopt;
+
+        const SVInt& value = expr.constant->integer();
+        if (!compilation.checkNoUnknowns(value, expr.sourceRange))
+            return std::nullopt;
+
+        auto coerced = value.as<int32_t>();
+        if (!coerced) {
+            auto& diag = compilation.addError(DiagCode::DimensionOutOfRange, expr.sourceRange);
+            diag << INT32_MIN;
+            diag << INT32_MAX;
+        }
+        return coerced;
+    };
+
+    const RangeSelectSyntax& range = syntax.as<RangeSelectSyntax>();
+    auto left = checkVal(range.left);
+    auto right = checkVal(range.right);
+    if (!left || !right)
+        return std::nullopt;
+
+    int64_t diff = *left - *right;
+    diff = (diff < 0 ? -diff : diff) + 1;
+    if (diff > SVInt::MAX_BITS) {
+        auto& diag = compilation.addError(DiagCode::ValueExceedsMaxBitWidth, range.range.location());
+        diag << range.left.sourceRange();
+        diag << range.right.sourceRange();
+        diag << (int)SVInt::MAX_BITS;
+        return std::nullopt;
+    }
+
+    return ConstantRange { *left, *right };
 }
 
 IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc, bitwidth_t bitWidth_,
@@ -356,8 +413,18 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
                                      LookupLocation location, const Scope& scope) {
     // This is a simple integral vector (possibly of just one element).
     SmallVectorSized<ConstantRange, 4> dims;
-    if (!evaluateConstantDims(compilation, syntax.dimensions, dims, location, scope))
-        return compilation.getErrorType();
+    for (const VariableDimensionSyntax* dimSyntax : syntax.dimensions) {
+        // TODO: better checking for these cases
+        if (!dimSyntax->specifier || dimSyntax->specifier->kind != SyntaxKind::RangeDimensionSpecifier)
+            return compilation.getErrorType();
+
+        const auto& selector = dimSyntax->specifier->as<RangeDimensionSpecifierSyntax>().selector;
+        auto dim = evaluateDimension(compilation, selector, location, scope);
+        if (!dim)
+            return compilation.getErrorType();
+
+        dims.append(*dim);
+    }
 
     bitmask<IntegralFlags> flags;
     if (syntax.keyword.kind == TokenKind::RegKeyword)
@@ -385,44 +452,6 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
         result = compilation.emplace<PackedArrayType>(*result, dims[i]);
 
     return *result;
-}
-
-bool IntegralType::evaluateConstantDims(Compilation& compilation,
-                                        const SyntaxList<VariableDimensionSyntax>& dimensions,
-                                        SmallVector<ConstantRange>& results,
-                                        LookupLocation location, const Scope& scope) {
-    for (const VariableDimensionSyntax* dim : dimensions) {
-        const SelectorSyntax* selector;
-        if (!dim->specifier || dim->specifier->kind != SyntaxKind::RangeDimensionSpecifier ||
-            (selector = &dim->specifier->as<RangeDimensionSpecifierSyntax>().selector)->kind != SyntaxKind::SimpleRangeSelect) {
-
-            // TODO: errors
-            //auto& diag = addError(DiagCode::PackedDimRequiresConstantRange, dim->specifier->getFirstToken().location());
-            //diag << dim->specifier->sourceRange();
-            return false;
-        }
-
-        const RangeSelectSyntax& range = selector->as<RangeSelectSyntax>();
-
-        // §6.9.1 - Implementations may set a limit on the maximum length of a vector,
-        // but the limit shall be at least 65536 (2^16) bits.
-        const int MaxRangeBits = 16;
-
-        // TODO: errors
-        BindContext context(scope, location, BindFlags::Constant);
-        const auto& left = Expression::bind(compilation, range.left, context);
-        const auto& right = Expression::bind(compilation, range.right, context);
-        if (!left.constant || !right.constant)
-            return false;
-
-        auto cl = left.constant->coerceInteger(MaxRangeBits);
-        auto cr = right.constant->coerceInteger(MaxRangeBits);
-        if (!cl || !cr)
-            return false;
-
-        results.emplace(ConstantRange { *cl, *cr });
-    }
-    return true;
 }
 
 PredefinedIntegerType::PredefinedIntegerType(Kind integerKind) :

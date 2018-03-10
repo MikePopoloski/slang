@@ -61,8 +61,8 @@ ConstantValue RealLiteral::evalImpl(EvalContext&) const {
 }
 
 ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
-    uint16_t width = (uint16_t)type->getBitWidth();
-    bool isSigned = type->as<IntegralType>().isSigned;
+    bitwidth_t width = type->getBitWidth();
+    bool isSigned = type->isSigned();
 
     switch (value.value) {
         case 0: return SVInt(width, 0, isSigned);

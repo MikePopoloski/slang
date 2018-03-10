@@ -45,12 +45,6 @@ public:
     const SVInt& integer() const { return std::get<1>(value); }
     double real() const { return std::get<2>(value); }
 
-    /// Tries to interpret the constant value as an integer, with no unknown bits,
-    /// and which fits in the given number of bits. If it does, the value is returned.
-    /// Otherwise, a diagnostic is issued.
-    optional<int> coerceInteger(uint32_t maxBits, Diagnostics* diagnostics = nullptr,
-                                SourceLocation location = SourceLocation()) const;
-
     static const ConstantValue Invalid;
 
 private:

@@ -134,6 +134,7 @@ enum class DiagCode : uint8_t {
     UnpackedDimensionRequiresConstRange,
     PackedDimRequiresConstantRange,
     PackedDimsOnPredefinedType,
+    DimensionOutOfRange,
     MixingOrderedAndNamedParams,
     DuplicateParamAssignment,
     NotePreviousUsage,
