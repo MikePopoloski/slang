@@ -289,9 +289,9 @@ namespace std
 // Implementation detail macros
 
 #define BITMASK_DETAIL_DEFINE_OPS(value_type) \
-    inline constexpr bitmask_lib::bitmask<value_type> operator & (value_type l, value_type r) noexcept { return bitmask::bitmask<value_type>{l} & r; } \
-    inline constexpr bitmask_lib::bitmask<value_type> operator | (value_type l, value_type r) noexcept { return bitmask::bitmask<value_type>{l} | r; } \
-    inline constexpr bitmask_lib::bitmask<value_type> operator ^ (value_type l, value_type r) noexcept { return bitmask::bitmask<value_type>{l} ^ r; } \
+    inline constexpr bitmask_lib::bitmask<value_type> operator & (value_type l, value_type r) noexcept { return bitmask_lib::bitmask<value_type>{l} & r; } \
+    inline constexpr bitmask_lib::bitmask<value_type> operator | (value_type l, value_type r) noexcept { return bitmask_lib::bitmask<value_type>{l} | r; } \
+    inline constexpr bitmask_lib::bitmask<value_type> operator ^ (value_type l, value_type r) noexcept { return bitmask_lib::bitmask<value_type>{l} ^ r; } \
     inline constexpr bitmask_lib::bitmask<value_type> operator ~ (value_type op) noexcept { return ~bitmask_lib::bitmask<value_type>{op}; }                \
     inline constexpr bitmask_lib::bitmask<value_type>::underlying_type bits(value_type op) noexcept { return bitmask_lib::bitmask<value_type>{op}.bits(); }\
     using unused_bitmask_ ## value_type ## _t_ = decltype(bitmask_lib::bitmask_detail::disable_unused_function_warnings<value_type>());
