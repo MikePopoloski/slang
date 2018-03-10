@@ -137,6 +137,12 @@ Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpres
             // Type is already set (always 1 bit).
             selfDetermined(compilation, expr.operand_);
             break;
+        case UnaryOperator::Preincrement: 
+        case UnaryOperator::Predecrement: 
+        case UnaryOperator::Postincrement:
+        case UnaryOperator::Postdecrement:
+            // Type is already set via the lvalue.
+            break;
     }
     return expr;
 }
