@@ -4,7 +4,7 @@
 // file LICENSE or https://github.com/CLIUtils/CLI11 for details.
 
 // This file was generated using MakeSingleHeader.py in CLI11/scripts
-// from: v1.3.0
+// from: v1.4.0
 
 // This has the complete CLI library in one file.
 
@@ -37,9 +37,9 @@ namespace CLI {
 // Note that all code in CLI11 must be in a namespace, even if it just a define.
 
 #define CLI11_VERSION_MAJOR 1
-#define CLI11_VERSION_MINOR 3
+#define CLI11_VERSION_MINOR 4
 #define CLI11_VERSION_PATCH 0
-#define CLI11_VERSION "1.3.0"
+#define CLI11_VERSION "1.4.0"
 
 } // namespace CLI
 
@@ -221,6 +221,22 @@ inline std::vector<std::string> split_up(std::string str) {
     return output;
 }
 
+/// Add a leader to the beginning of all new lines (nothing is added
+/// at the start of the first line). `"; "` would be for ini files
+///
+/// Can't use Regex, or this would be a subs.
+inline std::string fix_newlines(std::string leader, std::string input) {
+    std::string::size_type n = 0;
+    while(n != std::string::npos && n < input.size()) {
+        n = input.find('\n', n);
+        if(n != std::string::npos) {
+            input = input.substr(0, n + 1) + leader + input.substr(n + 1);
+            n += leader.size();
+        }
+    }
+    return input;
+}
+
 } // namespace detail
 } // namespace CLI
 
@@ -387,7 +403,7 @@ class ConversionError : public ParseError {
     CLI11_ERROR_DEF(ParseError, ConversionError)
     CLI11_ERROR_SIMPLE(ConversionError)
     ConversionError(std::string member, std::string name)
-        : ConversionError("The value " + member + "is not an allowed value for " + name) {}
+        : ConversionError("The value " + member + " is not an allowed value for " + name) {}
     ConversionError(std::string name, std::vector<std::string> results)
         : ConversionError("Could not convert: " + name + " = " + detail::join(results)) {}
     static ConversionError TooManyInputsFlag(std::string name) {
@@ -564,13 +580,35 @@ constexpr const char *type_name() {
 
 // Lexical cast
 
-/// Integers / enums
+/// Signed integers / enums
 template <typename T,
-          enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value, detail::enabler> = detail::dummy>
+          enable_if_t<(std::is_integral<T>::value && std::is_signed<T>::value) || std::is_enum<T>::value,
+                      detail::enabler> = detail::dummy>
 bool lexical_cast(std::string input, T &output) {
     try {
-        output = static_cast<T>(std::stoll(input));
-        return true;
+        size_t n = 0;
+        long long output_ll = std::stoll(input, &n, 0);
+        output = static_cast<T>(output_ll);
+        return n == input.size() && static_cast<long long>(output) == output_ll;
+    } catch(const std::invalid_argument &) {
+        return false;
+    } catch(const std::out_of_range &) {
+        return false;
+    }
+}
+
+/// Unsigned integers
+template <typename T,
+          enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value, detail::enabler> = detail::dummy>
+bool lexical_cast(std::string input, T &output) {
+    if(!input.empty() && input.front() == '-')
+        return false; // std::stoull happily converts negative values to junk without any errors.
+
+    try {
+        size_t n = 0;
+        unsigned long long output_ll = std::stoull(input, &n, 0);
+        output = static_cast<T>(output_ll);
+        return n == input.size() && static_cast<unsigned long long>(output) == output_ll;
     } catch(const std::invalid_argument &) {
         return false;
     } catch(const std::out_of_range &) {
@@ -582,8 +620,9 @@ bool lexical_cast(std::string input, T &output) {
 template <typename T, enable_if_t<std::is_floating_point<T>::value, detail::enabler> = detail::dummy>
 bool lexical_cast(std::string input, T &output) {
     try {
-        output = static_cast<T>(std::stold(input));
-        return true;
+        size_t n = 0;
+        output = static_cast<T>(std::stold(input, &n));
+        return n == input.size();
     } catch(const std::invalid_argument &) {
         return false;
     } catch(const std::out_of_range &) {
@@ -593,11 +632,32 @@ bool lexical_cast(std::string input, T &output) {
 
 /// String and similar
 template <typename T,
-          enable_if_t<!std::is_floating_point<T>::value && !std::is_integral<T>::value && !std::is_enum<T>::value,
+          enable_if_t<!std::is_floating_point<T>::value && !std::is_integral<T>::value && !std::is_enum<T>::value &&
+                          std::is_assignable<T &, std::string>::value,
                       detail::enabler> = detail::dummy>
 bool lexical_cast(std::string input, T &output) {
     output = input;
     return true;
+}
+
+/// Non-string parsable
+template <typename T,
+          enable_if_t<!std::is_floating_point<T>::value && !std::is_integral<T>::value && !std::is_enum<T>::value &&
+                          !std::is_assignable<T &, std::string>::value,
+                      detail::enabler> = detail::dummy>
+bool lexical_cast(std::string input, T &output) {
+
+// On GCC 4.7, thread_local is not available, so this optimization
+// is turned off (avoiding multiple initialisations on multiple usages
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && __GNUC__ == 4 && (__GNUC_MINOR__ < 8)
+    std::istringstream is;
+#else
+    static thread_local std::istringstream is;
+#endif
+
+    is.str(input);
+    is >> output;
+    return !is.fail() && !is.rdbuf()->in_avail();
 }
 
 } // namespace detail
@@ -823,6 +883,16 @@ inline std::string ExistingDirectory(const std::string &filename) {
         return "Directory does not exist: " + filename;
     } else if(!is_dir) {
         return "Directory is actually a file: " + filename;
+    }
+    return std::string();
+}
+
+/// Check for an existing path
+inline std::string ExistingPath(const std::string &filename) {
+    struct stat buffer;
+    bool const exist = stat(filename.c_str(), &buffer) == 0;
+    if(!exist) {
+        return "Path does not exist: " + filename;
     }
     return std::string();
 }
@@ -1122,7 +1192,7 @@ class Option : public OptionBase<Option> {
     }
 
     /// Sets required options
-    Option *requires(Option *opt) {
+    Option *needs(Option *opt) {
         auto tup = requires_.insert(opt);
         if(!tup.second)
             throw OptionAlreadyAdded::Requires(get_name(), opt->get_name());
@@ -1130,18 +1200,32 @@ class Option : public OptionBase<Option> {
     }
 
     /// Can find a string if needed
-    template <typename T = App> Option *requires(std::string opt_name) {
+    template <typename T = App> Option *needs(std::string opt_name) {
         for(const Option_p &opt : dynamic_cast<T *>(parent_)->options_)
             if(opt.get() != this && opt->check_name(opt_name))
-                return requires(opt.get());
+                return needs(opt.get());
         throw IncorrectConstruction::MissingOption(opt_name);
     }
 
     /// Any number supported, any mix of string and Opt
-    template <typename A, typename B, typename... ARG> Option *requires(A opt, B opt1, ARG... args) {
-        requires(opt);
-        return requires(opt1, args...);
+    template <typename A, typename B, typename... ARG> Option *needs(A opt, B opt1, ARG... args) {
+        needs(opt);
+        return needs(opt1, args...);
     }
+
+#if __cplusplus <= 201703L
+    /// Sets required options \deprecated
+    Option *requires(Option *opt) { return needs(opt); }
+
+    /// Can find a string if needed \deprecated
+    template <typename T = App> Option *requires(std::string opt_name) { return needs<T>(opt_name); }
+
+    /// Any number supported, any mix of string and Opt \deprecated
+    template <typename A, typename B, typename... ARG> Option *requires(A opt, B opt1, ARG... args) {
+        needs(opt);
+        return needs(opt1, args...);
+    }
+#endif
 
     /// Sets excluded options
     Option *excludes(Option *opt) {
@@ -1158,6 +1242,7 @@ class Option : public OptionBase<Option> {
                 return excludes(opt.get());
         throw IncorrectConstruction::MissingOption(opt_name);
     }
+
     /// Any number supported, any mix of string and Opt
     template <typename A, typename B, typename... ARG> Option *excludes(A opt, B opt1, ARG... args) {
         excludes(opt);
@@ -1503,6 +1588,9 @@ class App {
     /// If true, allow extra arguments (ie, don't throw an error). INHERITABLE
     bool allow_extras_{false};
 
+    /// If true, allow extra arguments in the ini file (ie, don't throw an error). INHERITABLE
+    bool allow_ini_extras_{false};
+
     ///  If true, return immediately on an unrecognised option (implies allow_extras) INHERITABLE
     bool prefix_command_{false};
 
@@ -1605,6 +1693,7 @@ class App {
             // INHERITABLE
             failure_message_ = parent_->failure_message_;
             allow_extras_ = parent_->allow_extras_;
+            allow_ini_extras_ = parent_->allow_ini_extras_;
             prefix_command_ = parent_->prefix_command_;
             ignore_case_ = parent_->ignore_case_;
             fallthrough_ = parent_->fallthrough_;
@@ -1637,6 +1726,14 @@ class App {
     /// Remove the error when extras are left over on the command line.
     App *allow_extras(bool allow = true) {
         allow_extras_ = allow;
+        return this;
+    }
+
+    /// Remove the error when extras are left over on the command line.
+    /// Will also call App::allow_extras().
+    App *allow_ini_extras(bool allow = true) {
+        allow_extras(allow);
+        allow_ini_extras_ = allow;
         return this;
     }
 
@@ -1994,6 +2091,8 @@ class App {
 
         std::string simple_name = CLI::detail::split(name, ',').at(0);
         CLI::callback_t fun = [&variable, simple_name, label](results_t res) {
+            if(res[1].back() == 'i')
+                res[1].pop_back();
             double x, y;
             bool worked = detail::lexical_cast(res[0], x) && detail::lexical_cast(res[1], y);
             if(worked)
@@ -2240,35 +2339,47 @@ class App {
 
     /// Produce a string that could be read in as a config of the current values of the App. Set default_also to include
     /// default arguments. Prefix will add a string to the beginning of each option.
-    std::string config_to_str(bool default_also = false, std::string prefix = "") const {
+    std::string
+    config_to_str(bool default_also = false, std::string prefix = "", bool write_description = false) const {
         std::stringstream out;
         for(const Option_p &opt : options_) {
 
             // Only process option with a long-name and configurable
             if(!opt->lnames_.empty() && opt->get_configurable()) {
                 std::string name = prefix + opt->lnames_[0];
+                std::string value;
 
                 // Non-flags
                 if(opt->get_expected() != 0) {
 
                     // If the option was found on command line
                     if(opt->count() > 0)
-                        out << name << "=" << detail::inijoin(opt->results()) << std::endl;
+                        value = detail::inijoin(opt->results());
 
                     // If the option has a default and is requested by optional argument
                     else if(default_also && !opt->defaultval_.empty())
-                        out << name << "=" << opt->defaultval_ << std::endl;
+                        value = opt->defaultval_;
                     // Flag, one passed
                 } else if(opt->count() == 1) {
-                    out << name << "=true" << std::endl;
+                    value = "true";
 
                     // Flag, multiple passed
                 } else if(opt->count() > 1) {
-                    out << name << "=" << opt->count() << std::endl;
+                    value = std::to_string(opt->count());
 
                     // Flag, not present
                 } else if(opt->count() == 0 && default_also) {
-                    out << name << "=false" << std::endl;
+                    value = "false";
+                }
+
+                if(!value.empty()) {
+                    if(write_description && opt->has_description()) {
+                        if(static_cast<int>(out.tellp()) != 0) {
+                            out << std::endl;
+                        }
+                        out << "; " << detail::fix_newlines("; ", opt->get_description()) << std::endl;
+                    }
+                    out << name << "=" << value << std::endl;
                 }
             }
         }
@@ -2402,6 +2513,9 @@ class App {
     /// Get the status of allow extras
     bool get_allow_extras() const { return allow_extras_; }
 
+    /// Get the status of allow extras
+    bool get_allow_ini_extras() const { return allow_ini_extras_; }
+
     /// Get a pointer to the help flag.
     Option *get_help_ptr() { return help_ptr_; }
 
@@ -2410,6 +2524,9 @@ class App {
 
     /// Get a pointer to the config option.
     Option *get_config_ptr() { return config_ptr_; }
+
+    /// Get the parent of this subcommand (or nullptr if master app)
+    App *get_parent() { return parent_; }
 
     /// Get a pointer to the config option. (const)
     const Option *get_config_ptr() const { return config_ptr_; }
@@ -2447,7 +2564,7 @@ class App {
 
     /// This returns the number of remaining options, minus the -- seperator
     size_t remaining_size(bool recurse = false) const {
-        size_t count = (size_t)std::count_if(
+        size_t count = std::count_if(
             std::begin(missing_), std::end(missing_), [](const std::pair<detail::Classifer, std::string> &val) {
                 return val.first != detail::Classifer::POSITIONAL_MARK;
             });
@@ -2592,7 +2709,7 @@ class App {
 
                 // Required but empty
                 if(opt->get_required() && opt->count() == 0)
-                    throw RequiredError(opt->single_name() + " is required");
+                    throw RequiredError(opt->single_name());
             }
             // Requires
             for(const Option *opt_req : opt->requires_)
@@ -2640,8 +2757,15 @@ class App {
         auto op_ptr = std::find_if(
             std::begin(options_), std::end(options_), [name](const Option_p &v) { return v->check_lname(name); });
 
-        if(op_ptr == std::end(options_))
+        if(op_ptr == std::end(options_)) {
+            if(allow_ini_extras_) {
+                // Should we worry about classifying the extras properly?
+                missing_.emplace_back(detail::Classifer::NONE, current.fullname);
+                args.pop_back();
+                return true;
+            }
             return false;
+        }
 
         // Let's not go crazy with pointer syntax
         Option_p &op = *op_ptr;
