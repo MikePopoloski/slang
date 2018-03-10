@@ -421,8 +421,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, Expression& value,
-                                  const ExpressionSyntax& syntax, const BindContext& context);
+    static Expression& fromSyntax(Compilation& compilation, Expression& value, const ExpressionSyntax& syntax,
+                                  SourceRange fullRange, const BindContext& context);
     static Expression& propagateType(Compilation& compilation, ElementSelectExpression& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
@@ -453,8 +453,8 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
 
-    static Expression& fromSyntax(Compilation& compilation, Expression& value,
-                                  const RangeSelectSyntax& syntax, const BindContext& context);
+    static Expression& fromSyntax(Compilation& compilation, Expression& value, const RangeSelectSyntax& syntax,
+                                  SourceRange fullRange, const BindContext& context);
     static Expression& propagateType(Compilation& compilation, RangeSelectExpression& expr, const Type& newType);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }

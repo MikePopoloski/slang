@@ -276,8 +276,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                 return badExpr(compilation, expr);
             }
 
-            // The source range of the entire member access starts from the dot operator.
-            SourceRange range { memberSelect->dotLocation, memberSelect->nameRange.end() };
+            // The source range of the entire member access starts from the value being selected.
+            SourceRange range { expr->sourceRange.start(), memberSelect->nameRange.end() };
             const auto& field = member->as<FieldSymbol>();
             expr = compilation.emplace<MemberAccessExpression>(field.getType(), *expr, field, range);
         }
@@ -306,17 +306,20 @@ Expression& Expression::bindSelectExpression(Compilation& compilation, const Ele
 
 Expression& Expression::bindSelector(Compilation& compilation, Expression& value, const ElementSelectSyntax& syntax,
                                      const BindContext& context) {
+    // The full source range of the expression includes the value and the selector syntax.
+    SourceRange fullRange = { value.sourceRange.start(), syntax.sourceRange().end() };
+
     // TODO: null selector?
     const SelectorSyntax* selector = syntax.selector;
     switch (selector->kind) {
         case SyntaxKind::BitSelect:
-            return ElementSelectExpression::fromSyntax(compilation, value,
-                                                       selector->as<BitSelectSyntax>().expr, context);
+            return ElementSelectExpression::fromSyntax(compilation, value, selector->as<BitSelectSyntax>().expr,
+                                                       fullRange, context);
         case SyntaxKind::SimpleRangeSelect:
         case SyntaxKind::AscendingRangeSelect:
         case SyntaxKind::DescendingRangeSelect:
-            return RangeSelectExpression::fromSyntax(compilation, value,
-                                                     selector->as<RangeSelectSyntax>(), context);
+            return RangeSelectExpression::fromSyntax(compilation, value, selector->as<RangeSelectSyntax>(),
+                                                     fullRange, context);
         default:
             THROW_UNREACHABLE;
     }
@@ -715,20 +718,24 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation, const Co
 }
 
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
-                                                const ExpressionSyntax& syntax, const BindContext& context) {
+                                                const ExpressionSyntax& syntax, SourceRange fullRange,
+                                                const BindContext& context) {
     Expression& selector = create(compilation, syntax, context);
     auto result = compilation.emplace<ElementSelectExpression>(compilation.getErrorType(), value,
-                                                               selector, syntax.sourceRange());
+                                                               selector, fullRange);
     if (value.bad())
         return badExpr(compilation, result);
 
     const Type& valueType = value.type->getCanonicalType();
     if (!valueType.isIntegral()) {
-        compilation.addError(DiagCode::BadIndexExpression, value.sourceRange) << *value.type;
+        auto& diag = compilation.addError(DiagCode::BadIndexExpression, syntax.sourceRange());
+        diag << value.sourceRange;
+        diag << *value.type;
         return badExpr(compilation, result);
     }
     else if (valueType.isScalar()) {
-        compilation.addError(DiagCode::CannotIndexScalar, value.sourceRange);
+        auto& diag = compilation.addError(DiagCode::CannotIndexScalar, syntax.sourceRange());
+        diag << value.sourceRange;
         return badExpr(compilation, result);
     }
     else if (valueType.kind == SymbolKind::PackedArrayType) {
@@ -747,7 +754,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 }
 
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
-                                              const RangeSelectSyntax& syntax, const BindContext& context) {
+                                              const RangeSelectSyntax& syntax, SourceRange fullRange,
+                                              const BindContext& context) {
     Expression& left = create(compilation, syntax.left, context);
     Expression& right = create(compilation, syntax.right, context);
 
@@ -760,7 +768,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     }
 
     auto result = compilation.emplace<RangeSelectExpression>(selectionKind, compilation.getErrorType(), value,
-                                                             left, right, syntax.sourceRange());
+                                                             left, right, fullRange);
     if (value.bad())
         return badExpr(compilation, result);
 
