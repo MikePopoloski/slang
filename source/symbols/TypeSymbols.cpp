@@ -544,10 +544,9 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
     SmallVectorSized<const Symbol*, 8> members;
     for (auto member : syntax.members) {
         const Type& type = compilation.getType(member->type, location, scope);
-        if (type.isIntegral()) {
-            isFourState |= type.as<IntegralType>().isFourState;
-        }
-        else if (!type.isError()) {
+        isFourState |= type.isFourState();
+
+        if (!type.isIntegral() && !type.isError()) {
             auto& diag = compilation.addError(DiagCode::PackedMemberNotIntegral,
                                               member->type.getFirstToken().location());
             diag << type;

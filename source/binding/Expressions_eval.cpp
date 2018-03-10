@@ -111,6 +111,20 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     // TODO: handle non-integer
     SVInt v = cv.integer();
 
+    // TODO: more robust lvalue handling
+    ConstantValue* lvalue = nullptr;
+    switch (op) {
+        case UnaryOperator::Preincrement:
+        case UnaryOperator::Predecrement:
+        case UnaryOperator::Postincrement:
+        case UnaryOperator::Postdecrement:
+            lvalue = context.findLocal(&((const NamedValueExpression&)operand()).symbol);
+            ASSERT(lvalue);
+            break;
+        default:
+            break;
+    }
+
 #define OP(k, v) case UnaryOperator::k: return v;
     switch (op) {
         OP(Plus, v);
@@ -123,6 +137,10 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
         OP(BitwiseNor, SVInt(!v.reductionOr()));
         OP(BitwiseXnor, SVInt(!v.reductionXor()));
         OP(LogicalNot, SVInt(!v));
+        case UnaryOperator::Preincrement: *lvalue = ++v; return v;
+        case UnaryOperator::Predecrement: *lvalue = --v; return v;
+        case UnaryOperator::Postincrement: *lvalue = v + 1; return v;
+        case UnaryOperator::Postdecrement: *lvalue = v - 1; return v;
     }
     THROW_UNREACHABLE;
 #undef OP

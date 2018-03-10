@@ -168,7 +168,12 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::UnaryBitwiseNorExpression:
         case SyntaxKind::UnaryBitwiseXnorExpression:
         case SyntaxKind::UnaryLogicalNotExpression:
+        case SyntaxKind::UnaryPreincrementExpression:
+        case SyntaxKind::UnaryPredecrementExpression:
             return UnaryExpression::fromSyntax(compilation, syntax.as<PrefixUnaryExpressionSyntax>(), context);
+        case SyntaxKind::PostincrementExpression:
+        case SyntaxKind::PostdecrementExpression:
+            return UnaryExpression::fromSyntax(compilation, syntax.as<PostfixUnaryExpressionSyntax>(), context);
         case SyntaxKind::AddExpression:
         case SyntaxKind::SubtractExpression:
         case SyntaxKind::MultiplyExpression:
@@ -289,6 +294,15 @@ Expression& Expression::badExpr(Compilation& compilation, const Expression* expr
     return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
 }
 
+bool Expression::checkLValue(Compilation& compilation, const Expression& expr, SourceLocation location) {
+    if (!expr.isLValue()) {
+        auto& diag = compilation.addError(DiagCode::ExpressionNotAssignable, location);
+        diag << expr.sourceRange;
+        return false;
+    }
+    return true;
+}
+
 IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
                                SourceRange sourceRange) :
     Expression(ExpressionKind::IntegerLiteral, type, sourceRange),
@@ -398,11 +412,42 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PrefixUn
             good = type->isIntegral();
             result->type = type->isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
             break;
+        case SyntaxKind::UnaryPreincrementExpression:
+        case SyntaxKind::UnaryPredecrementExpression:
+            // Supported for both integral and real types. Result is same as input type.
+            // The operand must also be an assignable lvalue.
+            good = type->isNumeric();
+            result->type = type;
+            if (!checkLValue(compilation, operand, syntax.operatorToken.location()))
+                return badExpr(compilation, result);
+            break;
         default:
             THROW_UNREACHABLE;
     }
 
     if (!good) {
+        auto& diag = compilation.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
+        diag << *type;
+        diag << operand.sourceRange;
+        return badExpr(compilation, result);
+    }
+
+    return *result;
+}
+
+Expression& UnaryExpression::fromSyntax(Compilation& compilation, const PostfixUnaryExpressionSyntax& syntax,
+                                        const BindContext& context) {
+    Expression& operand = create(compilation, syntax.operand, context);
+    const Type* type = operand.type;
+
+    // This method is only ever called for postincrement and postdecrement operators, so
+    // the operand must be an lvalue.
+    Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
+                                                              operand, syntax.sourceRange());
+    if (operand.bad() || !checkLValue(compilation, operand, syntax.operatorToken.location()))
+        return badExpr(compilation, result);
+
+    if (!type->isNumeric()) {
         auto& diag = compilation.addError(DiagCode::BadUnaryExpression, syntax.operatorToken.location());
         diag << *type;
         diag << operand.sourceRange;
@@ -579,11 +624,8 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
     }
 
     if (result->isAssignment()) {
-        if (!lhs.isLValue()) {
-            auto& diag = compilation.addError(DiagCode::ExpressionNotAssignable, location);
-            diag << lhs.sourceRange;
+        if (!checkLValue(compilation, lhs, location))
             return badExpr(compilation, result);
-        }
 
         // TODO: check for const assignment
 
@@ -860,6 +902,10 @@ UnaryOperator getUnaryOperator(SyntaxKind kind) {
         case SyntaxKind::UnaryBitwiseNorExpression: return UnaryOperator::BitwiseNor;
         case SyntaxKind::UnaryBitwiseXnorExpression: return UnaryOperator::BitwiseXnor;
         case SyntaxKind::UnaryLogicalNotExpression: return UnaryOperator::LogicalNot;
+        case SyntaxKind::UnaryPreincrementExpression: return UnaryOperator::Preincrement;
+        case SyntaxKind::UnaryPredecrementExpression: return UnaryOperator::Predecrement;
+        case SyntaxKind::PostincrementExpression: return UnaryOperator::Postincrement;
+        case SyntaxKind::PostdecrementExpression: return UnaryOperator::Postdecrement;
         default: THROW_UNREACHABLE;
     }
 }

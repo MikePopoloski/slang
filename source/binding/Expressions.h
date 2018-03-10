@@ -44,7 +44,11 @@ enum class UnaryOperator {
     BitwiseNand,
     BitwiseNor,
     BitwiseXnor,
-    LogicalNot
+    LogicalNot,
+    Preincrement,
+    Predecrement,
+    Postincrement,
+    Postdecrement
 };
 
 enum class BinaryOperator {
@@ -188,6 +192,9 @@ protected:
     [[nodiscard]] static Expression& selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
                                                     const BindContext& context);
 
+    // Helper methods for checking common expression requirements.
+    static bool checkLValue(Compilation& compilation, const Expression& expr, SourceLocation location);
+
     struct PropagationVisitor;
 };
 
@@ -325,6 +332,9 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, const PrefixUnaryExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static Expression& fromSyntax(Compilation& compilation, const PostfixUnaryExpressionSyntax& syntax,
                                   const BindContext& context);
 
     static Expression& propagateType(Compilation& compilation, UnaryExpression& expr, const Type& newType);

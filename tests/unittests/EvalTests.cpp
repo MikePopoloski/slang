@@ -263,3 +263,13 @@ TEST_CASE("dimension based system functions", "[eval]") {
     EVAL("$increment(down_vect)", 1);
 #undef EVAL
 }
+
+TEST_CASE("Unary inc-dec operators", "[eval]") {
+    ScriptSession session;
+    session.eval("logic [7:0] a = 123;");
+
+    CHECK(session.eval("++a").integer() == 124);
+    CHECK(session.eval("--a").integer() == 123);
+    CHECK(session.eval("a++").integer() == 123);
+    CHECK(session.eval("a--").integer() == 124);
+}
