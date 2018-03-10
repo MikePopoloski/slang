@@ -81,6 +81,9 @@ public:
     /// types as well as scalar and vector types.
     bool isSimpleBitVector() const;
 
+    /// Indicates whether this is any form of structure or union type.
+    bool isStructUnion() const;
+
     /// Indicates whether this is a numeric type, which includes all integral and floating types.
     bool isNumeric() const { return isIntegral() || isFloating(); }
 

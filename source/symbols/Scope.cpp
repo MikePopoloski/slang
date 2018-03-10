@@ -250,7 +250,8 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
 
     // Perform the lookup.
     lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);
-    result.selectors = selectors;
+    if (selectors)
+        result.selectors.appendRange(*selectors);
 
     const Symbol* symbol = result.found;
     if (!symbol && !result.hasError()) {
@@ -565,29 +566,34 @@ struct DownwardLookupResult {
     const NameSyntax* last;
 };
 
-DownwardLookupResult lookupDownward(span<const NameSyntax* const> nameParts, const Scope& scope) {
-    const NameSyntax* const final = nameParts[nameParts.size() - 1];
+struct NamePlusLoc {
+    const NameSyntax* name;
+    SourceLocation dotLocation;
+};
+
+DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Scope& scope) {
+    const NameSyntax* const final = nameParts[nameParts.size() - 1].name;
     const Scope* current = &scope;
     const Symbol* found = nullptr;
 
     for (auto part : nameParts) {
         const Symbol* symbol;
-        switch (part->kind) {
+        switch (part.name->kind) {
             case SyntaxKind::IdentifierName:
-                symbol = current->find(part->as<IdentifierNameSyntax>().identifier.valueText());
+                symbol = current->find(part.name->as<IdentifierNameSyntax>().identifier.valueText());
                 break;
             default:
                 THROW_UNREACHABLE;
         }
 
         if (!symbol)
-            return { found, part };
+            return { found, part.name };
 
         found = symbol;
-        if (part != final) {
+        if (part.name != final) {
             // This needs to be a scope, otherwise we can't do a lookup within it.
             if (!found->isScope())
-                return { found, part };
+                return { found, part.name };
             current = &found->as<Scope>();
         }
     }
@@ -602,10 +608,10 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     // Split the name into easier to manage chunks. The parser will always produce a left-recursive
     // name tree, so that's all we'll bother to handle.
     int colonParts = 0;
-    SmallVectorSized<const NameSyntax*, 8> nameParts;
+    SmallVectorSized<NamePlusLoc, 8> nameParts;
     const ScopedNameSyntax* scoped = &syntax;
     while (true) {
-        nameParts.append(&scoped->right);
+        nameParts.append({ &scoped->right, scoped->separator.location() });
         if (scoped->separator.kind == TokenKind::Dot)
             colonParts = 0;
         else
@@ -664,8 +670,32 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     //    upwards name resolution.
     if (result.found) {
         if (result.found->isValue()) {
-            // The remainder of the names are member selects.
-            result.memberSelects.appendRange(nameParts);
+            // This is a dotted member access.
+            for (const auto& part : nameParts) {
+                const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
+                switch (part.name->kind) {
+                    case SyntaxKind::IdentifierName:
+                        nameToken = part.name->as<IdentifierNameSyntax>().identifier;
+                        break;
+                    case SyntaxKind::IdentifierSelectName: {
+                        const auto& idSelect = part.name->as<IdentifierSelectNameSyntax>();
+                        nameToken = idSelect.identifier;
+                        selectors = &idSelect.selectors;
+                        break;
+                    }
+                    default:
+                        THROW_UNREACHABLE;
+                }
+
+                result.selectors.append(LookupResult::MemberSelector {
+                    nameToken.valueText(),
+                    part.dotLocation,
+                    nameToken.range()
+                });
+
+                if (selectors)
+                    result.selectors.appendRange(*selectors);
+            }
             return;
         }
 

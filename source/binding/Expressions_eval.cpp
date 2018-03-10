@@ -215,7 +215,11 @@ ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
 }
 
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
-    SVInt cond = pred().eval(context).integer();
+    ConstantValue cp = pred().eval(context);
+    if (!cp)
+        return nullptr;
+
+    SVInt cond = cp.integer();
     logic_t pred = (logic_t)cond;
 
     if (pred.isUnknown()) {
@@ -233,8 +237,13 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
 }
 
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
-    SVInt v = value().eval(context).integer();
-    SVInt index = selector().eval(context).integer();
+    ConstantValue cv = value().eval(context);
+    ConstantValue cs = selector().eval(context);
+    if (!cv || !cs)
+        return nullptr;
+
+    SVInt v = cv.integer();
+    SVInt index = cs.integer();
     ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
 
     if (index.hasUnknown()) {

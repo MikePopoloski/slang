@@ -106,6 +106,19 @@ bool Type::isSimpleBitVector() const {
     return ct.kind == SymbolKind::PackedArrayType && ct.as<PackedArrayType>().elementType.isScalar();
 }
 
+bool Type::isStructUnion() const {
+    const Type& ct = getCanonicalType();
+    switch (ct.kind) {
+        case SymbolKind::PackedStructType:
+        case SymbolKind::UnpackedStructType:
+        case SymbolKind::PackedUnionType:
+        case SymbolKind::UnpackedUnionType:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool Type::isMatching(const Type& rhs) const {
     // See [6.22.1] for Matching Types.
     const Type* l = &getCanonicalType();

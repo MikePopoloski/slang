@@ -11,6 +11,7 @@
 #include "parsing/AllSyntax.h"
 #include "symbols/Symbol.h"
 #include "util/Iterator.h"
+#include "util/Util.h"
 
 namespace slang {
 
@@ -85,10 +86,17 @@ private:
 
 struct LookupResult {
     const Symbol* found = nullptr;
-    const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
-    SmallVectorSized<const NameSyntax*, 4> memberSelects; 
     Diagnostics diagnostics;
     bool wasImported = false;
+
+    struct MemberSelector {
+        string_view name;
+        SourceLocation dotLocation;
+        SourceRange nameRange;
+    };
+
+    using Selector = std::variant<const ElementSelectSyntax*, MemberSelector>;
+    SmallVectorSized<Selector, 4> selectors; 
 
     bool hasError() const;
 

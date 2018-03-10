@@ -247,39 +247,48 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         return badExpr(compilation, nullptr);
 
     Expression* expr = &bindSymbol(compilation, *symbol, syntax);
-    if (result.selectors) {
-        for (auto selector : *result.selectors)
-            expr = &bindSelector(compilation, *expr, *selector, context);
-    }
-
+    
     // Drill down into member accesses.
-    for (auto nameSyntax : result.memberSelects) {
-        // TODO: array selectors
-        string_view name = nameSyntax->as<IdentifierNameSyntax>().identifier.valueText();
-        if (name.empty() || expr->bad())
-            return badExpr(compilation, expr);
+    for (const auto& selector : result.selectors) {
+        if (expr->bad())
+            return *expr;
 
-        if (!expr->type->isScope()) {
-            // TODO: dot operator location
-            auto& diag = compilation.addError(DiagCode::MemberAccessNotStructUnion, nameSyntax->sourceRange());
-            diag << *expr->type;
-            return badExpr(compilation, expr);
+        auto memberSelect = std::get_if<LookupResult::MemberSelector>(&selector);
+        if (memberSelect) {
+            string_view name = memberSelect->name;
+            if (name.empty())
+                return badExpr(compilation, expr);
+
+            if (!expr->type->isStructUnion()) {
+                auto& diag = compilation.addError(DiagCode::MemberAccessNotStructUnion, memberSelect->dotLocation);
+                diag << expr->sourceRange;
+                diag << memberSelect->nameRange;
+                diag << *expr->type;
+                return badExpr(compilation, expr);
+            }
+
+            const Symbol* member = expr->type->getCanonicalType().as<Scope>().find(name);
+            if (!member) {
+                auto& diag = compilation.addError(DiagCode::UnknownMember, memberSelect->nameRange);
+                diag << expr->sourceRange;
+                diag << name;
+                diag << *expr->type;
+                return badExpr(compilation, expr);
+            }
+
+            // The source range of the entire member access starts from the dot operator.
+            SourceRange range { memberSelect->dotLocation, memberSelect->nameRange.end() };
+
+            // TODO: add a field symbol type
+            const ValueSymbol& value = member->as<ValueSymbol>();
+
+            expr = compilation.emplace<MemberAccessExpression>(value.getType(), *expr, name, range);
         }
-
-        const Symbol* member = expr->type->as<Scope>().find(name);
-        if (!member) {
-            auto& diag = compilation.addError(DiagCode::UnknownMember, nameSyntax->sourceRange());
-            diag << expr->sourceRange;
-            diag << name;
-            diag << *expr->type;
-            return badExpr(compilation, expr);
+        else {
+            // Element / range selectors.
+            const ElementSelectSyntax* selectSyntax = std::get<const ElementSelectSyntax*>(selector);
+            expr = &bindSelector(compilation, *expr, *selectSyntax, context);
         }
-
-        // TODO: add a field symbol type
-        // TODO: source range of the member access
-        const ValueSymbol& value = member->as<ValueSymbol>();
-
-        expr = compilation.emplace<MemberAccessExpression>(value.getType(), *expr, name, nameSyntax->sourceRange());
     }
 
     return *expr;
