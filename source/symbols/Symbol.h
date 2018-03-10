@@ -55,6 +55,7 @@ enum class SymbolKind {
     SequentialBlock,
     Variable,
     FormalArgument,
+    Field,
     Subroutine
 };
 

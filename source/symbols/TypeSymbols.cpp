@@ -569,7 +569,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
         for (auto decl : member->declarators) {
             bitWidth += type.getBitWidth();
 
-            auto variable = compilation.emplace<VariableSymbol>(decl->name.valueText(), decl->name.location());
+            auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location());
             members.append(variable);
             variable->type = type;
 
@@ -602,7 +602,7 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
     for (auto member : syntax.members) {
         const Type& type = compilation.getType(member->type, location, scope);
         for (auto decl : member->declarators) {
-            auto variable = compilation.emplace<VariableSymbol>(decl->name.valueText(), decl->name.location());
+            auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location());
             result->addMember(*variable);
 
             variable->type = type;

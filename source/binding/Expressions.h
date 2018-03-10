@@ -468,11 +468,11 @@ private:
 /// Represents an access of a structure variable's members.
 class MemberAccessExpression : public Expression {
 public:
-    string_view memberName;
+    const FieldSymbol& field;
 
-    MemberAccessExpression(const Type& type, Expression& value, string_view memberName, SourceRange sourceRange) :
+    MemberAccessExpression(const Type& type, Expression& value, const FieldSymbol& field, SourceRange sourceRange) :
         Expression(ExpressionKind::MemberAccess, type, sourceRange),
-        memberName(memberName), value_(&value) {}
+        field(field), value_(&value) {}
 
     const Expression& value() const { return *value_; }
     Expression& value() { return *value_; }

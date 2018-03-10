@@ -9,6 +9,7 @@
 #include "binding/ConstantValue.h"
 #include "parsing/AllSyntax.h"
 #include "symbols/Lazy.h"
+#include "symbols/MemberSymbols.h"
 #include "symbols/Scope.h"
 #include "symbols/Symbol.h"
 
@@ -284,6 +285,15 @@ public:
     PackedArrayType(const Type& elementType, ConstantRange range);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
+};
+
+/// Represents a field member of a struct or union.
+class FieldSymbol : public VariableSymbol {
+public:
+    FieldSymbol(string_view name, SourceLocation loc) :
+        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic) {}
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
 };
 
 /// Represents a packed structure of members.

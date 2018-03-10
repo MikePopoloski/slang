@@ -103,6 +103,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(SequentialBlock);
         SYMBOL(Variable);
         SYMBOL(FormalArgument);
+        SYMBOL(Field);
         SYMBOL(Subroutine);
         TYPE(PredefinedIntegerType);
         TYPE(ScalarType);

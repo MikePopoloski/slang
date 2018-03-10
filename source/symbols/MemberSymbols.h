@@ -141,7 +141,7 @@ public:
     static VariableSymbol& fromSyntax(Compilation& compilation, const ForVariableDeclarationSyntax& syntax);
 
     static bool isKind(SymbolKind kind) {
-        return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument;
+        return kind == SymbolKind::Variable || kind == SymbolKind::FormalArgument || kind == SymbolKind::Field;
     }
 
 protected:

@@ -67,25 +67,20 @@ const Type& ValueSymbol::getType() const {
     switch (kind) {
         case SymbolKind::EnumValue:
             return as<EnumValueSymbol>().type;
-        case SymbolKind::Variable:
-        case SymbolKind::FormalArgument:
-            return *as<VariableSymbol>().type;
         case SymbolKind::Parameter:
             return as<ParameterSymbol>().getType();
         default:
-            THROW_UNREACHABLE;
+            return *as<VariableSymbol>().type;
     }
 }
 
 bool ValueSymbol::isKind(SymbolKind kind) {
     switch (kind) {
         case SymbolKind::EnumValue:
-        case SymbolKind::Variable:
-        case SymbolKind::FormalArgument:
         case SymbolKind::Parameter:
             return true;
         default:
-            return false;
+            return VariableSymbol::isKind(kind);
     }
 }
 

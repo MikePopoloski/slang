@@ -278,11 +278,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
             // The source range of the entire member access starts from the dot operator.
             SourceRange range { memberSelect->dotLocation, memberSelect->nameRange.end() };
-
-            // TODO: add a field symbol type
-            const ValueSymbol& value = member->as<ValueSymbol>();
-
-            expr = compilation.emplace<MemberAccessExpression>(value.getType(), *expr, name, range);
+            const auto& field = member->as<FieldSymbol>();
+            expr = compilation.emplace<MemberAccessExpression>(field.getType(), *expr, field, range);
         }
         else {
             // Element / range selectors.
