@@ -213,7 +213,7 @@ namespace std {
 #define MPARK_CONFIG_HPP
 
 // MSVC 2015 Update 3.
-#if __cplusplus < 201103L && (!defined(_MSC_VER) || _MSC_FULL_VER < 190024215)
+#if __cplusplus < 201103L && (!defined(_MSC_VER) || _MSC_FULL_VER < 190024210)
 #error "MPark.Variant requires C++11 support."
 #endif
 
@@ -507,7 +507,7 @@ namespace mpark {
           using std::swap;
 
           template <typename T>
-          struct is_swappable_impl {
+          struct is_swappable {
             private:
             template <typename U,
                       typename = decltype(swap(std::declval<U &>(),
@@ -518,11 +518,8 @@ namespace mpark {
             inline static std::false_type test(...);
 
             public:
-            using type = decltype(test<T>(0));
+            static constexpr bool value = decltype(test<T>(0))::value;
           };
-
-          template <typename T>
-          using is_swappable = typename is_swappable_impl<T>::type;
 
           template <typename T, bool = is_swappable<T>::value>
           struct is_nothrow_swappable {
@@ -536,11 +533,8 @@ namespace mpark {
         }  // namespace swappable
       }  // namespace detail
 
-      template <typename T>
-      using is_swappable = detail::swappable::is_swappable<T>;
-
-      template <typename T>
-      using is_nothrow_swappable = detail::swappable::is_nothrow_swappable<T>;
+      using detail::swappable::is_swappable;
+      using detail::swappable::is_nothrow_swappable;
 
       // <functional>
 #ifdef _MSC_VER
@@ -680,15 +674,12 @@ namespace mpark {
     template <std::size_t N>
     using size_constant = std::integral_constant<std::size_t, N>;
 
-    template <bool... Bs>
-    using bool_sequence = integer_sequence<bool, Bs...>;
-
     template <std::size_t I, typename T>
     struct indexed_type : size_constant<I>, identity<T> {};
 
     template <bool... Bs>
-    using all =
-        std::is_same<bool_sequence<true, Bs...>, bool_sequence<Bs..., true>>;
+    using all = std::is_same<integer_sequence<bool, true, Bs...>,
+                             integer_sequence<bool, Bs..., true>>;
 
 #ifdef MPARK_TYPE_PACK_ELEMENT
     template <std::size_t I, typename... Ts>
@@ -741,6 +732,20 @@ namespace mpark {
     template <typename T>
     struct is_trivially_move_assignable : bool_constant<__is_trivial(T)> {};
 #endif
+
+    template <typename T, bool>
+    struct dependent_type : T {};
+
+    template <typename Is, std::size_t J>
+    struct push_back;
+
+    template <typename Is, std::size_t J>
+    using push_back_t = typename push_back<Is, J>::type;
+
+    template <std::size_t... Is, std::size_t J>
+    struct push_back<index_sequence<Is...>, J> {
+      using type = index_sequence<Is..., J>;
+    };
 
   }  // namespace lib
 }  // namespace mpark
@@ -1034,7 +1039,6 @@ namespace mpark {
     namespace visitation {
 
       struct base {
-        private:
         template <typename T>
         inline static constexpr const T &at(const T &elem) {
           return elem;
@@ -1102,21 +1106,20 @@ namespace mpark {
         }
 
 #ifdef MPARK_RETURN_TYPE_DEDUCTION
-        template <typename F, typename... Vs, std::size_t... Is>
-        inline static constexpr auto make_fmatrix_impl(
-            lib::index_sequence<Is...> is) {
+        template <typename F, typename... Vs, typename Is>
+        inline static constexpr auto make_fmatrix_impl(Is is) {
           return make_dispatch<F, Vs...>(is);
         }
 
         template <typename F,
                   typename... Vs,
-                  std::size_t... Is,
+                  typename Is,
                   std::size_t... Js,
                   typename... Ls>
         inline static constexpr auto make_fmatrix_impl(
-            lib::index_sequence<Is...>, lib::index_sequence<Js...>, Ls... ls) {
+            Is, lib::index_sequence<Js...>, Ls... ls) {
           return make_farray(make_fmatrix_impl<F, Vs...>(
-              lib::index_sequence<Is..., Js>{}, ls...)...);
+              lib::push_back_t<Is, Js>{}, ls...)...);
         }
 
         template <typename F, typename... Vs>
@@ -1131,20 +1134,17 @@ namespace mpark {
           template <typename...>
           struct impl;
 
-          template <std::size_t... Is>
-          struct impl<lib::index_sequence<Is...>> {
+          template <typename Is>
+          struct impl<Is> {
             inline constexpr AUTO operator()() const
-              AUTO_RETURN(
-                  make_dispatch<F, Vs...>(lib::index_sequence<Is...>{}))
+              AUTO_RETURN(make_dispatch<F, Vs...>(Is{}))
           };
 
-          template <std::size_t... Is, std::size_t... Js, typename... Ls>
-          struct impl<lib::index_sequence<Is...>,
-                      lib::index_sequence<Js...>,
-                      Ls...> {
+          template <typename Is, std::size_t... Js, typename... Ls>
+          struct impl<Is, lib::index_sequence<Js...>, Ls...> {
             inline constexpr AUTO operator()() const
-              AUTO_RETURN(make_farray(
-                  impl<lib::index_sequence<Is..., Js>, Ls...>{}()...))
+              AUTO_RETURN(
+                  make_farray(impl<lib::push_back_t<Is, Js>, Ls...>{}()...))
           };
         };
 
@@ -1155,26 +1155,65 @@ namespace mpark {
                   lib::index_sequence<>,
                   lib::make_index_sequence<lib::decay_t<Vs>::size()>...>{}())
 #endif
+      };  // namespace base
 
-        public:
+      template <typename F, typename... Vs>
+      using FDiagonal = decltype(base::make_fdiagonal<F, Vs...>());
+
+      template <typename F, typename... Vs>
+      struct fdiagonal {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4268)
+#endif
+        static constexpr FDiagonal<F, Vs...> value =
+            base::make_fdiagonal<F, Vs...>();
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+      };
+
+      template <typename F, typename... Vs>
+      constexpr FDiagonal<F, Vs...> fdiagonal<F, Vs...>::value;
+
+      template <typename F, typename... Vs>
+      using FMatrix = decltype(base::make_fmatrix<F, Vs...>());
+
+      template <typename F, typename... Vs>
+      struct fmatrix {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4268)
+#endif
+        static constexpr FMatrix<F, Vs...> value =
+            base::make_fmatrix<F, Vs...>();
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+      };
+
+      template <typename F, typename... Vs>
+      constexpr FMatrix<F, Vs...> fmatrix<F, Vs...>::value;
+
+      struct alt {
         template <typename Visitor, typename... Vs>
         inline static constexpr DECLTYPE_AUTO visit_alt_at(std::size_t index,
                                                            Visitor &&visitor,
                                                            Vs &&... vs)
-          DECLTYPE_AUTO_RETURN(
-              at(make_fdiagonal<Visitor &&,
-                                decltype(as_base(lib::forward<Vs>(vs)))...>(),
-                 index)(lib::forward<Visitor>(visitor),
-                        as_base(lib::forward<Vs>(vs))...))
+          DECLTYPE_AUTO_RETURN(base::at(
+              fdiagonal<Visitor &&,
+                        decltype(as_base(lib::forward<Vs>(vs)))...>::value,
+              index)(lib::forward<Visitor>(visitor),
+                     as_base(lib::forward<Vs>(vs))...))
 
         template <typename Visitor, typename... Vs>
         inline static constexpr DECLTYPE_AUTO visit_alt(Visitor &&visitor,
                                                         Vs &&... vs)
-          DECLTYPE_AUTO_RETURN(
-              at(make_fmatrix<Visitor &&,
-                              decltype(as_base(lib::forward<Vs>(vs)))...>(),
-                 vs.index()...)(lib::forward<Visitor>(visitor),
-                                as_base(lib::forward<Vs>(vs))...))
+          DECLTYPE_AUTO_RETURN(base::at(
+              fmatrix<Visitor &&,
+                      decltype(as_base(lib::forward<Vs>(vs)))...>::value,
+              vs.index()...)(lib::forward<Visitor>(visitor),
+                             as_base(lib::forward<Vs>(vs))...))
       };
 
       struct variant {
@@ -1222,15 +1261,15 @@ namespace mpark {
                                                            Visitor &&visitor,
                                                            Vs &&... vs)
           DECLTYPE_AUTO_RETURN(
-              base::visit_alt_at(index,
-                                 lib::forward<Visitor>(visitor),
-                                 lib::forward<Vs>(vs).impl_...))
+              alt::visit_alt_at(index,
+                                lib::forward<Visitor>(visitor),
+                                lib::forward<Vs>(vs).impl_...))
 
         template <typename Visitor, typename... Vs>
         inline static constexpr DECLTYPE_AUTO visit_alt(Visitor &&visitor,
                                                         Vs &&... vs)
-          DECLTYPE_AUTO_RETURN(base::visit_alt(lib::forward<Visitor>(visitor),
-                                               lib::forward<Vs>(vs).impl_...))
+          DECLTYPE_AUTO_RETURN(alt::visit_alt(lib::forward<Visitor>(visitor),
+                                              lib::forward<Vs>(vs).impl_...))
 
         template <typename Visitor, typename... Vs>
         inline static constexpr DECLTYPE_AUTO visit_value_at(std::size_t index,
@@ -1416,7 +1455,7 @@ namespace mpark {
         ~destructor() { destroy(); },
         inline void destroy() noexcept {
           if (!this->valueless_by_exception()) {
-            visitation::base::visit_alt(dtor{}, *this);
+            visitation::alt::visit_alt(dtor{}, *this);
           }
           this->index_ = static_cast<index_t>(-1);
         });
@@ -1458,7 +1497,7 @@ namespace mpark {
       inline static void generic_construct(constructor &lhs, Rhs &&rhs) {
         lhs.destroy();
         if (!rhs.valueless_by_exception()) {
-          visitation::base::visit_alt_at(
+          visitation::alt::visit_alt_at(
               rhs.index(),
 #ifdef MPARK_GENERIC_LAMBDAS
               [](auto &lhs_alt, auto &&rhs_alt) {
@@ -1617,7 +1656,7 @@ namespace mpark {
         } else if (that.valueless_by_exception()) {
           this->destroy();
         } else {
-          visitation::base::visit_alt_at(
+          visitation::alt::visit_alt_at(
               that.index(),
 #ifdef MPARK_GENERIC_LAMBDAS
               [this](auto &this_alt, auto &&that_alt) {
@@ -1729,19 +1768,19 @@ namespace mpark {
         if (this->valueless_by_exception() && that.valueless_by_exception()) {
           // do nothing.
         } else if (this->index() == that.index()) {
-          visitation::base::visit_alt_at(this->index(),
+          visitation::alt::visit_alt_at(this->index(),
 #ifdef MPARK_GENERIC_LAMBDAS
-                                         [](auto &this_alt, auto &that_alt) {
-                                           using std::swap;
-                                           swap(this_alt.value,
-                                                that_alt.value);
-                                         }
+                                        [](auto &this_alt, auto &that_alt) {
+                                          using std::swap;
+                                          swap(this_alt.value,
+                                               that_alt.value);
+                                        }
 #else
-                                         swapper{}
+                                        swapper{}
 #endif
-                                         ,
-                                         *this,
-                                         that);
+                                        ,
+                                        *this,
+                                        that);
         } else {
           impl *lhs = this;
           impl *rhs = lib::addressof(that);
@@ -1996,12 +2035,14 @@ namespace mpark {
       return impl_.index();
     }
 
-    template <
-        bool Dummy = true,
-        lib::enable_if_t<lib::all<Dummy,
-                                  (std::is_move_constructible<Ts>::value &&
-                                   lib::is_swappable<Ts>::value)...>::value,
-                         int> = 0>
+    template <bool Dummy = true,
+              lib::enable_if_t<
+                  lib::all<Dummy,
+                           (lib::dependent_type<std::is_move_constructible<Ts>,
+                                                Dummy>::value &&
+                            lib::dependent_type<lib::is_swappable<Ts>,
+                                                Dummy>::value)...>::value,
+                  int> = 0>
     inline void swap(variant &that) noexcept(
         lib::all<(std::is_nothrow_move_constructible<Ts>::value &&
                   lib::is_nothrow_swappable<Ts>::value)...>::value) {
