@@ -222,6 +222,12 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
+    // The function gets an implicit variable inserted that represents the return value.
+    // TODO: don't do this if returning void; also handle name collisions with this thing
+    auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location);
+    implicitReturnVar->type = *proto.returnType;
+    result->addMember(*implicitReturnVar);
+
     // TODO: mising return type
     result->arguments = arguments.copy(compilation);
     result->returnType = *proto.returnType;
