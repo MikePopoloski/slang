@@ -650,7 +650,7 @@ protected:
 template<typename T>
 class SyntaxList : public SyntaxListBase {
 public:
-    SyntaxList(nullptr_t) : SyntaxList(span<T* const>(nullptr)) {}
+    SyntaxList(nullptr_t) : SyntaxList(span<T* const>()) {}
     SyntaxList(span<T* const> elements) :
         SyntaxListBase((uint32_t)elements.size()),
         elements(elements) {}
@@ -674,7 +674,7 @@ private:
 
 class TokenList : public SyntaxListBase {
 public:
-    TokenList(nullptr_t) : TokenList(span<Token const>(nullptr)) {}
+    TokenList(nullptr_t) : TokenList(span<Token const>()) {}
     TokenList(span<Token const> elements) :
         SyntaxListBase((uint32_t)elements.size()),
         elements(elements) {}
@@ -723,7 +723,7 @@ public:
         uint32_t index;
     };
 
-    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>(nullptr)) {}
+    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>()) {}
     SeparatedSyntaxList(span<TokenOrSyntax const> elements) :
         SyntaxListBase((uint32_t)elements.size()),
         elements(elements) {}

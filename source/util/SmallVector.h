@@ -137,7 +137,7 @@ public:
     /// Creates a copy of the array using the given allocator.
     span<T> copy(BumpAllocator& alloc) const {
         if (len == 0)
-            return nullptr;
+            return {};
 
         const T* source = data_;
         T* dest = reinterpret_cast<T*>(alloc.allocate(len * sizeof(T), alignof(T)));

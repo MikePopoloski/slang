@@ -374,7 +374,7 @@ StreamingConcatenationExpressionSyntax& Parser::parseStreamConcatenation(Token o
 
     Token openBraceInner;
     Token closeBraceInner;
-    span<TokenOrSyntax const> list = nullptr;
+    span<TokenOrSyntax const> list;
 
     parseSeparatedList<isPossibleExpressionOrComma, isEndOfBracedList>(
         TokenKind::OpenBrace,
@@ -681,7 +681,7 @@ ParameterValueAssignmentSyntax* Parser::parseParameterValueAssignment() {
 ArgumentListSyntax& Parser::parseArgumentList() {
     Token openParen;
     Token closeParen;
-    span<TokenOrSyntax const> list = nullptr;
+    span<TokenOrSyntax const> list;
 
     parseSeparatedList<isPossibleArgument, isEndOfParenList>(
         TokenKind::OpenParenthesis,

@@ -386,7 +386,7 @@ MemberSyntax* Parser::parseMember() {
 
                     auto name = consume();
                     auto& label = factory.namedLabel(name, expect(TokenKind::Colon));
-                    auto& statement = parseAssertionStatement(&label, nullptr);
+                    auto& statement = parseAssertionStatement(&label, {});
                     switch (statement.kind) {
                         case SyntaxKind::ImmediateAssertStatement:
                         case SyntaxKind::ImmediateAssumeStatement:
@@ -405,7 +405,7 @@ MemberSyntax* Parser::parseMember() {
         case TokenKind::AssumeKeyword:
         case TokenKind::CoverKeyword:
         case TokenKind::RestrictKeyword: {
-            auto& statement = parseAssertionStatement(nullptr, nullptr);
+            auto& statement = parseAssertionStatement(nullptr, {});
             switch (statement.kind) {
                 case SyntaxKind::ImmediateAssertStatement:
                 case SyntaxKind::ImmediateAssumeStatement:
@@ -731,7 +731,7 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(span<AttributeInstan
 GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(span<AttributeInstanceSyntax* const> attributes) {
     Token keyword;
     Token semi;
-    span<TokenOrSyntax const> identifiers = nullptr;
+    span<TokenOrSyntax const> identifiers;
 
     parseSeparatedList<isIdentifierOrComma, isSemicolon>(
         TokenKind::GenVarKeyword,
@@ -999,7 +999,7 @@ MemberSyntax* Parser::parseClassMember() {
             case TokenKind::ClassKeyword:
                 return &parseClassDeclaration(attributes, consume());
             case TokenKind::InterfaceKeyword:
-                return &factory.classPropertyDeclaration(attributes, nullptr, parseVariableDeclaration(nullptr));
+                return &factory.classPropertyDeclaration(attributes, nullptr, parseVariableDeclaration({}));
             default:
                 break;
         }
@@ -1018,7 +1018,7 @@ MemberSyntax* Parser::parseClassMember() {
     auto qualifiers = qualifierBuffer.copy(alloc);
 
     if (isVariableDeclaration()) {
-        auto& decl = parseVariableDeclaration(nullptr);
+        auto& decl = parseVariableDeclaration({});
         if (decl.kind == SyntaxKind::ParameterDeclarationStatement)
             errorIfAttributes(attributes, DiagCode::AttributesOnClassParam);
         return &factory.classPropertyDeclaration(attributes, qualifiers, decl);
@@ -1035,7 +1035,7 @@ MemberSyntax* Parser::parseClassMember() {
             return &factory.classMethodDeclaration(
                 attributes,
                 qualifiers,
-                parseFunctionDeclaration(nullptr, declKind, endKind)
+                parseFunctionDeclaration({}, declKind, endKind)
             );
         }
     }
@@ -1719,7 +1719,7 @@ EnumTypeSyntax& Parser::parseEnum() {
     auto openBrace = expect(TokenKind::OpenBrace);
 
     Token closeBrace;
-    span<TokenOrSyntax const> declarators = nullptr;
+    span<TokenOrSyntax const> declarators;
     if (openBrace.isMissing())
         closeBrace = Token::createMissing(alloc, TokenKind::CloseBrace, openBrace.location());
     else
@@ -1994,7 +1994,7 @@ AttributeSpecSyntax& Parser::parseAttributeSpec() {
 span<PackageImportDeclarationSyntax* const> Parser::parsePackageImports() {
     SmallVectorSized<PackageImportDeclarationSyntax*, 4> buffer;
     while (peek(TokenKind::ImportKeyword))
-        buffer.append(&parseImportDeclaration(nullptr));
+        buffer.append(&parseImportDeclaration({}));
     return buffer.copy(alloc);
 }
 
@@ -2111,7 +2111,7 @@ PropertyDeclarationSyntax& Parser::parsePropertyDeclaration(span<AttributeInstan
 
     SmallVectorSized<MemberSyntax*, 4> declarations;
     while (isVariableDeclaration())
-        declarations.append(&parseVariableDeclaration(nullptr));
+        declarations.append(&parseVariableDeclaration({}));
 
     auto& spec = parsePropertySpec();
     Token optSemi = consumeIf(TokenKind::Semicolon);
@@ -2130,7 +2130,7 @@ SequenceDeclarationSyntax& Parser::parseSequenceDeclaration(span<AttributeInstan
 
     SmallVectorSized<MemberSyntax*, 4> declarations;
     while (isVariableDeclaration())
-        declarations.append(&parseVariableDeclaration(nullptr));
+        declarations.append(&parseVariableDeclaration({}));
 
     // TODO: Parse all sequence expressions
     auto& expr = parseExpression();
@@ -2307,7 +2307,7 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
 
     Token openParen;
     Token closeParen;
-    span<TokenOrSyntax const> items = nullptr;
+    span<TokenOrSyntax const> items;
 
     parseSeparatedList<isPossiblePortConnection, isEndOfParenList>(
         TokenKind::OpenParenthesis,

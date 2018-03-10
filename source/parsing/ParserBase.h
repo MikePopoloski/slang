@@ -116,7 +116,7 @@ protected:
         openToken = expect(openKind);
         if (openToken.isMissing()) {
             closeToken = Token::createMissing(alloc, closeKind, openToken.location());
-            list = nullptr;
+            list = span<TokenOrSyntax const>();
             return;
         }
 

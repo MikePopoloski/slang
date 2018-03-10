@@ -125,7 +125,7 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK_THROWS("3'dxxx"_si);
     CHECK_THROWS("300'df"_si);
     CHECK_THROWS("300'of"_si);
-    CHECK_THROWS(SVInt::fromDigits(1, LiteralBase::Decimal, false, false, nullptr));
+    CHECK_THROWS(SVInt::fromDigits(1, LiteralBase::Decimal, false, false, {}));
 
     // Create from memory pointer.
     uint64_t mem1 = 0x234907862346ff;
@@ -262,7 +262,7 @@ TEST_CASE("Arithmetic", "[numeric]") {
     CHECK("32'sd32"_si - "100'sd32"_si == 0);
     CHECK("100'sd99999999999"_si * "-120'sd999987654321"_si == "-137'sd99998765431100012345679"_si);
     CHECK("-120'sd999987654321"_si * "0"_si == 0);
-    
+
     CHECK_THAT("100'bx"_si + "98'bx"_si, exactlyEquals("100'bx"_si));
     CHECK_THAT("100'bx"_si - "98'bx"_si, exactlyEquals("100'bx"_si));
     CHECK_THAT("100'bx"_si * "98'bx"_si, exactlyEquals("100'bx"_si));
@@ -411,7 +411,7 @@ TEST_CASE("Power", "[numeric]") {
     CHECK(posX.pow(SVInt::Zero) == 1);
     CHECK(posX.pow("-23'sd1333"_si) == 0);
     CHECK(posX.pow("23'sd33"_si) == 5792745);
-    
+
     CHECK("-3"_si.pow("3"_si) == "-27"_si);
     CHECK("-3"_si.pow("4"_si) == "81"_si);
     CHECK(SVInt(64, 3, false).pow(SVInt(918245)) == "64'd12951281834385883507"_si);

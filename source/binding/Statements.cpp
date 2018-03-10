@@ -11,7 +11,7 @@
 namespace slang {
 
 const InvalidStatement InvalidStatement::Instance(nullptr);
-const StatementList StatementList::Empty(nullptr);
+const StatementList StatementList::Empty({});
 
 void Statement::eval(EvalContext& context) const {
     switch (kind) {

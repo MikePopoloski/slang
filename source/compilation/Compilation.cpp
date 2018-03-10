@@ -349,7 +349,7 @@ void Compilation::trackImport(Scope::ImportDataIndex& index, const WildcardImpor
 
 span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataIndex index) {
     if (index == Scope::ImportDataIndex::Invalid)
-        return nullptr;
+        return {};
     return importData[index];
 }
 

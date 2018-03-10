@@ -819,7 +819,8 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
 
     if (errored) {
         return badExpr(compilation, compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
-                                                                                 nullptr, syntax.sourceRange()));
+                                                                                 span<const Expression*>(),
+                                                                                 syntax.sourceRange()));
     }
 
     return *compilation.emplace<ConcatenationExpression>(compilation.getType(totalWidth, flags),
