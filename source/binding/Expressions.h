@@ -175,13 +175,11 @@ protected:
         kind(kind), type(&type), sourceRange(sourceRange) {}
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
+    static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context);
-    static Expression& bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax);
-
     static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const BindContext& context);
     static Expression& bindSelector(Compilation& compilation, Expression& value, const ElementSelectSyntax& syntax, const BindContext& context);
-    static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 

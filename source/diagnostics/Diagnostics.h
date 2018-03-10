@@ -182,6 +182,7 @@ enum class DiagCode : uint8_t {
     UnknownClassOrPackage,
     UsedBeforeDeclared,
     NotAType,
+    NotAValue,
     UnknownMember,
 
     MaxValue

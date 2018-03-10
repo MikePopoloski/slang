@@ -246,7 +246,12 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     if (!symbol)
         return badExpr(compilation, nullptr);
 
-    Expression* expr = &bindSymbol(compilation, *symbol, syntax);
+    if (!symbol->isValue()) {
+        compilation.addError(DiagCode::NotAType, syntax.sourceRange()) << symbol->name;
+        return badExpr(compilation, nullptr);
+    }
+
+    Expression* expr = compilation.emplace<NamedValueExpression>(symbol->as<ValueSymbol>(), syntax.sourceRange());
     
     // Drill down into member accesses.
     for (const auto& selector : result.selectors) {
@@ -289,13 +294,6 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     }
 
     return *expr;
-}
-
-Expression& Expression::bindSymbol(Compilation& compilation, const Symbol& symbol, const ExpressionSyntax& syntax) {
-    if (symbol.isValue())
-        return *compilation.emplace<NamedValueExpression>(symbol.as<ValueSymbol>(), syntax.sourceRange());
-
-    THROW_UNREACHABLE;
 }
 
 Expression& Expression::bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax,
