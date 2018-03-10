@@ -236,7 +236,7 @@ public:
     SmallVectorSized(SmallVector<T>&& other) noexcept {
         if (other.isSmall()) {
             this->len = 0;
-            this->capacity = sizeof(T) * N;
+            this->capacity = N;
             this->data_ = reinterpret_cast<T*>(&this->firstElement[0]);
             this->appendRange(other.begin(), other.end());
         }
