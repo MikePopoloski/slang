@@ -30,6 +30,8 @@ public:
         Symbol(SymbolKind::TransparentMember, wrapped_.name, wrapped_.location),
         wrapped(wrapped_) {}
 
+    void toJson(json&) const { /* enum members will be exposed in their containing enum */ }
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TransparentMember; }
 };
 
@@ -45,6 +47,8 @@ public:
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
+
+    void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ExplicitImport; }
 
@@ -67,6 +71,8 @@ public:
         packageName(packageName) {}
 
     const PackageSymbol* getPackage() const;
+
+    void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::WildcardImport; }
 
@@ -113,6 +119,8 @@ public:
     bool isPortParam() const { return isPort; }
     bool isBodyParam() const { return !isPortParam(); }
 
+    void toJson(json& j) const;
+
 private:
     const DataTypeSyntax* declaredType = nullptr;
     mutable LazyType type;
@@ -133,6 +141,8 @@ public:
     VariableSymbol(string_view name, SourceLocation loc,
                    VariableLifetime lifetime = VariableLifetime::Automatic, bool isConst = false) :
         VariableSymbol(SymbolKind::Variable, name, loc, lifetime, isConst) {}
+
+    void toJson(json& j) const;
 
     /// Constructs all variable symbols specified by the given syntax node.
     static void fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
@@ -168,6 +178,8 @@ public:
                        direction == FormalArgumentDirection::ConstRef),
         direction(direction) {}
 
+    void toJson(json& j) const;
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
 };
 
@@ -195,6 +207,8 @@ public:
         StatementBodiedScope(compilation, this),
         returnType(static_cast<const Scope*>(this)),
         systemFunctionKind(systemFunction) {}
+
+    void toJson(json& j) const;
 
     static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax);
 

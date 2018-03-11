@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "HierarchySymbols.h"
 
+#include "json.hpp"
+
 #include "compilation/Compilation.h"
 #include "util/StackContainer.h"
 
@@ -253,6 +255,11 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Compilation& compilatio
                                                              kind);
     result->setBody(syntax.statement);
     return *result;
+}
+
+void ProceduralBlockSymbol::toJson(json& j) const {
+    // TODO: stringify
+    j["procedureKind"] = procedureKind;
 }
 
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,

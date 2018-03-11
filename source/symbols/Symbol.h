@@ -8,6 +8,7 @@
 
 #include "diagnostics/Diagnostics.h"
 #include "text/SourceLocation.h"
+#include "util/Util.h"
 
 namespace slang {
 
@@ -157,5 +158,8 @@ public:
 protected:
     using Symbol::Symbol;
 };
+
+/// Serialization of arbitrary symbols to JSON.
+void to_json(json& j, const Symbol& symbol);
 
 }

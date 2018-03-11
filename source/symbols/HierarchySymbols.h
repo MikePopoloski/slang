@@ -21,6 +21,8 @@ public:
         Symbol(SymbolKind::CompilationUnit, "", SourceLocation()),
         Scope(compilation, this) {}
 
+    void toJson(json&) const {}
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CompilationUnit; }
 };
 
@@ -30,6 +32,8 @@ public:
     PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::Package, name, loc),
         Scope(compilation, this) {}
+
+    void toJson(json&) const {}
 
     static PackageSymbol& fromSyntax(Compilation& compilation, const ModuleDeclarationSyntax& syntax);
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Package; }
@@ -62,6 +66,8 @@ public:
     ModuleInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         InstanceSymbol(SymbolKind::ModuleInstance, compilation, name, loc) {}
 
+    void toJson(json&) const {}
+
     static ModuleInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
                                              const Definition& definition);
 
@@ -76,6 +82,8 @@ public:
     InterfaceInstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         InstanceSymbol(SymbolKind::InterfaceInstance, compilation, name, loc) {}
 
+    void toJson(json&) const {}
+
     static InterfaceInstanceSymbol& instantiate(Compilation& compilation, string_view name, SourceLocation loc,
                                                 const Definition& definition, span<const ParameterMetadata> parameters);
 
@@ -87,6 +95,8 @@ public:
     SequentialBlockSymbol(Compilation& compilation, SourceLocation loc) :
         Symbol(SymbolKind::SequentialBlock, "", loc),
         StatementBodiedScope(compilation, this) {}
+
+    void toJson(json&) const {}
 
     static SequentialBlockSymbol& fromSyntax(Compilation& compilation, const BlockStatementSyntax& syntax);
 
@@ -101,6 +111,8 @@ public:
         Symbol(SymbolKind::ProceduralBlock, "", loc),
         StatementBodiedScope(compilation, this),
         procedureKind(procedureKind) {}
+
+    void toJson(json& j) const;
 
     static ProceduralBlockSymbol& fromSyntax(Compilation& compilation, const ProceduralBlockSyntax& syntax);
 
@@ -117,6 +129,8 @@ public:
         Symbol(SymbolKind::GenerateBlock, name, loc),
         Scope(compilation, this) {}
 
+    void toJson(json&) const {}
+
     /// Creates a generate block from the given if-generate syntax node. Note that
     /// this can return null if the condition is false and there is no else block.
     static GenerateBlockSymbol* fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
@@ -131,6 +145,8 @@ public:
     GenerateBlockArraySymbol(Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(SymbolKind::GenerateBlockArray, name, loc),
         Scope(compilation, this) {}
+
+    void toJson(json&) const {}
 
     /// Creates a generate block array from the given loop-generate syntax node.
     static GenerateBlockArraySymbol& fromSyntax(Compilation& compilation,
@@ -148,6 +164,8 @@ public:
 
     explicit RootSymbol(Compilation& compilation) :
         Symbol(SymbolKind::Root, "$root", SourceLocation()), Scope(compilation, this) {}
+
+    void toJson(json&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Root; }
 };

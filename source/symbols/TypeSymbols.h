@@ -271,6 +271,8 @@ public:
     EnumValueSymbol(Compilation& compilation, string_view name, SourceLocation loc,
                     const Type& type, ConstantValue value);
 
+    void toJson(json& j) const;
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumValue; }
 };
 
@@ -381,6 +383,8 @@ public:
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
+
+    void toJson(json& j) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ForwardingTypedef; }
 

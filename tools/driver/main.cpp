@@ -9,6 +9,7 @@
 #include "parsing/SyntaxTree.h"
 
 #include "CLI11.hpp"
+#include "json.hpp"
 
 using namespace slang;
 
@@ -38,6 +39,9 @@ try {
     Diagnostics diagnostics = compilation.getAllDiagnostics();
     DiagnosticWriter writer(sourceManager);
     printf("%s\n", writer.report(diagnostics).c_str());
+
+    json j = compilation.getRoot();
+    printf("%s\n", j.dump(4).c_str());
 
     return 0;
 }

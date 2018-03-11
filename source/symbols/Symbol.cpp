@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "Symbol.h"
 
+#include "json.hpp"
+
 #include "compilation/Compilation.h"
 #include "diagnostics/Diagnostics.h"
 #include "symbols/HierarchySymbols.h"
@@ -18,7 +20,7 @@ namespace {
 
 using namespace slang;
 
-struct Visitor {
+struct AsScopeVisitor {
     template<typename T>
     const Scope* visit(const T& symbol) {
         if constexpr (std::is_base_of_v<Scope, T>) {
@@ -27,6 +29,30 @@ struct Visitor {
         else {
             (void)symbol;
             return nullptr;
+        }
+    }
+};
+
+struct ToJsonVisitor {
+    template<typename T>
+    void visit(const T& symbol, json& j) {
+        if constexpr (std::is_base_of_v<Type, T>) {
+            j = symbol.toString();
+        }
+        else {
+            j["name"] = std::string(symbol.name);
+            j["kind"] = symbol.kind;
+            if constexpr (!std::is_same_v<Symbol, T>) {
+                symbol.toJson(j);
+            }
+
+            if constexpr (std::is_base_of_v<Scope, T>) {
+                j["members"] = json::array();
+                for (const auto& member : symbol.members()) {
+                    j["members"].push_back(member);
+                    //member.visit(*this, j);
+                }
+            }
         }
     }
 };
@@ -59,7 +85,7 @@ bool Symbol::isInstance() const {
 }
 
 const Scope* Symbol::scopeOrNull() const {
-    Visitor visitor;
+    AsScopeVisitor visitor;
     return visit(visitor);
 }
 
@@ -82,6 +108,11 @@ bool ValueSymbol::isKind(SymbolKind kind) {
         default:
             return VariableSymbol::isKind(kind);
     }
+}
+
+void to_json(json& j, const Symbol& symbol) {
+    ToJsonVisitor visitor;
+    symbol.visit(visitor, j);
 }
 
 }

@@ -47,6 +47,8 @@ public:
 
     static const ConstantValue Invalid;
 
+    friend void to_json(json& j, const ConstantValue& cv);
+
 private:
     std::variant<std::monostate, SVInt, double, NullPlaceholder> value;
 };

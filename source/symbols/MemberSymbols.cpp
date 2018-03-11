@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "MemberSymbols.h"
 
+#include "json.hpp"
+
 #include "compilation/Compilation.h"
 #include "symbols/HierarchySymbols.h"
 
@@ -28,10 +30,18 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
     return import;
 }
 
+void ExplicitImportSymbol::toJson(json& j) const {
+    j["package"] = std::string(packageName);
+}
+
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
     if (!package)
         package = getScope()->getCompilation().getPackage(packageName);
     return *package;
+}
+
+void WildcardImportSymbol::toJson(json& j) const {
+    j["package"] = std::string(packageName);
 }
 
 void ParameterSymbol::fromSyntax(Compilation& compilation, const ParameterDeclarationSyntax& syntax,
@@ -128,6 +138,16 @@ void ParameterSymbol::setDefault(const ExpressionSyntax& syntax) {
     defaultValue = &syntax;
 }
 
+void ParameterSymbol::toJson(json& j) const {
+    j["type"] = getType();
+    j["value"] = getValue();
+    j["isLocal"] = isLocalParam();
+    j["isPort"] = isPortParam();
+    j["isBody"] = isBodyParam();
+    if (hasDefault())
+        j["default"] = *getDefault();
+}
+
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                                 SmallVector<const VariableSymbol*>& results) {
     for (auto declarator : syntax.declarators) {
@@ -149,6 +169,21 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
     if (syntax.declarator.initializer)
         var->initializer = syntax.declarator.initializer->expr;
     return *var;
+}
+
+void VariableSymbol::toJson(json& j) const {
+    j["type"] = *type;
+    j["lifetime"] = lifetime; // TODO: tostring
+    j["isConst"] = isConst;
+    
+    // TODO:
+    //if (initializer)
+    //    j["initializer"] = 
+}
+
+void FormalArgumentSymbol::toJson(json& j) const {
+    VariableSymbol::toJson(j);
+    j["direction"] = direction; // TODO: tostring
 }
 
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
@@ -233,6 +268,13 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     result->returnType = *proto.returnType;
     result->setBody(syntax.items);
     return *result;
+}
+
+void SubroutineSymbol::toJson(json& j) const {
+    j["returnType"] = *returnType;
+    j["defaultLifetime"] = defaultLifetime; // TODO: tostring
+    j["systemFunctionKind"] = systemFunctionKind;
+    j["isTask"] = isTask;
 }
 
 }

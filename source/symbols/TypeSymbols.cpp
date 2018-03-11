@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "TypeSymbols.h"
 
+#include "json.hpp"
+
 #include "binding/ConstantValue.h"
 #include "compilation/Compilation.h"
 
@@ -561,6 +563,11 @@ EnumValueSymbol::EnumValueSymbol(Compilation& compilation, string_view name, Sou
 {
 }
 
+void EnumValueSymbol::toJson(json& j) const {
+    j["type"] = type;
+    j["value"] = value;
+}
+
 PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
     IntegralType(SymbolKind::PackedArrayType, "", SourceLocation(), elementType.getBitWidth() * range.width(),
                  elementType.isSigned(), elementType.isFourState()),
@@ -671,6 +678,10 @@ void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl
         next = &decl;
     else
         next->addForwardDecl(decl);
+}
+
+void ForwardingTypedefSymbol::toJson(json& j) const {
+    j["category"] = category; // TODO: tostring
 }
 
 const TypeAliasType& TypeAliasType::fromSyntax(Compilation& compilation,

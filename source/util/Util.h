@@ -91,6 +91,9 @@ using gsl::not_null;
 #include "bitmask.hpp"
 using bitmask_lib::bitmask;
 
+#include "json_fwd.hpp"
+using json = nlohmann::json;
+
 namespace slang {
 
 /// Converts a span of characters into a string_view.
