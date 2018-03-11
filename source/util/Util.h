@@ -105,7 +105,7 @@ using json = nlohmann::json;
     private: \
         template<typename T> \
         static constexpr auto check(T*) -> typename \
-            std::is_same<decltype(std::declval<T>().##name(std::declval<Args>()...)), Ret>::type; \
+            std::is_same<decltype(std::declval<T>().name(std::declval<Args>()...)), Ret>::type; \
         template<typename> \
         static constexpr std::false_type check(...); \
         typedef decltype(check<C>(0)) type; \
