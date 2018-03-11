@@ -592,42 +592,15 @@ public:
         return *static_cast<const T*>(this);
     }
 
-    // The following is some template magic to determine whether a type has a
-    // visit() function taking a specific argument, and if so call it. Otherwise
-    // it calls visitDefault().
-    template<typename, typename T>
-    struct has_visit {
-        static_assert(
-            std::integral_constant<T, false>::value,
-            "Second template parameter needs to be of function type.");
-    };
-
-    template<typename C, typename Ret, typename... Args>
-    struct has_visit<C, Ret(Args...)> {
-    private:
-        template<typename T>
-        static constexpr auto check(T*) -> typename
-            std::is_same<
-                decltype(std::declval<T>().visit(std::declval<Args>()...)),
-                Ret
-            >::type;
-
-        template<typename>
-        static constexpr std::false_type check(...);
-
-        typedef decltype(check<C>(0)) type;
-
-    public:
-        static constexpr bool value = type::value;
-    };
+    HAS_METHOD_TRAIT(visit);
 
     template<typename C, typename... Args>
-    static std::enable_if_t<has_visit<C, void(Args...)>::value> dispatch(C& c, Args&&... args) {
+    static std::enable_if_t<has_visit_v<C, void(Args...)>> dispatch(C& c, Args&&... args) {
         c.visit(std::forward<Args>(args)...);
     }
 
     template<typename C, typename... Args>
-    static std::enable_if_t<!has_visit<C, void(Args...)>::value> dispatch(C& c, Args&&... args) {
+    static std::enable_if_t<!has_visit_v<C, void(Args...)>> dispatch(C& c, Args&&... args) {
         c.visitDefault(std::forward<Args>(args)...);
     }
 

@@ -140,6 +140,10 @@ public:
     /// Evaluates the expression and tries to interpret the result in a boolean context.
     bool evalBool(EvalContext& context) const;
 
+    /// Evaluates an expression as an lvalue. Note that this will throw an exception
+    /// if the expression does not represent an lvalue.
+    LValue evalLValue(EvalContext& context) const;
+
     template<typename T>
     T& as() {
         ASSERT(T::isKind(kind));

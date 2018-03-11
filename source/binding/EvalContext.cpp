@@ -26,6 +26,10 @@ ConstantValue* EvalContext::findLocal(const Symbol* symbol) {
     return &it->second;
 }
 
+ConstantValue& EvalContext::findSubobject(const LValue& lvalue) const {
+
+}
+
 void EvalContext::pushFrame() {
     stack.emplace(Frame{});
 }

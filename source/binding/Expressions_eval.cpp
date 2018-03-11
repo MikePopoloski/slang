@@ -20,11 +20,36 @@ struct EvalVisitor {
         if (expr.constant)
             return *expr.constant;
 
+        if (expr.bad())
+            return nullptr;
+
         // Otherwise evaluate and return that.
         return expr.evalImpl(context);
     }
 
     ConstantValue visitInvalid(const Expression&) {
+        return nullptr;
+    }
+};
+
+class LValueVisitor {
+    HAS_METHOD_TRAIT(evalLValue);
+
+public:
+    template<typename T>
+    LValue visit(const T& expr, EvalContext& context) {
+        if constexpr (has_evalLValue_v<T, LValue(context)>) {
+            if (expr.bad())
+                return nullptr;
+
+            return expr.evalLValueImpl(context);
+        }
+        else {
+            THROW_UNREACHABLE;
+        }
+    }
+
+    LValue visitInvalid(const Expression&) {
         return nullptr;
     }
 };
@@ -217,27 +242,19 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
 }
 
 ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
-    ConstantValue cvl = left().eval(context);
-    ConstantValue cvr = right().eval(context);
-    if (!cvl || !cvr)
+    LValue lvalue = left().evalLValue(context);
+    ConstantValue rvalue = right().eval(context);
+    if (!lvalue || !rvalue)
         return nullptr;
 
-    // TODO: handle non-integer
-    if (!cvl.isInteger() || !cvr.isInteger())
-        return nullptr;
+    ConstantValue& subobject = context.findSubobject(lvalue);
 
-    SVInt r = cvr.integer();
-
-    // TODO: more robust lvalue handling
-    ConstantValue* lvalue = context.findLocal(&((const NamedValueExpression&)left()).symbol);
-    ASSERT(lvalue);
-
-    if (op)
-        *lvalue = evalBinaryOperator(*op, cvl, cvr);
+    if (isCompound())
+        subobject = evalBinaryOperator(*op, subobject, rvalue);
     else
-        *lvalue = r;
+        subobject = rvalue;
 
-    return *lvalue;
+    return subobject;
 }
 
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
