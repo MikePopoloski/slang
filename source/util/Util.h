@@ -40,6 +40,7 @@ using std::uintptr_t;
   using mpark::get;
   using mpark::get_if;
   using mpark::visit;
+  using mpark::holds_alternative;
 }
 #else
   #include <variant>

@@ -13,7 +13,7 @@ namespace slang {
 const ConstantValue ConstantValue::Invalid;
 
 void to_json(json& j, const ConstantValue& cv) {
-    std::visit([&j](auto&& arg) {
+    std::visit([&j](auto&& arg) noexcept {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             j = "<unset>";
