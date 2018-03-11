@@ -13,14 +13,22 @@ namespace slang {
 const ConstantValue ConstantValue::Invalid;
 
 void to_json(json& j, const ConstantValue& cv) {
-    switch (cv.value.index()) {
-        case 0: j = "<unset>"; break;
-        case 1: j = cv.integer().toString(); break;
-        case 2: j = cv.real(); break;
-        case 3: j = "null"; break;
-        default:
-            THROW_UNREACHABLE;
-    }
+    std::visit([&j](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, std::monostate>)
+            j = "<unset>";
+        else if constexpr (std::is_same_v<T, SVInt>)
+            j = arg.toString();
+        else if constexpr (std::is_same_v<T, double>)
+            j = arg;
+        else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+            j = "null";
+        else if constexpr (std::is_same_v<T, LValue>)
+            // TODO: print out lvalues
+            j = "TODO";
+        else
+            static_assert(always_false<T>::value, "Missing case");
+    }, cv.value);
 }
 
 }

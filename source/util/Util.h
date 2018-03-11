@@ -96,6 +96,8 @@ using json = nlohmann::json;
 
 namespace slang {
 
+template<typename T> struct always_false : std::false_type {};
+
 /// Converts a span of characters into a string_view.
 inline string_view to_string_view(span<char> text) {
     return string_view(text.data(), (size_t)text.size());

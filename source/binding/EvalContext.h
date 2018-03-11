@@ -36,7 +36,7 @@ public:
 
     // TODO: get rid of this
     bool hasReturned() { return stack.top().hasReturned; }
-    void setReturned(ConstantValue value) { stack.top().hasReturned = true; stack.top().returnValue = value; }
+    void setReturned(ConstantValue value) { stack.top().hasReturned = true; stack.top().returnValue = std::move(value); }
 
 private:
     // Represents a single frame in the call stack.
@@ -48,17 +48,6 @@ private:
         // Set to non-null when a return has been issued in this frame.
         ConstantValue returnValue;
         bool hasReturned = false;
-    };
-
-    // Represents an lvalue; something that can appear on the left hand side
-    // of an assignment expression. In general it means that it's some kind of
-    // memory location that we can actually write to.
-    struct LValue {
-        ConstantValue* storage;
-
-        // TODO: this is temporary until we support broader classes of lvalues
-        void store(ConstantValue&& value) { *storage = std::move(value); }
-        ConstantValue& load() { return *storage; }
     };
 
     std::stack<Frame> stack;
