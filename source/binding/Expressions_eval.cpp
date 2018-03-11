@@ -47,12 +47,8 @@ ConstantValue Expression::eval(EvalContext& context) const {
 }
 
 ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
-    uint16_t width = (uint16_t)type->getBitWidth();
     SVInt result = getValue();
-
-    // TODO: truncation?
-    if (width > result.getBitWidth())
-        result = extend(result, width, type->as<IntegralType>().isSigned);
+    ASSERT(result.getBitWidth() == type->getBitWidth());
     return result;
 }
 

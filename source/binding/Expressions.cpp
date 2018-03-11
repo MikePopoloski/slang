@@ -252,7 +252,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     }
 
     Expression* expr = compilation.emplace<NamedValueExpression>(symbol->as<ValueSymbol>(), syntax.sourceRange());
-    
+
     // Drill down into member accesses.
     for (const auto& selector : result.selectors) {
         if (expr->bad())
