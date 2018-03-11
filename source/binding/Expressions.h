@@ -303,6 +303,7 @@ public:
         Expression(ExpressionKind::NamedValue, symbol.getType(), sourceRange), symbol(symbol) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
+    LValue evalLValueImpl(EvalContext& context) const;
 
     static Expression& propagateType(Compilation& compilation, NamedValueExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
@@ -497,6 +498,7 @@ public:
     Expression& value() { return *value_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    LValue evalLValueImpl(EvalContext& context) const;
 
     static Expression& propagateType(Compilation&, MemberAccessExpression& expr, const Type&) { return expr; }
 

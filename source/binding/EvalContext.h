@@ -15,6 +15,7 @@
 
 namespace slang {
 
+class EvalContext;
 class FieldSymbol;
 class ValueSymbol;
 
@@ -48,8 +49,11 @@ struct LValue {
 
     LValue() = default;
     LValue(nullptr_t) {}
-    explicit LValue(const ValueSymbol* value) : root(value) {}
+    explicit LValue(const ValueSymbol& value) : root(&value) {}
     explicit LValue(Concat&& concat) : root(std::move(concat)) {}
+
+    ConstantValue load(EvalContext& context) const;
+    void store(EvalContext& context, const ConstantValue& value);
 
     void selectElement(int32_t index);
     void selectRange(int32_t left, int32_t right);
@@ -71,10 +75,6 @@ public:
     /// Gets the current value for the given local variable symbol.
     /// Returns nullptr if the symbol cannot be found.
     ConstantValue* findLocal(const Symbol* symbol);
-
-    ConstantValue& findSubobject(const LValue& lvalue) const;
-
-
 
     /// Push a new frame onto the call stack.
     void pushFrame();

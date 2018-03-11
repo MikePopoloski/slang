@@ -33,18 +33,20 @@ struct EvalVisitor {
 };
 
 class LValueVisitor {
-    HAS_METHOD_TRAIT(evalLValue);
+    HAS_METHOD_TRAIT(evalLValueImpl);
 
 public:
     template<typename T>
     LValue visit(const T& expr, EvalContext& context) {
-        if constexpr (has_evalLValue_v<T, LValue(context)>) {
+        if constexpr (has_evalLValueImpl_v<T, LValue(EvalContext&)>) {
             if (expr.bad())
                 return nullptr;
 
             return expr.evalLValueImpl(context);
         }
         else {
+            (void)expr;
+            (void)context;
             THROW_UNREACHABLE;
         }
     }
@@ -114,6 +116,11 @@ ConstantValue Expression::eval(EvalContext& context) const {
     return visit(visitor, context);
 }
 
+LValue Expression::evalLValue(EvalContext& context) const {
+    LValueVisitor visitor;
+    return visit(visitor, context);
+}
+
 ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     SVInt result = getValue();
     ASSERT(result.getBitWidth() == type->getBitWidth());
@@ -165,6 +172,10 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
             // TODO: report error if not constant
             return v ? *v : nullptr;
     }
+}
+
+LValue NamedValueExpression::evalLValueImpl(EvalContext&) const {
+    return LValue(symbol);
 }
 
 ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
@@ -247,14 +258,14 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     if (!lvalue || !rvalue)
         return nullptr;
 
-    ConstantValue& subobject = context.findSubobject(lvalue);
+    if (!isCompound())
+        lvalue.store(context, rvalue);
+    else {
+        rvalue = evalBinaryOperator(*op, lvalue.load(context), rvalue);
+        lvalue.store(context, rvalue);
+    }
 
-    if (isCompound())
-        subobject = evalBinaryOperator(*op, subobject, rvalue);
-    else
-        subobject = rvalue;
-
-    return subobject;
+    return rvalue;
 }
 
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
@@ -331,6 +342,11 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
 }
 
 ConstantValue MemberAccessExpression::evalImpl(EvalContext&) const {
+    // TODO: implement
+    return nullptr;
+}
+
+LValue MemberAccessExpression::evalLValueImpl(EvalContext&) const {
     // TODO: implement
     return nullptr;
 }

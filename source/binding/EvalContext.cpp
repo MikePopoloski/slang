@@ -8,6 +8,32 @@
 
 namespace slang {
 
+ConstantValue LValue::load(EvalContext& context) const {
+    // Find the root. TODO: handle concatenations
+    auto symbol = std::get<const ValueSymbol*>(root);
+    if (!symbol)
+        return nullptr;
+
+    ConstantValue* local = context.findLocal(symbol);
+    if (!local)
+        return nullptr;
+
+    return *local;
+}
+
+void LValue::store(EvalContext& context, const ConstantValue& value) {
+    // Find the root. TODO: handle concatenations
+    auto symbol = std::get<const ValueSymbol*>(root);
+    if (!symbol)
+        return;
+
+    ConstantValue* local = context.findLocal(symbol);
+    if (!local)
+        return;
+
+    *local = value;
+}
+
 EvalContext::EvalContext() {
     stack.emplace(Frame{});
 }
@@ -24,10 +50,6 @@ ConstantValue* EvalContext::findLocal(const Symbol* symbol) {
     if (it == stack.top().temporaries.end())
         return nullptr;
     return &it->second;
-}
-
-ConstantValue& EvalContext::findSubobject(const LValue& lvalue) const {
-
 }
 
 void EvalContext::pushFrame() {
