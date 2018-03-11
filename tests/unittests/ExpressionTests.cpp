@@ -77,7 +77,7 @@ TEST_CASE("Check type propagation", "[binding:expressions]") {
     REQUIRE(syntax->diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
-    const Expression& rhs = bound.as<BinaryExpression>().right();
+    const Expression& rhs = bound.as<AssignmentExpression>().right();
     CHECK(rhs.type->getBitWidth() == 20);
     const Expression& op1 = rhs.as<BinaryExpression>().left();
     CHECK(op1.type->getBitWidth() == 20);
@@ -104,7 +104,7 @@ TEST_CASE("Check type propagation 2", "[binding:expressions]") {
     REQUIRE(syntax->diagnostics().empty());
 
     CHECK(bound.type->getBitWidth() == 20);
-    const Expression& rhs = bound.as<BinaryExpression>().right();
+    const Expression& rhs = bound.as<AssignmentExpression>().right();
     CHECK(rhs.type->getBitWidth() == 20);
 
     const Expression& rrhs = rhs.as<BinaryExpression>().right();
@@ -137,7 +137,7 @@ TEST_CASE("Check type propagation real", "[binding:expressions]") {
     REQUIRE(syntax->diagnostics().empty());
     CHECK(bound.type->getBitWidth() == 20);
 
-    const Expression& rhs = bound.as<BinaryExpression>().right();
+    const Expression& rhs = bound.as<AssignmentExpression>().right();
     CHECK(rhs.type->getBitWidth() == 20);
 
     const Expression& rrhs = rhs.as<BinaryExpression>().right();

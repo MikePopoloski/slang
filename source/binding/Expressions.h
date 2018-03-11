@@ -26,6 +26,7 @@ enum class ExpressionKind {
     UnaryOp,
     BinaryOp,
     ConditionalOp,
+    Assignment,
     Concatenation,
     Replication,
     ElementSelect,
@@ -80,20 +81,7 @@ enum class BinaryOperator {
     LogicalShiftRight,
     ArithmeticShiftLeft,
     ArithmeticShiftRight,
-    Power,
-    Assignment,
-    AddAssignment,
-    SubtractAssignment,
-    MultiplyAssignment,
-    DivideAssignment,
-    ModAssignment,
-    AndAssignment,
-    OrAssignment,
-    XorAssignment,
-    LogicalLeftShiftAssignment,
-    LogicalRightShiftAssignment,
-    ArithmeticLeftShiftAssignment,
-    ArithmeticRightShiftAssignment,
+    Power
 };
 
 enum class RangeSelectionKind {
@@ -352,8 +340,6 @@ public:
         Expression(ExpressionKind::BinaryOp, type, sourceRange),
         op(op), left_(&left), right_(&right) {}
 
-    bool isAssignment() const;
-
     const Expression& left() const { return *left_; }
     Expression& left() { return *left_; }
 
@@ -400,6 +386,37 @@ public:
 
 private:
     Expression* pred_;
+    Expression* left_;
+    Expression* right_;
+};
+
+/// Represents an assignment expression.
+class AssignmentExpression : public Expression {
+public:
+    optional<BinaryOperator> op;
+
+    AssignmentExpression(optional<BinaryOperator> op, const Type& type, Expression& left,
+                         Expression& right, SourceRange sourceRange) :
+        Expression(ExpressionKind::Assignment, type, sourceRange),
+        op(op), left_(&left), right_(&right) {}
+
+    bool isCompound() const { return op.has_value(); }
+
+    const Expression& left() const { return *left_; }
+    Expression& left() { return *left_; }
+
+    const Expression& right() const { return *right_; }
+    Expression& right() { return *right_; }
+
+    ConstantValue evalImpl(EvalContext& context) const;
+
+    static Expression& fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
+                                  const BindContext& context);
+
+    static Expression& propagateType(Compilation& compilation, AssignmentExpression& expr, const Type& newType);
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
+
+private:
     Expression* left_;
     Expression* right_;
 };

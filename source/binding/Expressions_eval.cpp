@@ -29,6 +29,49 @@ struct EvalVisitor {
     }
 };
 
+ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl, const ConstantValue& cvr) {
+    // TODO: handle non-integer
+    if (!cvl.isInteger() || !cvr.isInteger())
+        return nullptr;
+
+    const SVInt& l = cvl.integer();
+    const SVInt& r = cvr.integer();
+
+#define OP(k, v) case BinaryOperator::k: return v
+    switch (op) {
+        OP(Add, l + r);
+        OP(Subtract, l - r);
+        OP(Multiply, l * r);
+        OP(Divide, l / r);
+        OP(Mod, l % r);
+        OP(BinaryAnd, l & r);
+        OP(BinaryOr, l | r);
+        OP(BinaryXor, l ^ r);
+        OP(LogicalShiftLeft, l.shl(r));
+        OP(LogicalShiftRight, l.lshr(r));
+        OP(ArithmeticShiftLeft, l.shl(r));
+        OP(ArithmeticShiftRight, l.ashr(r));
+        OP(BinaryXnor, l.xnor(r));
+        OP(Equality, SVInt(l == r));
+        OP(Inequality, SVInt(l != r));
+        OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
+        OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
+        OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
+        OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
+        OP(GreaterThanEqual, SVInt(l >= r));
+        OP(GreaterThan, SVInt(l > r));
+        OP(LessThanEqual, SVInt(l <= r));
+        OP(LessThan, SVInt(l < r));
+        OP(LogicalAnd, SVInt(l && r));
+        OP(LogicalOr, SVInt(l || r));
+        OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
+        OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
+        OP(Power, l.pow(r));
+    }
+    THROW_UNREACHABLE;
+#undef OP
+}
+
 }
 
 namespace slang {
@@ -148,66 +191,7 @@ ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
     if (!cvl || !cvr)
         return nullptr;
 
-    // TODO: handle non-integer
-    if (!cvl.isInteger() || !cvr.isInteger())
-        return nullptr;
-
-    SVInt l = cvl.integer();
-    SVInt r = cvr.integer();
-
-    // TODO: more robust lvalue handling
-    ConstantValue* lvalue = nullptr;
-    if (isAssignment())
-        lvalue = context.findLocal(&((const NamedValueExpression&)left()).symbol);
-
-#define OP(k, v) case BinaryOperator::k: return v
-#define ASSIGN(k, v) case BinaryOperator::k: ASSERT(lvalue); *lvalue = v; return *lvalue
-    switch (op) {
-        OP(Add, l + r);
-        OP(Subtract, l - r);
-        OP(Multiply, l * r);
-        OP(Divide, l / r);
-        OP(Mod, l % r);
-        OP(BinaryAnd, l & r);
-        OP(BinaryOr, l | r);
-        OP(BinaryXor, l ^ r);
-        OP(LogicalShiftLeft, l.shl(r));
-        OP(LogicalShiftRight, l.lshr(r));
-        OP(ArithmeticShiftLeft, l.shl(r));
-        OP(ArithmeticShiftRight, l.ashr(r));
-        OP(BinaryXnor, l.xnor(r));
-        OP(Equality, SVInt(l == r));
-        OP(Inequality, SVInt(l != r));
-        OP(CaseEquality, SVInt((logic_t)exactlyEqual(l, r)));
-        OP(CaseInequality, SVInt((logic_t)!exactlyEqual(l, r)));
-        OP(WildcardEquality, SVInt(wildcardEqual(l, r)));
-        OP(WildcardInequality, SVInt(!wildcardEqual(l, r)));
-        OP(GreaterThanEqual, SVInt(l >= r));
-        OP(GreaterThan, SVInt(l > r));
-        OP(LessThanEqual, SVInt(l <= r));
-        OP(LessThan, SVInt(l < r));
-        OP(LogicalAnd, SVInt(l && r));
-        OP(LogicalOr, SVInt(l || r));
-        OP(LogicalImplication, SVInt(SVInt::logicalImplication(l, r)));
-        OP(LogicalEquivalence, SVInt(SVInt::logicalEquivalence(l, r)));
-        OP(Power, l.pow(r));
-        ASSIGN(Assignment, r);
-        ASSIGN(AddAssignment, l + r);
-        ASSIGN(SubtractAssignment, l - r);
-        ASSIGN(MultiplyAssignment, l * r);
-        ASSIGN(DivideAssignment, l / r);
-        ASSIGN(ModAssignment, l % r);
-        ASSIGN(AndAssignment, l & r);
-        ASSIGN(OrAssignment, l | r);
-        ASSIGN(XorAssignment, l ^ r);
-        ASSIGN(LogicalLeftShiftAssignment, l.shl(r));
-        ASSIGN(LogicalRightShiftAssignment, l.lshr(r));
-        ASSIGN(ArithmeticLeftShiftAssignment, l.shl(r));
-        ASSIGN(ArithmeticRightShiftAssignment, l.ashr(r));
-    }
-    THROW_UNREACHABLE;
-#undef OP
-#undef ASSIGN
+    return evalBinaryOperator(op, cvl, cvr);
 }
 
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
@@ -230,6 +214,30 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
     else {
         return right().eval(context);
     }
+}
+
+ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
+    ConstantValue cvl = left().eval(context);
+    ConstantValue cvr = right().eval(context);
+    if (!cvl || !cvr)
+        return nullptr;
+
+    // TODO: handle non-integer
+    if (!cvl.isInteger() || !cvr.isInteger())
+        return nullptr;
+
+    SVInt r = cvr.integer();
+
+    // TODO: more robust lvalue handling
+    ConstantValue* lvalue = context.findLocal(&((const NamedValueExpression&)left()).symbol);
+    ASSERT(lvalue);
+
+    if (op)
+        *lvalue = evalBinaryOperator(*op, cvl, cvr);
+    else
+        *lvalue = r;
+
+    return *lvalue;
 }
 
 ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {

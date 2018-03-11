@@ -203,6 +203,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::ArithmeticShiftLeftExpression:
         case SyntaxKind::ArithmeticShiftRightExpression:
         case SyntaxKind::PowerExpression:
+            return BinaryExpression::fromSyntax(compilation, syntax.as<BinaryExpressionSyntax>(), context);
         case SyntaxKind::AssignmentExpression:
         case SyntaxKind::AddAssignmentExpression:
         case SyntaxKind::SubtractAssignmentExpression:
@@ -216,7 +217,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
-            return BinaryExpression::fromSyntax(compilation, syntax.as<BinaryExpressionSyntax>(), context);
+            return AssignmentExpression::fromSyntax(compilation, syntax.as<BinaryExpressionSyntax>(), context);
         case SyntaxKind::InvocationExpression:
             return CallExpression::fromSyntax(compilation, syntax.as<InvocationExpressionSyntax>(), context);
         case SyntaxKind::ConditionalExpression:
@@ -515,20 +516,15 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::AddExpression:
         case SyntaxKind::SubtractExpression:
         case SyntaxKind::MultiplyExpression:
-        case SyntaxKind::AddAssignmentExpression:
-        case SyntaxKind::SubtractAssignmentExpression:
-        case SyntaxKind::MultiplyAssignmentExpression:
             good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, rt, false);
             break;
         case SyntaxKind::DivideExpression:
-        case SyntaxKind::DivideAssignmentExpression:
             // Result is forced to 4-state because result can be X.
             good = bothNumeric;
             result->type = binaryOperatorType(compilation, lt, rt, true);
             break;
         case SyntaxKind::ModExpression:
-        case SyntaxKind::ModAssignmentExpression:
             // Result is forced to 4-state because result can be X.
             // Different from divide because only integers are allowed.
             good = bothIntegral;
@@ -538,9 +534,6 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::BinaryOrExpression:
         case SyntaxKind::BinaryXorExpression:
         case SyntaxKind::BinaryXnorExpression:
-        case SyntaxKind::AndAssignmentExpression:
-        case SyntaxKind::OrAssignmentExpression:
-        case SyntaxKind::XorAssignmentExpression:
             good = bothIntegral;
             result->type = binaryOperatorType(compilation, lt, rt, false);
             break;
@@ -548,10 +541,6 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         case SyntaxKind::LogicalShiftRightExpression:
         case SyntaxKind::ArithmeticShiftLeftExpression:
         case SyntaxKind::ArithmeticShiftRightExpression:
-        case SyntaxKind::LogicalLeftShiftAssignmentExpression:
-        case SyntaxKind::LogicalRightShiftAssignmentExpression:
-        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
-        case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
             // The result is always the same type as the lhs, except that if the rhs is
             // four state then the lhs also becomes four state.
             good = bothIntegral;
@@ -643,11 +632,6 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
                 good = false;
             }
             break;
-        case SyntaxKind::AssignmentExpression:
-            // No particular restriction on types here. We'll handle
-            // assignability below.
-            good = true;
-            break;
         default:
             THROW_UNREACHABLE;
     }
@@ -659,42 +643,6 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation, const BinaryE
         diag << lhs.sourceRange;
         diag << rhs.sourceRange;
         return badExpr(compilation, result);
-    }
-
-    if (result->isAssignment()) {
-        if (!checkLValue(compilation, lhs, location))
-            return badExpr(compilation, result);
-
-        // TODO: check for const assignment
-
-        if (!lt->isAssignmentCompatible(*rt)) {
-            DiagCode code = lt->isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-            auto& diag = compilation.addError(code, location);
-            diag << *rt << *lt;
-            diag << lhs.sourceRange;
-            diag << rhs.sourceRange;
-            return badExpr(compilation, result);
-        }
-
-        // TODO: unify this with Compilation::bindAssignment
-        if (lt->getBitWidth() > rt->getBitWidth()) {
-            if (!lt->isFloating() && !rt->isFloating())
-                rt = &compilation.getType(lt->getBitWidth(), rt->getIntegralFlags());
-            else {
-                if (lt->getBitWidth() > 32)
-                    rt = &compilation.getRealType();
-                else
-                    rt = &compilation.getShortRealType();
-            }
-            // TODO: return value?
-            Expression* r = &rhs;
-            contextDetermined(compilation, r, *rt);
-        }
-        else {
-            Expression* r = &rhs;
-            selfDetermined(compilation, r);
-        }
-        result->type = lhs.type;
     }
 
     return *result;
@@ -713,6 +661,56 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation, const Co
     // force four-state return type for ambiguous condition case
     const Type* type = binaryOperatorType(compilation, left.type, right.type, true);
     return *compilation.emplace<ConditionalExpression>(*type, pred, left, right, syntax.sourceRange());
+}
+
+Expression& AssignmentExpression::fromSyntax(Compilation& compilation, const BinaryExpressionSyntax& syntax,
+                                             const BindContext& context) {
+    Expression& lhs = selfDetermined(compilation, syntax.left, context);
+    Expression& rhs = create(compilation, syntax.right, context);
+
+    auto op = syntax.kind == SyntaxKind::AssignmentExpression ?
+        std::nullopt : std::make_optional(getBinaryOperator(syntax.kind));
+
+    auto result = compilation.emplace<AssignmentExpression>(op, *lhs.type, lhs, rhs, syntax.sourceRange());
+    if (lhs.bad() || rhs.bad())
+        return badExpr(compilation, result);
+
+    // Make sure we can actually assign to the thing on the lhs.
+    // TODO: check for const assignment
+    auto location = syntax.operatorToken.location();
+    if (!checkLValue(compilation, lhs, location))
+        return badExpr(compilation, result);
+
+    const Type* lt = lhs.type;
+    const Type* rt = rhs.type;
+    if (!lt->isAssignmentCompatible(*rt)) {
+        DiagCode code = lt->isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
+        auto& diag = compilation.addError(code, location);
+        diag << *rt << *lt;
+        diag << lhs.sourceRange;
+        diag << rhs.sourceRange;
+        return badExpr(compilation, result);
+    }
+
+    // An assignment expression always returns the type of the lhs. The rhs may need to be converted.
+
+    // TODO: unify this with Compilation::bindAssignment
+    if (lt->getBitWidth() > rt->getBitWidth()) {
+        if (!lt->isFloating() && !rt->isFloating())
+            rt = &compilation.getType(lt->getBitWidth(), rt->getIntegralFlags());
+        else {
+            if (lt->getBitWidth() > 32)
+                rt = &compilation.getRealType();
+            else
+                rt = &compilation.getShortRealType();
+        }
+        // TODO: return value?
+        contextDetermined(compilation, result->right_, *rt);
+    }
+    else
+        selfDetermined(compilation, result->right_);
+
+    return *result;
 }
 
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
@@ -913,27 +911,6 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation), syntax.sourceRange());
 }
 
-bool BinaryExpression::isAssignment() const {
-    switch (op) {
-        case BinaryOperator::Assignment:
-        case BinaryOperator::AddAssignment:
-        case BinaryOperator::SubtractAssignment:
-        case BinaryOperator::MultiplyAssignment:
-        case BinaryOperator::DivideAssignment:
-        case BinaryOperator::ModAssignment:
-        case BinaryOperator::AndAssignment:
-        case BinaryOperator::OrAssignment:
-        case BinaryOperator::XorAssignment:
-        case BinaryOperator::LogicalLeftShiftAssignment:
-        case BinaryOperator::LogicalRightShiftAssignment:
-        case BinaryOperator::ArithmeticLeftShiftAssignment:
-        case BinaryOperator::ArithmeticRightShiftAssignment:
-            return true;
-        default:
-            return false;
-    }
-}
-
 UnaryOperator getUnaryOperator(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::UnaryPlusExpression: return UnaryOperator::Plus;
@@ -984,19 +961,18 @@ BinaryOperator getBinaryOperator(SyntaxKind kind) {
         case SyntaxKind::ArithmeticShiftLeftExpression: return BinaryOperator::ArithmeticShiftLeft;
         case SyntaxKind::ArithmeticShiftRightExpression: return BinaryOperator::ArithmeticShiftRight;
         case SyntaxKind::PowerExpression: return BinaryOperator::Power;
-        case SyntaxKind::AssignmentExpression: return BinaryOperator::Assignment;
-        case SyntaxKind::AddAssignmentExpression: return BinaryOperator::AddAssignment;
-        case SyntaxKind::SubtractAssignmentExpression: return BinaryOperator::SubtractAssignment;
-        case SyntaxKind::MultiplyAssignmentExpression: return BinaryOperator::MultiplyAssignment;
-        case SyntaxKind::DivideAssignmentExpression: return BinaryOperator::DivideAssignment;
-        case SyntaxKind::ModAssignmentExpression: return BinaryOperator::ModAssignment;
-        case SyntaxKind::AndAssignmentExpression: return BinaryOperator::AndAssignment;
-        case SyntaxKind::OrAssignmentExpression: return BinaryOperator::OrAssignment;
-        case SyntaxKind::XorAssignmentExpression: return BinaryOperator::XorAssignment;
-        case SyntaxKind::LogicalLeftShiftAssignmentExpression: return BinaryOperator::LogicalLeftShiftAssignment;
-        case SyntaxKind::LogicalRightShiftAssignmentExpression: return BinaryOperator::LogicalRightShiftAssignment;
-        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression: return BinaryOperator::ArithmeticLeftShiftAssignment;
-        case SyntaxKind::ArithmeticRightShiftAssignmentExpression: return BinaryOperator::ArithmeticRightShiftAssignment;
+        case SyntaxKind::AddAssignmentExpression: return BinaryOperator::Add;
+        case SyntaxKind::SubtractAssignmentExpression: return BinaryOperator::Subtract;
+        case SyntaxKind::MultiplyAssignmentExpression: return BinaryOperator::Multiply;
+        case SyntaxKind::DivideAssignmentExpression: return BinaryOperator::Divide;
+        case SyntaxKind::ModAssignmentExpression: return BinaryOperator::Mod;
+        case SyntaxKind::AndAssignmentExpression: return BinaryOperator::BinaryAnd;
+        case SyntaxKind::OrAssignmentExpression: return BinaryOperator::BinaryOr;
+        case SyntaxKind::XorAssignmentExpression: return BinaryOperator::BinaryXor;
+        case SyntaxKind::LogicalLeftShiftAssignmentExpression: return BinaryOperator::LogicalShiftLeft;
+        case SyntaxKind::LogicalRightShiftAssignmentExpression: return BinaryOperator::LogicalShiftRight;
+        case SyntaxKind::ArithmeticLeftShiftAssignmentExpression: return BinaryOperator::ArithmeticShiftLeft;
+        case SyntaxKind::ArithmeticRightShiftAssignmentExpression: return BinaryOperator::ArithmeticShiftRight;
         default: THROW_UNREACHABLE;
     }
 }

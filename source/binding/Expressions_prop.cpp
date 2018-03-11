@@ -137,8 +137,8 @@ Expression& UnaryExpression::propagateType(Compilation& compilation, UnaryExpres
             // Type is already set (always 1 bit).
             selfDetermined(compilation, expr.operand_);
             break;
-        case UnaryOperator::Preincrement: 
-        case UnaryOperator::Predecrement: 
+        case UnaryOperator::Preincrement:
+        case UnaryOperator::Predecrement:
         case UnaryOperator::Postincrement:
         case UnaryOperator::Postdecrement:
             // Type is already set via the lvalue.
@@ -193,21 +193,6 @@ Expression& BinaryExpression::propagateType(Compilation& compilation, BinaryExpr
             contextDetermined(compilation, expr.left_, newType);
             selfDetermined(compilation, expr.right_);
             break;
-        case BinaryOperator::Assignment:
-        case BinaryOperator::AddAssignment:
-        case BinaryOperator::SubtractAssignment:
-        case BinaryOperator::MultiplyAssignment:
-        case BinaryOperator::DivideAssignment:
-        case BinaryOperator::ModAssignment:
-        case BinaryOperator::AndAssignment:
-        case BinaryOperator::OrAssignment:
-        case BinaryOperator::XorAssignment:
-        case BinaryOperator::LogicalLeftShiftAssignment:
-        case BinaryOperator::LogicalRightShiftAssignment:
-        case BinaryOperator::ArithmeticLeftShiftAssignment:
-        case BinaryOperator::ArithmeticRightShiftAssignment:
-            // Essentially self determined, logic handled at creation time.
-            break;
     }
     return expr;
 }
@@ -219,6 +204,11 @@ Expression& ConditionalExpression::propagateType(Compilation& compilation, Condi
     selfDetermined(compilation, expr.pred_);
     contextDetermined(compilation, expr.left_, newType);
     contextDetermined(compilation, expr.right_, newType);
+    return expr;
+}
+
+Expression& AssignmentExpression::propagateType(Compilation&, AssignmentExpression& expr,
+                                                const Type&) {
     return expr;
 }
 
@@ -234,6 +224,7 @@ Expression& RangeSelectExpression::propagateType(Compilation&, RangeSelectExpres
 
 Expression& ConcatenationExpression::propagateType(Compilation&, ConcatenationExpression& expr,
                                                    const Type&) {
+    // All operands are self-determined.
     return expr;
 }
 

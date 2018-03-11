@@ -138,7 +138,7 @@ endmodule
     const auto& x = top.memberAt<GenerateBlockSymbol>(1)
                        .memberAt<ProceduralBlockSymbol>(0)
                        .getBody()->as<ExpressionStatement>()
-                       .expr.as<BinaryExpression>()
+                       .expr.as<AssignmentExpression>()
                        .left().as<NamedValueExpression>().symbol;
 
     auto p_x = compilation.getPackage("p")->find("x");
