@@ -595,12 +595,12 @@ public:
     HAS_METHOD_TRAIT(visit);
 
     template<typename C, typename... Args>
-    static std::enable_if_t<has_visit_v<C, void(Args...)>> dispatch(C& c, Args&&... args) {
+    static std::enable_if_t<has_visit_v<C, void, Args...>> dispatch(C& c, Args&&... args) {
         c.visit(std::forward<Args>(args)...);
     }
 
     template<typename C, typename... Args>
-    static std::enable_if_t<!has_visit_v<C, void(Args...)>> dispatch(C& c, Args&&... args) {
+    static std::enable_if_t<!has_visit_v<C, void, Args...>> dispatch(C& c, Args&&... args) {
         c.visitDefault(std::forward<Args>(args)...);
     }
 

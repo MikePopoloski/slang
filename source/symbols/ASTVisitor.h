@@ -26,7 +26,7 @@ public:
 #define DERIVED *static_cast<TDerived*>(this)
     template<typename T>
     void visit(const T& t) {
-        if constexpr (has_handle_v<TDerived, void(T)>)
+        if constexpr (has_handle_v<TDerived, void, T>)
             static_cast<TDerived*>(this)->handle(t);
         else
             visitDefault(t);

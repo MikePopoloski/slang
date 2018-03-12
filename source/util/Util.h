@@ -113,7 +113,7 @@ using json = nlohmann::json;
         static constexpr bool value = type::value; \
     }; \
     template<typename C, typename Ret, typename... Args> \
-    static constexpr bool has_##name##_v = has_##name<C, Ret, Args...>::value
+    static constexpr bool has_##name##_v = has_##name<C, Ret(Args...)>::value
 
 namespace slang {
 

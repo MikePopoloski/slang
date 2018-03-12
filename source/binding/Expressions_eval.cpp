@@ -38,7 +38,7 @@ class LValueVisitor {
 public:
     template<typename T>
     LValue visit(const T& expr, EvalContext& context) {
-        if constexpr (has_evalLValueImpl_v<T, LValue(EvalContext&)>) {
+        if constexpr (has_evalLValueImpl_v<T, LValue, EvalContext&>) {
             if (expr.bad())
                 return nullptr;
 
