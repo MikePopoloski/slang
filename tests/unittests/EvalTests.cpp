@@ -144,90 +144,91 @@ endfunction
     CHECK(value3.integer() == 8);
 }
 
-// Simple test wrapper, uses ==(uint64_t) to check result
-#define EVAL_TEST(descr, expr, result) \
-TEST_CASE(descr, "[eval]") { \
-    ScriptSession session; \
-    auto value = session.eval(expr).integer(); \
-    CHECK(value == result); \
+TEST_CASE("Integer operators") {
+    ScriptSession session;
+
+#define EVAL(expr, result) CHECK_THAT(session.eval(expr).integer(), exactlyEquals(result))
+    // Bit shifts
+    EVAL("4 << 2", 16);
+    EVAL("4 <<< 2", 16);
+    EVAL("4 >> 1", 2);
+    EVAL("-4 >>> 1", -2);
+    EVAL("-65'sd4 >>> 1", "-65'sb10"_si);
+
+    // Conditional operator
+    EVAL("2 == 2 ? 5 : 4", 5);
+    EVAL("(2 * 2) == 3 ? 5 : 4", 4);
+    EVAL("'z ? 5 : 6", "32'sb1xx"_si);
+    EVAL("(1 / 0) ? 128'b101 : 128'b110", "128'b1xx"_si);
+    EVAL("'x ? 5 : 5", 5);
+
+    // Literals
+    EVAL("43'b10x", "43'b10x"_si);
+    EVAL("22'b101x", "22'b101x"_si);
+    EVAL("72'hxxffffffffffffffff", "72'hxxffffffffffffffff"_si);
+    EVAL("2'b101", "2'b01"_si);
+
+    // Literal unknown extension
+    EVAL("5'bx01", "5'bxxx01"_si);
+    EVAL("5'bz01", "5'bzzz01"_si);
+    EVAL("68'bz0000", "68'hzzzzzzzzzzzzzzzzz0"_si);
+
+    // Unbased unsized literals
+    EVAL("1 << '1", 2);
+    EVAL("'1 + 65'b0", "65'h1ffffffffffffffff"_si);
+
+    // Concatenations
+    EVAL("{2'b11, 4'b0010, 3'b101}", "9'b110010101"_si);
+    EVAL("{2'b11, 3'b101}", "5'b11101"_si);
+    EVAL("{22'b0, 43'b100, 1'b1 / 1'b0}", "66'b100x"_si);
+
+    // Replications
+    EVAL("{4 {2'b10}}", "8'b10101010"_si);
+    EVAL("{((2 + 2) - 4 + 4) {2'b01}}", "8'b01010101"_si);
+    EVAL("{2'b10, {0 {4'b1001}}, 2'b01}", "4'b1001"_si);
+
+    // Wildcard equality
+    EVAL("5'b11001 ==? {1'b1 / 1'b0, 4'b1001}", 1);
+    EVAL("({1'b1 / 1'b0, 4'b1001} ==? 5'b11001) === 'x", 1);
+
+    // Bit selects
+    EVAL("3'd7[2]", 1);
+    EVAL("5'd25[3:0]", 9);
+    EVAL("5'd25[3:1]", 4);
+    EVAL("65'h1ffffffffffffffff[64:62]", "3'b111"_si);
+    EVAL("5'd25[0 +: 3]", 9);
+    EVAL("5'd25[3 -: 3]", 9);
+
+    // Weird / out of range part selects
+    EVAL("4'b1001[(1 / 0)]", "1'bx"_si);
+    EVAL("4'b1001[(1/ 0) +: 2]", "2'bxx"_si);
+    EVAL("4'b1001[3 : -1]", "5'b1001x"_si);
+    EVAL("4'b1001[4 : 1]", "4'bx100"_si);
+    EVAL("4'b1001[4 : -1]", "6'bx1001x"_si);
+    EVAL("4'b1001[105 : 101]", "5'bxxxxx"_si);
+
+#undef EVAL
 }
 
-// Wrapper uses exactlyEqual and parses a text-specificied SVInt
-#define EVAL_TEST_EX(descr, expr, result) \
-TEST_CASE(descr, "[eval]") { \
-    ScriptSession session; \
-    auto value = session.eval(expr).integer(); \
-    auto res = SVInt::fromString(result); \
-    /* uncomment for diagonstics: */ \
-    /* printf("%s = %s\n", value.toString(LiteralBase::Binary).c_str(), res.toString(LiteralBase::Binary).c_str()); */ \
-    CHECK_THAT(value, exactlyEquals(res)); \
-}
-
-EVAL_TEST("lshl", "4 << 2", 16);
-EVAL_TEST("ashl", "4 <<< 2", 16);
-EVAL_TEST("lshr", "4 >> 1", 2);
-EVAL_TEST_EX("ashr", "-4 >>> 1", "-2");
-EVAL_TEST_EX("ashr_long", "-65'sd4 >>> 1", "-65'sb10");
-EVAL_TEST("conditionalT", "2 == 2 ? 5 : 4", 5);
-EVAL_TEST("conditionalF", "(2 * 2) == 3 ? 5 : 4", 4);
-EVAL_TEST_EX("conditionalU", "'z ? 5 : 6", "32'sb1xx");
-EVAL_TEST_EX("conditionalU2", "(1 / 0) ? 128'b101 : 128'b110", "128'b1xx");
-EVAL_TEST("conditionalUSame", "'x ? 5 : 5", 5);
-EVAL_TEST("selfDeterminedUULiteral", "1 << '1", 2);
-EVAL_TEST_EX("contextDeterminedUULiteral", "'1 + 65'b0", "65'h1ffffffffffffffff");
-EVAL_TEST_EX("concatenationLeadingZeroes", "{2'b11, 4'b0010, 3'b101}", "9'b110010101");
-EVAL_TEST_EX("concatenation", "{2'b11, 3'b101}", "5'b11101");
-EVAL_TEST_EX("concatenation2", "{22'b0, 43'b100, 1'b1 / 1'b0}", "66'b100x");
-EVAL_TEST_EX("replicate", "{4 {2'b10}}", "8'b10101010");
-EVAL_TEST_EX("nontrivialReplicate", "{((2 + 2) - 4 + 4) {2'b01}}", "8'b01010101");
-EVAL_TEST_EX("concatenation with zero-width replicate", "{2'b10, {0 {4'b1001}}, 2'b01}", "4'b1001");
-EVAL_TEST("wildcardEq", "5'b11001 ==? {1'b1 / 1'b0, 4'b1001}", 1);
-EVAL_TEST("wildcardEqNotCommute", "({1'b1 / 1'b0, 4'b1001} ==? 5'b11001) === 'x", 1);
-EVAL_TEST("bitSelect", "3'd7[2]", 1);
-EVAL_TEST("bitSelectSimpleRange", "5'd25[3:0]", 9);
-EVAL_TEST("bitSelectSimpleRangeNonzerobased", "5'd25[3:1]", 4);
-EVAL_TEST_EX("bitSelectSimpleRangeLarge", "65'h1ffffffffffffffff[64:62]", "3'b111");
-EVAL_TEST("bitSelectAscendingRange", "5'd25[0 +: 3]", 9);
-EVAL_TEST("bitSelectDescendingRange", "5'd25[3 -: 3]", 9);
-EVAL_TEST_EX("bitselect with unknown address", "4'b1001[(1 / 0)]", "1'bx");
-EVAL_TEST_EX("rangeselect with unknown address", "4'b1001[(1/ 0) +: 2]", "2'bxx");
-EVAL_TEST_EX("partially oob rangeselect (right)", "4'b1001[3 : -1]", "5'b1001x");
-EVAL_TEST_EX("partially oob rangeselect (left)", "4'b1001[4 : 1]", "4'bx100");
-EVAL_TEST_EX("partially oob rangeselect (both)", "4'b1001[4 : -1]", "6'bx1001x");
-EVAL_TEST_EX("totally oob rangeselect", "4'b1001[105 : 101]", "5'bxxxxx");
-EVAL_TEST("bits system call", "$bits(3'b101)", 3);
-EVAL_TEST("bits system call 2", "$bits(23)", 32);
-// Some basic tests that literals evaluate to the right values
-EVAL_TEST_EX("lit", "43'b10x", "43'b10x");
-EVAL_TEST_EX("lit2", "22'b101x", "22'b101x");
-EVAL_TEST_EX("bigliteral with a high x", "72'hxxffffffffffffffff",
-                                         "72'hxxffffffffffffffff");
-EVAL_TEST_EX("literal truncation", "2'b101", "2'b01");
-// If the highest bit is a z or x, that is extended to the full size
-EVAL_TEST_EX("xpadding", "5'bx01", "5'bxxx01");
-EVAL_TEST_EX("zpadding", "5'bz01", "5'bzzz01");
-EVAL_TEST_EX("really long zpadding", "68'bz0000", "68'hzzzzzzzzzzzzzzzzz0");
-
-TEST_CASE("bit select weird indexes", "[eval]") {
+TEST_CASE("bit select weird indices", "[eval]") {
     // The above bit select cases test the "normal" case where vectors are specified
     // with [N : 0]. Here we test "up-vectors" and non-zero lower bounds.
     ScriptSession session;
     session.eval("logic [0 : 15] up_vect = 5'b10111;");
 
     auto value = session.eval("up_vect[12:14]").integer();
-    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
+    CHECK(value == "3'b011"_si);
 
     value = session.eval("up_vect[12 -: 2]").integer();
-    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
+    CHECK(value == "3'b011"_si);
 
     value = session.eval("up_vect[14 +: 2]").integer();
-    CHECK(exactlyEqual(value, SVInt::fromString("3'b011")));
+    CHECK(value == "3'b011"_si);
 
     session.eval("logic [20 : 5] down_vect = 5'd25");
 
     value = session.eval("down_vect[8:5]").integer();
-
-    CHECK(exactlyEqual(value, SVInt::fromString("4'd9")));
+    CHECK(value == "4'd9"_si);
 
     value = session.eval("down_vect[5 +: 3]").integer();
     CHECK(value == 9);
@@ -240,9 +241,8 @@ TEST_CASE("dimension based system functions", "[eval]") {
     ScriptSession session;
     session.eval("logic [0 : 15] up_vect = 5'b10111;");
     session.eval("logic [15 : 0] down_vect = 5'd25");
-    SVInt value;
-#define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
 
+#define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
     EVAL("$left(up_vect)", 0);
     EVAL("$right(up_vect)", 15);
     EVAL("$left(down_vect)", 15);
@@ -272,4 +272,12 @@ TEST_CASE("Unary inc-dec operators", "[eval]") {
     CHECK(session.eval("--a").integer() == 123);
     CHECK(session.eval("a++").integer() == 123);
     CHECK(session.eval("a--").integer() == 124);
+
+    for (int i = 0; i < 2; i++)
+        session.eval("++a");
+    CHECK(session.eval("a").integer() == 125);
+
+    for (int i = 0; i < 3; i++)
+        session.eval("--a");
+    CHECK(session.eval("a").integer() == 122);
 }
