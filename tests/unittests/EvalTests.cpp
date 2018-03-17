@@ -206,9 +206,18 @@ TEST_CASE("Integer operators") {
     EVAL("4'b1001[4 : 1]", "4'bx100"_si);
     EVAL("4'b1001[4 : -1]", "6'bx1001x"_si);
     EVAL("4'b1001[105 : 101]", "5'bxxxxx"_si);
-
-#undef EVAL
 }
+
+// TODO: uncomment
+//TEST_CASE("Assignments") {
+//    ScriptSession session;
+//    session.eval("struct packed { logic [2:0] a; logic b; } foo;");
+//
+//    EVAL("foo = 4'b1101", 13);
+//    EVAL("foo.a = 3'b001", 1);
+//    EVAL("foo.b = 0", 0);
+//    EVAL("foo", 2);
+//}
 
 TEST_CASE("bit select weird indices", "[eval]") {
     // The above bit select cases test the "normal" case where vectors are specified
@@ -242,7 +251,6 @@ TEST_CASE("dimension based system functions", "[eval]") {
     session.eval("logic [0 : 15] up_vect = 5'b10111;");
     session.eval("logic [15 : 0] down_vect = 5'd25");
 
-#define EVAL(expr, result) CHECK(session.eval(expr).integer() == result)
     EVAL("$left(up_vect)", 0);
     EVAL("$right(up_vect)", 15);
     EVAL("$left(down_vect)", 15);

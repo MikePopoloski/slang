@@ -174,8 +174,12 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
     }
 }
 
-LValue NamedValueExpression::evalLValueImpl(EvalContext&) const {
-    return LValue(symbol);
+LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
+    auto cv = context.findLocal(&symbol);
+    if (!cv)
+        return nullptr;
+
+    return LValue(*cv);
 }
 
 ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
@@ -259,10 +263,10 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
         return nullptr;
 
     if (!isCompound())
-        lvalue.store(context, rvalue);
+        lvalue.store(rvalue);
     else {
-        rvalue = evalBinaryOperator(*op, lvalue.load(context), rvalue);
-        lvalue.store(context, rvalue);
+        rvalue = evalBinaryOperator(*op, lvalue.load(), rvalue);
+        lvalue.store(rvalue);
     }
 
     return rvalue;
@@ -347,7 +351,6 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext&) const {
 }
 
 LValue MemberAccessExpression::evalLValueImpl(EvalContext&) const {
-    // TODO: implement
     return nullptr;
 }
 

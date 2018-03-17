@@ -28,11 +28,6 @@ public:
     ConstantValue(double real) : value(real) {}
     ConstantValue(NullPlaceholder nul) : value(nul) {}
 
-    ConstantValue(const ConstantValue& other) = default;
-    ConstantValue(ConstantValue&& other) noexcept = default;
-    ConstantValue& operator=(const ConstantValue& other) = default;
-    ConstantValue& operator=(ConstantValue&& other) noexcept = default;
-
     bool bad() const { return std::holds_alternative<std::monostate>(value); }
     explicit operator bool() const { return !bad(); }
 
@@ -83,8 +78,12 @@ struct ConstantRange {
     /// "Little endian" bit order is when the msb is >= the lsb.
     bool isLittleEndian() const { return left >= right; }
 
-    /// Normalizes the range so that it's of the form [msb-lsb, 0] and in little endian bit order.
-    ConstantRange normalize() const { return { upper() - lower(), 0 }; }
+    /// Reverses the bit ordering of the range.
+    ConstantRange reverse() const { return { right, left }; }
+
+    /// Selects a subrange of this range, correctly handling both forms of
+    /// bit endianness. This will assert that the given subrange is not wider.
+    ConstantRange subrange(ConstantRange select) const;
 
     bool operator==(const ConstantRange& rhs) const {
         return left == rhs.left && right == rhs.right;
@@ -93,6 +92,39 @@ struct ConstantRange {
     bool operator!=(const ConstantRange& rhs) const {
         return !(*this == rhs);
     }
+};
+
+/// An lvalue is anything that can appear on the left hand side of an assignment
+/// expression. It represents some storage location in memory that can be read
+/// from and written to.
+///
+class LValue {
+public:
+    /// A concatenation of lvalues is also an lvalue and can be assigned to.
+    using Concat = std::vector<LValue>;
+
+    LValue() = default;
+    LValue(nullptr_t) {}
+    explicit LValue(Concat&& concat) : value(std::move(concat)) {}
+    explicit LValue(ConstantValue& base) : value(&base) {}
+
+    bool bad() const { return std::holds_alternative<std::monostate>(value); }
+    explicit operator bool() const { return !bad(); }
+
+    ConstantValue load() const;
+    void store(const ConstantValue& value);
+
+    LValue selectRange(ConstantRange range) const;
+
+private:
+    LValue(ConstantValue& base, ConstantRange range) : value(CVRange { &base, range }) {}
+
+    struct CVRange {
+        ConstantValue* cv;
+        ConstantRange range;
+    };
+
+    std::variant<std::monostate, Concat, ConstantValue*, CVRange> value;
 };
 
 }
