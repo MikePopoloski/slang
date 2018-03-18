@@ -575,6 +575,13 @@ PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
 {
 }
 
+bool FieldSymbol::isPacked() const {
+    const Scope* scope = getScope();
+    ASSERT(scope);
+    return scope->asSymbol().kind == SymbolKind::PackedStructType ||
+           scope->asSymbol().kind == SymbolKind::UnpackedStructType;
+}
+
 PackedStructType::PackedStructType(Compilation& compilation, bitwidth_t bitWidth,
                                    bool isSigned, bool isFourState) :
     IntegralType(SymbolKind::PackedStructType, "", SourceLocation(), bitWidth, isSigned, isFourState),
@@ -590,8 +597,9 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
     bitwidth_t bitWidth = 0;
 
     // We have to look at all the members up front to know our width and four-statedness.
+    // We have to iterate in reverse because members are specified from MSB to LSB order.
     SmallVectorSized<const Symbol*, 8> members;
-    for (auto member : syntax.members) {
+    for (auto member : make_reverse_range(syntax.members)) {
         const Type& type = compilation.getType(member->type, location, scope);
         isFourState |= type.isFourState();
 
@@ -603,11 +611,12 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
         }
 
         for (auto decl : member->declarators) {
-            bitWidth += type.getBitWidth();
-
-            auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location());
+            auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
+                                                             decl->name.location(), bitWidth);
             members.append(variable);
             variable->type = type;
+
+            bitWidth += type.getBitWidth();
 
             if (decl->initializer) {
                 auto& diag = compilation.addError(DiagCode::PackedMemberHasInitializer,
@@ -618,7 +627,7 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
     }
 
     auto result = compilation.emplace<PackedStructType>(compilation, bitWidth, isSigned, isFourState);
-    for (auto member : members)
+    for (auto member : make_reverse_range(members))
         result->addMember(*member);
 
     return *result;
@@ -634,12 +643,16 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
                                            LookupLocation location, const Scope& scope) {
     ASSERT(!syntax.packed);
 
+    uint32_t fieldIndex = 0;
     auto result = compilation.emplace<UnpackedStructType>(compilation);
     for (auto member : syntax.members) {
         const Type& type = compilation.getType(member->type, location, scope);
         for (auto decl : member->declarators) {
-            auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location());
+            auto variable = compilation.emplace<FieldSymbol>(decl->name.valueText(),
+                                                             decl->name.location(), fieldIndex);
             result->addMember(*variable);
+
+            fieldIndex++;
 
             variable->type = type;
             if (decl->initializer)

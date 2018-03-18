@@ -65,8 +65,7 @@ ConstantValue LValue::load() const {
 
 void LValue::store(const ConstantValue& newValue) {
     std::visit([&newValue](auto&& arg)
-               noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat> &&
-                        !std::is_same_v<std::decay_t<decltype(arg)>, CVRange>) {
+               noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             return;
@@ -75,8 +74,7 @@ void LValue::store(const ConstantValue& newValue) {
         else if constexpr (std::is_same_v<T, CVRange>) {
             ConstantValue& cv = *arg.cv;
             ASSERT(cv);
-
-            THROW_UNREACHABLE; // TODO: handle this
+            cv.integer().set(arg.range.upper(), arg.range.lower(), newValue.integer());
         }
         else if constexpr (std::is_same_v<T, Concat>)
             THROW_UNREACHABLE; // TODO: handle this case

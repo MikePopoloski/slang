@@ -31,6 +31,13 @@ private:
 template<typename T>
 iterator_range<T> make_range(T begin, T end) { return iterator_range<T>(begin, end); }
 
+template<typename TContainer>
+auto make_reverse_range(TContainer&& container) {
+    auto b = std::make_reverse_iterator(container.end());
+    auto e = std::make_reverse_iterator(container.begin());
+    return make_range(b, e);
+}
+
 // Note: Design mostly taken from llvm's iterator.h.
 
 /// Base class that hides most of the iterator boilerplate from you.

@@ -290,8 +290,16 @@ public:
 /// Represents a field member of a struct or union.
 class FieldSymbol : public VariableSymbol {
 public:
-    FieldSymbol(string_view name, SourceLocation loc) :
-        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic) {}
+    /// The offset of the field within its parent structure or union. If the parent type is
+    /// packed, this is an offset in bits. Otherwise it's an index into the list of fields.
+    uint32_t offset;
+
+    FieldSymbol(string_view name, SourceLocation loc, uint32_t offset) :
+        VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic),
+        offset(offset) {}
+
+    /// Indicates whether the field is part of a packed structure or union.
+    bool isPacked() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Field; }
 };

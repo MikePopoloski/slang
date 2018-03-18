@@ -208,16 +208,16 @@ TEST_CASE("Integer operators") {
     EVAL("4'b1001[105 : 101]", "5'bxxxxx"_si);
 }
 
-// TODO: uncomment
-//TEST_CASE("Assignments") {
-//    ScriptSession session;
-//    session.eval("struct packed { logic [2:0] a; logic b; } foo;");
-//
-//    EVAL("foo = 4'b1101", 13);
-//    EVAL("foo.a = 3'b001", 1);
-//    EVAL("foo.b = 0", 0);
-//    EVAL("foo", 2);
-//}
+TEST_CASE("Assignments") {
+    ScriptSession session;
+    session.eval("struct packed { logic [2:0] a; logic b; } foo;");
+
+    EVAL("foo = 4'b1101", 13);
+    EVAL("foo.a = 3'b001", 1);
+    EVAL("foo.b = 1'b0", 0);
+    EVAL("foo", 2);
+    EVAL("foo.a", 1);
+}
 
 TEST_CASE("bit select weird indices", "[eval]") {
     // The above bit select cases test the "normal" case where vectors are specified

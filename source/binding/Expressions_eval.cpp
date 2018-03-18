@@ -262,6 +262,8 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     if (!lvalue || !rvalue)
         return nullptr;
 
+    // TODO: ensure rhs is truncated to size of lhs
+
     if (!isCompound())
         lvalue.store(rvalue);
     else {
@@ -345,13 +347,25 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     }
 }
 
-ConstantValue MemberAccessExpression::evalImpl(EvalContext&) const {
-    // TODO: implement
-    return nullptr;
+ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
+    ConstantValue cv = value().eval(context);
+    if (!cv)
+        return nullptr;
+
+    // TODO: handle unpacked
+    ASSERT(field.isPacked());
+    int32_t offset = (int32_t)field.offset;
+    int32_t width = (int32_t)type->getBitWidth();
+    return cv.integer().slice(width + offset - 1, offset);
 }
 
-LValue MemberAccessExpression::evalLValueImpl(EvalContext&) const {
-    return nullptr;
+LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
+    // TODO: handle unpacked
+    ASSERT(field.isPacked());
+    int32_t offset = (int32_t)field.offset;
+    int32_t width = (int32_t)type->getBitWidth();
+
+    return value().evalLValue(context).selectRange({ width + offset - 1, offset });
 }
 
 ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
