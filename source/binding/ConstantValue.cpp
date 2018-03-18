@@ -42,7 +42,8 @@ void to_json(json& j, const ConstantValue& cv) {
 }
 
 ConstantValue LValue::load() const {
-    return std::visit([](auto&& arg) -> ConstantValue {
+    return std::visit([](auto&& arg)
+                      noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat>) -> ConstantValue {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             return ConstantValue();
@@ -63,7 +64,9 @@ ConstantValue LValue::load() const {
 }
 
 void LValue::store(const ConstantValue& newValue) {
-    std::visit([&newValue](auto&& arg) {
+    std::visit([&newValue](auto&& arg)
+               noexcept(!std::is_same_v<std::decay_t<decltype(arg)>, Concat> &&
+                        !std::is_same_v<std::decay_t<decltype(arg)>, CVRange>) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             return;

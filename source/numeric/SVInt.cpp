@@ -1226,14 +1226,14 @@ void SVInt::set(int32_t msb, int32_t lsb, const SVInt& value) {
         pVal = newData;
     }
 
-    bitcpy(getRawData(), std::max(lsb, 0), value.getRawData(), validSelectWidth, frontOOB);
+    bitcpy(getRawData(), (uint32_t)std::max(lsb, 0), value.getRawData(), validSelectWidth, frontOOB);
     if (value.unknownFlag) {
-        bitcpy(getRawData() + getNumWords(bitWidth, false), std::max(lsb, 0),
+        bitcpy(getRawData() + getNumWords(bitWidth, false), (uint32_t)std::max(lsb, 0),
                value.getRawData() + getNumWords(value.bitWidth, false), validSelectWidth, frontOOB);
     }
     else if (unknownFlag) {
         // We have to unset any of the unknown bits for the given segment.
-        clearBits(getRawData() + getNumWords(bitWidth, false), std::max(lsb, 0), validSelectWidth);
+        clearBits(getRawData() + getNumWords(bitWidth, false), (uint32_t)std::max(lsb, 0), validSelectWidth);
     }
 
     clearUnusedBits();
