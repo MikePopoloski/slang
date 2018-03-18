@@ -280,24 +280,43 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv || !cs)
         return nullptr;
 
-    SVInt v = cv.integer();
-    SVInt index = cs.integer();
-    ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
-
-    if (index.hasUnknown()) {
-        // If any part of an address is unknown, then the whole thing returns
-        // 'x; let's handle this here so everywhere else we can assume the inputs
-        // are normal numbers
-        return SVInt::createFillX((uint16_t)type->getBitWidth(), false);
+    optional<int32_t> index = getIndex(cs);
+    if (!index) {
+        // If any part of an address is unknown, then the whole thing returns 'x.
+        return SVInt::createFillX(type->getBitWidth(), false);
     }
 
+    return SVInt(cv.integer()[*index]);
+}
+
+LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
+    LValue lval = value().evalLValue(context);
+    ConstantValue cs = selector().eval(context);
+    if (!lval || !cs)
+        return nullptr;
+
+    optional<int32_t> index = getIndex(cs);
+    if (!index)
+        return nullptr;
+
+    return lval.selectRange({ *index, *index });
+}
+
+optional<int32_t> ElementSelectExpression::getIndex(const ConstantValue& selectorValue) const {
+    const SVInt& index = selectorValue.integer();
+    if (index.hasUnknown())
+        return std::nullopt;
+
+    // TODO: handle other kinds of selectable types
+    // TODO: handle out of bounds accesses
     // SVInt uses little endian ranges starting from zero; we need to translate from the
     // actual range used in the declaration of the variable.
-    int16_t actualIndex = int16_t(index.as<int>().value() - range.lower());
+    ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
+    int32_t actualIndex = index.as<int32_t>().value() - range.lower();
     if (!range.isLittleEndian())
-        actualIndex = int16_t(range.width() - (uint32_t)actualIndex - 1);
+        actualIndex = range.width() - actualIndex - 1;
 
-    return SVInt(v[actualIndex]);
+    return actualIndex;
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
@@ -307,40 +326,58 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv || !cl || !cr)
         return nullptr;
 
-    SVInt v = cv.integer();
-    ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
-
-    SVInt msb = cl.integer();
-    SVInt lsbOrWidth = cr.integer();
-
-    if (msb.hasUnknown() || lsbOrWidth.hasUnknown()) {
-        // If any part of an address is unknown, then the whole thing returns
-        // 'x; let's handle this here so everywhere else we can assume the inputs
-        // are normal numbers
-        return SVInt::createFillX((uint16_t)type->getBitWidth(), false);
+    optional<ConstantRange> range = getRange(cl, cr);
+    if (!range) {
+        // If any part of an address is unknown, then the whole thing returns 'x.
+        return SVInt::createFillX(type->getBitWidth(), false);
     }
 
-    // SVInt uses little endian ranges starting from zero; we need to translate from the
-    // actual range used in the declaration of the variable.
-    int16_t actualMsb = int16_t(msb.as<int>().value() - range.lower());
+    return cv.integer().slice(range->upper(), range->lower());
+}
+
+LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
+    LValue lval = value().evalLValue(context);
+    ConstantValue cl = left().eval(context);
+    ConstantValue cr = right().eval(context);
+    if (!lval || !cl || !cr)
+        return nullptr;
+
+    optional<ConstantRange> range = getRange(cl, cr);
+    if (!range)
+        return nullptr;
+
+    return lval.selectRange(*range);
+}
+
+optional<ConstantRange> RangeSelectExpression::getRange(const ConstantValue& cl,
+                                                        const ConstantValue& cr) const {
+    const SVInt& l = cl.integer();
+    const SVInt& r = cr.integer();
+    if (l.hasUnknown() || r.hasUnknown())
+        return std::nullopt;
+
+    // TODO: other selectable types
+    // TODO: check for out of range bounds
+    ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
+    int32_t msb = l.as<int32_t>().value() - range.lower();
     if (!range.isLittleEndian())
-        actualMsb = int16_t(range.width() - (uint32_t)actualMsb - 1);
+        msb = range.width() - msb - 1;
 
     switch (selectionKind) {
         case RangeSelectionKind::Simple: {
-            int16_t actualLsb = int16_t(lsbOrWidth.as<int>().value() - range.lower());
+            int32_t lsb = r.as<int32_t>().value() - range.lower();
             if (!range.isLittleEndian())
-                actualLsb = int16_t(range.width() - (uint32_t)actualLsb - 1);
+                lsb = range.width() - lsb - 1;
 
-            return v.slice(actualMsb, actualLsb);
+            return ConstantRange { msb, lsb };
         }
         case RangeSelectionKind::IndexedUp: {
-            int16_t width = lsbOrWidth.as<int16_t>().value();
-            return v.slice(actualMsb + width, actualMsb);
+            int32_t width = r.as<int32_t>().value();
+            return ConstantRange { msb + width, msb };
         }
         case RangeSelectionKind::IndexedDown: {
-            int16_t width = lsbOrWidth.as<int16_t>().value();
-            return v.slice(actualMsb, actualMsb - width);
+            int32_t width = r.as<int32_t>().value();
+            return ConstantRange { msb, msb - width };
         }
         default:
             THROW_UNREACHABLE;

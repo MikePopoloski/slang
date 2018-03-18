@@ -772,8 +772,8 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
     bool down = value.type->getCanonicalType().as<IntegralType>().getBitVectorRange().isLittleEndian();
     int width;
     if (selectionKind == RangeSelectionKind::Simple)
-        width = (down ? 1 : -1) * (int)(left.eval().integer().as<int64_t>().value() -
-                                        right.eval().integer().as<int64_t>().value());
+        width = (down ? 1 : -1) * ((int)(left.eval().integer().as<int64_t>().value() -
+                                        right.eval().integer().as<int64_t>().value()) + 1);
     else
         width = int(right.eval().integer().as<int64_t>().value());
 

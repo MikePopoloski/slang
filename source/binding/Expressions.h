@@ -440,6 +440,7 @@ public:
     Expression& selector() { return *selector_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    LValue evalLValueImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value, const ExpressionSyntax& syntax,
                                   SourceRange fullRange, const BindContext& context);
@@ -448,6 +449,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
 private:
+    optional<int32_t> getIndex(const ConstantValue& selectorValue) const;
+
     Expression* value_;
     Expression* selector_;
 };
@@ -472,6 +475,7 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
+    LValue evalLValueImpl(EvalContext& context) const;
 
     static Expression& fromSyntax(Compilation& compilation, Expression& value, const RangeSelectSyntax& syntax,
                                   SourceRange fullRange, const BindContext& context);
@@ -480,6 +484,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
 private:
+    optional<ConstantRange> getRange(const ConstantValue& cl, const ConstantValue& cr) const;
+
     Expression* value_;
     Expression* left_;
     Expression* right_;

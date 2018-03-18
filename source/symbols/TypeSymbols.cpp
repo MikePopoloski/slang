@@ -394,8 +394,11 @@ bool IntegralType::isKind(SymbolKind kind) {
 }
 
 ConstantRange IntegralType::getBitVectorRange() const {
-    if (isPredefinedInteger() || isScalar())
+    if (isPredefinedInteger() || isScalar() || kind == SymbolKind::PackedStructType ||
+        kind == SymbolKind::PackedUnionType) {
+
         return { int32_t(bitWidth - 1), 0 };
+    }
 
     return as<PackedArrayType>().range;
 }

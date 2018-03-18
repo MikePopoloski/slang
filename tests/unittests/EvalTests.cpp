@@ -217,6 +217,15 @@ TEST_CASE("Assignments") {
     EVAL("foo.b = 1'b0", 0);
     EVAL("foo", 2);
     EVAL("foo.a", 1);
+
+    EVAL("foo.a[1] = 1'b1", 1);
+    EVAL("foo", 6);
+    EVAL("foo.a[2:0] = '0", 0);
+    EVAL("foo", 0);
+    EVAL("foo[0+:1] = 2'b11", 3);
+    EVAL("foo", 3);
+    EVAL("foo[3-:3] = 4'b1010", 10);
+    EVAL("foo", 10);
 }
 
 TEST_CASE("bit select weird indices", "[eval]") {
