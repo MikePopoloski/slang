@@ -280,13 +280,13 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv || !cs)
         return nullptr;
 
-    optional<int32_t> index = getIndex(cs);
-    if (!index) {
+    optional<ConstantRange> range = getRange(cs);
+    if (!range) {
         // If any part of an address is unknown, then the whole thing returns 'x.
         return SVInt::createFillX(type->getBitWidth(), false);
     }
 
-    return SVInt(cv.integer()[*index]);
+    return cv.integer().slice(range->upper(), range->lower());
 }
 
 LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
@@ -295,28 +295,31 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval || !cs)
         return nullptr;
 
-    optional<int32_t> index = getIndex(cs);
-    if (!index)
+    optional<ConstantRange> range = getRange(cs);
+    if (!range)
         return nullptr;
 
-    return lval.selectRange({ *index, *index });
+    return lval.selectRange(*range);
 }
 
-optional<int32_t> ElementSelectExpression::getIndex(const ConstantValue& selectorValue) const {
-    const SVInt& index = selectorValue.integer();
-    if (index.hasUnknown())
+optional<ConstantRange> ElementSelectExpression::getRange(const ConstantValue& selectorValue) const {
+    optional<int32_t> index = selectorValue.integer().as<int32_t>();
+    if (!index)
         return std::nullopt;
 
-    // TODO: handle other kinds of selectable types
-    // TODO: handle out of bounds accesses
-    // SVInt uses little endian ranges starting from zero; we need to translate from the
-    // actual range used in the declaration of the variable.
-    ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
-    int32_t actualIndex = index.as<int32_t>().value() - range.lower();
-    if (!range.isLittleEndian())
-        actualIndex = range.width() - actualIndex - 1;
+    const Type& t = value().type->getCanonicalType();
+    ConstantRange declRange = t.as<IntegralType>().getBitVectorRange();
+    int32_t actualIndex = declRange.translateIndex(*index);
 
-    return actualIndex;
+    // We're actually selecting elements, which aren't necessarily bits.
+    int32_t width = 1;
+    if (t.kind == SymbolKind::PackedArrayType) {
+        // TODO: handle overflow?
+        width = t.as<PackedArrayType>().elementType.getBitWidth();
+        actualIndex *= width;
+    }
+
+    return ConstantRange { actualIndex + width - 1, actualIndex };
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
@@ -351,37 +354,46 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
 
 optional<ConstantRange> RangeSelectExpression::getRange(const ConstantValue& cl,
                                                         const ConstantValue& cr) const {
-    const SVInt& l = cl.integer();
-    const SVInt& r = cr.integer();
-    if (l.hasUnknown() || r.hasUnknown())
+    optional<int32_t> l = cl.integer().as<int32_t>();
+    optional<int32_t> r = cr.integer().as<int32_t>();
+    if (!l || !r)
         return std::nullopt;
 
-    // TODO: other selectable types
-    // TODO: check for out of range bounds
-    ConstantRange range = value().type->as<IntegralType>().getBitVectorRange();
-    int32_t msb = l.as<int32_t>().value() - range.lower();
-    if (!range.isLittleEndian())
-        msb = range.width() - msb - 1;
+    const Type& t = value().type->getCanonicalType();
+    ConstantRange declRange = t.as<IntegralType>().getBitVectorRange();
+    int32_t msb = declRange.translateIndex(*l);
 
+    // We're actually selecting elements, which aren't necessarily bits.
+    int32_t width = 1;
+    if (t.kind == SymbolKind::PackedArrayType) {
+        // TODO: handle overflow?
+        width = t.as<PackedArrayType>().elementType.getBitWidth();
+        msb *= width;
+    }
+
+    ConstantRange result;
     switch (selectionKind) {
         case RangeSelectionKind::Simple: {
-            int32_t lsb = r.as<int32_t>().value() - range.lower();
-            if (!range.isLittleEndian())
-                lsb = range.width() - lsb - 1;
-
-            return ConstantRange { msb, lsb };
+            int32_t lsb = declRange.translateIndex(*r) * width;
+            result = { msb, lsb };
+            break;
         }
         case RangeSelectionKind::IndexedUp: {
-            int32_t width = r.as<int32_t>().value();
-            return ConstantRange { msb + width, msb };
+            int32_t count = *r * width;
+            result = { msb + count, msb };
+            break;
         }
         case RangeSelectionKind::IndexedDown: {
-            int32_t width = r.as<int32_t>().value();
-            return ConstantRange { msb, msb - width };
+            int32_t count = *r * width;
+            result = { msb, msb - count };
+            break;
         }
         default:
             THROW_UNREACHABLE;
     }
+
+    result.left += width - 1;
+    return result;
 }
 
 ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {

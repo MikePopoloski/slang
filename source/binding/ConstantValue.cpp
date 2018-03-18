@@ -25,6 +25,13 @@ ConstantRange ConstantRange::subrange(ConstantRange select) const {
         return result.reverse();
 }
 
+int32_t ConstantRange::translateIndex(int32_t index) const {
+    if (!isLittleEndian())
+        return width() - index - 1;
+    else
+        return index - lower();
+}
+
 void to_json(json& j, const ConstantValue& cv) {
     std::visit([&j](auto&& arg) noexcept {
         using T = std::decay_t<decltype(arg)>;

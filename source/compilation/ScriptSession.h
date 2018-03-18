@@ -41,7 +41,7 @@ public:
                     if (symbol->initializer)
                         initial = symbol->initializer->eval(evalContext);
                     else
-                        initial = SVInt(0);
+                        initial = SVInt(symbol->type->getBitWidth(), 0, symbol->type->isSigned());
 
                     evalContext.createLocal(symbol, initial);
                 }

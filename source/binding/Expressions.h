@@ -449,7 +449,7 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
 private:
-    optional<int32_t> getIndex(const ConstantValue& selectorValue) const;
+    optional<ConstantRange> getRange(const ConstantValue& selectorValue) const;
 
     Expression* value_;
     Expression* selector_;

@@ -85,6 +85,11 @@ struct ConstantRange {
     /// bit endianness. This will assert that the given subrange is not wider.
     ConstantRange subrange(ConstantRange select) const;
 
+    /// Translates the given index to be relative to the range.
+    /// For example, if the range is [7:2] and you pass in 3, the result will be 1.
+    /// If the range is [2:7] and you pass in 3, the result will be 2.
+    int32_t translateIndex(int32_t index) const;
+
     bool operator==(const ConstantRange& rhs) const {
         return left == rhs.left && right == rhs.right;
     }
