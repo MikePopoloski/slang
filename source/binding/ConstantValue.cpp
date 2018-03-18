@@ -53,7 +53,7 @@ ConstantValue LValue::load() const {
             if (!cv)
                 return ConstantValue();
 
-            return cv.integer()(arg.range.upper(), arg.range.lower());
+            return cv.integer().slice(arg.range.upper(), arg.range.lower());
         }
         else if constexpr (std::is_same_v<T, Concat>)
             THROW_UNREACHABLE; // TODO: handle this case

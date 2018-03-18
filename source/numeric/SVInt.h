@@ -344,6 +344,12 @@ public:
     /// unknown values, so make sure you know what you're doing with it.
     bitwidth_t countPopulation() const;
 
+    /// Return a subset of the integer's bit range as a new integer.
+    SVInt slice(int32_t msb, int32_t lsb) const;
+
+    /// Replace a range of bits in the number with the given bit pattern.
+    void set(int32_t msb, int32_t lsb, const SVInt& value);
+
     SVInt& operator=(const SVInt& rhs) {
         if (isSingleWord() && rhs.isSingleWord()) {
             val = rhs.val;
@@ -431,7 +437,6 @@ public:
 
     logic_t operator[](const SVInt& index) const;
     logic_t operator[](int32_t index) const;
-    SVInt operator()(int32_t msb, int32_t lsb) const;
 
     explicit operator logic_t() const { return *this != 0; }
 

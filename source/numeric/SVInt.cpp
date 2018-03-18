@@ -1156,7 +1156,7 @@ logic_t SVInt::operator[](int32_t index) const {
     return bit ? logic_t::z : logic_t::x;
 }
 
-SVInt SVInt::operator()(int32_t msb, int32_t lsb) const {
+SVInt SVInt::slice(int32_t msb, int32_t lsb) const {
     ASSERT(msb >= lsb);
 
     // handle indexing out of bounds
@@ -1201,6 +1201,43 @@ SVInt SVInt::operator()(int32_t msb, int32_t lsb) const {
     result.clearUnusedBits();
     result.checkUnknown();
     return result;
+}
+
+void SVInt::set(int32_t msb, int32_t lsb, const SVInt& value) {
+    ASSERT(msb >= lsb);
+
+    bitwidth_t selectWidth = bitwidth_t(msb - lsb + 1);
+    ASSERT(value.getBitWidth() == selectWidth);
+    if (msb < 0 || lsb >= int32_t(bitWidth))
+        return;
+
+    uint32_t frontOOB = lsb < 0 ? uint32_t(-lsb) : 0;
+    uint32_t backOOB = bitwidth_t(msb) >= bitWidth ? bitwidth_t(msb - bitWidth + 1) : 0;
+    uint32_t validSelectWidth = selectWidth - frontOOB - backOOB;
+
+    if (!hasUnknown() && value.hasUnknown()) {
+        uint64_t* newData = new uint64_t[getNumWords(bitWidth, true)]();
+        memcpy(newData, getRawData(), getNumWords());
+
+        if (!isSingleWord())
+            delete[] pVal;
+
+        unknownFlag = true;
+        pVal = newData;
+    }
+
+    bitcpy(getRawData(), std::max(lsb, 0), value.getRawData(), validSelectWidth, frontOOB);
+    if (value.unknownFlag) {
+        bitcpy(getRawData() + getNumWords(bitWidth, false), std::max(lsb, 0),
+               value.getRawData() + getNumWords(value.bitWidth, false), validSelectWidth, frontOOB);
+    }
+    else if (unknownFlag) {
+        // We have to unset any of the unknown bits for the given segment.
+        clearBits(getRawData() + getNumWords(bitWidth, false), std::max(lsb, 0), validSelectWidth);
+    }
+
+    clearUnusedBits();
+    checkUnknown();
 }
 
 SVInt SVInt::conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs) {

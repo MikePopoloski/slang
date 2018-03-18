@@ -330,15 +330,15 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
             if (!range.isLittleEndian())
                 actualLsb = int16_t(range.width() - (uint32_t)actualLsb - 1);
 
-            return v(actualMsb, actualLsb);
+            return v.slice(actualMsb, actualLsb);
         }
         case RangeSelectionKind::IndexedUp: {
             int16_t width = lsbOrWidth.as<int16_t>().value();
-            return v(actualMsb + width, actualMsb);
+            return v.slice(actualMsb + width, actualMsb);
         }
         case RangeSelectionKind::IndexedDown: {
             int16_t width = lsbOrWidth.as<int16_t>().value();
-            return v(actualMsb, actualMsb - width);
+            return v.slice(actualMsb, actualMsb - width);
         }
         default:
             THROW_UNREACHABLE;

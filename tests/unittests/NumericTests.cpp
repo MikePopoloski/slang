@@ -97,7 +97,7 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK_THAT("13'b1100xZ?01"_si[99], exactlyEquals(logic_t::x));
     CHECK_THAT("13'b1100xZ?01"_si[SVInt(8)], exactlyEquals(logic_t(1)));
     CHECK_THAT("13'b1100xZ?01"_si["999'd929293939393939393939"_si], exactlyEquals(logic_t::x));
-    CHECK_THAT("13'b1100xZ?01"_si(8, 2), exactlyEquals("7'b1100xZz"_si));
+    CHECK_THAT("13'b1100xZ?01"_si.slice(8, 2), exactlyEquals("7'b1100xZz"_si));
 
     // extra digits should truncate from the left
     CHECK("4'hxxffa"_si == 10);
@@ -132,7 +132,7 @@ TEST_CASE("Construction", "[numeric]") {
     CHECK(SVInt(61, make_span((byte*)&mem1, 8), false).as<uint64_t>() == mem1);
 
     char mem2[128] = "asdfkljhaw4rkjb234890uKLJNSDF  K@#*)U?:hjn";
-    CHECK(SVInt(128 * 8, make_span((byte*)mem2, 128), false)(263, 256).as<char>() == '@');
+    CHECK(SVInt(128 * 8, make_span((byte*)mem2, 128), false).slice(263, 256).as<char>() == '@');
 }
 
 TEST_CASE("logic_t operators", "[numeric]") {
@@ -304,12 +304,6 @@ TEST_CASE("Arithmetic", "[numeric]") {
     CHECK(v8 == 2);
 
     CHECK_THAT(-SVInt(logic_t::z), exactlyEquals(SVInt(logic_t::x)));
-
-    // Test huge values
-    SVInt v7 = ("16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si.shl(16777000) +
-               "16777215'd1234"_si.shl(16777206))(16777214, 16777000);
-    CHECK(v7.toString(LiteralBase::Decimal) == "215'd47111210086086240918128115148156713906029950526455712219410726911");
-    CHECK(v7.toString(LiteralBase::Hex) == "215'h728560c56c16d0b0be23da38038624767fffffffffffffffffffff");
 }
 
 void testDiv(SVInt a, SVInt b, SVInt c) {
@@ -488,6 +482,39 @@ TEST_CASE("Bitwise", "[numeric]") {
     CHECK_THAT("1'bx"_si.reductionAnd(), exactlyEquals(logic_t::x));
     CHECK_THAT("1'bx"_si.reductionOr(), exactlyEquals(logic_t::x));
     CHECK_THAT("1'bx"_si.reductionXor(), exactlyEquals(logic_t::x));
+}
+
+TEST_CASE("Slicing", "[numeric]") {
+    SVInt v1 = "7'b1010101"_si;
+    v1.set(3, 2, "2'b10"_si);
+    CHECK(v1 == "7'b1011001"_si);
+
+    v1.set(9, -2, "12'b11011111011"_si);
+    CHECK(v1 == "7'b111110"_si);
+
+    v1.set(9, -2, "12'bx101111101z"_si);
+    CHECK(v1 == "7'b111110"_si);
+
+    v1.set(2, 2, "1'bx"_si);
+    CHECK_THAT(v1, exactlyEquals("7'b111x10"_si));
+
+    SVInt v2 = "128'b1"_si;
+    v2.set(12, 0, "13'b0x"_si);
+    CHECK_THAT(v2, exactlyEquals("128'b0x"_si));
+
+    v2.set(0, 0, "1'b0"_si);
+    CHECK_THAT(v2, exactlyEquals("128'b0"_si));
+
+    // Test huge values
+    SVInt v3 = ("16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si.shl(16777000) +
+                "16777215'd1234"_si.shl(16777206)).slice(16777214, 16777000);
+    CHECK(v3.toString(LiteralBase::Decimal) == "215'd47111210086086240918128115148156713906029950526455712219410726911");
+    CHECK(v3.toString(LiteralBase::Hex) == "215'h728560c56c16d0b0be23da38038624767fffffffffffffffffffff");
+
+    SVInt v4 = "16777215'd999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"_si.shl(16777000) +
+               "16777215'd1234"_si.shl(16777206);
+    v4.set(16777001, 16777000, "2'b01"_si);
+    CHECK(v4.slice(16777214, 16777000).toString(LiteralBase::Hex) == "215'h728560c56c16d0b0be23da38038624767ffffffffffffffffffffd");
 }
 
 TEST_CASE("SVInt misc functions", "[numeric]") {

@@ -382,8 +382,8 @@ static void bitcpy(uint64_t* dest, uint32_t destOffset, const uint64_t* src, uin
             srcWord = *src;
         }
 
-        *dest = (*dest    & ((1ull << destOffset) - 1)) |                  // preserved bits
-                ((srcWord & ((1ull << bitsToWrite) - 1)) << destOffset);   // new bits
+        uint64_t mask = (1ull << bitsToWrite) - 1;
+        *dest = (*dest & ~(mask << destOffset)) | ((srcWord & mask) << destOffset);
 
         dest++;
         srcOffset += bitsToWrite;
@@ -439,6 +439,32 @@ static void setBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
     // Handle leftover bits in the final word.
     if (length %= BitsPerWord)
         *dest |= (1ull << length) - 1;
+}
+
+static void clearBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
+    if (length == 0)
+        return;
+
+    // Get the first word we want to write to, and the remaining bits are an offset.
+    const uint32_t BitsPerWord = SVInt::BITS_PER_WORD;
+    dest += destOffset / BitsPerWord; destOffset %= BitsPerWord;
+
+    // Writing to the first word is a special case, due to the bit offset
+    if (destOffset) {
+        uint32_t bitsToWrite = std::min(length, BitsPerWord - destOffset);
+        length -= bitsToWrite;
+
+        *dest &= ~(((1ull << bitsToWrite) - 1) << destOffset);
+        dest++;
+    }
+
+    // Do a bulk set of whole words, with all writes to dest word-aligned.
+    for (uint32_t i = 0; i < length / BitsPerWord; i++)
+        *dest++ = 0;
+
+    // Handle leftover bits in the final word.
+    if (length %= BitsPerWord)
+        *dest &= ~((1ull << length) - 1);
 }
 
 }
