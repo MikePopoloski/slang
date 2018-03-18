@@ -61,11 +61,6 @@ string_view Trivia::getRawText() const {
     }
 }
 
-Token::Info::Info() :
-    flags(0)
-{
-}
-
 Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, bitmask<TokenFlags> flags) :
     trivia(trivia), rawText(rawText), location(location), flags(flags)
 {

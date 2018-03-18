@@ -73,7 +73,7 @@ Compilation::Compilation() :
     registerScalar(signedLogicType);
     registerScalar(signedRegType);
 
-    root.reset(new RootSymbol(*this));
+    root = std::make_unique<RootSymbol>(*this);
 
     // Register known system functions with the root symbol.
     root->addMember(createSystemFunction("$clog2", SystemFunction::clog2, { &getIntType() }));

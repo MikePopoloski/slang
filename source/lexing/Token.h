@@ -141,7 +141,7 @@ public:
         /// Various token flags.
         bitmask<TokenFlags> flags;
 
-        Info();
+        Info() = default;
         Info(span<Trivia const> trivia, string_view rawText, SourceLocation location,
              bitmask<TokenFlags> flags = TokenFlags::None);
 
