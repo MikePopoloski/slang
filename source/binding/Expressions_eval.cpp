@@ -315,7 +315,7 @@ optional<ConstantRange> ElementSelectExpression::getRange(const ConstantValue& s
     int32_t width = 1;
     if (t.kind == SymbolKind::PackedArrayType) {
         // TODO: handle overflow?
-        width = t.as<PackedArrayType>().elementType.getBitWidth();
+        width = (int32_t)t.as<PackedArrayType>().elementType.getBitWidth();
         actualIndex *= width;
     }
 
