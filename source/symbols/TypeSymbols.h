@@ -143,6 +143,10 @@ public:
     /// this returns all zeros.
     bitmask<IntegralFlags> getIntegralFlags() const;
 
+    /// Gets the default value for the type. An uninitialized variable of this
+    /// type will have the given default value.
+    ConstantValue getDefaultValue() const;
+
     std::string toString() const;
 
     static const Type& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
@@ -187,6 +191,8 @@ public:
 
     static const Type& fromSyntax(Compilation& compilation, const IntegerTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope);
+
+    ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind);
 
@@ -240,6 +246,8 @@ public:
     } floatKind;
 
     explicit FloatingType(Kind floatKind);
+
+    ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FloatingType; }
 };
@@ -322,6 +330,8 @@ public:
 
     static const Type& fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                   LookupLocation location, const Scope& scope);
+
+    ConstantValue getDefaultValueImpl() const;
 };
 
 /// Represents the Void (or lack of a) type. This can be used as the return type of functions
@@ -329,6 +339,8 @@ public:
 class VoidType : public Type {
 public:
     VoidType() : Type(SymbolKind::VoidType, "void", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const { return nullptr; }
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VoidType; }
 };
@@ -339,6 +351,8 @@ class NullType : public Type {
 public:
     NullType() : Type(SymbolKind::NullType, "null", SourceLocation()) {}
 
+    ConstantValue getDefaultValueImpl() const;
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NullType; }
 };
 
@@ -346,6 +360,8 @@ public:
 class CHandleType : public Type {
 public:
     CHandleType() : Type(SymbolKind::CHandleType, "chandle", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CHandleType; }
 };
@@ -355,6 +371,8 @@ class StringType : public Type {
 public:
     StringType() : Type(SymbolKind::StringType, "string", SourceLocation()) {}
 
+    ConstantValue getDefaultValueImpl() const;
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StringType; }
 };
 
@@ -363,6 +381,8 @@ public:
 class EventType : public Type {
 public:
     EventType() : Type(SymbolKind::EventType, "event", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EventType; }
 };
@@ -421,6 +441,8 @@ public:
     /// of this alias. Any inconsistencies will issue diagnostics.
     void checkForwardDecls() const;
 
+    ConstantValue getDefaultValueImpl() const;
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeAlias; }
 
 private:
@@ -432,6 +454,8 @@ private:
 class ErrorType : public Type {
 public:
     ErrorType() : Type(SymbolKind::ErrorType, "", SourceLocation()) {}
+
+    ConstantValue getDefaultValueImpl() const { return nullptr; }
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ErrorType; }
 

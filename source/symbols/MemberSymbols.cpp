@@ -262,6 +262,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     auto implicitReturnVar = compilation.emplace<VariableSymbol>(result->name, result->location);
     implicitReturnVar->type = *proto.returnType;
     result->addMember(*implicitReturnVar);
+    result->returnValVar = implicitReturnVar;
 
     // TODO: mising return type
     result->arguments = arguments.copy(compilation);

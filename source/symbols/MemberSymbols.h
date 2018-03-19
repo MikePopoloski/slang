@@ -189,6 +189,7 @@ public:
     using ArgList = span<const FormalArgumentSymbol* const>;
 
     LazyType returnType;
+    const VariableSymbol* returnValVar = nullptr;
     ArgList arguments;
     VariableLifetime defaultLifetime = VariableLifetime::Automatic;
     SystemFunction systemFunctionKind = SystemFunction::Unknown;

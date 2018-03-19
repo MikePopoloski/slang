@@ -227,7 +227,7 @@ TEST_CASE("Assignments") {
     EVAL("foo[3-:3] = 4'b1010", 10);
     EVAL("foo", 10);
 
-    session.eval("logic [3:1][7:2] bar;");
+    session.eval("logic [3:1][7:2] bar = '0;");
     EVAL("bar[2] = 3'b101", 5);
     EVAL("bar[2][3]", 1);
     EVAL("bar[7:6] = 6'b110011", 51);

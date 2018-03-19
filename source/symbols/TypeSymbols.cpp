@@ -53,6 +53,20 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
     }
 }
 
+struct GetDefaultVisitor {
+    HAS_METHOD_TRAIT(getDefaultValueImpl);
+
+    template<typename T>
+    ConstantValue visit([[maybe_unused]] const T& type) {
+        if constexpr (has_getDefaultValueImpl_v<T, ConstantValue>) {
+            return type.getDefaultValueImpl();
+        }
+        else {
+            THROW_UNREACHABLE;
+        }
+    }
+};
+
 }
 
 namespace slang {
@@ -207,6 +221,11 @@ bitmask<IntegralFlags> Type::getIntegralFlags() const {
         flags |= IntegralFlags::Reg;
 
     return flags;
+}
+
+ConstantValue Type::getDefaultValue() const {
+    GetDefaultVisitor visitor;
+    return visit(visitor);
 }
 
 std::string Type::toString() const {
@@ -459,6 +478,16 @@ const Type& IntegralType::fromSyntax(Compilation& compilation, const IntegerType
     return *result;
 }
 
+ConstantValue IntegralType::getDefaultValueImpl() const {
+    if (isEnum())
+        return as<EnumType>().baseType.getDefaultValue();
+
+    if (isFourState)
+        return SVInt::createFillX(bitWidth, isSigned);
+    else
+        return SVInt(bitWidth, 0, isSigned);
+}
+
 PredefinedIntegerType::PredefinedIntegerType(Kind integerKind) :
     PredefinedIntegerType(integerKind, getSigned(integerKind))
 {
@@ -490,6 +519,10 @@ FloatingType::FloatingType(Kind floatKind_) :
     Type(SymbolKind::FloatingType, "", SourceLocation()),
     floatKind(floatKind_)
 {
+}
+
+ConstantValue FloatingType::getDefaultValueImpl() const {
+    return 0.0;
 }
 
 EnumType::EnumType(Compilation& compilation, SourceLocation loc, const IntegralType& baseType_,
@@ -642,6 +675,11 @@ UnpackedStructType::UnpackedStructType(Compilation& compilation) :
 {
 }
 
+ConstantValue UnpackedStructType::getDefaultValueImpl() const {
+    // TODO: implement this
+    THROW_UNREACHABLE;
+}
+
 const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const StructUnionTypeSyntax& syntax,
                                            LookupLocation location, const Scope& scope) {
     ASSERT(!syntax.packed);
@@ -664,6 +702,24 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
     }
 
     return *result;
+}
+
+ConstantValue NullType::getDefaultValueImpl() const {
+    return ConstantValue::NullPlaceholder{};
+}
+
+ConstantValue CHandleType::getDefaultValueImpl() const {
+    return ConstantValue::NullPlaceholder{};
+}
+
+ConstantValue StringType::getDefaultValueImpl() const {
+    // TODO: implement this
+    THROW_UNREACHABLE;
+}
+
+ConstantValue EventType::getDefaultValueImpl() const {
+    // TODO: implement this
+    THROW_UNREACHABLE;
 }
 
 const ForwardingTypedefSymbol&
@@ -747,6 +803,10 @@ void TypeAliasType::checkForwardDecls() const {
         }
         forward = forward->getNextForwardDecl();
     }
+}
+
+ConstantValue TypeAliasType::getDefaultValueImpl() const {
+    return targetType->getDefaultValue();
 }
 
 }

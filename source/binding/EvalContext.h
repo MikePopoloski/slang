@@ -15,6 +15,8 @@
 
 namespace slang {
 
+class SubroutineSymbol;
+
 /// A container for all context required to evaluate an expression.
 /// Mostly this involves tracking the callstack and maintaining
 /// storage for local variables.
@@ -23,31 +25,31 @@ public:
     EvalContext();
 
     /// Creates storage for a local variable in the current frame.
-    ConstantValue* createLocal(const Symbol* symbol, ConstantValue value);
+    ConstantValue* createLocal(const ValueSymbol* symbol, ConstantValue value = nullptr);
 
     /// Gets the current value for the given local variable symbol.
     /// Returns nullptr if the symbol cannot be found.
-    ConstantValue* findLocal(const Symbol* symbol);
+    ConstantValue* findLocal(const ValueSymbol* symbol);
 
     /// Push a new frame onto the call stack.
-    void pushFrame();
+    void pushFrame(const SubroutineSymbol& subroutine);
 
     /// Pop the active frame from the call stack and returns its value, if any.
     ConstantValue popFrame();
 
     // TODO: get rid of this
     bool hasReturned() { return stack.top().hasReturned; }
-    void setReturned(ConstantValue value) { stack.top().hasReturned = true; stack.top().returnValue = std::move(value); }
+    void setReturned(ConstantValue value);
 
 private:
     // Represents a single frame in the call stack.
     struct Frame {
         // A set of temporary values materialized within the stack frame.
         // Use a map so that the values don't move around in memory.
-        std::map<const Symbol*, ConstantValue> temporaries;
+        std::map<const ValueSymbol*, ConstantValue> temporaries;
 
         // Set to non-null when a return has been issued in this frame.
-        ConstantValue returnValue;
+        const SubroutineSymbol* subroutine = nullptr;
         bool hasReturned = false;
     };
 

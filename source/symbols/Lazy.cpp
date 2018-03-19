@@ -16,8 +16,10 @@ LazyInitializer::LazyInitializer(ScopeOrSymbol parent) :
     Lazy(parent, nullptr) {}
 
 const Expression& LazyInitializer::evaluate(const Scope& scope, const ExpressionSyntax& syntax) const {
-    // TODO: bind assignment-like here
-    return Expression::bind(scope.getCompilation(), syntax, BindContext(scope, LookupLocation::before(getSymbol())));
+    const ValueSymbol& value = getSymbol().as<ValueSymbol>();
+    return Expression::bind(scope.getCompilation(), value.getType(), syntax,
+                            SourceLocation(), // TODO: set real source location
+                            BindContext(scope, LookupLocation::before(value)));
 }
 
 LazyType::LazyType(ScopeOrSymbol parent) :
