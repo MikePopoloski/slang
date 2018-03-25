@@ -115,30 +115,34 @@ bool Expression::isLValue() const {
 }
 
 Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context) {
+    Expression* result;
     switch (syntax.kind) {
         case SyntaxKind::NullLiteralExpression:
-            return NullLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            result = &NullLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            break;
         case SyntaxKind::StringLiteralExpression:
-            return StringLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
-        case SyntaxKind::TimeLiteralExpression:
-        case SyntaxKind::WildcardLiteralExpression:
-        case SyntaxKind::OneStepLiteralExpression:
-            // TODO: unimplemented
+            result = &StringLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
             break;
         case SyntaxKind::IdentifierName:
         case SyntaxKind::IdentifierSelectName:
         case SyntaxKind::ScopedName:
-            return bindName(compilation, syntax.as<NameSyntax>(), context);
+            result = &bindName(compilation, syntax.as<NameSyntax>(), context);
+            break;
         case SyntaxKind::RealLiteralExpression:
-            return RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            result = &RealLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            break;
         case SyntaxKind::IntegerLiteralExpression:
-            return IntegerLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            result = &IntegerLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            break;
         case SyntaxKind::UnbasedUnsizedLiteralExpression:
-            return UnbasedUnsizedIntegerLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            result = &UnbasedUnsizedIntegerLiteral::fromSyntax(compilation, syntax.as<LiteralExpressionSyntax>());
+            break;
         case SyntaxKind::IntegerVectorExpression:
-            return IntegerLiteral::fromSyntax(compilation, syntax.as<IntegerVectorExpressionSyntax>());
+            result = &IntegerLiteral::fromSyntax(compilation, syntax.as<IntegerVectorExpressionSyntax>());
+            break;
         case SyntaxKind::ParenthesizedExpression:
-            return create(compilation, syntax.as<ParenthesizedExpressionSyntax>().expression, context);
+            result = &create(compilation, syntax.as<ParenthesizedExpressionSyntax>().expression, context);
+            break;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
         case SyntaxKind::UnaryBitwiseNotExpression:
@@ -151,10 +155,12 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::UnaryLogicalNotExpression:
         case SyntaxKind::UnaryPreincrementExpression:
         case SyntaxKind::UnaryPredecrementExpression:
-            return UnaryExpression::fromSyntax(compilation, syntax.as<PrefixUnaryExpressionSyntax>(), context);
+            result = &UnaryExpression::fromSyntax(compilation, syntax.as<PrefixUnaryExpressionSyntax>(), context);
+            break;
         case SyntaxKind::PostincrementExpression:
         case SyntaxKind::PostdecrementExpression:
-            return UnaryExpression::fromSyntax(compilation, syntax.as<PostfixUnaryExpressionSyntax>(), context);
+            result = &UnaryExpression::fromSyntax(compilation, syntax.as<PostfixUnaryExpressionSyntax>(), context);
+            break;
         case SyntaxKind::AddExpression:
         case SyntaxKind::SubtractExpression:
         case SyntaxKind::MultiplyExpression:
@@ -183,7 +189,8 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::ArithmeticShiftLeftExpression:
         case SyntaxKind::ArithmeticShiftRightExpression:
         case SyntaxKind::PowerExpression:
-            return BinaryExpression::fromSyntax(compilation, syntax.as<BinaryExpressionSyntax>(), context);
+            result = &BinaryExpression::fromSyntax(compilation, syntax.as<BinaryExpressionSyntax>(), context);
+            break;
         case SyntaxKind::AssignmentExpression:
         case SyntaxKind::AddAssignmentExpression:
         case SyntaxKind::SubtractAssignmentExpression:
@@ -197,23 +204,31 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
         case SyntaxKind::LogicalRightShiftAssignmentExpression:
         case SyntaxKind::ArithmeticLeftShiftAssignmentExpression:
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
-            return AssignmentExpression::fromSyntax(compilation, syntax.as<BinaryExpressionSyntax>(), context);
+            result = &AssignmentExpression::fromSyntax(compilation, syntax.as<BinaryExpressionSyntax>(), context);
+            break;
         case SyntaxKind::InvocationExpression:
-            return CallExpression::fromSyntax(compilation, syntax.as<InvocationExpressionSyntax>(), context);
+            result = &CallExpression::fromSyntax(compilation, syntax.as<InvocationExpressionSyntax>(), context);
+            break;
         case SyntaxKind::ConditionalExpression:
-            return ConditionalExpression::fromSyntax(compilation, syntax.as<ConditionalExpressionSyntax>(), context);
+            result = &ConditionalExpression::fromSyntax(compilation, syntax.as<ConditionalExpressionSyntax>(), context);
+            break;
         case SyntaxKind::ConcatenationExpression:
-            return ConcatenationExpression::fromSyntax(compilation, syntax.as<ConcatenationExpressionSyntax>(),
+            result = &ConcatenationExpression::fromSyntax(compilation, syntax.as<ConcatenationExpressionSyntax>(),
                                                        context);
+            break;
         case SyntaxKind::MultipleConcatenationExpression:
-            return ReplicationExpression::fromSyntax(compilation, syntax.as<MultipleConcatenationExpressionSyntax>(),
+            result = &ReplicationExpression::fromSyntax(compilation, syntax.as<MultipleConcatenationExpressionSyntax>(),
                                                      context);
+            break;
         case SyntaxKind::ElementSelectExpression:
-            return bindSelectExpression(compilation, syntax.as<ElementSelectExpressionSyntax>(), context);
+            result = &bindSelectExpression(compilation, syntax.as<ElementSelectExpressionSyntax>(), context);
+            break;
         default:
             THROW_UNREACHABLE;
     }
-    return badExpr(compilation, nullptr);
+
+    result->syntax = &syntax;
+    return *result;
 }
 
 Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context) {

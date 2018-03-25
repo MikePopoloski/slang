@@ -112,6 +112,10 @@ public:
     /// The value of the expression, if it's constant. Otherwise nullptr.
     const ConstantValue* constant = nullptr;
 
+    /// The syntax used to create the expression, if any. An expression tree can
+    /// be created manually in which case it may not have a syntax representation.
+    const ExpressionSyntax* syntax = nullptr;
+
     /// The source range of this expression, if it originated from source code.
     SourceRange sourceRange;
 
