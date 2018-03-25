@@ -313,7 +313,7 @@ optional<ConstantRange> ElementSelectExpression::getRange(const ConstantValue& s
 
     // We're actually selecting elements, which aren't necessarily bits.
     // TODO: handle overflow?
-    int32_t width = type->getBitWidth();
+    int32_t width = (int32_t)type->getBitWidth();
     actualIndex *= width;
 
     return ConstantRange { actualIndex + width - 1, actualIndex };
@@ -518,7 +518,7 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
 
         case ConversionKind::IntTruncation:
             // TODO: add a truncate() method
-            return value.integer().slice(type->getBitWidth() - 1, 0);
+            return value.integer().slice((int32_t)type->getBitWidth() - 1, 0);
 
         case ConversionKind::FloatExtension:
             return value;
