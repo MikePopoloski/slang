@@ -38,8 +38,11 @@ public:
     ConstantValue popFrame();
 
     // TODO: get rid of this
-    bool hasReturned() { return stack.top().hasReturned; }
+    bool hasReturned() { return stack.back().hasReturned; }
     void setReturned(ConstantValue value);
+
+    /// Dumps the contents of the call stack to a string for debugging.
+    std::string dumpStack() const;
 
 private:
     // Represents a single frame in the call stack.
@@ -53,7 +56,7 @@ private:
         bool hasReturned = false;
     };
 
-    std::stack<Frame> stack;
+    std::deque<Frame> stack;
 };
 
 }

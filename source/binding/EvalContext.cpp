@@ -6,17 +6,19 @@
 //------------------------------------------------------------------------------
 #include "EvalContext.h"
 
+#include "fmt/format.h"
+
 #include "symbols/MemberSymbols.h"
 #include "symbols/TypeSymbols.h"
 
 namespace slang {
 
 EvalContext::EvalContext() {
-    stack.emplace(Frame{});
+    stack.emplace_back(Frame{});
 }
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
-    ConstantValue& result = stack.top().temporaries[symbol];
+    ConstantValue& result = stack.back().temporaries[symbol];
     ASSERT(!result);
 
     if (!value)
@@ -31,8 +33,8 @@ ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue
 }
 
 ConstantValue* EvalContext::findLocal(const ValueSymbol* symbol) {
-    auto it = stack.top().temporaries.find(symbol);
-    if (it == stack.top().temporaries.end())
+    auto it = stack.back().temporaries.find(symbol);
+    if (it == stack.back().temporaries.end())
         return nullptr;
     return &it->second;
 }
@@ -40,24 +42,24 @@ ConstantValue* EvalContext::findLocal(const ValueSymbol* symbol) {
 void EvalContext::pushFrame(const SubroutineSymbol& subroutine) {
     Frame frame;
     frame.subroutine = &subroutine;
-    stack.emplace(std::move(frame));
+    stack.emplace_back(std::move(frame));
 }
 
 ConstantValue EvalContext::popFrame() {
     ConstantValue result;
-    Frame& frame = stack.top();
+    Frame& frame = stack.back();
     if (frame.subroutine) {
         ConstantValue* storage = findLocal(frame.subroutine->returnValVar);
         ASSERT(storage);
         result = std::move(*storage);
     }
 
-    stack.pop();
+    stack.pop_back();
     return result;
 }
 
 void EvalContext::setReturned(ConstantValue value) {
-    Frame& frame = stack.top();
+    Frame& frame = stack.back();
     frame.hasReturned = true;
 
     const SubroutineSymbol* subroutine = frame.subroutine;
@@ -67,6 +69,17 @@ void EvalContext::setReturned(ConstantValue value) {
     ASSERT(storage);
 
     *storage = std::move(value);
+}
+
+std::string EvalContext::dumpStack() const {
+    fmt::MemoryWriter writer;
+    int index = 0;
+    for (const Frame& frame : stack) {
+        writer.write("{}: {}\n", index++, frame.subroutine ? frame.subroutine->name : "<global>");
+        for (auto& [symbol, value] : frame.temporaries)
+            writer.write("    {} = {}\n", symbol->name, value.toString());
+    }
+    return writer.str();
 }
 
 }
