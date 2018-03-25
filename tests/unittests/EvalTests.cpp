@@ -196,8 +196,8 @@ TEST_CASE("Integer operators") {
     EVAL("5'd25[3:0]", 9);
     EVAL("5'd25[3:1]", 4);
     EVAL("65'h1ffffffffffffffff[64:62]", "3'b111"_si);
-    EVAL("5'd25[0 +: 3]", 9);
-    EVAL("5'd25[3 -: 3]", 9);
+    EVAL("5'd25[0 +: 4]", 9);
+    EVAL("5'd25[3 -: 4]", 9);
 
     // Weird / out of range part selects
     EVAL("4'b1001[(1 / 0)]", "1'bx"_si);
@@ -222,9 +222,9 @@ TEST_CASE("Assignments") {
     EVAL("foo", 6);
     EVAL("foo.a[2:0] = '0", 0);
     EVAL("foo", 0);
-    EVAL("foo[0+:1] = 2'b11", 3);
+    EVAL("foo[0+:2] = 2'b11", 3);
     EVAL("foo", 3);
-    EVAL("foo[3-:3] = 4'b1010", 10);
+    EVAL("foo[3-:4] = 4'b1010", 10);
     EVAL("foo", 10);
 
     session.eval("logic [3:1][7:2] bar = '0;");
@@ -243,10 +243,10 @@ TEST_CASE("bit select weird indices", "[eval]") {
     auto value = session.eval("up_vect[12:14]").integer();
     CHECK(value == "3'b011"_si);
 
-    value = session.eval("up_vect[12 -: 2]").integer();
+    value = session.eval("up_vect[12 -: 3]").integer();
     CHECK(value == "3'b011"_si);
 
-    value = session.eval("up_vect[14 +: 2]").integer();
+    value = session.eval("up_vect[14 +: 3]").integer();
     CHECK(value == "3'b011"_si);
 
     session.eval("logic [20 : 5] down_vect = 5'd25");
@@ -254,10 +254,10 @@ TEST_CASE("bit select weird indices", "[eval]") {
     value = session.eval("down_vect[8:5]").integer();
     CHECK(value == "4'd9"_si);
 
-    value = session.eval("down_vect[5 +: 3]").integer();
+    value = session.eval("down_vect[5 +: 4]").integer();
     CHECK(value == 9);
 
-    value = session.eval("down_vect[8 -: 3]").integer();
+    value = session.eval("down_vect[8 -: 4]").integer();
     CHECK(value == 9);
 }
 

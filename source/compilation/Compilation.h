@@ -142,9 +142,8 @@ private:
     bool finalized = false;
     bool forcedDiagnostics = false;
 
-    // A set of names that are instantiated anywhere in the design. This is used to
-    // determine which modules should be top-level instances (because nobody ever
-    // instantiates them).
+    // A set of names that are instantiated anywhere in the design. This is used to determine
+    // which modules should be top-level instances (because nobody ever instantiates them).
     NameSet instantiatedNames;
 
     // A list of compilation units that have been added to the compilation.

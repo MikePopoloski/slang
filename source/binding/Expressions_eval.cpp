@@ -312,12 +312,9 @@ optional<ConstantRange> ElementSelectExpression::getRange(const ConstantValue& s
     int32_t actualIndex = declRange.translateIndex(*index);
 
     // We're actually selecting elements, which aren't necessarily bits.
-    int32_t width = 1;
-    if (t.kind == SymbolKind::PackedArrayType) {
-        // TODO: handle overflow?
-        width = (int32_t)t.as<PackedArrayType>().elementType.getBitWidth();
-        actualIndex *= width;
-    }
+    // TODO: handle overflow?
+    int32_t width = type->getBitWidth();
+    actualIndex *= width;
 
     return ConstantRange { actualIndex + width - 1, actualIndex };
 }
@@ -379,12 +376,12 @@ optional<ConstantRange> RangeSelectExpression::getRange(const ConstantValue& cl,
             break;
         }
         case RangeSelectionKind::IndexedUp: {
-            int32_t count = *r * width;
+            int32_t count = (*r - 1) * width;
             result = { msb + count, msb };
             break;
         }
         case RangeSelectionKind::IndexedDown: {
-            int32_t count = *r * width;
+            int32_t count = (*r - 1) * width;
             result = { msb, msb - count };
             break;
         }
@@ -518,6 +515,10 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
         case ConversionKind::IntExtension:
             ASSERT(value.isInteger() && value.integer().getBitWidth() == operand().type->getBitWidth());
             return extend(value.integer(), (uint16_t)type->getBitWidth(), type->as<IntegralType>().isSigned);
+
+        case ConversionKind::IntTruncation:
+            // TODO: add a truncate() method
+            return value.integer().slice(type->getBitWidth() - 1, 0);
 
         case ConversionKind::FloatExtension:
             return value;

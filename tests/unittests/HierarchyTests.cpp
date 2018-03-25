@@ -263,7 +263,7 @@ endmodule
     const auto& returnStmt = foo.getBody()->as<StatementList>().list[0]->as<ReturnStatement>();
     REQUIRE(returnStmt.kind == StatementKind::Return);
     CHECK(!returnStmt.expr->bad());
-    CHECK(returnStmt.expr->type->getBitWidth() == 32);
+    CHECK(returnStmt.expr->type->getBitWidth() == 16);
 
     NO_COMPILATION_ERRORS;
 }

@@ -14,6 +14,9 @@ namespace {
 using namespace slang;
 
 const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt, bool forceFourState) {
+    if (!lt->isNumeric() || !rt->isNumeric())
+        return &compilation.getErrorType();
+
     // Figure out what the result type of an arithmetic binary operator should be. The rules are:
     // - If either operand is real, the result is real
     // - Otherwise, if either operand is shortreal, the result is shortreal
@@ -92,30 +95,7 @@ const Expression& Expression::bind(Compilation& compilation, const Type& lhs, co
     if (expr.bad() || lhs.isError())
         return expr;
 
-    const Type* type = expr.type;
-    if (!lhs.isAssignmentCompatible(*type)) {
-        DiagCode code = lhs.isCastCompatible(*type) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        compilation.addError(code, location) << rhs.sourceRange();
-        return *compilation.emplace<InvalidExpression>(&expr, compilation.getErrorType());
-    }
-
-    if (lhs.getBitWidth() > type->getBitWidth()) {
-        if (!lhs.isFloating() && !type->isFloating())
-            type = &compilation.getType(lhs.getBitWidth(), type->getIntegralFlags());
-        else {
-            if (lhs.getBitWidth() > 32)
-                type = &compilation.getRealType();
-            else
-                type = &compilation.getShortRealType();
-        }
-    }
-    else {
-        // TODO: truncation
-    }
-
-    Expression* e = &expr;
-    Expression::contextDetermined(compilation, e, *type);
-    return *e;
+    return convertAssignment(compilation, lhs, expr, location, std::nullopt);
 }
 
 bool Expression::bad() const {
@@ -327,6 +307,35 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
 Expression& Expression::convert(Compilation& compilation, ConversionKind conversionKind, const Type& type,
                                 Expression& expr) {
     return *compilation.emplace<ConversionExpression>(conversionKind, type, expr, expr.sourceRange);
+}
+
+Expression& Expression::convertAssignment(Compilation& compilation, const Type& type, Expression& expr,
+                                          SourceLocation location, optional<SourceRange> lhsRange) {
+    const Type* rt = expr.type;
+    if (!type.isAssignmentCompatible(*rt)) {
+        DiagCode code = type.isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
+        auto& diag = compilation.addError(code, location);
+        diag << *rt << type;
+        if (lhsRange)
+            diag << *lhsRange;
+
+        diag << expr.sourceRange;
+        return badExpr(compilation, &expr);
+    }
+
+    // TODO: handle non-integral
+
+    Expression* result = &expr;
+    rt = binaryOperatorType(compilation, &type, rt, false);
+    contextDetermined(compilation, result, *rt);
+
+    // Once we've converted up, we may still need to truncate back down to the actual size of
+    // the lvalue we're assigning to.
+    if (rt->getBitWidth() > type.getBitWidth()) {
+        return convert(compilation, ConversionKind::IntTruncation, type, *result);
+    }
+
+    return *result;
 }
 
 Expression& Expression::badExpr(Compilation& compilation, const Expression* expr) {
@@ -681,34 +690,9 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation, const Bin
     if (!checkLValue(compilation, lhs, location))
         return badExpr(compilation, result);
 
-    const Type* lt = lhs.type;
-    const Type* rt = rhs.type;
-    if (!lt->isAssignmentCompatible(*rt)) {
-        DiagCode code = lt->isCastCompatible(*rt) ? DiagCode::NoImplicitConversion : DiagCode::BadAssignment;
-        auto& diag = compilation.addError(code, location);
-        diag << *rt << *lt;
-        diag << lhs.sourceRange;
-        diag << rhs.sourceRange;
+    result->right_ = &convertAssignment(compilation, *lhs.type, *result->right_, location, lhs.sourceRange);
+    if (result->right_->bad())
         return badExpr(compilation, result);
-    }
-
-    // An assignment expression always returns the type of the lhs. The rhs may need to be converted.
-
-    // TODO: unify this with Compilation::bindAssignment
-    if (lt->getBitWidth() > rt->getBitWidth()) {
-        if (!lt->isFloating() && !rt->isFloating())
-            rt = &compilation.getType(lt->getBitWidth(), rt->getIntegralFlags());
-        else {
-            if (lt->getBitWidth() > 32)
-                rt = &compilation.getRealType();
-            else
-                rt = &compilation.getShortRealType();
-        }
-        // TODO: return value?
-        contextDetermined(compilation, result->right_, *rt);
-    }
-    else
-        selfDetermined(compilation, result->right_);
 
     return *result;
 }
@@ -716,10 +700,10 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation, const Bin
 Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                                 const ExpressionSyntax& syntax, SourceRange fullRange,
                                                 const BindContext& context) {
-    Expression& selector = create(compilation, syntax, context);
+    Expression& selector = selfDetermined(compilation, syntax, context);
     auto result = compilation.emplace<ElementSelectExpression>(compilation.getErrorType(), value,
                                                                selector, fullRange);
-    if (value.bad())
+    if (value.bad() || selector.bad())
         return badExpr(compilation, result);
 
     const Type& valueType = value.type->getCanonicalType();
@@ -741,7 +725,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
         result->type = valueType.isFourState() ? &compilation.getLogicType() : &compilation.getBitType();
     }
 
-    if (!selector.type->getCanonicalType().isIntegral()) {
+    if (!selector.type->isIntegral()) {
         compilation.addError(DiagCode::IndexMustBeIntegral, selector.sourceRange);
         return badExpr(compilation, result);
     }
@@ -752,8 +736,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                               const RangeSelectSyntax& syntax, SourceRange fullRange,
                                               const BindContext& context) {
-    Expression& left = create(compilation, syntax.left, context);
-    Expression& right = create(compilation, syntax.right, context);
+    Expression& left = selfDetermined(compilation, syntax.left, context);
+    Expression& right = selfDetermined(compilation, syntax.right, context);
 
     RangeSelectionKind selectionKind;
     switch (syntax.kind) {
@@ -765,19 +749,28 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
 
     auto result = compilation.emplace<RangeSelectExpression>(selectionKind, compilation.getErrorType(), value,
                                                              left, right, fullRange);
-    if (value.bad())
+    if (value.bad() || left.bad() || right.bad())
         return badExpr(compilation, result);
 
     // TODO: clean this up
-    bool down = value.type->getCanonicalType().as<IntegralType>().getBitVectorRange().isLittleEndian();
-    int width;
-    if (selectionKind == RangeSelectionKind::Simple)
-        width = (down ? 1 : -1) * ((int)(left.eval().integer().as<int64_t>().value() -
-                                        right.eval().integer().as<int64_t>().value()) + 1);
-    else
-        width = int(right.eval().integer().as<int64_t>().value());
 
-    result->type = &compilation.getType((uint16_t)width, IntegralFlags::Unsigned);
+    const Type& ct = value.type->getCanonicalType();
+    const Type* elementType;
+    if (ct.kind == SymbolKind::PackedArrayType)
+        elementType = &ct.as<PackedArrayType>().elementType;
+    else if (ct.isFourState())
+        elementType = &compilation.getLogicType();
+    else
+        elementType = &compilation.getBitType();
+
+    if (selectionKind == RangeSelectionKind::Simple) {
+        ConstantRange range { *left.eval().integer().as<int32_t>(), *right.eval().integer().as<int32_t>() };
+        result->type = compilation.emplace<PackedArrayType>(*elementType, ConstantRange { (int32_t)range.width() - 1, 0 });
+    }
+    else {
+        int32_t width = *right.eval().integer().as<int32_t>();
+        result->type = compilation.emplace<PackedArrayType>(*elementType, ConstantRange { width - 1, 0 });
+    }
     return *result;
 }
 
@@ -903,9 +896,15 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     // TODO: handle named arguments in addition to ordered
     SmallVectorSized<const Expression*, 8> buffer;
     for (uint32_t i = 0; i < actualArgs.count(); i++) {
+        // TODO: split out system functions and handle arguments without this case
         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-        buffer.append(&Expression::bind(compilation, *formalArgs[i]->type, arg.expr,
-                                        arg.getFirstToken().location(), context));
+        if (subroutine.isSystemFunction()) {
+            buffer.append(&Expression::bind(compilation, arg.expr, context));
+        }
+        else {
+            buffer.append(&Expression::bind(compilation, *formalArgs[i]->type, arg.expr,
+                                            arg.getFirstToken().location(), context));
+        }
     }
 
     return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation), syntax.sourceRange());

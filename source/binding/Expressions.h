@@ -93,7 +93,8 @@ enum class RangeSelectionKind {
 enum class ConversionKind {
     IntToFloat,
     IntExtension,
-    FloatExtension
+    IntTruncation,
+    FloatExtension,
 };
 
 UnaryOperator getUnaryOperator(SyntaxKind kind);
@@ -168,6 +169,9 @@ protected:
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
     static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
+
+    static Expression& convertAssignment(Compilation& compilation, const Type& type, Expression& expr,
+                                         SourceLocation location, optional<SourceRange> lhsRange);
 
     static Expression& bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context);
     static Expression& bindSelectExpression(Compilation& compilation, const ElementSelectExpressionSyntax& syntax, const BindContext& context);
