@@ -559,7 +559,8 @@ public:
     SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
     /// Utility method to wrap writeTo and generate an std::string.
-    std::string toString(bitmask<SyntaxToStringFlags> flags = SyntaxToStringFlags::None) const;
+    std::string toString() const { return toString(SyntaxToStringFlags::None); }
+    std::string toString(bitmask<SyntaxToStringFlags> flags) const;
 
     /// Write the node and all of its children to a string.
     void writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags) const;

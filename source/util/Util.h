@@ -31,6 +31,8 @@ using std::uint32_t;
 using std::uint64_t;
 using std::uintptr_t;
 
+using namespace std::literals;
+
 // Clang 5.0 and 6.0 fails to compile <variant> from libstdc++
 #ifdef __clang__
   #include "compat/variant.h"

@@ -12,6 +12,22 @@ namespace slang {
 
 const ConstantValue ConstantValue::Invalid;
 
+std::string ConstantValue::toString() const {
+    return std::visit([](auto&& arg) noexcept {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, std::monostate>)
+            return "<unset>"s;
+        else if constexpr (std::is_same_v<T, SVInt>)
+            return arg.toString();
+        else if constexpr (std::is_same_v<T, double>)
+            return std::to_string(arg);
+        else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
+            return "null"s;
+        else
+            static_assert(always_false<T>::value, "Missing case");
+    }, value);
+}
+
 ConstantRange ConstantRange::subrange(ConstantRange select) const {
     int32_t l = lower();
     ConstantRange result;
@@ -33,19 +49,7 @@ int32_t ConstantRange::translateIndex(int32_t index) const {
 }
 
 void to_json(json& j, const ConstantValue& cv) {
-    std::visit([&j](auto&& arg) noexcept {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, std::monostate>)
-            j = "<unset>";
-        else if constexpr (std::is_same_v<T, SVInt>)
-            j = arg.toString();
-        else if constexpr (std::is_same_v<T, double>)
-            j = arg;
-        else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
-            j = "null";
-        else
-            static_assert(always_false<T>::value, "Missing case");
-    }, cv.value);
+    j = cv.toString();
 }
 
 ConstantValue LValue::load() const {

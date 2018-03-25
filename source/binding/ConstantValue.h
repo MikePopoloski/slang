@@ -42,6 +42,8 @@ public:
 
     double real() const { return std::get<double>(value); }
 
+    std::string toString() const;
+
     static const ConstantValue Invalid;
 
     friend void to_json(json& j, const ConstantValue& cv);
