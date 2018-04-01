@@ -613,19 +613,22 @@ TEST_CASE("Escaped keyword identifiers", "[lexer]") {
 }
 
 TEST_CASE("Too many errors", "[lexer]") {
-    char buf[1024];
-    for (size_t i = 0; i < 1024 / 8; ++i) {
-        memcpy(buf + 8*i, "\x01\x02\x03\x04\x05\x06\x07\x08", 8);
-    }
+    std::vector<char> buf;
+    for (int i = 0; i < 10; i++)
+        buf.push_back('\x01');
+
+    LexerOptions options;
+    options.maxErrors = 9;
+
     diagnostics.clear();
-    auto buffer = getSourceManager().assignText(string_view((const char *)buf, 1024));
-    Lexer lexer(buffer, alloc, diagnostics);
-    Token token;
-    for (size_t i = 0; i < 1024; ++i) {
-        token = lexer.lex();
-    }
-    CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(diagnostics.size() == Lexer::MAX_LEXER_ERRORS + 1);
+    auto buffer = getSourceManager().assignText(string_view(buf.data(), buf.size()));
+    Lexer lexer(buffer, alloc, diagnostics, options);
+
+    for (size_t i = 0; i < buf.size() - 1; i++)
+        CHECK(lexer.lex().kind == TokenKind::Unknown);
+
+    CHECK(diagnostics.size() == buf.size() - 1);
+    CHECK(lexer.lex().kind == TokenKind::EndOfFile);
     CHECK(diagnostics.back().code == DiagCode::TooManyLexerErrors);
 }
 

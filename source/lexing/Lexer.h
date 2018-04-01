@@ -32,6 +32,13 @@ enum class LexerMode {
     IncludeFileName
 };
 
+/// Contains various options that can control lexing behavior.
+struct LexerOptions {
+    /// The maximum number of errors that can occur before the rest of the source
+    /// buffer is skipped.
+    uint32_t maxErrors = 16;
+};
+
 /// The Lexer is responsible for taking source text and chopping it up into tokens.
 /// Tokens carry along leading "trivia", which is things like whitespace and comments,
 /// so that we can programmatically piece back together what the original file looked like.
@@ -40,7 +47,8 @@ enum class LexerMode {
 /// character level.
 class Lexer {
 public:
-    Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,
+          LexerOptions options = LexerOptions{});
 
     // Not copyable
     Lexer(const Lexer&) = delete;
@@ -62,13 +70,12 @@ public:
     /// The @a location and @a trivia parameters are used in the newly created token.
     /// The range of tokens to stringify is given by @a begin and @a end.
     /// If @a noWhitespace is set to true, all whitespace in between tokens will be stripped.
-    static Token stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia, Token* begin, Token* end, bool noWhitespace = false);
+    static Token stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
+                           Token* begin, Token* end, bool noWhitespace = false);
 
-    // TODO: have this based on some options system or otherwise not just a randomly
-    // chosen number.
-    static constexpr size_t MAX_LEXER_ERRORS = 50;
 private:
-    Lexer(BufferID bufferId, string_view source, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Lexer(BufferID bufferId, string_view source, BumpAllocator& alloc,
+          Diagnostics& diagnostics, LexerOptions options);
 
     TokenKind lexToken(Token::Info* info, bool directiveMode, KeywordVersion keywordVersion);
     TokenKind lexNumericLiteral(Token::Info* info);
@@ -120,6 +127,7 @@ private:
 
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
+    LexerOptions options;
 
     // the source text and start and end pointers within it
     BufferID bufferId;
@@ -129,6 +137,9 @@ private:
 
     // save our place in the buffer to measure out the current lexeme
     const char* marker;
+
+    // the number of errors that have occurred while lexing the current buffer
+    uint32_t errorCount = 0;
 
     // Keeps track of whether we just entered a new line, to enforce tokens
     // that must start on their own line

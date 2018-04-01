@@ -72,14 +72,16 @@ inline double computeRealValue(uint64_t value, int decPoint, int digits, uint64_
 
 SyntaxKind getDirectiveKind(string_view directive);
 
-Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics) :
-    Lexer(buffer.id, buffer.data, alloc, diagnostics)
+Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics, LexerOptions options) :
+    Lexer(buffer.id, buffer.data, alloc, diagnostics, options)
 {
 }
 
-Lexer::Lexer(BufferID bufferId, string_view source, BumpAllocator& alloc, Diagnostics& diagnostics) :
+Lexer::Lexer(BufferID bufferId, string_view source, BumpAllocator& alloc,
+             Diagnostics& diagnostics, LexerOptions options) :
     alloc(alloc),
     diagnostics(diagnostics),
+    options(options),
     bufferId(bufferId),
     originalBegin(source.data()),
     sourceBuffer(source.data()),
@@ -128,7 +130,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     string_view combined { mem, newLength };
 
     Diagnostics unused;
-    Lexer lexer { BufferID(), combined, alloc, unused };
+    Lexer lexer { BufferID(), combined, alloc, unused, LexerOptions{} };
 
     auto token = lexer.lex();
     if (token.kind == TokenKind::Unknown || token.rawText().empty())
@@ -175,7 +177,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     string_view raw = to_string_view(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer { BufferID(), raw, alloc, unused };
+    Lexer lexer { BufferID(), raw, alloc, unused, LexerOptions{} };
 
     auto token = lexer.lex();
     ASSERT(token.kind == TokenKind::StringLiteral);
@@ -209,13 +211,11 @@ Token Lexer::lex(LexerMode mode, KeywordVersion keywordVersion) {
     onNewLine = false;
     info->rawText = lexeme();
 
-    if (kind != TokenKind::EndOfFile && diagnostics.size() >= MAX_LEXER_ERRORS) {
-        // Stop any further lexing by claiming to at the end of the buffer
+    if (kind != TokenKind::EndOfFile && diagnostics.size() > options.maxErrors) {
+        // Stop any further lexing by claiming to be at the end of the buffer.
         addError(DiagCode::TooManyLexerErrors, currentOffset());
-
-        // consume the rest of the file and turn it into trivia
-        triviaBuffer.append(Trivia(TriviaKind::DisabledText, string_view(marker, (uint32_t)(sourceEnd - marker))));
         sourceBuffer = sourceEnd - 1;
+        triviaBuffer.append(Trivia(TriviaKind::DisabledText, lexeme()));
         kind = TokenKind::EndOfFile;
     }
     info->trivia = triviaBuffer.copy(alloc);
@@ -1063,6 +1063,7 @@ void Lexer::addTrivia(TriviaKind kind, SmallVector<Trivia>& triviaBuffer) {
 
 void Lexer::addError(DiagCode code, uint32_t offset) {
     diagnostics.emplace(code, SourceLocation(getBufferID(), offset));
+    errorCount++;
 }
 
 uint32_t Lexer::currentOffset() {
