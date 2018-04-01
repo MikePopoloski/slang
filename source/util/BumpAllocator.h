@@ -34,9 +34,9 @@ public:
     }
 
     /// Allocate @a size bytes of memory with the given @a alignment.
-    std::byte* allocate(size_t size, size_t alignment) {
-        std::byte* base = alignPtr(head->current, alignment);
-        std::byte* next = base + size;
+    byte* allocate(size_t size, size_t alignment) {
+        byte* base = alignPtr(head->current, alignment);
+        byte* next = base + size;
         if (next > endPtr)
             return allocateSlow(size, alignment);
 
@@ -44,35 +44,15 @@ public:
         return base;
     }
 
-    // TODO: move this someplace more appropriate
-    string_view makeCopy(string_view str) {
-        if (str.empty())
-            return str;
-
-        char* data = (char*)allocate(str.length(), 1);
-        str.copy(data, str.length());
-        return string_view(data, str.length());
-    }
-
-    template<typename T, typename U = std::remove_const_t<T>>
-    span<U> makeCopy(span<T> source) {
-        if (source.empty())
-            return nullptr;
-
-        U* data = (U*)allocate(sizeof(U) * source.size(), alignof(U));
-        std::copy(source.begin(), source.end(), data);
-        return span<U>(data, source.size());
-    }
-
 protected:
     // Allocations are tracked as a linked list of segments.
     struct Segment {
         Segment* prev;
-        std::byte* current;
+        byte* current;
     };
 
     Segment* head;
-    std::byte* endPtr;
+    byte* endPtr;
 
     enum {
         INITIAL_SIZE = 512,
@@ -80,10 +60,10 @@ protected:
     };
 
     // Slow path handling of allocation.
-    std::byte* allocateSlow(size_t size, size_t alignment);
+    byte* allocateSlow(size_t size, size_t alignment);
 
-    static std::byte* alignPtr(std::byte* ptr, size_t alignment) {
-        return reinterpret_cast<std::byte*>(
+    static byte* alignPtr(byte* ptr, size_t alignment) {
+        return reinterpret_cast<byte*>(
             (reinterpret_cast<uintptr_t>(ptr) + alignment - 1) & ~(alignment - 1));
     }
 

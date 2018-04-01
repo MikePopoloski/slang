@@ -12,7 +12,7 @@ namespace slang {
 
 BumpAllocator::BumpAllocator() {
     head = allocSegment(nullptr, INITIAL_SIZE);
-    endPtr = (std::byte*)head + INITIAL_SIZE;
+    endPtr = (byte*)head + INITIAL_SIZE;
 }
 
 BumpAllocator::~BumpAllocator() {
@@ -37,7 +37,7 @@ BumpAllocator& BumpAllocator::operator=(BumpAllocator&& other) noexcept {
     return *this;
 }
 
-std::byte* BumpAllocator::allocateSlow(size_t size, size_t alignment) {
+byte* BumpAllocator::allocateSlow(size_t size, size_t alignment) {
     // for really large allocations, give them their own segment
     if (size > (SEGMENT_SIZE >> 1)) {
         size = (size + alignment - 1) & ~(alignment - 1);
@@ -47,14 +47,14 @@ std::byte* BumpAllocator::allocateSlow(size_t size, size_t alignment) {
 
     // otherwise, start a new block
     head = allocSegment(head, SEGMENT_SIZE);
-    endPtr = (std::byte*)head + SEGMENT_SIZE;
+    endPtr = (byte*)head + SEGMENT_SIZE;
     return allocate(size, alignment);
 }
 
 BumpAllocator::Segment* BumpAllocator::allocSegment(Segment* prev, size_t size) {
     auto seg = (Segment*)malloc(size);
     seg->prev = prev;
-    seg->current = (std::byte*)seg + sizeof(Segment);
+    seg->current = (byte*)seg + sizeof(Segment);
     return seg;
 }
 
