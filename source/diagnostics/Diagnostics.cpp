@@ -27,6 +27,11 @@ Diagnostic& Diagnostic::addNote(DiagCode noteCode, SourceLocation noteLocation) 
     return notes.back();
 }
 
+Diagnostic& Diagnostic::addNote(const Diagnostic& diag) {
+    notes.emplace_back(diag);
+    return notes.back();
+}
+
 Diagnostic& operator<<(Diagnostic& diag, string_view arg) {
     diag.args.emplace_back(std::string(arg));
     return diag;
@@ -235,6 +240,11 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NotAType] = { "'{}' is not a type", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAValue] = { "'{}' does not refer to a value", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownMember] = { "no member named '{}' in {}", DiagnosticSeverity::Error };
+
+    // constant evaluation
+    descriptors[DiagCode::ExpressionNotConstant] = { "expression is not constant", DiagnosticSeverity::Error };
+    descriptors[DiagCode::NoteNonConstVariable] = { "reference to non-constant variable '{}' is not allowed in a constant expression", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NoteInCallTo] = { "in call to '{}'", DiagnosticSeverity::Note };
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());

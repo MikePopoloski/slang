@@ -32,7 +32,7 @@ public:
     ConstantValue* findLocal(const ValueSymbol* symbol);
 
     /// Push a new frame onto the call stack.
-    void pushFrame(const SubroutineSymbol& subroutine);
+    void pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation);
 
     /// Pop the active frame from the call stack and returns its value, if any.
     ConstantValue popFrame();
@@ -44,19 +44,30 @@ public:
     /// Dumps the contents of the call stack to a string for debugging.
     std::string dumpStack() const;
 
+    /// Gets the set of diagnostics that have been produced during constant evaluation.
+    const Diagnostics& getDiagnostics() const { return diags; }
+
+    /// Reports a diagnostic under the current evaluation context.
+    Diagnostic& addDiag(DiagCode code, SourceLocation location);
+    Diagnostic& addDiag(DiagCode code, SourceRange range);
+
 private:
+    void reportStack();
+
     // Represents a single frame in the call stack.
     struct Frame {
         // A set of temporary values materialized within the stack frame.
         // Use a map so that the values don't move around in memory.
         std::map<const ValueSymbol*, ConstantValue> temporaries;
 
-        // Set to non-null when a return has been issued in this frame.
         const SubroutineSymbol* subroutine = nullptr;
+        SourceLocation callLocation;
         bool hasReturned = false;
     };
 
     std::deque<Frame> stack;
+    Diagnostics diags;
+    bool reportedCallstack = false;
 };
 
 }

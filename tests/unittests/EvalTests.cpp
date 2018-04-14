@@ -304,3 +304,31 @@ TEST_CASE("Unary inc-dec operators", "[eval]") {
         session.eval("--a");
     CHECK(session.eval("a").integer() == 122);
 }
+
+TEST_CASE("Constant eval errors", "[eval]") {
+    ScriptSession session;
+    session.eval("logic f = 1;");
+    session.eval("function int foo(int a); return f + a; endfunction");
+    session.eval("function int bar(int b); return foo(b + 1); endfunction");
+
+    CHECK(!session.eval("localparam int p = bar(1);"));
+
+    std::string msg = "\n" + session.reportDiagnostics();
+    CHECK(msg == R"(
+source:1:20: error: expression is not constant
+localparam int p = bar(1);
+                   ^~~~~~
+source:1:33: note: reference to non-constant variable 'f' is not allowed in a constant expression
+function int foo(int a); return f + a; endfunction
+                                ^
+source:1:33: note: in call to 'foo(2)'
+function int bar(int b); return foo(b + 1); endfunction
+                                ^
+source:1:20: note: in call to 'bar(1)'
+localparam int p = bar(1);
+                   ^
+source:1:7: note: declared here
+logic f = 1;
+      ^
+)");
+}

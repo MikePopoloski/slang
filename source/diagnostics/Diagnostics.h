@@ -185,6 +185,11 @@ enum class DiagCode : uint8_t {
     NotAValue,
     UnknownMember,
 
+    // constant evaluation
+    ExpressionNotConstant,
+    NoteNonConstVariable,
+    NoteInCallTo,
+
     MaxValue
 };
 
@@ -220,6 +225,7 @@ public:
 
     /// Adds a new note to the diagnostic at the given source location.
     Diagnostic& addNote(DiagCode code, SourceLocation location);
+    Diagnostic& addNote(const Diagnostic& diag);
 
     /// Adds an argument to the diagnostic.
     friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);

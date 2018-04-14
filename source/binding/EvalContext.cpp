@@ -39,9 +39,10 @@ ConstantValue* EvalContext::findLocal(const ValueSymbol* symbol) {
     return &it->second;
 }
 
-void EvalContext::pushFrame(const SubroutineSymbol& subroutine) {
+void EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation) {
     Frame frame;
     frame.subroutine = &subroutine;
+    frame.callLocation = callLocation;
     stack.emplace_back(std::move(frame));
 }
 
@@ -80,6 +81,47 @@ std::string EvalContext::dumpStack() const {
             writer.write("    {} = {}\n", symbol->name, value.toString());
     }
     return writer.str();
+}
+
+Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
+    Diagnostic& diag = diags.add(code, location);
+    reportStack();
+    return diag;
+}
+
+Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
+    Diagnostic& diag = diags.add(code, range);
+    reportStack();
+    return diag;
+}
+
+void EvalContext::reportStack() {
+    // Once per evaluation, include the current callstack in the list of
+    // diagnostics if we end up issuing any at all.
+    if (std::exchange(reportedCallstack, true))
+        return;
+
+    fmt::MemoryWriter writer;
+    for (const Frame& frame : make_reverse_range(stack)) {
+        if (!frame.subroutine)
+            break;
+
+        writer.clear();
+        writer.write("{}(", frame.subroutine->name);
+
+        for (auto arg : frame.subroutine->arguments) {
+            auto it = frame.temporaries.find(arg);
+            ASSERT(it != frame.temporaries.end());
+
+            writer << it->second.toString();
+            if (arg != frame.subroutine->arguments.last(1)[0])
+                writer << ", ";
+        }
+
+        writer.write(")");
+
+        diags.add(DiagCode::NoteInCallTo, frame.callLocation) << writer.str();
+    }
 }
 
 }

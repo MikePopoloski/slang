@@ -133,14 +133,13 @@ public:
     /// Indicates whether the expression evaluates to an lvalue.
     bool isLValue() const;
 
-    /// Evaluates the expression under the given evaluation context.
+    /// Evaluates the expression under the given evaluation context. Any errors that occur
+    /// will be stored in the evaluation context instead of issued to the compilation.
     ConstantValue eval(EvalContext& context) const;
 
-    /// Evaluates the expression under a default context.
-    ConstantValue eval() const {
-        EvalContext context;
-        return eval(context);
-    }
+    /// Evaluates the expression under a default context. Any errors that occur will be
+    /// issued to the compilation.
+    ConstantValue eval(Compilation& compilation) const;
 
     /// Evaluates the expression and tries to interpret the result in a boolean context.
     bool evalBool(EvalContext& context) const;

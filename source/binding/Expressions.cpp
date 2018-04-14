@@ -779,11 +779,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         elementType = &compilation.getBitType();
 
     if (selectionKind == RangeSelectionKind::Simple) {
-        ConstantRange range { *left.eval().integer().as<int32_t>(), *right.eval().integer().as<int32_t>() };
+        ConstantRange range { *left.eval(compilation).integer().as<int32_t>(), *right.eval(compilation).integer().as<int32_t>() };
         result->type = compilation.emplace<PackedArrayType>(*elementType, ConstantRange { (int32_t)range.width() - 1, 0 });
     }
     else {
-        int32_t width = *right.eval().integer().as<int32_t>();
+        int32_t width = *right.eval(compilation).integer().as<int32_t>();
         result->type = compilation.emplace<PackedArrayType>(*elementType, ConstantRange { width - 1, 0 });
     }
     return *result;

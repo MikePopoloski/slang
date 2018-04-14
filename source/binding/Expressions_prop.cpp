@@ -33,7 +33,8 @@ struct Expression::PropagationVisitor {
 
         // Try to fold any constant values.
         ASSERT(!result.constant);
-        ConstantValue value = result.eval();
+        EvalContext context;
+        ConstantValue value = result.eval(context);
         if (value)
             result.constant = compilation.createConstant(std::move(value));
         return result;

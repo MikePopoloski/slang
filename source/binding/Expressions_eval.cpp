@@ -7,6 +7,7 @@
 #include "Expressions.h"
 
 #include "binding/Statements.h"
+#include "compilation/Compilation.h"
 #include "symbols/ASTVisitor.h"
 
 namespace {
@@ -116,6 +117,21 @@ ConstantValue Expression::eval(EvalContext& context) const {
     return visit(visitor, context);
 }
 
+ConstantValue Expression::eval(Compilation& compilation) const {
+    EvalContext context;
+    ConstantValue result = eval(context);
+
+    const Diagnostics& diags = context.getDiagnostics();
+    if (!diags.empty()) {
+        // TODO: should tie in to BindContext requirement flags
+        Diagnostic& diag = compilation.addError(DiagCode::ExpressionNotConstant, sourceRange);
+        for (const Diagnostic& note : diags)
+            diag.addNote(note);
+    }
+
+    return result;
+}
+
 LValue Expression::evalLValue(EvalContext& context) const {
     LValueVisitor visitor;
     return visit(visitor, context);
@@ -169,9 +185,16 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
             return symbol.as<EnumValueSymbol>().value;
         default:
             ConstantValue* v = context.findLocal(&symbol);
-            // TODO: report error if not constant
-            return v ? *v : nullptr;
+            if (v)
+                return *v;
+            break;
     }
+
+    // If we reach this point, the variable was not found, which should mean that
+    // it's not actually constant.
+    context.addDiag(DiagCode::NoteNonConstVariable, sourceRange) << symbol.name;
+    context.addDiag(DiagCode::NoteDeclarationHere, symbol.location);
+    return nullptr;
 }
 
 LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
@@ -489,7 +512,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     }
 
     // Push a new stack frame, push argument values as locals.
-    context.pushFrame(subroutine);
+    context.pushFrame(subroutine, sourceRange.start());
     span<const FormalArgumentSymbol* const> formals = subroutine.arguments;
     for (uint32_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
