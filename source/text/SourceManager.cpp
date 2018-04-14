@@ -216,13 +216,6 @@ SourceBuffer SourceManager::assignText(string_view path, string_view text, Sourc
     return assignBuffer(path, std::move(buffer), includedFrom);
 }
 
-SourceBuffer SourceManager::appendText(BufferID buffer, string_view text) {
-    ASSERT(buffer);
-    FileInfo& fi = std::get<FileInfo>(bufferEntries[buffer.id]);
-    SourceLocation includeLoc = SourceLocation(buffer, (uint32_t)fi.data->mem.size());
-    return assignText(text, includeLoc);
-}
-
 SourceBuffer SourceManager::assignBuffer(string_view path, std::vector<char>&& buffer, SourceLocation includedFrom) {
     userFileBuffers.emplace_back(FileData(nullptr, std::string(path), std::move(buffer)));
     return createBufferEntry(&userFileBuffers.back(), includedFrom);

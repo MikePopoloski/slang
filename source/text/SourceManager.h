@@ -105,10 +105,6 @@ public:
     /// Pretend it came from a file located at @a path.
     SourceBuffer assignText(string_view path, string_view text, SourceLocation includedFrom = SourceLocation());
 
-    /// Pretend that the given text has been appended to the specified buffer.
-    /// This is mostly for testing purposes.
-    SourceBuffer appendText(BufferID buffer, string_view text);
-
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
     SourceBuffer assignBuffer(string_view path, std::vector<char>&& buffer, SourceLocation includedFrom = SourceLocation());
