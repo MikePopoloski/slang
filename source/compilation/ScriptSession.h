@@ -18,7 +18,7 @@ public:
     ScriptSession() : scope(compilation.createScriptScope()) {}
 
     ConstantValue eval(const std::string& text) {
-        syntaxTrees.emplace_back(SyntaxTree::fromText(string_view(text)));
+        syntaxTrees.emplace_back(SyntaxTree::fromText(string_view(text), "source"));
 
         const auto& node = syntaxTrees.back()->root();
         switch (node.kind) {
@@ -67,18 +67,14 @@ public:
     }
 
     std::string reportDiagnostics() {
-        // TODO: clean this up
         if (syntaxTrees.empty())
             return "";
 
-        diagnostics.sort(syntaxTrees[0]->sourceManager());
-        return DiagnosticWriter(syntaxTrees[0]->sourceManager()).report(diagnostics);
+        return DiagnosticWriter{syntaxTrees[0]->sourceManager()}.report(compilation.getAllDiagnostics());
     }
 
 private:
     std::vector<std::shared_ptr<SyntaxTree>> syntaxTrees;
-    BumpAllocator alloc;
-    Diagnostics diagnostics;
     Compilation compilation;
     CompilationUnitSymbol& scope;
     EvalContext evalContext;
