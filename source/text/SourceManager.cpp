@@ -224,12 +224,8 @@ SourceBuffer SourceManager::appendText(BufferID buffer, string_view text) {
 }
 
 SourceBuffer SourceManager::assignBuffer(string_view path, std::vector<char>&& buffer, SourceLocation includedFrom) {
-    Path fullPath = path;
-    std::string canonicalStr = fullPath.str();
-    auto it = lookupCache.find(canonicalStr);
-    ASSERT(it == lookupCache.end());
-
-    return cacheBuffer(std::move(canonicalStr), fullPath, includedFrom, std::move(buffer));
+    userFileBuffers.emplace_back(FileData(nullptr, std::string(path), std::move(buffer)));
+    return createBufferEntry(&userFileBuffers.back(), includedFrom);
 }
 
 SourceBuffer SourceManager::readSource(string_view path) {

@@ -140,11 +140,11 @@ private:
     // Stores actual file contents and metadata; only one per loaded file
     class FileData {
     public:
-        std::string name;           // name of the file
-        std::vector<char> mem;      // file contents
-        std::vector<uint32_t> lineOffsets;
-        std::vector<LineDirectiveInfo> lineDirectives;
-        const Path* directory;      // directory in which the file exists
+        std::string name;                               // name of the file
+        std::vector<char> mem;                          // file contents
+        std::vector<uint32_t> lineOffsets;              // cache of compute line offsets
+        std::vector<LineDirectiveInfo> lineDirectives;  // cache of line directives
+        const Path* directory;                          // directory in which the file exists
 
         FileData(const Path* directory, std::string name, std::vector<char>&& data) :
             name(std::move(name)),
@@ -189,6 +189,9 @@ private:
 
     // cache for file lookups; this holds on to the actual file data
     std::unordered_map<std::string, std::unique_ptr<FileData>> lookupCache;
+
+    // extra file data that came from programmatic buffers instead of a real fie on disk
+    std::deque<FileData> userFileBuffers;
 
     // directories for system and user includes
     std::vector<Path> systemDirectories;
