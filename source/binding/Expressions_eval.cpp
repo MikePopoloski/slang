@@ -334,10 +334,10 @@ optional<ConstantRange> ElementSelectExpression::getRange(EvalContext& context,
     optional<int32_t> index = selectorValue.integer().as<int32_t>();
     if (index) {
         ConstantRange declRange = t.as<IntegralType>().getBitVectorRange();
-        int32_t actualIndex = declRange.translateIndex(*index);
-        if (declRange.containsPoint(actualIndex)) {
+        if (declRange.containsPoint(*index)) {
             // We're actually selecting elements, which aren't necessarily bits.
             // TODO: handle overflow?
+            int32_t actualIndex = declRange.translateIndex(*index);
             int32_t width = (int32_t)type->getBitWidth();
             actualIndex *= width;
 
