@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "binding/ConstantValue.h"
 #include "text/SourceLocation.h"
 #include "util/SmallVector.h"
 
@@ -187,8 +188,10 @@ enum class DiagCode : uint8_t {
 
     // constant evaluation
     ExpressionNotConstant,
-    NoteNonConstVariable,
     NoteInCallTo,
+    NoteNonConstVariable,
+    NoteArrayIndexInvalid,
+    NotePartSelectInvalid,
 
     MaxValue
 };
@@ -205,7 +208,7 @@ enum class DiagnosticSeverity {
 class Diagnostic {
 public:
     // Diagnostic-specific arguments that can be used to better report messages.
-    using ArgVariantType = std::variant<std::string, int64_t, uint64_t, const Type*>;
+    using ArgVariantType = std::variant<std::string, int64_t, uint64_t, const Type*, ConstantValue>;
     struct Arg : public ArgVariantType {
         using ArgVariantType::variant;
         friend std::ostream& operator<<(std::ostream& os, const Arg& arg);
@@ -231,6 +234,7 @@ public:
     friend Diagnostic& operator<<(Diagnostic& diag, const Type& arg);
     friend Diagnostic& operator<<(Diagnostic& diag, string_view arg);
     friend Diagnostic& operator<<(Diagnostic& diag, SourceRange arg);
+    friend Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg);
 
     template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>>>
     inline friend Diagnostic& operator<<(Diagnostic& diag, T arg) {

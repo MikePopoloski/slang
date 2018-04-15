@@ -199,8 +199,11 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 
 LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
     auto cv = context.findLocal(&symbol);
-    if (!cv)
+    if (!cv) {
+        context.addDiag(DiagCode::NoteNonConstVariable, sourceRange) << symbol.name;
+        context.addDiag(DiagCode::NoteDeclarationHere, symbol.location);
         return nullptr;
+    }
 
     return LValue(*cv);
 }
@@ -303,7 +306,7 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv || !cs)
         return nullptr;
 
-    optional<ConstantRange> range = getRange(cs);
+    optional<ConstantRange> range = getRange(context, cs);
     if (!range) {
         // If any part of an address is unknown, then the whole thing returns 'x.
         return SVInt::createFillX(type->getBitWidth(), false);
@@ -318,28 +321,32 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval || !cs)
         return nullptr;
 
-    optional<ConstantRange> range = getRange(cs);
+    optional<ConstantRange> range = getRange(context, cs);
     if (!range)
         return nullptr;
 
     return lval.selectRange(*range);
 }
 
-optional<ConstantRange> ElementSelectExpression::getRange(const ConstantValue& selectorValue) const {
-    optional<int32_t> index = selectorValue.integer().as<int32_t>();
-    if (!index)
-        return std::nullopt;
-
+optional<ConstantRange> ElementSelectExpression::getRange(EvalContext& context,
+                                                          const ConstantValue& selectorValue) const {
     const Type& t = value().type->getCanonicalType();
-    ConstantRange declRange = t.as<IntegralType>().getBitVectorRange();
-    int32_t actualIndex = declRange.translateIndex(*index);
+    optional<int32_t> index = selectorValue.integer().as<int32_t>();
+    if (index) {
+        ConstantRange declRange = t.as<IntegralType>().getBitVectorRange();
+        int32_t actualIndex = declRange.translateIndex(*index);
+        if (declRange.containsPoint(actualIndex)) {
+            // We're actually selecting elements, which aren't necessarily bits.
+            // TODO: handle overflow?
+            int32_t width = (int32_t)type->getBitWidth();
+            actualIndex *= width;
 
-    // We're actually selecting elements, which aren't necessarily bits.
-    // TODO: handle overflow?
-    int32_t width = (int32_t)type->getBitWidth();
-    actualIndex *= width;
+            return ConstantRange{ actualIndex + width - 1, actualIndex };
+        }
+    }
 
-    return ConstantRange { actualIndex + width - 1, actualIndex };
+    context.addDiag(DiagCode::NoteArrayIndexInvalid, sourceRange) << selectorValue << t;
+    return std::nullopt;
 }
 
 ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
@@ -349,7 +356,7 @@ ConstantValue RangeSelectExpression::evalImpl(EvalContext& context) const {
     if (!cv || !cl || !cr)
         return nullptr;
 
-    optional<ConstantRange> range = getRange(cl, cr);
+    optional<ConstantRange> range = getRange(context, cl, cr);
     if (!range) {
         // If any part of an address is unknown, then the whole thing returns 'x.
         return SVInt::createFillX(type->getBitWidth(), false);
@@ -365,14 +372,15 @@ LValue RangeSelectExpression::evalLValueImpl(EvalContext& context) const {
     if (!lval || !cl || !cr)
         return nullptr;
 
-    optional<ConstantRange> range = getRange(cl, cr);
+    optional<ConstantRange> range = getRange(context, cl, cr);
     if (!range)
         return nullptr;
 
     return lval.selectRange(*range);
 }
 
-optional<ConstantRange> RangeSelectExpression::getRange(const ConstantValue& cl,
+optional<ConstantRange> RangeSelectExpression::getRange(EvalContext&,
+                                                        const ConstantValue& cl,
                                                         const ConstantValue& cr) const {
     optional<int32_t> l = cl.integer().as<int32_t>();
     optional<int32_t> r = cr.integer().as<int32_t>();
@@ -519,10 +527,10 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
 
     context.createLocal(subroutine.returnValVar);
 
-    subroutine.getBody()->eval(context);
+    bool succeeded = subroutine.getBody()->eval(context);
+    ConstantValue result = context.popFrame();
 
-    // Pop the frame and return the value
-    return context.popFrame();
+    return succeeded ? result : nullptr;
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {

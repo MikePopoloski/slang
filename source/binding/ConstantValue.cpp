@@ -48,8 +48,16 @@ int32_t ConstantRange::translateIndex(int32_t index) const {
         return index - lower();
 }
 
+bool ConstantRange::containsPoint(int32_t index) const {
+    return index >= lower() && index <= upper();
+}
+
 void to_json(json& j, const ConstantValue& cv) {
     j = cv.toString();
+}
+
+std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
+    return os << cv.toString();
 }
 
 ConstantValue LValue::load() const {

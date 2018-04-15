@@ -456,7 +456,7 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ElementSelect; }
 
 private:
-    optional<ConstantRange> getRange(const ConstantValue& selectorValue) const;
+    optional<ConstantRange> getRange(EvalContext& context, const ConstantValue& selectorValue) const;
 
     Expression* value_;
     Expression* selector_;
@@ -491,7 +491,7 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::RangeSelect; }
 
 private:
-    optional<ConstantRange> getRange(const ConstantValue& cl, const ConstantValue& cr) const;
+    optional<ConstantRange> getRange(EvalContext& context, const ConstantValue& cl, const ConstantValue& cr) const;
 
     Expression* value_;
     Expression* left_;

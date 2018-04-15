@@ -47,6 +47,11 @@ Diagnostic& operator<<(Diagnostic& diag, SourceRange range) {
     return diag;
 }
 
+Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg) {
+    diag.args.emplace_back(arg);
+    return diag;
+}
+
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
     return std::visit([&](auto&& t) -> auto& { return os << t; },
                       static_cast<const Diagnostic::ArgVariantType&>(arg));
@@ -243,8 +248,10 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
 
     // constant evaluation
     descriptors[DiagCode::ExpressionNotConstant] = { "expression is not constant", DiagnosticSeverity::Error };
-    descriptors[DiagCode::NoteNonConstVariable] = { "reference to non-constant variable '{}' is not allowed in a constant expression", DiagnosticSeverity::Note };
     descriptors[DiagCode::NoteInCallTo] = { "in call to '{}'", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NoteNonConstVariable] = { "reference to non-constant variable '{}' is not allowed in a constant expression", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NoteArrayIndexInvalid] = { "cannot refer to element {} of array of type {} in a constant expression", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NotePartSelectInvalid] = { "cannot select range of {}:{} from array of type {} in a constant expression", DiagnosticSeverity::Note };
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());

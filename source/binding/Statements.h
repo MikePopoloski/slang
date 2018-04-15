@@ -36,7 +36,7 @@ public:
     bool bad() const { return kind == StatementKind::Invalid; }
 
     /// Evaluates the statement under the given evaluation context.
-    void eval(EvalContext& context) const;
+    bool eval(EvalContext& context) const;
 
     template<typename T>
     T& as() {
@@ -83,7 +83,7 @@ public:
     StatementList(span<const Statement* const> list) :
         Statement(StatementKind::List), list(list) {}
 
-    void eval(EvalContext& context) const;
+    bool eval(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::List; }
     static const StatementList Empty;
@@ -97,7 +97,7 @@ public:
     SequentialBlockStatement(const SequentialBlockSymbol& block) :
         Statement(StatementKind::SequentialBlock), block(block) {}
 
-    void eval(EvalContext& context) const;
+    bool eval(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::SequentialBlock; }
 };
@@ -109,7 +109,7 @@ public:
     ReturnStatement(const StatementSyntax& syntax, const Expression* expr) :
         Statement(StatementKind::Return, syntax), expr(expr) {}
 
-    void eval(EvalContext& context) const;
+    bool eval(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Return; }
 };
@@ -121,7 +121,7 @@ public:
     VariableDeclStatement(const VariableSymbol& symbol) :
         Statement(StatementKind::VariableDeclaration), symbol(symbol) {}
 
-    void eval(EvalContext& context) const;
+    bool eval(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
@@ -137,7 +137,7 @@ public:
         Statement(StatementKind::Conditional, syntax),
         cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
 
-    void eval(EvalContext& context) const;
+    bool eval(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Conditional; }
 };
@@ -155,7 +155,7 @@ public:
         Statement(StatementKind::ForLoop, syntax),
         initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
 
-    void eval(EvalContext& context) const;
+    bool eval(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ForLoop; }
 };
@@ -167,7 +167,7 @@ public:
     ExpressionStatement(const ExpressionStatementSyntax& syntax, const Expression& expr) :
         Statement(StatementKind::ExpressionStatement, syntax), expr(expr) {}
 
-    void eval(EvalContext& context) const;
+    bool eval(EvalContext& context) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::ExpressionStatement; }
 };

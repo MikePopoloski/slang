@@ -6,7 +6,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "diagnostics/Diagnostics.h"
+#include <string>
+
 #include "numeric/SVInt.h"
 
 namespace slang {
@@ -47,6 +48,7 @@ public:
     static const ConstantValue Invalid;
 
     friend void to_json(json& j, const ConstantValue& cv);
+    friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
 
 private:
     std::variant<std::monostate, SVInt, double, NullPlaceholder> value;
@@ -91,6 +93,9 @@ struct ConstantRange {
     /// For example, if the range is [7:2] and you pass in 3, the result will be 1.
     /// If the range is [2:7] and you pass in 3, the result will be 2.
     int32_t translateIndex(int32_t index) const;
+
+    /// Determines whether the given point is within the range.
+    bool containsPoint(int32_t index) const;
 
     bool operator==(const ConstantRange& rhs) const {
         return left == rhs.left && right == rhs.right;

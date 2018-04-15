@@ -13,63 +13,92 @@ namespace slang {
 const InvalidStatement InvalidStatement::Instance(nullptr);
 const StatementList StatementList::Empty({});
 
-void Statement::eval(EvalContext& context) const {
+bool Statement::eval(EvalContext& context) const {
     switch (kind) {
-        case StatementKind::Invalid: break;
-        case StatementKind::List: as<StatementList>().eval(context); break;
-        case StatementKind::SequentialBlock: as<SequentialBlockStatement>().eval(context); break;
-        case StatementKind::ExpressionStatement: as<ExpressionStatement>().eval(context); break;
-        case StatementKind::VariableDeclaration: as<VariableDeclStatement>().eval(context); break;
-        case StatementKind::Return: as<ReturnStatement>().eval(context); break;
-        case StatementKind::Conditional: as<ConditionalStatement>().eval(context); break;
-        case StatementKind::ForLoop: as<ForLoopStatement>().eval(context); break;
+        case StatementKind::Invalid: return false;
+        case StatementKind::List: return as<StatementList>().eval(context);
+        case StatementKind::SequentialBlock: return as<SequentialBlockStatement>().eval(context);
+        case StatementKind::ExpressionStatement: return as<ExpressionStatement>().eval(context);
+        case StatementKind::VariableDeclaration: return as<VariableDeclStatement>().eval(context);
+        case StatementKind::Return: return as<ReturnStatement>().eval(context);
+        case StatementKind::Conditional: return as<ConditionalStatement>().eval(context);
+        case StatementKind::ForLoop: return as<ForLoopStatement>().eval(context);
     }
+    THROW_UNREACHABLE;
 }
 
-void StatementList::eval(EvalContext& context) const {
+bool StatementList::eval(EvalContext& context) const {
     for (auto item : list) {
-        item->eval(context);
+        if (!item->eval(context))
+            return false;
         if (context.hasReturned())
             break;
     }
+
+    return true;
 }
 
-void SequentialBlockStatement::eval(EvalContext& context) const {
-    block.getBody()->eval(context);
+bool SequentialBlockStatement::eval(EvalContext& context) const {
+    return block.getBody()->eval(context);
 }
 
-void ExpressionStatement::eval(EvalContext& context) const {
-    expr.eval(context);
+bool ExpressionStatement::eval(EvalContext& context) const {
+    return bool(expr.eval(context));
 }
 
-void VariableDeclStatement::eval(EvalContext& context) const {
+bool VariableDeclStatement::eval(EvalContext& context) const {
     // Create storage for the variable
     ConstantValue initial;
     if (symbol.initializer)
         initial = symbol.initializer->eval(context);
 
     context.createLocal(&symbol, initial);
+    return true;
 }
 
-void ReturnStatement::eval(EvalContext& context) const {
+bool ReturnStatement::eval(EvalContext& context) const {
     // TODO: empty return?
     context.setReturned(expr->eval(context));
+    return true;
 }
 
-void ConditionalStatement::eval(EvalContext& context) const {
-    if (cond.evalBool(context))
-        ifTrue.eval(context);
+bool ConditionalStatement::eval(EvalContext& context) const {
+    auto result = cond.eval(context);
+    if (result.bad())
+        return false;
+
+    // TODO: non integers?
+    if ((bool)(logic_t)result.integer())
+        return ifTrue.eval(context);
     else if (ifFalse)
-        ifFalse->eval(context);
+        return ifFalse->eval(context);
+    return true;
 }
 
-void ForLoopStatement::eval(EvalContext& context) const {
-    initializers.eval(context);
-    while (stopExpr && stopExpr->evalBool(context)) {
-        body.eval(context);
-        for (auto step : steps)
-            step->eval(context);
+bool ForLoopStatement::eval(EvalContext& context) const {
+    if (!initializers.eval(context))
+        return false;
+
+    while (true) {
+        if (stopExpr) {
+            auto result = stopExpr->eval(context);
+            if (result.bad())
+                return false;
+
+            // TODO: non integers?
+            if (!(bool)(logic_t)result.integer())
+                break;
+        }
+
+        if (!body.eval(context))
+            return false;
+
+        for (auto step : steps) {
+            if (!step->eval(context))
+                return false;
+        }
     }
+    return true;
 }
 
 }
