@@ -9,6 +9,7 @@
 #include "fmt/format.h"
 #include "fmt/ostream.h"
 
+#include "symbols/TypePrinter.h"
 #include "text/SourceManager.h"
 
 namespace slang {
@@ -53,8 +54,16 @@ Diagnostic& operator<<(Diagnostic& diag, const ConstantValue& arg) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Diagnostic::Arg& arg) {
-    return std::visit([&](auto&& t) -> auto& { return os << t; },
-                      static_cast<const Diagnostic::ArgVariantType&>(arg));
+    return std::visit([&](auto&& t) -> auto& {
+        if constexpr (std::is_same_v<std::decay_t<decltype(t)>, const Type*>) {
+            TypePrinter printer;
+            printer.append(*t);
+            return os << printer.toString();
+        }
+        else {
+            return os << t;
+        }
+    }, static_cast<const Diagnostic::ArgVariantType&>(arg));
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
