@@ -52,7 +52,8 @@ ConstantValue EvalContext::popFrame() {
     if (frame.subroutine) {
         ConstantValue* storage = findLocal(frame.subroutine->returnValVar);
         ASSERT(storage);
-        result = std::move(*storage);
+        if (storage)
+            result = std::move(*storage);
     }
 
     stack.pop_back();
