@@ -7,7 +7,7 @@
     A generic implementation of the BitmaskType C++ concept
     http://en.cppreference.com/w/cpp/concept/BitmaskType
 
-    Version: 1.1
+    Version: 1.1.2
 
     Latest version and documentation:
         https://github.com/oliora/bitmask
@@ -19,6 +19,11 @@
 
     Changes history
     ---------------
+    v1.1.2:
+        - Fix: Can not define bitmask for a class local enum (https://github.com/oliora/bitmask/issues/3)
+    v1.1.1:
+        - Added missed `<limits>` header
+        - README and code comments updated
     v1.1:
         - Change namespace from `boost` to `bitmask`
         - Add CMake package
@@ -107,7 +112,7 @@ namespace bitmask_lib {
             : std::integral_constant<underlying_type_t<T>, static_cast<underlying_type_t<T>>(T::_bitmask_value_mask)> {};
 
         template<class T>
-        static constexpr underlying_type_t<T> disable_unused_function_warnings() noexcept
+        inline constexpr underlying_type_t<T> disable_unused_function_warnings() noexcept
         {
             return (static_cast<T>(0) & static_cast<T>(0)).bits()
                 & (static_cast<T>(0) | static_cast<T>(0)).bits()
@@ -287,6 +292,13 @@ namespace std
 }
 
 // Implementation detail macros
+#define BITMASK_DETAIL_CONCAT_IMPL(a, b) a##b
+#define BITMASK_DETAIL_CONCAT(a, b) BITMASK_DETAIL_CONCAT_IMPL(a, b)
+
+// Must be user-defined if compiler doesn't have `__COUNTER__` macro
+#ifndef BITMASK_MAKE_UNIQUE_NAME
+#define BITMASK_MAKE_UNIQUE_NAME(prefix) BITMASK_DETAIL_CONCAT(prefix, __COUNTER__)
+#endif
 
 #define BITMASK_DETAIL_DEFINE_OPS(value_type) \
     inline constexpr bitmask_lib::bitmask<value_type> operator & (value_type l, value_type r) noexcept { return bitmask_lib::bitmask<value_type>{l} & r; } \
@@ -294,7 +306,11 @@ namespace std
     inline constexpr bitmask_lib::bitmask<value_type> operator ^ (value_type l, value_type r) noexcept { return bitmask_lib::bitmask<value_type>{l} ^ r; } \
     inline constexpr bitmask_lib::bitmask<value_type> operator ~ (value_type op) noexcept { return ~bitmask_lib::bitmask<value_type>{op}; }                \
     inline constexpr bitmask_lib::bitmask<value_type>::underlying_type bits(value_type op) noexcept { return bitmask_lib::bitmask<value_type>{op}.bits(); }\
-    using unused_bitmask_ ## value_type ## _t_ = decltype(bitmask_lib::bitmask_detail::disable_unused_function_warnings<value_type>());
+    namespace bitmask_definition_detail {                                                                                                           \
+        class BITMASK_MAKE_UNIQUE_NAME(_disable_unused_function_warnings_) {                                                                        \
+            static constexpr int _unused() noexcept { return bitmask_lib::bitmask_detail::disable_unused_function_warnings<value_type>(), 0; }      \
+        };                                                                                                                                          \
+    }
 
 #define BITMASK_DETAIL_DEFINE_VALUE_MASK(value_type, value_mask) \
     inline constexpr bitmask_lib::bitmask_detail::underlying_type_t<value_type> get_enum_mask(value_type) noexcept { return value_mask; }
