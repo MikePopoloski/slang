@@ -88,7 +88,7 @@ public:
 
     /// Add a range of elements to the end of the array.
     void appendRange(const T* begin, const T* end) {
-        if (std::is_trivially_copyable<T>()) {
+        if constexpr (std::is_trivially_copyable<T>()) {
             uint32_t count = (uint32_t)std::distance(begin, end);
             uint32_t newLen = len + count;
             ensureSize(newLen);
@@ -175,7 +175,7 @@ protected:
 
     void resize() {
         T* newData = (T*)malloc(capacity * sizeof(T));
-        if (std::is_trivially_copyable<T>())
+        if constexpr (std::is_trivially_copyable<T>())
             memcpy(newData, data_, len * sizeof(T));
         else {
             // We assume we can trivially std::move elements here. Don't do anything dumb like
@@ -205,7 +205,7 @@ protected:
     }
 
     void destructElements() {
-        if (!std::is_trivially_destructible<T>()) {
+        if constexpr (!std::is_trivially_destructible<T>()) {
             for (uint32_t i = 0; i < len; i++)
                 data_[i].~T();
         }
