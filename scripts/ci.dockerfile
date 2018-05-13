@@ -1,4 +1,4 @@
-FROM 		ubuntu:artful
+FROM 		ubuntu:bionic
 MAINTAINER 	Mike Popoloski
 CMD 		bash
 
@@ -10,12 +10,12 @@ RUN apt-get update && apt-get install -y \
 	wget \
 	doxygen \
 	xz-utils \
-	g++-7 \
-	clang-5.0 \
-	clang-tidy-5.0
+	g++-8 \
+	clang-6.0 \
+	clang-tidy-6.0
 
 RUN wget -O /tmp/cppcheck.tar.gz \
-	http://github.com/danmar/cppcheck/releases/download/1.81/cppcheck-1.81.tar.gz && \
+	https://github.com/danmar/cppcheck/archive/1.83.tar.gz && \
 	mkdir -p /tmp/cppcheck && \
 	tar xvzf /tmp/cppcheck.tar.gz -C /tmp/cppcheck --strip-components=1 && \
 	make -j 4 -C /tmp/cppcheck
