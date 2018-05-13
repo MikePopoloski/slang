@@ -8,7 +8,7 @@
 
 #include <cstdlib>
 
-#define XXH_PRIVATE_API
+#define XXH_INLINE_ALL
 #include "../external/xxhash/xxhash.h"
 
 namespace slang {
