@@ -19,7 +19,7 @@ Still under heavy construction!
 
 ### Build Instructions
 
-You need a compiler for your platform that supports C++17. The tests run under Visual Studio 2017, GCC-7, and Clang-5.0.
+You need a compiler for your platform that supports C++17. The tests run under Visual Studio 2017, GCC-8, and Clang-6.0.
 
 #### Windows
 ```
