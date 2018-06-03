@@ -19,7 +19,7 @@ install:
 
 script:
   - export ci_env=`bash <(curl -s https://codecov.io/env)`
-  - if [ "$BUILD_TARGET" == "linux-clang" ]; then docker exec build slang/scripts/build_clang.sh; fi
+  - if [ "$BUILD_TARGET" == "linux-clang" ]; then docker exec $ci_env build slang/scripts/build_clang.sh; fi
   - if [ "$BUILD_TARGET" == "linux-gcc" ]; then docker exec $ci_env build slang/scripts/build_gcc.sh; fi
 
 branches:
