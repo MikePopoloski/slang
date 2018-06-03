@@ -180,7 +180,7 @@ function toolchain(_buildDir, _libDir)
 		}
 
 	if _OPTIONS["with-coverage"] then
-		configuration { "linux-gcc* or linux-clang*" }
+		configuration { "linux-gcc*" }
 			buildoptions {
 				"--coverage",
 				"-fno-inline",
@@ -188,6 +188,14 @@ function toolchain(_buildDir, _libDir)
 				"-fno-default-inline",
 				"-fno-omit-frame-pointer",
 				"-fno-optimize-sibling-calls"
+			}
+			linkoptions {
+				"--coverage"
+			}
+		configuration { "linux-clang*" }
+			buildoptions {
+				"--coverage",
+				"-O0"
 			}
 			linkoptions {
 				"--coverage"
