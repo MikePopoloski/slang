@@ -6,8 +6,8 @@ services:
 
 matrix:
   include:
-    - env: BUILD_TARGET=linux-gcc BUILD_FLAGS="--with-coverage"
-    - env: BUILD_TARGET=linux-clang BUILD_FLAGS="--sanitizer=undefined,address"
+    - env: BUILD_TARGET=linux-gcc
+    - env: BUILD_TARGET=linux-clang BUILD_FLAGS="--sanitizer=undefined,address --with-coverage"
 
 before_install:
   - docker pull mpopoloski/slang:1.2
