@@ -73,7 +73,7 @@ void Token::Info::setBit(logic_t value) {
     else {
         NumericLiteralInfo numInfo;
         numInfo.value = value;
-        extra = std::move(numInfo);
+        extra = numInfo;
     }
 }
 
@@ -84,7 +84,7 @@ void Token::Info::setReal(double value) {
     else {
         NumericLiteralInfo numInfo;
         numInfo.value = value;
-        extra = std::move(numInfo);
+        extra = numInfo;
     }
 }
 
@@ -103,7 +103,7 @@ void Token::Info::setInt(BumpAllocator& alloc, const SVInt& value) {
     else {
         NumericLiteralInfo numInfo;
         numInfo.value = storage;
-        extra = std::move(numInfo);
+        extra = numInfo;
     }
 }
 
@@ -114,7 +114,7 @@ void Token::Info::setNumFlags(LiteralBase base, bool isSigned) {
     else {
         NumericLiteralInfo numInfo;
         numInfo.numericFlags.set(base, isSigned);
-        extra = std::move(numInfo);
+        extra = numInfo;
     }
 }
 
@@ -125,7 +125,7 @@ void Token::Info::setTimeUnit(TimeUnit unit) {
     else {
         NumericLiteralInfo numInfo;
         numInfo.numericFlags.set(unit);
-        extra = std::move(numInfo);
+        extra = numInfo;
     }
 }
 

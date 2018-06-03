@@ -581,11 +581,11 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
                 value = *init.constant;
         }
 
+        current = value.integer() + one;
         auto ev = compilation.emplace<EnumValueSymbol>(compilation, member->name.valueText(),
                                                        member->name.location(), *resultType,
                                                        std::move(value));
         resultType->addMember(*ev);
-        current = value.integer() + one;
         previousMember = ev;
     }
 
