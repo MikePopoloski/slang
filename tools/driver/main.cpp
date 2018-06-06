@@ -13,7 +13,7 @@
 
 using namespace slang;
 
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 try {
     std::vector<std::string> sourceFiles;
 
@@ -32,20 +32,31 @@ try {
 
     // Build the compilation out of each source file.
     Compilation compilation;
-    for (const std::string& file : sourceFiles)
-        compilation.addSyntaxTree(SyntaxTree::fromFile(file, sourceManager));
+    bool anyErrors = false;
+    for (const std::string& file : sourceFiles) {
+        std::shared_ptr<SyntaxTree> tree = SyntaxTree::fromFile(file, sourceManager);
+        if (!tree) {
+            printf("error: no such file or directory: '%s'\n", file.c_str());
+            anyErrors = true;
+            continue;
+        }
+
+        compilation.addSyntaxTree(std::move(tree));
+    }
+
+    if (compilation.getSyntaxTrees().empty()) {
+        printf("error: no input files\n");
+        return 1;
+    }
 
     // Report diagnostics.
     Diagnostics diagnostics = compilation.getAllDiagnostics();
     DiagnosticWriter writer(sourceManager);
     printf("%s\n", writer.report(diagnostics).c_str());
 
-    json j = compilation.getRoot();
-    printf("%s\n", j.dump(4).c_str());
-
-    return 0;
+    return !anyErrors && diagnostics.empty() ? 0 : 1;
 }
 catch (const std::exception& e) {
-    printf("Caught exception: %s\n", e.what());
-    return 1;
+    printf("internal compiler error (exception): %s\n", e.what());
+    return 2;
 }

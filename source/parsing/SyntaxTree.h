@@ -42,7 +42,10 @@ public:
     }
 
     static std::shared_ptr<SyntaxTree> fromFile(string_view path, SourceManager& sourceManager) {
-        return create(sourceManager, sourceManager.readSource(path), false);
+        SourceBuffer buffer = sourceManager.readSource(path);
+        if (!buffer)
+            return nullptr;
+        return create(sourceManager, buffer, false);
     }
 
     static std::shared_ptr<SyntaxTree> fromText(string_view text, SourceManager& sourceManager,

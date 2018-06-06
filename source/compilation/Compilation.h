@@ -31,6 +31,9 @@ public:
     /// by calling @a getRoot this call will throw an exception.
     void addSyntaxTree(std::shared_ptr<SyntaxTree> tree);
 
+    /// Gets the set of syntax trees that have been added to the compilation.
+    span<const std::shared_ptr<SyntaxTree>> getSyntaxTrees() const;
+
     /// Gets the root of the design. The first time you call this method all top-level
     /// instances will be elaborated and the compilation finalized. After that you can
     /// no longer make any modifications to the compilation object; any attempts to do

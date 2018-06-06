@@ -140,6 +140,10 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     forcedDiagnostics = false;
 }
 
+span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const {
+    return syntaxTrees;
+}
+
 const RootSymbol& Compilation::getRoot() {
     if (!finalized) {
         // Find modules that have no instantiations.
