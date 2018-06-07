@@ -48,6 +48,6 @@ open build/projects/xcode4-osx/slang.xcworkspace
 #### OSX - GCC
 ```
 brew install gcc
-scripts/bin/osx/genie --gcc=linux-gcc gmake
-make -C build/projects/gmake-linux -j 8
+scripts/bin/osx/genie --gcc=osx gmake
+make -C build/projects/gmake-osx -j 8
 ```

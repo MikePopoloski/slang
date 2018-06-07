@@ -7,6 +7,7 @@ function toolchain(_buildDir, _libDir)
 		allowed = {
 			{ "linux-gcc",       "Linux (GCC compiler)"       },
 			{ "linux-clang",     "Linux (Clang compiler)"     },
+			{ "osx", 			 "OSX" 						  }
 		},
 	}
 
@@ -79,6 +80,9 @@ function toolchain(_buildDir, _libDir)
 			premake.gcc.cxx = "clang++-6.0"
 			premake.gcc.ar  = "ar"
 			location (path.join(_buildDir, "projects", _ACTION .. "-linux-clang"))
+
+		elseif "osx" == _OPTIONS["gcc"] then
+			location (path.join(_buildDir, "projects", _ACTION .. "-osx"))
 
 		end
 
@@ -276,7 +280,30 @@ function toolchain(_buildDir, _libDir)
 			}
 		end
 
-	configuration { "linux-gcc* or linux-clang*", "Debug" }
+	configuration { "osx" }
+		buildoptions {
+			"-msse2",
+			"-Wunused-value",
+			"-Wformat-security",
+			"-Wnull-dereference",
+			"-Wimplicit-fallthrough=5",
+			"-Wsuggest-override",
+			"-Walloc-zero",
+			"-Wlogical-op",
+			"-Wlogical-not-parentheses",
+			"-Wvla",
+			"-Wnoexcept",
+			"-Wduplicated-cond",
+			"-Wtype-limits"
+		}
+		buildoptions_cpp {
+			"-std=c++1z",
+		}
+		links {
+			"dl",
+		}
+
+	configuration { "linux-gcc* or linux-clang* or osx", "Debug" }
 		buildoptions {
 			"-g"
 		}
@@ -298,21 +325,10 @@ function toolchain(_buildDir, _libDir)
 		}
 
 	configuration { "osx", "x64" }
-		targetdir (path.join(_buildDir, "osx64_clang/bin"))
-		objdir (path.join(_buildDir, "osx64_clang/obj"))
+		targetdir (path.join(_buildDir, "osx64/bin"))
+		objdir (path.join(_buildDir, "osx64/obj"))
 		buildoptions {
 			"-m64",
-		}
-
-	configuration { "osx" }
-		buildoptions_cpp {
-			"-std=c++11",
-		}
-		buildoptions {
-			"-Wfatal-errors",
-			"-msse2",
-			"-Wunused-value",
-			"-Wundef",
 		}
 
 	configuration {} -- reset configuration
