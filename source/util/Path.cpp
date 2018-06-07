@@ -109,7 +109,9 @@ bool Path::readFile(std::vector<char>& buffer) const {
         return false;
     }
 
+#ifndef __APPLE__
     posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
 
     // TODO: vector does initialization always, which is dumb
     off_t remaining = sb.st_size;
