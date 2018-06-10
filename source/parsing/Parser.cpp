@@ -10,7 +10,7 @@
 
 namespace slang {
 
-Parser::Parser(Preprocessor& preprocessor) :
+Parser::Parser(Preprocessor& preprocessor, const Bag&) :
     ParserBase::ParserBase(preprocessor),
     factory(alloc),
     vectorBuilder(getDiagnostics())

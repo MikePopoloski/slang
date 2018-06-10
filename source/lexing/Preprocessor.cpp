@@ -39,14 +39,31 @@ namespace slang {
 
 SyntaxKind getDirectiveKind(string_view directive);
 
-Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics) :
+Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
+                           const Bag& options_) :
     sourceManager(sourceManager),
     alloc(alloc),
-    diagnostics(diagnostics)
+    diagnostics(diagnostics),
+    options(options_.getOrDefault<PreprocessorOptions>()),
+    lexerOptions(options_.getOrDefault<LexerOptions>())
 {
     keywordVersionStack.push_back(KeywordVersion::v1800_2012);
     resetAllDirectives();
     undefineAll();
+
+    for (std::string& predef : options.predefines) {
+        // Find location of equals sign to indicate start of body.
+        // If there is no equals sign, predefine to a value of 1.
+        size_t index = predef.find('=');
+        if (index != std::string::npos)
+            predef[index] = ' ';
+        else
+            predef += " 1";
+        predefine(predef, options.predefineSource);
+    }
+
+    for (const std::string& undef : options.undefines)
+        undefine(string_view(undef));
 }
 
 void Preprocessor::pushSource(string_view source) {
@@ -55,10 +72,10 @@ void Preprocessor::pushSource(string_view source) {
 }
 
 void Preprocessor::pushSource(SourceBuffer buffer) {
-    ASSERT(lexerStack.size() < MaxIncludeDepth);
+    ASSERT(lexerStack.size() < options.maxIncludeDepth);
     ASSERT(buffer.id);
 
-    auto lexer = alloc.emplace<Lexer>(buffer, alloc, diagnostics);
+    auto lexer = alloc.emplace<Lexer>(buffer, alloc, diagnostics, lexerOptions);
     lexerStack.push_back(lexer);
 }
 
@@ -353,7 +370,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), isSystem);
         if (!buffer.id)
             addError(DiagCode::CouldNotOpenIncludeFile, fileName.location());
-        else if (lexerStack.size() >= MaxIncludeDepth)
+        else if (lexerStack.size() >= options.maxIncludeDepth)
             addError(DiagCode::ExceededMaxIncludeDepth, fileName.location());
         else
             pushSource(buffer);

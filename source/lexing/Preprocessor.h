@@ -12,7 +12,9 @@
 #include "diagnostics/Diagnostics.h"
 #include "parsing/SyntaxNode.h"
 #include "text/SourceLocation.h"
+#include "util/Bag.h"
 #include "util/SmallVector.h"
+
 #include "Lexer.h"
 #include "Token.h"
 
@@ -26,6 +28,24 @@ struct MacroFormalArgumentSyntax;
 
 string_view getDirectiveText(SyntaxKind kind);
 
+/// Contains various options that can control preprocessing behavior.
+struct PreprocessorOptions {
+    /// The maximum depth of the include stack; further attempts to include
+    /// a file will result in an error.
+    uint32_t maxIncludeDepth = 1024;
+
+    /// The name to associate with errors produced by macros specified
+    /// via the @a predefines option.
+    std::string predefineSource = "<api>";
+
+    /// A set of macros to predefine, of the form <macro>=<value> or
+    /// just <macro> to predefine to a value of 1.
+    std::vector<std::string> predefines;
+
+    /// A set of macro names to undefine at the start of file preprocessing.
+    std::vector<std::string> undefines;
+};
+
 /// Preprocessor - Interface between lexer and parser
 ///
 /// This class handles the messy interface between various source file lexers, include directives,
@@ -33,7 +53,8 @@ string_view getDirectiveText(SyntaxKind kind);
 /// of tokens to consume.
 class Preprocessor {
 public:
-    Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics);
+    Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
+                 const Bag& options = {});
 
     /// Push a new source file onto the stack.
     void pushSource(string_view source);
@@ -221,6 +242,8 @@ private:
     SourceManager& sourceManager;
     BumpAllocator& alloc;
     Diagnostics& diagnostics;
+    PreprocessorOptions options;
+    LexerOptions lexerOptions;
 
     // stack of active lexers; each `include pushes a new lexer
     std::deque<Lexer*> lexerStack;
@@ -259,9 +282,6 @@ private:
     std::vector<KeywordVersion> keywordVersionStack;
     optional<Timescale> activeTimescale;
     TokenKind defaultNetType;
-
-    // maximum number of nested includes
-    static constexpr int MaxIncludeDepth = 1024;
 };
 
 }

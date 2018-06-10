@@ -11,6 +11,7 @@
 #include "diagnostics/Diagnostics.h"
 #include "lexing/Preprocessor.h"
 #include "text/SourceManager.h"
+#include "util/Bag.h"
 #include "util/BumpAllocator.h"
 
 #include "Parser.h"
@@ -41,16 +42,23 @@ public:
         return fromText(text, getDefaultSourceManager(), name);
     }
 
-    static std::shared_ptr<SyntaxTree> fromFile(string_view path, SourceManager& sourceManager) {
+    static std::shared_ptr<SyntaxTree> fromFile(string_view path, SourceManager& sourceManager,
+                                                const Bag& options = {}) {
         SourceBuffer buffer = sourceManager.readSource(path);
         if (!buffer)
             return nullptr;
-        return create(sourceManager, buffer, false);
+        return create(sourceManager, buffer, options, false);
     }
 
     static std::shared_ptr<SyntaxTree> fromText(string_view text, SourceManager& sourceManager,
-                                                string_view name = "") {
-        return create(sourceManager, sourceManager.assignText(name, text), true);
+                                                string_view name = "",
+                                                const Bag& options = {}) {
+        return create(sourceManager, sourceManager.assignText(name, text), options, true);
+    }
+
+    static std::shared_ptr<SyntaxTree> fromBuffer(const SourceBuffer& buffer, SourceManager& sourceManager,
+                                                  const Bag& options = {}) {
+        return create(sourceManager, buffer, options, false);
     }
 
     /// Gets any diagnostics generated while parsing.
@@ -75,6 +83,9 @@ public:
     /// The ID of the source buffer used to create the syntax tree.
     BufferID bufferID() const { return bufferID_; }
 
+    /// The options used to construct the syntax tree.
+    const Bag& options() const { return options_; }
+
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
     /// the source loaded by this thing will live in memory for the lifetime of
@@ -86,23 +97,27 @@ public:
 
 private:
     SyntaxTree(const SyntaxNode* root, SourceManager& sourceManager,
-               BumpAllocator&& alloc, Diagnostics&& diagnostics, BufferID bufferID) :
+               BumpAllocator&& alloc, Diagnostics&& diagnostics,
+               const Bag& options, BufferID bufferID) :
         rootNode(root), sourceMan(sourceManager),
-        alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)), bufferID_(bufferID) {}
+        alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)),
+        options_(options), bufferID_(bufferID) {}
 
-    static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source, bool guess) {
+    static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source,
+                                              const Bag& options, bool guess) {
         BumpAllocator alloc;
         Diagnostics diagnostics;
-        Preprocessor preprocessor(sourceManager, alloc, diagnostics);
+        Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
         preprocessor.pushSource(source);
 
-        Parser parser(preprocessor);
+        Parser parser(preprocessor, options);
 
         return std::shared_ptr<SyntaxTree>(new SyntaxTree(
             guess ? &parser.parseGuess() : &parser.parseCompilationUnit(),
             sourceManager,
             std::move(alloc),
             std::move(diagnostics),
+            options,
             source.id
         ));
     }
@@ -111,6 +126,7 @@ private:
     SourceManager& sourceMan;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
+    Bag options_;
     BufferID bufferID_;
 };
 

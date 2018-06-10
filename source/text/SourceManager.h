@@ -53,8 +53,12 @@ public:
     /// Gets the source line number for a given source location.
     uint32_t getLineNumber(SourceLocation location) const;
 
-    /// Gets the source file name for a given source location
+    /// Gets the source file name for a given source location.
     string_view getFileName(SourceLocation location) const;
+
+    /// Gets the source file name for a given source buffer, not taking
+    /// into account any `line directives that may be in the file.
+    string_view getRawFileName(BufferID buffer) const;
 
     /// Gets the column line number for a given source location.
     /// @a location must be a file location.

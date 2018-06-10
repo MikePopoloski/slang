@@ -8,6 +8,7 @@
 
 #include "lexing/Token.h"
 #include "numeric/VectorBuilder.h"
+#include "util/Bag.h"
 
 #include "AllSyntax.h"
 #include "ParserBase.h"
@@ -23,7 +24,7 @@ public:
     // TODO: This should be configurable through the Options system
     static constexpr size_t MaxDepth=100;
 
-    explicit Parser(Preprocessor& preprocessor);
+    explicit Parser(Preprocessor& preprocessor, const Bag& options = {});
 
     /// Parse a whole compilation unit.
     CompilationUnitSyntax& parseCompilationUnit();

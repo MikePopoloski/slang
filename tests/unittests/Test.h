@@ -1,5 +1,10 @@
 #pragma once
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4459)   // annoying warning about global "alloc" being shadowed by locals
+#endif
+
 #include <sstream>
 
 #include "Catch/catch.hpp"

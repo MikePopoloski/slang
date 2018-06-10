@@ -77,6 +77,14 @@ string_view SourceManager::getFileName(SourceLocation location) const {
         return string_view(lineDirective->name);
 }
 
+string_view SourceManager::getRawFileName(BufferID buffer) const {
+    FileData* fd = getFileData(buffer);
+    if (!fd)
+        return "";
+    else
+        return string_view(fd->name);
+}
+
 SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
     if (!buffer)
         return SourceLocation();
