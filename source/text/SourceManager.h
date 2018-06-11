@@ -7,14 +7,16 @@
 #pragma once
 
 #include <deque>
+#include <filesystem>
 #include <memory>
 #include <set>
 #include <unordered_map>
 
-#include "util/Path.h"
 #include "util/Util.h"
 
 #include "SourceLocation.h"
+
+namespace fs = std::filesystem;
 
 namespace slang {
 
@@ -144,9 +146,9 @@ private:
         std::vector<char> mem;                          // file contents
         std::vector<uint32_t> lineOffsets;              // cache of compute line offsets
         std::vector<LineDirectiveInfo> lineDirectives;  // cache of line directives
-        const Path* directory;                          // directory in which the file exists
+        const fs::path* directory;                          // directory in which the file exists
 
-        FileData(const Path* directory, std::string name, std::vector<char>&& data) :
+        FileData(const fs::path* directory, std::string name, std::vector<char>&& data) :
             name(std::move(name)),
             mem(std::move(data)),
             directory(directory) {}
@@ -194,22 +196,24 @@ private:
     std::deque<FileData> userFileBuffers;
 
     // directories for system and user includes
-    std::vector<Path> systemDirectories;
-    std::vector<Path> userDirectories;
+    std::vector<fs::path> systemDirectories;
+    std::vector<fs::path> userDirectories;
 
     // uniquified backing memory for directories
-    std::set<Path> directories;
+    std::set<fs::path> directories;
 
     FileData* getFileData(BufferID buffer) const;
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom);
 
-    SourceBuffer openCached(const Path& fullPath, SourceLocation includedFrom);
-    SourceBuffer cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, std::vector<char>&& buffer);
+    SourceBuffer openCached(const fs::path& fullPath, SourceLocation includedFrom);
+    SourceBuffer cacheBuffer(const fs::path& path, SourceLocation includedFrom, std::vector<char>&& buffer);
 
     // Get raw line number of a file location, ignoring any line directives
     uint32_t getRawLineNumber(SourceLocation location) const;
 
     static void computeLineOffsets(const std::vector<char>& buffer, std::vector<uint32_t>& offsets);
+
+    static bool readFile(const fs::path& path, std::vector<char>& buffer);
 };
 
 }

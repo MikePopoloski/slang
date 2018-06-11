@@ -39,13 +39,13 @@ using namespace slang;
 } while (0)
 
 inline std::string findTestDir() {
-    auto path = Path::getCurrentDirectory();
-    while (!(path + "tests").exists()) {
-        path = path.parentPath();
+    auto path = fs::current_path();
+    while (!fs::exists(path / "tests")) {
+        path = path.parent_path();
         ASSERT(!path.empty());
     }
 
-    return (path + "tests/unittests/data/").str();
+    return (path / "tests/unittests/data/").string();
 }
 
 inline SourceManager& getSourceManager() {

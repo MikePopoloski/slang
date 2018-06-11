@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
 
     // Find all Verilog files in the given directories.
     DependencyMapper mapper;
-    std::vector<Path> verilogFiles;
+    std::vector<fs::path> verilogFiles;
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
@@ -97,14 +97,17 @@ int main(int argc, char* argv[]) {
             }
         }
         else {
-            verilogFiles = Path::findFiles(argv[i], ".sv", true);
+            for (auto& entry : fs::recursive_directory_iterator(argv[i])) {
+                if (entry.is_regular_file() && entry.path().filename().extension() == ".sv")
+                    verilogFiles.push_back(entry.path());
+            }
         }
     }
 
     // Parse each file, build a map of top-level module, interface, and
     // package definitions.
-    for (const Path& path : verilogFiles)
-        mapper.parseFile(path.str());
+    for (const fs::path& path : verilogFiles)
+        mapper.parseFile(path.string());
 
     mapper.printDeps();
 }

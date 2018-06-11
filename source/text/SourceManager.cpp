@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "SourceManager.h"
 
+#include <fstream>
+
 #include "util/StackContainer.h"
 
 namespace slang {
@@ -17,18 +19,15 @@ SourceManager::SourceManager() {
 }
 
 std::string SourceManager::makeAbsolutePath(string_view path) const {
-    if (path.empty())
-        return "";
-
-    return Path::makeAbsolute(path).str();
+    return fs::canonical(path).string();
 }
 
 void SourceManager::addSystemDirectory(string_view path) {
-    systemDirectories.push_back(Path::makeAbsolute(path));
+    systemDirectories.push_back(fs::canonical(path));
 }
 
 void SourceManager::addUserDirectory(string_view path) {
-    userDirectories.push_back(Path::makeAbsolute(path));
+    userDirectories.push_back(fs::canonical(path));
 }
 
 uint32_t SourceManager::getLineNumber(SourceLocation location) const {
@@ -237,14 +236,14 @@ SourceBuffer SourceManager::readSource(string_view path) {
 SourceBuffer SourceManager::readHeader(string_view path, SourceLocation includedFrom, bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     ASSERT(!path.empty());
-    Path p = path;
-    if (p.isAbsolute())
+    fs::path p = path;
+    if (p.is_absolute())
         return openCached(p, includedFrom);
 
     // system path lookups only look in system directories
     if (isSystemPath) {
         for (auto& d : systemDirectories) {
-            SourceBuffer result = openCached(d + p, includedFrom);
+            SourceBuffer result = openCached(d / p, includedFrom);
             if (result.id)
                 return result;
         }
@@ -254,14 +253,14 @@ SourceBuffer SourceManager::readHeader(string_view path, SourceLocation included
     // search relative to the current file
     FileData* fd = getFileData(includedFrom.buffer());
     if (fd && fd->directory) {
-        SourceBuffer result = openCached((*fd->directory) + p, includedFrom);
+        SourceBuffer result = openCached((*fd->directory) / p, includedFrom);
         if (result.id)
             return result;
     }
 
     // search additional include directories
     for (auto& d : userDirectories) {
-        SourceBuffer result = openCached(d + p, includedFrom);
+        SourceBuffer result = openCached(d / p, includedFrom);
         if (result.id)
             return result;
     }
@@ -297,18 +296,14 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
     };
 }
 
-SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation includedFrom) {
-    Path absPath;
-    try {
-        absPath = Path::makeAbsolute(fullPath);
-    }
-    catch (std::runtime_error&) {
+SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom) {
+    std::error_code ec;
+    fs::path absPath = fs::canonical(fullPath, ec);
+    if (ec)
         return SourceBuffer();
-    }
 
     // first see if we have this file cached
-    std::string canonicalStr = absPath.str();
-    auto it = lookupCache.find(canonicalStr);
+    auto it = lookupCache.find(absPath.string());
     if (it != lookupCache.end()) {
         FileData* fd = it->second.get();
         if (!fd)
@@ -318,23 +313,23 @@ SourceBuffer SourceManager::openCached(const Path& fullPath, SourceLocation incl
 
     // do the read
     std::vector<char> buffer;
-    if (!absPath.readFile(buffer)) {
-        lookupCache.emplace(std::move(canonicalStr), nullptr);
+    if (!readFile(absPath, buffer)) {
+        lookupCache.emplace(absPath.string(), nullptr);
         return SourceBuffer();
     }
 
-    return cacheBuffer(std::move(canonicalStr), absPath, includedFrom, std::move(buffer));
+    return cacheBuffer(std::move(absPath), includedFrom, std::move(buffer));
 }
 
-SourceBuffer SourceManager::cacheBuffer(std::string&& canonicalPath, const Path& path, SourceLocation includedFrom, std::vector<char>&& buffer) {
-    std::string name = path.filename();
+SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation includedFrom, std::vector<char>&& buffer) {
+    std::string name = path.filename().string();
     auto fd = std::make_unique<FileData>(
-        &*directories.insert(path.parentPath()).first,
+        &*directories.insert(path.parent_path()).first,
         std::move(name),
         std::move(buffer)
     );
 
-    FileData* fdPtr = lookupCache.emplace(std::move(canonicalPath), std::move(fd)).first->second.get();
+    FileData* fdPtr = lookupCache.emplace(path.string(), std::move(fd)).first->second.get();
     return createBufferEntry(fdPtr, includedFrom);
 }
 
@@ -356,6 +351,23 @@ void SourceManager::computeLineOffsets(const std::vector<char>& buffer, std::vec
             ptr++;
         }
     }
+}
+
+bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
+    std::error_code ec;
+    uintmax_t size = fs::file_size(path, ec);
+    if (ec)
+        return false;
+
+    // + 1 for null terminator
+    buffer.resize((uint32_t)size + 1);
+    std::ifstream stream(path, std::ios::binary);
+    stream.read(buffer.data(), size);
+
+    // null-terminate the buffer while we're at it
+    buffer[(uint32_t)size] = '\0';
+
+    return stream.good();
 }
 
 const SourceManager::LineDirectiveInfo*
