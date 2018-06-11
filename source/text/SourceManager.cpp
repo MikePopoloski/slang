@@ -362,12 +362,15 @@ bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
     // + 1 for null terminator
     buffer.resize((uint32_t)size + 1);
     std::ifstream stream(path, std::ios::binary);
-    stream.read(buffer.data(), size);
+    if (!stream.read(buffer.data(), size))
+        return false;
 
     // null-terminate the buffer while we're at it
-    buffer[(uint32_t)size] = '\0';
+    std::streamsize sz = stream.gcount();
+    buffer.resize(sz + 1);
+    buffer[sz] = '\0';
 
-    return stream.good();
+    return true;
 }
 
 const SourceManager::LineDirectiveInfo*
