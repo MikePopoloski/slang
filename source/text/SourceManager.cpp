@@ -362,11 +362,11 @@ bool SourceManager::readFile(const fs::path& path, std::vector<char>& buffer) {
     // + 1 for null terminator
     buffer.resize((uint32_t)size + 1);
     std::ifstream stream(path, std::ios::binary);
-    if (!stream.read(buffer.data(), size))
+    if (!stream.read(buffer.data(), (std::streamsize)size))
         return false;
 
     // null-terminate the buffer while we're at it
-    std::streamsize sz = stream.gcount();
+    size_t sz = (size_t)stream.gcount();
     buffer.resize(sz + 1);
     buffer[sz] = '\0';
 

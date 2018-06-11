@@ -244,6 +244,7 @@ function toolchain(_buildDir, _libDir)
 		links {
 			"rt",
 			"dl",
+			"stdc++fs"
 		}
 
 	configuration { "linux-clang*" }
@@ -277,6 +278,7 @@ function toolchain(_buildDir, _libDir)
 			links {
 				"rt",
 				"dl",
+				"stdc++fs"
 			}
 		end
 
@@ -301,6 +303,7 @@ function toolchain(_buildDir, _libDir)
 		}
 		links {
 			"dl",
+			"stdc++fs"
 		}
 
 	configuration { "linux-gcc* or linux-clang* or osx", "Debug" }
