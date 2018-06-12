@@ -86,7 +86,9 @@ const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance
 
 const Expression& Expression::bind(Compilation& compilation, const ExpressionSyntax& syntax,
                                    const BindContext& context) {
-    return selfDetermined(compilation, syntax, context);
+    const Expression& result = selfDetermined(compilation, syntax, context);
+    result.checkBindFlags(compilation, context);
+    return result;
 }
 
 const Expression& Expression::bind(Compilation& compilation, const Type& lhs, const ExpressionSyntax& rhs,
@@ -95,7 +97,23 @@ const Expression& Expression::bind(Compilation& compilation, const Type& lhs, co
     if (expr.bad() || lhs.isError())
         return expr;
 
-    return convertAssignment(compilation, lhs, expr, location, std::nullopt);
+    const Expression& result = convertAssignment(compilation, lhs, expr, location, std::nullopt);
+    result.checkBindFlags(compilation, context);
+    return result;
+}
+
+void Expression::checkBindFlags(Compilation& compilation, const BindContext& context) const {
+    if ((context.flags & BindFlags::Constant) || (context.flags & BindFlags::IntegralConstant)) {
+        EvalContext evalContext;
+        eval(evalContext);
+
+        const Diagnostics& diags = evalContext.getDiagnostics();
+        if (!diags.empty()) {
+            Diagnostic& diag = compilation.addError(DiagCode::ExpressionNotConstant, sourceRange);
+            for (const Diagnostic& note : diags)
+                diag.addNote(note);
+        }
+    }
 }
 
 bool Expression::bad() const {
@@ -751,6 +769,7 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                               const RangeSelectSyntax& syntax, SourceRange fullRange,
                                               const BindContext& context) {
+    // TODO: require constant integer expressions
     Expression& left = selfDetermined(compilation, syntax.left, context);
     Expression& right = selfDetermined(compilation, syntax.right, context);
 
@@ -779,11 +798,11 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
         elementType = &compilation.getBitType();
 
     if (selectionKind == RangeSelectionKind::Simple) {
-        ConstantRange range { *left.eval(compilation).integer().as<int32_t>(), *right.eval(compilation).integer().as<int32_t>() };
+        ConstantRange range { *left.eval().integer().as<int32_t>(), *right.eval().integer().as<int32_t>() };
         result->type = compilation.emplace<PackedArrayType>(*elementType, ConstantRange { (int32_t)range.width() - 1, 0 });
     }
     else {
-        int32_t width = *right.eval(compilation).integer().as<int32_t>();
+        int32_t width = *right.eval().integer().as<int32_t>();
         result->type = compilation.emplace<PackedArrayType>(*elementType, ConstantRange { width - 1, 0 });
     }
     return *result;

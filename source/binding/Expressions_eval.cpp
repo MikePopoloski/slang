@@ -117,19 +117,9 @@ ConstantValue Expression::eval(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-ConstantValue Expression::eval(Compilation& compilation) const {
+ConstantValue Expression::eval() const {
     EvalContext context;
-    ConstantValue result = eval(context);
-
-    const Diagnostics& diags = context.getDiagnostics();
-    if (!diags.empty()) {
-        // TODO: should tie in to BindContext requirement flags
-        Diagnostic& diag = compilation.addError(DiagCode::ExpressionNotConstant, sourceRange);
-        for (const Diagnostic& note : diags)
-            diag.addNote(note);
-    }
-
-    return result;
+    return eval(context);
 }
 
 LValue Expression::evalLValue(EvalContext& context) const {

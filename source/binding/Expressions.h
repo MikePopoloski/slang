@@ -133,13 +133,12 @@ public:
     /// Indicates whether the expression evaluates to an lvalue.
     bool isLValue() const;
 
+    /// Evaluates the expression as a constant value.
+    ConstantValue eval() const;
+
     /// Evaluates the expression under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.
     ConstantValue eval(EvalContext& context) const;
-
-    /// Evaluates the expression under a default context. Any errors that occur will be
-    /// issued to the compilation.
-    ConstantValue eval(Compilation& compilation) const;
 
     /// Evaluates the expression and tries to interpret the result in a boolean context.
     bool evalBool(EvalContext& context) const;
@@ -169,6 +168,8 @@ public:
 protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
+
+    void checkBindFlags(Compilation& compilation, const BindContext& context) const;
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
     static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
