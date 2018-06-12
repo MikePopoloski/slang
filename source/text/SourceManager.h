@@ -135,8 +135,8 @@ private:
         uint32_t lineOfDirective;   // Line number set by directive
         uint8_t level;              // Level of directive. Either 0, 1, or 2.
 
-        LineDirectiveInfo(string_view fname, uint32_t lif, uint32_t lod, uint8_t level) :
-            name(fname), lineInFile(lif), lineOfDirective(lod), level(level) {}
+        LineDirectiveInfo(std::string&& fname, uint32_t lif, uint32_t lod, uint8_t level) :
+            name(std::move(fname)), lineInFile(lif), lineOfDirective(lod), level(level) {}
     };
 
     // Stores actual file contents and metadata; only one per loaded file
@@ -146,7 +146,7 @@ private:
         std::vector<char> mem;                          // file contents
         std::vector<uint32_t> lineOffsets;              // cache of compute line offsets
         std::vector<LineDirectiveInfo> lineDirectives;  // cache of line directives
-        const fs::path* directory;                          // directory in which the file exists
+        const fs::path* directory;                      // directory in which the file exists
 
         FileData(const fs::path* directory, std::string name, std::vector<char>&& data) :
             name(std::move(name)),

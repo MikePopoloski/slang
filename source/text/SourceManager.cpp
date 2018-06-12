@@ -275,8 +275,15 @@ void SourceManager::addLineDirective(SourceLocation location, uint32_t lineNum,
     if (!fd)
         return;
 
+    fs::path full;
+    fs::path linePath = name;
+    if (linePath.has_relative_path())
+        full = linePath.lexically_proximate(fs::current_path());
+    else
+        full = fs::path(fd->name).replace_filename(linePath);
+
     uint32_t sourceLineNum = getRawLineNumber(fileLocation);
-    fd->lineDirectives.emplace_back(name, sourceLineNum, lineNum, level);
+    fd->lineDirectives.emplace_back(full.string(), sourceLineNum, lineNum, level);
 }
 
 SourceManager::FileData* SourceManager::getFileData(BufferID buffer) const {
@@ -322,7 +329,14 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
 }
 
 SourceBuffer SourceManager::cacheBuffer(const fs::path& path, SourceLocation includedFrom, std::vector<char>&& buffer) {
-    std::string name = path.filename().string();
+    std::string name;
+    std::error_code ec;
+    fs::path rel = fs::proximate(path, ec);
+    if (ec || rel.empty())
+        name = path.filename().string();
+    else
+        name = rel.string();
+
     auto fd = std::make_unique<FileData>(
         &*directories.insert(path.parent_path()).first,
         std::move(name),

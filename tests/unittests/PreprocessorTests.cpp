@@ -683,12 +683,41 @@ TEST_CASE("FILE Directive (include+nesting)", "[preprocessor]") {
     Token token = preprocessor.next();
     REQUIRE(token);
 
+    std::string compare = fs::proximate(findTestDir() + "/file_uses_defn.svh").string();
+
     REQUIRE(token.kind == TokenKind::StringLiteral);
-    CHECK(token.valueText() == "file_uses_defn.svh");
+    CHECK(token.valueText() == compare);
 
     token = preprocessor.next();
     REQUIRE(token.kind == TokenKind::StringLiteral);
-    CHECK(token.valueText() != "file_uses_defn.svh");
+    CHECK(token.valueText() != compare);
+
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("`line + FILE + LINE Directive", "[preprocessor]") {
+    auto& text =
+"`line 6 \"other.sv\" 0\n"
+"`__LINE__\n"
+"`include \"file_uses_defn.svh\"\n"
+"`__FILE__";
+
+    diagnostics.clear();
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::IntegerLiteral);
+    CHECK(token.intValue() == 6);
+
+    token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    std::string compare = fs::proximate(findTestDir() + "/file_uses_defn.svh").string();
+    CHECK(token.valueText() == compare);
+
+    token = preprocessor.next();
+    REQUIRE(token.kind == TokenKind::StringLiteral);
+    CHECK(token.valueText() == "other.sv");
 
     CHECK_DIAGNOSTICS_EMPTY;
 }
