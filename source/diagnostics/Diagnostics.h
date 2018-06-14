@@ -184,6 +184,7 @@ enum class DiagCode : uint8_t {
     UsedBeforeDeclared,
     NotAType,
     NotAValue,
+    NotAHierarchicalScope,
     UnknownMember,
 
     // constant evaluation

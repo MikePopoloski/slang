@@ -98,6 +98,8 @@ void Scope::addMember(const Symbol& symbol) {
         auto syntax = lazyType->getSourceOrNull();
         if (syntax && syntax->kind == SyntaxKind::EnumType)
             getOrAddDeferredData().registerTransparentType(lastMember, *lazyType);
+
+        // TODO: handle lazy types that have already been realized?
     }
 
     insertMember(&symbol, lastMember);
@@ -699,9 +701,23 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             return;
         }
 
-        // TODO: handle scopes
-        THROW_UNREACHABLE;
+        if (!result.found->isScope() || result.found->isType()) {
+            NamePlusLoc& part = nameParts.back();
+            auto& diag = result.diagnostics.add(DiagCode::NotAHierarchicalScope, part.dotLocation);
+            diag << nameToken.valueText();
+            diag << nameToken.range();
+            diag << part.name->sourceRange();
+            return;
+        }
+
+        // TODO: handle more cases / error conditions
+        auto downward = lookupDownward(nameParts, result.found->as<Scope>());
+        result.found = downward.found;
+        return;
     }
+
+    // TODO: upward name resolution
+    result.diagnostics.add(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
 }
 
 }

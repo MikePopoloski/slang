@@ -96,7 +96,7 @@ struct LookupResult {
     };
 
     using Selector = std::variant<const ElementSelectSyntax*, MemberSelector>;
-    SmallVectorSized<Selector, 4> selectors; 
+    SmallVectorSized<Selector, 4> selectors;
 
     bool hasError() const;
 

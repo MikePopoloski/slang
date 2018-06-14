@@ -253,6 +253,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::UsedBeforeDeclared] = { "identifier '{}' used before its declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAType] = { "'{}' is not a type", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAValue] = { "'{}' does not refer to a value", DiagnosticSeverity::Error };
+    descriptors[DiagCode::NotAHierarchicalScope] = { "'{}' is not a hierarchical scope name", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownMember] = { "no member named '{}' in {}", DiagnosticSeverity::Error };
 
     // constant evaluation
