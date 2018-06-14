@@ -52,27 +52,24 @@ endfunction
     auto value = session.eval("num_words_in_address_space(8, 64, 20)");
     CHECK(value.integer() == 131072);
 }
-//
-//TEST_CASE("Module param", "[eval]") {
-//    ScriptSession session;
-//    auto module = session.eval("module A#(parameter int P); localparam LP = P + 3; endmodule");
-//    CHECK(module);
-//    auto instance = session.eval("A #(.P(2)) a0();");
-//    CHECK(instance);
-//    auto value = session.eval("a0.LP");
-//    CHECK(value.integer() == 5);
-//}
-//
-//TEST_CASE("Interface param", "[eval]") {
-//    ScriptSession session;
-//    auto interface = session.eval("interface IFACE1#(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");
-//    CHECK(interface);
-//    auto instance = session.eval("IFACE1 #(6) i0();");
-//    CHECK(instance);
-//    auto value = session.eval("i0.W");
-//    CHECK(value.integer() == 6);
-//}
-//
+
+TEST_CASE("Module param", "[eval]") {
+   ScriptSession session;
+   session.eval("module A#(parameter int P); localparam LP = P + 3; endmodule");
+   session.eval("A #(.P(2)) a0();");
+   auto value = session.eval("a0.LP");
+   CHECK(value.integer() == 5);
+}
+
+TEST_CASE("Interface param", "[eval]") {
+   ScriptSession session;
+   session.eval("interface IFACE1#(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");
+   session.eval("IFACE1 #(6) i0();");
+   auto value = session.eval("i0.W");
+   CHECK(value.integer() == 6);
+}
+
+// TODO:
 //TEST_CASE("Interface port param", "[eval]") {
 //    ScriptSession session;
 //    auto interface = session.eval("interface IFACE2 #(parameter int W = 8); logic valid; logic [W-1:0] data; endinterface");

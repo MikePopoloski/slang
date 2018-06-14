@@ -23,7 +23,7 @@ PackageSymbol& PackageSymbol::fromSyntax(Compilation& compilation, const ModuleD
 
 void InstanceSymbol::fromSyntax(Compilation& compilation, const HierarchyInstantiationSyntax& syntax,
                                 LookupLocation location, const Scope& scope, SmallVector<const Symbol*>& results) {
-    
+
     auto definition = compilation.getDefinition(syntax.type.valueText(), scope);
     if (!definition) {
         // TODO: error
@@ -262,53 +262,45 @@ void ProceduralBlockSymbol::toJson(json& j) const {
     j["procedureKind"] = procedureKind;
 }
 
-GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
-                                                     LookupLocation location, const Scope& parent) {
+void GenerateBlockSymbol::elaborate(const IfGenerateSyntax& syntax) {
     // TODO: better error checking
-    const auto& cond = Expression::bind(compilation, syntax.condition, BindContext(parent, location,
-                                                                                   BindFlags::Constant));
+    Compilation& comp = getCompilation();
+    BindContext bindContext(*getParent(), LookupLocation::after(asSymbol()), BindFlags::Constant);
+    const auto& cond = Expression::bind(comp, syntax.condition, bindContext);
     if (!cond.constant)
-        return nullptr;
+        return;
 
     // TODO: handle named block, location
     const SVInt& value = cond.constant->integer();
     if ((logic_t)value) {
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
-        block->addMembers(syntax.block);
-        return block;
+        addMembers(syntax.block);
     }
     else if (syntax.elseClause) {
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
-        block->addMembers(syntax.elseClause->clause);
-        return block;
+        addMembers(syntax.elseClause->clause);
     }
-    return nullptr;
 }
 
-GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
-                                                               const LoopGenerateSyntax& syntax,
-                                                               LookupLocation location,
-                                                               const Scope& parent) {
+void GenerateBlockArraySymbol::elaborate(const LoopGenerateSyntax& syntax) {
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
     // we need to do a lookup to make sure we have the actual genvar.
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
-    const auto& initial = Expression::bind(compilation, syntax.initialExpr, BindContext(parent, location,
-                                                                                        BindFlags::Constant));
+    Compilation& comp = getCompilation();
+    BindContext bindContext(*getParent(), LookupLocation::after(asSymbol()), BindFlags::Constant);
+    const auto& initial = Expression::bind(comp, syntax.initialExpr, bindContext);
     if (!initial.constant)
-        return *result;
+        return;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    SequentialBlockSymbol iterScope(compilation, SourceLocation());
+    SequentialBlockSymbol iterScope(comp, SourceLocation());
     VariableSymbol local { syntax.identifier.valueText(), syntax.identifier.location() };
-    local.type = compilation.getIntType();
+    local.type = comp.getIntType();
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    const auto& stopExpr = Expression::bind(compilation, syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
-    const auto& iterExpr = Expression::bind(compilation, syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& stopExpr = Expression::bind(comp, syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& iterExpr = Expression::bind(comp, syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
 
     // Create storage for the iteration variable.
     EvalContext context;
@@ -320,19 +312,18 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
-        auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText(),
-                                                                  syntax.identifier.location(),
-                                                                  true /* isLocal */,
-                                                                  false /* isPort */);
+        auto block = comp.emplace<GenerateBlockSymbol>(comp, "", SourceLocation());
+        auto implicitParam = comp.emplace<ParameterSymbol>(syntax.identifier.valueText(),
+                                                           syntax.identifier.location(),
+                                                           true /* isLocal */,
+                                                           false /* isPort */);
         block->addMember(*implicitParam);
         block->addMembers(syntax.block);
-        result->addMember(*block);
+        addMember(*block);
 
         implicitParam->setType(*local.type);
         implicitParam->setValue(*genvar);
     }
-    return *result;
 }
 
 }

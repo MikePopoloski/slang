@@ -311,9 +311,6 @@ private:
     // the given symbol. If `at` is null, it will insert at the head of the list.
     void insertMember(const Symbol* member, const Symbol* at) const;
 
-    // Adds a syntax node to the list of deferred members in the scope.
-    void addDeferredMember(const SyntaxNode& member);
-
     // Gets or creates deferred member data in the Compilation object's sideband table.
     DeferredMemberData& getOrAddDeferredData();
 
