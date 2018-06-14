@@ -261,7 +261,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         return badExpr(compilation, nullptr);
 
     if (!symbol->isValue()) {
-        compilation.addError(DiagCode::NotAType, syntax.sourceRange()) << symbol->name;
+        compilation.addError(DiagCode::NotAValue, syntax.sourceRange()) << symbol->name;
         return badExpr(compilation, nullptr);
     }
 
