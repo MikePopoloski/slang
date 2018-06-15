@@ -89,9 +89,12 @@ public:
     void addDiagnostics(const Diagnostics& diagnostics);
 
     const Type& getType(SyntaxKind kind) const;
-    const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent);
+    const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
+                        bool allowNetType = false);
+
     const PackedArrayType& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
     const ScalarType& getScalarType(bitmask<IntegralFlags> flags);
+    const NetType& getNetType(TokenKind kind) const;
 
     /// Various built-in type symbols for easy access.
     const ScalarType& getBitType() const { return bitType; }
@@ -112,6 +115,10 @@ public:
     const NullType& getNullType() const { return nullType; }
     const EventType& getEventType() const { return eventType; }
     const ErrorType& getErrorType() const { return errorType; }
+
+    /// Get the 'wire' built in net type. The rest of the built-in net types are rare enough
+    /// that we don't bother providing dedicated accessors for them.
+    const NetType& getWireNetType() const { return *wireNetType; }
 
     ConstantValue* createConstant(ConstantValue&& value) { return constantAllocator.emplace(std::move(value)); }
 
@@ -179,6 +186,9 @@ private:
     // Map from syntax kinds to the built-in types.
     flat_hash_map<SyntaxKind, const Type*> knownTypes;
 
+    // Map from token kinds to the built-in net types.
+    flat_hash_map<TokenKind, std::unique_ptr<NetType>> knownNetTypes;
+
     // A table to look up scalar types based on combinations of the three flags: signed, fourstate, reg
     // Two of the entries are not valid and will be nullptr (!fourstate & reg).
     ScalarType* scalarTypeTable[8] {nullptr};
@@ -205,6 +215,7 @@ private:
     NullType nullType;
     EventType eventType;
     ErrorType errorType;
+    NetType* wireNetType;
 };
 
 }

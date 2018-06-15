@@ -243,6 +243,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
 
     // types
     descriptors[DiagCode::InvalidEnumBase] = { "", DiagnosticSeverity::Error };
+    descriptors[DiagCode::NetTypeNotAllowed] = { "{} is a net type, not a data type", DiagnosticSeverity::Error };
 
     // lookups
     descriptors[DiagCode::AmbiguousWildcardImport] = { "multiple imports found for identifier '{}'", DiagnosticSeverity::Error };

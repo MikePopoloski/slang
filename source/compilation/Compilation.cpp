@@ -64,6 +64,21 @@ Compilation::Compilation() :
     knownTypes[SyntaxKind::EventType] = &eventType;
     knownTypes[SyntaxKind::Unknown] = &errorType;
 
+    knownNetTypes[TokenKind::WireKeyword] = std::make_unique<NetType>(NetType::Wire);
+    knownNetTypes[TokenKind::WAndKeyword] = std::make_unique<NetType>(NetType::WAnd);
+    knownNetTypes[TokenKind::WOrKeyword] = std::make_unique<NetType>(NetType::WOr);
+    knownNetTypes[TokenKind::TriKeyword] = std::make_unique<NetType>(NetType::Tri);
+    knownNetTypes[TokenKind::TriAndKeyword] = std::make_unique<NetType>(NetType::TriAnd);
+    knownNetTypes[TokenKind::TriOrKeyword] = std::make_unique<NetType>(NetType::TriOr);
+    knownNetTypes[TokenKind::Tri0Keyword] = std::make_unique<NetType>(NetType::Tri0);
+    knownNetTypes[TokenKind::Tri1Keyword] = std::make_unique<NetType>(NetType::Tri1);
+    knownNetTypes[TokenKind::TriRegKeyword] = std::make_unique<NetType>(NetType::TriReg);
+    knownNetTypes[TokenKind::Supply0Keyword] = std::make_unique<NetType>(NetType::Supply0);
+    knownNetTypes[TokenKind::Supply1Keyword] = std::make_unique<NetType>(NetType::Supply1);
+    knownNetTypes[TokenKind::UWireKeyword] = std::make_unique<NetType>(NetType::UWire);
+    knownNetTypes[TokenKind::Unknown] = std::make_unique<NetType>(NetType::Unknown);
+    wireNetType = knownNetTypes[TokenKind::WireKeyword].get();
+
     // Scalar types are indexed by bit flags.
     auto registerScalar = [this](auto& type) { scalarTypeTable[type.getIntegralFlags().bits() & 0x7] = &type; };
     registerScalar(bitType);
@@ -315,8 +330,14 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
     return it == knownTypes.end() ? errorType : *it->second;
 }
 
-const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent) {
-    return Type::fromSyntax(*this, node, location, parent);
+const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
+                                 bool allowNetType) {
+    const Type& result = Type::fromSyntax(*this, node, location, parent);
+    if (!allowNetType && result.isNetType()) {
+        addError(DiagCode::NetTypeNotAllowed, node.sourceRange()) << result.name;
+        return errorType;
+    }
+    return result;
 }
 
 const PackedArrayType& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags) {
@@ -336,6 +357,11 @@ const ScalarType& Compilation::getScalarType(bitmask<IntegralFlags> flags) {
     ScalarType* ptr = scalarTypeTable[flags.bits() & 0x7];
     ASSERT(ptr);
     return *ptr;
+}
+
+const NetType& Compilation::getNetType(TokenKind kind) const {
+    auto it = knownNetTypes.find(kind);
+    return it == knownNetTypes.end() ? *knownNetTypes.find(TokenKind::Unknown)->second : *it->second;
 }
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {

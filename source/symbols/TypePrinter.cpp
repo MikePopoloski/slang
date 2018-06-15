@@ -121,6 +121,26 @@ void TypePrinter::handle(const ErrorType&) {
     writer << "<error>";
 }
 
+void TypePrinter::handle(const NetType& type) {
+    switch (type.netKind) {
+        case NetType::Unknown: writer << "<error-nettype>"; break;
+        case NetType::Wire: writer << "wire"; break;
+        case NetType::WAnd:  writer << "wand"; break;
+        case NetType::WOr: writer << "wor"; break;
+        case NetType::Tri: writer << "tri"; break;
+        case NetType::TriAnd: writer << "triand"; break;
+        case NetType::TriOr: writer << "trior"; break;
+        case NetType::Tri0: writer << "tri0"; break;
+        case NetType::Tri1: writer << "tri1"; break;
+        case NetType::TriReg: writer << "trireg"; break;
+        case NetType::Supply0: writer << "supply0"; break;
+        case NetType::Supply1: writer << "supply1"; break;
+        case NetType::UWire: writer << "uwire"; break;
+        case NetType::UserDefined: break; // TODO:
+        case NetType::Alias: break; // TODO:
+    }
+}
+
 void TypePrinter::appendStructMembers(const Scope& scope) {
     writer << "{";
     for (const auto& member : scope.members()) {

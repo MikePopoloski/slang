@@ -299,6 +299,7 @@ bool Type::isKind(SymbolKind kind) {
         case SymbolKind::EventType:
         case SymbolKind::TypeAlias:
         case SymbolKind::ErrorType:
+        case SymbolKind::NetType:
             return true;
         default:
             return false;
@@ -807,6 +808,12 @@ void TypeAliasType::checkForwardDecls() const {
 
 ConstantValue TypeAliasType::getDefaultValueImpl() const {
     return targetType->getDefaultValue();
+}
+
+NetType::NetType(NetKind netKind) :
+    Type(SymbolKind::NetType, "", SourceLocation()),
+    netKind(netKind)
+{
 }
 
 }

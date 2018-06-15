@@ -40,6 +40,7 @@ enum class SymbolKind {
     TypeAlias,
     ErrorType,
     ForwardingTypedef,
+    NetType,
     Parameter,
     Modport,
     ModuleInstance,

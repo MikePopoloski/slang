@@ -33,6 +33,7 @@ public:
     void handle(const EventType& type);
     void handle(const TypeAliasType& type);
     void handle(const ErrorType& type);
+    void handle(const NetType& type);
 
 private:
     void appendStructMembers(const Scope& scope);

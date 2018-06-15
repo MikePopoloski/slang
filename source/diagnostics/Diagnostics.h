@@ -174,6 +174,7 @@ enum class DiagCode : uint8_t {
 
     // types
     InvalidEnumBase,
+    NetTypeNotAllowed,
 
     // lookups
     AmbiguousWildcardImport,
