@@ -28,6 +28,10 @@ struct BindContext {
     BindContext(const Scope& scope, LookupLocation lookupLocation, bitmask<BindFlags> flags = BindFlags::None) :
         scope(scope), lookupLocation(lookupLocation), flags(flags) {}
 
+    bool isConstant() const {
+        return (flags & BindFlags::Constant) || (flags & BindFlags::IntegralConstant);
+    }
+
     BindContext withFlags(bitmask<BindFlags> addedFlags) const {
         BindContext result(*this);
         result.flags |= addedFlags;

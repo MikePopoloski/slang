@@ -103,7 +103,7 @@ const Expression& Expression::bind(Compilation& compilation, const Type& lhs, co
 }
 
 void Expression::checkBindFlags(Compilation& compilation, const BindContext& context) const {
-    if ((context.flags & BindFlags::Constant) || (context.flags & BindFlags::IntegralConstant)) {
+    if (context.isConstant()) {
         EvalContext evalContext;
         eval(evalContext);
 
@@ -251,7 +251,8 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
 
 Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax, const BindContext& context) {
     LookupResult result;
-    context.scope.lookupName(syntax, context.lookupLocation, context.lookupKind, result);
+    LookupFlags flags = context.isConstant() ? LookupFlags::Constant : LookupFlags::None;
+    context.scope.lookupName(syntax, context.lookupLocation, context.lookupKind, flags, result);
 
     if (result.hasError())
         compilation.addDiagnostics(result.diagnostics);
@@ -909,7 +910,8 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
 
     // TODO: name syntax on the LHS in parser?
     LookupResult result;
-    context.scope.lookupName(syntax.left.as<NameSyntax>(), context.lookupLocation, LookupNameKind::Callable, result);
+    LookupFlags flags = context.isConstant() ? LookupFlags::Constant : LookupFlags::None;
+    context.scope.lookupName(syntax.left.as<NameSyntax>(), context.lookupLocation, LookupNameKind::Callable, flags, result);
 
     const Symbol* symbol = result.found;
     ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);

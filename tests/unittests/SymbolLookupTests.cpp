@@ -18,7 +18,8 @@ import Foo::x;
     const CompilationUnitSymbol* unit = compilation.getRoot().compilationUnits[0];
 
     LookupResult result;
-    unit->lookupName(compilation.parseName("x"), LookupLocation::max, LookupNameKind::Variable, result);
+    unit->lookupName(compilation.parseName("x"), LookupLocation::max, LookupNameKind::Variable,
+                     LookupFlags::None, result);
 
     CHECK(result.wasImported);
     REQUIRE(result.found);
@@ -56,7 +57,8 @@ endmodule
 
     // Lookup at (1); should return the local parameter
     LookupResult result;
-    gen_b.lookupName(compilation.parseName("x"), LookupLocation::after(param), LookupNameKind::Variable, result);
+    gen_b.lookupName(compilation.parseName("x"), LookupLocation::after(param), LookupNameKind::Variable,
+                     LookupFlags::None, result);
 
     const Symbol* symbol = result.found;
     CHECK(!result.wasImported);
@@ -66,7 +68,8 @@ endmodule
     CHECK(compilation.getSemanticDiagnostics().empty());
 
     // Lookup at (2); should return the package parameter
-    gen_b.lookupName(compilation.parseName("x"), LookupLocation::before(param), LookupNameKind::Variable, result);
+    gen_b.lookupName(compilation.parseName("x"), LookupLocation::before(param), LookupNameKind::Variable,
+                     LookupFlags::None, result);
     symbol = result.found;
 
     CHECK(result.wasImported);
@@ -284,7 +287,6 @@ endmodule
     CHECK(diags[3].code == DiagCode::ImportNameCollision);
 }
 
-
 TEST_CASE("Member access", "[symbols:lookup]") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -299,4 +301,29 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Hierarchical reference in CE", "[symbols:lookup]") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+
+    if (1) begin : foo
+        int i;
+    end
+
+    localparam int j = foo.i;
+    if (foo.i) begin
+        int j = asdf;
+    end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == DiagCode::HierarchicalNotAllowedInConstant);
+    CHECK(diags[1].code == DiagCode::HierarchicalNotAllowedInConstant);
 }

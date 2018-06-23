@@ -242,7 +242,7 @@ const Symbol* Scope::find(string_view name) const {
 }
 
 void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, LookupNameKind nameKind,
-                       LookupResult& result) const {
+                       bitmask<LookupFlags> flags, LookupResult& result) const {
     Token nameToken;
     const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
     switch (syntax.kind) {
@@ -257,7 +257,7 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
         }
         case SyntaxKind::ScopedName:
             // Handle qualified names completely separately.
-            lookupQualified(syntax.as<ScopedNameSyntax>(), location, nameKind, result);
+            lookupQualified(syntax.as<ScopedNameSyntax>(), location, nameKind, flags, result);
             return;
         default:
             THROW_UNREACHABLE;
@@ -303,9 +303,10 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
     }
 }
 
-const Symbol* Scope::lookupName(string_view name, LookupLocation location, LookupNameKind nameKind) const {
+const Symbol* Scope::lookupName(string_view name, LookupLocation location,
+                                LookupNameKind nameKind, bitmask<LookupFlags> flags) const {
     LookupResult result;
-    lookupName(compilation.parseName(name), location, nameKind, result);
+    lookupName(compilation.parseName(name), location, nameKind, flags, result);
     return result.found;
 }
 
@@ -654,7 +655,7 @@ DownwardLookupResult lookupDownward(span<const NamePlusLoc> nameParts, const Sco
 }
 
 void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
-                            LookupNameKind nameKind, LookupResult& result) const {
+                            LookupNameKind nameKind, bitmask<LookupFlags> flags, LookupResult& result) const {
     // Split the name into easier to manage chunks. The parser will always produce a left-recursive
     // name tree, so that's all we'll bother to handle.
     int colonParts = 0;
@@ -718,37 +719,46 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
     //    but with an added restriction that only a direct downward lookup from the package is allowed.
     // 4. The name is not found; it's considered a hierarchical reference and participates in
     //    upwards name resolution.
-    if (result.found) {
-        if (result.found->isValue()) {
-            // This is a dotted member access.
-            for (const auto& part : nameParts) {
-                const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
-                switch (part.name->kind) {
-                    case SyntaxKind::IdentifierName:
-                        nameToken = part.name->as<IdentifierNameSyntax>().identifier;
-                        break;
-                    case SyntaxKind::IdentifierSelectName: {
-                        const auto& idSelect = part.name->as<IdentifierSelectNameSyntax>();
-                        nameToken = idSelect.identifier;
-                        selectors = &idSelect.selectors;
-                        break;
-                    }
-                    default:
-                        THROW_UNREACHABLE;
+    if (result.found && result.found->isValue()) {
+        // This is a dotted member access.
+        for (const auto& part : nameParts) {
+            const SyntaxList<ElementSelectSyntax>* selectors = nullptr;
+            switch (part.name->kind) {
+                case SyntaxKind::IdentifierName:
+                    nameToken = part.name->as<IdentifierNameSyntax>().identifier;
+                    break;
+                case SyntaxKind::IdentifierSelectName: {
+                    const auto& idSelect = part.name->as<IdentifierSelectNameSyntax>();
+                    nameToken = idSelect.identifier;
+                    selectors = &idSelect.selectors;
+                    break;
                 }
-
-                result.selectors.append(LookupResult::MemberSelector {
-                    nameToken.valueText(),
-                    part.dotLocation,
-                    nameToken.range()
-                });
-
-                if (selectors)
-                    result.selectors.appendRange(*selectors);
+                default:
+                    THROW_UNREACHABLE;
             }
-            return;
-        }
 
+            result.selectors.append(LookupResult::MemberSelector {
+                nameToken.valueText(),
+                part.dotLocation,
+                nameToken.range()
+            });
+
+            if (selectors)
+                result.selectors.appendRange(*selectors);
+        }
+        return;
+    }
+
+    // At this point the name must be considered a hierarchical name, so check now that
+    // we're allowed to use one of those.
+    if (flags & LookupFlags::Constant) {
+        NamePlusLoc& part = nameParts.back();
+        auto& diag = result.diagnostics.add(DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
+        diag << nameToken.range();
+        return;
+    }
+
+    if (result.found) {
         if (!result.found->isScope() || result.found->isType()) {
             NamePlusLoc& part = nameParts.back();
             auto& diag = result.diagnostics.add(DiagCode::NotAHierarchicalScope, part.dotLocation);

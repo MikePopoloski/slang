@@ -48,6 +48,17 @@ enum class LookupNameKind {
     BindTarget
 };
 
+/// Additional modifiers for a lookup operation.
+enum class LookupFlags {
+    /// No special modifiers.
+    None = 0,
+
+    /// The lookup is occurring in a constant context. This adds an additional
+    /// restriction that the symbols cannot be referenced by hierarchical path.
+    Constant = 1
+};
+BITMASK_DEFINE_MAX_ELEMENT(LookupFlags, Constant);
+
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
 /// For example, variables cannot be referenced before they are declared.
@@ -136,10 +147,11 @@ public:
     }
 
     void lookupName(const NameSyntax& syntax, LookupLocation location,
-                    LookupNameKind nameKind, LookupResult& result) const;
+                    LookupNameKind nameKind, bitmask<LookupFlags> flags, LookupResult& result) const;
 
     const Symbol* lookupName(string_view name, LookupLocation location = LookupLocation::max,
-                             LookupNameKind nameKind = LookupNameKind::Variable) const;
+                             LookupNameKind nameKind = LookupNameKind::Variable,
+                             bitmask<LookupFlags> flags = LookupFlags::None) const;
 
     /// Gets a specific member at the given zero-based index, expecting it to be of the specified type.
     /// This expects (and asserts) that the member at the given index is of the specified type `T`.
@@ -322,7 +334,7 @@ private:
 
     // Performs a qualified lookup in this scope using all of the various language rules for name resolution.
     void lookupQualified(const ScopedNameSyntax& syntax, LookupLocation location,
-                         LookupNameKind nameKind, LookupResult& result) const;
+                         LookupNameKind nameKind, bitmask<LookupFlags> flags, LookupResult& result) const;
 
     // The compilation that owns this scope.
     Compilation& compilation;

@@ -186,6 +186,7 @@ enum class DiagCode : uint8_t {
     NotAType,
     NotAValue,
     NotAHierarchicalScope,
+    HierarchicalNotAllowedInConstant,
     UnknownMember,
 
     // constant evaluation
