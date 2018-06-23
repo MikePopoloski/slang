@@ -99,6 +99,7 @@ struct LookupResult {
     const Symbol* found = nullptr;
     Diagnostics diagnostics;
     bool wasImported = false;
+    bool isHierarchical = false;
 
     struct MemberSelector {
         string_view name;

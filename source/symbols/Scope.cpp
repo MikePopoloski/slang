@@ -69,6 +69,7 @@ bool LookupResult::hasError() const {
 void LookupResult::clear() {
     found = nullptr;
     wasImported = false;
+    isHierarchical = false;
     diagnostics.clear();
 }
 
@@ -751,6 +752,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
 
     // At this point the name must be considered a hierarchical name, so check now that
     // we're allowed to use one of those.
+    result.isHierarchical = true;
     if (flags & LookupFlags::Constant) {
         NamePlusLoc& part = nameParts.back();
         auto& diag = result.diagnostics.add(DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);

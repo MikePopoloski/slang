@@ -266,7 +266,9 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         return badExpr(compilation, nullptr);
     }
 
-    Expression* expr = compilation.emplace<NamedValueExpression>(symbol->as<ValueSymbol>(), syntax.sourceRange());
+    Expression* expr = compilation.emplace<NamedValueExpression>(symbol->as<ValueSymbol>(),
+                                                                 result.isHierarchical,
+                                                                 syntax.sourceRange());
 
     // Drill down into member accesses.
     for (const auto& selector : result.selectors) {

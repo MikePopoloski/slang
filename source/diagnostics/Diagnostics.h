@@ -197,6 +197,7 @@ enum class DiagCode : uint8_t {
     NoteNonConstVariable,
     NoteArrayIndexInvalid,
     NotePartSelectInvalid,
+    NoteHierarchicalNameInCE,
 
     MaxValue
 };

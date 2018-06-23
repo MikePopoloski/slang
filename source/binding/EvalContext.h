@@ -22,7 +22,7 @@ class SubroutineSymbol;
 /// storage for local variables.
 class EvalContext {
 public:
-    EvalContext();
+    explicit EvalContext(bool isScriptEval = false);
 
     /// Creates storage for a local variable in the current frame.
     ConstantValue* createLocal(const ValueSymbol* symbol, ConstantValue value = nullptr);
@@ -36,6 +36,10 @@ public:
 
     /// Pop the active frame from the call stack and returns its value, if any.
     ConstantValue popFrame();
+
+    /// Indicates whether this evaluation context is for a script session
+    /// (not used during normal compilation flow).
+    bool isScriptEval() const { return isScriptEval_; }
 
     // TODO: get rid of this
     bool hasReturned() { return stack.back().hasReturned; }
@@ -68,6 +72,7 @@ private:
     std::deque<Frame> stack;
     Diagnostics diags;
     bool reportedCallstack = false;
+    bool isScriptEval_ = false;
 };
 
 }

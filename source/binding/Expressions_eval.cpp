@@ -168,6 +168,11 @@ ConstantValue StringLiteral::evalImpl(EvalContext&) const {
 }
 
 ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
+    if (isHierarchical && !context.isScriptEval()) {
+        context.addDiag(DiagCode::NoteHierarchicalNameInCE, sourceRange) << symbol.name;
+        return nullptr;
+    }
+
     switch (symbol.kind) {
         case SymbolKind::Parameter:
             return symbol.as<ParameterSymbol>().getValue();
@@ -188,6 +193,11 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 }
 
 LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
+    if (isHierarchical && !context.isScriptEval()) {
+        context.addDiag(DiagCode::NoteHierarchicalNameInCE, sourceRange) << symbol.name;
+        return nullptr;
+    }
+
     auto cv = context.findLocal(&symbol);
     if (!cv) {
         context.addDiag(DiagCode::NoteNonConstVariable, sourceRange) << symbol.name;

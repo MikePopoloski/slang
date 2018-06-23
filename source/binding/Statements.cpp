@@ -49,8 +49,11 @@ bool ExpressionStatement::eval(EvalContext& context) const {
 bool VariableDeclStatement::eval(EvalContext& context) const {
     // Create storage for the variable
     ConstantValue initial;
-    if (symbol.initializer)
+    if (symbol.initializer) {
         initial = symbol.initializer->eval(context);
+        if (!initial)
+            return false;
+    }
 
     context.createLocal(&symbol, initial);
     return true;

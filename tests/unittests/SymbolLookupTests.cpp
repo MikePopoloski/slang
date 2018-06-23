@@ -309,12 +309,23 @@ module m1;
 
     if (1) begin : foo
         int i;
+        parameter int j = 3;
     end
 
     localparam int j = foo.i;
     if (foo.i) begin
         int j = asdf;
     end
+
+    localparam int k = baz();
+
+    function logic[foo.i-1:0] bar;
+        foo.i = 1; // fine if not called from constant context, otherwise an error
+    endfunction
+
+    function int baz;
+        int k = foo.j;
+    endfunction
 
 endmodule
 )");
@@ -323,7 +334,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     Diagnostics diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    std::string result = DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(diags);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == DiagCode::HierarchicalNotAllowedInConstant);
     CHECK(diags[1].code == DiagCode::HierarchicalNotAllowedInConstant);
+    CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[3].code == DiagCode::HierarchicalNotAllowedInConstant);
 }

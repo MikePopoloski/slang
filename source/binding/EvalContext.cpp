@@ -13,7 +13,9 @@
 
 namespace slang {
 
-EvalContext::EvalContext() {
+EvalContext::EvalContext(bool isScriptEval) :
+    isScriptEval_(isScriptEval)
+{
     stack.emplace_back(Frame{});
 }
 

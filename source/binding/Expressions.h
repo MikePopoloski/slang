@@ -306,9 +306,11 @@ private:
 class NamedValueExpression : public Expression {
 public:
     const ValueSymbol& symbol;
+    bool isHierarchical;
 
-    NamedValueExpression(const ValueSymbol& symbol, SourceRange sourceRange) :
-        Expression(ExpressionKind::NamedValue, symbol.getType(), sourceRange), symbol(symbol) {}
+    NamedValueExpression(const ValueSymbol& symbol, bool isHierarchical, SourceRange sourceRange) :
+        Expression(ExpressionKind::NamedValue, symbol.getType(), sourceRange),
+        symbol(symbol), isHierarchical(isHierarchical) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;

@@ -266,6 +266,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NoteNonConstVariable] = { "reference to non-constant variable '{}' is not allowed in a constant expression", DiagnosticSeverity::Note };
     descriptors[DiagCode::NoteArrayIndexInvalid] = { "cannot refer to element {} of array of type {} in a constant expression", DiagnosticSeverity::Note };
     descriptors[DiagCode::NotePartSelectInvalid] = { "cannot select range of {}:{} from array of type {} in a constant expression", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NoteHierarchicalNameInCE] = { "reference to '{}' by hierarchical name is not allowed in a constant expression", DiagnosticSeverity::Note };
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());
