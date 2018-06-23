@@ -755,6 +755,8 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
         NamePlusLoc& part = nameParts.back();
         auto& diag = result.diagnostics.add(DiagCode::HierarchicalNotAllowedInConstant, part.dotLocation);
         diag << nameToken.range();
+
+        result.found = nullptr;
         return;
     }
 

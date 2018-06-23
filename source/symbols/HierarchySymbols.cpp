@@ -262,6 +262,22 @@ void ProceduralBlockSymbol::toJson(json& j) const {
     j["procedureKind"] = procedureKind;
 }
 
+static string_view getGenerateBlockName(const SyntaxNode& node) {
+    if (node.kind != SyntaxKind::GenerateBlock)
+        return "";
+
+    // Try to find a name for this block. Generate blocks allow the name to be specified twice
+    // (for no good reason) so check both locations. The parser has already checked for inconsistencies here.
+    const GenerateBlockSyntax& block = node.as<GenerateBlockSyntax>();
+    if (block.label)
+        return block.label->name.valueText();
+
+    if (block.beginName)
+        return block.beginName->name.valueText();
+
+    return "";
+}
+
 GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
                                                      LookupLocation location, const Scope& parent) {
     // TODO: better error checking
@@ -270,20 +286,22 @@ GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, c
     if (!cond.constant)
         return nullptr;
 
-    // TODO: handle named block, location
     const SVInt& value = cond.constant->integer();
-    if ((logic_t)value) {
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
-        block->addMembers(syntax.block);
-        return block;
-    }
-    else if (syntax.elseClause) {
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
-        block->addMembers(syntax.elseClause->clause);
-        return block;
-    }
 
-    return nullptr;
+    const SyntaxNode* memberSyntax = nullptr;
+    if ((logic_t)value)
+        memberSyntax = &syntax.block;
+    else if (syntax.elseClause)
+        memberSyntax = &syntax.elseClause->clause;
+    else
+        return nullptr;
+
+    string_view name = getGenerateBlockName(*memberSyntax);
+    SourceLocation loc = memberSyntax->getFirstToken().location();
+    
+    auto block = compilation.emplace<GenerateBlockSymbol>(compilation, name, loc);
+    block->addMembers(*memberSyntax);
+    return block;
 }
 
 GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
@@ -294,8 +312,11 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     // we need to do a lookup to make sure we have the actual genvar.
     // TODO: do the actual lookup
 
-    // Initialize the genvar
+    string_view name = getGenerateBlockName(syntax.block);
+    SourceLocation loc = syntax.block.getFirstToken().location();
     auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
+
+    // Initialize the genvar
     BindContext bindContext(parent, location, BindFlags::Constant);
     const auto& initial = Expression::bind(compilation, syntax.initialExpr, bindContext);
     if (!initial.constant)
