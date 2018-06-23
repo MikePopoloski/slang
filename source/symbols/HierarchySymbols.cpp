@@ -262,45 +262,54 @@ void ProceduralBlockSymbol::toJson(json& j) const {
     j["procedureKind"] = procedureKind;
 }
 
-void GenerateBlockSymbol::elaborate(const IfGenerateSyntax& syntax) {
+GenerateBlockSymbol* GenerateBlockSymbol::fromSyntax(Compilation& compilation, const IfGenerateSyntax& syntax,
+                                                     LookupLocation location, const Scope& parent) {
     // TODO: better error checking
-    Compilation& comp = getCompilation();
-    BindContext bindContext(*getParent(), LookupLocation::after(asSymbol()), BindFlags::Constant);
-    const auto& cond = Expression::bind(comp, syntax.condition, bindContext);
+    BindContext bindContext(parent, location, BindFlags::Constant);
+    const auto& cond = Expression::bind(compilation, syntax.condition, bindContext);
     if (!cond.constant)
-        return;
+        return nullptr;
 
     // TODO: handle named block, location
     const SVInt& value = cond.constant->integer();
     if ((logic_t)value) {
-        addMembers(syntax.block);
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
+        block->addMembers(syntax.block);
+        return block;
     }
     else if (syntax.elseClause) {
-        addMembers(syntax.elseClause->clause);
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
+        block->addMembers(syntax.elseClause->clause);
+        return block;
     }
+
+    return nullptr;
 }
 
-void GenerateBlockArraySymbol::elaborate(const LoopGenerateSyntax& syntax) {
+GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
+                                                               const LoopGenerateSyntax& syntax,
+                                                               LookupLocation location,
+                                                               const Scope& parent) {
     // If the loop initializer has a genvar keyword, we can use it directly. Otherwise
     // we need to do a lookup to make sure we have the actual genvar.
     // TODO: do the actual lookup
 
     // Initialize the genvar
-    Compilation& comp = getCompilation();
-    BindContext bindContext(*getParent(), LookupLocation::after(asSymbol()), BindFlags::Constant);
-    const auto& initial = Expression::bind(comp, syntax.initialExpr, bindContext);
+    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
+    BindContext bindContext(parent, location, BindFlags::Constant);
+    const auto& initial = Expression::bind(compilation, syntax.initialExpr, bindContext);
     if (!initial.constant)
-        return;
+        return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    SequentialBlockSymbol iterScope(comp, SourceLocation());
+    SequentialBlockSymbol iterScope(compilation, SourceLocation());
     VariableSymbol local { syntax.identifier.valueText(), syntax.identifier.location() };
-    local.type = comp.getIntType();
+    local.type = compilation.getIntType();
     iterScope.addMember(local);
 
     // Bind the stop and iteration expressions so we can reuse them on each iteration.
-    const auto& stopExpr = Expression::bind(comp, syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
-    const auto& iterExpr = Expression::bind(comp, syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& stopExpr = Expression::bind(compilation, syntax.stopExpr, BindContext(iterScope, LookupLocation::max));
+    const auto& iterExpr = Expression::bind(compilation, syntax.iterationExpr, BindContext(iterScope, LookupLocation::max));
 
     // Create storage for the iteration variable.
     EvalContext context;
@@ -312,18 +321,20 @@ void GenerateBlockArraySymbol::elaborate(const LoopGenerateSyntax& syntax) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
         // TODO: scope name
-        auto block = comp.emplace<GenerateBlockSymbol>(comp, "", SourceLocation());
-        auto implicitParam = comp.emplace<ParameterSymbol>(syntax.identifier.valueText(),
-                                                           syntax.identifier.location(),
-                                                           true /* isLocal */,
-                                                           false /* isPort */);
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", SourceLocation());
+        auto implicitParam = compilation.emplace<ParameterSymbol>(syntax.identifier.valueText(),
+                                                                  syntax.identifier.location(),
+                                                                  true /* isLocal */,
+                                                                  false /* isPort */);
         block->addMember(*implicitParam);
         block->addMembers(syntax.block);
-        addMember(*block);
+        result->addMember(*block);
 
         implicitParam->setType(*local.type);
         implicitParam->setValue(*genvar);
     }
+
+    return *result;
 }
 
 }

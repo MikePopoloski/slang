@@ -27,6 +27,21 @@ bool respectsLookupLocation(LookupNameKind kind) {
     THROW_UNREACHABLE;
 }
 
+// This is a placeholder symbol that we insert into a scope's member list where we need to
+// later pull it out and replace it with a real member (that can't be known until full elaboration).
+class DeferredMemberSymbol : public Symbol {
+public:
+    const SyntaxNode& node;
+
+    explicit DeferredMemberSymbol(const SyntaxNode& node) :
+        Symbol(SymbolKind::DeferredMember, "", SourceLocation()),
+        node(node) {}
+
+    static bool isKind(SymbolKind kind) {
+        return kind == SymbolKind::DeferredMember;
+    }
+};
+
 }
 
 namespace slang {
@@ -135,26 +150,18 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             }
             break;
         case SyntaxKind::HierarchyInstantiation:
-            getOrAddDeferredData().addMember(syntax, lastMember);
+        case SyntaxKind::IfGenerate:
+        case SyntaxKind::LoopGenerate: {
+            // TODO: handle special generate block name conflict rules
+            auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
+            addMember(*sym);
+            getOrAddDeferredData().addMember(sym);
             break;
+        }
         case SyntaxKind::ModportDeclaration:
             // TODO: modports
             break;
-        case SyntaxKind::IfGenerate: {
-            // Generate blocks are special; we create the symbol now but defer
-            // elaboration until everything else is in place.
-            // TODO: handle special generate block name conflict rules
-            auto sym = compilation.emplace<GenerateBlockSymbol>(compilation);
-            addMember(*sym);
-            getOrAddDeferredData().addMember(syntax, sym);
-            break;
-        }
-        case SyntaxKind::LoopGenerate: {
-            auto sym = compilation.emplace<GenerateBlockArraySymbol>(compilation);
-            addMember(*sym);
-            getOrAddDeferredData().addMember(syntax, sym);
-            break;
-        }
+        
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
             addMember(SubroutineSymbol::fromSyntax(compilation, syntax.as<FunctionDeclarationSyntax>()));
@@ -405,38 +412,76 @@ void Scope::elaborate() const {
         static_cast<StatementBodiedScope*>(const_cast<Scope*>(this))->bindBody(*syntax);
     }
     else {
-        // Go through deferred members and insert them into our scope. These need to be
-        // iterated in reverse order to make sure they end up correctly sorted for purposes
-        // of lookup locations and member traversal.
+        // Go through deferred members and elaborate them now. We skip generate blocks in
+        // the initial pass because evaluating their conditions may depend on other members
+        // that have yet to be elaborated. This implicitly implements the elaboration algorithm
+        // described in [23.10.4.1].
         auto deferred = deferredData.getMembers();
-        for (auto [node, insertionPoint] : make_range(deferred.rbegin(), deferred.rend())) {
-            LookupLocation location = insertionPoint ? LookupLocation::after(*insertionPoint) : LookupLocation::min;
-            if (node->kind == SyntaxKind::HierarchyInstantiation) {
-                SmallVectorSized<const Symbol*, 8> symbols;
-                InstanceSymbol::fromSyntax(compilation, node->as<HierarchyInstantiationSyntax>(),
-                                           location, *this, symbols);
+        for (auto symbol : deferred) {
+            auto& member = symbol->as<DeferredMemberSymbol>();
 
-                const Symbol* last = insertionPoint;
-                for (auto symbol : symbols) {
-                    insertMember(symbol, last);
-                    last = symbol;
+            switch (member.node.kind) {
+                case SyntaxKind::HierarchyInstantiation: {
+                    SmallVectorSized<const Symbol*, 8> instances;
+                    LookupLocation location = LookupLocation::before(*symbol);
+
+                    InstanceSymbol::fromSyntax(compilation, member.node.as<HierarchyInstantiationSyntax>(),
+                                               location, *this, instances);
+
+                    const Symbol* last = symbol;
+                    for (auto instance : instances) {
+                        insertMember(instance, last);
+                        last = instance;
+                    }
+                    break;
                 }
+                default:
+                    break;
             }
         }
 
         // Now that all instances have been inserted, go back through and elaborate generate blocks.
-        for (auto [node, symbol] : deferred) {
-            // Unfortunate but will always be safe to do.
-            Symbol* sym = const_cast<Symbol*>(symbol);
-            switch (node->kind) {
-                case SyntaxKind::IfGenerate:
-                    sym->as<GenerateBlockSymbol>().elaborate(node->as<IfGenerateSyntax>());
+        for (auto symbol : deferred) {
+            auto& member = symbol->as<DeferredMemberSymbol>();
+            LookupLocation location = LookupLocation::before(*symbol);
+
+            switch (member.node.kind) {
+                case SyntaxKind::IfGenerate: {
+                    auto block = GenerateBlockSymbol::fromSyntax(compilation, member.node.as<IfGenerateSyntax>(),
+                                                                 location, *this);
+                    if (block)
+                        insertMember(block, symbol);
                     break;
+                }
                 case SyntaxKind::LoopGenerate:
-                    sym->as<GenerateBlockArraySymbol>().elaborate(node->as<LoopGenerateSyntax>());
+                    insertMember(&GenerateBlockArraySymbol::fromSyntax(compilation,
+                                                                       member.node.as<LoopGenerateSyntax>(),
+                                                                       location, *this),
+                                 symbol);
                     break;
                 default:
                     break;
+            }
+        }
+
+        // Finally unlink any deferred members we had; we no longer need them.
+        if (!deferred.empty()) {
+            const Symbol* symbol = firstMember;
+            const Symbol* prev = nullptr;
+
+            while (symbol) {
+                if (symbol->kind == SymbolKind::DeferredMember) {
+                    if (prev)
+                        prev->nextInScope = symbol->nextInScope;
+                    else
+                        firstMember = symbol->nextInScope;
+
+                    if (lastMember == symbol)
+                        lastMember = symbol->nextInScope;
+                }
+
+                prev = symbol;
+                symbol = symbol->nextInScope;
             }
         }
     }

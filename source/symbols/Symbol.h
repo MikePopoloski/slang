@@ -19,6 +19,7 @@ enum class SymbolKind {
     Unknown,
     Root,
     CompilationUnit,
+    DeferredMember,
     TransparentMember,
     PredefinedIntegerType,
     ScalarType,

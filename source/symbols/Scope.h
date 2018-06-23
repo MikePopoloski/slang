@@ -253,11 +253,11 @@ private:
     // Data stored in sideband tables in the Compilation object for deferred members.
     class DeferredMemberData {
     public:
-        void addMember(const SyntaxNode& member, const Symbol* insertionPoint) {
-            std::get<0>(membersOrStatement).emplace_back(&member, insertionPoint);
+        void addMember(Symbol* symbol) {
+            std::get<0>(membersOrStatement).emplace_back(symbol);
         }
 
-        span<std::tuple<const SyntaxNode*, const Symbol*> const> getMembers() const {
+        span<Symbol* const> getMembers() const {
             return std::get<0>(membersOrStatement);
         }
 
@@ -289,10 +289,7 @@ private:
         //   before any lookups or iterations are done of members in the scope.
         // - Statement syntax (a single node or a list of them) that describes the body
         //   of a StatementBodiedScope.
-        std::variant<
-            std::vector<std::tuple<const SyntaxNode*, const Symbol*>>,
-            const SyntaxNode*
-        > membersOrStatement;
+        std::variant<std::vector<Symbol*>, const SyntaxNode*> membersOrStatement;
 
         // Some types are special in that their members leak into the surrounding scope; this
         // set keeps track of all variables, parameters, arguments, etc that have such data types
