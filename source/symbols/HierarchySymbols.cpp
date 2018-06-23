@@ -314,7 +314,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     string_view name = getGenerateBlockName(syntax.block);
     SourceLocation loc = syntax.block.getFirstToken().location();
-    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, "", SourceLocation());
+    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc);
 
     // Initialize the genvar
     BindContext bindContext(parent, location, BindFlags::Constant);
