@@ -57,6 +57,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
 #define TYPE(k) case SymbolKind::k: return visitor.visit(*static_cast<const k*>(this), std::forward<Args>(args)...)
     switch (kind) {
         case SymbolKind::Unknown: return visitor.visit(*this, std::forward<Args>(args)...);
+        case SymbolKind::DeferredMember: return visitor.visit(*this, std::forward<Args>(args)...);
         case SymbolKind::TypeAlias: return visitor.visit(*static_cast<const TypeAliasType*>(this), std::forward<Args>(args)...);
         SYMBOL(Root);
         SYMBOL(CompilationUnit);
