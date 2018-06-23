@@ -240,3 +240,24 @@ TEST_CASE("Expression types") {
     CHECK(diags[0].code == DiagCode::BadUnaryExpression);
     CHECK(diags[1].code == DiagCode::BadBinaryExpression);
 }
+
+TEST_CASE("Expression bad name references") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+
+    int i = m1 + 2;     // not a value
+    int j = (3 + 4)(2); // not callable
+    int k = i(2);       // not a task or function
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == DiagCode::NotAValue);
+    CHECK(diags[1].code == DiagCode::ExpressionNotCallable);
+    CHECK(diags[2].code == DiagCode::NotASubroutine);
+}

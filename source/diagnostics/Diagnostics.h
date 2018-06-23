@@ -168,6 +168,7 @@ enum class DiagCode : uint8_t {
     ExpressionNotAssignable,
     ReplicationZeroOutsideConcat,
     MemberAccessNotStructUnion,
+    ExpressionNotCallable,
 
     // statements
     ReturnNotInSubroutine,
@@ -185,6 +186,7 @@ enum class DiagCode : uint8_t {
     UsedBeforeDeclared,
     NotAType,
     NotAValue,
+    NotASubroutine,
     NotAHierarchicalScope,
     HierarchicalNotAllowedInConstant,
     UnknownMember,

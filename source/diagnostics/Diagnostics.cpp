@@ -237,6 +237,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::ExpressionNotAssignable] = { "expression is not assignable", DiagnosticSeverity::Error };
     descriptors[DiagCode::ReplicationZeroOutsideConcat] = { "replication constant can only be zero inside of a concatenation", DiagnosticSeverity::Error };
     descriptors[DiagCode::MemberAccessNotStructUnion] = { "member access type {} is not a structure or union", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ExpressionNotCallable] = { "expression is not callable", DiagnosticSeverity::Error };
 
     // statements
     descriptors[DiagCode::ReturnNotInSubroutine] = { "return statement is only valid inside task and function blocks", DiagnosticSeverity::Error };
@@ -254,6 +255,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::UsedBeforeDeclared] = { "identifier '{}' used before its declaration", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAType] = { "'{}' is not a type", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAValue] = { "'{}' does not refer to a value", DiagnosticSeverity::Error };
+    descriptors[DiagCode::NotASubroutine] = { "'{}' is not a task or function", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotAHierarchicalScope] = { "'{}' is not a hierarchical scope name", DiagnosticSeverity::Error };
     descriptors[DiagCode::HierarchicalNotAllowedInConstant] = { "hierarchical names are not allowed in constant expressions", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownMember] = { "no member named '{}' in {}", DiagnosticSeverity::Error };

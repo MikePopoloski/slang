@@ -905,16 +905,31 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
 
 Expression& CallExpression::fromSyntax(Compilation& compilation, const InvocationExpressionSyntax& syntax,
                                        const BindContext& context) {
-    // TODO: check for something other than a simple name on the LHS
-    auto name = syntax.left.getFirstToken();
+    // TODO: once classes are supported, member access needs to work here
+    if (!NameSyntax::isKind(syntax.left.kind)) {
+        SourceLocation loc = syntax.arguments ? syntax.arguments->openParen.location() :
+                                                syntax.left.getFirstToken().location();
+        auto& diag = compilation.addError(DiagCode::ExpressionNotCallable, loc);
+        diag << syntax.left.sourceRange();
+        return badExpr(compilation, nullptr);
+    }
 
-    // TODO: name syntax on the LHS in parser?
     LookupResult result;
     LookupFlags flags = context.isConstant() ? LookupFlags::Constant : LookupFlags::None;
-    context.scope.lookupName(syntax.left.as<NameSyntax>(), context.lookupLocation, LookupNameKind::Callable, flags, result);
+    context.scope.lookupName(syntax.left.as<NameSyntax>(), context.lookupLocation, LookupNameKind::Callable,
+                             flags, result);
+
+    if (result.hasError())
+        compilation.addDiagnostics(result.diagnostics);
 
     const Symbol* symbol = result.found;
-    ASSERT(symbol && symbol->kind == SymbolKind::Subroutine);
+    if (!symbol)
+        return badExpr(compilation, nullptr);
+
+    if (symbol->kind != SymbolKind::Subroutine) {
+        compilation.addError(DiagCode::NotASubroutine, syntax.left.sourceRange()) << symbol->name;
+        return badExpr(compilation, nullptr);
+    }
 
     auto actualArgs = syntax.arguments->parameters;
     const SubroutineSymbol& subroutine = symbol->as<SubroutineSymbol>();
@@ -922,8 +937,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     // TODO: handle too few args as well, which requires looking at default values
     auto formalArgs = subroutine.arguments;
     if (formalArgs.size() < actualArgs.count()) {
-        auto& diag = compilation.addError(DiagCode::TooManyArguments, name.location());
-        diag << syntax.left.sourceRange();
+        auto& diag = compilation.addError(DiagCode::TooManyArguments, syntax.left.sourceRange());
         diag << formalArgs.size();
         diag << actualArgs.count();
         return badExpr(compilation, nullptr);
