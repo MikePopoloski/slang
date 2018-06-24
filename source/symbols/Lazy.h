@@ -37,8 +37,13 @@ struct Lazy {
         if (cache.index() == 0)
             return std::get<0>(cache);
 
+        ASSERT(!evaluating);
+
+        evaluating = true;
         auto derived = static_cast<const TDerived*>(this);
         const TResult& result = derived->evaluate(getScope(), *std::get<1>(cache));
+
+        evaluating = false;
         cache = &result;
         return &result;
     }
@@ -50,6 +55,7 @@ struct Lazy {
     }
 
     bool hasResult() const { return cache.index() == 0 && std::get<0>(cache); }
+    bool isEvaluating() const { return evaluating; }
 
 protected:
     const Scope& getScope() const {
@@ -69,6 +75,7 @@ protected:
 private:
     ScopeOrSymbol parent;
     mutable std::variant<const TResult*, const TSource*> cache;
+    mutable bool evaluating = false;
 };
 
 #define LAZY(name, TResult, TSource)                            \

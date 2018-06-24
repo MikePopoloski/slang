@@ -187,7 +187,8 @@ void FormalArgumentSymbol::toJson(json& j) const {
 }
 
 SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
-                                               const FunctionDeclarationSyntax& syntax) {
+                                               const FunctionDeclarationSyntax& syntax,
+                                               const Scope& parent) {
     // TODO: non simple names?
     const auto& proto = syntax.prototype;
     Token nameToken = proto.name.getFirstToken();
@@ -197,7 +198,8 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
         nameToken.valueText(),
         nameToken.location(),
         SemanticFacts::getVariableLifetime(proto.lifetime).value_or(VariableLifetime::Automatic),
-        syntax.kind == SyntaxKind::TaskDeclaration
+        syntax.kind == SyntaxKind::TaskDeclaration,
+        parent
     );
 
     SmallVectorSized<const FormalArgumentSymbol*, 8> arguments;

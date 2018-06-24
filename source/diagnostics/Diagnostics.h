@@ -190,6 +190,7 @@ enum class DiagCode : uint8_t {
     NotAHierarchicalScope,
     HierarchicalNotAllowedInConstant,
     UnknownMember,
+    RecursiveDefinition,
 
     // constant evaluation
     ExpressionNotConstant,

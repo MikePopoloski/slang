@@ -259,6 +259,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NotAHierarchicalScope] = { "'{}' is not a hierarchical scope name", DiagnosticSeverity::Error };
     descriptors[DiagCode::HierarchicalNotAllowedInConstant] = { "hierarchical names are not allowed in constant expressions", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnknownMember] = { "no member named '{}' in {}", DiagnosticSeverity::Error };
+    descriptors[DiagCode::RecursiveDefinition] = { "'{}' recursively depends on its own definition", DiagnosticSeverity::Error };
 
     // constant evaluation
     descriptors[DiagCode::ExpressionNotConstant] = { "expression is not constant", DiagnosticSeverity::Error };

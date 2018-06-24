@@ -88,28 +88,26 @@ const Scope* Scope::getParent() const {
     return thisSym->getScope();
 }
 
-void Scope::addMember(const Symbol& symbol) {
-    // For any symbols that expose a type to the surrounding scope, keep track of it in our
-    // deferred data so that we can include enum values in our member list.
-    const LazyType* lazyType = nullptr;
+static const LazyType* getLazyType(const Symbol& symbol) {
     switch (symbol.kind) {
         case SymbolKind::Variable:
         case SymbolKind::FormalArgument:
-            lazyType = &symbol.as<VariableSymbol>().type;
-            break;
+            return &symbol.as<VariableSymbol>().type;
         case SymbolKind::Subroutine:
-            lazyType = &symbol.as<SubroutineSymbol>().returnType;
-            break;
+            return &symbol.as<SubroutineSymbol>().returnType;
         case SymbolKind::Parameter:
-            lazyType = &symbol.as<ParameterSymbol>().getLazyType();
-            break;
+            return &symbol.as<ParameterSymbol>().getLazyType();
         case SymbolKind::TypeAlias:
-            lazyType = &symbol.as<TypeAliasType>().targetType;
-            break;
+            return &symbol.as<TypeAliasType>().targetType;
         default:
-            break;
+            return nullptr;
     }
+}
 
+void Scope::addMember(const Symbol& symbol) {
+    // For any symbols that expose a type to the surrounding scope, keep track of it in our
+    // deferred data so that we can include enum values in our member list.
+    const LazyType* lazyType = getLazyType(symbol);
     if (lazyType) {
         auto syntax = lazyType->getSourceOrNull();
         if (syntax && syntax->kind == SyntaxKind::EnumType)
@@ -165,7 +163,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration:
-            addMember(SubroutineSymbol::fromSyntax(compilation, syntax.as<FunctionDeclarationSyntax>()));
+            addMember(SubroutineSymbol::fromSyntax(compilation, syntax.as<FunctionDeclarationSyntax>(), *this));
             break;
         case SyntaxKind::DataDeclaration: {
             SmallVectorSized<const VariableSymbol*, 4> variables;
@@ -550,6 +548,18 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
                     result.found = symbol;
                     break;
             }
+
+            // We have a fully resolved and valid symbol. Before we return back to the caller, make sure that
+            // the symbol we're returning isn't in the process of having its type evaluated. This can only happen
+            // with a mutually recursive definition of something like a parameter and a function, so detect and
+            // report the error here to avoid a stack overflow.
+            const LazyType* lazyType = result.found ? getLazyType(*result.found) : nullptr;
+            if (lazyType && lazyType->isEvaluating()) {
+                auto& diag = result.diagnostics.add(DiagCode::RecursiveDefinition, sourceRange) << name;
+                diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
+                result.found = nullptr;
+            }
+            
             return;
         }
     }

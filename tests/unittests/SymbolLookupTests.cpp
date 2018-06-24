@@ -334,7 +334,6 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     Diagnostics diags = compilation.getAllDiagnostics();
-    std::string result = DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(diags);
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == DiagCode::HierarchicalNotAllowedInConstant);
     CHECK(diags[1].code == DiagCode::HierarchicalNotAllowedInConstant);

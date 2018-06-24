@@ -285,3 +285,31 @@ endpackage
     CHECK(cv.integer() == 4);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Recursive parameter / function") {
+    auto tree = SyntaxTree::fromText(R"(
+module M;
+    localparam logic [bar()-1:0] foo = 1;
+
+    function logic[$bits(foo)-1:0] bar;
+        return 1;
+    endfunction
+
+    // TODO: also handle this case
+    /*localparam int a = stuff();
+    localparam int b = a;
+
+    function int stuff;
+        return b;
+    endfunction*/
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == DiagCode::RecursiveDefinition);
+}

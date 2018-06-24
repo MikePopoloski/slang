@@ -196,10 +196,10 @@ public:
     bool isTask = false;
 
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     VariableLifetime defaultLifetime, bool isTask) :
+                     VariableLifetime defaultLifetime, bool isTask, const Scope& parent) :
         Symbol(SymbolKind::Subroutine, name, loc),
         StatementBodiedScope(compilation, this),
-        returnType(static_cast<const Scope*>(this)),
+        returnType(&parent),    // return type is evaluated in parent scope
         defaultLifetime(defaultLifetime), isTask(isTask) {}
 
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
@@ -211,7 +211,8 @@ public:
 
     void toJson(json& j) const;
 
-    static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax);
+    static SubroutineSymbol& fromSyntax(Compilation& compilation, const FunctionDeclarationSyntax& syntax,
+                                        const Scope& parent);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
 
