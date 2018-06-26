@@ -100,7 +100,7 @@ namespace slang {
 	cppf.write('        case SyntaxKind::Unknown: return 0;\n')
 	cppf.write('        case SyntaxKind::List: return ((const SyntaxListBase*)this)->getChildCount();\n')
 
-	for k,v in kindmap.items():
+	for k,v in sorted(kindmap.items()):
 		count = alltypes[v].memberCount
 		cppf.write('        case SyntaxKind::{}: return {};\n'.format(k, count))
 
@@ -129,7 +129,7 @@ namespace slang {
 			v = alltypes[k]
 
 	# Write out isKind static methods for each derived type
-	for k,v in alltypes.items():
+	for k,v in sorted(alltypes.items()):
 		if v.base is None:
 			continue
 
@@ -139,7 +139,7 @@ namespace slang {
 			cppf.write('    return kind == SyntaxKind::{};\n'.format(list(kinds)[0]))
 		else:
 			cppf.write('    switch (kind) {\n')
-			for kind in kinds:
+			for kind in sorted(kinds):
 				cppf.write('        case SyntaxKind::{}:\n'.format(kind))
 			cppf.write('            return true;\n')
 			cppf.write('        default:\n')
@@ -154,7 +154,7 @@ namespace slang {
 	outf.write('    explicit SyntaxFactory(BumpAllocator& alloc) : alloc(alloc) {}\n')
 	outf.write('\n')
 
-	for k,v in alltypes.items():
+	for k,v in sorted(alltypes.items()):
 		if not v.final:
 			continue
 
@@ -182,7 +182,7 @@ namespace slang {
 	outf.write('        case SyntaxKind::Unknown: break;\n')
 	outf.write('        case SyntaxKind::List: v.visitDefault(*node); break;\n')
 
-	for k,v in kindmap.items():
+	for k,v in sorted(kindmap.items()):
 		outf.write('        case SyntaxKind::{}: '.format(k))
 		outf.write('SyntaxNode::dispatch(v, *(const {0}*)node); break;\n'.format(v))
 		alltypes.pop(v, None)
