@@ -56,6 +56,7 @@ enum class SymbolKind {
     GenerateBlockArray,
     ProceduralBlock,
     SequentialBlock,
+    Net,
     Variable,
     FormalArgument,
     Field,

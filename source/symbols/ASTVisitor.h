@@ -74,6 +74,7 @@ decltype(auto) Symbol::visit(TVisitor& visitor, Args&&... args) const {
         SYMBOL(GenerateBlockArray);
         SYMBOL(ProceduralBlock);
         SYMBOL(SequentialBlock);
+        SYMBOL(Net);
         SYMBOL(Variable);
         SYMBOL(FormalArgument);
         SYMBOL(Field);

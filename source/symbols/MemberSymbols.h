@@ -133,7 +133,24 @@ private:
     bool isPort = false;
 };
 
-/// Represents a variable declaration (which does not include nets).
+/// Represents a net declaration.
+class NetSymbol : public ValueSymbol {
+public:
+    LazyType dataType;
+
+    NetSymbol(string_view name, SourceLocation loc) :
+        ValueSymbol(SymbolKind::Net, name, loc),
+        dataType(this) {}
+
+    void toJson(json& j) const;
+
+    static void fromSyntax(Compilation& compilation, const NetDeclarationSyntax& syntax,
+                           SmallVector<const NetSymbol*>& results);
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }
+};
+
+/// Represents a variable declaration.
 class VariableSymbol : public ValueSymbol {
 public:
     LazyType type;

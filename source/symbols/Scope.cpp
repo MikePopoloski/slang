@@ -90,6 +90,8 @@ const Scope* Scope::getParent() const {
 
 static const LazyType* getLazyType(const Symbol& symbol) {
     switch (symbol.kind) {
+        case SymbolKind::Net:
+            return &symbol.as<NetSymbol>().dataType;
         case SymbolKind::Variable:
         case SymbolKind::FormalArgument:
             return &symbol.as<VariableSymbol>().type;
@@ -170,6 +172,13 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             VariableSymbol::fromSyntax(compilation, syntax.as<DataDeclarationSyntax>(), variables);
             for (auto variable : variables)
                 addMember(*variable);
+            break;
+        }
+        case SyntaxKind::NetDeclaration: {
+            SmallVectorSized<const NetSymbol*, 4> nets;
+            NetSymbol::fromSyntax(compilation, syntax.as<NetDeclarationSyntax>(), nets);
+            for (auto net : nets)
+                addMember(*net);
             break;
         }
         case SyntaxKind::ParameterDeclarationStatement: {

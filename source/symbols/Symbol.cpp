@@ -95,6 +95,8 @@ const Type& ValueSymbol::getType() const {
             return as<EnumValueSymbol>().type;
         case SymbolKind::Parameter:
             return as<ParameterSymbol>().getType();
+        case SymbolKind::Net:
+            return *as<NetSymbol>().dataType;
         default:
             return *as<VariableSymbol>().type;
     }
@@ -102,6 +104,7 @@ const Type& ValueSymbol::getType() const {
 
 bool ValueSymbol::isKind(SymbolKind kind) {
     switch (kind) {
+        case SymbolKind::Net:
         case SymbolKind::EnumValue:
         case SymbolKind::Parameter:
             return true;

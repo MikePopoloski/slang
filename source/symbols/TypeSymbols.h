@@ -469,7 +469,7 @@ public:
 ///
 /// There is a parallel type system for nets that exists independently from the data type
 /// system. Most nets will be one of the built in types, but user defined net types can
-/// exist too (though they are currently unimplemented here).
+/// exist too (TODO: though they are currently unimplemented here).
 ///
 /// We actually inherit from Type here because in the face of net type aliases the parser
 /// doesn't know whether something is a data declaration or a net declaration; once we start

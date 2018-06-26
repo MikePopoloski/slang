@@ -153,6 +153,22 @@ void ParameterSymbol::toJson(json& j) const {
         j["default"] = *getDefault();
 }
 
+void NetSymbol::fromSyntax(Compilation& compilation, const NetDeclarationSyntax& syntax,
+                           SmallVector<const NetSymbol*>& results) {
+    for (auto declarator : syntax.declarators) {
+        auto net = compilation.emplace<NetSymbol>(declarator->name.valueText(),
+                                                  declarator->name.location());
+        
+        // TODO: net types, initializers, etc
+        net->dataType = syntax.type;
+        results.append(net);
+    }
+}
+
+void NetSymbol::toJson(json& j) const {
+    j["dataType"] = *dataType;
+}
+
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
                                 SmallVector<const VariableSymbol*>& results) {
     for (auto declarator : syntax.declarators) {
