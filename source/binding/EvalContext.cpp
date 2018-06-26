@@ -41,10 +41,12 @@ ConstantValue* EvalContext::findLocal(const ValueSymbol* symbol) {
     return &it->second;
 }
 
-void EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation) {
+void EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
+                            LookupLocation lookupLocation) {
     Frame frame;
     frame.subroutine = &subroutine;
     frame.callLocation = callLocation;
+    frame.lookupLocation = lookupLocation;
     stack.emplace_back(std::move(frame));
 }
 

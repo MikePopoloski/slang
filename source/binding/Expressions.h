@@ -317,6 +317,9 @@ public:
 
     static Expression& propagateType(Compilation& compilation, NamedValueExpression& expr, const Type& newType);
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NamedValue; }
+
+private:
+    bool verifyAccess(EvalContext& context) const;
 };
 
 /// Represents a unary operator expression.
@@ -576,9 +579,10 @@ class CallExpression : public Expression {
 public:
     const SubroutineSymbol& subroutine;
 
-    CallExpression(const SubroutineSymbol& subroutine, span<const Expression*> arguments, SourceRange sourceRange) :
+    CallExpression(const SubroutineSymbol& subroutine, span<const Expression*> arguments,
+                   LookupLocation lookupLocation, SourceRange sourceRange) :
         Expression(ExpressionKind::Call, *subroutine.returnType, sourceRange),
-        subroutine(subroutine), arguments_(arguments) {}
+        subroutine(subroutine), arguments_(arguments), lookupLocation(lookupLocation) {}
 
     span<const Expression* const> arguments() const { return arguments_; }
     span<const Expression*> arguments() { return arguments_; }
@@ -593,6 +597,7 @@ public:
 
 private:
     span<const Expression*> arguments_;
+    LookupLocation lookupLocation;
 };
 
 /// Represents a type conversion expression.

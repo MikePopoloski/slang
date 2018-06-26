@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "binding/ConstantValue.h"
+#include "symbols/Scope.h"
 #include "symbols/Symbol.h"
 
 namespace slang {
@@ -22,6 +23,25 @@ class SubroutineSymbol;
 /// storage for local variables.
 class EvalContext {
 public:
+    /// Represents a single frame in the call stack.
+    struct Frame {
+        /// A set of temporary values materialized within the stack frame.
+        /// Uses a map so that the values don't move around in memory.
+        std::map<const ValueSymbol*, ConstantValue> temporaries;
+
+        /// The function that is being executed in this frame, if any.
+        const SubroutineSymbol* subroutine = nullptr;
+
+        /// The source location of the function call site.
+        SourceLocation callLocation;
+
+        /// The lookup location of the function call site.
+        LookupLocation lookupLocation;
+
+        // TODO: remove this
+        bool hasReturned = false;
+    };
+
     explicit EvalContext(bool isScriptEval = false);
 
     /// Creates storage for a local variable in the current frame.
@@ -32,7 +52,8 @@ public:
     ConstantValue* findLocal(const ValueSymbol* symbol);
 
     /// Push a new frame onto the call stack.
-    void pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation);
+    void pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
+                   LookupLocation lookupLocation);
 
     /// Pop the active frame from the call stack and returns its value, if any.
     ConstantValue popFrame();
@@ -40,6 +61,9 @@ public:
     /// Indicates whether this evaluation context is for a script session
     /// (not used during normal compilation flow).
     bool isScriptEval() const { return isScriptEval_; }
+
+    /// Gets the top of the call stack.
+    const Frame& topFrame() const { return stack.back(); }
 
     // TODO: get rid of this
     bool hasReturned() { return stack.back().hasReturned; }
@@ -57,17 +81,6 @@ public:
 
 private:
     void reportStack();
-
-    // Represents a single frame in the call stack.
-    struct Frame {
-        // A set of temporary values materialized within the stack frame.
-        // Use a map so that the values don't move around in memory.
-        std::map<const ValueSymbol*, ConstantValue> temporaries;
-
-        const SubroutineSymbol* subroutine = nullptr;
-        SourceLocation callLocation;
-        bool hasReturned = false;
-    };
 
     std::deque<Frame> stack;
     Diagnostics diags;

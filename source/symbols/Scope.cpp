@@ -553,11 +553,15 @@ void Scope::lookupUnqualified(string_view name, LookupLocation location, LookupN
             // the symbol we're returning isn't in the process of having its type evaluated. This can only happen
             // with a mutually recursive definition of something like a parameter and a function, so detect and
             // report the error here to avoid a stack overflow.
-            const LazyType* lazyType = result.found ? getLazyType(*result.found) : nullptr;
-            if (lazyType && lazyType->isEvaluating()) {
-                auto& diag = result.diagnostics.add(DiagCode::RecursiveDefinition, sourceRange) << name;
-                diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
-                result.found = nullptr;
+            if (result.found) {
+                const LazyType* lazyType = getLazyType(*result.found);
+                if ((lazyType && lazyType->isEvaluating()) || (result.found->kind == SymbolKind::Parameter &&
+                                                               result.found->as<ParameterSymbol>().isEvaluating())) {
+                    
+                    auto& diag = result.diagnostics.add(DiagCode::RecursiveDefinition, sourceRange) << name;
+                    diag.addNote(DiagCode::NoteDeclarationHere, result.found->location);
+                    result.found = nullptr;
+                }
             }
             
             return;

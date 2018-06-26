@@ -78,6 +78,9 @@ public:
     /// A special location that should always compare before any other.
     static const LookupLocation min;
 
+    /// Gets the scope of the lookup location, if any.
+    const Scope* getScope() const { return scope; }
+
     bool operator==(const LookupLocation& other) const {
         return scope == other.scope && index == other.index;
     }

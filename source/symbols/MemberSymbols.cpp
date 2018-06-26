@@ -109,14 +109,19 @@ const ConstantValue* ParameterSymbol::getDefault() const {
     if (!defaultValue)
         return nullptr;
 
+    ASSERT(!evaluating);
+
     if (defaultValue.is<const ExpressionSyntax*>()) {
         ASSERT(declaredType);
 
+        evaluating = true;
         const Scope* scope = getScope();
         auto typeAndValue = evaluate(*declaredType, *defaultValue.get<const ExpressionSyntax*>(),
                                      LookupLocation::before(*this), *scope);
+
         auto cv = scope->getCompilation().createConstant(std::move(std::get<1>(typeAndValue)));
         defaultValue = cv;
+        evaluating = false;
 
         // If the value of this parameter hasn't yet been overriden, use the default type and value we just computed.
         if (!type.hasResult() || !value) {

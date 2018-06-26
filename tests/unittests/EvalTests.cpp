@@ -315,7 +315,7 @@ TEST_CASE("Constant eval errors", "[eval]") {
 source:1:20: error: expression is not constant
 localparam int p = bar(1);
                    ^~~~~~
-source:1:33: note: reference to non-constant variable 'f' is not allowed in a constant expression
+source:1:33: note: all identifiers that are not parameters must be declared locally to a constant function
 function int foo(int a); return f + a; endfunction
                                 ^
 source:1:33: note: in call to 'foo(2)'

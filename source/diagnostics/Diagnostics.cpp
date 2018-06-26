@@ -83,8 +83,6 @@ void Diagnostics::sort(const SourceManager& sourceManager) {
     };
 
     std::stable_sort(begin(), end(), compare);
-    for (auto& diag : *this)
-        std::stable_sort(diag.notes.begin(), diag.notes.end(), compare);
 }
 
 DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
@@ -268,6 +266,8 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NoteArrayIndexInvalid] = { "cannot refer to element {} of array of type {} in a constant expression", DiagnosticSeverity::Note };
     descriptors[DiagCode::NotePartSelectInvalid] = { "cannot select range of {}:{} from array of type {} in a constant expression", DiagnosticSeverity::Note };
     descriptors[DiagCode::NoteHierarchicalNameInCE] = { "reference to '{}' by hierarchical name is not allowed in a constant expression", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NoteFunctionIdentifiersMustBeLocal] = { "all identifiers that are not parameters must be declared locally to a constant function", DiagnosticSeverity::Note };
+    descriptors[DiagCode::NoteParamUsedInCEBeforeDecl] = { "parameter '{}' is declared after the invocation of the current constant function", DiagnosticSeverity::Note };
 
     // if this assert fails, you added a new diagnostic without adding a descriptor for it
     ASSERT((int)DiagCode::MaxValue == descriptors.size());

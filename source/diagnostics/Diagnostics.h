@@ -199,6 +199,8 @@ enum class DiagCode : uint8_t {
     NoteArrayIndexInvalid,
     NotePartSelectInvalid,
     NoteHierarchicalNameInCE,
+    NoteFunctionIdentifiersMustBeLocal,
+    NoteParamUsedInCEBeforeDecl,
 
     MaxValue
 };

@@ -295,13 +295,26 @@ module M;
         return 1;
     endfunction
 
-    // TODO: also handle this case
-    /*localparam int a = stuff();
+    localparam int baz = fun();
+    localparam int bax = baz;
+
+    function logic[bax-1:0] fun;
+        return 1;
+    endfunction
+
+    localparam int a = stuff();
     localparam int b = a;
 
     function int stuff;
         return b;
-    endfunction*/
+    endfunction
+
+    localparam int z = stuff2();
+    logic [3:0] y;
+
+    function int stuff2;
+        return $bits(y);
+    endfunction
 
 endmodule
 )");
@@ -310,6 +323,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     Diagnostics diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == DiagCode::RecursiveDefinition);
+    CHECK(diags[1].code == DiagCode::RecursiveDefinition);
+    CHECK(diags[2].code == DiagCode::ExpressionNotConstant);
+    CHECK(diags[3].code == DiagCode::RecursiveDefinition);
+    CHECK(diags[4].code == DiagCode::ExpressionNotConstant);
 }

@@ -959,7 +959,8 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
         }
     }
 
-    return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation), syntax.sourceRange());
+    return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation),
+                                                context.lookupLocation, syntax.sourceRange());
 }
 
 UnaryOperator getUnaryOperator(SyntaxKind kind) {

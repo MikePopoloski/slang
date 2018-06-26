@@ -168,10 +168,8 @@ ConstantValue StringLiteral::evalImpl(EvalContext&) const {
 }
 
 ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
-    if (isHierarchical && !context.isScriptEval()) {
-        context.addDiag(DiagCode::NoteHierarchicalNameInCE, sourceRange) << symbol.name;
+    if (!verifyAccess(context))
         return nullptr;
-    }
 
     switch (symbol.kind) {
         case SymbolKind::Parameter:
@@ -193,10 +191,8 @@ ConstantValue NamedValueExpression::evalImpl(EvalContext& context) const {
 }
 
 LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
-    if (isHierarchical && !context.isScriptEval()) {
-        context.addDiag(DiagCode::NoteHierarchicalNameInCE, sourceRange) << symbol.name;
+    if (!verifyAccess(context))
         return nullptr;
-    }
 
     auto cv = context.findLocal(&symbol);
     if (!cv) {
@@ -206,6 +202,56 @@ LValue NamedValueExpression::evalLValueImpl(EvalContext& context) const {
     }
 
     return LValue(*cv);
+}
+
+bool NamedValueExpression::verifyAccess(EvalContext& context) const {
+    if (context.isScriptEval())
+        return true;
+
+    // Hierarchical names are disallowed in constant expressions and constant functions
+    if (isHierarchical) {
+        context.addDiag(DiagCode::NoteHierarchicalNameInCE, sourceRange) << symbol.name;
+        return false;
+    }
+
+    const EvalContext::Frame& frame = context.topFrame();
+    const SubroutineSymbol* subroutine = frame.subroutine;
+    if (!subroutine)
+        return true;
+
+    // Constant functions have a bunch of additional restrictions. See [13.4.4]:
+    // - All parameter values used within the function shall be defined before the use of
+    //   the invoking constant function call.
+    // - All identifiers that are not parameters or functions shall be declared locally to
+    //   the current function.
+    if (symbol.kind != SymbolKind::Parameter) {
+        const Scope* scope = symbol.getScope();
+        while (scope && scope != subroutine)
+            scope = scope->getParent();
+
+        if (scope != subroutine) {
+            context.addDiag(DiagCode::NoteFunctionIdentifiersMustBeLocal, sourceRange);
+            context.addDiag(DiagCode::NoteDeclarationHere, symbol.location);
+            return false;
+        }
+    }
+    else {
+        LookupLocation location = LookupLocation::after(symbol);
+        const Scope* commonParent = subroutine->getParent();
+        const Scope* scope = symbol.getScope();
+        while (scope && scope != commonParent) {
+            location = LookupLocation::before(scope->asSymbol());
+            scope = scope->getParent();
+        }
+
+        if (!(location < frame.lookupLocation)) {
+            context.addDiag(DiagCode::NoteParamUsedInCEBeforeDecl, sourceRange) << symbol.name;
+            context.addDiag(DiagCode::NoteDeclarationHere, symbol.location);
+            return false;
+        }
+    }
+
+    return true;
 }
 
 ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
@@ -520,7 +566,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     }
 
     // Push a new stack frame, push argument values as locals.
-    context.pushFrame(subroutine, sourceRange.start());
+    context.pushFrame(subroutine, sourceRange.start(), lookupLocation);
     span<const FormalArgumentSymbol* const> formals = subroutine.arguments;
     for (uint32_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);

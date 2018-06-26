@@ -119,6 +119,8 @@ public:
     bool isPortParam() const { return isPort; }
     bool isBodyParam() const { return !isPortParam(); }
 
+    bool isEvaluating() const { return evaluating; }
+
     void toJson(json& j) const;
 
 private:
@@ -126,6 +128,7 @@ private:
     mutable LazyType type;
     mutable const ConstantValue* value = nullptr;
     mutable PointerUnion<const ConstantValue*, const ExpressionSyntax*> defaultValue;
+    mutable bool evaluating = false;
     bool isLocal = false;
     bool isPort = false;
 };
