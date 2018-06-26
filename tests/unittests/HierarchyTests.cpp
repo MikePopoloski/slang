@@ -218,11 +218,11 @@ endmodule
 
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation);
-    const auto& alwaysComb = instance.memberAt<ProceduralBlockSymbol>(2);
+    const auto& alwaysComb = instance.memberAt<ProceduralBlockSymbol>(8);
 
     CHECK(alwaysComb.procedureKind == ProceduralBlockKind::AlwaysComb);
 
-    const auto& variable = instance.memberAt<VariableSymbol>(4);
+    const auto& variable = instance.memberAt<VariableSymbol>(10);
     CHECK(variable.type->isIntegral());
     CHECK(variable.name == "arr1");
 

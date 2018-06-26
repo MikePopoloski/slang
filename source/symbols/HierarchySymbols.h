@@ -14,6 +14,8 @@
 
 namespace slang {
 
+class Expression;
+
 /// The root of a single compilation unit.
 class CompilationUnitSymbol : public Symbol, public Scope {
 public:
@@ -53,12 +55,61 @@ public:
         ConstantValue value;
     };
 
+    /// Defines information about a single port exposed by the instance.
+    struct Port {
+        /// The externally visible name of the port, if it has one.
+        string_view name;
+
+        /// The kind of port.
+        PortKind kind = PortKind::Net;
+
+        /// The direction of data flowing across the port. Some port kinds
+        /// don't have meaningful semantics for direction; in those cases, this
+        /// is set to NotApplicable.
+        PortDirection direction = PortDirection::NotApplicable;
+
+        /// The type of the port, if it has one. Otherwise nullptr.
+        const Type* type = nullptr;
+
+        /// An instance-internal symbol that this port connects to, if any.
+        /// Ports that do not connect directly to an internal symbol will have
+        /// this set to nullptr.
+        const Symbol* symbol = nullptr;
+
+        /// For explicit ports, this is the expression that controls how it
+        /// connects to the instance's internals.
+        const Expression* explicitConnection = nullptr;
+
+        /// The default value of the port, if any. Otherwise nullptr.
+        const ConstantValue* defaultValue = nullptr;
+    };
+
+    /// The set of ports exposed by the instance.
+    span<const Port> ports;
+
 protected:
     InstanceSymbol(SymbolKind kind, Compilation& compilation, string_view name, SourceLocation loc) :
         Symbol(kind, name, loc),
         Scope(compilation, this) {}
 
+    struct PortListBuilder {
+        Compilation& compilation;
+
+        PortKind lastKind;
+        PortDirection lastDirection;
+        const Type* lastType;
+
+        SmallVectorSized<Port, 8> ports;
+
+        explicit PortListBuilder(Compilation& compilation);
+
+        void add(const Port& port);
+    };
+
     void populate(const Definition& definition, span<const ParameterMetadata> parameters);
+    void handleAnsiPorts(const AnsiPortListSyntax& syntax);
+    void handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilder& builder);
+    void handleNonAnsiPorts(const NonAnsiPortListSyntax& syntax);
 };
 
 class ModuleInstanceSymbol : public InstanceSymbol {

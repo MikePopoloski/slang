@@ -19,6 +19,16 @@ std::optional<VariableLifetime> getVariableLifetime(Token token) {
     }
 }
 
+PortDirection getPortDirection(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::InputKeyword: return PortDirection::In;
+        case TokenKind::InOutKeyword: return PortDirection::InOut;
+        case TokenKind::OutputKeyword: return PortDirection::Out;
+        case TokenKind::RefKeyword: return PortDirection::Ref;
+        default: return PortDirection::NotApplicable;
+    }
+}
+
 ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::AlwaysBlock: return ProceduralBlockKind::Always;

@@ -171,13 +171,14 @@ bool InstanceSymbol::isKind(SymbolKind kind) {
 
 void InstanceSymbol::populate(const Definition& definition, span<const ParameterMetadata> parameters) {
     // Add all port parameters as members first.
+    Compilation& comp = getCompilation();
     auto paramIt = parameters.begin();
     while (paramIt != parameters.end()) {
         auto decl = paramIt->decl;
         if (!decl->isPort)
             break;
 
-        auto& param = ParameterSymbol::fromDecl(getCompilation(), *decl);
+        auto& param = ParameterSymbol::fromDecl(comp, *decl);
         addMember(param);
 
         if (paramIt->type) {
@@ -185,6 +186,20 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
             param.setValue(paramIt->value);
         }
         paramIt++;
+    }
+
+    const PortListSyntax* portSyntax = definition.syntax.header.ports;
+    if (portSyntax) {
+        switch (portSyntax->kind) {
+            case SyntaxKind::AnsiPortList:
+                handleAnsiPorts(portSyntax->as<AnsiPortListSyntax>());
+                break;
+            case SyntaxKind::NonAnsiPortList:
+                handleNonAnsiPorts(portSyntax->as<NonAnsiPortListSyntax>());
+                break;
+            default:
+                THROW_UNREACHABLE;
+        }
     }
 
     for (auto member : definition.syntax.members) {
@@ -198,7 +213,7 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
                 ASSERT(paramIt != parameters.end());
 
                 auto decl = paramIt->decl;
-                auto& param = ParameterSymbol::fromDecl(getCompilation(), *decl);
+                auto& param = ParameterSymbol::fromDecl(comp, *decl);
                 if (paramIt->type) {
                     param.setType(*paramIt->type);
                     param.setValue(paramIt->value);
@@ -208,6 +223,174 @@ void InstanceSymbol::populate(const Definition& definition, span<const Parameter
             }
         }
     }
+}
+
+void InstanceSymbol::handleAnsiPorts(const AnsiPortListSyntax& syntax) {
+    Compilation& comp = getCompilation();
+
+    PortListBuilder builder{comp};
+    for (const MemberSyntax* port : syntax.ports) {
+        switch (port->kind) {
+            case SyntaxKind::ImplicitAnsiPort: {
+                handleImplicitAnsiPort(port->as<ImplicitAnsiPortSyntax>(), builder);
+                break;
+            }
+            default:
+                // TODO:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    ports = builder.ports.copy(getCompilation());
+}
+
+void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax, PortListBuilder& builder) {
+    Compilation& comp = getCompilation();
+
+    Port port;
+    port.name = syntax.declarator.name.valueText();
+
+    // Helper function to check if an implicit type syntax is totally empty.
+    auto typeSyntaxEmpty = [](const DataTypeSyntax& typeSyntax) {
+        if (typeSyntax.kind != SyntaxKind::ImplicitType)
+            return false;
+
+        const auto& implicitType = typeSyntax.as<ImplicitTypeSyntax>();
+        return !implicitType.signing && implicitType.dimensions.count() == 0;
+    };
+
+    // Helper function to set the port's direction and data type, which are both optional.
+    auto setDirectionAndType = [&](const auto& header) {
+        if (!header.direction)
+            port.direction = builder.lastDirection;
+        else
+            port.direction = SemanticFacts::getPortDirection(header.direction.kind);
+
+        if (typeSyntaxEmpty(header.dataType))
+            port.type = &comp.getLogicType();
+        else {
+            // We always add ports in syntactical order, so it's fine to just
+            // always do a lookup from the "end" of the instance. No other members have been added yet.
+            port.type = &comp.getType(header.dataType, LookupLocation::max, *this);
+        }
+    };
+
+    switch (syntax.header.kind) {
+        case SyntaxKind::VariablePortHeader: {
+            const auto& header = syntax.header.as<VariablePortHeaderSyntax>();
+            if (!header.direction && !header.varKeyword && typeSyntaxEmpty(header.dataType)) {
+                // If all three are omitted, take all from the previous port.
+                // TODO: default nettype?
+                port.kind = builder.lastKind;
+                port.direction = builder.lastDirection;
+                port.type = builder.lastType;
+            }
+            else {
+                setDirectionAndType(header);
+
+                if (header.varKeyword)
+                    port.kind = PortKind::Variable;
+                else {
+                    // Rules from [23.2.2.3]:
+                    // - For input and inout, default to a net
+                    // - For output, if we have a data type it's a var, otherwise net
+                    // - For ref it's always a var
+                    switch (port.direction) {
+                        case PortDirection::In:
+                        case PortDirection::InOut:
+                            // TODO: default nettype
+                            port.kind = PortKind::Net;
+                            break;
+                        case PortDirection::Out:
+                            if (header.dataType.kind == SyntaxKind::ImplicitType)
+                                port.kind = PortKind::Net;
+                            else
+                                port.kind = PortKind::Variable;
+                            break;
+                        case PortDirection::Ref:
+                            port.kind = PortKind::Variable;
+                            break;
+                        case PortDirection::NotApplicable:
+                            THROW_UNREACHABLE;
+                    }
+                }
+            }
+
+            // Create a new symbol to represent this port internally to the instance.
+            // TODO: interconnect ports don't have a datatype
+            // TODO: variable lifetime
+            auto variable = comp.emplace<VariableSymbol>(port.name, syntax.declarator.name.location());
+            port.symbol = variable;
+            variable->type = port.type;
+            addMember(*variable);
+
+            // Initializers here are evaluated in the context of the port list and must always be a constant value.
+            // TODO: handle initializers
+
+            break;
+        }
+        case SyntaxKind::NetPortHeader: {
+            const auto& header = syntax.header.as<NetPortHeaderSyntax>();
+            port.kind = PortKind::Net;
+            setDirectionAndType(header);
+
+            // Create a new symbol to represent this port internally to the instance.
+            // TODO: net type
+            auto net = comp.emplace<NetSymbol>(port.name, syntax.declarator.name.location());
+            port.symbol = net;
+            net->dataType = port.type;
+            addMember(*net);
+
+            break;
+        }
+        default:
+            // TODO:
+            THROW_UNREACHABLE;
+    }
+
+    builder.add(port);
+}
+
+void InstanceSymbol::handleNonAnsiPorts(const NonAnsiPortListSyntax&) {
+    // TODO: implement
+}
+
+InstanceSymbol::PortListBuilder::PortListBuilder(Compilation& compilation) :
+    compilation(compilation),
+    lastKind(PortKind::Net),
+    lastDirection(PortDirection::InOut),
+    lastType(&compilation.getLogicType())
+{
+}
+
+void InstanceSymbol::PortListBuilder::add(const Port& port) {
+    ports.append(port);
+
+    lastKind = port.kind;
+    lastDirection = port.direction;
+    lastType = port.type;
+
+    if (lastDirection == PortDirection::NotApplicable)
+        lastDirection = PortDirection::InOut;
+
+    if (lastKind == PortKind::Explicit || lastKind == PortKind::Interface) {
+        switch (lastDirection) {
+            case PortDirection::In:
+            case PortDirection::InOut:
+            case PortDirection::Out:
+                // TODO: default nettype
+                lastKind = PortKind::Net;
+                break;
+            case PortDirection::Ref:
+                lastKind = PortKind::Variable;
+                break;
+            case PortDirection::NotApplicable:
+                THROW_UNREACHABLE;
+        }
+    }
+
+    if (lastKind != PortKind::Interconnect && !lastType)
+        lastType = &compilation.getLogicType();
 }
 
 ModuleInstanceSymbol& ModuleInstanceSymbol::instantiate(Compilation& compilation, string_view name,

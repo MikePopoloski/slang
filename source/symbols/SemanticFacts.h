@@ -51,10 +51,31 @@ enum class ProceduralBlockKind {
     AlwaysFF
 };
 
+/// Specifies possible port kinds.
+enum class PortKind {
+    Net,
+    Variable,
+    Explicit,
+    Interconnect,
+    Interface
+};
+
+/// Specifies the behavior of connections to a particular port.
+enum class PortDirection {
+    NotApplicable,
+    In,
+    Out,
+    InOut,
+    Ref
+};
+
 namespace SemanticFacts {
 
 /// Interprets a keyword token as a variable lifetime value.
 std::optional<VariableLifetime> getVariableLifetime(Token token);
+
+/// Interprets a token type as a port direction value.
+PortDirection getPortDirection(TokenKind kind);
 
 ProceduralBlockKind getProceduralBlockKind(SyntaxKind kind);
 
