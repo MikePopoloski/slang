@@ -210,7 +210,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
 
     if (kind == TokenKind::VarKeyword) {
         auto varKeyword = consume();
-        return factory.variablePortHeader(direction, varKeyword, &parseDataType(/* allowImplicit */ true));
+        return factory.variablePortHeader(direction, varKeyword, parseDataType(/* allowImplicit */ true));
     }
 
     if (kind == TokenKind::Identifier) {
@@ -220,15 +220,17 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
             return factory.interfacePortHeader(name, parseDotMemberClause());
         }
 
-        DataTypeSyntax* type = nullptr;
+        DataTypeSyntax* type;
         if (!isPlainPortName())
             type = &parseDataType(/* allowImplicit */ false);
+        else
+            type = &factory.implicitType(Token(), nullptr);
 
-        return factory.variablePortHeader(direction, Token(), type);
+        return factory.variablePortHeader(direction, Token(), *type);
     }
 
     // assume we have some kind of data type here
-    return factory.variablePortHeader(direction, Token(), &parseDataType(/* allowImplicit */ true));
+    return factory.variablePortHeader(direction, Token(), parseDataType(/* allowImplicit */ true));
 }
 
 AnsiPortSyntax& Parser::parseAnsiPort() {

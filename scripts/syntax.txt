@@ -904,7 +904,7 @@ DotMemberClauseSyntax? modport
 VariablePortHeaderSyntax base=PortHeaderSyntax kind=VariablePortHeader
 token direction
 token varKeyword
-DataTypeSyntax? type
+DataTypeSyntax dataType
 
 InterconnectPortHeaderSyntax base=PortHeaderSyntax kind=InterconnectPortHeader
 token direction
