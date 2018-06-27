@@ -736,7 +736,7 @@ class basic_parse_context : private ErrorHandler {
 
   // Advances the begin iterator to ``it``.
   FMT_CONSTEXPR void advance_to(iterator it) {
-    format_str_.remove_prefix(size_t(it - begin()));
+    format_str_.remove_prefix(it - begin());
   }
 
   // Returns the next argument index.
@@ -1060,7 +1060,7 @@ class basic_format_args {
   format_arg do_get(size_type index) const {
     int64_t signed_types = static_cast<int64_t>(types_);
     if (signed_types < 0) {
-      uint64_t num_args = static_cast<uint64_t>(-signed_types);
+      uint64_t num_args = -signed_types;
       return index < num_args ? args_[index] : format_arg();
     }
     format_arg arg;
@@ -1089,7 +1089,7 @@ class basic_format_args {
   }
 
   basic_format_args(const format_arg *args, size_type count)
-  : types_((uint64_t)(-(int64_t)count)) {
+  : types_(-(int64_t)count) {
     set_data(args);
   }
 
