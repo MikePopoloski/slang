@@ -84,6 +84,12 @@
 # pragma clang diagnostic ignored "-Wdocumentation-unknown-command"
 # pragma clang diagnostic ignored "-Wgnu-string-literal-operator-template"
 # pragma clang diagnostic ignored "-Wpadded"
+# pragma clang diagnostic ignored "-Wsign-conversion"
+#endif
+
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4702) // unreachable code
 #endif
 
 #ifdef __GNUC_LIBSTD__
@@ -3674,6 +3680,10 @@ FMT_END_NAMESPACE
 
 #if defined(__clang__) && !defined(FMT_ICC_VERSION)
 # pragma clang diagnostic pop
+#endif
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
 #endif
 
 #endif  // FMT_FORMAT_H_
