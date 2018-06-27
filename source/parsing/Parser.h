@@ -113,7 +113,7 @@ private:
     ModportItemSyntax& parseModportItem();
     ModportDeclarationSyntax& parseModportDeclaration(span<AttributeInstanceSyntax* const> attributes);
     NonAnsiPortSyntax& parseNonAnsiPort();
-    AnsiPortSyntax& parseAnsiPort();
+    MemberSyntax& parseAnsiPort();
     AnsiPortListSyntax& parseAnsiPortList(Token openParen);
     PortHeaderSyntax& parsePortHeader(Token direction);
     PortDeclarationSyntax& parsePortDeclaration(span<AttributeInstanceSyntax* const> attributes);

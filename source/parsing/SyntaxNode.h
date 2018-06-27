@@ -605,6 +605,8 @@ public:
         c.visitDefault(std::forward<Args>(args)...);
     }
 
+    static bool isKind(SyntaxKind) { return true; }
+
 protected:
     virtual TokenOrSyntax getChild(uint32_t) const = 0;
 };
@@ -712,7 +714,7 @@ public:
     const T* operator[](uint32_t index) const {
         index <<= 1;
         ASSERT(!elements[index].isToken);
-        return static_cast<const T*>(elements[index].node);
+        return &elements[index].node->as<T>();
     }
 
     const_iterator begin() const { return const_iterator(*this, 0); }

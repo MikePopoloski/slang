@@ -894,9 +894,6 @@ token openParen
 separated_list<NonAnsiPortSyntax> ports
 token closeParen
 
-AnsiPortSyntax final=false
-list<AttributeInstanceSyntax> attributes
-
 InterfacePortHeaderSyntax base=PortHeaderSyntax kind=InterfacePortHeader
 token nameOrKeyword
 DotMemberClauseSyntax? modport
@@ -916,11 +913,11 @@ token direction
 token netType
 DataTypeSyntax dataType
 
-ImplicitAnsiPortSyntax base=AnsiPortSyntax kind=ImplicitAnsiPort
+ImplicitAnsiPortSyntax base=MemberSyntax kind=ImplicitAnsiPort
 PortHeaderSyntax header
 VariableDeclaratorSyntax declarator
 
-ExplicitAnsiPortSyntax base=AnsiPortSyntax kind=ExplicitAnsiPort
+ExplicitAnsiPortSyntax base=MemberSyntax kind=ExplicitAnsiPort
 token direction
 token dot
 token name

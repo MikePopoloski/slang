@@ -434,16 +434,6 @@ bool AnsiPortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AnsiPortList;
 }
 
-bool AnsiPortSyntax::isKind(SyntaxKind kind) {
-    switch (kind) {
-        case SyntaxKind::ExplicitAnsiPort:
-        case SyntaxKind::ImplicitAnsiPort:
-            return true;
-        default:
-            return false;
-    }
-}
-
 bool ArgumentListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ArgumentList;
 }
@@ -1550,6 +1540,7 @@ bool MemberSyntax::isKind(SyntaxKind kind) {
         case SyntaxKind::DataDeclaration:
         case SyntaxKind::DefParam:
         case SyntaxKind::EmptyMember:
+        case SyntaxKind::ExplicitAnsiPort:
         case SyntaxKind::FinalBlock:
         case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
         case SyntaxKind::ForwardTypedefDeclaration:
@@ -1560,6 +1551,7 @@ bool MemberSyntax::isKind(SyntaxKind kind) {
         case SyntaxKind::HierarchyInstantiation:
         case SyntaxKind::IfGenerate:
         case SyntaxKind::ImmediateAssertionMember:
+        case SyntaxKind::ImplicitAnsiPort:
         case SyntaxKind::InitialBlock:
         case SyntaxKind::InterfaceDeclaration:
         case SyntaxKind::LetDeclaration:

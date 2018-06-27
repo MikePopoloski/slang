@@ -233,7 +233,7 @@ PortHeaderSyntax& Parser::parsePortHeader(Token direction) {
     return factory.variablePortHeader(direction, Token(), parseDataType(/* allowImplicit */ true));
 }
 
-AnsiPortSyntax& Parser::parseAnsiPort() {
+MemberSyntax& Parser::parseAnsiPort() {
     auto attributes = parseAttributes();
     auto kind = peek().kind;
 

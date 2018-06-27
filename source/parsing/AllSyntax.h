@@ -3909,27 +3909,6 @@ protected:
     }
 };
 
-struct AnsiPortSyntax : public SyntaxNode {
-    SyntaxList<AttributeInstanceSyntax> attributes;
-
-    AnsiPortSyntax(SyntaxKind kind, SyntaxList<AttributeInstanceSyntax> attributes) :
-        SyntaxNode(kind), attributes(attributes)
-    {}
-
-    AnsiPortSyntax(const AnsiPortSyntax&) = delete;
-    AnsiPortSyntax& operator=(const AnsiPortSyntax&) = delete;
-
-    static bool isKind(SyntaxKind kind);
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override {
-        switch (index) {
-            case 0: return &attributes;
-            default: return nullptr;
-        }
-    }
-};
-
 struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
     Token nameOrKeyword;
     DotMemberClauseSyntax* modport;
@@ -4028,12 +4007,12 @@ protected:
     }
 };
 
-struct ImplicitAnsiPortSyntax : public AnsiPortSyntax {
+struct ImplicitAnsiPortSyntax : public MemberSyntax {
     PortHeaderSyntax& header;
     VariableDeclaratorSyntax& declarator;
 
     ImplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, PortHeaderSyntax& header, VariableDeclaratorSyntax& declarator) :
-        AnsiPortSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(header), declarator(declarator)
+        MemberSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(header), declarator(declarator)
     {}
 
     ImplicitAnsiPortSyntax(const ImplicitAnsiPortSyntax&) = delete;
@@ -4052,7 +4031,7 @@ protected:
     }
 };
 
-struct ExplicitAnsiPortSyntax : public AnsiPortSyntax {
+struct ExplicitAnsiPortSyntax : public MemberSyntax {
     Token direction;
     Token dot;
     Token name;
@@ -4061,7 +4040,7 @@ struct ExplicitAnsiPortSyntax : public AnsiPortSyntax {
     Token closeParen;
 
     ExplicitAnsiPortSyntax(SyntaxList<AttributeInstanceSyntax> attributes, Token direction, Token dot, Token name, Token openParen, ExpressionSyntax* expr, Token closeParen) :
-        AnsiPortSyntax(SyntaxKind::ExplicitAnsiPort, attributes), direction(direction), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
+        MemberSyntax(SyntaxKind::ExplicitAnsiPort, attributes), direction(direction), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
     ExplicitAnsiPortSyntax(const ExplicitAnsiPortSyntax&) = delete;
