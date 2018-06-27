@@ -78,14 +78,14 @@ void EvalContext::setReturned(ConstantValue value) {
 }
 
 std::string EvalContext::dumpStack() const {
-    fmt::MemoryWriter writer;
+    fmt::memory_buffer buffer;
     int index = 0;
     for (const Frame& frame : stack) {
-        writer.write("{}: {}\n", index++, frame.subroutine ? frame.subroutine->name : "<global>");
+        format_to(buffer, "{}: {}\n", index++, frame.subroutine ? frame.subroutine->name : "<global>");
         for (auto& [symbol, value] : frame.temporaries)
-            writer.write("    {} = {}\n", symbol->name, value.toString());
+            format_to(buffer, "    {} = {}\n", symbol->name, value.toString());
     }
-    return writer.str();
+    return to_string(buffer);
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
@@ -106,26 +106,26 @@ void EvalContext::reportStack() {
     if (std::exchange(reportedCallstack, true))
         return;
 
-    fmt::MemoryWriter writer;
+    fmt::memory_buffer buffer;;
     for (const Frame& frame : make_reverse_range(stack)) {
         if (!frame.subroutine)
             break;
 
-        writer.clear();
-        writer.write("{}(", frame.subroutine->name);
+        buffer.clear();
+        format_to(buffer, "{}(", frame.subroutine->name);
 
         for (auto arg : frame.subroutine->arguments) {
             auto it = frame.temporaries.find(arg);
             ASSERT(it != frame.temporaries.end());
 
-            writer << it->second.toString();
+            buffer << it->second.toString();
             if (arg != frame.subroutine->arguments.last(1)[0])
-                writer << ", ";
+                buffer << ", ";
         }
 
-        writer.write(")");
+        buffer << ")";
 
-        diags.add(DiagCode::NoteInCallTo, frame.callLocation) << writer.str();
+        diags.add(DiagCode::NoteInCallTo, frame.callLocation) << to_string(buffer);
     }
 }
 

@@ -38,7 +38,7 @@ public:
 private:
     void appendStructMembers(const Scope& scope);
 
-    fmt::MemoryWriter writer;
+    fmt::memory_buffer buffer;
 };
 
 }

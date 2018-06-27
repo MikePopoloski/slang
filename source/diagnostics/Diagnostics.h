@@ -303,7 +303,7 @@ private:
     void highlightRange(SourceRange range, SourceLocation caretLoc, uint32_t col, string_view sourceLine, std::string& buffer);
 
     template<typename T>
-    void formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,
+    void formatDiag(T& buffer, SourceLocation loc, const std::vector<SourceRange>& ranges,
                     const char* severity, const std::string& msg);
 
     const SourceManager& sourceManager;

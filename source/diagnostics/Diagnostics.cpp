@@ -295,42 +295,39 @@ std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
     }
 
     // build the error message from arguments, if we have any
-    fmt::MemoryWriter writer;
+    fmt::memory_buffer buffer;
     Descriptor& desc = descriptors[diagnostic.code];
     if (diagnostic.args.empty())
-        formatDiag(writer, location, diagnostic.ranges, severityToString[(int)desc.severity], desc.format);
+        formatDiag(buffer, location, diagnostic.ranges, severityToString[(int)desc.severity], desc.format);
     else {
         // The fmtlib API for arg lists isn't very pretty, but it gets the job done
-        ASSERT(diagnostic.args.size() < fmt::ArgList::MAX_PACKED_ARGS - 1);
-        using ArgArray = fmt::internal::ArgArray<fmt::ArgList::MAX_PACKED_ARGS - 1>;
-        typename ArgArray::Type values;
-        uint64_t types = 0;
-        for (size_t i = 0; i < diagnostic.args.size(); i++) {
-            values[i] = ArgArray::template make<fmt::BasicFormatter<char>>(diagnostic.args[i]);
-            types |= (size_t)fmt::internal::Arg::CUSTOM << (i * 4);
-        }
-        std::string msg = fmt::format(desc.format, fmt::ArgList(types, values));
-        formatDiag(writer, location, diagnostic.ranges, severityToString[(int)desc.severity], msg);
+        using ctx = fmt::format_context;
+        std::vector<fmt::basic_format_arg<ctx>> args;
+        for (auto& arg : diagnostic.args)
+            args.push_back(fmt::internal::make_arg<ctx>(arg));
+
+        std::string msg = fmt::vformat(desc.format, fmt::basic_format_args<ctx>(args.data(), (unsigned)args.size()));
+        formatDiag(buffer, location, diagnostic.ranges, severityToString[(int)desc.severity], msg);
     }
 
     // write out macro expansions, if we have any
     while (!expansionLocs.empty()) {
         location = expansionLocs.back();
         expansionLocs.pop();
-        formatDiag(writer, sourceManager.getOriginalLoc(location), std::vector<SourceRange>(),
+        formatDiag(buffer, sourceManager.getOriginalLoc(location), std::vector<SourceRange>(),
                    "note", "expanded from here");
     }
 
     for (const Diagnostic& note : diagnostic.notes)
-        writer << report(note);
+        buffer << report(note);
 
-    return writer.str();
+    return to_string(buffer);
 }
 
 std::string DiagnosticWriter::report(const Diagnostics& diagnostics) {
     std::deque<SourceLocation> includeStack;
     BufferID lastBuffer;
-    fmt::MemoryWriter writer;
+    fmt::memory_buffer buffer;
 
     for (auto& diag : diagnostics) {
         SourceLocation loc = sourceManager.getFullyExpandedLoc(diag.location);
@@ -341,15 +338,15 @@ std::string DiagnosticWriter::report(const Diagnostics& diagnostics) {
             getIncludeStack(lastBuffer, includeStack);
 
             for (auto& includeLoc : includeStack) {
-                writer.write("In file included from {}:{}:\n",
+                format_to(buffer, "In file included from {}:{}:\n",
                     sourceManager.getFileName(includeLoc),
                     sourceManager.getLineNumber(includeLoc)
                 );
             }
         }
-        writer << report(diag);
+        buffer << report(diag);
     }
-    return writer.str();
+    return to_string(buffer);
 }
 
 string_view DiagnosticWriter::getBufferLine(SourceLocation location, uint32_t col) {
@@ -428,10 +425,10 @@ void DiagnosticWriter::highlightRange(SourceRange range, SourceLocation caretLoc
 }
 
 template<typename T>
-void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vector<SourceRange>& ranges,
+void DiagnosticWriter::formatDiag(T& buffer, SourceLocation loc, const std::vector<SourceRange>& ranges,
                                   const char* severity, const std::string& msg) {
     uint32_t col = sourceManager.getColumnNumber(loc);
-    writer.write("{}:{}:{}: {}: {}",
+    format_to(buffer, "{}:{}:{}: {}: {}",
         sourceManager.getFileName(loc),
         sourceManager.getLineNumber(loc),
         col,
@@ -441,25 +438,25 @@ void DiagnosticWriter::formatDiag(T& writer, SourceLocation loc, const std::vect
 
     string_view line = getBufferLine(loc, col);
     if (!line.empty()) {
-        writer.write("\n{}\n", line);
+        format_to(buffer, "\n{}\n", line);
 
         // Highlight any ranges and print the caret location.
-        std::string buffer(std::max(line.length(), (size_t)col), ' ');
+        std::string highlight(std::max(line.length(), (size_t)col), ' ');
 
         // handle tabs to get proper alignment on a terminal
         for (uint32_t i = 0; i < line.length(); ++i) {
             if (line[i] == '\t')
-                buffer[i] = '\t';
+                highlight[i] = '\t';
         }
 
         for (SourceRange range : ranges)
-            highlightRange(range, loc, col, line, buffer);
+            highlightRange(range, loc, col, line, highlight);
 
-        buffer[col - 1] = '^';
-        buffer.erase(buffer.find_last_not_of(' ') + 1);
-        writer << buffer;
+        highlight[col - 1] = '^';
+        highlight.erase(highlight.find_last_not_of(' ') + 1);
+        buffer << highlight;
     }
-    writer << '\n';
+    buffer << "\n";
 }
 
 }
