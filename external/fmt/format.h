@@ -926,7 +926,7 @@ class decimal_formatter {
       uint64_t t = ((1ULL << (32 + a)) / data::POWERS_OF_10_32[n] + 1 - n / 9);
       t = ((t * u) >> a) + n / 5 * 4;
       write_pair(0, t >> 32);
-      for (int i = 2; i < N; i += 2) {
+      for (unsigned i = 2; i < N; i += 2) {
         t = 100ULL * static_cast<uint32_t>(t);
         write_pair(i, t >> 32);
       }
@@ -1596,7 +1596,7 @@ FMT_CONSTEXPR unsigned parse_nonnegative_int(Iterator &it, ErrorHandler &&eh) {
       value = max_int + 1;
       break;
     }
-    value = value * 10 + (*it - '0');
+    value = value * 10 + unsigned(*it - '0');
     // Workaround for MSVC "setup_exception stack overflow" error:
     auto next = it;
     ++next;
@@ -1932,7 +1932,7 @@ FMT_CONSTEXPR Iterator parse_arg_id(Iterator it, IDHandler &&handler) {
   do {
     c = *++it;
   } while (is_name_start(c) || ('0' <= c && c <= '9'));
-  handler(basic_string_view<char_type>(pointer_from(start), it - start));
+  handler(basic_string_view<char_type>(pointer_from(start), size_t(it - start)));
   return it;
 }
 
@@ -2401,8 +2401,8 @@ class basic_writer {
         size = spec.width();
       }
     } else if (spec.precision() > static_cast<int>(num_digits)) {
-      size = prefix.size() + spec.precision();
-      padding = spec.precision() - num_digits;
+      size = prefix.size() + (size_t)spec.precision();
+      padding = size_t(spec.precision()) - num_digits;
       fill = '0';
     }
     align_spec as = spec;
@@ -3262,7 +3262,7 @@ struct format_handler : internal::error_handler {
     : context(r.begin(), str, format_args) {}
 
   void on_text(iterator begin, iterator end) {
-    size_t size = end - begin;
+    size_t size = size_t(end - begin);
     auto out = context.out();
     auto &&it = internal::reserve(out, size);
     it = std::copy_n(begin, size, it);
