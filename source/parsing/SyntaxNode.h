@@ -714,7 +714,7 @@ public:
     const T* operator[](uint32_t index) const {
         index <<= 1;
         ASSERT(!elements[index].isToken);
-        return &elements[index].node->as<T>();
+        return &elements[index].node->template as<T>();
     }
 
     const_iterator begin() const { return const_iterator(*this, 0); }
