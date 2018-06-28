@@ -185,6 +185,16 @@
 # include <functional>
 #endif
 
+#if defined(__clang__) && !defined(FMT_ICC_VERSION)
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wsign-conversion"
+#endif
+
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4702) // unreachable code
+#endif
+
 FMT_BEGIN_NAMESPACE
 
 // An implementation of declval for pre-C++11 compilers such as gcc 4.
@@ -1306,5 +1316,13 @@ inline void print(wstring_view format_str, const Args & ... args) {
   vprint(format_str, as);
 }
 FMT_END_NAMESPACE
+
+#if defined(__clang__) && !defined(FMT_ICC_VERSION)
+# pragma clang diagnostic pop
+#endif
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #endif  // FMT_CORE_H_
