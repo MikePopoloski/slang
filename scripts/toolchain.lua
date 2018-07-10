@@ -229,7 +229,6 @@ function toolchain(_buildDir, _libDir)
 			"-Wformat-security",
 			"-Wnull-dereference",
 			"-Wimplicit-fallthrough=5",
-			"-Wsuggest-override",
 			"-Walloc-zero",
 			"-Wlogical-op",
 			"-Wlogical-not-parentheses",

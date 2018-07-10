@@ -19,6 +19,8 @@ class Type;
 
 class SystemSubroutine {
 public:
+    virtual ~SystemSubroutine() = default;
+
     using Args = span<const Expression* const>;
 
     std::string name;
