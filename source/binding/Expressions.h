@@ -8,6 +8,7 @@
 
 #include "binding/BindContext.h"
 #include "binding/EvalContext.h"
+#include "binding/SystemSubroutine.h"
 #include "symbols/MemberSymbols.h"
 #include "symbols/TypeSymbols.h"
 
@@ -577,15 +578,18 @@ private:
 /// Represents a subroutine call.
 class CallExpression : public Expression {
 public:
-    const SubroutineSymbol& subroutine;
+    using Subroutine = std::variant<const SubroutineSymbol*, const SystemSubroutine*>;
+    Subroutine subroutine;
 
-    CallExpression(const SubroutineSymbol& subroutine, span<const Expression*> arguments,
+    CallExpression(const Subroutine& subroutine, const Type& returnType, span<const Expression*> arguments,
                    LookupLocation lookupLocation, SourceRange sourceRange) :
-        Expression(ExpressionKind::Call, *subroutine.returnType, sourceRange),
+        Expression(ExpressionKind::Call, returnType, sourceRange),
         subroutine(subroutine), arguments_(arguments), lookupLocation(lookupLocation) {}
 
     span<const Expression* const> arguments() const { return arguments_; }
     span<const Expression*> arguments() { return arguments_; }
+
+    bool isSystemCall() const { return subroutine.index() == 1; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 

@@ -212,22 +212,14 @@ public:
     const VariableSymbol* returnValVar = nullptr;
     ArgList arguments;
     VariableLifetime defaultLifetime = VariableLifetime::Automatic;
-    SystemFunction systemFunctionKind = SystemFunction::Unknown;
     bool isTask = false;
 
     SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     VariableLifetime defaultLifetime, bool isTask, const Scope& parent) :
+                     VariableLifetime defaultLifetime, bool isTask, const Scope&) :
         Symbol(SymbolKind::Subroutine, name, loc),
         StatementBodiedScope(compilation, this),
-        returnType(&parent),    // return type is evaluated in parent scope
+        returnType(static_cast<Symbol*>(this)),
         defaultLifetime(defaultLifetime), isTask(isTask) {}
-
-    SubroutineSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     SystemFunction systemFunction) :
-        Symbol(SymbolKind::Subroutine, name, loc),
-        StatementBodiedScope(compilation, this),
-        returnType(static_cast<const Scope*>(this)),
-        systemFunctionKind(systemFunction) {}
 
     void toJson(json& j) const;
 
@@ -235,8 +227,6 @@ public:
                                         const Scope& parent);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Subroutine; }
-
-    bool isSystemFunction() const { return systemFunctionKind != SystemFunction::Unknown; }
 };
 
 }

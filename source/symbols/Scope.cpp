@@ -68,6 +68,7 @@ bool LookupResult::hasError() const {
 
 void LookupResult::clear() {
     found = nullptr;
+    systemSubroutine = nullptr;
     wasImported = false;
     isHierarchical = false;
     diagnostics.clear();
@@ -274,6 +275,15 @@ void Scope::lookupName(const NameSyntax& syntax, LookupLocation location, Lookup
     // If the parser added a missing identifier token, it already issued an appropriate error.
     if (nameToken.valueText().empty())
         return;
+
+    // If this is a system name, look up directly in the compilation.
+    if (nameToken.identifierType() == IdentifierType::System) {
+        result.found = nullptr;
+        result.systemSubroutine = compilation.getSystemSubroutine(nameToken.valueText());
+        if (!result.systemSubroutine)
+            result.diagnostics.add(DiagCode::UndeclaredIdentifier, nameToken.range()) << nameToken.valueText();
+        return;
+    }
 
     // Perform the lookup.
     lookupUnqualified(nameToken.valueText(), location, nameKind, nameToken.range(), result);

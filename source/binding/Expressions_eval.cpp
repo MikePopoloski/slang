@@ -526,6 +526,11 @@ ConstantValue ReplicationExpression::evalImpl(EvalContext& context) const {
 }
 
 ConstantValue CallExpression::evalImpl(EvalContext& context) const {
+    // Delegate system calls to their appropriate handler.
+    // TODO: handle non-constant system calls.
+    if (isSystemCall())
+        return std::get<1>(subroutine)->eval(context, arguments());
+
     // Evaluate all argument in the current stack frame.
     SmallVectorSized<ConstantValue, 8> args;
     for (auto arg : arguments()) {
@@ -535,45 +540,16 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
         args.emplace(std::move(v));
     }
 
-    // If this is a system function we will just evaluate it directly
-    if (subroutine.systemFunctionKind != SystemFunction::Unknown) {
-        switch (subroutine.systemFunctionKind) {
-            case SystemFunction::Unknown: break;
-            case SystemFunction::clog2: return SVInt(clog2(args[0].integer()));
-            case SystemFunction::bits:
-            case SystemFunction::low:
-            case SystemFunction::high:
-            case SystemFunction::left:
-            case SystemFunction::right:
-            case SystemFunction::size:
-            case SystemFunction::increment: {
-                //TODO: add support for things other than integral types
-                const auto& argType = arguments()[0]->type->as<IntegralType>();
-                ConstantRange range = argType.getBitVectorRange();
-                switch (subroutine.systemFunctionKind) {
-                    case SystemFunction::bits:  return SVInt(argType.bitWidth);
-                    case SystemFunction::low:   return SVInt(range.lower());
-                    case SystemFunction::high:  return SVInt(range.upper());
-                    case SystemFunction::left:  return SVInt(range.left);
-                    case SystemFunction::right: return SVInt(range.right);
-                    case SystemFunction::size:  return SVInt(argType.bitWidth);
-                    case SystemFunction::increment: return SVInt(range.isLittleEndian() ? 1 : -1);
-                    default: THROW_UNREACHABLE;
-                }
-                break;
-            }
-        }
-    }
-
     // Push a new stack frame, push argument values as locals.
-    context.pushFrame(subroutine, sourceRange.start(), lookupLocation);
-    span<const FormalArgumentSymbol* const> formals = subroutine.arguments;
+    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+    context.pushFrame(symbol, sourceRange.start(), lookupLocation);
+    span<const FormalArgumentSymbol* const> formals = symbol.arguments;
     for (uint32_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
-    context.createLocal(subroutine.returnValVar);
+    context.createLocal(symbol.returnValVar);
 
-    bool succeeded = subroutine.getBody()->eval(context);
+    bool succeeded = symbol.getBody()->eval(context);
     ConstantValue result = context.popFrame();
 
     return succeeded ? result : nullptr;

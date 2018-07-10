@@ -9,6 +9,8 @@
 #include "parsing/SyntaxTree.h"
 #include "symbols/ASTVisitor.h"
 
+#include "BuiltInSubroutines.h"
+
 namespace {
 
 using namespace slang;
@@ -90,21 +92,17 @@ Compilation::Compilation() :
 
     root = std::make_unique<RootSymbol>(*this);
 
-    // Register known system functions with the root symbol.
-    root->addMember(createSystemFunction("$clog2", SystemFunction::clog2, { &getIntType() }));
-
-    // Assume input type has no width, so that the argument's self-determined type won't be expanded due to the
-    // assignment like context
-    // TODO: add support for all these operands on data_types, not just expressions,
-    // and add support for things like unpacked arrays
-    const auto& trivialIntType = getType(1, IntegralFlags::FourState);
-    root->addMember(createSystemFunction("$bits", SystemFunction::bits, { &trivialIntType }));
-    root->addMember(createSystemFunction("$left", SystemFunction::left, { &trivialIntType }));
-    root->addMember(createSystemFunction("$right", SystemFunction::right, { &trivialIntType }));
-    root->addMember(createSystemFunction("$low", SystemFunction::low, { &trivialIntType }));
-    root->addMember(createSystemFunction("$high", SystemFunction::high, { &trivialIntType }));
-    root->addMember(createSystemFunction("$size", SystemFunction::size, { &trivialIntType }));
-    root->addMember(createSystemFunction("$increment", SystemFunction::increment, { &trivialIntType }));
+    // Register all system functions.
+#define REGISTER(name) addSystemSubroutine(std::make_unique<Builtins::name##Subroutine>())
+    REGISTER(Clog2);
+    REGISTER(Bits);
+    REGISTER(Low);
+    REGISTER(High);
+    REGISTER(Left);
+    REGISTER(Right);
+    REGISTER(Size);
+    REGISTER(Increment);
+#undef REGISTER
 }
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
@@ -269,6 +267,17 @@ void Compilation::addPackage(const PackageSymbol& package) {
     packageMap.emplace(package.name, &package);
 }
 
+void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine) {
+    subroutineMap.emplace(subroutine->name, std::move(subroutine));
+}
+
+const SystemSubroutine* Compilation::getSystemSubroutine(string_view name) const {
+    auto it = subroutineMap.find(name);
+    if (it == subroutineMap.end())
+        return nullptr;
+    return it->second.get();
+}
+
 const NameSyntax& Compilation::parseName(string_view name) {
     SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
     Preprocessor preprocessor(sourceMan, *this, diags);
@@ -404,22 +413,6 @@ optional<bitwidth_t> Compilation::checkValidBitWidth(const SVInt& value, SourceR
     if (!result)
         addError(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
     return result;
-}
-
-SubroutineSymbol& Compilation::createSystemFunction(string_view funcName, SystemFunction funcKind,
-                                                    std::initializer_list<const Type*> argTypes) {
-    auto func = emplace<SubroutineSymbol>(*this, funcName, SourceLocation(), funcKind);
-    func->returnType = getIntType();
-
-    SmallVectorSized<const FormalArgumentSymbol*, 8> args;
-    for (auto type : argTypes) {
-        auto arg = emplace<FormalArgumentSymbol>();
-        arg->type = *type;
-        args.append(arg);
-    }
-
-    func->arguments = args.copy(*this);
-    return *func;
 }
 
 void Compilation::findInstantiations(const ModuleDeclarationSyntax& module, SmallVector<NameSet>& scopeStack,

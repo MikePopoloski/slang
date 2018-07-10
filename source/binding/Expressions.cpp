@@ -924,6 +924,31 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     if (result.hasError())
         compilation.addDiagnostics(result.diagnostics);
 
+    if (result.systemSubroutine) {
+        SmallVectorSized<const Expression*, 8> buffer;
+        if (syntax.arguments) {
+            auto actualArgs = syntax.arguments->parameters;
+            for (uint32_t i = 0; i < actualArgs.count(); i++) {
+                // TODO: error if not ordered arguments
+                const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
+                buffer.append(&Expression::bind(compilation, arg.expr, context));
+            }
+        }
+
+        const Type& type = result.systemSubroutine->checkArguments(compilation, buffer);
+        auto expr = compilation.emplace<CallExpression>(result.systemSubroutine, type, buffer.copy(compilation),
+                                                        context.lookupLocation, syntax.sourceRange());
+        if (type.isError())
+            return badExpr(compilation, expr);
+
+        for (auto arg : expr->arguments()) {
+            if (arg->bad())
+                return badExpr(compilation, expr);
+        }
+
+        return *expr;
+    }
+
     const Symbol* symbol = result.found;
     if (!symbol)
         return badExpr(compilation, nullptr);
@@ -948,18 +973,12 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
     // TODO: handle named arguments in addition to ordered
     SmallVectorSized<const Expression*, 8> buffer;
     for (uint32_t i = 0; i < actualArgs.count(); i++) {
-        // TODO: split out system functions and handle arguments without this case
         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-        if (subroutine.isSystemFunction()) {
-            buffer.append(&Expression::bind(compilation, arg.expr, context));
-        }
-        else {
-            buffer.append(&Expression::bind(compilation, *formalArgs[i]->type, arg.expr,
-                                            arg.getFirstToken().location(), context));
-        }
+        buffer.append(&Expression::bind(compilation, *formalArgs[i]->type, arg.expr,
+                                        arg.getFirstToken().location(), context));
     }
 
-    return *compilation.emplace<CallExpression>(subroutine, buffer.copy(compilation),
+    return *compilation.emplace<CallExpression>(&subroutine, *subroutine.returnType, buffer.copy(compilation),
                                                 context.lookupLocation, syntax.sourceRange());
 }
 

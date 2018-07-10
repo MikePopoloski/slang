@@ -18,6 +18,7 @@ namespace slang {
 class Compilation;
 class ForwardingTypedefSymbol;
 class Scope;
+class SystemSubroutine;
 class WildcardImportSymbol;
 struct LazyType;
 
@@ -100,6 +101,7 @@ private:
 
 struct LookupResult {
     const Symbol* found = nullptr;
+    const SystemSubroutine* systemSubroutine = nullptr;
     Diagnostics diagnostics;
     bool wasImported = false;
     bool isHierarchical = false;

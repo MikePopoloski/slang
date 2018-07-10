@@ -28,19 +28,6 @@ enum class FormalArgumentDirection {
     ConstRef
 };
 
-/// Indicates which built-in system function is represented by a symbol.
-enum class SystemFunction {
-    Unknown,
-    clog2,
-    bits,
-    left,
-    right,
-    low,
-    high,
-    size,
-    increment
-};
-
 /// Specifies possible procedural block kinds.
 enum class ProceduralBlockKind {
     Initial,

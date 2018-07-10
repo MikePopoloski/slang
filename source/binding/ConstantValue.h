@@ -26,8 +26,10 @@ public:
 
     ConstantValue(const SVInt& integer) : value(integer) {}
     ConstantValue(SVInt&& integer) : value(std::move(integer)) {}
-    ConstantValue(double real) : value(real) {}
     ConstantValue(NullPlaceholder nul) : value(nul) {}
+
+    template<typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+    ConstantValue(T real) : value(double(real)) {}
 
     bool bad() const { return std::holds_alternative<std::monostate>(value); }
     explicit operator bool() const { return !bad(); }

@@ -297,7 +297,6 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 void SubroutineSymbol::toJson(json& j) const {
     j["returnType"] = *returnType;
     j["defaultLifetime"] = defaultLifetime; // TODO: tostring
-    j["systemFunctionKind"] = systemFunctionKind;
     j["isTask"] = isTask;
 }
 

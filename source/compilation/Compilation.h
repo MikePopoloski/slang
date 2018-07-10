@@ -19,6 +19,7 @@
 namespace slang {
 
 class SyntaxTree;
+class SystemSubroutine;
 
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
@@ -55,6 +56,12 @@ public:
 
     /// Adds a package to the map of global packages.
     void addPackage(const PackageSymbol& package);
+
+    /// Registers a system subroutine handler, which can be accessed by compiled code.
+    void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
+
+    /// Gets a system subroutine with the given na,e or null if there is no such subroutine registered.
+    const SystemSubroutine* getSystemSubroutine(string_view name) const;
 
     /// A convenience method for parsing a name string and turning it into a set of syntax nodes.
     /// This is mostly for testing and API purposes; normal compilation never does this.
@@ -127,9 +134,6 @@ public:
     optional<bitwidth_t> checkValidBitWidth(const SVInt& value, SourceRange range);
 
 private:
-    SubroutineSymbol& createSystemFunction(string_view name, SystemFunction kind,
-                                           std::initializer_list<const Type*> argTypes);
-
     void getParamDecls(const ParameterDeclarationSyntax& syntax, bool isPort, bool isLocal,
                        SmallVector<Definition::ParameterDecl>& parameters);
 
@@ -179,6 +183,9 @@ private:
     // The name map for packages. Note that packages have their own namespace,
     // which is why they can't share the definitions name table.
     flat_hash_map<string_view, const PackageSymbol*> packageMap;
+
+    /// The name map for system subroutines.
+    flat_hash_map<string_view, std::unique_ptr<SystemSubroutine>> subroutineMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
     flat_hash_map<uint32_t, const PackedArrayType*> vectorTypeCache;
