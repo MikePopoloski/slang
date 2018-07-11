@@ -50,6 +50,7 @@ struct ToJsonVisitor {
                 j["members"] = json::array();
                 for (const auto& member : symbol.members()) {
                     j["members"].push_back(member);
+                    // TODO: ?
                     //member.visit(*this, j);
                 }
             }

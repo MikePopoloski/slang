@@ -715,6 +715,7 @@ void Scope::lookupQualified(const ScopedNameSyntax& syntax, LookupLocation locat
             nameToken = first->as<IdentifierNameSyntax>().identifier;
             break;
         case SyntaxKind::IdentifierSelectName:
+            // TODO:
             //nameToken = first->as<IdentifierSelectNameSyntax>().identifier;
             //break;
         default:
