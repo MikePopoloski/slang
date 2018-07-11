@@ -28,21 +28,21 @@ public:
     const Type& checkArguments(Compilation& compilation, const Args& args) const final;
 };
 
-#define SUBROUTINE(name, className, base, ...)                                  \
+#define SUBROUTINE(className, base, ...)                                        \
     class className : public base {                                             \
     public:                                                                     \
-        className() : base(name, __VA_ARGS__) {}                                \
+        className() : base(__VA_ARGS__) {}                                      \
         ConstantValue eval(EvalContext& context, const Args& args) const final; \
     }
 
-SUBROUTINE("$clog2", Clog2Subroutine, IntegerMathFunction);
-SUBROUTINE("$bits", BitsSubroutine, DataQueryFunction, SystemSubroutineFlags::AllowDataTypeArg);
-SUBROUTINE("$low", LowSubroutine, ArrayQueryFunction);
-SUBROUTINE("$high", HighSubroutine, ArrayQueryFunction);
-SUBROUTINE("$left", LeftSubroutine, ArrayQueryFunction);
-SUBROUTINE("$right", RightSubroutine, ArrayQueryFunction);
-SUBROUTINE("$size", SizeSubroutine, ArrayQueryFunction);
-SUBROUTINE("$increment", IncrementSubroutine, ArrayQueryFunction);
+SUBROUTINE(Clog2Subroutine, IntegerMathFunction, "$clog2");
+SUBROUTINE(BitsSubroutine, DataQueryFunction, "$bits", SystemSubroutineFlags::AllowDataTypeArg);
+SUBROUTINE(LowSubroutine, ArrayQueryFunction, "$low");
+SUBROUTINE(HighSubroutine, ArrayQueryFunction, "$high");
+SUBROUTINE(LeftSubroutine, ArrayQueryFunction, "$left");
+SUBROUTINE(RightSubroutine, ArrayQueryFunction, "$right");
+SUBROUTINE(SizeSubroutine, ArrayQueryFunction, "$size");
+SUBROUTINE(IncrementSubroutine, ArrayQueryFunction, "$increment");
 
 #undef SUBROUTINE
 
