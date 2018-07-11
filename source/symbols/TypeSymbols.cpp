@@ -323,6 +323,12 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
     if (result.hasError())
         compilation.addDiagnostics(result.diagnostics);
 
+    return fromLookupResult(compilation, result, syntax, location, parent);
+}
+
+const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult& result,
+                                   const NameSyntax& syntax, LookupLocation location,
+                                   const Scope& parent) {
     const Symbol* symbol = result.found;
     if (!symbol)
         return compilation.getErrorType();

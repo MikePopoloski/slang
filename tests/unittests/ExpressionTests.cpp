@@ -241,7 +241,7 @@ TEST_CASE("Expression types") {
     CHECK(diags[1].code == DiagCode::BadBinaryExpression);
 }
 
-TEST_CASE("Expression bad name references") {
+TEST_CASE("Expression - bad name references") {
     auto tree = SyntaxTree::fromText(R"(
 module m1;
 
@@ -260,4 +260,46 @@ endmodule
     CHECK(diags[0].code == DiagCode::NotAValue);
     CHECK(diags[1].code == DiagCode::ExpressionNotCallable);
     CHECK(diags[2].code == DiagCode::NotASubroutine);
+}
+
+TEST_CASE("Expression - bad use of data type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+
+    typedef int blah;
+
+    int i = int;
+    int j = -(int + 1);
+    int k = (blah * 2);
+    int l = $bits(blah & 2);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == DiagCode::ExpectedExpression);
+    CHECK(diags[1].code == DiagCode::ExpectedExpression);
+    CHECK(diags[2].code == DiagCode::NotAValue);
+    CHECK(diags[3].code == DiagCode::NotAValue);
+}
+
+TEST_CASE("Expression - allowed data type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1;
+
+    typedef int blah;
+
+    int i = $bits(blah);
+    int j = $bits(logic[3:0]);
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

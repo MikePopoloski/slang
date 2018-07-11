@@ -35,9 +35,7 @@ ConstantValue Clog2Subroutine::eval(EvalContext& context, const Args& args) cons
 }
 
 ConstantValue BitsSubroutine::eval(EvalContext&, const Args& args) const {
-    // TODO: other types?
-    const auto& argType = args[0]->type->as<IntegralType>();
-    return SVInt(argType.bitWidth);
+    return SVInt(args[0]->type->getBitWidth());
 }
 
 ConstantValue LowSubroutine::eval(EvalContext&, const Args& args) const {

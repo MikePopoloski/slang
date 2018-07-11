@@ -234,16 +234,20 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::ConcatenationExpression:
             result = &ConcatenationExpression::fromSyntax(compilation, syntax.as<ConcatenationExpressionSyntax>(),
-                                                       context);
+                                                          context);
             break;
         case SyntaxKind::MultipleConcatenationExpression:
             result = &ReplicationExpression::fromSyntax(compilation, syntax.as<MultipleConcatenationExpressionSyntax>(),
-                                                     context);
+                                                        context);
             break;
         case SyntaxKind::ElementSelectExpression:
             result = &bindSelectExpression(compilation, syntax.as<ElementSelectExpressionSyntax>(), context);
             break;
         default:
+            if (DataTypeSyntax::isKind(syntax.kind)) {
+                result = &DataTypeExpression::fromSyntax(compilation, syntax.as<DataTypeSyntax>(), context);
+                break;
+            }
             THROW_UNREACHABLE;
     }
 
@@ -262,6 +266,13 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
     const Symbol* symbol = result.found;
     if (!symbol)
         return badExpr(compilation, nullptr);
+
+    if (symbol->isType() && (context.flags & BindFlags::AllowDataType) != 0) {
+        // We looked up a named data type and we were allowed to do so, so return it.
+        const Type& resultType = Type::fromLookupResult(compilation, result, syntax,
+                                                        context.lookupLocation, context.scope);
+        return *compilation.emplace<DataTypeExpression>(resultType, syntax.sourceRange());
+    }
 
     if (!symbol->isValue()) {
         compilation.addError(DiagCode::NotAValue, syntax.sourceRange()) << symbol->name;
@@ -933,7 +944,11 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
             for (uint32_t i = 0; i < actualArgs.count(); i++) {
                 // TODO: error if not ordered arguments
                 const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
-                buffer.append(&Expression::bind(compilation, arg.expr, context));
+                BindFlags extra = BindFlags::None;
+                if (i == 0 && (result.systemSubroutine->flags & SystemSubroutineFlags::AllowDataTypeArg) != 0)
+                    extra = BindFlags::AllowDataType;
+
+                buffer.append(&selfDetermined(compilation, arg.expr, context, extra));
             }
         }
 
@@ -982,6 +997,17 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
 
     return *compilation.emplace<CallExpression>(&subroutine, *subroutine.returnType, buffer.copy(compilation),
                                                 context.lookupLocation, syntax.sourceRange());
+}
+
+Expression& DataTypeExpression::fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
+                                           const BindContext& context) {
+    if ((context.flags & BindFlags::AllowDataType) == 0) {
+        compilation.addError(DiagCode::ExpectedExpression, syntax.sourceRange());
+        return badExpr(compilation, nullptr);
+    }
+
+    const Type& type = compilation.getType(syntax, context.lookupLocation, context.scope);
+    return *compilation.emplace<DataTypeExpression>(type, syntax.sourceRange());
 }
 
 UnaryOperator getUnaryOperator(SyntaxKind kind) {

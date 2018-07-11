@@ -28,15 +28,15 @@ public:
     const Type& checkArguments(Compilation& compilation, const Args& args) const final;
 };
 
-#define SUBROUTINE(name, className, base)                                       \
+#define SUBROUTINE(name, className, base, ...)                                  \
     class className : public base {                                             \
     public:                                                                     \
-        className() : base(name) {}                                             \
+        className() : base(name, __VA_ARGS__) {}                                \
         ConstantValue eval(EvalContext& context, const Args& args) const final; \
     }
 
 SUBROUTINE("$clog2", Clog2Subroutine, IntegerMathFunction);
-SUBROUTINE("$bits", BitsSubroutine, DataQueryFunction);
+SUBROUTINE("$bits", BitsSubroutine, DataQueryFunction, SystemSubroutineFlags::AllowDataTypeArg);
 SUBROUTINE("$low", LowSubroutine, ArrayQueryFunction);
 SUBROUTINE("$high", HighSubroutine, ArrayQueryFunction);
 SUBROUTINE("$left", LeftSubroutine, ArrayQueryFunction);

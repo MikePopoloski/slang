@@ -162,6 +162,7 @@ enum class DiagCode : uint8_t {
     BadConcatExpression,
     CannotIndexScalar,
     IndexMustBeIntegral,
+    ArgMustBeIntegral,
     BadAssignment,
     NoImplicitConversion,
     TooManyArguments,

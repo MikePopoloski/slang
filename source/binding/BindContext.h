@@ -15,9 +15,10 @@ enum class BindFlags : uint8_t {
     None = 0,
     Constant = 1,
     IntegralConstant = 2,
-    InsideConcatenation = 4
+    InsideConcatenation = 4,
+    AllowDataType = 8
 };
-BITMASK_DEFINE_MAX_ELEMENT(BindFlags, InsideConcatenation);
+BITMASK_DEFINE_MAX_ELEMENT(BindFlags, AllowDataType);
 
 struct BindContext {
     const Scope& scope;
@@ -35,7 +36,7 @@ struct BindContext {
     BindContext resetFlags(bitmask<BindFlags> addedFlags) const {
         // Remove non-sticky flags, add in any extras specified by addedFlags
         BindContext result(*this);
-        result.flags &= ~(BindFlags::InsideConcatenation);
+        result.flags &= ~(BindFlags::InsideConcatenation | BindFlags::AllowDataType);
         result.flags |= addedFlags;
         return result;
     }

@@ -247,4 +247,8 @@ Expression& ConversionExpression::propagateType(Compilation& compilation, Conver
     return expr;
 }
 
+Expression& DataTypeExpression::propagateType(Compilation&, DataTypeExpression& expr, const Type&) {
+    return expr;
+}
+
 }

@@ -152,6 +152,7 @@ decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... a
         CASE(MemberAccess, MemberAccessExpression);
         CASE(Call, CallExpression);
         CASE(Conversion, ConversionExpression);
+        CASE(DataType, DataTypeExpression);
     }
 #undef CASE
     THROW_UNREACHABLE;

@@ -35,6 +35,7 @@ enum class ExpressionKind {
     MemberAccess,
     Call,
     Conversion,
+    DataType
 };
 
 enum class UnaryOperator {
@@ -626,6 +627,23 @@ public:
 
 private:
     Expression* operand_;
+};
+
+/// Adapts a data type for use in an expression tree. This is for cases where both an expression
+/// and a data type is valid; for example, as an argument to a $bits() call or as a parameter
+/// assignment (because of type parameters).
+class DataTypeExpression : public Expression {
+public:
+    DataTypeExpression(const Type& type, SourceRange sourceRange) :
+        Expression(ExpressionKind::DataType, type, sourceRange) {}
+
+    ConstantValue evalImpl(EvalContext& context) const;
+
+    static Expression& propagateType(Compilation& compilation, DataTypeExpression& expr, const Type& newType);
+    static Expression& fromSyntax(Compilation& compilation, const DataTypeSyntax& syntax,
+                                  const BindContext& context);
+
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::DataType; }
 };
 
 }

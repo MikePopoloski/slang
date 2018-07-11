@@ -17,6 +17,12 @@ class EvalContext;
 class Expression;
 class Type;
 
+enum class SystemSubroutineFlags {
+    None = 0,
+    AllowDataTypeArg = 1,
+};
+BITMASK_DEFINE_MAX_ELEMENT(SystemSubroutineFlags, AllowDataTypeArg);
+
 class SystemSubroutine {
 public:
     virtual ~SystemSubroutine() = default;
@@ -24,12 +30,14 @@ public:
     using Args = span<const Expression* const>;
 
     std::string name;
+    bitmask<SystemSubroutineFlags> flags;
 
     virtual const Type& checkArguments(Compilation& compilation, const Args& args) const = 0;
     virtual ConstantValue eval(EvalContext& context, const Args& args) const = 0;
 
 protected:
-    explicit SystemSubroutine(std::string name) : name(std::move(name)) {}
+    SystemSubroutine(std::string name, bitmask<SystemSubroutineFlags> flags = SystemSubroutineFlags::None) :
+        name(std::move(name)), flags(flags) {}
 };
 
 }

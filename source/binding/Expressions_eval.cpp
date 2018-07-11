@@ -581,4 +581,8 @@ ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     }
 }
 
+ConstantValue DataTypeExpression::evalImpl(EvalContext&) const {
+    return nullptr;
+}
+
 }
