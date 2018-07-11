@@ -13,6 +13,7 @@
 #include <optional>                     // for std::optional
 #include <string_view>                  // for std::string_view
 #include <utility>                      // for many random utility functions
+#include <variant>                      // for std::variant
 
 using std::byte;
 using std::int8_t;
@@ -32,21 +33,6 @@ using std::uint64_t;
 using std::uintptr_t;
 
 using namespace std::literals;
-
-// Clang 5.0 and 6.0 fails to compile <variant> from libstdc++
-#ifdef __clang__
-  #include "compat/variant.h"
-  namespace std {
-  using mpark::variant;
-  using mpark::monostate;
-  using mpark::get;
-  using mpark::get_if;
-  using mpark::visit;
-  using mpark::holds_alternative;
-}
-#else
-  #include <variant>
-#endif
 
 #if !defined(ASSERT_ENABLED)
   #if !defined(NDEBUG)
