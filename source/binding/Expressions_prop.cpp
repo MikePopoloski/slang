@@ -57,8 +57,8 @@ void Expression::selfDetermined(Compilation& compilation, Expression*& expr) {
 }
 
 Expression& Expression::selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
-                                       const BindContext& context) {
-    Expression* expr = &create(compilation, syntax, context);
+                                       const BindContext& context, bitmask<BindFlags> extraFlags) {
+    Expression* expr = &create(compilation, syntax, context, extraFlags);
     selfDetermined(compilation, expr);
     return *expr;
 }

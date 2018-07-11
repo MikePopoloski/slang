@@ -172,7 +172,8 @@ protected:
 
     void checkBindFlags(Compilation& compilation, const BindContext& context) const;
 
-    static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context);
+    static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context,
+                              bitmask<BindFlags> extraFlags = BindFlags::None);
     static Expression& convert(Compilation& compilation, ConversionKind conversionKind, const Type& type, Expression& expr);
 
     static Expression& convertAssignment(Compilation& compilation, const Type& type, Expression& expr,
@@ -190,7 +191,8 @@ protected:
     // Perform type propagation and constant folding of a self-determined subexpression.
     static void selfDetermined(Compilation& compilation, Expression*& expr);
     [[nodiscard]] static Expression& selfDetermined(Compilation& compilation, const ExpressionSyntax& syntax,
-                                                    const BindContext& context);
+                                                    const BindContext& context,
+                                                    bitmask<BindFlags> extraFlags = BindFlags::None);
 
     // Helper methods for checking common expression requirements.
     static bool checkLValue(Compilation& compilation, const Expression& expr, SourceLocation location);

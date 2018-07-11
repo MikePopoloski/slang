@@ -32,8 +32,10 @@ struct BindContext {
         return (flags & BindFlags::Constant) || (flags & BindFlags::IntegralConstant);
     }
 
-    BindContext withFlags(bitmask<BindFlags> addedFlags) const {
+    BindContext resetFlags(bitmask<BindFlags> addedFlags) const {
+        // Remove non-sticky flags, add in any extras specified by addedFlags
         BindContext result(*this);
+        result.flags &= ~(BindFlags::InsideConcatenation);
         result.flags |= addedFlags;
         return result;
     }

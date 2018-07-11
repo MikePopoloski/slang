@@ -132,7 +132,9 @@ bool Expression::isLValue() const {
     }
 }
 
-Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& context) {
+Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax, const BindContext& ctx,
+                               bitmask<BindFlags> extraFlags) {
+    BindContext context = ctx.resetFlags(extraFlags);
     Expression* result;
     switch (syntax.kind) {
         case SyntaxKind::NullLiteralExpression:
@@ -159,7 +161,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             result = &IntegerLiteral::fromSyntax(compilation, syntax.as<IntegerVectorExpressionSyntax>());
             break;
         case SyntaxKind::ParenthesizedExpression:
-            result = &create(compilation, syntax.as<ParenthesizedExpressionSyntax>().expression, context);
+            result = &create(compilation, syntax.as<ParenthesizedExpressionSyntax>().expression, context, extraFlags);
             break;
         case SyntaxKind::UnaryPlusExpression:
         case SyntaxKind::UnaryMinusExpression:
@@ -825,7 +827,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         // it's ok to have that zero count.
         Expression* arg;
         if (argSyntax->kind == SyntaxKind::MultipleConcatenationExpression)
-            arg = &selfDetermined(compilation, *argSyntax, context.withFlags(BindFlags::InsideConcatenation));
+            arg = &selfDetermined(compilation, *argSyntax, context, BindFlags::InsideConcatenation);
         else
             arg = &selfDetermined(compilation, *argSyntax, context);
         buffer.append(arg);
@@ -871,7 +873,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
                                               const MultipleConcatenationExpressionSyntax& syntax,
                                               const BindContext& context) {
     Expression& left = selfDetermined(compilation, syntax.expression,
-                                      context.withFlags(BindFlags::IntegralConstant));
+                                      context, BindFlags::IntegralConstant);
     Expression& right = selfDetermined(compilation, syntax.concatenation, context);
 
     auto result = compilation.emplace<ReplicationExpression>(compilation.getErrorType(), left,
