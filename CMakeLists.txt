@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.11)
 project(slang VERSION 0.1.0 LANGUAGES CXX)
 
+option(SLANG_MSVC_W4 "Enable /W4 for MSVC builds" ON)
+option(SLANG_MSVC_STATIC_RUNTIME "Enable linking to the MSVC static runtime" ON)
+
 # Defaults for a bunch of Windows-specific junk
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_definitions(-DNOMINMAX)
@@ -21,10 +24,40 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	add_compile_options(/std:c++latest)
 	add_compile_options(/permissive-)
 	add_compile_options(/Zc:inline)
-	add_compile_options(/Gy)
+	add_compile_options(/Gy)		# Function-level linking
 
-	if(CMAKE_BUILD_TYPE MATCHES DEBUG)
-		add_compile_options(/GS)	# Buffer overrun checks
+	if(NOT CMAKE_BUILD_TYPE MATCHES DEBUG)
+		add_compile_options(/GS-)	# Disable buffer overrun checks
+		add_compile_options(/GL)	# Whole program optimization
+		set(CMAKE_EXE_LINKER_FLAGS "${MAKE_EXE_LINKER_FLAGS} /LTCG")
+		set(CMAKE_SHARED_LINKER_FLAGS "${MAKE_SHARED_LINKER_FLAGS} /LTCG")
+		set(CMAKE_STATIC_LINKER_FLAGS "${MAKE_SHARED_LINKER_FLAGS} /LTCG")
+	endif()
+
+	if(SLANG_MSVC_W4)
+		if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
+			string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+		else()
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+		endif()
+	endif()
+
+	if(SLANG_MSVC_STATIC_RUNTIME)
+		set(variables
+			CMAKE_C_FLAGS_DEBUG
+			CMAKE_C_FLAGS_MINSIZEREL
+			CMAKE_C_FLAGS_RELEASE
+			CMAKE_C_FLAGS_RELWITHDEBINFO
+			CMAKE_CXX_FLAGS_DEBUG
+			CMAKE_CXX_FLAGS_MINSIZEREL
+			CMAKE_CXX_FLAGS_RELEASE
+			CMAKE_CXX_FLAGS_RELWITHDEBINFO
+		)
+		foreach(variable ${variables})
+			if(${variable} MATCHES "/MD")
+				string(REGEX REPLACE "/MD" "/MT" ${variable} "${${variable}}")
+			endif()
+		endforeach()
 	endif()
 else()
 	set(CMAKE_CXX_STANDARD 17)

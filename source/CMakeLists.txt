@@ -48,5 +48,10 @@ add_library(slang STATIC
 	../external/fmt/posix.cc
 )
 
+# Warnings as errors
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+	target_compile_options(slang PRIVATE /WX)
+endif()
+
 target_include_directories(slang PUBLIC ./)
 target_include_directories(slang PUBLIC ../external/)
