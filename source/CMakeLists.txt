@@ -6,7 +6,7 @@ add_library(slang STATIC
 	binding/Expressions_prop.cpp
 	binding/Statements.cpp
 
-	compilation/BuiltinSubroutines.cpp
+	compilation/BuiltInSubroutines.cpp
 	compilation/Compilation.cpp
 
 	diagnostics/Diagnostics.cpp
@@ -48,9 +48,12 @@ add_library(slang STATIC
 	../external/fmt/posix.cc
 )
 
-# Warnings as errors
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+	# Warnings as errors
 	target_compile_options(slang PRIVATE /WX)
+else()
+	# Link against C++17 filesystem
+	target_link_libraries(slang PUBLIC stdc++fs)
 endif()
 
 target_include_directories(slang PUBLIC ./)
