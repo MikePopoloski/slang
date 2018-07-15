@@ -283,7 +283,9 @@ void DiagnosticWriter::setSeverity(DiagCode code, DiagnosticSeverity severity) {
 }
 
 DiagnosticSeverity DiagnosticWriter::getSeverity(DiagCode code) const {
-    return descriptors.find(code)->second.severity;
+    auto it = descriptors.find(code);
+    ASSERT(it != descriptors.end());
+    return it->second.severity;
 }
 
 std::string DiagnosticWriter::report(const Diagnostic& diagnostic) {
