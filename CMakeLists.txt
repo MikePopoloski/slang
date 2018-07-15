@@ -4,6 +4,8 @@ project(slang VERSION 0.1.0 LANGUAGES CXX)
 
 option(SLANG_MSVC_W4 "Enable /W4 for MSVC builds" ON)
 option(SLANG_MSVC_STATIC_RUNTIME "Enable linking to the MSVC static runtime" ON)
+option(SLANG_COVERAGE "Enable code coverage" OFF)
+set(SLANG_SANITIZERS "" CACHE STRING "List of Clang sanitizers to include in build")
 
 # Default build type if none is set
 if(NOT CMAKE_BUILD_TYPE)
@@ -88,6 +90,27 @@ else()
   			add_compile_options(-fdiagnostics-color)
   		endif()
   	endif()
+
+  	if(SLANG_COVERAGE)
+  		add_compile_options(--coverage)
+  		link_libraries(--coverage)
+
+		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+			add_compile_options(-O0)
+		else()
+			add_compile_options(
+			    -fno-inline
+				-fno-inline-small-functions
+				-fno-default-inline
+				-fno-omit-frame-pointer
+				-fno-optimize-sibling-calls
+			)
+		endif()
+	endif()
+
+	if(SLANG_SANITIZERS)
+		add_compile_options("-fsanitize=${SLANG_SANITIZERS}")
+	endif()
 endif()
 
 add_subdirectory(source)
