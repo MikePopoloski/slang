@@ -54,6 +54,43 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 else()
 	# Link against C++17 filesystem
 	target_link_libraries(slang PUBLIC stdc++fs)
+	target_compile_options(slang PRIVATE
+		-Wall
+		-Wextra
+		-Werror
+	)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	target_compile_options(slang PRIVATE
+		-Warray-bounds-pointer-arithmetic
+		-Wassign-enum
+		-Wbad-function-cast
+		-Wcast-qual
+		-Wcomma
+		-Wduplicate-enum
+		-Wduplicate-method-arg
+		-Wimplicit-fallthrough
+		-Wrange-loop-analysis
+		-Wpedantic
+		-Wconversion
+		-Wshadow
+		-Wno-missing-braces
+	)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+	target_compile_options(slang PRIVATE
+		-Wunused-value
+		-Wformat-security
+		-Wnull-dereference
+		-Wimplicit-fallthrough=5
+		-Walloc-zero
+		-Wlogical-op
+		-Wlogical-not-parentheses
+		-Wvla
+		-Wnoexcept
+		-Wduplicated-cond
+		-Wtype-limits
+	)
 endif()
 
 target_include_directories(slang PUBLIC ./)
