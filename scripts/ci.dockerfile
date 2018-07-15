@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y \
 	xz-utils \
 	g++-8 \
 	clang-6.0 \
-	clang-tidy-6.0
+	clang-tidy-6.0 \
+	cmake
 
 RUN wget -O /tmp/cppcheck.tar.gz \
 	https://github.com/danmar/cppcheck/archive/1.83.tar.gz && \
