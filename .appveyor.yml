@@ -7,12 +7,14 @@ configuration: Release
 platform: x64
 
 install:
-  - cmd: scripts\bin\windows\genie.exe vs2017
+  - cmd: mkdir build
+  - cmd: cd build
+  - cmd: cmake -G"Visual Studio 15 2017 Win64" ..
 
 build:
   parallel: true
   verbosity: minimal
-  project: build/projects/vs2017/slang.sln
+  project: build/slang.sln
 
 test_script:
-  - cmd: build\win64_vs2017\bin\unittestsRelease.exe
+  - cmd: build\tests\unittests\Release\unittests.exe
