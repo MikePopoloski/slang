@@ -6,8 +6,8 @@ services:
 
 matrix:
   include:
-    - env: BUILD_TYPE=gcc CXX=g++-8
-    - env: BUILD_TYPE=clang CXX=clang++-6.0 CONFIG_FLAGS="-DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address"
+    - env: BUILD_TYPE=gcc MATRIX_ENV="CC=gcc-8 && CXX=g++-8"
+    - env: BUILD_TYPE=clang MATRIX_ENV="CC=clang-6.0 && CXX=clang++-6.0" CONFIG_FLAGS="-DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address"
 
 before_install:
   - docker pull mpopoloski/slang:latest
@@ -15,7 +15,7 @@ before_install:
   - docker exec build git clone https://github.com/MikePopoloski/slang.git
 
 install:
-  - docker exec build /bin/sh -c "cd slang && mkdir build && cd build && cmake $BUILD_FLAGS .."
+  - docker exec build /bin/sh -c "$MATRIX_ENV; cd slang && mkdir build && cd build && cmake $CONFIG_FLAGS .."
 
 script:
   - export ci_env=`bash <(curl -s https://codecov.io/env)`
