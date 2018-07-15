@@ -19,35 +19,15 @@ Still under heavy construction!
 
 ### Build Instructions
 
-You need a compiler for your platform that supports C++17. The tests run under Visual Studio 2017, GCC-8, and Clang-6.0.
+You need [CMake](https://cmake.org/) (3.10 or later) and a compiler for your platform that fully supports C++17. The tests run under Visual Studio 2017, GCC-8, and Clang-6.0. CMake supports many generators so you can use the one that is most comfortable for you; some recommended options are as follows:
 
-#### Windows
-```
-scripts\bin\windows\genie vs2017
-msbuild build\projects\vs2017\slang.sln
-```
+#### Visual Studio
+The recommended method on Windows is to open the slang root folder in Visual Studio and press build. The IDE handles all of the CMake interaction.
 
-#### Linux - GCC
+#### Ninja
+[Ninja](https://ninja-build.org/) is the recommended method for command line building (on any platform):
 ```
-scripts/bin/linux/genie --gcc=linux-gcc gmake
-make -C build/projects/gmake-linux -j 8
-```
-
-#### Linux - Clang
-```
-scripts/bin/linux/genie --gcc=linux-clang gmake
-make -C build/projects/gmake-linux-clang -j 8
-```
-
-#### OSX - Xcode
-```
-scripts/bin/osx/genie --xcode=osx xcode4
-open build/projects/xcode4-osx/slang.xcworkspace
-```
-
-#### OSX - GCC
-```
-brew install gcc
-scripts/bin/osx/genie --gcc=osx gmake
-make -C build/projects/gmake-osx -j 8
+mkdir build && cd build
+cmake -GNinja ..
+ninja
 ```
