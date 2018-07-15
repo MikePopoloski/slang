@@ -92,18 +92,16 @@ else()
   	endif()
 
   	if(SLANG_COVERAGE)
-  		add_compile_options(--coverage)
+  		add_compile_options(--coverage -fno-omit-frame-pointer -fno-optimize-sibling-calls)
   		link_libraries(--coverage)
 
 		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-			add_compile_options(-O0)
+			add_compile_options(-O0 -fno-inline-functions)
 		else()
 			add_compile_options(
 			    -fno-inline
 				-fno-inline-small-functions
 				-fno-default-inline
-				-fno-omit-frame-pointer
-				-fno-optimize-sibling-calls
 			)
 		endif()
 	endif()
