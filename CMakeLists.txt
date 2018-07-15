@@ -32,11 +32,18 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	add_compile_options(/Zc:inline)
 	add_compile_options(/Gy)		# Function-level linking
 
-	if(NOT CMAKE_BUILD_TYPE MATCHES DEBUG)
+	if(CMAKE_BUILD_TYPE MATCHES "Debug")
+		# Use fast linking
+		string(REGEX REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+		string(REGEX REPLACE "/debug" "/DEBUG:FASTLINK" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+	else()
 		add_compile_options(/GS-)	# Disable buffer overrun checks
 		add_compile_options(/GL)	# Whole program optimization
-		set(CMAKE_EXE_LINKER_FLAGS "${MAKE_EXE_LINKER_FLAGS} /LTCG")
-		set(CMAKE_SHARED_LINKER_FLAGS "${MAKE_SHARED_LINKER_FLAGS} /LTCG")
+		add_compile_options(/Zi)	# Generate debug info even in release
+
+		set(REL_LINK_FLAGS "/LTCG /DEBUG:FULL /INCREMENTAL:NO /OPT:REF /OPT:ICF")
+		set(CMAKE_EXE_LINKER_FLAGS "${MAKE_EXE_LINKER_FLAGS} ${REL_LINK_FLAGS}")
+		set(CMAKE_SHARED_LINKER_FLAGS "${MAKE_SHARED_LINKER_FLAGS} ${REL_LINK_FLAGS}")
 		set(CMAKE_STATIC_LINKER_FLAGS "${MAKE_SHARED_LINKER_FLAGS} /LTCG")
 	endif()
 
