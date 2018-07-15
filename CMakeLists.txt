@@ -5,6 +5,12 @@ project(slang VERSION 0.1.0 LANGUAGES CXX)
 option(SLANG_MSVC_W4 "Enable /W4 for MSVC builds" ON)
 option(SLANG_MSVC_STATIC_RUNTIME "Enable linking to the MSVC static runtime" ON)
 
+# Default build type if none is set
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+      "Build type (Release/Debug/RelWithDebInfo/MinSizeRel)" FORCE)
+endif()
+
 # Defaults for a bunch of Windows-specific junk
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_definitions(-DNOMINMAX)
@@ -66,6 +72,15 @@ else()
 
 	# Always include debug info
 	add_compile_options(-g)
+
+	# Color in diagnostics please
+	if(CMAKE_GENERATOR MATCHES "Ninja")
+		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+			add_compile_options(-Xclang -fcolor-diagnostics)
+		else()
+  			add_compile_options(-fdiagnostics-color)
+  		endif()
+  	endif()
 endif()
 
 add_subdirectory(source)
