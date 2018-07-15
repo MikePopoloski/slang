@@ -284,7 +284,8 @@ void DiagnosticWriter::setSeverity(DiagCode code, DiagnosticSeverity severity) {
 
 DiagnosticSeverity DiagnosticWriter::getSeverity(DiagCode code) const {
     auto it = descriptors.find(code);
-    ASSERT(it != descriptors.end());
+    if (it == descriptors.end())
+        throw std::logic_error("Invalid diagnostic code");
     return it->second.severity;
 }
 
