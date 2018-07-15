@@ -114,6 +114,11 @@ else()
 	endif()
 endif()
 
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+	# Only MSBuild needs this, other generators will compile one file at a time
+  	add_compile_options("/MP")
+endif()
+
 add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(tests/unittests)
