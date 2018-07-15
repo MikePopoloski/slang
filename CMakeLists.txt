@@ -110,6 +110,7 @@ else()
 
 	if(SLANG_SANITIZERS)
 		add_compile_options("-fsanitize=${SLANG_SANITIZERS}")
+		link_libraries("-fsanitize=${SLANG_SANITIZERS}")
 	endif()
 endif()
 
