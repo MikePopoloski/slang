@@ -17,4 +17,4 @@ build:
   project: build/slang.sln
 
 test_script:
-  - cmd: build\tests\unittests\Release\unittests.exe
+  - cmd: tests\unittests\Release\unittests.exe
