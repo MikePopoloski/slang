@@ -9,7 +9,7 @@
 #include <cstdlib>
 
 #define XXH_INLINE_ALL
-#include "../external/xxhash/xxhash.h"
+#include <xxhash/xxhash.h>
 
 namespace slang {
 

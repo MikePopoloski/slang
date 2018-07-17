@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "flat_hash_map.hpp"
+#include <flat_hash_map.hpp>
 
 #include "parsing/AllSyntax.h"
 #include "symbols/Symbol.h"

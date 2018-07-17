@@ -10,7 +10,7 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include "flat_hash_map.hpp"
+#include <flat_hash_map.hpp>
 
 namespace slang {
 
