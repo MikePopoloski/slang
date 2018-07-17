@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "Util.h"
 
-#include "fmt/format.h"
+#include <fmt/format.h>
 
 namespace slang {
 

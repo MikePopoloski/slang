@@ -6,8 +6,8 @@
 //------------------------------------------------------------------------------
 #include "Diagnostics.h"
 
-#include "fmt/format.h"
-#include "fmt/ostream.h"
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 
 #include "symbols/TypePrinter.h"
 #include "text/SourceManager.h"

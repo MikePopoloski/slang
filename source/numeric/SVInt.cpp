@@ -8,7 +8,7 @@
 
 #include <stdexcept>
 
-#include "fmt/format.h"
+#include <fmt/format.h>
 
 #include "text/CharInfo.h"
 #include "util/Hash.h"

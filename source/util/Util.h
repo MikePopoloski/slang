@@ -64,7 +64,7 @@ using namespace std::literals;
   throw std::logic_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + \
                          ": " + "Default case should be unreachable!")
 
-#include "gsl/gsl"
+#include <gsl/gsl>
 
 using gsl::span;
 using gsl::make_span;
@@ -77,10 +77,10 @@ using gsl::not_null;
   #define NO_SANITIZE(warningName)
 #endif
 
-#include "bitmask.hpp"
+#include <bitmask.hpp>
 using bitmask_lib::bitmask;
 
-#include "json_fwd.hpp"
+#include <nlohmann/json_fwd.hpp>
 using json = nlohmann::json;
 
 #define HAS_METHOD_TRAIT(name) \
