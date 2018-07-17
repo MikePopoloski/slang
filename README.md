@@ -43,7 +43,7 @@ If you're building on Linux and don't want the additional Ninja dependency, you 
 ```
 mkdir build && cd build
 cmake ..
-make
+make -j 8
 ```
 
 #### Running tests
