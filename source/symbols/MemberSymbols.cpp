@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "MemberSymbols.h"
 
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 #include "compilation/Compilation.h"
 #include "symbols/HierarchySymbols.h"

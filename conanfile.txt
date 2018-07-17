@@ -1,0 +1,7 @@
+[requires]
+catch2/2.2.2@bincrafters/stable
+jsonformoderncpp/3.1.2@vthiery/stable
+CLI11/1.6.0@cliutils/stable
+
+[generators]
+cmake

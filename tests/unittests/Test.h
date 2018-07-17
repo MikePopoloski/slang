@@ -7,7 +7,7 @@
 
 #include <sstream>
 
-#include "Catch/catch.hpp"
+#include <catch.hpp>
 
 #include "binding/Expressions.h"
 #include "binding/Statements.h"

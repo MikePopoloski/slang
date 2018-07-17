@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "HierarchySymbols.h"
 
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 #include "compilation/Compilation.h"
 #include "util/StackContainer.h"

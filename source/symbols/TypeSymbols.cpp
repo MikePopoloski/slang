@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "TypeSymbols.h"
 
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 #include "binding/ConstantValue.h"
 #include "compilation/Compilation.h"

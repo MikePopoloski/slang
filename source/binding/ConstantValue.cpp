@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 #include "ConstantValue.h"
 
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 namespace slang {
 

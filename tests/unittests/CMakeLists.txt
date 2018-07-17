@@ -16,7 +16,7 @@ add_executable(unittests
 	TypeTests.cpp
 )
 
-target_link_libraries(unittests PRIVATE slang)
+target_link_libraries(unittests PRIVATE slang CONAN_PKG::catch2)
 
 # Copy the data directory for running tests from the build folder.
 add_custom_command(

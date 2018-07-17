@@ -92,6 +92,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 		-Wtype-limits
 	)
 endif()
+
 target_link_libraries(slang PUBLIC CONAN_PKG::jsonformoderncpp)
 
 target_include_directories(slang PUBLIC ./)

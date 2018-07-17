@@ -8,8 +8,8 @@
 #include "compilation/Compilation.h"
 #include "parsing/SyntaxTree.h"
 
-#include "CLI11.hpp"
-#include "json.hpp"
+#include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
 
 using namespace slang;
 
