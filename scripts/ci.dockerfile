@@ -13,7 +13,13 @@ RUN apt-get update && apt-get install -y \
 	g++-8 \
 	clang-6.0 \
 	clang-tidy-6.0 \
-	cmake
+	cmake \
+	python3 \
+	python3-distutils \
+	python3-setuptools \
+	python3-pip
+
+RUN pip3 install conan && conan user
 
 RUN wget -O /tmp/cppcheck.tar.gz \
 	https://github.com/danmar/cppcheck/archive/1.83.tar.gz && \
