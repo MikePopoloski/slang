@@ -49,5 +49,5 @@ make -j 8
 #### Running tests
 From the build directory:
 ```
-tests/unittests/Release/unittests.exe
+bin/unittests
 ```
