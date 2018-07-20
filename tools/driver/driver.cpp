@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// main.cpp
+// driver.cpp
 // Entry point for the primary driver program.
 //
 // File is under the MIT license; see LICENSE for details
