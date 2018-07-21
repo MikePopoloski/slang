@@ -6,26 +6,12 @@
 //------------------------------------------------------------------------------
 #include "SyntaxNode.h"
 
+#include "lexing/SyntaxPrinter.h"
+
 namespace slang {
 
-void SyntaxNode::writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags) const {
-    uint32_t childCount = getChildCount();
-    for (uint32_t i = 0; i < childCount; i++) {
-        auto child = getChild(i);
-        if (child.isToken) {
-            if (child.token)
-                child.token.writeTo(buffer, flags);
-        }
-        else if (child.node) {
-            child.node->writeTo(buffer, flags);
-        }
-    }
-}
-
-std::string SyntaxNode::toString(bitmask<SyntaxToStringFlags> flags) const {
-    SmallVectorSized<char, 256> buffer;
-    writeTo(buffer, flags);
-    return std::string(buffer.begin(), buffer.end());
+std::string SyntaxNode::toString() const {
+    return SyntaxPrinter().print(*this).str();
 }
 
 Token SyntaxNode::getFirstToken() const {

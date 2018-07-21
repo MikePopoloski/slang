@@ -30,17 +30,6 @@ enum class TokenFlags : uint8_t {
 };
 BITMASK_DEFINE_MAX_ELEMENT(TokenFlags, IsFromPreprocessor);
 
-/// Various flags used to control conversion to string.
-enum class SyntaxToStringFlags : uint8_t {
-    None = 0x0,
-    IncludeTrivia = 0x1,
-    IncludeMissing = 0x2,
-    IncludePreprocessed = 0x4,
-    IncludeSkipped = 0x8,
-    IncludeDirectives = 0x10
-};
-BITMASK_DEFINE_MAX_ELEMENT(SyntaxToStringFlags, IncludeDirectives);
-
 /// Various flags for numeric tokens.
 struct NumericTokenFlags {
     uint8_t raw = 0;
@@ -87,15 +76,16 @@ public:
     Trivia(TriviaKind kind, span<Token const> tokens) : kind(kind), tokens(tokens) {}
     Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
 
-    /// Writes the trivia's text to the given buffer.
-    void writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags = SyntaxToStringFlags::None) const;
-
-    /// If this trivia is tracking a skipped syntax node, return that now.
+    /// If this trivia is tracking a skipped syntax node or a directive, returns that node.
+    /// Otherwise returns nullptr.
     SyntaxNode* syntax() const;
 
-    /// Get the raw text of the trivia. Asserts that the trivia type
-    /// has raw text.
+    /// Get the raw text of the trivia, if any.
     string_view getRawText() const;
+
+    /// If the trivia represents skipped tokens, returns the list of tokens that were
+    /// skipped. Otherwise returns an empty span.
+    span<Token const> getSkippedTokens() const;
 
 private:
     union {
@@ -182,12 +172,8 @@ public:
     /// Gets the original lexeme that led to the creation of this token.
     string_view rawText() const;
 
-    /// Convenience method that wraps writeTo and builds an std::string.
-    std::string toString(bitmask<SyntaxToStringFlags> flags = SyntaxToStringFlags::None) const;
-
-    /// Write the string representation of the token to the given buffer.
-    /// flags control what exactly gets written.
-    void writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags) const;
+    /// Prints the token (including all of its trivia) to a string.
+    std::string toString() const;
 
     /// Data accessors for specific kinds of tokens.
     /// These will generally assert if the kind is wrong.

@@ -1,5 +1,7 @@
 #include "Test.h"
 
+#include "lexing/SyntaxPrinter.h"
+
 std::string preprocess(string_view text) {
     diagnostics.clear();
 
@@ -9,7 +11,7 @@ std::string preprocess(string_view text) {
     std::string result;
     while (true) {
         Token token = preprocessor.next();
-        result += token.toString(SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia);
+        result += token.toString();
         if (token.kind == TokenKind::EndOfFile)
             break;
     }
@@ -37,7 +39,7 @@ void testDirective(SyntaxKind kind) {
     REQUIRE(token);
 
     CHECK(token.kind == TokenKind::Directive);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(token.toString() == text);
     CHECK(token.valueText() == text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
@@ -71,8 +73,10 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     auto& text = "`define FOO (1)";
     Token token = lexToken(text);
 
+    std::string str = SyntaxPrinter().setIncludeDirectives(true).print(token).str();
+
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
+    CHECK(str == text);
     CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(token.trivia().size() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);
@@ -90,8 +94,10 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     auto& text = "`define FOO(a) a+1";
     Token token = lexToken(text);
 
+    std::string str = SyntaxPrinter().setIncludeDirectives(true).print(token).str();
+
     CHECK(token.kind == TokenKind::EndOfFile);
-    CHECK(token.toString(SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives) == text);
+    CHECK(str == text);
     CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(token.trivia().size() == 1);
     REQUIRE(token.trivia()[0].kind == TriviaKind::Directive);

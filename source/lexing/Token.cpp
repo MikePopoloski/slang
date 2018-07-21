@@ -10,6 +10,8 @@
 #include "parsing/AllSyntax.h"
 #include "util/BumpAllocator.h"
 
+#include "SyntaxPrinter.h"
+
 namespace slang {
 
 void NumericTokenFlags::set(LiteralBase base_, bool isSigned_) {
@@ -22,30 +24,9 @@ void NumericTokenFlags::set(TimeUnit unit_) {
 }
 
 SyntaxNode* Trivia::syntax() const {
-    ASSERT(kind == TriviaKind::Directive || kind == TriviaKind::SkippedSyntax);
-    return syntaxNode;
-}
-
-void Trivia::writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> flags) const {
-    switch (kind) {
-        case TriviaKind::Directive:
-            if (flags & SyntaxToStringFlags::IncludeDirectives)
-                syntaxNode->writeTo(buffer, flags);
-            break;
-        case TriviaKind::SkippedSyntax:
-            if (flags & SyntaxToStringFlags::IncludeSkipped)
-                syntaxNode->writeTo(buffer, flags);
-            break;
-        case TriviaKind::SkippedTokens:
-            if (flags & SyntaxToStringFlags::IncludeSkipped) {
-                for (Token t : tokens)
-                    t.writeTo(buffer, flags);
-            }
-            break;
-        default:
-            buffer.appendRange(rawText);
-            break;
-    }
+    if (kind == TriviaKind::Directive || kind == TriviaKind::SkippedSyntax)
+        return syntaxNode;
+    return nullptr;
 }
 
 string_view Trivia::getRawText() const {
@@ -53,12 +34,16 @@ string_view Trivia::getRawText() const {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:
         case TriviaKind::SkippedTokens:
-            // TODO: maybe just throw here
-            ASSERT(false);
             return "";
         default:
             return rawText;
     }
+}
+
+span<Token const> Trivia::getSkippedTokens() const {
+    if (kind == TriviaKind::SkippedTokens)
+        return tokens;
+    return {};
 }
 
 Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, bitmask<TokenFlags> flags) :
@@ -199,25 +184,8 @@ SourceRange Token::range() const {
     return SourceRange(location(), location() + rawText().length());
 }
 
-void Token::writeTo(SmallVector<char>& buffer, bitmask<SyntaxToStringFlags> writeFlags) const {
-    if (!(writeFlags & SyntaxToStringFlags::IncludePreprocessed) && isFromPreprocessor())
-        return;
-
-    if (writeFlags & SyntaxToStringFlags::IncludeTrivia) {
-        for (const auto& t : info->trivia)
-            t.writeTo(buffer, writeFlags);
-    }
-
-    if (!(writeFlags & SyntaxToStringFlags::IncludeMissing) && isMissing())
-        return;
-
-    buffer.appendRange(rawText());
-}
-
-std::string Token::toString(bitmask<SyntaxToStringFlags> writeFlags) const {
-    SmallVectorSized<char, 256> buffer;
-    writeTo(buffer, writeFlags);
-    return std::string(buffer.begin(), buffer.end());
+std::string Token::toString() const {
+    return SyntaxPrinter().print(*this).str();
 }
 
 SVInt Token::intValue() const {

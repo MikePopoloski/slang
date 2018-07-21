@@ -5,7 +5,7 @@ TEST_CASE("Simple module", "[parser:modules]") {
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
 }
@@ -15,7 +15,7 @@ TEST_CASE("Simple interface", "[parser:modules]") {
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::InterfaceDeclaration);
-    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
 }
@@ -25,7 +25,7 @@ TEST_CASE("Simple program", "[parser:modules]") {
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::ProgramDeclaration);
-    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
 }
@@ -35,7 +35,7 @@ TEST_CASE("Complex header", "[parser:modules]") {
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
     CHECK(module.attributes.count() == 1);
@@ -49,7 +49,7 @@ TEST_CASE("Parameter ports", "[parser:modules]") {
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
 
     auto parameters = module.header.parameters->declarations;
@@ -67,7 +67,7 @@ const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) 
     const auto& module = parseModule(fullText);
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
-    CHECK(module.toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
+    CHECK(module.toString() == fullText);
     CHECK_DIAGNOSTICS_EMPTY;
 
     REQUIRE(module.members.count() == 1);
@@ -98,7 +98,7 @@ const MemberSyntax* parseClassMember(const std::string& text, SyntaxKind kind) {
     const auto& classDecl = parseClass(fullText);
 
     REQUIRE(classDecl.kind == SyntaxKind::ClassDeclaration);
-    CHECK(classDecl.toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
+    CHECK(classDecl.toString() == fullText);
     CHECK_DIAGNOSTICS_EMPTY;
 
     REQUIRE(classDecl.items.count() == 1);

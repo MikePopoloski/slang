@@ -12,6 +12,7 @@
   #include <io.h>
 #endif
 
+#include "lexing/SyntaxPrinter.h"
 #include "parsing/SyntaxTree.h"
 
 using namespace slang;
@@ -22,18 +23,20 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Make sure we reproduce newlines correct on Windows:
+    // Make sure we reproduce newlines correctly on Windows:
 #if defined(_WIN32)
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
 
-    SmallVectorSized<char, 8> buffer;
     auto tree = SyntaxTree::fromFile(argv[1]);
-    tree->root().writeTo(buffer, SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives |
-                         SyntaxToStringFlags::IncludeSkipped);
 
-    buffer.append('\0');
-    printf("%s", buffer.data());
+    std::string output = SyntaxPrinter()
+        .setIncludeDirectives(true)
+        .setIncludeSkipped(true)
+        .setIncludeTrivia(true)
+        .print(tree->root())
+        .str();
 
+    printf("%s", output.c_str());
     return 0;
 }

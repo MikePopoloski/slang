@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 
 #include "compilation/Compilation.h"
+#include "lexing/SyntaxPrinter.h"
 #include "parsing/SyntaxTree.h"
 
 #include <CLI/CLI.hpp>
@@ -24,10 +25,10 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
         Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
         preprocessor.pushSource(buffer);
 
-        SmallVectorSized<char, 32> output;
+        SyntaxPrinter output;
         while (true) {
             Token token = preprocessor.next();
-            token.writeTo(output, SyntaxToStringFlags::IncludePreprocessed | SyntaxToStringFlags::IncludeTrivia);
+            output.print(token);
             if (token.kind == TokenKind::EndOfFile)
                 break;
         }
@@ -39,7 +40,7 @@ bool runPreprocessor(SourceManager& sourceManager, const Bag& options,
             success = false;
         }
 
-        printf("==============================\n%s\n", std::string(output.begin(), output.size()).c_str());
+        printf("==============================\n%s\n", output.str().c_str());
     }
     return success;
 }

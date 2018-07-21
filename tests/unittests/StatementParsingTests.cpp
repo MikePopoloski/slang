@@ -5,7 +5,7 @@ TEST_CASE("If statement", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ConditionalStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
     CHECK(stmt.as<ConditionalStatementSyntax>().predicate.conditions[0]->expr.kind == SyntaxKind::LogicalAndExpression);
 }
 
@@ -14,7 +14,7 @@ TEST_CASE("Case statement (empty)", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Case statement (normal)", "[parser:statements]") {
@@ -22,7 +22,7 @@ TEST_CASE("Case statement (normal)", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Case statement (pattern)", "[parser:statements]") {
@@ -30,7 +30,7 @@ TEST_CASE("Case statement (pattern)", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Case statement (range)", "[parser:statements]") {
@@ -38,7 +38,7 @@ TEST_CASE("Case statement (range)", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::CaseStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Loop statements", "[parser:statements]") {
@@ -46,7 +46,7 @@ TEST_CASE("Loop statements", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::LoopStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Do while statement", "[parser:statements]") {
@@ -54,7 +54,7 @@ TEST_CASE("Do while statement", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::DoWhileStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Foreach statement", "[parser:statements]") {
@@ -62,14 +62,14 @@ TEST_CASE("Foreach statement", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ForeachLoopStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 TEST_CASE("Forever statement", "[parser:statements]") {
     auto& text = "forever ;";
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ForeverStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Return statement", "[parser:statements]") {
@@ -77,7 +77,7 @@ TEST_CASE("Return statement", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::ReturnStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Jump statements", "[parser:statements]") {
@@ -85,7 +85,7 @@ TEST_CASE("Jump statements", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::JumpStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Disable statement", "[parser:statements]") {
@@ -93,7 +93,7 @@ TEST_CASE("Disable statement", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::DisableStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Disable fork statement", "[parser:statements]") {
@@ -101,7 +101,7 @@ TEST_CASE("Disable fork statement", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::DisableForkStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 void testTimingControl(string_view text, SyntaxKind kind) {
@@ -109,7 +109,7 @@ void testTimingControl(string_view text, SyntaxKind kind) {
 
     REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
     CHECK(stmt.as<TimingControlStatementSyntax>().timingControl.kind == kind);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Timing control statements", "[parser:statements]") {
@@ -129,7 +129,7 @@ void testStatement(string_view text, SyntaxKind kind) {
     auto& stmt = parseStatement(std::string(text));
 
     REQUIRE(stmt.kind == kind);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Procedural assign", "[parser:statements]") {
@@ -150,7 +150,7 @@ void parseBlockDeclaration(const std::string& text) {
     auto& stmt = parseStatement(fullText);
 
     REQUIRE(stmt.kind == SyntaxKind::SequentialBlockStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == fullText);
+    CHECK(stmt.toString() == fullText);
 
     auto& block = stmt.as<BlockStatementSyntax>();
     REQUIRE(block.items.count() == 1);
@@ -173,7 +173,7 @@ TEST_CASE("Blocking Event Trigger", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::BlockingEventTriggerStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }
 
 TEST_CASE("Nonblocking Event Trigger", "[parser:statements]") {
@@ -181,5 +181,5 @@ TEST_CASE("Nonblocking Event Trigger", "[parser:statements]") {
     auto& stmt = parseStatement(text);
 
     REQUIRE(stmt.kind == SyntaxKind::NonblockingEventTriggerStatement);
-    CHECK(stmt.toString(SyntaxToStringFlags::IncludeTrivia) == text);
+    CHECK(stmt.toString() == text);
 }

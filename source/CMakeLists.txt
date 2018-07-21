@@ -14,6 +14,7 @@ add_library(slang STATIC
 	lexing/Lexer.cpp
 	lexing/LexerFacts.cpp
 	lexing/Preprocessor.cpp
+	lexing/SyntaxPrinter.cpp
 	lexing/Token.cpp
 
 	numeric/SVInt.cpp
