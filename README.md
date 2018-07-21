@@ -10,15 +10,15 @@ Parser and compiler library for SystemVerilog.
 
 Still under heavy construction!
 
-### Try It Out
-Experiment with parsing, type checking, and error detection live [on the web](http://sv-lang.com/) (this tool is inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)). It's still pretty rough but useful for exploring the interactive behavior of the toolchain.
-
 ### Goals
 * Fully parse and analyze all SystemVerilog features.
 * Be robust about compilation, no matter how broken the source text. This makes the compiler usable in editor highlighting and completion scenarios, where the code is likely to be pretty broken.
 * The parse tree should round trip back to the original source, making it easy to write refactoring and code generation tools.
 * Provide great error messages, ala clang.
 * Be fast and robust in the face of production-scale projects.
+
+### Try It Out
+Experiment with parsing, type checking, and error detection live [on the web](http://sv-lang.com/) (this tool is inspired by Matt Godbolt's excellent [Compiler Explorer](https://godbolt.org/)). It's still pretty rough but useful for exploring the interactive behavior of the toolchain.
 
 ### Build Instructions
 
