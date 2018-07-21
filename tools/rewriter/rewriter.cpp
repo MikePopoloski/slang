@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 
     // Make sure we reproduce newlines correct on Windows:
 #if defined(_WIN32)
-    _setmode(fileno(stdout), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
 #endif
 
     SmallVectorSized<char, 8> buffer;
