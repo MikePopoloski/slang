@@ -227,12 +227,6 @@ bool Token::hasTrivia(TriviaKind triviaKind) const {
     return false;
 }
 
-Token Token::asPreprocessed(BumpAllocator& alloc) const {
-    auto newInfo = alloc.emplace<Info>(*info);
-    newInfo->flags |= TokenFlags::IsFromPreprocessor;
-    return Token(kind, newInfo);
-}
-
 Token Token::withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const {
     auto newInfo = alloc.emplace<Info>(*info);
     newInfo->trivia = trivia;

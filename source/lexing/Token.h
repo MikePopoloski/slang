@@ -25,10 +25,9 @@ class Token;
 /// Various flags that we track on the token.
 enum class TokenFlags : uint8_t {
     None = 0,
-    Missing = 1,
-    IsFromPreprocessor = 2
+    Missing = 1
 };
-BITMASK_DEFINE_MAX_ELEMENT(TokenFlags, IsFromPreprocessor);
+BITMASK_DEFINE_MAX_ELEMENT(TokenFlags, Missing);
 
 /// Various flags for numeric tokens.
 struct NumericTokenFlags {
@@ -157,9 +156,6 @@ public:
     /// A missing token was expected and inserted by the parser at a given point.
     bool isMissing() const { return (info->flags & TokenFlags::Missing) != 0; }
 
-    /// Token was sourced from a preprocessor directive (include, macro, etc)
-    bool isFromPreprocessor() const { return (info->flags & TokenFlags::IsFromPreprocessor) != 0; }
-
     SourceRange range() const;
     SourceLocation location() const { return info->location; }
     span<Trivia const> trivia() const { return info->trivia; }
@@ -191,7 +187,6 @@ public:
     explicit operator bool() const { return valid(); }
 
     /// Modification methods to make it easier to deal with immutable tokens.
-    Token asPreprocessed(BumpAllocator& alloc) const;
     Token withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const;
     Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
 
