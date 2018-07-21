@@ -7,6 +7,10 @@
 //------------------------------------------------------------------------------
 
 #include <cstdio>
+#if defined(_WIN32)
+  #include <fcntl.h>
+  #include <io.h>
+#endif
 
 #include "parsing/SyntaxTree.h"
 
@@ -18,13 +22,18 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // Make sure we reproduce newlines correct on Windows:
+#if defined(_WIN32)
+    _setmode(fileno(stdout), _O_BINARY);
+#endif
+
     SmallVectorSized<char, 8> buffer;
     auto tree = SyntaxTree::fromFile(argv[1]);
     tree->root().writeTo(buffer, SyntaxToStringFlags::IncludeTrivia | SyntaxToStringFlags::IncludeDirectives |
                          SyntaxToStringFlags::IncludeSkipped);
 
     buffer.append('\0');
-    puts(buffer.data());
+    printf("%s", buffer.data());
 
     return 0;
 }
