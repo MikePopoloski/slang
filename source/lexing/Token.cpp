@@ -23,6 +23,26 @@ void NumericTokenFlags::set(TimeUnit unit_) {
     raw |= uint8_t(unit_) << 3;
 }
 
+Trivia::Trivia() :
+    rawText{ "", 0 }, kind(TriviaKind::Unknown)
+{
+}
+
+Trivia::Trivia(TriviaKind kind, string_view rawText) :
+    rawText{ rawText.data(), (uint32_t)rawText.size() }, kind(kind)
+{
+}
+
+Trivia::Trivia(TriviaKind kind, span<Token const> tokens) :
+    tokens{ tokens.data(), (uint32_t)tokens.size() }, kind(kind)
+{
+}
+
+Trivia::Trivia(TriviaKind kind, SyntaxNode* syntax) :
+    syntaxNode(syntax), kind(kind)
+{
+}
+
 SyntaxNode* Trivia::syntax() const {
     if (kind == TriviaKind::Directive || kind == TriviaKind::SkippedSyntax)
         return syntaxNode;
@@ -36,14 +56,16 @@ string_view Trivia::getRawText() const {
         case TriviaKind::SkippedTokens:
             return "";
         default:
-            return rawText;
+            if (hasFullLocation)
+                return fullLocation->text;
+            return { rawText.ptr, rawText.len };
     }
 }
 
 span<Token const> Trivia::getSkippedTokens() const {
-    if (kind == TriviaKind::SkippedTokens)
-        return tokens;
-    return {};
+    if (kind != TriviaKind::SkippedTokens)
+        return {};
+    return { tokens.ptr, tokens.len };
 }
 
 Token::Info::Info(span<Trivia const> trivia, string_view rawText, SourceLocation location, bitmask<TokenFlags> flags) :

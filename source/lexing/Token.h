@@ -67,13 +67,34 @@ enum class TriviaKind : uint8_t {
 /// not turn into a token; for example, a preprocessor directive, a line continuation
 /// character, or a comment.
 class Trivia {
+private:
+#pragma pack(push, 4)
+    struct ShortStringView { const char* ptr; uint32_t len; };
+    struct ShortTokenSpan { const Token* ptr; uint32_t len; };
+    struct FullLocation { string_view text; SourceLocation location; };
+
+    union {
+        ShortStringView rawText;
+        ShortTokenSpan tokens;
+        SyntaxNode* syntaxNode;
+        FullLocation* fullLocation;
+    };
+#pragma pack(pop)
+
+    // The vast majority of trivia lives alongside the token it's attached to, so if
+    // you want to know its source location just walk backward from the parent location.
+    // For certain cases though (the preprocessor inserted tokens) the trivia gets glued
+    // together from different locations. In that case hasFullLocation will be true and
+    // the union will point at a FullLocation structure.
+    bool hasFullLocation = false;
+
 public:
     TriviaKind kind;
 
-    Trivia() : kind(TriviaKind::Unknown), rawText("") {}
-    Trivia(TriviaKind kind, string_view rawText) : kind(kind), rawText(rawText) {}
-    Trivia(TriviaKind kind, span<Token const> tokens) : kind(kind), tokens(tokens) {}
-    Trivia(TriviaKind kind, SyntaxNode* syntax) : kind(kind), syntaxNode(syntax) {}
+    Trivia();
+    Trivia(TriviaKind kind, string_view rawText);
+    Trivia(TriviaKind kind, span<Token const> tokens);
+    Trivia(TriviaKind kind, SyntaxNode* syntax);
 
     /// If this trivia is tracking a skipped syntax node or a directive, returns that node.
     /// Otherwise returns nullptr.
@@ -85,14 +106,8 @@ public:
     /// If the trivia represents skipped tokens, returns the list of tokens that were
     /// skipped. Otherwise returns an empty span.
     span<Token const> getSkippedTokens() const;
-
-private:
-    union {
-        string_view rawText;
-        span<Token const> tokens;
-        SyntaxNode* syntaxNode;
-    };
 };
+static_assert(sizeof(Trivia) == 16);
 
 /// Represents a single lexed token, including leading trivia, original location, token kind,
 /// and any related information derived from the token itself (such as the lexeme).
