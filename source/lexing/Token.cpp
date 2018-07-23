@@ -62,6 +62,22 @@ Trivia Trivia::withLocation(BumpAllocator& alloc, SourceLocation location) const
     return result;
 }
 
+optional<SourceLocation> Trivia::getExplicitLocation() const {
+    switch (kind) {
+        case TriviaKind::Directive:
+        case TriviaKind::SkippedSyntax:
+            return syntaxNode->getFirstToken().location();
+        case TriviaKind::SkippedTokens:
+            ASSERT(tokens.len);
+            return tokens.ptr[0].location();
+        default:
+            if (hasFullLocation)
+                return fullLocation->location;
+
+            return std::nullopt;
+    }
+}
+
 SyntaxNode* Trivia::syntax() const {
     if (kind == TriviaKind::Directive || kind == TriviaKind::SkippedSyntax)
         return syntaxNode;

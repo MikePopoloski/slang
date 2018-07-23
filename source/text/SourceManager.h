@@ -79,6 +79,9 @@ public:
     /// Determines whether the given location is inside an include file.
     bool isIncludedFileLoc(SourceLocation location) const;
 
+    /// Determines whether the given location is from a macro expansion or an include file.
+    bool isPreprocessedLoc(SourceLocation location) const;
+
     /// Determines whether the @param left location comes before the @param right location
     /// within the "compilation unit space", which is a hypothetical source space where
     /// all macros and include files have been expanded out into a flat file.

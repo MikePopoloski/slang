@@ -101,6 +101,10 @@ public:
     /// directive or skipped tokens, returns a copy without modification.
     [[nodiscard]] Trivia withLocation(BumpAllocator& alloc, SourceLocation location) const;
 
+    /// Gets the source location of the trivia if one is explicitly known. If not, nullopt
+    /// is returned to signify that the location is implicitly relative to the parent token.
+    optional<SourceLocation> getExplicitLocation() const;
+
     /// If this trivia is tracking a skipped syntax node or a directive, returns that node.
     /// Otherwise returns nullptr.
     SyntaxNode* syntax() const;

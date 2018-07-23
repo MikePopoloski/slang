@@ -34,6 +34,7 @@ int main(int argc, char** argv) {
         .setIncludeDirectives(true)
         .setIncludeSkipped(true)
         .setIncludeTrivia(true)
+        .excludePreprocessed(tree->sourceManager())
         .print(tree->root())
         .str();
 

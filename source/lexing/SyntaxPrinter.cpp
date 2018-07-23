@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 #include "SyntaxPrinter.h"
 
+#include "text/SourceManager.h"
+
 namespace slang {
 
 SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
@@ -32,12 +34,43 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
 }
 
 SyntaxPrinter& SyntaxPrinter::print(Token token) {
-    if (includeTrivia) {
-        for (const auto& t : token.trivia())
-            print(t);
+    bool excluded = false;
+    if (sourceManager) {
+        // If we have a source manager set it means we want to exclude any tokens that
+        // came from the preprocessor (macro expansion, include files).
+        excluded = sourceManager->isPreprocessedLoc(token.location());
     }
 
-    if (includeMissing || !token.isMissing())
+    if (includeTrivia) {
+        if (!sourceManager) {
+            for (const auto& t : token.trivia())
+                print(t);
+        }
+        else {
+            // Exclude any trivia that is from a preprocessed location as well. In order
+            // to know that we need to skip over any trivia that is implicitly located
+            // relative to something ahead of it (a directive or the token itself).
+            SmallVectorSized<const Trivia*, 8> pending;
+            for (const auto& trivia : token.trivia()) {
+                pending.append(&trivia);
+                auto loc = trivia.getExplicitLocation();
+                if (loc) {
+                    if (!sourceManager->isPreprocessedLoc(*loc)) {
+                        for (auto t : pending)
+                            print(*t);
+                    }
+                    pending.clear();
+                }
+            }
+
+            if (!excluded) {
+                for (auto t : pending)
+                    print(*t);
+            }
+        }
+    }
+
+    if (!excluded && (includeMissing || !token.isMissing()))
         buffer.append(token.rawText());
 
     return *this;

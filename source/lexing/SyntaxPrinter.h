@@ -25,10 +25,13 @@ public:
     SyntaxPrinter& setIncludeSkipped(bool include) { includeSkipped = include; return *this; }
     SyntaxPrinter& setIncludeDirectives(bool include) { includeDirectives = include; return *this; }
 
+    SyntaxPrinter& excludePreprocessed(const SourceManager& sm) { sourceManager = &sm; return *this; }
+
     std::string str() const { return buffer; }
 
 private:
     std::string buffer;
+    const SourceManager* sourceManager = nullptr;
     bool includeTrivia = true;
     bool includeMissing = false;
     bool includeSkipped = false;

@@ -89,7 +89,8 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
         return SourceLocation();
 
     ASSERT(buffer.id < bufferEntries.size());
-    return std::get<FileInfo>(bufferEntries[buffer.id]).includedFrom;
+    const FileInfo* info = std::get_if<FileInfo>(&bufferEntries[buffer.id]);
+    return info ? info->includedFrom : SourceLocation();
 }
 
 bool SourceManager::isFileLoc(SourceLocation location) const {
@@ -112,6 +113,10 @@ bool SourceManager::isMacroLoc(SourceLocation location) const {
 
 bool SourceManager::isIncludedFileLoc(SourceLocation location) const {
     return getIncludedFrom(location.buffer()).valid();
+}
+
+bool SourceManager::isPreprocessedLoc(SourceLocation location) const {
+    return isMacroLoc(location) || isIncludedFileLoc(location);
 }
 
 bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocation right) const {
