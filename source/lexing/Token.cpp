@@ -43,6 +43,25 @@ Trivia::Trivia(TriviaKind kind, SyntaxNode* syntax) :
 {
 }
 
+Trivia Trivia::withLocation(BumpAllocator& alloc, SourceLocation location) const {
+    switch (kind) {
+        case TriviaKind::Directive:
+        case TriviaKind::SkippedSyntax:
+        case TriviaKind::SkippedTokens:
+            return *this;
+        default:
+            break;
+    }
+
+    Trivia result;
+    result.kind = kind;
+    result.hasFullLocation = true;
+    result.fullLocation = alloc.emplace<FullLocation>();
+    result.fullLocation->text = getRawText();
+    result.fullLocation->location = location;
+    return result;
+}
+
 SyntaxNode* Trivia::syntax() const {
     if (kind == TriviaKind::Directive || kind == TriviaKind::SkippedSyntax)
         return syntaxNode;

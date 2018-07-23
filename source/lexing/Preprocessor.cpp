@@ -272,12 +272,18 @@ Token Preprocessor::nextRaw(LexerMode mode) {
     // return that one, but we do want to merge its trivia with whatever comes
     // next.
     SmallVectorSized<Trivia, 16> trivia;
-    trivia.appendRange(token.trivia());
+    auto appendTrivia = [&trivia, this](Token token) {
+        SourceLocation loc = token.location();
+        for (const auto& t : token.trivia())
+            trivia.append(t.withLocation(alloc, loc));
+    };
+
+    appendTrivia(token);
 
     while (true) {
         auto& nextSource = lexerStack.back();
         token = nextSource->lex(mode, keywordVersionStack.back());
-        trivia.appendRange(token.trivia());
+        appendTrivia(token);
         if (token.kind != TokenKind::EndOfFile)
             break;
 

@@ -96,6 +96,11 @@ public:
     Trivia(TriviaKind kind, span<Token const> tokens);
     Trivia(TriviaKind kind, SyntaxNode* syntax);
 
+    /// If the trivia is raw source text, creates a new trivia with the specified location
+    /// (instead of implicitly offset from the parent token). If this trivia is for a
+    /// directive or skipped tokens, returns a copy without modification.
+    [[nodiscard]] Trivia withLocation(BumpAllocator& alloc, SourceLocation location) const;
+
     /// If this trivia is tracking a skipped syntax node or a directive, returns that node.
     /// Otherwise returns nullptr.
     SyntaxNode* syntax() const;
@@ -202,8 +207,8 @@ public:
     explicit operator bool() const { return valid(); }
 
     /// Modification methods to make it easier to deal with immutable tokens.
-    Token withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const;
-    Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
+    [[nodiscard]] Token withTrivia(BumpAllocator& alloc, span<Trivia const> trivia) const;
+    [[nodiscard]] Token withLocation(BumpAllocator& alloc, SourceLocation location) const;
 
     static Token createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation location);
     static Token createExpected(BumpAllocator& alloc, Diagnostics& diagnostics, Token actual, TokenKind expected, Token lastConsumed);
