@@ -78,7 +78,6 @@ enum class DiagCode : uint8_t {
     MismatchedEndKeywordsDirective,
     InvalidTimescaleSpecifier,
     IgnoredMacroPaste,
-    SpuriousMacroToken,
 
     // parser
     ExpectedIdentifier,
@@ -126,13 +125,11 @@ enum class DiagCode : uint8_t {
     AttributesOnTimeDecl,
 
     // declarations
-    DuplicateDefinition,
     NotePreviousDefinition,
-    UnknownModule,
     LocalParamNoInitializer,
     BodyParamNoInitializer,
-    UnpackedDimensionRequired,
-    UnpackedDimensionRequiresConstRange,
+    UnpackedDimensionRequired, // TODO:
+    UnpackedDimensionRequiresConstRange, // TODO:
     PackedDimRequiresConstantRange,
     PackedDimsOnPredefinedType,
     DimensionOutOfRange,
@@ -140,13 +137,12 @@ enum class DiagCode : uint8_t {
     DuplicateParamAssignment,
     NotePreviousUsage,
     ParamHasNoValue,
-    ModuleUnreferenced,
     NoteDeclarationHere,
     TooManyParamAssignments,
     AssignedToLocalPortParam,
     AssignedToLocalBodyParam,
     ParameterDoesNotExist,
-    DuplicateAttribute,
+    DuplicateAttribute, // TODO:
     PackedMemberNotIntegral,
     PackedMemberHasInitializer,
     Redefinition,
@@ -162,7 +158,6 @@ enum class DiagCode : uint8_t {
     BadConcatExpression,
     CannotIndexScalar,
     IndexMustBeIntegral,
-    ArgMustBeIntegral,
     BadAssignment,
     NoImplicitConversion,
     TooManyArguments,
@@ -198,7 +193,7 @@ enum class DiagCode : uint8_t {
     NoteInCallTo,
     NoteNonConstVariable,
     NoteArrayIndexInvalid,
-    NotePartSelectInvalid,
+    NotePartSelectInvalid,  // TODO:
     NoteHierarchicalNameInCE,
     NoteFunctionIdentifiersMustBeLocal,
     NoteParamUsedInCEBeforeDecl,

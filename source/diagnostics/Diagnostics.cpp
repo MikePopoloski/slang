@@ -144,7 +144,6 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::MismatchedEndKeywordsDirective] = { "no opening `begin_keywords directive", DiagnosticSeverity::Error };
     descriptors[DiagCode::InvalidTimescaleSpecifier] = { "timescale specifiers must be powers of ten with precision more precise than unit", DiagnosticSeverity::Error };
     descriptors[DiagCode::IgnoredMacroPaste] = { "paste token is pointless because it is adjacent to whitespace", DiagnosticSeverity::Warning };
-    descriptors[DiagCode::SpuriousMacroToken] = { "spurious macro token", DiagnosticSeverity::Error };
 
     // parser
     descriptors[DiagCode::ExpectedIdentifier] = { "expected identifier", DiagnosticSeverity::Error };
@@ -192,9 +191,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::AttributesOnTimeDecl] = { "attributes are not allowed on a time units declaration", DiagnosticSeverity::Error };
 
     // declarations
-    descriptors[DiagCode::DuplicateDefinition] = { "duplicate {} definition '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotePreviousDefinition] = { "previous definition here", DiagnosticSeverity::Note };
-    descriptors[DiagCode::UnknownModule] = { "unknown module named '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::LocalParamNoInitializer] = { "local parameter is missing an initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::BodyParamNoInitializer] = { "parameter declaration is missing an initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnpackedDimensionRequired] = { "unpacked dimension is required in array declaration", DiagnosticSeverity::Error };
@@ -206,7 +203,6 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::DuplicateParamAssignment] = { "duplicate assignment for parameter '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotePreviousUsage] = { "previous usage here", DiagnosticSeverity::Note };
     descriptors[DiagCode::ParamHasNoValue] = { "instance of module '{}' does not provide a value for parameter '{}' and it does not have a default value", DiagnosticSeverity::Error };
-    descriptors[DiagCode::ModuleUnreferenced] = { "module '{}' is unreferenced and cannot be top level because it has parameters that do not have a default value", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoteDeclarationHere] = { "declared here", DiagnosticSeverity::Note };
     descriptors[DiagCode::TooManyParamAssignments] = { "too many parameter assignments given to instantiation of module '{}' ({} given, expected {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::AssignedToLocalPortParam] = { "can't assign a value to a localparam", DiagnosticSeverity::Error };
@@ -229,7 +225,6 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::BadConcatExpression] = { "invalid operand type {} in concatenation", DiagnosticSeverity::Error };
     descriptors[DiagCode::CannotIndexScalar] = { "scalar type cannot be indexed", DiagnosticSeverity::Error };
     descriptors[DiagCode::IndexMustBeIntegral] = { "index expression must be integral", DiagnosticSeverity::Error };
-    descriptors[DiagCode::ArgMustBeIntegral] = { "argument must be integral", DiagnosticSeverity::Error };
     descriptors[DiagCode::BadAssignment] = { "value of type {} cannot be assigned to type {}", DiagnosticSeverity::Error };
     descriptors[DiagCode::NoImplicitConversion] = { "no implicit conversion from {} to {}; explicit conversion exists, are you missing a cast?", DiagnosticSeverity::Error };
     descriptors[DiagCode::TooManyArguments] = { "too many arguments to subroutine call; expected {} but {} were provided", DiagnosticSeverity::Error };
