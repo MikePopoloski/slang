@@ -6,7 +6,7 @@ services:
 
 matrix:
   include:
-    - env: BUILD_TYPE=gcc CONFIG_FLAGS="-DCMAKE_CXX_COMPILER=g++-8"
+    - env: BUILD_TYPE=gcc CONFIG_FLAGS="-DCMAKE_CXX_COMPILER=g++-8 -DSLANG_COVERAGE=ON"
     - env: BUILD_TYPE=clang CONFIG_FLAGS="-DCMAKE_CXX_COMPILER=clang++-6.0 -DSLANG_COVERAGE=ON -DSLANG_SANITIZERS=undefined,address"
 
 before_install:
