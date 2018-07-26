@@ -7,6 +7,24 @@
 #include "SyntaxNode.h"
 
 #include "lexing/SyntaxPrinter.h"
+#include "parsing/AllSyntax.h"
+
+namespace {
+
+using namespace slang;
+
+struct GetChildVisitor {
+    template<typename T>
+    TokenOrSyntax visit(const T& node, uint32_t index) {
+        return node.getChild(index);
+    }
+
+    TokenOrSyntax visitInvalid(const SyntaxNode&, uint32_t) {
+        return nullptr;
+    }
+};
+
+}
 
 namespace slang {
 
@@ -54,15 +72,20 @@ SourceRange SyntaxNode::sourceRange() const {
     return SourceRange(firstToken.location(), lastToken.location() + lastToken.rawText().length());
 }
 
+TokenOrSyntax SyntaxNode::getChild(uint32_t index) const {
+    GetChildVisitor visitor;
+    return visit(visitor, index);
+}
+
 const SyntaxNode* SyntaxNode::childNode(uint32_t index) const {
-    auto child = const_cast<SyntaxNode*>(this)->getChild(index);
+    auto child = getChild(index);
     if (child.isToken)
         return nullptr;
     return child.node;
 }
 
 Token SyntaxNode::childToken(uint32_t index) const {
-    auto child = const_cast<SyntaxNode*>(this)->getChild(index);
+    auto child = getChild(index);
     if (!child.isToken)
         return Token();
     return child.token;

@@ -180,8 +180,8 @@ namespace slang {
 	outf.write('decltype(auto) visitSyntaxNode(TNode* node, TVisitor& visitor, Args&&... args) {\n')
 	outf.write('    static constexpr bool isConst = std::is_const_v<TNode>;')
 	outf.write('    switch (node->kind) {\n')
-	outf.write('        case SyntaxKind::Unknown: return visitor.visitInvalid(*node);\n')
-	outf.write('        case SyntaxKind::List: return visitor.visitList(*node);\n')
+	outf.write('        case SyntaxKind::Unknown: return visitor.visitInvalid(*node, std::forward<Args>(args)...);\n')
+	outf.write('        case SyntaxKind::List: return visitor.visit(*static_cast<std::conditional_t<isConst, const SyntaxListBase*, SyntaxListBase*>>(node), std::forward<Args>(args)...);\n')
 
 	for k,v in sorted(kindmap.items()):
 		outf.write('        case SyntaxKind::{}: return visitor.visit(*static_cast<'.format(k))
@@ -191,6 +191,16 @@ namespace slang {
 	outf.write('    }\n')
 	outf.write('    THROW_UNREACHABLE;\n')
 	outf.write('}\n\n')
+	outf.write('}\n\n')
+
+	outf.write('template<typename TVisitor, typename... Args>\n')
+	outf.write('decltype(auto) SyntaxNode::visit(TVisitor& visitor, Args&&... args) {\n')
+	outf.write('    return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);\n')
+	outf.write('}\n\n')
+
+	outf.write('template<typename TVisitor, typename... Args>\n')
+	outf.write('decltype(auto) SyntaxNode::visit(TVisitor& visitor, Args&&... args) const {\n')
+	outf.write('    return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);\n')
 	outf.write('}\n\n')
 
 	outf.write('}\n')
@@ -295,8 +305,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
 		outf.write('    static bool isKind(SyntaxKind kind);\n\n')
 
-		outf.write('protected:\n')
-		outf.write('    TokenOrSyntax getChild(uint32_t index) const override{} {{\n'.format(final))
+		outf.write('    TokenOrSyntax getChild(uint32_t index) const {\n')
 
 		if len(combined) > 0:
 			outf.write('        switch (index) {\n')

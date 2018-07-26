@@ -48,8 +48,7 @@ struct EqualsValueClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return equals;
             case 1: return &expr;
@@ -71,8 +70,7 @@ struct AttributeSpecSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return name;
             case 1: return value;
@@ -95,8 +93,7 @@ struct AttributeInstanceSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &specs;
@@ -119,8 +116,7 @@ struct NamedLabelSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return name;
             case 1: return colon;
@@ -142,8 +138,7 @@ struct StatementSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -164,8 +159,7 @@ struct MemberSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             default: return nullptr;
@@ -195,8 +189,7 @@ struct EmptyArgumentSyntax : public ArgumentSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         (void)index;
         return nullptr;
     }
@@ -214,8 +207,7 @@ struct OrderedArgumentSyntax : public ArgumentSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             default: return nullptr;
@@ -239,8 +231,7 @@ struct NamedArgumentSyntax : public ArgumentSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return dot;
             case 1: return name;
@@ -266,8 +257,7 @@ struct ArgumentListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &parameters;
@@ -290,8 +280,7 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return hash;
             case 1: return &parameters;
@@ -324,8 +313,7 @@ struct VariablePatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return dot;
             case 1: return variableName;
@@ -346,8 +334,7 @@ struct WildcardPatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return dotStar;
             default: return nullptr;
@@ -367,8 +354,7 @@ struct ExpressionPatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             default: return nullptr;
@@ -390,8 +376,7 @@ struct TaggedPatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return tagged;
             case 1: return memberName;
@@ -422,8 +407,7 @@ struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &pattern;
             default: return nullptr;
@@ -445,8 +429,7 @@ struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return name;
             case 1: return colon;
@@ -470,8 +453,7 @@ struct StructurePatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return &members;
@@ -494,8 +476,7 @@ struct MatchesClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return matchesKeyword;
             case 1: return &pattern;
@@ -517,8 +498,7 @@ struct ConditionalPatternSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             case 1: return matchesClause;
@@ -539,8 +519,7 @@ struct ConditionalPredicateSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &conditions;
             default: return nullptr;
@@ -571,8 +550,7 @@ struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return &items;
@@ -596,8 +574,7 @@ struct AssignmentPatternItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &key;
             case 1: return colon;
@@ -621,8 +598,7 @@ struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return &items;
@@ -649,8 +625,7 @@ struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return &countExpr;
@@ -677,8 +652,7 @@ struct BadExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             default: return nullptr;
@@ -709,8 +683,7 @@ struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return operatorToken;
             case 1: return &attributes;
@@ -734,8 +707,7 @@ struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &operand;
             case 1: return &attributes;
@@ -760,8 +732,7 @@ struct BinaryExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return operatorToken;
@@ -788,8 +759,7 @@ struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &min;
             case 1: return colon1;
@@ -815,8 +785,7 @@ struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return tagged;
             case 1: return member;
@@ -840,8 +809,7 @@ struct OpenRangeListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return &valueRanges;
@@ -865,8 +833,7 @@ struct InsideExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             case 1: return inside;
@@ -893,8 +860,7 @@ struct ConditionalExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &predicate;
             case 1: return question;
@@ -920,8 +886,7 @@ struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return type;
             case 1: return &pattern;
@@ -953,8 +918,7 @@ struct BitSelectSyntax : public SelectorSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             default: return nullptr;
@@ -976,8 +940,7 @@ struct RangeSelectSyntax : public SelectorSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return range;
@@ -1001,8 +964,7 @@ struct ElementSelectSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBracket;
             case 1: return selector;
@@ -1035,8 +997,7 @@ struct IdentifierNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return identifier;
             default: return nullptr;
@@ -1057,8 +1018,7 @@ struct IdentifierSelectNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return identifier;
             case 1: return &selectors;
@@ -1078,8 +1038,7 @@ struct EmptyIdentifierNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         (void)index;
         return nullptr;
     }
@@ -1097,8 +1056,7 @@ struct KeywordNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             default: return nullptr;
@@ -1119,8 +1077,7 @@ struct ClassNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return identifier;
             case 1: return &parameters;
@@ -1143,8 +1100,7 @@ struct ScopedNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return separator;
@@ -1167,8 +1123,7 @@ struct ClassScopeSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return separator;
@@ -1191,8 +1146,7 @@ struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return literal;
             default: return nullptr;
@@ -1214,8 +1168,7 @@ struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return size;
             case 1: return base;
@@ -1238,8 +1191,7 @@ struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return closeBrace;
@@ -1262,8 +1214,7 @@ struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return &expressions;
@@ -1288,8 +1239,7 @@ struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return &expression;
@@ -1313,8 +1263,7 @@ struct StreamExpressionWithRange : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return withKeyword;
             case 1: return &range;
@@ -1336,8 +1285,7 @@ struct StreamExpressionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expression;
             case 1: return withRange;
@@ -1364,8 +1312,7 @@ struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return operatorToken;
@@ -1393,8 +1340,7 @@ struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &expression;
@@ -1418,8 +1364,7 @@ struct NewClassExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return classScope;
             case 1: return newKeyword;
@@ -1445,8 +1390,7 @@ struct NewArrayExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return newKeyword;
             case 1: return openBracket;
@@ -1471,8 +1415,7 @@ struct NewExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return newKeyword;
             case 1: return &expr;
@@ -1496,8 +1439,7 @@ struct ElementSelectExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return &select;
@@ -1520,8 +1462,7 @@ struct MemberAccessExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return dot;
@@ -1545,8 +1486,7 @@ struct InvocationExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return &attributes;
@@ -1570,8 +1510,7 @@ struct CastExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return apostrophe;
@@ -1595,8 +1534,7 @@ struct SignedCastExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return signing;
             case 1: return apostrophe;
@@ -1630,8 +1568,7 @@ struct DelaySyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return hash;
             case 1: return &delayValue;
@@ -1653,8 +1590,7 @@ struct EventControlSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return at;
             case 1: return &eventName;
@@ -1685,8 +1621,7 @@ struct SignalEventExpressionSyntax : public EventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return edge;
             case 1: return &expr;
@@ -1709,8 +1644,7 @@ struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return operatorToken;
@@ -1734,8 +1668,7 @@ struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &expr;
@@ -1757,8 +1690,7 @@ struct ImplicitEventControlSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return atStar;
             default: return nullptr;
@@ -1779,8 +1711,7 @@ struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return at;
             case 1: return openParenStarCloseParen;
@@ -1802,8 +1733,7 @@ struct EventControlWithExpressionSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return at;
             case 1: return &expr;
@@ -1828,8 +1758,7 @@ struct RepeatedEventControlSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return repeat;
             case 1: return openParen;
@@ -1854,8 +1783,7 @@ struct TimingControlExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &timing;
             case 1: return &expr;
@@ -1878,8 +1806,7 @@ struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return &timing;
@@ -1904,8 +1831,7 @@ struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return doubleHash;
             case 1: return openBracket;
@@ -1939,8 +1865,7 @@ struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &selector;
             default: return nullptr;
@@ -1960,8 +1885,7 @@ struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return star;
             default: return nullptr;
@@ -1982,8 +1906,7 @@ struct ColonExpressionClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return colon;
             case 1: return &expr;
@@ -2005,8 +1928,7 @@ struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return dollar;
             case 1: return maxSizeClause;
@@ -2029,8 +1951,7 @@ struct VariableDimensionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBracket;
             case 1: return specifier;
@@ -2054,8 +1975,7 @@ struct VariableDeclaratorSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return name;
             case 1: return &dimensions;
@@ -2080,8 +2000,7 @@ struct DataDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &modifiers;
@@ -2109,8 +2028,7 @@ struct TypedefDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return typedefKeyword;
@@ -2138,8 +2056,7 @@ struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return typedefKeyword;
@@ -2167,8 +2084,7 @@ struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return typedefKeyword;
@@ -2204,8 +2120,7 @@ struct ChargeStrengthSyntax : public NetStrengthSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return strength;
@@ -2231,8 +2146,7 @@ struct DriveStrengthSyntax : public NetStrengthSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return strength0;
@@ -2261,8 +2175,7 @@ struct NetDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return netType;
@@ -2290,8 +2203,7 @@ struct PackageImportItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return package;
             case 1: return doubleColon;
@@ -2315,8 +2227,7 @@ struct PackageImportDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -2341,8 +2252,7 @@ struct ParameterDeclarationSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             case 1: return &type;
@@ -2365,8 +2275,7 @@ struct ParameterDeclarationStatementSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &parameter;
@@ -2399,8 +2308,7 @@ struct PortDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &header;
@@ -2425,8 +2333,7 @@ struct GenvarDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -2453,8 +2360,7 @@ struct IntegerTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             case 1: return signing;
@@ -2476,8 +2382,7 @@ struct KeywordTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             default: return nullptr;
@@ -2497,8 +2402,7 @@ struct NamedTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &name;
             default: return nullptr;
@@ -2522,8 +2426,7 @@ struct StructUnionMemberSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return randomQualifier;
@@ -2554,8 +2457,7 @@ struct StructUnionTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             case 1: return tagged;
@@ -2587,8 +2489,7 @@ struct EnumTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             case 1: return baseType;
@@ -2616,8 +2517,7 @@ struct TypeReferenceSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return typeKeyword;
             case 1: return openParen;
@@ -2641,8 +2541,7 @@ struct DotMemberClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return dot;
             case 1: return member;
@@ -2667,8 +2566,7 @@ struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return virtualKeyword;
             case 1: return interfaceKeyword;
@@ -2693,8 +2591,7 @@ struct ImplicitTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return signing;
             case 1: return &dimensions;
@@ -2716,8 +2613,7 @@ struct VarDataTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return var;
             case 1: return &type;
@@ -2742,8 +2638,7 @@ struct DeferredAssertionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return hash;
             case 1: return zero;
@@ -2766,8 +2661,7 @@ struct ElseClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return elseKeyword;
             case 1: return &clause;
@@ -2789,8 +2683,7 @@ struct ActionBlockSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return statement;
             case 1: return elseClause;
@@ -2814,8 +2707,7 @@ struct ImmediateAssertionStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -2844,8 +2736,7 @@ struct DisableIffSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return disable;
             case 1: return iff;
@@ -2871,8 +2762,7 @@ struct PropertySpecSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return clocking;
             case 1: return disable;
@@ -2899,8 +2789,7 @@ struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -2927,8 +2816,7 @@ struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &statement;
@@ -2949,8 +2837,7 @@ struct ImmediateAssertionMemberSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &statement;
@@ -2973,8 +2860,7 @@ struct EmptyStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3002,8 +2888,7 @@ struct ConditionalStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3042,8 +2927,7 @@ struct DefaultCaseItemSyntax : public CaseItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return defaultKeyword;
             case 1: return colon;
@@ -3069,8 +2953,7 @@ struct PatternCaseItemSyntax : public CaseItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &pattern;
             case 1: return tripleAnd;
@@ -3096,8 +2979,7 @@ struct StandardCaseItemSyntax : public CaseItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expressions;
             case 1: return colon;
@@ -3126,8 +3008,7 @@ struct CaseStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3157,8 +3038,7 @@ struct ForeverStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3185,8 +3065,7 @@ struct LoopStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3218,8 +3097,7 @@ struct DoWhileStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3249,8 +3127,7 @@ struct ForVariableDeclarationSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return varKeyword;
             case 1: return &type;
@@ -3280,8 +3157,7 @@ struct ForLoopStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3316,8 +3192,7 @@ struct ForeachLoopListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &arrayName;
@@ -3344,8 +3219,7 @@ struct ForeachLoopStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3371,8 +3245,7 @@ struct ReturnStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3397,8 +3270,7 @@ struct JumpStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3422,8 +3294,7 @@ struct TimingControlStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3447,8 +3318,7 @@ struct ExpressionStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3475,8 +3345,7 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3504,8 +3373,7 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3531,8 +3399,7 @@ struct DisableStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3558,8 +3425,7 @@ struct DisableForkStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3584,8 +3450,7 @@ struct NamedBlockClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return colon;
             case 1: return name;
@@ -3610,8 +3475,7 @@ struct BlockStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3641,8 +3505,7 @@ struct WaitStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3670,8 +3533,7 @@ struct WaitForkStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3699,8 +3561,7 @@ struct WaitOrderStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3728,8 +3589,7 @@ struct RandCaseItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             case 1: return colon;
@@ -3753,8 +3613,7 @@ struct RandCaseStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3780,8 +3639,7 @@ struct EventTriggerStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return label;
             case 1: return &attributes;
@@ -3825,8 +3683,7 @@ struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             default: return nullptr;
@@ -3850,8 +3707,7 @@ struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return dot;
             case 1: return name;
@@ -3877,8 +3733,7 @@ struct NonAnsiPortListSyntax : public PortListSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &ports;
@@ -3901,8 +3756,7 @@ struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return nameOrKeyword;
             case 1: return modport;
@@ -3925,8 +3779,7 @@ struct VariablePortHeaderSyntax : public PortHeaderSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return direction;
             case 1: return varKeyword;
@@ -3950,8 +3803,7 @@ struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return direction;
             case 1: return interconnect;
@@ -3975,8 +3827,7 @@ struct NetPortHeaderSyntax : public PortHeaderSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return direction;
             case 1: return netType;
@@ -3999,8 +3850,7 @@ struct ImplicitAnsiPortSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &header;
@@ -4027,8 +3877,7 @@ struct ExplicitAnsiPortSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return direction;
@@ -4056,8 +3905,7 @@ struct AnsiPortListSyntax : public PortListSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &ports;
@@ -4081,8 +3929,7 @@ struct WildcardPortListSyntax : public PortListSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return dotStar;
@@ -4107,8 +3954,7 @@ struct ParameterPortListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return hash;
             case 1: return openParen;
@@ -4137,8 +3983,7 @@ struct ModuleHeaderSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return moduleKeyword;
             case 1: return lifetime;
@@ -4167,8 +4012,7 @@ struct ModuleDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &header;
@@ -4193,8 +4037,7 @@ struct ExternModuleSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return externKeyword;
             case 1: return &header;
@@ -4218,8 +4061,7 @@ struct EmptyMemberSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
@@ -4242,8 +4084,7 @@ struct ProceduralBlockSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -4267,8 +4108,7 @@ struct GenerateRegionSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -4302,8 +4142,7 @@ struct LoopGenerateSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -4340,8 +4179,7 @@ struct IfGenerateSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -4372,8 +4210,7 @@ struct CaseGenerateSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -4404,8 +4241,7 @@ struct GenerateBlockSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return label;
@@ -4432,8 +4268,7 @@ struct DividerClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return divide;
             case 1: return value;
@@ -4457,8 +4292,7 @@ struct TimeUnitsDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -4482,8 +4316,7 @@ struct PortConnectionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             default: return nullptr;
@@ -4503,8 +4336,7 @@ struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &expr;
@@ -4529,8 +4361,7 @@ struct NamedPortConnectionSyntax : public PortConnectionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return dot;
@@ -4555,8 +4386,7 @@ struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return dotStar;
@@ -4581,8 +4411,7 @@ struct HierarchicalInstanceSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return name;
             case 1: return &dimensions;
@@ -4609,8 +4438,7 @@ struct HierarchyInstantiationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return type;
@@ -4639,8 +4467,7 @@ struct FunctionPortSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return constKeyword;
@@ -4667,8 +4494,7 @@ struct FunctionPortListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &ports;
@@ -4694,8 +4520,7 @@ struct FunctionPrototypeSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             case 1: return lifetime;
@@ -4723,8 +4548,7 @@ struct FunctionDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &prototype;
@@ -4753,8 +4577,7 @@ struct AssertionItemPortSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return local;
@@ -4780,8 +4603,7 @@ struct AssertionItemPortListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &ports;
@@ -4807,8 +4629,7 @@ struct LetDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return let;
@@ -4841,8 +4662,7 @@ struct PropertyDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -4879,8 +4699,7 @@ struct SequenceDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -4911,8 +4730,7 @@ struct ExtendsClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             case 1: return &baseName;
@@ -4935,8 +4753,7 @@ struct ImplementsClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             case 1: return &interfaces;
@@ -4967,8 +4784,7 @@ struct ClassDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return virtualOrInterface;
@@ -5000,8 +4816,7 @@ struct ClassPropertyDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
@@ -5024,8 +4839,7 @@ struct ClassMethodDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
@@ -5049,8 +4863,7 @@ struct ClassMethodPrototypeSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
@@ -5075,8 +4888,7 @@ struct ContinuousAssignSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return assign;
@@ -5100,8 +4912,7 @@ struct DefParamAssignmentSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &name;
             case 1: return setter;
@@ -5124,8 +4935,7 @@ struct DefParamSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return defparam;
@@ -5149,8 +4959,7 @@ struct ModportClockingPortSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return clocking;
@@ -5181,8 +4990,7 @@ struct ModportNamedPortSyntax : public ModportPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return name;
             default: return nullptr;
@@ -5206,8 +5014,7 @@ struct ModportExplicitPortSyntax : public ModportPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return dot;
             case 1: return name;
@@ -5232,8 +5039,7 @@ struct ModportSimplePortListSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return direction;
@@ -5255,8 +5061,7 @@ struct ModportSubroutinePortSyntax : public ModportPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &prototype;
             default: return nullptr;
@@ -5277,8 +5082,7 @@ struct ModportSubroutinePortListSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return importExport;
@@ -5301,8 +5105,7 @@ struct ModportItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return name;
             case 1: return &ports;
@@ -5325,8 +5128,7 @@ struct ModportDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -5351,8 +5153,7 @@ struct ClockingSkewSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return edge;
             case 1: return hash;
@@ -5378,8 +5179,7 @@ struct ClockingDirectionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return input;
             case 1: return inputSkew;
@@ -5407,8 +5207,7 @@ struct ClockingItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return defaultKeyword;
             case 1: return direction;
@@ -5441,8 +5240,7 @@ struct ClockingDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return globalOrDefault;
@@ -5478,8 +5276,7 @@ struct DPIImportExportSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return keyword;
@@ -5518,8 +5315,7 @@ struct DistWeightSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return op;
             case 1: return &expr;
@@ -5541,8 +5337,7 @@ struct DistItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &range;
             case 1: return weight;
@@ -5566,8 +5361,7 @@ struct DistConstraintListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return dist;
             case 1: return openBrace;
@@ -5591,8 +5385,7 @@ struct ExpressionOrDistSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             case 1: return &distribution;
@@ -5615,8 +5408,7 @@ struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return soft;
             case 1: return &expr;
@@ -5640,8 +5432,7 @@ struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return unique;
             case 1: return &ranges;
@@ -5665,8 +5456,7 @@ struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return arrow;
@@ -5689,8 +5479,7 @@ struct ElseConstraintClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return elseKeyword;
             case 1: return &constraints;
@@ -5716,8 +5505,7 @@ struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return ifKeyword;
             case 1: return openParen;
@@ -5744,8 +5532,7 @@ struct LoopConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return foreachKeyword;
             case 1: return &loopList;
@@ -5770,8 +5557,7 @@ struct DisableConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return disable;
             case 1: return soft;
@@ -5798,8 +5584,7 @@ struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return solve;
             case 1: return &beforeExpr;
@@ -5825,8 +5610,7 @@ struct ConstraintBlockSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBrace;
             case 1: return &items;
@@ -5851,8 +5635,7 @@ struct ConstraintPrototypeSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
@@ -5879,8 +5662,7 @@ struct ConstraintDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return &qualifiers;
@@ -5907,8 +5689,7 @@ struct WithClauseSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return with;
             case 1: return openParen;
@@ -5933,8 +5714,7 @@ struct IdentifierListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &identifiers;
@@ -5958,8 +5738,7 @@ struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return with;
             case 1: return names;
@@ -5986,8 +5765,7 @@ struct WithFunctionSampleSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return with;
             case 1: return function;
@@ -6021,8 +5799,7 @@ struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &left;
             case 1: return orKeyword;
@@ -6045,8 +5822,7 @@ struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return keyword;
             case 1: return &name;
@@ -6070,8 +5846,7 @@ struct BlockCoverageEventSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return atat;
             case 1: return openParen;
@@ -6101,8 +5876,7 @@ struct CovergroupDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return covergroup;
@@ -6135,8 +5909,7 @@ struct CoverageOptionSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return option;
@@ -6169,8 +5942,7 @@ struct CoverpointSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return type;
@@ -6208,8 +5980,7 @@ struct DefaultCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return defaultKeyword;
             case 1: return sequenceKeyword;
@@ -6231,8 +6002,7 @@ struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyn
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &expr;
             case 1: return withClause;
@@ -6254,8 +6024,7 @@ struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &ranges;
             case 1: return withClause;
@@ -6279,8 +6048,7 @@ struct TransRepeatRangeSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openBracket;
             case 1: return specifier;
@@ -6304,8 +6072,7 @@ struct TransRangeSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &items;
             case 1: return repeat;
@@ -6328,8 +6095,7 @@ struct TransSetSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &ranges;
@@ -6352,8 +6118,7 @@ struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSynt
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &sets;
             case 1: return withClause;
@@ -6377,8 +6142,7 @@ struct IffClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return iff;
             case 1: return openParen;
@@ -6408,8 +6172,7 @@ struct CoverageBinsSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &attributes;
             case 1: return wildcard;
@@ -6440,8 +6203,7 @@ struct CompilationUnitSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &members;
             case 1: return endOfFile;
@@ -6464,8 +6226,7 @@ struct DirectiveSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             default: return nullptr;
@@ -6485,8 +6246,7 @@ struct SimpleDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return endOfDirective;
@@ -6508,8 +6268,7 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return fileName;
@@ -6533,8 +6292,7 @@ struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return name;
@@ -6558,8 +6316,7 @@ struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return endOfDirective;
@@ -6582,8 +6339,7 @@ struct MacroArgumentDefaultSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return equals;
             case 1: return &tokens;
@@ -6605,8 +6361,7 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return name;
             case 1: return defaultValue;
@@ -6629,8 +6384,7 @@ struct MacroFormalArgumentListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &args;
@@ -6655,8 +6409,7 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return name;
@@ -6680,8 +6433,7 @@ struct MacroActualArgumentSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return &tokens;
             default: return nullptr;
@@ -6703,8 +6455,7 @@ struct MacroActualArgumentListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return openParen;
             case 1: return &args;
@@ -6726,8 +6477,7 @@ struct MacroUsageSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return args;
@@ -6753,8 +6503,7 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return timeUnit;
@@ -6781,8 +6530,7 @@ struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return netType;
@@ -6807,8 +6555,7 @@ struct LineDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return lineNumber;
@@ -6833,8 +6580,7 @@ struct UndefDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return name;
@@ -6857,8 +6603,7 @@ struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
+    TokenOrSyntax getChild(uint32_t index) const {
         switch (index) {
             case 0: return directive;
             case 1: return versionSpecifier;
@@ -7133,8 +6878,8 @@ namespace detail {
 template<typename TNode, typename TVisitor, typename... Args>
 decltype(auto) visitSyntaxNode(TNode* node, TVisitor& visitor, Args&&... args) {
     static constexpr bool isConst = std::is_const_v<TNode>;    switch (node->kind) {
-        case SyntaxKind::Unknown: return visitor.visitInvalid(*node);
-        case SyntaxKind::List: return visitor.visitList(*node);
+        case SyntaxKind::Unknown: return visitor.visitInvalid(*node, std::forward<Args>(args)...);
+        case SyntaxKind::List: return visitor.visit(*static_cast<std::conditional_t<isConst, const SyntaxListBase*, SyntaxListBase*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::AcceptOnPropertyExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const PrefixUnaryExpressionSyntax*, PrefixUnaryExpressionSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::ActionBlock: return visitor.visit(*static_cast<std::conditional_t<isConst, const ActionBlockSyntax*, ActionBlockSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::AddAssignmentExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const BinaryExpressionSyntax*, BinaryExpressionSyntax*>>(node), std::forward<Args>(args)...);
@@ -7545,6 +7290,16 @@ decltype(auto) visitSyntaxNode(TNode* node, TVisitor& visitor, Args&&... args) {
     THROW_UNREACHABLE;
 }
 
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) SyntaxNode::visit(TVisitor& visitor, Args&&... args) {
+    return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);
+}
+
+template<typename TVisitor, typename... Args>
+decltype(auto) SyntaxNode::visit(TVisitor& visitor, Args&&... args) const {
+    return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);
 }
 
 }

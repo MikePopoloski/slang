@@ -28,7 +28,7 @@ struct EvalVisitor {
         return expr.evalImpl(context);
     }
 
-    ConstantValue visitInvalid(const Expression&) {
+    ConstantValue visitInvalid(const Expression&, EvalContext&) {
         return nullptr;
     }
 };
@@ -52,7 +52,7 @@ public:
         }
     }
 
-    LValue visitInvalid(const Expression&) {
+    LValue visitInvalid(const Expression&, EvalContext&) {
         return nullptr;
     }
 };

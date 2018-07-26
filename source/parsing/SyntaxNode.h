@@ -587,26 +587,23 @@ public:
     }
 
     template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args) {
-        return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);
-    }
+    decltype(auto) visit(TVisitor& visitor, Args&&... args);
 
     template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args) const {
-        return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);
-    }
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
     static bool isKind(SyntaxKind) { return true; }
 
 protected:
     explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
-    virtual TokenOrSyntax getChild(uint32_t) const = 0;
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 class SyntaxListBase : public SyntaxNode {
 public:
     uint32_t getChildCount() const { return childCount; }
+    virtual TokenOrSyntax getChild(uint32_t index) const = 0;
 
 protected:
     SyntaxListBase(uint32_t childCount) :

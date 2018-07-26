@@ -134,7 +134,7 @@ decltype(auto) visitExpression(TExpression* expr, TVisitor& visitor, Args&&... a
                             std::forward<Args>(args)...)
 
     switch (expr->kind) {
-        case ExpressionKind::Invalid: return visitor.visitInvalid(*expr);
+        case ExpressionKind::Invalid: return visitor.visitInvalid(*expr, std::forward<Args>(args)...);
         CASE(IntegerLiteral, IntegerLiteral);
         CASE(RealLiteral, RealLiteral);
         CASE(UnbasedUnsizedIntegerLiteral, UnbasedUnsizedIntegerLiteral);
