@@ -98,6 +98,8 @@ public:
     const Type& getType(SyntaxKind kind) const;
     const Type& getType(const DataTypeSyntax& node, LookupLocation location, const Scope& parent,
                         bool allowNetType = false);
+    const Type& getType(const Type& elementType, LookupLocation location, const Scope& parent,
+                        const SyntaxList<VariableDimensionSyntax>& dimensions);
 
     const PackedArrayType& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
     const ScalarType& getScalarType(bitmask<IntegralFlags> flags);
@@ -132,6 +134,7 @@ public:
     bool checkNoUnknowns(const SVInt& value, SourceRange range);
     bool checkPositive(const SVInt& value, SourceRange range);
     optional<bitwidth_t> checkValidBitWidth(const SVInt& value, SourceRange range);
+    optional<int32_t> evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location, const Scope& scope);
 
 private:
     void getParamDecls(const ParameterDeclarationSyntax& syntax, bool isPort, bool isLocal,

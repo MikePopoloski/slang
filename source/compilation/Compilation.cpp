@@ -349,6 +349,11 @@ const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation loca
     return result;
 }
 
+const Type& Compilation::getType(const Type& elementType, LookupLocation location, const Scope& scope,
+                                 const SyntaxList<VariableDimensionSyntax>& dimensions) {
+    return UnpackedArrayType::fromSyntax(*this, elementType, location, scope, dimensions);
+}
+
 const PackedArrayType& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags) {
     ASSERT(width > 0);
     uint32_t key = width;
@@ -413,6 +418,27 @@ optional<bitwidth_t> Compilation::checkValidBitWidth(const SVInt& value, SourceR
     if (!result)
         addError(DiagCode::ValueExceedsMaxBitWidth, range) << (int)SVInt::MAX_BITS;
     return result;
+}
+
+optional<int32_t> Compilation::evalIntegerExpr(const ExpressionSyntax& syntax, LookupLocation location,
+                                               const Scope& scope) {
+    BindContext context(scope, location, BindFlags::IntegralConstant);
+    const auto& expr = Expression::bind(*this, syntax, context);
+    if (!expr.constant || !expr.constant->isInteger())
+        return std::nullopt;
+
+    const SVInt& value = expr.constant->integer();
+    if (!checkNoUnknowns(value, expr.sourceRange))
+        return std::nullopt;
+
+    auto coerced = value.as<int32_t>();
+    if (!coerced) {
+        auto& diag = addError(DiagCode::ValueOutOfRange, expr.sourceRange);
+        diag << value;
+        diag << INT32_MIN;
+        diag << INT32_MAX;
+    }
+    return coerced;
 }
 
 void Compilation::findInstantiations(const ModuleDeclarationSyntax& module, SmallVector<NameSet>& scopeStack,

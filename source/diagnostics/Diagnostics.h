@@ -59,6 +59,7 @@ enum class DiagCode : uint8_t {
     ValueMustNotBeUnknown,
     ValueMustBePositive,
     ValueExceedsMaxBitWidth,
+    ValueOutOfRange,
 
     // preprocessor
     CouldNotOpenIncludeFile,
@@ -128,11 +129,10 @@ enum class DiagCode : uint8_t {
     NotePreviousDefinition,
     LocalParamNoInitializer,
     BodyParamNoInitializer,
-    UnpackedDimensionRequired, // TODO:
+    InvalidUnpackedDimension,
     UnpackedDimensionRequiresConstRange, // TODO:
     PackedDimRequiresConstantRange,
     PackedDimsOnPredefinedType,
-    DimensionOutOfRange,
     MixingOrderedAndNamedParams,
     DuplicateParamAssignment,
     NotePreviousUsage,

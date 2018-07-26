@@ -125,6 +125,7 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::ValueMustNotBeUnknown] = { "value must not have any unknown bits", DiagnosticSeverity::Error };
     descriptors[DiagCode::ValueMustBePositive] = { "value must be positive", DiagnosticSeverity::Error };
     descriptors[DiagCode::ValueExceedsMaxBitWidth] = { "value exceeds maximum vector width ({} bits)", DiagnosticSeverity::Error };
+    descriptors[DiagCode::ValueOutOfRange] = { "{} is out of allowed range ({} to {})", DiagnosticSeverity::Error };
 
     // preprocessor
     descriptors[DiagCode::CouldNotOpenIncludeFile] = { "could not find or open include file", DiagnosticSeverity::Error };
@@ -194,11 +195,10 @@ DiagnosticWriter::DiagnosticWriter(const SourceManager& sourceManager) :
     descriptors[DiagCode::NotePreviousDefinition] = { "previous definition here", DiagnosticSeverity::Note };
     descriptors[DiagCode::LocalParamNoInitializer] = { "local parameter is missing an initializer", DiagnosticSeverity::Error };
     descriptors[DiagCode::BodyParamNoInitializer] = { "parameter declaration is missing an initializer", DiagnosticSeverity::Error };
-    descriptors[DiagCode::UnpackedDimensionRequired] = { "unpacked dimension is required in array declaration", DiagnosticSeverity::Error };
+    descriptors[DiagCode::InvalidUnpackedDimension] = { "invalid unpacked dimension", DiagnosticSeverity::Error };
     descriptors[DiagCode::UnpackedDimensionRequiresConstRange] = { "unpacked dimension requires a constant range", DiagnosticSeverity::Error };
     descriptors[DiagCode::PackedDimRequiresConstantRange] = { "packed dimension requires a constant range", DiagnosticSeverity::Error };
     descriptors[DiagCode::PackedDimsOnPredefinedType] = { "packed dimensions not allowed on predefined integer type '{}'", DiagnosticSeverity::Error };
-    descriptors[DiagCode::DimensionOutOfRange] = { "dimension bound is out of allowed range ({} to {})", DiagnosticSeverity::Error };
     descriptors[DiagCode::MixingOrderedAndNamedParams] = { "mixing ordered and named parameter assignments is not allowed", DiagnosticSeverity::Error };
     descriptors[DiagCode::DuplicateParamAssignment] = { "duplicate assignment for parameter '{}'", DiagnosticSeverity::Error };
     descriptors[DiagCode::NotePreviousUsage] = { "previous usage here", DiagnosticSeverity::Note };

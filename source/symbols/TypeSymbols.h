@@ -306,6 +306,23 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
 };
 
+/// Represents an unpacked array of some other type.
+class UnpackedArrayType : public Type {
+public:
+    const Type& elementType;
+    ConstantRange range;
+
+    UnpackedArrayType(const Type& elementType, ConstantRange range);
+
+    static const Type& fromSyntax(Compilation& compilation, const Type& elementType,
+                                  LookupLocation location, const Scope& scope,
+                                  const SyntaxList<VariableDimensionSyntax>& dimensions);
+
+    ConstantValue getDefaultValueImpl() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnpackedArrayType; }
+};
+
 /// Represents a field member of a struct or union.
 class FieldSymbol : public VariableSymbol {
 public:
@@ -343,6 +360,8 @@ public:
                                   LookupLocation location, const Scope& scope);
 
     ConstantValue getDefaultValueImpl() const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnpackedStructType; }
 };
 
 /// Represents the Void (or lack of a) type. This can be used as the return type of functions

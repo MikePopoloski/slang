@@ -360,31 +360,13 @@ optional<ConstantRange> Type::evaluateDimension(Compilation& compilation, const 
         return std::nullopt;
     }
 
-    BindContext context(scope, location, BindFlags::IntegralConstant);
-    auto checkVal = [&](const ExpressionSyntax& s) -> optional<int32_t> {
-        const auto& expr = Expression::bind(compilation, s, context);
-        if (!expr.constant || !expr.constant->isInteger())
-            return std::nullopt;
-
-        const SVInt& value = expr.constant->integer();
-        if (!compilation.checkNoUnknowns(value, expr.sourceRange))
-            return std::nullopt;
-
-        auto coerced = value.as<int32_t>();
-        if (!coerced) {
-            auto& diag = compilation.addError(DiagCode::DimensionOutOfRange, expr.sourceRange);
-            diag << INT32_MIN;
-            diag << INT32_MAX;
-        }
-        return coerced;
-    };
-
     const RangeSelectSyntax& range = syntax.as<RangeSelectSyntax>();
-    auto left = checkVal(range.left);
-    auto right = checkVal(range.right);
+    auto left = compilation.evalIntegerExpr(range.left, location, scope);
+    auto right = compilation.evalIntegerExpr(range.right, location, scope);
     if (!left || !right)
         return std::nullopt;
 
+    // TODO: check should include size of underlying type
     int64_t diff = *left - *right;
     diff = (diff < 0 ? -diff : diff) + 1;
     if (diff > SVInt::MAX_BITS) {
@@ -616,6 +598,66 @@ PackedArrayType::PackedArrayType(const Type& elementType, ConstantRange range) :
                  elementType.isSigned(), elementType.isFourState()),
     elementType(elementType), range(range)
 {
+}
+
+UnpackedArrayType::UnpackedArrayType(const Type& elementType, ConstantRange range) :
+    Type(SymbolKind::UnpackedArrayType, "", SourceLocation()),
+    elementType(elementType), range(range)
+{
+}
+
+const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& elementType,
+                                          LookupLocation location, const Scope& scope,
+                                          const SyntaxList<VariableDimensionSyntax>& dimensions) {
+    const Type* result = &elementType;
+    uint32_t count = dimensions.count();
+    for (uint32_t i = 0; i < count; i++) {
+        // TODO: handle other kinds of unpacked arrays
+        const VariableDimensionSyntax& dim = *dimensions[count - i - 1];
+        if (!dim.specifier || dim.specifier->kind != SyntaxKind::RangeDimensionSpecifier)
+            return compilation.getErrorType();
+
+        ConstantRange range;
+        const auto& selector = dim.specifier->as<RangeDimensionSpecifierSyntax>().selector;
+        switch (selector.kind) {
+            case SyntaxKind::BitSelect: {
+                auto left = compilation.evalIntegerExpr(selector.as<BitSelectSyntax>().expr, location, scope);
+                if (!left)
+                    return compilation.getErrorType();
+
+                if (*left <= 0) {
+                    compilation.addError(DiagCode::ValueMustBePositive, selector.sourceRange());
+                    return compilation.getErrorType();
+                }
+
+                range = { 0, *left - 1 };
+                break;
+            }
+            case SyntaxKind::SimpleRangeSelect: {
+                auto& rangeSyntax = selector.as<RangeSelectSyntax>();
+                auto left = compilation.evalIntegerExpr(rangeSyntax.left, location, scope);
+                auto right = compilation.evalIntegerExpr(rangeSyntax.right, location, scope);
+                if (!left || !right)
+                    return compilation.getErrorType();
+
+                range = { *left, *right };
+                break;
+            }
+            default: {
+                compilation.addError(DiagCode::InvalidUnpackedDimension, selector.sourceRange());
+                return compilation.getErrorType();
+            }
+        }
+
+        result = compilation.emplace<UnpackedArrayType>(*result, range);
+    }
+
+    return *result;
+}
+
+ConstantValue UnpackedArrayType::getDefaultValueImpl() const {
+    // TODO: implement this
+    THROW_UNREACHABLE;
 }
 
 bool FieldSymbol::isPacked() const {
