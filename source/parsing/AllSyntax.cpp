@@ -101,7 +101,6 @@ uint32_t SyntaxNode::getChildCount() const {
         case SyntaxKind::CycleDelay: return 2;
         case SyntaxKind::DPIImportExport: return 8;
         case SyntaxKind::DataDeclaration: return 5;
-        case SyntaxKind::DataTypeDimensionSpecifier: return 1;
         case SyntaxKind::DefParam: return 4;
         case SyntaxKind::DefParamAssignment: return 2;
         case SyntaxKind::DefaultCaseItem: return 3;
@@ -790,10 +789,6 @@ bool DataDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DataDeclaration;
 }
 
-bool DataTypeDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
-    return kind == SyntaxKind::DataTypeDimensionSpecifier;
-}
-
 bool DataTypeSyntax::isKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::BitType:
@@ -870,7 +865,6 @@ bool DelaySyntax::isKind(SyntaxKind kind) {
 
 bool DimensionSpecifierSyntax::isKind(SyntaxKind kind) {
     switch (kind) {
-        case SyntaxKind::DataTypeDimensionSpecifier:
         case SyntaxKind::QueueDimensionSpecifier:
         case SyntaxKind::RangeDimensionSpecifier:
         case SyntaxKind::WildcardDimensionSpecifier:
@@ -2512,10 +2506,6 @@ DPIImportExportSyntax& SyntaxFactory::dPIImportExport(SyntaxList<AttributeInstan
 
 DataDeclarationSyntax& SyntaxFactory::dataDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi) {
     return *alloc.emplace<DataDeclarationSyntax>(attributes, modifiers, type, declarators, semi);
-}
-
-DataTypeDimensionSpecifierSyntax& SyntaxFactory::dataTypeDimensionSpecifier(DataTypeSyntax& type) {
-    return *alloc.emplace<DataTypeDimensionSpecifierSyntax>(type);
 }
 
 DefParamAssignmentSyntax& SyntaxFactory::defParamAssignment(NameSyntax& name, EqualsValueClauseSyntax* setter) {

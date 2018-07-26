@@ -1948,27 +1948,6 @@ protected:
     }
 };
 
-struct DataTypeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
-    DataTypeSyntax& type;
-
-    DataTypeDimensionSpecifierSyntax(DataTypeSyntax& type) :
-        DimensionSpecifierSyntax(SyntaxKind::DataTypeDimensionSpecifier), type(type)
-    {}
-
-    DataTypeDimensionSpecifierSyntax(const DataTypeDimensionSpecifierSyntax&) = delete;
-    DataTypeDimensionSpecifierSyntax& operator=(const DataTypeDimensionSpecifierSyntax&) = delete;
-
-    static bool isKind(SyntaxKind kind);
-
-protected:
-    TokenOrSyntax getChild(uint32_t index) const override final {
-        switch (index) {
-            case 0: return &type;
-            default: return nullptr;
-        }
-    }
-};
-
 struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
     Token star;
 
@@ -6945,7 +6924,6 @@ public:
     CoverpointSyntax& coverpoint(SyntaxList<AttributeInstanceSyntax> attributes, DataTypeSyntax* type, NamedLabelSyntax* label, Token coverpoint, ExpressionSyntax& expr, Token openBrace, SyntaxList<MemberSyntax> members, Token closeBrace, Token emptySemi);
     DPIImportExportSyntax& dPIImportExport(SyntaxList<AttributeInstanceSyntax> attributes, Token keyword, Token stringLiteral, Token property, Token name, Token equals, FunctionPrototypeSyntax& method, Token semi);
     DataDeclarationSyntax& dataDeclaration(SyntaxList<AttributeInstanceSyntax> attributes, TokenList modifiers, DataTypeSyntax& type, SeparatedSyntaxList<VariableDeclaratorSyntax> declarators, Token semi);
-    DataTypeDimensionSpecifierSyntax& dataTypeDimensionSpecifier(DataTypeSyntax& type);
     DefParamAssignmentSyntax& defParamAssignment(NameSyntax& name, EqualsValueClauseSyntax* setter);
     DefParamSyntax& defParam(SyntaxList<AttributeInstanceSyntax> attributes, Token defparam, SeparatedSyntaxList<DefParamAssignmentSyntax> assignments, Token semi);
     DefaultCaseItemSyntax& defaultCaseItem(Token defaultKeyword, Token colon, SyntaxNode& clause);
@@ -7242,7 +7220,6 @@ void dispatchVisitor(T& v, const SyntaxNode* node) {
         case SyntaxKind::CycleDelay: SyntaxNode::dispatch(v, *(const DelaySyntax*)node); break;
         case SyntaxKind::DPIImportExport: SyntaxNode::dispatch(v, *(const DPIImportExportSyntax*)node); break;
         case SyntaxKind::DataDeclaration: SyntaxNode::dispatch(v, *(const DataDeclarationSyntax*)node); break;
-        case SyntaxKind::DataTypeDimensionSpecifier: SyntaxNode::dispatch(v, *(const DataTypeDimensionSpecifierSyntax*)node); break;
         case SyntaxKind::DefParam: SyntaxNode::dispatch(v, *(const DefParamSyntax*)node); break;
         case SyntaxKind::DefParamAssignment: SyntaxNode::dispatch(v, *(const DefParamAssignmentSyntax*)node); break;
         case SyntaxKind::DefaultCaseItem: SyntaxNode::dispatch(v, *(const DefaultCaseItemSyntax*)node); break;

@@ -449,9 +449,6 @@ empty
 RangeDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=RangeDimensionSpecifier
 SelectorSyntax selector
 
-DataTypeDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=DataTypeDimensionSpecifier
-DataTypeSyntax type
-
 WildcardDimensionSpecifierSyntax base=DimensionSpecifierSyntax kind=WildcardDimensionSpecifier
 token star
 
