@@ -555,8 +555,6 @@ public:
     /// The kind of syntax node.
     SyntaxKind kind;
 
-    SyntaxNode(SyntaxKind kind) : kind(kind) {}
-
     /// Print the node and all of its children to a string.
     std::string toString() const;
 
@@ -588,21 +586,21 @@ public:
         return *static_cast<const T*>(this);
     }
 
-    HAS_METHOD_TRAIT(visit);
-
-    template<typename C, typename... Args>
-    static std::enable_if_t<has_visit_v<C, void, Args...>> dispatch(C& c, Args&&... args) {
-        c.visit(std::forward<Args>(args)...);
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) {
+        return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);
     }
 
-    template<typename C, typename... Args>
-    static std::enable_if_t<!has_visit_v<C, void, Args...>> dispatch(C& c, Args&&... args) {
-        c.visitDefault(std::forward<Args>(args)...);
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) const {
+        return detail::visitSyntaxNode(this, visitor, std::forward<Args>(args)...);
     }
 
     static bool isKind(SyntaxKind) { return true; }
 
 protected:
+    explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
+
     virtual TokenOrSyntax getChild(uint32_t) const = 0;
 };
 

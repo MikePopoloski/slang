@@ -15,16 +15,22 @@ namespace slang {
 /// node types you want to handle.
 template<typename TDerived>
 class SyntaxVisitor {
+    HAS_METHOD_TRAIT(handle);
+
 public:
-    void visitNode(const SyntaxNode* node) {
-        dispatchVisitor(*static_cast<TDerived*>(this), node);
+    template<typename T>
+    void visit(const T& t) {
+        if constexpr (has_handle_v<TDerived, void, T>)
+            static_cast<TDerived*>(this)->handle(t);
+        else
+            visitDefault(t);
     }
 
     void visitDefault(const SyntaxNode& node) {
         for (uint32_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (child)
-                visitNode(node.childNode(i));
+                child->visit(*static_cast<TDerived*>(this));
             else {
                 auto token = node.childToken(i);
                 if (token)
