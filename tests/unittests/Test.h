@@ -35,8 +35,15 @@ using namespace slang;
 
 #define NO_COMPILATION_ERRORS do {\
     Diagnostics diags = compilation.getAllDiagnostics(); \
-    if (!diags.empty()) FAIL_CHECK(DiagnosticWriter(SyntaxTree::getDefaultSourceManager()).report(diags)); \
+    if (!diags.empty()) FAIL_CHECK(report(diags)); \
 } while (0)
+
+inline std::string report(Diagnostics& diags) {
+    if (diags.empty())
+        return "";
+
+    return "\n" + DiagnosticWriter{ SyntaxTree::getDefaultSourceManager() }.report(diags);
+}
 
 inline std::string findTestDir() {
     auto path = fs::current_path();

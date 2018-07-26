@@ -323,7 +323,6 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     Diagnostics diags = compilation.getAllDiagnostics();
-    std::string str = DiagnosticWriter{ SyntaxTree::getDefaultSourceManager() }.report(diags);
     // TODO: $bits() function should check argument even though it's not evaluated
     //REQUIRE(diags.size() == 5);
     REQUIRE(diags.size() == 4);

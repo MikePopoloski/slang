@@ -349,8 +349,8 @@ const Type& Compilation::getType(const DataTypeSyntax& node, LookupLocation loca
     return result;
 }
 
-const Type& Compilation::getType(const Type& elementType, LookupLocation location, const Scope& scope,
-                                 const SyntaxList<VariableDimensionSyntax>& dimensions) {
+const Type& Compilation::getType(const Type& elementType, const SyntaxList<VariableDimensionSyntax>& dimensions,
+                                 LookupLocation location, const Scope& scope) {
     return UnpackedArrayType::fromSyntax(*this, elementType, location, scope, dimensions);
 }
 

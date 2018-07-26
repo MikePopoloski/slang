@@ -202,10 +202,7 @@ endmodule
     CHECK(diags[1].code == DiagCode::UnresolvedForwardTypedef);
     CHECK(diags[2].code == DiagCode::ForwardTypedefDoesNotMatch);
 
-    std::string msg = DiagnosticWriter{*compilation.getSourceManager()}.report(diags);
-    msg = "\n" + msg;
-
-    CHECK(msg == R"(
+    CHECK(report(diags) == R"(
 source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
     typedef enum e1_t;
                  ^
@@ -218,5 +215,73 @@ source:9:20: error: forward typedef basic type 'struct' does not match declarati
 source:12:26: note: declared here
     typedef enum { SDF } s1_t;
                          ^
+)");
+}
+
+TEST_CASE("Unpacked arrays") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top(logic f[3], g, h[0:1]);
+
+endmodule
+)");
+
+    Compilation compilation;
+    const auto& instance = evalModule(tree, compilation);
+
+    const auto& fType = instance.find<VariableSymbol>("f").getType();
+    CHECK(fType.isUnpackedArray());
+    CHECK(fType.as<UnpackedArrayType>().range == ConstantRange { 0, 2 });
+
+    const auto& gType = instance.find<VariableSymbol>("g").getType();
+    CHECK(!gType.isUnpackedArray());
+
+    const auto& hType = instance.find<VariableSymbol>("h").getType();
+    CHECK(hType.isUnpackedArray());
+    CHECK(hType.as<UnpackedArrayType>().range == ConstantRange{ 0, 1 });
+
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Invalid unpacked dimensions") {
+    auto tree = SyntaxTree::fromText(R"(
+module Top(logic f[3'b1x0],
+           g[-1],
+           h[9999999999999],
+           i[0]);
+
+    struct packed { logic j[3]; } foo;
+
+endmodule
+)", "source");
+
+    Compilation compilation;
+    evalModule(tree, compilation);
+
+    Diagnostics diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == DiagCode::ValueMustNotBeUnknown);
+    CHECK(diags[1].code == DiagCode::ValueMustBePositive);
+    CHECK(diags[2].code == DiagCode::ValueOutOfRange);
+    CHECK(diags[3].code == DiagCode::ValueMustBePositive);
+    CHECK(diags[4].code == DiagCode::PackedMemberNotIntegral);
+
+    // TODO: reporting for value out of range is bad
+    // TODO: report type names correctly
+    CHECK(report(diags) == R"(
+source:2:20: error: value must not have any unknown bits
+module Top(logic f[3'b1x0],
+                   ^~~~~~
+source:3:14: error: value must be positive
+           g[-1],
+             ^~
+source:4:14: error: 1316134911 is out of allowed range (-2147483648 to 2147483647)
+           h[9999999999999],
+             ^~~~~~~~~~~~~
+source:5:14: error: value must be positive
+           i[0]);
+             ^
+source:7:27: error: packed members must be of integral type (type is )
+    struct packed { logic j[3]; } foo;
+                          ^~~~
 )");
 }

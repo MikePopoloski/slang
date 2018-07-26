@@ -316,12 +316,16 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
                 }
             }
 
+            // Unpacked dimensions are not inherited, so make sure not to set port.type with them.
+            const Type* finalType = &comp.getType(*port.type, syntax.declarator.dimensions,
+                                                  LookupLocation::max, *this);
+
             // Create a new symbol to represent this port internally to the instance.
             // TODO: interconnect ports don't have a datatype
             // TODO: variable lifetime
             auto variable = comp.emplace<VariableSymbol>(port.name, syntax.declarator.name.location());
             port.symbol = variable;
-            variable->type = port.type;
+            variable->type = finalType;
             addMember(*variable);
 
             // Initializers here are evaluated in the context of the port list and must always be a constant value.
@@ -334,11 +338,15 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
             port.kind = PortKind::Net;
             setDirectionAndType(header);
 
+            // Unpacked dimensions are not inherited, so make sure not to set port.type with them.
+            const Type* finalType = &comp.getType(*port.type, syntax.declarator.dimensions,
+                                                  LookupLocation::max, *this);
+
             // Create a new symbol to represent this port internally to the instance.
             // TODO: net type
             auto net = comp.emplace<NetSymbol>(port.name, syntax.declarator.name.location());
             port.symbol = net;
-            net->dataType = port.type;
+            net->dataType = finalType;
             addMember(*net);
 
             break;

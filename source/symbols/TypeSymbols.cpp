@@ -688,7 +688,9 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
         const Type& type = compilation.getType(member->type, location, scope);
         isFourState |= type.isFourState();
 
+        bool issuedError = false;
         if (!type.isIntegral() && !type.isError()) {
+            issuedError = true;
             auto& diag = compilation.addError(DiagCode::PackedMemberNotIntegral,
                                               member->type.getFirstToken().location());
             diag << type;
@@ -700,6 +702,15 @@ const Type& PackedStructType::fromSyntax(Compilation& compilation, const StructU
                                                              decl->name.location(), bitWidth);
             members.append(variable);
             variable->type = type;
+
+            // Unpacked arrays are disallowed in packed structs.
+            if (const Type& dimType = compilation.getType(type, decl->dimensions, location, scope);
+                dimType.isUnpackedArray() && !issuedError) {
+
+                auto& diag = compilation.addError(DiagCode::PackedMemberNotIntegral, decl->name.range());
+                diag << dimType;
+                diag << decl->dimensions.sourceRange();
+            }
 
             bitWidth += type.getBitWidth();
 
@@ -744,7 +755,7 @@ const Type& UnpackedStructType::fromSyntax(Compilation& compilation, const Struc
 
             fieldIndex++;
 
-            variable->type = type;
+            variable->type = compilation.getType(type, decl->dimensions, location, scope);
             if (decl->initializer)
                 variable->initializer = decl->initializer->expr;
         }

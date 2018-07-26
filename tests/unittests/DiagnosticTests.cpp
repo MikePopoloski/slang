@@ -1,9 +1,5 @@
 #include "Test.h"
 
-std::string getDiagnostic(size_t i) {
-    return DiagnosticWriter(getSourceManager()).report(diagnostics[i]);
-}
-
 TEST_CASE("Diagnostic Line Number", "[diagnostic]") {
     auto& text = "`include \"foofile\"\nident";
 
@@ -14,7 +10,7 @@ TEST_CASE("Diagnostic Line Number", "[diagnostic]") {
     CHECK(token.kind == TokenKind::Identifier);
     CHECK(token.valueText() == "ident");
     CHECK(diagnostics.size() == 1);
-    std::string message = getDiagnostic(0);
+    std::string message = to_string(diagnostics[0]);
     int bufNum, line, col;
     sscanf(message.c_str(), "<unnamed_buffer%d>:%d:%d", &bufNum, &line, &col);
     CHECK(line == 1);
@@ -29,7 +25,7 @@ TEST_CASE("Diagnostic reporting with `line", "[diagnostic]") {
 
     lexToken(text);
     CHECK(diagnostics.size() == 1);
-    std::string message = getDiagnostic(0);
+    std::string message = to_string(diagnostics[0]);
     int line, col;
     int matches = sscanf(message.c_str(), "foo.svh:%d:%d", &line, &col);
     REQUIRE(matches == 2);

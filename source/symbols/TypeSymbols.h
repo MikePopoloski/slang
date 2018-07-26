@@ -88,6 +88,12 @@ public:
     /// Indicates whether this is a numeric type, which includes all integral and floating types.
     bool isNumeric() const { return isIntegral() || isFloating(); }
 
+    /// Indicates whether this is a packed array type.
+    bool isPackedArray() const { return getCanonicalType().kind == SymbolKind::PackedArrayType; }
+
+    /// Indicates whether this is an unpacked array type.
+    bool isUnpackedArray() const { return getCanonicalType().kind == SymbolKind::UnpackedArrayType; }
+
     /// Indicates whether this is an enum type.
     bool isEnum() const { return getCanonicalType().kind == SymbolKind::EnumType; }
 
