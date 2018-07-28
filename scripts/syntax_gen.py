@@ -98,7 +98,10 @@ namespace slang {
 	cppf.write('uint32_t SyntaxNode::getChildCount() const {\n')
 	cppf.write('    switch (kind) {\n')
 	cppf.write('        case SyntaxKind::Unknown: return 0;\n')
-	cppf.write('        case SyntaxKind::List: return ((const SyntaxListBase*)this)->getChildCount();\n')
+	cppf.write('        case SyntaxKind::SyntaxList:\n')
+	cppf.write('        case SyntaxKind::TokenList:\n')
+	cppf.write('        case SyntaxKind::SeparatedList:\n')
+	cppf.write('            return ((const SyntaxListBase*)this)->getChildCount();\n')
 
 	for k,v in sorted(kindmap.items()):
 		count = len(alltypes[v].combinedMembers)
@@ -200,7 +203,10 @@ namespace slang {
 	outf.write('    static constexpr bool isConst = std::is_const_v<TNode>;')
 	outf.write('    switch (node->kind) {\n')
 	outf.write('        case SyntaxKind::Unknown: return visitor.visitInvalid(*node, std::forward<Args>(args)...);\n')
-	outf.write('        case SyntaxKind::List: return visitor.visit(*static_cast<std::conditional_t<isConst, const SyntaxListBase*, SyntaxListBase*>>(node), std::forward<Args>(args)...);\n')
+	outf.write('        case SyntaxKind::SyntaxList:\n')
+	outf.write('        case SyntaxKind::TokenList:\n')
+	outf.write('        case SyntaxKind::SeparatedList:\n')
+	outf.write('            return visitor.visit(*static_cast<std::conditional_t<isConst, const SyntaxListBase*, SyntaxListBase*>>(node), std::forward<Args>(args)...);\n')
 
 	for k,v in sorted(kindmap.items()):
 		outf.write('        case SyntaxKind::{}: return visitor.visit(*static_cast<'.format(k))

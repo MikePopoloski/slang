@@ -20,7 +20,7 @@ void StatementBodiedScope::setBody(const SyntaxList<SyntaxNode>& syntax) {
 }
 
 void StatementBodiedScope::bindBody(const SyntaxNode& syntax) {
-    if (syntax.kind == SyntaxKind::List)
+    if (syntax.kind == SyntaxKind::SyntaxList)
         setBody(&bindStatementList((const SyntaxList<SyntaxNode>&)syntax));
     else
         setBody(&bindStatement(syntax.as<StatementSyntax>(), BindContext(*this, LookupLocation::max)));

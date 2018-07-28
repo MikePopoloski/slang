@@ -4916,7 +4916,10 @@ template<typename TNode, typename TVisitor, typename... Args>
 decltype(auto) visitSyntaxNode(TNode* node, TVisitor& visitor, Args&&... args) {
     static constexpr bool isConst = std::is_const_v<TNode>;    switch (node->kind) {
         case SyntaxKind::Unknown: return visitor.visitInvalid(*node, std::forward<Args>(args)...);
-        case SyntaxKind::List: return visitor.visit(*static_cast<std::conditional_t<isConst, const SyntaxListBase*, SyntaxListBase*>>(node), std::forward<Args>(args)...);
+        case SyntaxKind::SyntaxList:
+        case SyntaxKind::TokenList:
+        case SyntaxKind::SeparatedList:
+            return visitor.visit(*static_cast<std::conditional_t<isConst, const SyntaxListBase*, SyntaxListBase*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::AcceptOnPropertyExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const PrefixUnaryExpressionSyntax*, PrefixUnaryExpressionSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::ActionBlock: return visitor.visit(*static_cast<std::conditional_t<isConst, const ActionBlockSyntax*, ActionBlockSyntax*>>(node), std::forward<Args>(args)...);
         case SyntaxKind::AddAssignmentExpression: return visitor.visit(*static_cast<std::conditional_t<isConst, const BinaryExpressionSyntax*, BinaryExpressionSyntax*>>(node), std::forward<Args>(args)...);

@@ -14,7 +14,10 @@ namespace slang {
 uint32_t SyntaxNode::getChildCount() const {
     switch (kind) {
         case SyntaxKind::Unknown: return 0;
-        case SyntaxKind::List: return ((const SyntaxListBase*)this)->getChildCount();
+        case SyntaxKind::SyntaxList:
+        case SyntaxKind::TokenList:
+        case SyntaxKind::SeparatedList:
+            return ((const SyntaxListBase*)this)->getChildCount();
         case SyntaxKind::AcceptOnPropertyExpression: return 3;
         case SyntaxKind::ActionBlock: return 2;
         case SyntaxKind::AddAssignmentExpression: return 4;

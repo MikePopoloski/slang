@@ -150,6 +150,8 @@ public:
     uint32_t getChildCount() const { return childCount; }
     virtual TokenOrSyntax getChild(uint32_t index) const = 0;
 
+    static bool isKind(SyntaxKind kind);
+
 protected:
     SyntaxListBase(SyntaxKind kind, uint32_t childCount) :
         SyntaxNode(kind), childCount(childCount) {}
@@ -228,7 +230,9 @@ private:
 
 enum class SyntaxKind : uint16_t {
     Unknown,
-    List,
+    SyntaxList,
+    TokenList,
+    SeparatedList,
 
     // directives
     BeginKeywordsDirective,
@@ -685,16 +689,16 @@ enum class SyntaxKind : uint16_t {
 
 template<typename T>
 SyntaxList<T>::SyntaxList(span<T*> elements) :
-    SyntaxListBase(SyntaxKind::List, (uint32_t)elements.size()),
+    SyntaxListBase(SyntaxKind::SyntaxList, (uint32_t)elements.size()),
     span<T*>(elements) {}
 
 inline TokenList::TokenList(span<Token> elements) :
-    SyntaxListBase(SyntaxKind::List, (uint32_t)elements.size()),
+    SyntaxListBase(SyntaxKind::TokenList, (uint32_t)elements.size()),
     span<Token>(elements) {}
 
 template<typename T>
 SeparatedSyntaxList<T>::SeparatedSyntaxList(span<TokenOrSyntax> elements) :
-    SyntaxListBase(SyntaxKind::List, (uint32_t)elements.size()),
+    SyntaxListBase(SyntaxKind::SeparatedList, (uint32_t)elements.size()),
     elements(elements) {}
 
 }

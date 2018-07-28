@@ -91,4 +91,15 @@ Token SyntaxNode::childToken(uint32_t index) const {
     return child.token;
 }
 
+bool SyntaxListBase::isKind(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::SyntaxList:
+        case SyntaxKind::TokenList:
+        case SyntaxKind::SeparatedList:
+            return true;
+        default:
+            return false;
+    }
+}
+
 }
