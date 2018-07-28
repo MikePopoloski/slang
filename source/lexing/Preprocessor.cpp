@@ -1303,7 +1303,7 @@ MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     return pp.alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef);
 }
 
-span<Token const> Preprocessor::MacroParser::parseTokenList() {
+span<Token> Preprocessor::MacroParser::parseTokenList() {
     // comma and right parenthesis only end the default token list if they are
     // not inside a nested pair of (), [], or {}
     // otherwise, keep swallowing tokens as part of the default

@@ -222,7 +222,7 @@ private:
 
         MacroActualArgumentSyntax* parseActualArgument();
         MacroFormalArgumentSyntax* parseFormalArgument();
-        span<Token const> parseTokenList();
+        span<Token> parseTokenList();
 
         Token peek();
         Token consume();

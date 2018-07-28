@@ -616,10 +616,7 @@ protected:
 template<typename T>
 class SyntaxList : public SyntaxListBase {
 public:
-    SyntaxList(nullptr_t) : SyntaxList(span<T* const>()) {}
-    SyntaxList(span<T* const> elements) :
-        SyntaxListBase((uint32_t)elements.size()),
-        elements(elements) {}
+    SyntaxList(nullptr_t) : SyntaxList(span<T*>()) {}
 
     SyntaxList(span<T*> elements) :
         SyntaxListBase((uint32_t)elements.size()),
@@ -630,6 +627,7 @@ public:
     typename span<T* const>::const_iterator begin() const { return elements.begin(); }
     typename span<T* const>::const_iterator end() const { return elements.end(); }
 
+    T* operator[](uint32_t index) { return elements[index]; }
     const T* operator[](uint32_t index) const { return elements[index]; }
 
 private:
@@ -640,10 +638,7 @@ private:
 
 class TokenList : public SyntaxListBase {
 public:
-    TokenList(nullptr_t) : TokenList(span<Token const>()) {}
-    TokenList(span<Token const> elements) :
-        SyntaxListBase((uint32_t)elements.size()),
-        elements(elements) {}
+    TokenList(nullptr_t) : TokenList(span<Token>()) {}
 
     TokenList(span<Token> elements) :
         SyntaxListBase((uint32_t)elements.size()),
@@ -689,10 +684,7 @@ public:
         uint32_t index;
     };
 
-    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax const>()) {}
-    SeparatedSyntaxList(span<TokenOrSyntax const> elements) :
-        SyntaxListBase((uint32_t)elements.size()),
-        elements(elements) {}
+    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>()) {}
 
     SeparatedSyntaxList(span<TokenOrSyntax> elements) :
         SyntaxListBase((uint32_t)elements.size()),

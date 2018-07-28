@@ -108,7 +108,7 @@ protected:
         TokenKind closeKind,
         TokenKind separatorKind,
         Token& openToken,
-        span<TokenOrSyntax const>& list,
+        span<TokenOrSyntax>& list,
         Token& closeToken,
         DiagCode code,
         TParserFunc&& parseItem
@@ -116,7 +116,7 @@ protected:
         openToken = expect(openKind);
         if (openToken.isMissing()) {
             closeToken = Token::createMissing(alloc, closeKind, openToken.location());
-            list = span<TokenOrSyntax const>();
+            list = span<TokenOrSyntax>();
             return;
         }
 
