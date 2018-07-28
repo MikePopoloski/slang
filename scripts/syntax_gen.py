@@ -5,14 +5,14 @@ import os
 
 class TypeInfo:
 	def __init__(self, processedMembers, members, pointerMembers, final,
-				 constructorArgs, base, memberCount):
+				 constructorArgs, base, combinedMembers):
 		self.processedMembers = processedMembers
 		self.members = members
 		self.pointerMembers = pointerMembers
 		self.final = final
 		self.constructorArgs = constructorArgs
 		self.base = base
-		self.memberCount = memberCount
+		self.combinedMembers = combinedMembers
 
 def main():
 	ourdir = os.path.dirname(os.path.realpath(__file__))
@@ -61,7 +61,7 @@ namespace slang {
 	alltypes = {}
 	kindmap = {}
 
-	alltypes['SyntaxNode'] = TypeInfo(None, None, None, '', None, None, 0)
+	alltypes['SyntaxNode'] = TypeInfo(None, None, None, '', None, None, [])
 
 	for line in [x.strip('\n') for x in inf]:
 		if line.startswith('//'):
@@ -101,7 +101,7 @@ namespace slang {
 	cppf.write('        case SyntaxKind::List: return ((const SyntaxListBase*)this)->getChildCount();\n')
 
 	for k,v in sorted(kindmap.items()):
-		count = alltypes[v].memberCount
+		count = len(alltypes[v].combinedMembers)
 		cppf.write('        case SyntaxKind::{}: return {};\n'.format(k, count))
 
 	cppf.write('    }\n')
@@ -147,6 +147,25 @@ namespace slang {
 			cppf.write('    }\n')
 
 		cppf.write('}\n\n')
+
+		if len(v.members) != 0 or v.final != '':
+			cppf.write('TokenOrSyntax {}::getChild(uint32_t index) const {{\n'.format(k))
+			if len(v.combinedMembers) > 0:
+				cppf.write('    switch (index) {\n')
+
+				index = 0
+				for m in v.combinedMembers:
+					addr = '&' if m[1] in v.pointerMembers else ''
+					cppf.write('        case {}: return {}{};\n'.format(index, addr, m[1]))
+					index += 1
+
+				cppf.write('        default: return nullptr;\n')
+				cppf.write('    }\n')
+			else:
+				cppf.write('    (void)index;\n')
+				cppf.write('    return nullptr;\n')
+
+			cppf.write('}\n\n')
 
 	# Write out syntax factory methods
 	outf.write('class SyntaxFactory {\n')
@@ -290,7 +309,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
 	constructorArgs = '{}{}'.format(kindArg, ', '.join(processed_members))
 	alltypes[name] = TypeInfo(processed_members, members, pointerMembers, final,
-							  constructorArgs, base, len(combined))
+							  constructorArgs, base, combined)
 
 	outf.write('\n')
 	outf.write('    {}({}) :\n'.format(name, constructorArgs))
@@ -305,24 +324,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
 		outf.write('    static bool isKind(SyntaxKind kind);\n\n')
 
-		outf.write('    TokenOrSyntax getChild(uint32_t index) const {\n')
-
-		if len(combined) > 0:
-			outf.write('        switch (index) {\n')
-
-			index = 0
-			for m in combined:
-				addr = '&' if m[1] in pointerMembers else ''
-				outf.write('            case {}: return {}{};\n'.format(index, addr, m[1]))
-				index += 1
-
-			outf.write('            default: return nullptr;\n')
-			outf.write('        }\n')
-		else:
-			outf.write('        (void)index;\n')
-			outf.write('        return nullptr;\n')
-
-		outf.write('    }\n')
+		outf.write('    TokenOrSyntax getChild(uint32_t index) const;\n')
 
 	outf.write('};\n\n')
 

@@ -48,13 +48,7 @@ struct EqualsValueClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return equals;
-            case 1: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct AttributeSpecSyntax : public SyntaxNode {
@@ -70,13 +64,7 @@ struct AttributeSpecSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return name;
-            case 1: return value;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct AttributeInstanceSyntax : public SyntaxNode {
@@ -93,14 +81,7 @@ struct AttributeInstanceSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &specs;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NamedLabelSyntax : public SyntaxNode {
@@ -116,13 +97,7 @@ struct NamedLabelSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return name;
-            case 1: return colon;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StatementSyntax : public SyntaxNode {
@@ -138,13 +113,7 @@ struct StatementSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MemberSyntax : public SyntaxNode {
@@ -159,12 +128,7 @@ struct MemberSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- ARGUMENTS -----
@@ -189,10 +153,7 @@ struct EmptyArgumentSyntax : public ArgumentSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        (void)index;
-        return nullptr;
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct OrderedArgumentSyntax : public ArgumentSyntax {
@@ -207,12 +168,7 @@ struct OrderedArgumentSyntax : public ArgumentSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NamedArgumentSyntax : public ArgumentSyntax {
@@ -231,16 +187,7 @@ struct NamedArgumentSyntax : public ArgumentSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return dot;
-            case 1: return name;
-            case 2: return openParen;
-            case 3: return expr;
-            case 4: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ArgumentListSyntax : public SyntaxNode {
@@ -257,14 +204,7 @@ struct ArgumentListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &parameters;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ParameterValueAssignmentSyntax : public SyntaxNode {
@@ -280,13 +220,7 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return hash;
-            case 1: return &parameters;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- PATTERNS -----
@@ -313,13 +247,7 @@ struct VariablePatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return dot;
-            case 1: return variableName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct WildcardPatternSyntax : public PatternSyntax {
@@ -334,12 +262,7 @@ struct WildcardPatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return dotStar;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExpressionPatternSyntax : public PatternSyntax {
@@ -354,12 +277,7 @@ struct ExpressionPatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TaggedPatternSyntax : public PatternSyntax {
@@ -376,14 +294,7 @@ struct TaggedPatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return tagged;
-            case 1: return memberName;
-            case 2: return pattern;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StructurePatternMemberSyntax : public SyntaxNode {
@@ -407,12 +318,7 @@ struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &pattern;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
@@ -429,14 +335,7 @@ struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return name;
-            case 1: return colon;
-            case 2: return &pattern;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StructurePatternSyntax : public PatternSyntax {
@@ -453,14 +352,7 @@ struct StructurePatternSyntax : public PatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return &members;
-            case 2: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MatchesClauseSyntax : public SyntaxNode {
@@ -476,13 +368,7 @@ struct MatchesClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return matchesKeyword;
-            case 1: return &pattern;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConditionalPatternSyntax : public SyntaxNode {
@@ -498,13 +384,7 @@ struct ConditionalPatternSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            case 1: return matchesClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConditionalPredicateSyntax : public SyntaxNode {
@@ -519,12 +399,7 @@ struct ConditionalPredicateSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &conditions;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct AssignmentPatternSyntax : public SyntaxNode {
@@ -550,14 +425,7 @@ struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return &items;
-            case 2: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct AssignmentPatternItemSyntax : public SyntaxNode {
@@ -574,14 +442,7 @@ struct AssignmentPatternItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &key;
-            case 1: return colon;
-            case 2: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
@@ -598,14 +459,7 @@ struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return &items;
-            case 2: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
@@ -625,17 +479,7 @@ struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return &countExpr;
-            case 2: return innerOpenBrace;
-            case 3: return &items;
-            case 4: return innerCloseBrace;
-            case 5: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- EXPRESSIONS -----
@@ -652,12 +496,7 @@ struct BadExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PrimaryExpressionSyntax : public ExpressionSyntax {
@@ -683,14 +522,7 @@ struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return operatorToken;
-            case 1: return &attributes;
-            case 2: return &operand;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
@@ -707,14 +539,7 @@ struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &operand;
-            case 1: return &attributes;
-            case 2: return operatorToken;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct BinaryExpressionSyntax : public ExpressionSyntax {
@@ -732,15 +557,7 @@ struct BinaryExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return operatorToken;
-            case 2: return &attributes;
-            case 3: return &right;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
@@ -759,16 +576,7 @@ struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &min;
-            case 1: return colon1;
-            case 2: return &typ;
-            case 3: return colon2;
-            case 4: return &max;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
@@ -785,14 +593,7 @@ struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return tagged;
-            case 1: return member;
-            case 2: return expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct OpenRangeListSyntax : public SyntaxNode {
@@ -809,14 +610,7 @@ struct OpenRangeListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return &valueRanges;
-            case 2: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct InsideExpressionSyntax : public ExpressionSyntax {
@@ -833,14 +627,7 @@ struct InsideExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            case 1: return inside;
-            case 2: return &ranges;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConditionalExpressionSyntax : public ExpressionSyntax {
@@ -860,17 +647,7 @@ struct ConditionalExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &predicate;
-            case 1: return question;
-            case 2: return &attributes;
-            case 3: return &left;
-            case 4: return colon;
-            case 5: return &right;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
@@ -886,13 +663,7 @@ struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return type;
-            case 1: return &pattern;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- SELECTORS -----
@@ -918,12 +689,7 @@ struct BitSelectSyntax : public SelectorSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct RangeSelectSyntax : public SelectorSyntax {
@@ -940,14 +706,7 @@ struct RangeSelectSyntax : public SelectorSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return range;
-            case 2: return &right;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ElementSelectSyntax : public ExpressionSyntax {
@@ -964,14 +723,7 @@ struct ElementSelectSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBracket;
-            case 1: return selector;
-            case 2: return closeBracket;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- NAMES -----
@@ -997,12 +749,7 @@ struct IdentifierNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return identifier;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct IdentifierSelectNameSyntax : public NameSyntax {
@@ -1018,13 +765,7 @@ struct IdentifierSelectNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return identifier;
-            case 1: return &selectors;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct EmptyIdentifierNameSyntax : public NameSyntax {
@@ -1038,10 +779,7 @@ struct EmptyIdentifierNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        (void)index;
-        return nullptr;
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct KeywordNameSyntax : public NameSyntax {
@@ -1056,12 +794,7 @@ struct KeywordNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClassNameSyntax : public NameSyntax {
@@ -1077,13 +810,7 @@ struct ClassNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return identifier;
-            case 1: return &parameters;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ScopedNameSyntax : public NameSyntax {
@@ -1100,14 +827,7 @@ struct ScopedNameSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return separator;
-            case 2: return &right;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClassScopeSyntax : public NameSyntax {
@@ -1123,13 +843,7 @@ struct ClassScopeSyntax : public NameSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return separator;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- PRIMARY EXPRESSIONS -----
@@ -1146,12 +860,7 @@ struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return literal;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
@@ -1168,14 +877,7 @@ struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return size;
-            case 1: return base;
-            case 2: return value;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
@@ -1191,13 +893,7 @@ struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -1214,14 +910,7 @@ struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return &expressions;
-            case 2: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -1239,15 +928,7 @@ struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return &expression;
-            case 2: return &concatenation;
-            case 3: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StreamExpressionWithRange : public SyntaxNode {
@@ -1263,13 +944,7 @@ struct StreamExpressionWithRange : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return withKeyword;
-            case 1: return &range;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StreamExpressionSyntax : public SyntaxNode {
@@ -1285,13 +960,7 @@ struct StreamExpressionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expression;
-            case 1: return withRange;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -1312,18 +981,7 @@ struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return operatorToken;
-            case 2: return sliceSize;
-            case 3: return innerOpenBrace;
-            case 4: return &expressions;
-            case 5: return innerCloseBrace;
-            case 6: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
@@ -1340,14 +998,7 @@ struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &expression;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NewClassExpressionSyntax : public ExpressionSyntax {
@@ -1364,14 +1015,7 @@ struct NewClassExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return classScope;
-            case 1: return newKeyword;
-            case 2: return arguments;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NewArrayExpressionSyntax : public ExpressionSyntax {
@@ -1390,16 +1034,7 @@ struct NewArrayExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return newKeyword;
-            case 1: return openBracket;
-            case 2: return &sizeExpr;
-            case 3: return closeBracket;
-            case 4: return initializer;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NewExpressionSyntax : public ExpressionSyntax {
@@ -1415,13 +1050,7 @@ struct NewExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return newKeyword;
-            case 1: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- POSTFIX EXPRESSIONS -----
@@ -1439,13 +1068,7 @@ struct ElementSelectExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return &select;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MemberAccessExpressionSyntax : public ExpressionSyntax {
@@ -1462,14 +1085,7 @@ struct MemberAccessExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return dot;
-            case 2: return name;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct InvocationExpressionSyntax : public ExpressionSyntax {
@@ -1486,14 +1102,7 @@ struct InvocationExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return &attributes;
-            case 2: return arguments;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CastExpressionSyntax : public ExpressionSyntax {
@@ -1510,14 +1119,7 @@ struct CastExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return apostrophe;
-            case 2: return &right;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct SignedCastExpressionSyntax : public ExpressionSyntax {
@@ -1534,14 +1136,7 @@ struct SignedCastExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return signing;
-            case 1: return apostrophe;
-            case 2: return &inner;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- TIMING CONTROL -----
@@ -1568,13 +1163,7 @@ struct DelaySyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return hash;
-            case 1: return &delayValue;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct EventControlSyntax : public TimingControlSyntax {
@@ -1590,13 +1179,7 @@ struct EventControlSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return at;
-            case 1: return &eventName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct EventExpressionSyntax : public SyntaxNode {
@@ -1621,13 +1204,7 @@ struct SignalEventExpressionSyntax : public EventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return edge;
-            case 1: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
@@ -1644,14 +1221,7 @@ struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return operatorToken;
-            case 2: return &right;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
@@ -1668,14 +1238,7 @@ struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &expr;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ImplicitEventControlSyntax : public TimingControlSyntax {
@@ -1690,12 +1253,7 @@ struct ImplicitEventControlSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return atStar;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
@@ -1711,13 +1269,7 @@ struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return at;
-            case 1: return openParenStarCloseParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct EventControlWithExpressionSyntax : public TimingControlSyntax {
@@ -1733,13 +1285,7 @@ struct EventControlWithExpressionSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return at;
-            case 1: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct RepeatedEventControlSyntax : public TimingControlSyntax {
@@ -1758,16 +1304,7 @@ struct RepeatedEventControlSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return repeat;
-            case 1: return openParen;
-            case 2: return &expr;
-            case 3: return closeParen;
-            case 4: return eventControl;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TimingControlExpressionSyntax : public ExpressionSyntax {
@@ -1783,13 +1320,7 @@ struct TimingControlExpressionSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &timing;
-            case 1: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
@@ -1806,14 +1337,7 @@ struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return &timing;
-            case 2: return &right;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
@@ -1831,15 +1355,7 @@ struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return doubleHash;
-            case 1: return openBracket;
-            case 2: return op;
-            case 3: return closeBracket;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- DECLARATIONS -----
@@ -1865,12 +1381,7 @@ struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &selector;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
@@ -1885,12 +1396,7 @@ struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return star;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ColonExpressionClauseSyntax : public SyntaxNode {
@@ -1906,13 +1412,7 @@ struct ColonExpressionClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return colon;
-            case 1: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
@@ -1928,13 +1428,7 @@ struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return dollar;
-            case 1: return maxSizeClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct VariableDimensionSyntax : public SyntaxNode {
@@ -1951,14 +1445,7 @@ struct VariableDimensionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBracket;
-            case 1: return specifier;
-            case 2: return closeBracket;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct VariableDeclaratorSyntax : public SyntaxNode {
@@ -1975,14 +1462,7 @@ struct VariableDeclaratorSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return name;
-            case 1: return &dimensions;
-            case 2: return initializer;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DataDeclarationSyntax : public MemberSyntax {
@@ -2000,16 +1480,7 @@ struct DataDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &modifiers;
-            case 2: return &type;
-            case 3: return &declarators;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TypedefDeclarationSyntax : public MemberSyntax {
@@ -2028,17 +1499,7 @@ struct TypedefDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return typedefKeyword;
-            case 2: return &type;
-            case 3: return name;
-            case 4: return &dimensions;
-            case 5: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
@@ -2056,16 +1517,7 @@ struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return typedefKeyword;
-            case 2: return keyword;
-            case 3: return name;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
@@ -2084,17 +1536,7 @@ struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return typedefKeyword;
-            case 2: return interfaceKeyword;
-            case 3: return classKeyword;
-            case 4: return name;
-            case 5: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NetStrengthSyntax : public SyntaxNode {
@@ -2120,14 +1562,7 @@ struct ChargeStrengthSyntax : public NetStrengthSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return strength;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DriveStrengthSyntax : public NetStrengthSyntax {
@@ -2146,16 +1581,7 @@ struct DriveStrengthSyntax : public NetStrengthSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return strength0;
-            case 2: return comma;
-            case 3: return strength1;
-            case 4: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NetDeclarationSyntax : public MemberSyntax {
@@ -2175,18 +1601,7 @@ struct NetDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return netType;
-            case 2: return strength;
-            case 3: return expansionHint;
-            case 4: return &type;
-            case 5: return &declarators;
-            case 6: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PackageImportItemSyntax : public SyntaxNode {
@@ -2203,14 +1618,7 @@ struct PackageImportItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return package;
-            case 1: return doubleColon;
-            case 2: return item;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PackageImportDeclarationSyntax : public MemberSyntax {
@@ -2227,15 +1635,7 @@ struct PackageImportDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return &items;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ParameterDeclarationSyntax : public SyntaxNode {
@@ -2252,14 +1652,7 @@ struct ParameterDeclarationSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return &type;
-            case 2: return &declarators;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ParameterDeclarationStatementSyntax : public MemberSyntax {
@@ -2275,14 +1668,7 @@ struct ParameterDeclarationStatementSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &parameter;
-            case 2: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PortHeaderSyntax : public SyntaxNode {
@@ -2308,15 +1694,7 @@ struct PortDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &header;
-            case 2: return &declarators;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct GenvarDeclarationSyntax : public MemberSyntax {
@@ -2333,15 +1711,7 @@ struct GenvarDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return &identifiers;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- TYPES -----
@@ -2360,14 +1730,7 @@ struct IntegerTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return signing;
-            case 2: return &dimensions;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct KeywordTypeSyntax : public DataTypeSyntax {
@@ -2382,12 +1745,7 @@ struct KeywordTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NamedTypeSyntax : public DataTypeSyntax {
@@ -2402,12 +1760,7 @@ struct NamedTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &name;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StructUnionMemberSyntax : public SyntaxNode {
@@ -2426,16 +1779,7 @@ struct StructUnionMemberSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return randomQualifier;
-            case 2: return &type;
-            case 3: return &declarators;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StructUnionTypeSyntax : public DataTypeSyntax {
@@ -2457,19 +1801,7 @@ struct StructUnionTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return tagged;
-            case 2: return packed;
-            case 3: return signing;
-            case 4: return openBrace;
-            case 5: return &members;
-            case 6: return closeBrace;
-            case 7: return &dimensions;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct EnumTypeSyntax : public DataTypeSyntax {
@@ -2489,17 +1821,7 @@ struct EnumTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return baseType;
-            case 2: return openBrace;
-            case 3: return &members;
-            case 4: return closeBrace;
-            case 5: return &dimensions;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TypeReferenceSyntax : public DataTypeSyntax {
@@ -2517,15 +1839,7 @@ struct TypeReferenceSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return typeKeyword;
-            case 1: return openParen;
-            case 2: return &expr;
-            case 3: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DotMemberClauseSyntax : public SyntaxNode {
@@ -2541,13 +1855,7 @@ struct DotMemberClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return dot;
-            case 1: return member;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
@@ -2566,16 +1874,7 @@ struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return virtualKeyword;
-            case 1: return interfaceKeyword;
-            case 2: return name;
-            case 3: return parameters;
-            case 4: return modport;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ImplicitTypeSyntax : public DataTypeSyntax {
@@ -2591,13 +1890,7 @@ struct ImplicitTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return signing;
-            case 1: return &dimensions;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct VarDataTypeSyntax : public DataTypeSyntax {
@@ -2613,13 +1906,7 @@ struct VarDataTypeSyntax : public DataTypeSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return var;
-            case 1: return &type;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- ASSERTIONS -----
@@ -2638,14 +1925,7 @@ struct DeferredAssertionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return hash;
-            case 1: return zero;
-            case 2: return finalKeyword;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ElseClauseSyntax : public SyntaxNode {
@@ -2661,13 +1941,7 @@ struct ElseClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return elseKeyword;
-            case 1: return &clause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ActionBlockSyntax : public SyntaxNode {
@@ -2683,13 +1957,7 @@ struct ActionBlockSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return statement;
-            case 1: return elseClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ImmediateAssertionStatementSyntax : public StatementSyntax {
@@ -2707,17 +1975,7 @@ struct ImmediateAssertionStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return keyword;
-            case 3: return delay;
-            case 4: return &expr;
-            case 5: return &action;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DisableIffSyntax : public SyntaxNode {
@@ -2736,16 +1994,7 @@ struct DisableIffSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return disable;
-            case 1: return iff;
-            case 2: return openParen;
-            case 3: return &expr;
-            case 4: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PropertySpecSyntax : public SyntaxNode {
@@ -2762,14 +2011,7 @@ struct PropertySpecSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return clocking;
-            case 1: return disable;
-            case 2: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
@@ -2789,19 +2031,7 @@ struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return keyword;
-            case 3: return propertyOrSequence;
-            case 4: return openParen;
-            case 5: return &propertySpec;
-            case 6: return closeParen;
-            case 7: return &action;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
@@ -2816,13 +2046,7 @@ struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ImmediateAssertionMemberSyntax : public MemberSyntax {
@@ -2837,13 +2061,7 @@ struct ImmediateAssertionMemberSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- STATEMENTS -----
@@ -2860,14 +2078,7 @@ struct EmptyStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return semicolon;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConditionalStatementSyntax : public StatementSyntax {
@@ -2888,20 +2099,7 @@ struct ConditionalStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return uniqueOrPriority;
-            case 3: return ifKeyword;
-            case 4: return openParen;
-            case 5: return &predicate;
-            case 6: return closeParen;
-            case 7: return &statement;
-            case 8: return elseClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CaseItemSyntax : public SyntaxNode {
@@ -2927,14 +2125,7 @@ struct DefaultCaseItemSyntax : public CaseItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return defaultKeyword;
-            case 1: return colon;
-            case 2: return &clause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PatternCaseItemSyntax : public CaseItemSyntax {
@@ -2953,16 +2144,7 @@ struct PatternCaseItemSyntax : public CaseItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &pattern;
-            case 1: return tripleAnd;
-            case 2: return expr;
-            case 3: return colon;
-            case 4: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct StandardCaseItemSyntax : public CaseItemSyntax {
@@ -2979,14 +2161,7 @@ struct StandardCaseItemSyntax : public CaseItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expressions;
-            case 1: return colon;
-            case 2: return &clause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CaseStatementSyntax : public StatementSyntax {
@@ -3008,21 +2183,7 @@ struct CaseStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return uniqueOrPriority;
-            case 3: return caseKeyword;
-            case 4: return openParen;
-            case 5: return &expr;
-            case 6: return closeParen;
-            case 7: return matchesOrInside;
-            case 8: return &items;
-            case 9: return endcase;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ForeverStatementSyntax : public StatementSyntax {
@@ -3038,15 +2199,7 @@ struct ForeverStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return foreverKeyword;
-            case 3: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct LoopStatementSyntax : public StatementSyntax {
@@ -3065,18 +2218,7 @@ struct LoopStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return repeatOrWhile;
-            case 3: return openParen;
-            case 4: return &expr;
-            case 5: return closeParen;
-            case 6: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DoWhileStatementSyntax : public StatementSyntax {
@@ -3097,20 +2239,7 @@ struct DoWhileStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return doKeyword;
-            case 3: return &statement;
-            case 4: return whileKeyword;
-            case 5: return openParen;
-            case 6: return &expr;
-            case 7: return closeParen;
-            case 8: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ForVariableDeclarationSyntax : public SyntaxNode {
@@ -3127,14 +2256,7 @@ struct ForVariableDeclarationSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return varKeyword;
-            case 1: return &type;
-            case 2: return &declarator;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ForLoopStatementSyntax : public StatementSyntax {
@@ -3157,22 +2279,7 @@ struct ForLoopStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return forKeyword;
-            case 3: return openParen;
-            case 4: return &initializers;
-            case 5: return semi1;
-            case 6: return &stopExpr;
-            case 7: return semi2;
-            case 8: return &steps;
-            case 9: return closeParen;
-            case 10: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ForeachLoopListSyntax : public SyntaxNode {
@@ -3192,17 +2299,7 @@ struct ForeachLoopListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &arrayName;
-            case 2: return openBracket;
-            case 3: return &loopVariables;
-            case 4: return closeBracket;
-            case 5: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ForeachLoopStatementSyntax : public StatementSyntax {
@@ -3219,16 +2316,7 @@ struct ForeachLoopStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return keyword;
-            case 3: return &loopList;
-            case 4: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ReturnStatementSyntax : public StatementSyntax {
@@ -3245,16 +2333,7 @@ struct ReturnStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return returnKeyword;
-            case 3: return returnValue;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct JumpStatementSyntax : public StatementSyntax {
@@ -3270,15 +2349,7 @@ struct JumpStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return breakOrContinue;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TimingControlStatementSyntax : public StatementSyntax {
@@ -3294,15 +2365,7 @@ struct TimingControlStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return &timingControl;
-            case 3: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExpressionStatementSyntax : public StatementSyntax {
@@ -3318,15 +2381,7 @@ struct ExpressionStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return &expr;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ProceduralAssignStatementSyntax : public StatementSyntax {
@@ -3345,18 +2400,7 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return keyword;
-            case 3: return &lvalue;
-            case 4: return equals;
-            case 5: return &value;
-            case 6: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ProceduralDeassignStatementSyntax : public StatementSyntax {
@@ -3373,16 +2417,7 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return keyword;
-            case 3: return &variable;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DisableStatementSyntax : public StatementSyntax {
@@ -3399,16 +2434,7 @@ struct DisableStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return disable;
-            case 3: return &name;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DisableForkStatementSyntax : public StatementSyntax {
@@ -3425,16 +2451,7 @@ struct DisableForkStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return disable;
-            case 3: return fork;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NamedBlockClauseSyntax : public SyntaxNode {
@@ -3450,13 +2467,7 @@ struct NamedBlockClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return colon;
-            case 1: return name;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct BlockStatementSyntax : public StatementSyntax {
@@ -3475,18 +2486,7 @@ struct BlockStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return begin;
-            case 3: return blockName;
-            case 4: return &items;
-            case 5: return end;
-            case 6: return endBlockName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct WaitStatementSyntax : public StatementSyntax {
@@ -3505,18 +2505,7 @@ struct WaitStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return wait;
-            case 3: return openParen;
-            case 4: return &expr;
-            case 5: return closeParen;
-            case 6: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct WaitForkStatementSyntax : public StatementSyntax {
@@ -3533,16 +2522,7 @@ struct WaitForkStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return wait;
-            case 3: return fork;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct WaitOrderStatementSyntax : public StatementSyntax {
@@ -3561,18 +2541,7 @@ struct WaitOrderStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return wait_order;
-            case 3: return openParen;
-            case 4: return &names;
-            case 5: return closeParen;
-            case 6: return &action;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct RandCaseItemSyntax : public SyntaxNode {
@@ -3589,14 +2558,7 @@ struct RandCaseItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            case 1: return colon;
-            case 2: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct RandCaseStatementSyntax : public StatementSyntax {
@@ -3613,16 +2575,7 @@ struct RandCaseStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return randCase;
-            case 3: return &items;
-            case 4: return endCase;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct EventTriggerStatementSyntax : public StatementSyntax {
@@ -3639,16 +2592,7 @@ struct EventTriggerStatementSyntax : public StatementSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return label;
-            case 1: return &attributes;
-            case 2: return trigger;
-            case 3: return timing;
-            case 4: return &name;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- MODULES -----
@@ -3683,12 +2627,7 @@ struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
@@ -3707,16 +2646,7 @@ struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return dot;
-            case 1: return name;
-            case 2: return openParen;
-            case 3: return expr;
-            case 4: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NonAnsiPortListSyntax : public PortListSyntax {
@@ -3733,14 +2663,7 @@ struct NonAnsiPortListSyntax : public PortListSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &ports;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
@@ -3756,13 +2679,7 @@ struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return nameOrKeyword;
-            case 1: return modport;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct VariablePortHeaderSyntax : public PortHeaderSyntax {
@@ -3779,14 +2696,7 @@ struct VariablePortHeaderSyntax : public PortHeaderSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return direction;
-            case 1: return varKeyword;
-            case 2: return &dataType;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
@@ -3803,14 +2713,7 @@ struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return direction;
-            case 1: return interconnect;
-            case 2: return type;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NetPortHeaderSyntax : public PortHeaderSyntax {
@@ -3827,14 +2730,7 @@ struct NetPortHeaderSyntax : public PortHeaderSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return direction;
-            case 1: return netType;
-            case 2: return &dataType;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ImplicitAnsiPortSyntax : public MemberSyntax {
@@ -3850,14 +2746,7 @@ struct ImplicitAnsiPortSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &header;
-            case 2: return &declarator;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExplicitAnsiPortSyntax : public MemberSyntax {
@@ -3877,18 +2766,7 @@ struct ExplicitAnsiPortSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return direction;
-            case 2: return dot;
-            case 3: return name;
-            case 4: return openParen;
-            case 5: return expr;
-            case 6: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct AnsiPortListSyntax : public PortListSyntax {
@@ -3905,14 +2783,7 @@ struct AnsiPortListSyntax : public PortListSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &ports;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct WildcardPortListSyntax : public PortListSyntax {
@@ -3929,14 +2800,7 @@ struct WildcardPortListSyntax : public PortListSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return dotStar;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ParameterPortListSyntax : public SyntaxNode {
@@ -3954,15 +2818,7 @@ struct ParameterPortListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return hash;
-            case 1: return openParen;
-            case 2: return &declarations;
-            case 3: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModuleHeaderSyntax : public SyntaxNode {
@@ -3983,18 +2839,7 @@ struct ModuleHeaderSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return moduleKeyword;
-            case 1: return lifetime;
-            case 2: return name;
-            case 3: return &imports;
-            case 4: return parameters;
-            case 5: return ports;
-            case 6: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModuleDeclarationSyntax : public MemberSyntax {
@@ -4012,16 +2857,7 @@ struct ModuleDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &header;
-            case 2: return &members;
-            case 3: return endmodule;
-            case 4: return blockName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExternModuleSyntax : public SyntaxNode {
@@ -4037,13 +2873,7 @@ struct ExternModuleSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return externKeyword;
-            case 1: return &header;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- MEMBERS -----
@@ -4061,14 +2891,7 @@ struct EmptyMemberSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &qualifiers;
-            case 2: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ProceduralBlockSyntax : public MemberSyntax {
@@ -4084,14 +2907,7 @@ struct ProceduralBlockSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return &statement;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct GenerateRegionSyntax : public MemberSyntax {
@@ -4108,15 +2924,7 @@ struct GenerateRegionSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return &members;
-            case 3: return endgenerate;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct LoopGenerateSyntax : public MemberSyntax {
@@ -4142,24 +2950,7 @@ struct LoopGenerateSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return openParen;
-            case 3: return genvar;
-            case 4: return identifier;
-            case 5: return equals;
-            case 6: return &initialExpr;
-            case 7: return semi1;
-            case 8: return &stopExpr;
-            case 9: return semi2;
-            case 10: return &iterationExpr;
-            case 11: return closeParen;
-            case 12: return &block;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct IfGenerateSyntax : public MemberSyntax {
@@ -4179,18 +2970,7 @@ struct IfGenerateSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return openParen;
-            case 3: return &condition;
-            case 4: return closeParen;
-            case 5: return &block;
-            case 6: return elseClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CaseGenerateSyntax : public MemberSyntax {
@@ -4210,18 +2990,7 @@ struct CaseGenerateSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return openParen;
-            case 3: return &condition;
-            case 4: return closeParen;
-            case 5: return &items;
-            case 6: return endCase;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct GenerateBlockSyntax : public MemberSyntax {
@@ -4241,18 +3010,7 @@ struct GenerateBlockSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return label;
-            case 2: return begin;
-            case 3: return beginName;
-            case 4: return &members;
-            case 5: return end;
-            case 6: return endName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DividerClauseSyntax : public SyntaxNode {
@@ -4268,13 +3026,7 @@ struct DividerClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return divide;
-            case 1: return value;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TimeUnitsDeclarationSyntax : public MemberSyntax {
@@ -4292,16 +3044,7 @@ struct TimeUnitsDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return time;
-            case 3: return divider;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PortConnectionSyntax : public SyntaxNode {
@@ -4316,12 +3059,7 @@ struct PortConnectionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
@@ -4336,13 +3074,7 @@ struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct NamedPortConnectionSyntax : public PortConnectionSyntax {
@@ -4361,17 +3093,7 @@ struct NamedPortConnectionSyntax : public PortConnectionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return dot;
-            case 2: return name;
-            case 3: return openParen;
-            case 4: return expr;
-            case 5: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
@@ -4386,13 +3108,7 @@ struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return dotStar;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct HierarchicalInstanceSyntax : public SyntaxNode {
@@ -4411,16 +3127,7 @@ struct HierarchicalInstanceSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return name;
-            case 1: return &dimensions;
-            case 2: return openParen;
-            case 3: return &connections;
-            case 4: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct HierarchyInstantiationSyntax : public MemberSyntax {
@@ -4438,16 +3145,7 @@ struct HierarchyInstantiationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return type;
-            case 2: return parameters;
-            case 3: return &instances;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct FunctionPortSyntax : public SyntaxNode {
@@ -4467,17 +3165,7 @@ struct FunctionPortSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return constKeyword;
-            case 2: return direction;
-            case 3: return varKeyword;
-            case 4: return dataType;
-            case 5: return &declarator;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct FunctionPortListSyntax : public SyntaxNode {
@@ -4494,14 +3182,7 @@ struct FunctionPortListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &ports;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct FunctionPrototypeSyntax : public SyntaxNode {
@@ -4520,16 +3201,7 @@ struct FunctionPrototypeSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return lifetime;
-            case 2: return returnType;
-            case 3: return &name;
-            case 4: return portList;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct FunctionDeclarationSyntax : public MemberSyntax {
@@ -4548,17 +3220,7 @@ struct FunctionDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &prototype;
-            case 2: return semi;
-            case 3: return &items;
-            case 4: return end;
-            case 5: return endBlockName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct AssertionItemPortSyntax : public SyntaxNode {
@@ -4577,16 +3239,7 @@ struct AssertionItemPortSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return local;
-            case 2: return direction;
-            case 3: return &type;
-            case 4: return &declarator;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct AssertionItemPortListSyntax : public SyntaxNode {
@@ -4603,14 +3256,7 @@ struct AssertionItemPortListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &ports;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct LetDeclarationSyntax : public MemberSyntax {
@@ -4629,17 +3275,7 @@ struct LetDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return let;
-            case 2: return identifier;
-            case 3: return portList;
-            case 4: return &initializer;
-            case 5: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PropertyDeclarationSyntax : public MemberSyntax {
@@ -4662,21 +3298,7 @@ struct PropertyDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return name;
-            case 3: return portList;
-            case 4: return semi;
-            case 5: return &assertionVariables;
-            case 6: return &propertySpec;
-            case 7: return optionalSemi;
-            case 8: return end;
-            case 9: return endBlockName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct SequenceDeclarationSyntax : public MemberSyntax {
@@ -4699,21 +3321,7 @@ struct SequenceDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return name;
-            case 3: return portList;
-            case 4: return semi;
-            case 5: return &assertionVariables;
-            case 6: return &seqExpr;
-            case 7: return optionalSemi;
-            case 8: return end;
-            case 9: return endBlockName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExtendsClauseSyntax : public SyntaxNode {
@@ -4730,14 +3338,7 @@ struct ExtendsClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return &baseName;
-            case 2: return arguments;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ImplementsClauseSyntax : public SyntaxNode {
@@ -4753,13 +3354,7 @@ struct ImplementsClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return &interfaces;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClassDeclarationSyntax : public MemberSyntax {
@@ -4784,23 +3379,7 @@ struct ClassDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return virtualOrInterface;
-            case 2: return classKeyword;
-            case 3: return lifetime;
-            case 4: return name;
-            case 5: return parameters;
-            case 6: return extendsClause;
-            case 7: return implementsClause;
-            case 8: return semi;
-            case 9: return &items;
-            case 10: return endClass;
-            case 11: return endBlockName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClassPropertyDeclarationSyntax : public MemberSyntax {
@@ -4816,14 +3395,7 @@ struct ClassPropertyDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &qualifiers;
-            case 2: return &declaration;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClassMethodDeclarationSyntax : public MemberSyntax {
@@ -4839,14 +3411,7 @@ struct ClassMethodDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &qualifiers;
-            case 2: return &declaration;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClassMethodPrototypeSyntax : public MemberSyntax {
@@ -4863,15 +3428,7 @@ struct ClassMethodPrototypeSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &qualifiers;
-            case 2: return &prototype;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ContinuousAssignSyntax : public MemberSyntax {
@@ -4888,15 +3445,7 @@ struct ContinuousAssignSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return assign;
-            case 2: return &assignments;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DefParamAssignmentSyntax : public SyntaxNode {
@@ -4912,13 +3461,7 @@ struct DefParamAssignmentSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &name;
-            case 1: return setter;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DefParamSyntax : public MemberSyntax {
@@ -4935,15 +3478,7 @@ struct DefParamSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return defparam;
-            case 2: return &assignments;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModportClockingPortSyntax : public MemberSyntax {
@@ -4959,14 +3494,7 @@ struct ModportClockingPortSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return clocking;
-            case 2: return name;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModportPortSyntax : public SyntaxNode {
@@ -4990,12 +3518,7 @@ struct ModportNamedPortSyntax : public ModportPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return name;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModportExplicitPortSyntax : public ModportPortSyntax {
@@ -5014,16 +3537,7 @@ struct ModportExplicitPortSyntax : public ModportPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return dot;
-            case 1: return name;
-            case 2: return openParen;
-            case 3: return expr;
-            case 4: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModportSimplePortListSyntax : public MemberSyntax {
@@ -5039,14 +3553,7 @@ struct ModportSimplePortListSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return direction;
-            case 2: return &ports;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModportSubroutinePortSyntax : public ModportPortSyntax {
@@ -5061,12 +3568,7 @@ struct ModportSubroutinePortSyntax : public ModportPortSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &prototype;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModportSubroutinePortListSyntax : public MemberSyntax {
@@ -5082,14 +3584,7 @@ struct ModportSubroutinePortListSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return importExport;
-            case 2: return &ports;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModportItemSyntax : public SyntaxNode {
@@ -5105,13 +3600,7 @@ struct ModportItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return name;
-            case 1: return &ports;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ModportDeclarationSyntax : public MemberSyntax {
@@ -5128,15 +3617,7 @@ struct ModportDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return &items;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClockingSkewSyntax : public SyntaxNode {
@@ -5153,14 +3634,7 @@ struct ClockingSkewSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return edge;
-            case 1: return hash;
-            case 2: return value;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClockingDirectionSyntax : public SyntaxNode {
@@ -5179,16 +3653,7 @@ struct ClockingDirectionSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return input;
-            case 1: return inputSkew;
-            case 2: return output;
-            case 3: return ouputSkew;
-            case 4: return inout;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClockingItemSyntax : public SyntaxNode {
@@ -5207,16 +3672,7 @@ struct ClockingItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return defaultKeyword;
-            case 1: return direction;
-            case 2: return &assignments;
-            case 3: return semi;
-            case 4: return declaration;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ClockingDeclarationSyntax : public MemberSyntax {
@@ -5240,22 +3696,7 @@ struct ClockingDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return globalOrDefault;
-            case 2: return clocking;
-            case 3: return blockName;
-            case 4: return at;
-            case 5: return event;
-            case 6: return eventIdentifier;
-            case 7: return semi;
-            case 8: return &items;
-            case 9: return endClocking;
-            case 10: return endBlockName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DPIImportExportSyntax : public MemberSyntax {
@@ -5276,19 +3717,7 @@ struct DPIImportExportSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return keyword;
-            case 2: return stringLiteral;
-            case 3: return property;
-            case 4: return name;
-            case 5: return equals;
-            case 6: return &method;
-            case 7: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- CONSTRAINTS -----
@@ -5315,13 +3744,7 @@ struct DistWeightSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return op;
-            case 1: return &expr;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DistItemSyntax : public SyntaxNode {
@@ -5337,13 +3760,7 @@ struct DistItemSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &range;
-            case 1: return weight;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DistConstraintListSyntax : public SyntaxNode {
@@ -5361,15 +3778,7 @@ struct DistConstraintListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return dist;
-            case 1: return openBrace;
-            case 2: return &items;
-            case 3: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExpressionOrDistSyntax : public ExpressionSyntax {
@@ -5385,13 +3794,7 @@ struct ExpressionOrDistSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            case 1: return &distribution;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
@@ -5408,14 +3811,7 @@ struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return soft;
-            case 1: return &expr;
-            case 2: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
@@ -5432,14 +3828,7 @@ struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return unique;
-            case 1: return &ranges;
-            case 2: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
@@ -5456,14 +3845,7 @@ struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return arrow;
-            case 2: return &constraints;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ElseConstraintClauseSyntax : public SyntaxNode {
@@ -5479,13 +3861,7 @@ struct ElseConstraintClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return elseKeyword;
-            case 1: return &constraints;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
@@ -5505,17 +3881,7 @@ struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return ifKeyword;
-            case 1: return openParen;
-            case 2: return &condition;
-            case 3: return closeParen;
-            case 4: return &constraints;
-            case 5: return elseClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct LoopConstraintSyntax : public ConstraintItemSyntax {
@@ -5532,14 +3898,7 @@ struct LoopConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return foreachKeyword;
-            case 1: return &loopList;
-            case 2: return &constraints;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DisableConstraintSyntax : public ConstraintItemSyntax {
@@ -5557,15 +3916,7 @@ struct DisableConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return disable;
-            case 1: return soft;
-            case 2: return &name;
-            case 3: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
@@ -5584,16 +3935,7 @@ struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return solve;
-            case 1: return &beforeExpr;
-            case 2: return before;
-            case 3: return &afterExpr;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConstraintBlockSyntax : public ConstraintItemSyntax {
@@ -5610,14 +3952,7 @@ struct ConstraintBlockSyntax : public ConstraintItemSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBrace;
-            case 1: return &items;
-            case 2: return closeBrace;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConstraintPrototypeSyntax : public MemberSyntax {
@@ -5635,16 +3970,7 @@ struct ConstraintPrototypeSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &qualifiers;
-            case 2: return keyword;
-            case 3: return name;
-            case 4: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConstraintDeclarationSyntax : public MemberSyntax {
@@ -5662,16 +3988,7 @@ struct ConstraintDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return &qualifiers;
-            case 2: return keyword;
-            case 3: return name;
-            case 4: return &block;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct WithClauseSyntax : public ExpressionSyntax {
@@ -5689,15 +4006,7 @@ struct WithClauseSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return with;
-            case 1: return openParen;
-            case 2: return &expr;
-            case 3: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct IdentifierListSyntax : public SyntaxNode {
@@ -5714,14 +4023,7 @@ struct IdentifierListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &identifiers;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
@@ -5738,14 +4040,7 @@ struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return with;
-            case 1: return names;
-            case 2: return &constraints;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- COVER GROUPS -----
@@ -5765,15 +4060,7 @@ struct WithFunctionSampleSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return with;
-            case 1: return function;
-            case 2: return sample;
-            case 3: return &portList;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct BlockEventExpressionSyntax : public SyntaxNode {
@@ -5799,14 +4086,7 @@ struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &left;
-            case 1: return orKeyword;
-            case 2: return &right;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
@@ -5822,13 +4102,7 @@ struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return keyword;
-            case 1: return &name;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct BlockCoverageEventSyntax : public SyntaxNode {
@@ -5846,15 +4120,7 @@ struct BlockCoverageEventSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return atat;
-            case 1: return openParen;
-            case 2: return &expr;
-            case 3: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CovergroupDeclarationSyntax : public MemberSyntax {
@@ -5876,20 +4142,7 @@ struct CovergroupDeclarationSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return covergroup;
-            case 2: return name;
-            case 3: return portList;
-            case 4: return event;
-            case 5: return semi;
-            case 6: return &members;
-            case 7: return endgroup;
-            case 8: return endBlockName;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CoverageOptionSyntax : public MemberSyntax {
@@ -5909,18 +4162,7 @@ struct CoverageOptionSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return option;
-            case 2: return dot;
-            case 3: return name;
-            case 4: return equals;
-            case 5: return &expr;
-            case 6: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CoverpointSyntax : public MemberSyntax {
@@ -5942,20 +4184,7 @@ struct CoverpointSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return type;
-            case 2: return label;
-            case 3: return coverpoint;
-            case 4: return &expr;
-            case 5: return openBrace;
-            case 6: return &members;
-            case 7: return closeBrace;
-            case 8: return emptySemi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CoverageBinInitializerSyntax : public SyntaxNode {
@@ -5980,13 +4209,7 @@ struct DefaultCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return defaultKeyword;
-            case 1: return sequenceKeyword;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -6002,13 +4225,7 @@ struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyn
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &expr;
-            case 1: return withClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -6024,13 +4241,7 @@ struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &ranges;
-            case 1: return withClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TransRepeatRangeSyntax : public SyntaxNode {
@@ -6048,15 +4259,7 @@ struct TransRepeatRangeSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openBracket;
-            case 1: return specifier;
-            case 2: return selector;
-            case 3: return closeBracket;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TransRangeSyntax : public SyntaxNode {
@@ -6072,13 +4275,7 @@ struct TransRangeSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &items;
-            case 1: return repeat;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TransSetSyntax : public SyntaxNode {
@@ -6095,14 +4292,7 @@ struct TransSetSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &ranges;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -6118,13 +4308,7 @@ struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSynt
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &sets;
-            case 1: return withClause;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct IffClauseSyntax : public SyntaxNode {
@@ -6142,15 +4326,7 @@ struct IffClauseSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return iff;
-            case 1: return openParen;
-            case 2: return &expr;
-            case 3: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct CoverageBinsSyntax : public MemberSyntax {
@@ -6172,20 +4348,7 @@ struct CoverageBinsSyntax : public MemberSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &attributes;
-            case 1: return wildcard;
-            case 2: return keyword;
-            case 3: return name;
-            case 4: return selector;
-            case 5: return equals;
-            case 6: return &initializer;
-            case 7: return iff;
-            case 8: return semi;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- TOP LEVEL -----
@@ -6203,13 +4366,7 @@ struct CompilationUnitSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &members;
-            case 1: return endOfFile;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 // ----- DIRECTIVES -----
@@ -6226,12 +4383,7 @@ struct DirectiveSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct SimpleDirectiveSyntax : public DirectiveSyntax {
@@ -6246,13 +4398,7 @@ struct SimpleDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return endOfDirective;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct IncludeDirectiveSyntax : public DirectiveSyntax {
@@ -6268,14 +4414,7 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return fileName;
-            case 2: return endOfDirective;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
@@ -6292,15 +4431,7 @@ struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return name;
-            case 2: return endOfDirective;
-            case 3: return &disabledTokens;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
@@ -6316,14 +4447,7 @@ struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return endOfDirective;
-            case 2: return &disabledTokens;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MacroArgumentDefaultSyntax : public SyntaxNode {
@@ -6339,13 +4463,7 @@ struct MacroArgumentDefaultSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return equals;
-            case 1: return &tokens;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MacroFormalArgumentSyntax : public SyntaxNode {
@@ -6361,13 +4479,7 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return name;
-            case 1: return defaultValue;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MacroFormalArgumentListSyntax : public SyntaxNode {
@@ -6384,14 +4496,7 @@ struct MacroFormalArgumentListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &args;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DefineDirectiveSyntax : public DirectiveSyntax {
@@ -6409,16 +4514,7 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return name;
-            case 2: return formalArguments;
-            case 3: return &body;
-            case 4: return endOfDirective;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MacroActualArgumentSyntax : public SyntaxNode {
@@ -6433,12 +4529,7 @@ struct MacroActualArgumentSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return &tokens;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MacroActualArgumentListSyntax : public SyntaxNode {
@@ -6455,14 +4546,7 @@ struct MacroActualArgumentListSyntax : public SyntaxNode {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return openParen;
-            case 1: return &args;
-            case 2: return closeParen;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct MacroUsageSyntax : public DirectiveSyntax {
@@ -6477,13 +4561,7 @@ struct MacroUsageSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return args;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct TimescaleDirectiveSyntax : public DirectiveSyntax {
@@ -6503,18 +4581,7 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return timeUnit;
-            case 2: return timeUnitUnit;
-            case 3: return slash;
-            case 4: return timePrecision;
-            case 5: return timePrecisionUnit;
-            case 6: return endOfDirective;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
@@ -6530,14 +4597,7 @@ struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return netType;
-            case 2: return endOfDirective;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct LineDirectiveSyntax : public DirectiveSyntax {
@@ -6555,16 +4615,7 @@ struct LineDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return lineNumber;
-            case 2: return fileName;
-            case 3: return level;
-            case 4: return endOfDirective;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct UndefDirectiveSyntax : public DirectiveSyntax {
@@ -6580,14 +4631,7 @@ struct UndefDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return name;
-            case 2: return endOfDirective;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
@@ -6603,14 +4647,7 @@ struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
 
     static bool isKind(SyntaxKind kind);
 
-    TokenOrSyntax getChild(uint32_t index) const {
-        switch (index) {
-            case 0: return directive;
-            case 1: return versionSpecifier;
-            case 2: return endOfDirective;
-            default: return nullptr;
-        }
-    }
+    TokenOrSyntax getChild(uint32_t index) const;
 };
 
 class SyntaxFactory {
