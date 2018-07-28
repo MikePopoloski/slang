@@ -432,7 +432,15 @@ bool ActionBlockSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ActionBlock;
 }
 
-TokenOrSyntax ActionBlockSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ActionBlockSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return statement;
+        case 1: return elseClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ActionBlockSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return statement;
         case 1: return elseClause;
@@ -444,7 +452,16 @@ bool AnsiPortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AnsiPortList;
 }
 
-TokenOrSyntax AnsiPortListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax AnsiPortListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &ports;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax AnsiPortListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &ports;
@@ -457,7 +474,16 @@ bool ArgumentListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ArgumentList;
 }
 
-TokenOrSyntax ArgumentListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ArgumentListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &parameters;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ArgumentListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &parameters;
@@ -481,7 +507,16 @@ bool AssertionItemPortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AssertionItemPortList;
 }
 
-TokenOrSyntax AssertionItemPortListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax AssertionItemPortListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &ports;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax AssertionItemPortListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &ports;
@@ -494,7 +529,18 @@ bool AssertionItemPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AssertionItemPort;
 }
 
-TokenOrSyntax AssertionItemPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax AssertionItemPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return local;
+        case 2: return direction;
+        case 3: return &type;
+        case 4: return &declarator;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax AssertionItemPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return local;
@@ -509,7 +555,15 @@ bool AssignmentPatternExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AssignmentPatternExpression;
 }
 
-TokenOrSyntax AssignmentPatternExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax AssignmentPatternExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return type;
+        case 1: return &pattern;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax AssignmentPatternExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return type;
         case 1: return &pattern;
@@ -521,7 +575,16 @@ bool AssignmentPatternItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AssignmentPatternItem;
 }
 
-TokenOrSyntax AssignmentPatternItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax AssignmentPatternItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &key;
+        case 1: return colon;
+        case 2: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax AssignmentPatternItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &key;
         case 1: return colon;
@@ -545,7 +608,16 @@ bool AttributeInstanceSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AttributeInstance;
 }
 
-TokenOrSyntax AttributeInstanceSyntax::getChild(uint32_t index) const {
+TokenOrSyntax AttributeInstanceSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &specs;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax AttributeInstanceSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &specs;
@@ -558,7 +630,15 @@ bool AttributeSpecSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AttributeSpec;
 }
 
-TokenOrSyntax AttributeSpecSyntax::getChild(uint32_t index) const {
+TokenOrSyntax AttributeSpecSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        case 1: return value;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax AttributeSpecSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
         case 1: return value;
@@ -570,7 +650,14 @@ bool BadExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::BadExpression;
 }
 
-TokenOrSyntax BadExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax BadExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax BadExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         default: return nullptr;
@@ -581,7 +668,16 @@ bool BeginKeywordsDirectiveSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::BeginKeywordsDirective;
 }
 
-TokenOrSyntax BeginKeywordsDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax BeginKeywordsDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return versionSpecifier;
+        case 2: return endOfDirective;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax BeginKeywordsDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return versionSpecifier;
@@ -594,7 +690,16 @@ bool BinaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::BinaryBlockEventExpression;
 }
 
-TokenOrSyntax BinaryBlockEventExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax BinaryBlockEventExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return orKeyword;
+        case 2: return &right;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax BinaryBlockEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return orKeyword;
@@ -607,7 +712,16 @@ bool BinaryEventExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::BinaryEventExpression;
 }
 
-TokenOrSyntax BinaryEventExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax BinaryEventExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return operatorToken;
+        case 2: return &right;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax BinaryEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return operatorToken;
@@ -682,7 +796,17 @@ bool BinaryExpressionSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax BinaryExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax BinaryExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return operatorToken;
+        case 2: return &attributes;
+        case 3: return &right;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax BinaryExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return operatorToken;
@@ -696,7 +820,14 @@ bool BitSelectSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::BitSelect;
 }
 
-TokenOrSyntax BitSelectSyntax::getChild(uint32_t index) const {
+TokenOrSyntax BitSelectSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax BitSelectSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         default: return nullptr;
@@ -707,7 +838,17 @@ bool BlockCoverageEventSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::BlockCoverageEvent;
 }
 
-TokenOrSyntax BlockCoverageEventSyntax::getChild(uint32_t index) const {
+TokenOrSyntax BlockCoverageEventSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return atat;
+        case 1: return openParen;
+        case 2: return &expr;
+        case 3: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax BlockCoverageEventSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return atat;
         case 1: return openParen;
@@ -737,7 +878,20 @@ bool BlockStatementSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax BlockStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax BlockStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return begin;
+        case 3: return blockName;
+        case 4: return &items;
+        case 5: return end;
+        case 6: return endBlockName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax BlockStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -754,7 +908,20 @@ bool CaseGenerateSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::CaseGenerate;
 }
 
-TokenOrSyntax CaseGenerateSyntax::getChild(uint32_t index) const {
+TokenOrSyntax CaseGenerateSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return openParen;
+        case 3: return &condition;
+        case 4: return closeParen;
+        case 5: return &items;
+        case 6: return endCase;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax CaseGenerateSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -782,7 +949,23 @@ bool CaseStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::CaseStatement;
 }
 
-TokenOrSyntax CaseStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax CaseStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return uniqueOrPriority;
+        case 3: return caseKeyword;
+        case 4: return openParen;
+        case 5: return &expr;
+        case 6: return closeParen;
+        case 7: return matchesOrInside;
+        case 8: return &items;
+        case 9: return endcase;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax CaseStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -802,7 +985,16 @@ bool CastExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::CastExpression;
 }
 
-TokenOrSyntax CastExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax CastExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return apostrophe;
+        case 2: return &right;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax CastExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return apostrophe;
@@ -815,7 +1007,16 @@ bool ChargeStrengthSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ChargeStrength;
 }
 
-TokenOrSyntax ChargeStrengthSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ChargeStrengthSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return strength;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ChargeStrengthSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return strength;
@@ -828,7 +1029,25 @@ bool ClassDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClassDeclaration;
 }
 
-TokenOrSyntax ClassDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClassDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return virtualOrInterface;
+        case 2: return classKeyword;
+        case 3: return lifetime;
+        case 4: return name;
+        case 5: return parameters;
+        case 6: return extendsClause;
+        case 7: return implementsClause;
+        case 8: return semi;
+        case 9: return &items;
+        case 10: return endClass;
+        case 11: return endBlockName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClassDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return virtualOrInterface;
@@ -850,7 +1069,16 @@ bool ClassMethodDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClassMethodDeclaration;
 }
 
-TokenOrSyntax ClassMethodDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClassMethodDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &qualifiers;
+        case 2: return &declaration;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClassMethodDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
@@ -863,7 +1091,17 @@ bool ClassMethodPrototypeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClassMethodPrototype;
 }
 
-TokenOrSyntax ClassMethodPrototypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClassMethodPrototypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &qualifiers;
+        case 2: return &prototype;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClassMethodPrototypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
@@ -877,7 +1115,15 @@ bool ClassNameSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClassName;
 }
 
-TokenOrSyntax ClassNameSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClassNameSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return identifier;
+        case 1: return &parameters;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClassNameSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return identifier;
         case 1: return &parameters;
@@ -889,7 +1135,16 @@ bool ClassPropertyDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClassPropertyDeclaration;
 }
 
-TokenOrSyntax ClassPropertyDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClassPropertyDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &qualifiers;
+        case 2: return &declaration;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClassPropertyDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
@@ -902,7 +1157,15 @@ bool ClassScopeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClassScope;
 }
 
-TokenOrSyntax ClassScopeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClassScopeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return separator;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClassScopeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return separator;
@@ -914,7 +1177,24 @@ bool ClockingDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClockingDeclaration;
 }
 
-TokenOrSyntax ClockingDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClockingDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return globalOrDefault;
+        case 2: return clocking;
+        case 3: return blockName;
+        case 4: return at;
+        case 5: return event;
+        case 6: return eventIdentifier;
+        case 7: return semi;
+        case 8: return &items;
+        case 9: return endClocking;
+        case 10: return endBlockName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClockingDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return globalOrDefault;
@@ -935,7 +1215,18 @@ bool ClockingDirectionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClockingDirection;
 }
 
-TokenOrSyntax ClockingDirectionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClockingDirectionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return input;
+        case 1: return inputSkew;
+        case 2: return output;
+        case 3: return ouputSkew;
+        case 4: return inout;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClockingDirectionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return input;
         case 1: return inputSkew;
@@ -950,7 +1241,18 @@ bool ClockingItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClockingItem;
 }
 
-TokenOrSyntax ClockingItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClockingItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return defaultKeyword;
+        case 1: return direction;
+        case 2: return &assignments;
+        case 3: return semi;
+        case 4: return declaration;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClockingItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return defaultKeyword;
         case 1: return direction;
@@ -965,7 +1267,16 @@ bool ClockingSkewSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClockingSkew;
 }
 
-TokenOrSyntax ClockingSkewSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ClockingSkewSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return edge;
+        case 1: return hash;
+        case 2: return value;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ClockingSkewSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return edge;
         case 1: return hash;
@@ -978,7 +1289,15 @@ bool ColonExpressionClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ColonExpressionClause;
 }
 
-TokenOrSyntax ColonExpressionClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ColonExpressionClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return colon;
+        case 1: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ColonExpressionClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return colon;
         case 1: return &expr;
@@ -990,7 +1309,15 @@ bool CompilationUnitSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::CompilationUnit;
 }
 
-TokenOrSyntax CompilationUnitSyntax::getChild(uint32_t index) const {
+TokenOrSyntax CompilationUnitSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &members;
+        case 1: return endOfFile;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax CompilationUnitSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &members;
         case 1: return endOfFile;
@@ -1002,7 +1329,16 @@ bool ConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConcatenationExpression;
 }
 
-TokenOrSyntax ConcatenationExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConcatenationExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &expressions;
+        case 2: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConcatenationExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return &expressions;
@@ -1015,7 +1351,15 @@ bool ConcurrentAssertionMemberSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConcurrentAssertionMember;
 }
 
-TokenOrSyntax ConcurrentAssertionMemberSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConcurrentAssertionMemberSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConcurrentAssertionMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &statement;
@@ -1037,7 +1381,21 @@ bool ConcurrentAssertionStatementSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax ConcurrentAssertionStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConcurrentAssertionStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return keyword;
+        case 3: return propertyOrSequence;
+        case 4: return openParen;
+        case 5: return &propertySpec;
+        case 6: return closeParen;
+        case 7: return &action;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConcurrentAssertionStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -1062,7 +1420,17 @@ bool ConditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax ConditionalBranchDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConditionalBranchDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return name;
+        case 2: return endOfDirective;
+        case 3: return &disabledTokens;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConditionalBranchDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return name;
@@ -1076,7 +1444,19 @@ bool ConditionalConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConditionalConstraint;
 }
 
-TokenOrSyntax ConditionalConstraintSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConditionalConstraintSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return ifKeyword;
+        case 1: return openParen;
+        case 2: return &condition;
+        case 3: return closeParen;
+        case 4: return &constraints;
+        case 5: return elseClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConditionalConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return ifKeyword;
         case 1: return openParen;
@@ -1092,7 +1472,19 @@ bool ConditionalExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConditionalExpression;
 }
 
-TokenOrSyntax ConditionalExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConditionalExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &predicate;
+        case 1: return question;
+        case 2: return &attributes;
+        case 3: return &left;
+        case 4: return colon;
+        case 5: return &right;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConditionalExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &predicate;
         case 1: return question;
@@ -1108,7 +1500,15 @@ bool ConditionalPatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConditionalPattern;
 }
 
-TokenOrSyntax ConditionalPatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConditionalPatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        case 1: return matchesClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConditionalPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         case 1: return matchesClause;
@@ -1120,7 +1520,14 @@ bool ConditionalPredicateSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConditionalPredicate;
 }
 
-TokenOrSyntax ConditionalPredicateSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConditionalPredicateSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &conditions;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConditionalPredicateSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &conditions;
         default: return nullptr;
@@ -1131,7 +1538,22 @@ bool ConditionalStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConditionalStatement;
 }
 
-TokenOrSyntax ConditionalStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConditionalStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return uniqueOrPriority;
+        case 3: return ifKeyword;
+        case 4: return openParen;
+        case 5: return &predicate;
+        case 6: return closeParen;
+        case 7: return &statement;
+        case 8: return elseClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConditionalStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -1150,7 +1572,16 @@ bool ConstraintBlockSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConstraintBlock;
 }
 
-TokenOrSyntax ConstraintBlockSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConstraintBlockSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &items;
+        case 2: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConstraintBlockSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return &items;
@@ -1163,7 +1594,18 @@ bool ConstraintDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConstraintDeclaration;
 }
 
-TokenOrSyntax ConstraintDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConstraintDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &qualifiers;
+        case 2: return keyword;
+        case 3: return name;
+        case 4: return &block;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConstraintDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
@@ -1194,7 +1636,18 @@ bool ConstraintPrototypeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ConstraintPrototype;
 }
 
-TokenOrSyntax ConstraintPrototypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ConstraintPrototypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &qualifiers;
+        case 2: return keyword;
+        case 3: return name;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ConstraintPrototypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
@@ -1209,7 +1662,17 @@ bool ContinuousAssignSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ContinuousAssign;
 }
 
-TokenOrSyntax ContinuousAssignSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ContinuousAssignSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return assign;
+        case 2: return &assignments;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ContinuousAssignSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return assign;
@@ -1235,7 +1698,22 @@ bool CoverageBinsSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::CoverageBins;
 }
 
-TokenOrSyntax CoverageBinsSyntax::getChild(uint32_t index) const {
+TokenOrSyntax CoverageBinsSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return wildcard;
+        case 2: return keyword;
+        case 3: return name;
+        case 4: return selector;
+        case 5: return equals;
+        case 6: return &initializer;
+        case 7: return iff;
+        case 8: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax CoverageBinsSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return wildcard;
@@ -1254,7 +1732,20 @@ bool CoverageOptionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::CoverageOption;
 }
 
-TokenOrSyntax CoverageOptionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax CoverageOptionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return option;
+        case 2: return dot;
+        case 3: return name;
+        case 4: return equals;
+        case 5: return &expr;
+        case 6: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax CoverageOptionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return option;
@@ -1271,7 +1762,22 @@ bool CovergroupDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::CovergroupDeclaration;
 }
 
-TokenOrSyntax CovergroupDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax CovergroupDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return covergroup;
+        case 2: return name;
+        case 3: return portList;
+        case 4: return event;
+        case 5: return semi;
+        case 6: return &members;
+        case 7: return endgroup;
+        case 8: return endBlockName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax CovergroupDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return covergroup;
@@ -1290,7 +1796,22 @@ bool CoverpointSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::Coverpoint;
 }
 
-TokenOrSyntax CoverpointSyntax::getChild(uint32_t index) const {
+TokenOrSyntax CoverpointSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return type;
+        case 2: return label;
+        case 3: return coverpoint;
+        case 4: return &expr;
+        case 5: return openBrace;
+        case 6: return &members;
+        case 7: return closeBrace;
+        case 8: return emptySemi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax CoverpointSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return type;
@@ -1309,7 +1830,21 @@ bool DPIImportExportSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DPIImportExport;
 }
 
-TokenOrSyntax DPIImportExportSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DPIImportExportSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return stringLiteral;
+        case 3: return property;
+        case 4: return name;
+        case 5: return equals;
+        case 6: return &method;
+        case 7: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DPIImportExportSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -1327,7 +1862,18 @@ bool DataDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DataDeclaration;
 }
 
-TokenOrSyntax DataDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DataDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &modifiers;
+        case 2: return &type;
+        case 3: return &declarators;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DataDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &modifiers;
@@ -1378,7 +1924,15 @@ bool DefParamAssignmentSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DefParamAssignment;
 }
 
-TokenOrSyntax DefParamAssignmentSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DefParamAssignmentSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &name;
+        case 1: return setter;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DefParamAssignmentSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &name;
         case 1: return setter;
@@ -1390,7 +1944,17 @@ bool DefParamSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DefParam;
 }
 
-TokenOrSyntax DefParamSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DefParamSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return defparam;
+        case 2: return &assignments;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DefParamSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return defparam;
@@ -1404,7 +1968,16 @@ bool DefaultCaseItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DefaultCaseItem;
 }
 
-TokenOrSyntax DefaultCaseItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DefaultCaseItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return defaultKeyword;
+        case 1: return colon;
+        case 2: return &clause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DefaultCaseItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return defaultKeyword;
         case 1: return colon;
@@ -1417,7 +1990,15 @@ bool DefaultCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DefaultCoverageBinInitializer;
 }
 
-TokenOrSyntax DefaultCoverageBinInitializerSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DefaultCoverageBinInitializerSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return defaultKeyword;
+        case 1: return sequenceKeyword;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DefaultCoverageBinInitializerSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return defaultKeyword;
         case 1: return sequenceKeyword;
@@ -1429,7 +2010,16 @@ bool DefaultNetTypeDirectiveSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DefaultNetTypeDirective;
 }
 
-TokenOrSyntax DefaultNetTypeDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DefaultNetTypeDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return netType;
+        case 2: return endOfDirective;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DefaultNetTypeDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return netType;
@@ -1442,7 +2032,16 @@ bool DeferredAssertionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DeferredAssertion;
 }
 
-TokenOrSyntax DeferredAssertionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DeferredAssertionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return hash;
+        case 1: return zero;
+        case 2: return finalKeyword;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DeferredAssertionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return hash;
         case 1: return zero;
@@ -1455,7 +2054,18 @@ bool DefineDirectiveSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DefineDirective;
 }
 
-TokenOrSyntax DefineDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DefineDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return name;
+        case 2: return formalArguments;
+        case 3: return &body;
+        case 4: return endOfDirective;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DefineDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return name;
@@ -1476,7 +2086,15 @@ bool DelaySyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax DelaySyntax::getChild(uint32_t index) const {
+TokenOrSyntax DelaySyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return hash;
+        case 1: return &delayValue;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DelaySyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return hash;
         case 1: return &delayValue;
@@ -1524,7 +2142,14 @@ bool DirectiveSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax DirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         default: return nullptr;
@@ -1535,7 +2160,17 @@ bool DisableConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DisableConstraint;
 }
 
-TokenOrSyntax DisableConstraintSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DisableConstraintSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return disable;
+        case 1: return soft;
+        case 2: return &name;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DisableConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return disable;
         case 1: return soft;
@@ -1549,7 +2184,18 @@ bool DisableForkStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DisableForkStatement;
 }
 
-TokenOrSyntax DisableForkStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DisableForkStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return disable;
+        case 3: return fork;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DisableForkStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -1564,7 +2210,18 @@ bool DisableIffSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DisableIff;
 }
 
-TokenOrSyntax DisableIffSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DisableIffSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return disable;
+        case 1: return iff;
+        case 2: return openParen;
+        case 3: return &expr;
+        case 4: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DisableIffSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return disable;
         case 1: return iff;
@@ -1579,7 +2236,18 @@ bool DisableStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DisableStatement;
 }
 
-TokenOrSyntax DisableStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DisableStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return disable;
+        case 3: return &name;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DisableStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -1594,7 +2262,17 @@ bool DistConstraintListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DistConstraintList;
 }
 
-TokenOrSyntax DistConstraintListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DistConstraintListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return dist;
+        case 1: return openBrace;
+        case 2: return &items;
+        case 3: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DistConstraintListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return dist;
         case 1: return openBrace;
@@ -1608,7 +2286,15 @@ bool DistItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DistItem;
 }
 
-TokenOrSyntax DistItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DistItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &range;
+        case 1: return weight;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DistItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &range;
         case 1: return weight;
@@ -1620,7 +2306,15 @@ bool DistWeightSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DistWeight;
 }
 
-TokenOrSyntax DistWeightSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DistWeightSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return op;
+        case 1: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DistWeightSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return op;
         case 1: return &expr;
@@ -1632,7 +2326,15 @@ bool DividerClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DividerClause;
 }
 
-TokenOrSyntax DividerClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DividerClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return divide;
+        case 1: return value;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DividerClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return divide;
         case 1: return value;
@@ -1644,7 +2346,22 @@ bool DoWhileStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DoWhileStatement;
 }
 
-TokenOrSyntax DoWhileStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DoWhileStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return doKeyword;
+        case 3: return &statement;
+        case 4: return whileKeyword;
+        case 5: return openParen;
+        case 6: return &expr;
+        case 7: return closeParen;
+        case 8: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DoWhileStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -1663,7 +2380,15 @@ bool DotMemberClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DotMemberClause;
 }
 
-TokenOrSyntax DotMemberClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DotMemberClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return dot;
+        case 1: return member;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DotMemberClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return dot;
         case 1: return member;
@@ -1675,7 +2400,18 @@ bool DriveStrengthSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DriveStrength;
 }
 
-TokenOrSyntax DriveStrengthSyntax::getChild(uint32_t index) const {
+TokenOrSyntax DriveStrengthSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return strength0;
+        case 2: return comma;
+        case 3: return strength1;
+        case 4: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax DriveStrengthSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return strength0;
@@ -1690,7 +2426,15 @@ bool ElementSelectExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ElementSelectExpression;
 }
 
-TokenOrSyntax ElementSelectExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ElementSelectExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return &select;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ElementSelectExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return &select;
@@ -1702,7 +2446,16 @@ bool ElementSelectSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ElementSelect;
 }
 
-TokenOrSyntax ElementSelectSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ElementSelectSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBracket;
+        case 1: return selector;
+        case 2: return closeBracket;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ElementSelectSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBracket;
         case 1: return selector;
@@ -1715,7 +2468,15 @@ bool ElseClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ElseClause;
 }
 
-TokenOrSyntax ElseClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ElseClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return elseKeyword;
+        case 1: return &clause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ElseClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return elseKeyword;
         case 1: return &clause;
@@ -1727,7 +2488,15 @@ bool ElseConstraintClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ElseConstraintClause;
 }
 
-TokenOrSyntax ElseConstraintClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ElseConstraintClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return elseKeyword;
+        case 1: return &constraints;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ElseConstraintClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return elseKeyword;
         case 1: return &constraints;
@@ -1739,7 +2508,12 @@ bool EmptyArgumentSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EmptyArgument;
 }
 
-TokenOrSyntax EmptyArgumentSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EmptyArgumentSyntax::getChild(uint32_t index) {
+    (void)index;
+    return nullptr;
+}
+
+ConstTokenOrSyntax EmptyArgumentSyntax::getChild(uint32_t index) const {
     (void)index;
     return nullptr;
 }
@@ -1748,7 +2522,12 @@ bool EmptyIdentifierNameSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EmptyIdentifierName;
 }
 
-TokenOrSyntax EmptyIdentifierNameSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EmptyIdentifierNameSyntax::getChild(uint32_t index) {
+    (void)index;
+    return nullptr;
+}
+
+ConstTokenOrSyntax EmptyIdentifierNameSyntax::getChild(uint32_t index) const {
     (void)index;
     return nullptr;
 }
@@ -1757,7 +2536,16 @@ bool EmptyMemberSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EmptyMember;
 }
 
-TokenOrSyntax EmptyMemberSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EmptyMemberSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &qualifiers;
+        case 2: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax EmptyMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &qualifiers;
@@ -1770,7 +2558,15 @@ bool EmptyQueueExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EmptyQueueExpression;
 }
 
-TokenOrSyntax EmptyQueueExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EmptyQueueExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax EmptyQueueExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return closeBrace;
@@ -1782,7 +2578,16 @@ bool EmptyStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EmptyStatement;
 }
 
-TokenOrSyntax EmptyStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EmptyStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return semicolon;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax EmptyStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -1795,7 +2600,19 @@ bool EnumTypeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EnumType;
 }
 
-TokenOrSyntax EnumTypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EnumTypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        case 1: return baseType;
+        case 2: return openBrace;
+        case 3: return &members;
+        case 4: return closeBrace;
+        case 5: return &dimensions;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax EnumTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         case 1: return baseType;
@@ -1811,7 +2628,15 @@ bool EqualsValueClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EqualsValueClause;
 }
 
-TokenOrSyntax EqualsValueClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EqualsValueClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return equals;
+        case 1: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax EqualsValueClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return equals;
         case 1: return &expr;
@@ -1823,7 +2648,15 @@ bool EventControlSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EventControl;
 }
 
-TokenOrSyntax EventControlSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EventControlSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return at;
+        case 1: return &eventName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax EventControlSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return at;
         case 1: return &eventName;
@@ -1835,7 +2668,15 @@ bool EventControlWithExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EventControlWithExpression;
 }
 
-TokenOrSyntax EventControlWithExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EventControlWithExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return at;
+        case 1: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax EventControlWithExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return at;
         case 1: return &expr;
@@ -1864,7 +2705,18 @@ bool EventTriggerStatementSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax EventTriggerStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax EventTriggerStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return trigger;
+        case 3: return timing;
+        case 4: return &name;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax EventTriggerStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -1879,7 +2731,20 @@ bool ExplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExplicitAnsiPort;
 }
 
-TokenOrSyntax ExplicitAnsiPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExplicitAnsiPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return direction;
+        case 2: return dot;
+        case 3: return name;
+        case 4: return openParen;
+        case 5: return expr;
+        case 6: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExplicitAnsiPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return direction;
@@ -1896,7 +2761,18 @@ bool ExplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExplicitNonAnsiPort;
 }
 
-TokenOrSyntax ExplicitNonAnsiPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExplicitNonAnsiPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return dot;
+        case 1: return name;
+        case 2: return openParen;
+        case 3: return expr;
+        case 4: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExplicitNonAnsiPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return dot;
         case 1: return name;
@@ -1911,7 +2787,16 @@ bool ExpressionConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExpressionConstraint;
 }
 
-TokenOrSyntax ExpressionConstraintSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExpressionConstraintSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return soft;
+        case 1: return &expr;
+        case 2: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExpressionConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return soft;
         case 1: return &expr;
@@ -1924,7 +2809,15 @@ bool ExpressionCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExpressionCoverageBinInitializer;
 }
 
-TokenOrSyntax ExpressionCoverageBinInitializerSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExpressionCoverageBinInitializerSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        case 1: return withClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExpressionCoverageBinInitializerSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         case 1: return withClause;
@@ -1936,7 +2829,15 @@ bool ExpressionOrDistSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExpressionOrDist;
 }
 
-TokenOrSyntax ExpressionOrDistSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExpressionOrDistSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        case 1: return &distribution;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExpressionOrDistSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         case 1: return &distribution;
@@ -1948,7 +2849,14 @@ bool ExpressionPatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExpressionPattern;
 }
 
-TokenOrSyntax ExpressionPatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExpressionPatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExpressionPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         default: return nullptr;
@@ -1959,7 +2867,17 @@ bool ExpressionStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExpressionStatement;
 }
 
-TokenOrSyntax ExpressionStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExpressionStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return &expr;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExpressionStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -2146,7 +3064,16 @@ bool ExtendsClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExtendsClause;
 }
 
-TokenOrSyntax ExtendsClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExtendsClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        case 1: return &baseName;
+        case 2: return arguments;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExtendsClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         case 1: return &baseName;
@@ -2159,7 +3086,15 @@ bool ExternModuleSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExternModule;
 }
 
-TokenOrSyntax ExternModuleSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ExternModuleSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return externKeyword;
+        case 1: return &header;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ExternModuleSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return externKeyword;
         case 1: return &header;
@@ -2171,7 +3106,24 @@ bool ForLoopStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ForLoopStatement;
 }
 
-TokenOrSyntax ForLoopStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ForLoopStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return forKeyword;
+        case 3: return openParen;
+        case 4: return &initializers;
+        case 5: return semi1;
+        case 6: return &stopExpr;
+        case 7: return semi2;
+        case 8: return &steps;
+        case 9: return closeParen;
+        case 10: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ForLoopStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -2192,7 +3144,16 @@ bool ForVariableDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ForVariableDeclaration;
 }
 
-TokenOrSyntax ForVariableDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ForVariableDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return varKeyword;
+        case 1: return &type;
+        case 2: return &declarator;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ForVariableDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return varKeyword;
         case 1: return &type;
@@ -2205,7 +3166,19 @@ bool ForeachLoopListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ForeachLoopList;
 }
 
-TokenOrSyntax ForeachLoopListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ForeachLoopListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &arrayName;
+        case 2: return openBracket;
+        case 3: return &loopVariables;
+        case 4: return closeBracket;
+        case 5: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ForeachLoopListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &arrayName;
@@ -2221,7 +3194,18 @@ bool ForeachLoopStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ForeachLoopStatement;
 }
 
-TokenOrSyntax ForeachLoopStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ForeachLoopStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return keyword;
+        case 3: return &loopList;
+        case 4: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ForeachLoopStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -2236,7 +3220,17 @@ bool ForeverStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ForeverStatement;
 }
 
-TokenOrSyntax ForeverStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ForeverStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return foreverKeyword;
+        case 3: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ForeverStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -2250,7 +3244,19 @@ bool ForwardInterfaceClassTypedefDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ForwardInterfaceClassTypedefDeclaration;
 }
 
-TokenOrSyntax ForwardInterfaceClassTypedefDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ForwardInterfaceClassTypedefDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return typedefKeyword;
+        case 2: return interfaceKeyword;
+        case 3: return classKeyword;
+        case 4: return name;
+        case 5: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ForwardInterfaceClassTypedefDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return typedefKeyword;
@@ -2266,7 +3272,18 @@ bool ForwardTypedefDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ForwardTypedefDeclaration;
 }
 
-TokenOrSyntax ForwardTypedefDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ForwardTypedefDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return typedefKeyword;
+        case 2: return keyword;
+        case 3: return name;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ForwardTypedefDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return typedefKeyword;
@@ -2287,7 +3304,19 @@ bool FunctionDeclarationSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax FunctionDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax FunctionDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &prototype;
+        case 2: return semi;
+        case 3: return &items;
+        case 4: return end;
+        case 5: return endBlockName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax FunctionDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &prototype;
@@ -2303,7 +3332,16 @@ bool FunctionPortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::FunctionPortList;
 }
 
-TokenOrSyntax FunctionPortListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax FunctionPortListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &ports;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax FunctionPortListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &ports;
@@ -2316,7 +3354,19 @@ bool FunctionPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::FunctionPort;
 }
 
-TokenOrSyntax FunctionPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax FunctionPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return constKeyword;
+        case 2: return direction;
+        case 3: return varKeyword;
+        case 4: return dataType;
+        case 5: return &declarator;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax FunctionPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return constKeyword;
@@ -2332,7 +3382,18 @@ bool FunctionPrototypeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::FunctionPrototype;
 }
 
-TokenOrSyntax FunctionPrototypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax FunctionPrototypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        case 1: return lifetime;
+        case 2: return returnType;
+        case 3: return &name;
+        case 4: return portList;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax FunctionPrototypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         case 1: return lifetime;
@@ -2347,7 +3408,20 @@ bool GenerateBlockSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::GenerateBlock;
 }
 
-TokenOrSyntax GenerateBlockSyntax::getChild(uint32_t index) const {
+TokenOrSyntax GenerateBlockSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return label;
+        case 2: return begin;
+        case 3: return beginName;
+        case 4: return &members;
+        case 5: return end;
+        case 6: return endName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax GenerateBlockSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return label;
@@ -2364,7 +3438,17 @@ bool GenerateRegionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::GenerateRegion;
 }
 
-TokenOrSyntax GenerateRegionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax GenerateRegionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return &members;
+        case 3: return endgenerate;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax GenerateRegionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -2378,7 +3462,17 @@ bool GenvarDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::GenvarDeclaration;
 }
 
-TokenOrSyntax GenvarDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax GenvarDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return &identifiers;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax GenvarDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -2392,7 +3486,18 @@ bool HierarchicalInstanceSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::HierarchicalInstance;
 }
 
-TokenOrSyntax HierarchicalInstanceSyntax::getChild(uint32_t index) const {
+TokenOrSyntax HierarchicalInstanceSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        case 1: return &dimensions;
+        case 2: return openParen;
+        case 3: return &connections;
+        case 4: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax HierarchicalInstanceSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
         case 1: return &dimensions;
@@ -2407,7 +3512,18 @@ bool HierarchyInstantiationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::HierarchyInstantiation;
 }
 
-TokenOrSyntax HierarchyInstantiationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax HierarchyInstantiationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return type;
+        case 2: return parameters;
+        case 3: return &instances;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax HierarchyInstantiationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return type;
@@ -2422,7 +3538,16 @@ bool IdentifierListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::IdentifierList;
 }
 
-TokenOrSyntax IdentifierListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax IdentifierListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &identifiers;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax IdentifierListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &identifiers;
@@ -2435,7 +3560,14 @@ bool IdentifierNameSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::IdentifierName;
 }
 
-TokenOrSyntax IdentifierNameSyntax::getChild(uint32_t index) const {
+TokenOrSyntax IdentifierNameSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return identifier;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax IdentifierNameSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return identifier;
         default: return nullptr;
@@ -2446,7 +3578,15 @@ bool IdentifierSelectNameSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::IdentifierSelectName;
 }
 
-TokenOrSyntax IdentifierSelectNameSyntax::getChild(uint32_t index) const {
+TokenOrSyntax IdentifierSelectNameSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return identifier;
+        case 1: return &selectors;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax IdentifierSelectNameSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return identifier;
         case 1: return &selectors;
@@ -2458,7 +3598,20 @@ bool IfGenerateSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::IfGenerate;
 }
 
-TokenOrSyntax IfGenerateSyntax::getChild(uint32_t index) const {
+TokenOrSyntax IfGenerateSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return openParen;
+        case 3: return &condition;
+        case 4: return closeParen;
+        case 5: return &block;
+        case 6: return elseClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax IfGenerateSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -2475,7 +3628,17 @@ bool IffClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::IffClause;
 }
 
-TokenOrSyntax IffClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax IffClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return iff;
+        case 1: return openParen;
+        case 2: return &expr;
+        case 3: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax IffClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return iff;
         case 1: return openParen;
@@ -2489,7 +3652,15 @@ bool ImmediateAssertionMemberSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ImmediateAssertionMember;
 }
 
-TokenOrSyntax ImmediateAssertionMemberSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ImmediateAssertionMemberSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ImmediateAssertionMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &statement;
@@ -2508,7 +3679,19 @@ bool ImmediateAssertionStatementSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax ImmediateAssertionStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ImmediateAssertionStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return keyword;
+        case 3: return delay;
+        case 4: return &expr;
+        case 5: return &action;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ImmediateAssertionStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -2524,7 +3707,15 @@ bool ImplementsClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ImplementsClause;
 }
 
-TokenOrSyntax ImplementsClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ImplementsClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        case 1: return &interfaces;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ImplementsClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         case 1: return &interfaces;
@@ -2536,7 +3727,16 @@ bool ImplicationConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ImplicationConstraint;
 }
 
-TokenOrSyntax ImplicationConstraintSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ImplicationConstraintSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return arrow;
+        case 2: return &constraints;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ImplicationConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return arrow;
@@ -2549,7 +3749,16 @@ bool ImplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ImplicitAnsiPort;
 }
 
-TokenOrSyntax ImplicitAnsiPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ImplicitAnsiPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &header;
+        case 2: return &declarator;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ImplicitAnsiPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &header;
@@ -2562,7 +3771,14 @@ bool ImplicitEventControlSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ImplicitEventControl;
 }
 
-TokenOrSyntax ImplicitEventControlSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ImplicitEventControlSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return atStar;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ImplicitEventControlSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return atStar;
         default: return nullptr;
@@ -2573,7 +3789,14 @@ bool ImplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ImplicitNonAnsiPort;
 }
 
-TokenOrSyntax ImplicitNonAnsiPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ImplicitNonAnsiPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ImplicitNonAnsiPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         default: return nullptr;
@@ -2584,7 +3807,15 @@ bool ImplicitTypeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ImplicitType;
 }
 
-TokenOrSyntax ImplicitTypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ImplicitTypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return signing;
+        case 1: return &dimensions;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ImplicitTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return signing;
         case 1: return &dimensions;
@@ -2596,7 +3827,16 @@ bool IncludeDirectiveSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::IncludeDirective;
 }
 
-TokenOrSyntax IncludeDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax IncludeDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return fileName;
+        case 2: return endOfDirective;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax IncludeDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return fileName;
@@ -2609,7 +3849,16 @@ bool InsideExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::InsideExpression;
 }
 
-TokenOrSyntax InsideExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax InsideExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        case 1: return inside;
+        case 2: return &ranges;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax InsideExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         case 1: return inside;
@@ -2635,7 +3884,16 @@ bool IntegerTypeSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax IntegerTypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax IntegerTypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        case 1: return signing;
+        case 2: return &dimensions;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax IntegerTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         case 1: return signing;
@@ -2648,7 +3906,16 @@ bool IntegerVectorExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::IntegerVectorExpression;
 }
 
-TokenOrSyntax IntegerVectorExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax IntegerVectorExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return size;
+        case 1: return base;
+        case 2: return value;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax IntegerVectorExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return size;
         case 1: return base;
@@ -2661,7 +3928,16 @@ bool InterconnectPortHeaderSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::InterconnectPortHeader;
 }
 
-TokenOrSyntax InterconnectPortHeaderSyntax::getChild(uint32_t index) const {
+TokenOrSyntax InterconnectPortHeaderSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return direction;
+        case 1: return interconnect;
+        case 2: return type;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax InterconnectPortHeaderSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return direction;
         case 1: return interconnect;
@@ -2674,7 +3950,15 @@ bool InterfacePortHeaderSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::InterfacePortHeader;
 }
 
-TokenOrSyntax InterfacePortHeaderSyntax::getChild(uint32_t index) const {
+TokenOrSyntax InterfacePortHeaderSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return nameOrKeyword;
+        case 1: return modport;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax InterfacePortHeaderSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return nameOrKeyword;
         case 1: return modport;
@@ -2686,7 +3970,16 @@ bool InvocationExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::InvocationExpression;
 }
 
-TokenOrSyntax InvocationExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax InvocationExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return &attributes;
+        case 2: return arguments;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax InvocationExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return &attributes;
@@ -2699,7 +3992,17 @@ bool JumpStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::JumpStatement;
 }
 
-TokenOrSyntax JumpStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax JumpStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return breakOrContinue;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax JumpStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -2728,7 +4031,14 @@ bool KeywordNameSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax KeywordNameSyntax::getChild(uint32_t index) const {
+TokenOrSyntax KeywordNameSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax KeywordNameSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         default: return nullptr;
@@ -2754,7 +4064,14 @@ bool KeywordTypeSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax KeywordTypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax KeywordTypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax KeywordTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         default: return nullptr;
@@ -2765,7 +4082,19 @@ bool LetDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::LetDeclaration;
 }
 
-TokenOrSyntax LetDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax LetDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return let;
+        case 2: return identifier;
+        case 3: return portList;
+        case 4: return &initializer;
+        case 5: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax LetDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return let;
@@ -2781,7 +4110,18 @@ bool LineDirectiveSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::LineDirective;
 }
 
-TokenOrSyntax LineDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax LineDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return lineNumber;
+        case 2: return fileName;
+        case 3: return level;
+        case 4: return endOfDirective;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax LineDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return lineNumber;
@@ -2809,7 +4149,14 @@ bool LiteralExpressionSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax LiteralExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax LiteralExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return literal;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax LiteralExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return literal;
         default: return nullptr;
@@ -2820,7 +4167,16 @@ bool LoopConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::LoopConstraint;
 }
 
-TokenOrSyntax LoopConstraintSyntax::getChild(uint32_t index) const {
+TokenOrSyntax LoopConstraintSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return foreachKeyword;
+        case 1: return &loopList;
+        case 2: return &constraints;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax LoopConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return foreachKeyword;
         case 1: return &loopList;
@@ -2833,7 +4189,26 @@ bool LoopGenerateSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::LoopGenerate;
 }
 
-TokenOrSyntax LoopGenerateSyntax::getChild(uint32_t index) const {
+TokenOrSyntax LoopGenerateSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return openParen;
+        case 3: return genvar;
+        case 4: return identifier;
+        case 5: return equals;
+        case 6: return &initialExpr;
+        case 7: return semi1;
+        case 8: return &stopExpr;
+        case 9: return semi2;
+        case 10: return &iterationExpr;
+        case 11: return closeParen;
+        case 12: return &block;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax LoopGenerateSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -2856,7 +4231,20 @@ bool LoopStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::LoopStatement;
 }
 
-TokenOrSyntax LoopStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax LoopStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return repeatOrWhile;
+        case 3: return openParen;
+        case 4: return &expr;
+        case 5: return closeParen;
+        case 6: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax LoopStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -2873,7 +4261,16 @@ bool MacroActualArgumentListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MacroActualArgumentList;
 }
 
-TokenOrSyntax MacroActualArgumentListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MacroActualArgumentListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &args;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MacroActualArgumentListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &args;
@@ -2886,7 +4283,14 @@ bool MacroActualArgumentSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MacroActualArgument;
 }
 
-TokenOrSyntax MacroActualArgumentSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MacroActualArgumentSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &tokens;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MacroActualArgumentSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &tokens;
         default: return nullptr;
@@ -2897,7 +4301,15 @@ bool MacroArgumentDefaultSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MacroArgumentDefault;
 }
 
-TokenOrSyntax MacroArgumentDefaultSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MacroArgumentDefaultSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return equals;
+        case 1: return &tokens;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MacroArgumentDefaultSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return equals;
         case 1: return &tokens;
@@ -2909,7 +4321,16 @@ bool MacroFormalArgumentListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MacroFormalArgumentList;
 }
 
-TokenOrSyntax MacroFormalArgumentListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MacroFormalArgumentListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &args;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MacroFormalArgumentListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &args;
@@ -2922,7 +4343,15 @@ bool MacroFormalArgumentSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MacroFormalArgument;
 }
 
-TokenOrSyntax MacroFormalArgumentSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MacroFormalArgumentSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        case 1: return defaultValue;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MacroFormalArgumentSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
         case 1: return defaultValue;
@@ -2934,7 +4363,15 @@ bool MacroUsageSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MacroUsage;
 }
 
-TokenOrSyntax MacroUsageSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MacroUsageSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return args;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MacroUsageSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return args;
@@ -2946,7 +4383,15 @@ bool MatchesClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MatchesClause;
 }
 
-TokenOrSyntax MatchesClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MatchesClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return matchesKeyword;
+        case 1: return &pattern;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MatchesClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return matchesKeyword;
         case 1: return &pattern;
@@ -2958,7 +4403,16 @@ bool MemberAccessExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MemberAccessExpression;
 }
 
-TokenOrSyntax MemberAccessExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MemberAccessExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return dot;
+        case 2: return name;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MemberAccessExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return dot;
@@ -3029,7 +4483,14 @@ bool MemberSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax MemberSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MemberSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         default: return nullptr;
@@ -3040,7 +4501,18 @@ bool MinTypMaxExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MinTypMaxExpression;
 }
 
-TokenOrSyntax MinTypMaxExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MinTypMaxExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &min;
+        case 1: return colon1;
+        case 2: return &typ;
+        case 3: return colon2;
+        case 4: return &max;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MinTypMaxExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &min;
         case 1: return colon1;
@@ -3055,7 +4527,16 @@ bool ModportClockingPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportClockingPort;
 }
 
-TokenOrSyntax ModportClockingPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModportClockingPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return clocking;
+        case 2: return name;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModportClockingPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return clocking;
@@ -3068,7 +4549,17 @@ bool ModportDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportDeclaration;
 }
 
-TokenOrSyntax ModportDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModportDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return &items;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModportDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -3082,7 +4573,18 @@ bool ModportExplicitPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportExplicitPort;
 }
 
-TokenOrSyntax ModportExplicitPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModportExplicitPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return dot;
+        case 1: return name;
+        case 2: return openParen;
+        case 3: return expr;
+        case 4: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModportExplicitPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return dot;
         case 1: return name;
@@ -3097,7 +4599,15 @@ bool ModportItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportItem;
 }
 
-TokenOrSyntax ModportItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModportItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        case 1: return &ports;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModportItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
         case 1: return &ports;
@@ -3109,7 +4619,14 @@ bool ModportNamedPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportNamedPort;
 }
 
-TokenOrSyntax ModportNamedPortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModportNamedPortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModportNamedPortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
         default: return nullptr;
@@ -3131,7 +4648,16 @@ bool ModportSimplePortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportSimplePortList;
 }
 
-TokenOrSyntax ModportSimplePortListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModportSimplePortListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return direction;
+        case 2: return &ports;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModportSimplePortListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return direction;
@@ -3144,7 +4670,16 @@ bool ModportSubroutinePortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportSubroutinePortList;
 }
 
-TokenOrSyntax ModportSubroutinePortListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModportSubroutinePortListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return importExport;
+        case 2: return &ports;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModportSubroutinePortListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return importExport;
@@ -3157,7 +4692,14 @@ bool ModportSubroutinePortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportSubroutinePort;
 }
 
-TokenOrSyntax ModportSubroutinePortSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModportSubroutinePortSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &prototype;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModportSubroutinePortSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &prototype;
         default: return nullptr;
@@ -3176,7 +4718,18 @@ bool ModuleDeclarationSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax ModuleDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModuleDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &header;
+        case 2: return &members;
+        case 3: return endmodule;
+        case 4: return blockName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModuleDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &header;
@@ -3199,7 +4752,20 @@ bool ModuleHeaderSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax ModuleHeaderSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ModuleHeaderSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return moduleKeyword;
+        case 1: return lifetime;
+        case 2: return name;
+        case 3: return &imports;
+        case 4: return parameters;
+        case 5: return ports;
+        case 6: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ModuleHeaderSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return moduleKeyword;
         case 1: return lifetime;
@@ -3216,7 +4782,17 @@ bool MultipleConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MultipleConcatenationExpression;
 }
 
-TokenOrSyntax MultipleConcatenationExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax MultipleConcatenationExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &expression;
+        case 2: return &concatenation;
+        case 3: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax MultipleConcatenationExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return &expression;
@@ -3255,7 +4831,18 @@ bool NamedArgumentSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NamedArgument;
 }
 
-TokenOrSyntax NamedArgumentSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NamedArgumentSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return dot;
+        case 1: return name;
+        case 2: return openParen;
+        case 3: return expr;
+        case 4: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NamedArgumentSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return dot;
         case 1: return name;
@@ -3270,7 +4857,15 @@ bool NamedBlockClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NamedBlockClause;
 }
 
-TokenOrSyntax NamedBlockClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NamedBlockClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return colon;
+        case 1: return name;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NamedBlockClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return colon;
         case 1: return name;
@@ -3282,7 +4877,15 @@ bool NamedLabelSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NamedLabel;
 }
 
-TokenOrSyntax NamedLabelSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NamedLabelSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        case 1: return colon;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NamedLabelSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
         case 1: return colon;
@@ -3294,7 +4897,19 @@ bool NamedPortConnectionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NamedPortConnection;
 }
 
-TokenOrSyntax NamedPortConnectionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NamedPortConnectionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return dot;
+        case 2: return name;
+        case 3: return openParen;
+        case 4: return expr;
+        case 5: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NamedPortConnectionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return dot;
@@ -3310,7 +4925,16 @@ bool NamedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NamedStructurePatternMember;
 }
 
-TokenOrSyntax NamedStructurePatternMemberSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NamedStructurePatternMemberSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        case 1: return colon;
+        case 2: return &pattern;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NamedStructurePatternMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
         case 1: return colon;
@@ -3323,7 +4947,14 @@ bool NamedTypeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NamedType;
 }
 
-TokenOrSyntax NamedTypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NamedTypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &name;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NamedTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &name;
         default: return nullptr;
@@ -3334,7 +4965,20 @@ bool NetDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NetDeclaration;
 }
 
-TokenOrSyntax NetDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NetDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return netType;
+        case 2: return strength;
+        case 3: return expansionHint;
+        case 4: return &type;
+        case 5: return &declarators;
+        case 6: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NetDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return netType;
@@ -3351,7 +4995,16 @@ bool NetPortHeaderSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NetPortHeader;
 }
 
-TokenOrSyntax NetPortHeaderSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NetPortHeaderSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return direction;
+        case 1: return netType;
+        case 2: return &dataType;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NetPortHeaderSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return direction;
         case 1: return netType;
@@ -3374,7 +5027,18 @@ bool NewArrayExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NewArrayExpression;
 }
 
-TokenOrSyntax NewArrayExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NewArrayExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return newKeyword;
+        case 1: return openBracket;
+        case 2: return &sizeExpr;
+        case 3: return closeBracket;
+        case 4: return initializer;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NewArrayExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return newKeyword;
         case 1: return openBracket;
@@ -3389,7 +5053,16 @@ bool NewClassExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NewClassExpression;
 }
 
-TokenOrSyntax NewClassExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NewClassExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return classScope;
+        case 1: return newKeyword;
+        case 2: return arguments;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NewClassExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return classScope;
         case 1: return newKeyword;
@@ -3402,7 +5075,15 @@ bool NewExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NewExpression;
 }
 
-TokenOrSyntax NewExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NewExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return newKeyword;
+        case 1: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NewExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return newKeyword;
         case 1: return &expr;
@@ -3414,7 +5095,16 @@ bool NonAnsiPortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NonAnsiPortList;
 }
 
-TokenOrSyntax NonAnsiPortListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax NonAnsiPortListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &ports;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax NonAnsiPortListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &ports;
@@ -3437,7 +5127,16 @@ bool OpenRangeListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::OpenRangeList;
 }
 
-TokenOrSyntax OpenRangeListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax OpenRangeListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &valueRanges;
+        case 2: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax OpenRangeListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return &valueRanges;
@@ -3450,7 +5149,14 @@ bool OrderedArgumentSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::OrderedArgument;
 }
 
-TokenOrSyntax OrderedArgumentSyntax::getChild(uint32_t index) const {
+TokenOrSyntax OrderedArgumentSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax OrderedArgumentSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         default: return nullptr;
@@ -3461,7 +5167,15 @@ bool OrderedPortConnectionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::OrderedPortConnection;
 }
 
-TokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &expr;
@@ -3473,7 +5187,14 @@ bool OrderedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::OrderedStructurePatternMember;
 }
 
-TokenOrSyntax OrderedStructurePatternMemberSyntax::getChild(uint32_t index) const {
+TokenOrSyntax OrderedStructurePatternMemberSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &pattern;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax OrderedStructurePatternMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &pattern;
         default: return nullptr;
@@ -3484,7 +5205,17 @@ bool PackageImportDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::PackageImportDeclaration;
 }
 
-TokenOrSyntax PackageImportDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PackageImportDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return &items;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PackageImportDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -3498,7 +5229,16 @@ bool PackageImportItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::PackageImportItem;
 }
 
-TokenOrSyntax PackageImportItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PackageImportItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return package;
+        case 1: return doubleColon;
+        case 2: return item;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PackageImportItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return package;
         case 1: return doubleColon;
@@ -3511,7 +5251,16 @@ bool ParameterDeclarationStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParameterDeclarationStatement;
 }
 
-TokenOrSyntax ParameterDeclarationStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ParameterDeclarationStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &parameter;
+        case 2: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ParameterDeclarationStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &parameter;
@@ -3524,7 +5273,16 @@ bool ParameterDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParameterDeclaration;
 }
 
-TokenOrSyntax ParameterDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ParameterDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        case 1: return &type;
+        case 2: return &declarators;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ParameterDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         case 1: return &type;
@@ -3537,7 +5295,17 @@ bool ParameterPortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParameterPortList;
 }
 
-TokenOrSyntax ParameterPortListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ParameterPortListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return hash;
+        case 1: return openParen;
+        case 2: return &declarations;
+        case 3: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ParameterPortListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return hash;
         case 1: return openParen;
@@ -3551,7 +5319,15 @@ bool ParameterValueAssignmentSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParameterValueAssignment;
 }
 
-TokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return hash;
+        case 1: return &parameters;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return hash;
         case 1: return &parameters;
@@ -3563,7 +5339,15 @@ bool ParenImplicitEventControlSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParenImplicitEventControl;
 }
 
-TokenOrSyntax ParenImplicitEventControlSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ParenImplicitEventControlSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return at;
+        case 1: return openParenStarCloseParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ParenImplicitEventControlSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return at;
         case 1: return openParenStarCloseParen;
@@ -3575,7 +5359,16 @@ bool ParenthesizedEventExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParenthesizedEventExpression;
 }
 
-TokenOrSyntax ParenthesizedEventExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ParenthesizedEventExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &expr;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ParenthesizedEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &expr;
@@ -3588,7 +5381,16 @@ bool ParenthesizedExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParenthesizedExpression;
 }
 
-TokenOrSyntax ParenthesizedExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ParenthesizedExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &expression;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ParenthesizedExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &expression;
@@ -3601,7 +5403,18 @@ bool PatternCaseItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::PatternCaseItem;
 }
 
-TokenOrSyntax PatternCaseItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PatternCaseItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &pattern;
+        case 1: return tripleAnd;
+        case 2: return expr;
+        case 3: return colon;
+        case 4: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PatternCaseItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &pattern;
         case 1: return tripleAnd;
@@ -3636,7 +5449,14 @@ bool PortConnectionSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax PortConnectionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PortConnectionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PortConnectionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         default: return nullptr;
@@ -3647,7 +5467,17 @@ bool PortDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::PortDeclaration;
 }
 
-TokenOrSyntax PortDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PortDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return &header;
+        case 2: return &declarators;
+        case 3: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PortDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return &header;
@@ -3690,7 +5520,16 @@ bool PostfixUnaryExpressionSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax PostfixUnaryExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PostfixUnaryExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &operand;
+        case 1: return &attributes;
+        case 2: return operatorToken;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PostfixUnaryExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &operand;
         case 1: return &attributes;
@@ -3732,7 +5571,16 @@ bool PrefixUnaryExpressionSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax PrefixUnaryExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PrefixUnaryExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return operatorToken;
+        case 1: return &attributes;
+        case 2: return &operand;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PrefixUnaryExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return operatorToken;
         case 1: return &attributes;
@@ -3745,7 +5593,15 @@ bool PrimaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::PrimaryBlockEventExpression;
 }
 
-TokenOrSyntax PrimaryBlockEventExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PrimaryBlockEventExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        case 1: return &name;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PrimaryBlockEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         case 1: return &name;
@@ -3787,7 +5643,20 @@ bool ProceduralAssignStatementSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax ProceduralAssignStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ProceduralAssignStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return keyword;
+        case 3: return &lvalue;
+        case 4: return equals;
+        case 5: return &value;
+        case 6: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ProceduralAssignStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -3814,7 +5683,16 @@ bool ProceduralBlockSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax ProceduralBlockSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ProceduralBlockSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ProceduralBlockSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -3833,7 +5711,18 @@ bool ProceduralDeassignStatementSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax ProceduralDeassignStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ProceduralDeassignStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return keyword;
+        case 3: return &variable;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ProceduralDeassignStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -3848,7 +5737,23 @@ bool PropertyDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::PropertyDeclaration;
 }
 
-TokenOrSyntax PropertyDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PropertyDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return name;
+        case 3: return portList;
+        case 4: return semi;
+        case 5: return &assertionVariables;
+        case 6: return &propertySpec;
+        case 7: return optionalSemi;
+        case 8: return end;
+        case 9: return endBlockName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PropertyDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -3868,7 +5773,16 @@ bool PropertySpecSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::PropertySpec;
 }
 
-TokenOrSyntax PropertySpecSyntax::getChild(uint32_t index) const {
+TokenOrSyntax PropertySpecSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return clocking;
+        case 1: return disable;
+        case 2: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax PropertySpecSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return clocking;
         case 1: return disable;
@@ -3881,7 +5795,15 @@ bool QueueDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::QueueDimensionSpecifier;
 }
 
-TokenOrSyntax QueueDimensionSpecifierSyntax::getChild(uint32_t index) const {
+TokenOrSyntax QueueDimensionSpecifierSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return dollar;
+        case 1: return maxSizeClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax QueueDimensionSpecifierSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return dollar;
         case 1: return maxSizeClause;
@@ -3893,7 +5815,16 @@ bool RandCaseItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::RandCaseItem;
 }
 
-TokenOrSyntax RandCaseItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax RandCaseItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expr;
+        case 1: return colon;
+        case 2: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax RandCaseItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expr;
         case 1: return colon;
@@ -3906,7 +5837,18 @@ bool RandCaseStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::RandCaseStatement;
 }
 
-TokenOrSyntax RandCaseStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax RandCaseStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return randCase;
+        case 3: return &items;
+        case 4: return endCase;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax RandCaseStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -3921,7 +5863,16 @@ bool RandomizeMethodWithClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::RandomizeMethodWithClause;
 }
 
-TokenOrSyntax RandomizeMethodWithClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax RandomizeMethodWithClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return with;
+        case 1: return names;
+        case 2: return &constraints;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax RandomizeMethodWithClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return with;
         case 1: return names;
@@ -3934,7 +5885,15 @@ bool RangeCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::RangeCoverageBinInitializer;
 }
 
-TokenOrSyntax RangeCoverageBinInitializerSyntax::getChild(uint32_t index) const {
+TokenOrSyntax RangeCoverageBinInitializerSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &ranges;
+        case 1: return withClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax RangeCoverageBinInitializerSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &ranges;
         case 1: return withClause;
@@ -3946,7 +5905,14 @@ bool RangeDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::RangeDimensionSpecifier;
 }
 
-TokenOrSyntax RangeDimensionSpecifierSyntax::getChild(uint32_t index) const {
+TokenOrSyntax RangeDimensionSpecifierSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &selector;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax RangeDimensionSpecifierSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &selector;
         default: return nullptr;
@@ -3964,7 +5930,16 @@ bool RangeSelectSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax RangeSelectSyntax::getChild(uint32_t index) const {
+TokenOrSyntax RangeSelectSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return range;
+        case 2: return &right;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax RangeSelectSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return range;
@@ -3977,7 +5952,18 @@ bool RepeatedEventControlSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::RepeatedEventControl;
 }
 
-TokenOrSyntax RepeatedEventControlSyntax::getChild(uint32_t index) const {
+TokenOrSyntax RepeatedEventControlSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return repeat;
+        case 1: return openParen;
+        case 2: return &expr;
+        case 3: return closeParen;
+        case 4: return eventControl;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax RepeatedEventControlSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return repeat;
         case 1: return openParen;
@@ -3992,7 +5978,19 @@ bool ReplicatedAssignmentPatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ReplicatedAssignmentPattern;
 }
 
-TokenOrSyntax ReplicatedAssignmentPatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ReplicatedAssignmentPatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &countExpr;
+        case 2: return innerOpenBrace;
+        case 3: return &items;
+        case 4: return innerCloseBrace;
+        case 5: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ReplicatedAssignmentPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return &countExpr;
@@ -4008,7 +6006,18 @@ bool ReturnStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ReturnStatement;
 }
 
-TokenOrSyntax ReturnStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ReturnStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return returnKeyword;
+        case 3: return returnValue;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ReturnStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -4023,7 +6032,16 @@ bool ScopedNameSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ScopedName;
 }
 
-TokenOrSyntax ScopedNameSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ScopedNameSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return separator;
+        case 2: return &right;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ScopedNameSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return separator;
@@ -4048,7 +6066,23 @@ bool SequenceDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::SequenceDeclaration;
 }
 
-TokenOrSyntax SequenceDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax SequenceDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return name;
+        case 3: return portList;
+        case 4: return semi;
+        case 5: return &assertionVariables;
+        case 6: return &seqExpr;
+        case 7: return optionalSemi;
+        case 8: return end;
+        case 9: return endBlockName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax SequenceDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -4068,7 +6102,17 @@ bool ShortcutCycleDelayRangeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ShortcutCycleDelayRange;
 }
 
-TokenOrSyntax ShortcutCycleDelayRangeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax ShortcutCycleDelayRangeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return doubleHash;
+        case 1: return openBracket;
+        case 2: return op;
+        case 3: return closeBracket;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax ShortcutCycleDelayRangeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return doubleHash;
         case 1: return openBracket;
@@ -4082,7 +6126,15 @@ bool SignalEventExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::SignalEventExpression;
 }
 
-TokenOrSyntax SignalEventExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax SignalEventExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return edge;
+        case 1: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax SignalEventExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return edge;
         case 1: return &expr;
@@ -4094,7 +6146,16 @@ bool SignedCastExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::SignedCastExpression;
 }
 
-TokenOrSyntax SignedCastExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax SignedCastExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return signing;
+        case 1: return apostrophe;
+        case 2: return &inner;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax SignedCastExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return signing;
         case 1: return apostrophe;
@@ -4107,7 +6168,16 @@ bool SimpleAssignmentPatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::SimpleAssignmentPattern;
 }
 
-TokenOrSyntax SimpleAssignmentPatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax SimpleAssignmentPatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &items;
+        case 2: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax SimpleAssignmentPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return &items;
@@ -4132,7 +6202,15 @@ bool SimpleDirectiveSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax SimpleDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax SimpleDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return endOfDirective;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax SimpleDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return endOfDirective;
@@ -4144,7 +6222,18 @@ bool SolveBeforeConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::SolveBeforeConstraint;
 }
 
-TokenOrSyntax SolveBeforeConstraintSyntax::getChild(uint32_t index) const {
+TokenOrSyntax SolveBeforeConstraintSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return solve;
+        case 1: return &beforeExpr;
+        case 2: return before;
+        case 3: return &afterExpr;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax SolveBeforeConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return solve;
         case 1: return &beforeExpr;
@@ -4159,7 +6248,16 @@ bool StandardCaseItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::StandardCaseItem;
 }
 
-TokenOrSyntax StandardCaseItemSyntax::getChild(uint32_t index) const {
+TokenOrSyntax StandardCaseItemSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expressions;
+        case 1: return colon;
+        case 2: return &clause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StandardCaseItemSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expressions;
         case 1: return colon;
@@ -4211,7 +6309,15 @@ bool StatementSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax StatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax StatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -4223,7 +6329,15 @@ bool StreamExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::StreamExpression;
 }
 
-TokenOrSyntax StreamExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax StreamExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &expression;
+        case 1: return withRange;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StreamExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &expression;
         case 1: return withRange;
@@ -4235,7 +6349,15 @@ bool StreamExpressionWithRange::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::StreamExpressionWithRange;
 }
 
-TokenOrSyntax StreamExpressionWithRange::getChild(uint32_t index) const {
+TokenOrSyntax StreamExpressionWithRange::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return withKeyword;
+        case 1: return &range;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StreamExpressionWithRange::getChild(uint32_t index) const {
     switch (index) {
         case 0: return withKeyword;
         case 1: return &range;
@@ -4247,7 +6369,20 @@ bool StreamingConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::StreamingConcatenationExpression;
 }
 
-TokenOrSyntax StreamingConcatenationExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax StreamingConcatenationExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return operatorToken;
+        case 2: return sliceSize;
+        case 3: return innerOpenBrace;
+        case 4: return &expressions;
+        case 5: return innerCloseBrace;
+        case 6: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StreamingConcatenationExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return operatorToken;
@@ -4264,7 +6399,18 @@ bool StructUnionMemberSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::StructUnionMember;
 }
 
-TokenOrSyntax StructUnionMemberSyntax::getChild(uint32_t index) const {
+TokenOrSyntax StructUnionMemberSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return randomQualifier;
+        case 2: return &type;
+        case 3: return &declarators;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StructUnionMemberSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return randomQualifier;
@@ -4285,7 +6431,21 @@ bool StructUnionTypeSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax StructUnionTypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax StructUnionTypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return keyword;
+        case 1: return tagged;
+        case 2: return packed;
+        case 3: return signing;
+        case 4: return openBrace;
+        case 5: return &members;
+        case 6: return closeBrace;
+        case 7: return &dimensions;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StructUnionTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return keyword;
         case 1: return tagged;
@@ -4313,7 +6473,16 @@ bool StructurePatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::StructurePattern;
 }
 
-TokenOrSyntax StructurePatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax StructurePatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &members;
+        case 2: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StructurePatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return &members;
@@ -4326,7 +6495,16 @@ bool StructuredAssignmentPatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::StructuredAssignmentPattern;
 }
 
-TokenOrSyntax StructuredAssignmentPatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax StructuredAssignmentPatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBrace;
+        case 1: return &items;
+        case 2: return closeBrace;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax StructuredAssignmentPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBrace;
         case 1: return &items;
@@ -4339,7 +6517,16 @@ bool TaggedPatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TaggedPattern;
 }
 
-TokenOrSyntax TaggedPatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TaggedPatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return tagged;
+        case 1: return memberName;
+        case 2: return pattern;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TaggedPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return tagged;
         case 1: return memberName;
@@ -4352,7 +6539,16 @@ bool TaggedUnionExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TaggedUnionExpression;
 }
 
-TokenOrSyntax TaggedUnionExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TaggedUnionExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return tagged;
+        case 1: return member;
+        case 2: return expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TaggedUnionExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return tagged;
         case 1: return member;
@@ -4365,7 +6561,18 @@ bool TimeUnitsDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TimeUnitsDeclaration;
 }
 
-TokenOrSyntax TimeUnitsDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TimeUnitsDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return keyword;
+        case 2: return time;
+        case 3: return divider;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TimeUnitsDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return keyword;
@@ -4380,7 +6587,20 @@ bool TimescaleDirectiveSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TimescaleDirective;
 }
 
-TokenOrSyntax TimescaleDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TimescaleDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return timeUnit;
+        case 2: return timeUnitUnit;
+        case 3: return slash;
+        case 4: return timePrecision;
+        case 5: return timePrecisionUnit;
+        case 6: return endOfDirective;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TimescaleDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return timeUnit;
@@ -4397,7 +6617,16 @@ bool TimingControlExpressionConcatenationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TimingControlExpressionConcatenation;
 }
 
-TokenOrSyntax TimingControlExpressionConcatenationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TimingControlExpressionConcatenationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &left;
+        case 1: return &timing;
+        case 2: return &right;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TimingControlExpressionConcatenationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &left;
         case 1: return &timing;
@@ -4410,7 +6639,15 @@ bool TimingControlExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TimingControlExpression;
 }
 
-TokenOrSyntax TimingControlExpressionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TimingControlExpressionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &timing;
+        case 1: return &expr;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TimingControlExpressionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &timing;
         case 1: return &expr;
@@ -4422,7 +6659,17 @@ bool TimingControlStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TimingControlStatement;
 }
 
-TokenOrSyntax TimingControlStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TimingControlStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return &timingControl;
+        case 3: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TimingControlStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -4452,7 +6699,15 @@ bool TransListCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TransListCoverageBinInitializer;
 }
 
-TokenOrSyntax TransListCoverageBinInitializerSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TransListCoverageBinInitializerSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &sets;
+        case 1: return withClause;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TransListCoverageBinInitializerSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &sets;
         case 1: return withClause;
@@ -4464,7 +6719,15 @@ bool TransRangeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TransRange;
 }
 
-TokenOrSyntax TransRangeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TransRangeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &items;
+        case 1: return repeat;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TransRangeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &items;
         case 1: return repeat;
@@ -4476,7 +6739,17 @@ bool TransRepeatRangeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TransRepeatRange;
 }
 
-TokenOrSyntax TransRepeatRangeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TransRepeatRangeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBracket;
+        case 1: return specifier;
+        case 2: return selector;
+        case 3: return closeBracket;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TransRepeatRangeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBracket;
         case 1: return specifier;
@@ -4490,7 +6763,16 @@ bool TransSetSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TransSet;
 }
 
-TokenOrSyntax TransSetSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TransSetSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return &ranges;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TransSetSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return &ranges;
@@ -4503,7 +6785,17 @@ bool TypeReferenceSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TypeReference;
 }
 
-TokenOrSyntax TypeReferenceSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TypeReferenceSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return typeKeyword;
+        case 1: return openParen;
+        case 2: return &expr;
+        case 3: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TypeReferenceSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return typeKeyword;
         case 1: return openParen;
@@ -4517,7 +6809,19 @@ bool TypedefDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TypedefDeclaration;
 }
 
-TokenOrSyntax TypedefDeclarationSyntax::getChild(uint32_t index) const {
+TokenOrSyntax TypedefDeclarationSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return typedefKeyword;
+        case 2: return &type;
+        case 3: return name;
+        case 4: return &dimensions;
+        case 5: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax TypedefDeclarationSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return typedefKeyword;
@@ -4539,7 +6843,16 @@ bool UnconditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
     }
 }
 
-TokenOrSyntax UnconditionalBranchDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax UnconditionalBranchDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return endOfDirective;
+        case 2: return &disabledTokens;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax UnconditionalBranchDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return endOfDirective;
@@ -4552,7 +6865,16 @@ bool UndefDirectiveSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::UndefDirective;
 }
 
-TokenOrSyntax UndefDirectiveSyntax::getChild(uint32_t index) const {
+TokenOrSyntax UndefDirectiveSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return directive;
+        case 1: return name;
+        case 2: return endOfDirective;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax UndefDirectiveSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return directive;
         case 1: return name;
@@ -4565,7 +6887,16 @@ bool UniquenessConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::UniquenessConstraint;
 }
 
-TokenOrSyntax UniquenessConstraintSyntax::getChild(uint32_t index) const {
+TokenOrSyntax UniquenessConstraintSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return unique;
+        case 1: return &ranges;
+        case 2: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax UniquenessConstraintSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return unique;
         case 1: return &ranges;
@@ -4578,7 +6909,15 @@ bool VarDataTypeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::VarDataType;
 }
 
-TokenOrSyntax VarDataTypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax VarDataTypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return var;
+        case 1: return &type;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax VarDataTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return var;
         case 1: return &type;
@@ -4590,7 +6929,16 @@ bool VariableDeclaratorSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::VariableDeclarator;
 }
 
-TokenOrSyntax VariableDeclaratorSyntax::getChild(uint32_t index) const {
+TokenOrSyntax VariableDeclaratorSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return name;
+        case 1: return &dimensions;
+        case 2: return initializer;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax VariableDeclaratorSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return name;
         case 1: return &dimensions;
@@ -4603,7 +6951,16 @@ bool VariableDimensionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::VariableDimension;
 }
 
-TokenOrSyntax VariableDimensionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax VariableDimensionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openBracket;
+        case 1: return specifier;
+        case 2: return closeBracket;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax VariableDimensionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openBracket;
         case 1: return specifier;
@@ -4616,7 +6973,15 @@ bool VariablePatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::VariablePattern;
 }
 
-TokenOrSyntax VariablePatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax VariablePatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return dot;
+        case 1: return variableName;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax VariablePatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return dot;
         case 1: return variableName;
@@ -4628,7 +6993,16 @@ bool VariablePortHeaderSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::VariablePortHeader;
 }
 
-TokenOrSyntax VariablePortHeaderSyntax::getChild(uint32_t index) const {
+TokenOrSyntax VariablePortHeaderSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return direction;
+        case 1: return varKeyword;
+        case 2: return &dataType;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax VariablePortHeaderSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return direction;
         case 1: return varKeyword;
@@ -4641,7 +7015,18 @@ bool VirtualInterfaceTypeSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::VirtualInterfaceType;
 }
 
-TokenOrSyntax VirtualInterfaceTypeSyntax::getChild(uint32_t index) const {
+TokenOrSyntax VirtualInterfaceTypeSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return virtualKeyword;
+        case 1: return interfaceKeyword;
+        case 2: return name;
+        case 3: return parameters;
+        case 4: return modport;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax VirtualInterfaceTypeSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return virtualKeyword;
         case 1: return interfaceKeyword;
@@ -4656,7 +7041,18 @@ bool WaitForkStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WaitForkStatement;
 }
 
-TokenOrSyntax WaitForkStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WaitForkStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return wait;
+        case 3: return fork;
+        case 4: return semi;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WaitForkStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -4671,7 +7067,20 @@ bool WaitOrderStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WaitOrderStatement;
 }
 
-TokenOrSyntax WaitOrderStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WaitOrderStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return wait_order;
+        case 3: return openParen;
+        case 4: return &names;
+        case 5: return closeParen;
+        case 6: return &action;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WaitOrderStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -4688,7 +7097,20 @@ bool WaitStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WaitStatement;
 }
 
-TokenOrSyntax WaitStatementSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WaitStatementSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return label;
+        case 1: return &attributes;
+        case 2: return wait;
+        case 3: return openParen;
+        case 4: return &expr;
+        case 5: return closeParen;
+        case 6: return &statement;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WaitStatementSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return label;
         case 1: return &attributes;
@@ -4705,7 +7127,14 @@ bool WildcardDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WildcardDimensionSpecifier;
 }
 
-TokenOrSyntax WildcardDimensionSpecifierSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WildcardDimensionSpecifierSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return star;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WildcardDimensionSpecifierSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return star;
         default: return nullptr;
@@ -4716,7 +7145,14 @@ bool WildcardPatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WildcardPattern;
 }
 
-TokenOrSyntax WildcardPatternSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WildcardPatternSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return dotStar;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WildcardPatternSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return dotStar;
         default: return nullptr;
@@ -4727,7 +7163,15 @@ bool WildcardPortConnectionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WildcardPortConnection;
 }
 
-TokenOrSyntax WildcardPortConnectionSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WildcardPortConnectionSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return &attributes;
+        case 1: return dotStar;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WildcardPortConnectionSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return &attributes;
         case 1: return dotStar;
@@ -4739,7 +7183,16 @@ bool WildcardPortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WildcardPortList;
 }
 
-TokenOrSyntax WildcardPortListSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WildcardPortListSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return openParen;
+        case 1: return dotStar;
+        case 2: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WildcardPortListSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return openParen;
         case 1: return dotStar;
@@ -4752,7 +7205,17 @@ bool WithClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WithClause;
 }
 
-TokenOrSyntax WithClauseSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WithClauseSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return with;
+        case 1: return openParen;
+        case 2: return &expr;
+        case 3: return closeParen;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WithClauseSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return with;
         case 1: return openParen;
@@ -4766,7 +7229,17 @@ bool WithFunctionSampleSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WithFunctionSample;
 }
 
-TokenOrSyntax WithFunctionSampleSyntax::getChild(uint32_t index) const {
+TokenOrSyntax WithFunctionSampleSyntax::getChild(uint32_t index) {
+    switch (index) {
+        case 0: return with;
+        case 1: return function;
+        case 2: return sample;
+        case 3: return &portList;
+        default: return nullptr;
+    }
+}
+
+ConstTokenOrSyntax WithFunctionSampleSyntax::getChild(uint32_t index) const {
     switch (index) {
         case 0: return with;
         case 1: return function;

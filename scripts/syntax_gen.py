@@ -152,23 +152,26 @@ namespace slang {
 		cppf.write('}\n\n')
 
 		if len(v.members) != 0 or v.final != '':
-			cppf.write('TokenOrSyntax {}::getChild(uint32_t index) const {{\n'.format(k))
-			if len(v.combinedMembers) > 0:
-				cppf.write('    switch (index) {\n')
+			for returnType in ('TokenOrSyntax', 'ConstTokenOrSyntax'):
+				cppf.write('{} {}::getChild(uint32_t index){} {{\n'.format(
+					returnType, k, '' if returnType == 'TokenOrSyntax' else ' const'))
 
-				index = 0
-				for m in v.combinedMembers:
-					addr = '&' if m[1] in v.pointerMembers else ''
-					cppf.write('        case {}: return {}{};\n'.format(index, addr, m[1]))
-					index += 1
+				if len(v.combinedMembers) > 0:
+					cppf.write('    switch (index) {\n')
 
-				cppf.write('        default: return nullptr;\n')
-				cppf.write('    }\n')
-			else:
-				cppf.write('    (void)index;\n')
-				cppf.write('    return nullptr;\n')
+					index = 0
+					for m in v.combinedMembers:
+						addr = '&' if m[1] in v.pointerMembers else ''
+						cppf.write('        case {}: return {}{};\n'.format(index, addr, m[1]))
+						index += 1
 
-			cppf.write('}\n\n')
+					cppf.write('        default: return nullptr;\n')
+					cppf.write('    }\n')
+				else:
+					cppf.write('    (void)index;\n')
+					cppf.write('    return nullptr;\n')
+
+				cppf.write('}\n\n')
 
 	# Write out syntax factory methods
 	outf.write('class SyntaxFactory {\n')
@@ -330,7 +333,8 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
 		outf.write('    static bool isKind(SyntaxKind kind);\n\n')
 
-		outf.write('    TokenOrSyntax getChild(uint32_t index) const;\n')
+		outf.write('    TokenOrSyntax getChild(uint32_t index);\n')
+		outf.write('    ConstTokenOrSyntax getChild(uint32_t index) const;\n')
 
 	outf.write('};\n\n')
 

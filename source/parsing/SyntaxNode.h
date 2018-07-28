@@ -80,18 +80,31 @@ bool isBeforeOrSemicolon(TokenKind kind);
 bool isStatement(SyntaxKind kind);
 bool isExpression(SyntaxKind kind);
 
-// discriminated union of Token and SyntaxNode
-struct TokenOrSyntax : public std::variant<Token, const SyntaxNode*> {
-    using Base = std::variant<Token, const SyntaxNode*>;
-    TokenOrSyntax(Token token) : Base(token) {}
-    TokenOrSyntax(const SyntaxNode* node) : Base(node) {}
-    TokenOrSyntax(nullptr_t) : Base(Token()) {}
+template<typename TNode>
+struct TokenOrSyntaxBase : public std::variant<Token, TNode> {
+    using Base = std::variant<Token, TNode>;
+    TokenOrSyntaxBase(Token token) : Base(token) {}
+    TokenOrSyntaxBase(TNode node) : Base(node) {}
+    TokenOrSyntaxBase(nullptr_t) : Base(Token()) {}
 
-    bool isToken() const { return index() == 0; }
-    bool isNode() const { return index() == 1; }
+    bool isToken() const { return this->index() == 0; }
+    bool isNode() const { return this->index() == 1; }
 
     Token token() const { return std::get<0>(*this); }
-    const SyntaxNode* node() const { return std::get<1>(*this); }
+    TNode node() const { return std::get<1>(*this); }
+
+protected:
+    TokenOrSyntaxBase() = default;
+};
+
+struct TokenOrSyntax : public TokenOrSyntaxBase<SyntaxNode*> {
+    using TokenOrSyntaxBase::TokenOrSyntaxBase;
+};
+
+struct ConstTokenOrSyntax : public TokenOrSyntaxBase<const SyntaxNode*> {
+    using TokenOrSyntaxBase::TokenOrSyntaxBase;
+
+    ConstTokenOrSyntax(TokenOrSyntax tos);
 };
 
 /// Base class for all syntax nodes.
@@ -143,13 +156,13 @@ protected:
     explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
 private:
-    TokenOrSyntax getChild(uint32_t index) const;
+    ConstTokenOrSyntax getChild(uint32_t index) const;
 };
 
 class SyntaxListBase : public SyntaxNode {
 public:
     uint32_t getChildCount() const { return childCount; }
-    virtual TokenOrSyntax getChild(uint32_t index) const = 0;
+    virtual ConstTokenOrSyntax getChild(uint32_t index) const = 0;
 
     static bool isKind(SyntaxKind kind);
 
@@ -167,7 +180,7 @@ public:
     SyntaxList(span<T*> elements);
 
 private:
-    TokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
+    ConstTokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
 };
 
 class TokenList : public SyntaxListBase, public span<Token> {
@@ -176,7 +189,7 @@ public:
     TokenList(span<Token> elements);
 
 private:
-    TokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
+    ConstTokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
 };
 
 template<typename T>
@@ -223,7 +236,7 @@ public:
     const_iterator end() const { return const_iterator(*this, size()); }
 
 private:
-    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+    ConstTokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
     span<TokenOrSyntax> elements;
 };

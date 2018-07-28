@@ -15,11 +15,11 @@ using namespace slang;
 
 struct GetChildVisitor {
     template<typename T>
-    TokenOrSyntax visit(const T& node, uint32_t index) {
+    ConstTokenOrSyntax visit(const T& node, uint32_t index) {
         return node.getChild(index);
     }
 
-    TokenOrSyntax visitInvalid(const SyntaxNode&, uint32_t) {
+    ConstTokenOrSyntax visitInvalid(const SyntaxNode&, uint32_t) {
         return nullptr;
     }
 };
@@ -27,6 +27,13 @@ struct GetChildVisitor {
 }
 
 namespace slang {
+
+ConstTokenOrSyntax::ConstTokenOrSyntax(TokenOrSyntax tos) {
+    if (tos.isNode())
+        *this = tos.node();
+    else
+        *this = tos.token();
+}
 
 std::string SyntaxNode::toString() const {
     return SyntaxPrinter().print(*this).str();
@@ -72,7 +79,7 @@ SourceRange SyntaxNode::sourceRange() const {
     return SourceRange(firstToken.location(), lastToken.location() + lastToken.rawText().length());
 }
 
-TokenOrSyntax SyntaxNode::getChild(uint32_t index) const {
+ConstTokenOrSyntax SyntaxNode::getChild(uint32_t index) const {
     GetChildVisitor visitor;
     return visit(visitor, index);
 }
