@@ -1,12 +1,8 @@
-*:external/fmt/format.h
-*:external/fmt/format.cc
-syntaxError:source/util/HashMap.h:289
+*:external/*
+syntaxError:source/util/SmallVector.h:91
 uninitMemberVar:source/util/SmallVector.h:154
 uninitMemberVar:source/util/SmallVector.h:155
 uninitMemberVar:source/util/SmallVector.h:223
 uninitMemberVar:source/util/SmallVector.h:228
-arithOperationsOnVoidPointer:source/util/Path.cpp:232
-resourceLeak:source/util/Path.cpp:233
-resourceLeak:source/util/Path.cpp:248
 toomanyconfigs
 constStatement
