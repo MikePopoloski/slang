@@ -25,6 +25,9 @@ namespace slang {
 /// live for as long as you need to access its syntax nodes.
 class SyntaxTree {
 public:
+    SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc) :
+        rootNode(root), sourceMan(sourceManager), alloc(std::move(alloc)) {}
+
     SyntaxTree(SyntaxTree&& other) = default;
     SyntaxTree& operator=(SyntaxTree&&) = default;
 
@@ -78,10 +81,8 @@ public:
     const SourceManager& sourceManager() const { return sourceMan; }
 
     /// Gets the root of the syntax tree.
+    SyntaxNode& root() { return *rootNode; }
     const SyntaxNode& root() const { return *rootNode; }
-
-    /// The ID of the source buffer used to create the syntax tree.
-    BufferID bufferID() const { return bufferID_; }
 
     /// The options used to construct the syntax tree.
     const Bag& options() const { return options_; }
@@ -96,12 +97,12 @@ public:
     }
 
 private:
-    SyntaxTree(const SyntaxNode* root, SourceManager& sourceManager,
+    SyntaxTree(SyntaxNode* root, SourceManager& sourceManager,
                BumpAllocator&& alloc, Diagnostics&& diagnostics,
-               const Bag& options, BufferID bufferID) :
+               const Bag& options) :
         rootNode(root), sourceMan(sourceManager),
         alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)),
-        options_(options), bufferID_(bufferID) {}
+        options_(options) {}
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source,
                                               const Bag& options, bool guess) {
@@ -117,17 +118,15 @@ private:
             sourceManager,
             std::move(alloc),
             std::move(diagnostics),
-            options,
-            source.id
+            options
         ));
     }
 
-    const SyntaxNode* rootNode;
+    SyntaxNode* rootNode;
     SourceManager& sourceMan;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;
-    BufferID bufferID_;
 };
 
 }
