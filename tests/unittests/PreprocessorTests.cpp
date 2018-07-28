@@ -86,7 +86,7 @@ TEST_CASE("Macro define (simple)", "[preprocessor]") {
     CHECK(def.endOfDirective);
     CHECK(def.directive);
     CHECK(!def.formalArguments);
-    REQUIRE(def.body.count() == 3);
+    REQUIRE(def.body.size() == 3);
     CHECK(def.body[1].kind == TokenKind::IntegerLiteral);
 }
 
@@ -107,9 +107,9 @@ TEST_CASE("Macro define (function-like)", "[preprocessor]") {
     CHECK(def.endOfDirective);
     CHECK(def.directive);
     REQUIRE(def.formalArguments);
-    CHECK(def.formalArguments->args.count() == 1);
+    CHECK(def.formalArguments->args.size() == 1);
     CHECK(def.formalArguments->args[0]->name.valueText() == "a");
-    REQUIRE(def.body.count() == 3);
+    REQUIRE(def.body.size() == 3);
     CHECK(def.body[2].kind == TokenKind::IntegerLiteral);
 }
 

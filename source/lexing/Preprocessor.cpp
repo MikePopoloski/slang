@@ -966,7 +966,7 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
 
     // ignore empty macro
     const auto& body = directive->body;
-    if (body.count() == 0)
+    if (body.empty())
         return true;
 
     if (!directive->formalArguments) {
@@ -990,21 +990,21 @@ bool Preprocessor::expandMacro(MacroDef macro, Token usageSite, MacroActualArgum
     ASSERT(actualArgs);
     auto& formalList = directive->formalArguments->args;
     auto& actualList = actualArgs->args;
-    if (actualList.count() > formalList.count()) {
+    if (actualList.size() > formalList.size()) {
         addError(DiagCode::TooManyActualMacroArgs, actualArgs->getFirstToken().location());
         return false;
     }
 
     argumentMap.clear();
-    for (uint32_t i = 0; i < formalList.count(); i++) {
+    for (uint32_t i = 0; i < formalList.size(); i++) {
         auto formal = formalList[i];
         auto name = formal->name.valueText();
 
         const TokenList* tokenList = nullptr;
-        if (actualList.count() > i) {
+        if (actualList.size() > i) {
             // if our actual argument is empty and we have a default, take that
             tokenList = &actualList[i]->tokens;
-            if (tokenList->count() == 0 && formal->defaultValue)
+            if (tokenList->empty() && formal->defaultValue)
                 tokenList = &formal->defaultValue->tokens;
         }
         else {

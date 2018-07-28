@@ -256,7 +256,7 @@ void InstanceSymbol::handleImplicitAnsiPort(const ImplicitAnsiPortSyntax& syntax
             return false;
 
         const auto& implicitType = typeSyntax.as<ImplicitTypeSyntax>();
-        return !implicitType.signing && implicitType.dimensions.count() == 0;
+        return !implicitType.signing && implicitType.dimensions.empty();
     };
 
     // Helper function to set the port's direction and data type, which are both optional.

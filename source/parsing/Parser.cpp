@@ -51,7 +51,7 @@ SyntaxNode& Parser::parseGuess() {
         // If there's only one member, pull it out for convenience
         diagnostics.pop();
         auto& unit = parseCompilationUnit();
-        if (unit.members.count() == 1)
+        if (unit.members.size() == 1)
             return *unit.members[0];
         else
             return unit;

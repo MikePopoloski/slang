@@ -610,7 +610,7 @@ const Type& UnpackedArrayType::fromSyntax(Compilation& compilation, const Type& 
                                           LookupLocation location, const Scope& scope,
                                           const SyntaxList<VariableDimensionSyntax>& dimensions) {
     const Type* result = &elementType;
-    uint32_t count = dimensions.count();
+    uint32_t count = (uint32_t)dimensions.size();
     for (uint32_t i = 0; i < count; i++) {
         // TODO: handle other kinds of unpacked arrays
         const VariableDimensionSyntax& dim = *dimensions[count - i - 1];

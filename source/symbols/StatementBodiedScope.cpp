@@ -101,7 +101,7 @@ Statement& StatementBodiedScope::bindReturnStatement(const ReturnStatementSyntax
 
 Statement& StatementBodiedScope::bindConditionalStatement(const ConditionalStatementSyntax& syntax,
                                                           const BindContext& context) {
-    ASSERT(syntax.predicate.conditions.count() == 1);
+    ASSERT(syntax.predicate.conditions.size() == 1);
     ASSERT(!syntax.predicate.conditions[0]->matchesClause);
 
     Compilation& comp = getCompilation();

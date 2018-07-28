@@ -38,9 +38,9 @@ TEST_CASE("Complex header", "[parser:modules]") {
     CHECK(module.toString() == text);
     CHECK_DIAGNOSTICS_EMPTY;
     CHECK(module.header.name.valueText() == "foo");
-    CHECK(module.attributes.count() == 1);
-    CHECK(module.header.imports[0]->items.count() == 2);
-    CHECK(module.header.parameters->declarations.count() == 3);
+    CHECK(module.attributes.size() == 1);
+    CHECK(module.header.imports[0]->items.size() == 2);
+    CHECK(module.header.parameters->declarations.size() == 3);
     CHECK(module.header.ports->kind == SyntaxKind::AnsiPortList);
 }
 
@@ -70,7 +70,7 @@ const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) 
     CHECK(module.toString() == fullText);
     CHECK_DIAGNOSTICS_EMPTY;
 
-    REQUIRE(module.members.count() == 1);
+    REQUIRE(module.members.size() == 1);
     REQUIRE(module.members[0]->kind == kind);
     return module.members[0];
 }
@@ -101,7 +101,7 @@ const MemberSyntax* parseClassMember(const std::string& text, SyntaxKind kind) {
     CHECK(classDecl.toString() == fullText);
     CHECK_DIAGNOSTICS_EMPTY;
 
-    REQUIRE(classDecl.items.count() == 1);
+    REQUIRE(classDecl.items.size() == 1);
     REQUIRE(classDecl.items[0]->kind == kind);
     return classDecl.items[0];
 }

@@ -584,7 +584,7 @@ TEST_CASE("Directive continuation", "[lexer]") {
     REQUIRE(t.syntax()->kind == SyntaxKind::DefineDirective);
 
     const DefineDirectiveSyntax& define = t.syntax()->as<DefineDirectiveSyntax>();
-    REQUIRE(define.body.count() == 3);
+    REQUIRE(define.body.size() == 3);
     CHECK(define.body[2].valueText() == "baz");
 
     CHECK_DIAGNOSTICS_EMPTY;

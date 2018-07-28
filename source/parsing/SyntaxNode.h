@@ -597,6 +597,7 @@ public:
 protected:
     explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
+private:
     TokenOrSyntax getChild(uint32_t index) const;
 };
 
@@ -614,56 +615,39 @@ protected:
 };
 
 template<typename T>
-class SyntaxList : public SyntaxListBase {
+class SyntaxList : public SyntaxListBase, public span<T*> {
 public:
     SyntaxList(nullptr_t) : SyntaxList(span<T*>()) {}
 
     SyntaxList(span<T*> elements) :
         SyntaxListBase((uint32_t)elements.size()),
-        elements(elements) {}
-
-    uint32_t count() const { return (uint32_t)elements.size(); }
-
-    typename span<T* const>::const_iterator begin() const { return elements.begin(); }
-    typename span<T* const>::const_iterator end() const { return elements.end(); }
-
-    T* operator[](uint32_t index) { return elements[index]; }
-    const T* operator[](uint32_t index) const { return elements[index]; }
+        span<T*>(elements) {}
 
 private:
-    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
-
-    span<T* const> elements;
+    TokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
 };
 
-class TokenList : public SyntaxListBase {
+class TokenList : public SyntaxListBase, public span<Token> {
 public:
     TokenList(nullptr_t) : TokenList(span<Token>()) {}
 
     TokenList(span<Token> elements) :
         SyntaxListBase((uint32_t)elements.size()),
-        elements(elements) {}
-
-    uint32_t count() const { return (uint32_t)elements.size(); }
-
-    span<Token const>::const_iterator begin() const { return elements.begin(); }
-    span<Token const>::const_iterator end() const { return elements.end(); }
-
-    Token operator[](uint32_t index) const { return elements[index]; }
+        span<Token>(elements) {}
 
 private:
-    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
-
-    span<Token const> elements;
+    TokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
 };
 
 template<typename T>
 class SeparatedSyntaxList : public SyntaxListBase {
 public:
+    using size_type = span<TokenOrSyntax>::size_type;
+
     class const_iterator : public iterator_facade<const_iterator, std::random_access_iterator_tag,
-                                                  const T*, int32_t> {
+                                                  const T*, size_type> {
     public:
-        const_iterator(const SeparatedSyntaxList& list, uint32_t index) :
+        const_iterator(const SeparatedSyntaxList& list, size_type index) :
             list(list), index(index) {}
 
         bool operator==(const const_iterator& other) const {
@@ -674,14 +658,14 @@ public:
 
         const T* operator*() const { return list[index]; }
 
-        int32_t operator-(const const_iterator& other) const { return index - other.index; }
+        size_type operator-(const const_iterator& other) const { return index - other.index; }
 
-        const_iterator& operator+=(int32_t n) { index += (uint32_t)n; return *this; }
-        const_iterator& operator-=(int32_t n) { index -= (uint32_t)n; return *this; }
+        const_iterator& operator+=(int32_t n) { index += n; return *this; }
+        const_iterator& operator-=(int32_t n) { index -= n; return *this; }
 
     private:
         const SeparatedSyntaxList& list;
-        uint32_t index;
+        size_type index;
     };
 
     SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>()) {}
@@ -690,22 +674,22 @@ public:
         SyntaxListBase((uint32_t)elements.size()),
         elements(elements) {}
 
-    bool empty() const { return count() == 0; }
-    uint32_t count() const { return (uint32_t)std::ceil(elements.size() / 2.0); }
+    bool empty() const { return elements.empty(); }
+    span<TokenOrSyntax>::size_type size() const { return (elements.size() + 1) / 2; }
 
-    const T* operator[](uint32_t index) const {
+    const T* operator[](size_type index) const {
         index <<= 1;
         ASSERT(!elements[index].isToken);
         return &elements[index].node->template as<T>();
     }
 
     const_iterator begin() const { return const_iterator(*this, 0); }
-    const_iterator end() const { return const_iterator(*this, count()); }
+    const_iterator end() const { return const_iterator(*this, size()); }
 
 private:
     TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
 
-    span<TokenOrSyntax const> elements;
+    span<TokenOrSyntax> elements;
 };
 
 }

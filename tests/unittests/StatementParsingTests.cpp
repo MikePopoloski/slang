@@ -153,7 +153,7 @@ void parseBlockDeclaration(const std::string& text) {
     CHECK(stmt.toString() == fullText);
 
     auto& block = stmt.as<BlockStatementSyntax>();
-    REQUIRE(block.items.count() == 1);
+    REQUIRE(block.items.size() == 1);
     REQUIRE(block.items[0]->kind == SyntaxKind::DataDeclaration);
 }
 

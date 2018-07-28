@@ -710,7 +710,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& compilation, const Co
                                               const BindContext& context) {
     // TODO: handle the pattern matching conditional predicate case, rather than just assuming that it's a simple
     // expression
-    ASSERT(syntax.predicate.conditions.count() == 1);
+    ASSERT(syntax.predicate.conditions.size() == 1);
     Expression& pred = create(compilation, syntax.predicate.conditions[0]->expr, context);
     Expression& left = create(compilation, syntax.left, context);
     Expression& right = create(compilation, syntax.right, context);
@@ -941,7 +941,7 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
         SmallVectorSized<const Expression*, 8> buffer;
         if (syntax.arguments) {
             auto actualArgs = syntax.arguments->parameters;
-            for (uint32_t i = 0; i < actualArgs.count(); i++) {
+            for (uint32_t i = 0; i < actualArgs.size(); i++) {
                 // TODO: error if not ordered arguments
                 const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
                 BindFlags extra = BindFlags::None;
@@ -980,16 +980,16 @@ Expression& CallExpression::fromSyntax(Compilation& compilation, const Invocatio
 
     // TODO: handle too few args as well, which requires looking at default values
     auto formalArgs = subroutine.arguments;
-    if (formalArgs.size() < actualArgs.count()) {
+    if (formalArgs.size() < actualArgs.size()) {
         auto& diag = compilation.addError(DiagCode::TooManyArguments, syntax.left.sourceRange());
         diag << formalArgs.size();
-        diag << actualArgs.count();
+        diag << actualArgs.size();
         return badExpr(compilation, nullptr);
     }
 
     // TODO: handle named arguments in addition to ordered
     SmallVectorSized<const Expression*, 8> buffer;
-    for (uint32_t i = 0; i < actualArgs.count(); i++) {
+    for (uint32_t i = 0; i < actualArgs.size(); i++) {
         const auto& arg = actualArgs[i]->as<OrderedArgumentSyntax>();
         buffer.append(&Expression::bind(compilation, *formalArgs[i]->type, arg.expr,
                                         arg.getFirstToken().location(), context));
