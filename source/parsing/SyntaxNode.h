@@ -19,6 +19,213 @@ namespace slang {
 
 class SyntaxNode;
 
+enum class SyntaxKind : uint16_t;
+enum class TokenKind : uint16_t;
+
+SyntaxKind getUnaryPrefixExpression(TokenKind kind);
+SyntaxKind getUnaryPostfixExpression(TokenKind kind);
+SyntaxKind getLiteralExpression(TokenKind kind);
+SyntaxKind getBinaryExpression(TokenKind kind);
+SyntaxKind getKeywordNameExpression(TokenKind kind);
+SyntaxKind getIntegerType(TokenKind kind);
+SyntaxKind getKeywordType(TokenKind kind);
+SyntaxKind getProceduralBlockKind(TokenKind kind);
+SyntaxKind getModuleDeclarationKind(TokenKind kind);
+SyntaxKind getModuleHeaderKind(TokenKind kind);
+TokenKind getModuleEndKind(TokenKind kind);
+int getPrecedence(SyntaxKind kind);
+bool isRightAssociative(SyntaxKind kind);
+bool isPossibleDataType(TokenKind kind);
+bool isPossibleExpression(TokenKind kind);
+bool isPossibleStatement(TokenKind kind);
+bool isNetType(TokenKind kind);
+bool isPortDirection(TokenKind kind);
+bool isPossibleArgument(TokenKind kind);
+bool isComma(TokenKind kind);
+bool isSemicolon(TokenKind kind);
+bool isCloseBrace(TokenKind kind);
+bool isIdentifierOrComma(TokenKind kind);
+bool isPossibleExpressionOrComma(TokenKind kind);
+bool isPossibleExpressionOrCommaOrDefault(TokenKind kind);
+bool isPossibleExpressionOrTripleAnd(TokenKind kind);
+bool isPossibleOpenRangeElement(TokenKind kind);
+bool isPossiblePattern(TokenKind kind);
+bool isPossibleDelayOrEventControl(TokenKind kind);
+bool isEndKeyword(TokenKind kind);
+bool isDeclarationModifier(TokenKind kind);
+bool isMemberQualifier(TokenKind kind);
+bool isEndOfParenList(TokenKind kind);
+bool isEndOfBracedList(TokenKind kind);
+bool isEndOfBracketedList(TokenKind kind);
+bool isEndOfCaseItem(TokenKind kind);
+bool isEndOfConditionalPredicate(TokenKind kind);
+bool isEndOfAttribute(TokenKind kind);
+bool isEndOfParameterList(TokenKind kind);
+bool isEndOfTransSet(TokenKind kind);
+bool isNotInType(TokenKind kind);
+bool isNotInPortReference(TokenKind kind);
+bool isNotInConcatenationExpr(TokenKind kind);
+bool isNotInParameterList(TokenKind kind);
+bool isPossiblePropertyPortItem(TokenKind kind);
+bool isPossibleAnsiPort(TokenKind kind);
+bool isPossibleNonAnsiPort(TokenKind kind);
+bool isPossibleModportPort(TokenKind kind);
+bool isPossibleFunctionPort(TokenKind kind);
+bool isPossibleParameter(TokenKind kind);
+bool isPossiblePortConnection(TokenKind kind);
+bool isPossibleVectorDigit(TokenKind kind);
+bool isPossibleLetPortItem(TokenKind kind);
+bool isPossibleTransSet(TokenKind kind);
+bool isBeforeOrSemicolon(TokenKind kind);
+bool isStatement(SyntaxKind kind);
+bool isExpression(SyntaxKind kind);
+
+// discriminated union of Token and SyntaxNode
+struct TokenOrSyntax {
+    union {
+        Token token;
+        const SyntaxNode* node;
+    };
+    bool isToken;
+
+    TokenOrSyntax(Token token) : token(token), isToken(true) {}
+    TokenOrSyntax(const SyntaxNode* node) : node(node), isToken(false) {}
+    TokenOrSyntax(nullptr_t) : token(), isToken(true) {}
+};
+
+/// Base class for all syntax nodes.
+class SyntaxNode {
+public:
+    /// The kind of syntax node.
+    SyntaxKind kind;
+
+    /// Print the node and all of its children to a string.
+    std::string toString() const;
+
+    /// Get the first leaf token in this subtree.
+    Token getFirstToken() const;
+
+    /// Get the last leaf token in this subtree.
+    Token getLastToken() const;
+
+    /// Get the source range of the node.
+    SourceRange sourceRange() const;
+
+    /// Gets the child syntax node at the specified index. If the child at
+    /// the given index is not a node (probably a token) then this returns null.
+    const SyntaxNode* childNode(uint32_t index) const;
+    Token childToken(uint32_t index) const;
+
+    uint32_t getChildCount() const; // Note: implemented in AllSyntax.cpp
+
+    template<typename T>
+    T& as() {
+        ASSERT(T::isKind(kind));
+        return *static_cast<T*>(this);
+    }
+
+    template<typename T>
+    const T& as() const {
+        ASSERT(T::isKind(kind));
+        return *static_cast<const T*>(this);
+    }
+
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args);
+
+    template<typename TVisitor, typename... Args>
+    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
+
+    static bool isKind(SyntaxKind) { return true; }
+
+protected:
+    explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
+
+private:
+    TokenOrSyntax getChild(uint32_t index) const;
+};
+
+class SyntaxListBase : public SyntaxNode {
+public:
+    uint32_t getChildCount() const { return childCount; }
+    virtual TokenOrSyntax getChild(uint32_t index) const = 0;
+
+protected:
+    SyntaxListBase(SyntaxKind kind, uint32_t childCount) :
+        SyntaxNode(kind), childCount(childCount) {}
+
+    uint32_t childCount;
+};
+
+template<typename T>
+class SyntaxList : public SyntaxListBase, public span<T*> {
+public:
+    SyntaxList(nullptr_t) : SyntaxList(span<T*>()) {}
+    SyntaxList(span<T*> elements);
+
+private:
+    TokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
+};
+
+class TokenList : public SyntaxListBase, public span<Token> {
+public:
+    TokenList(nullptr_t) : TokenList(span<Token>()) {}
+    TokenList(span<Token> elements);
+
+private:
+    TokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
+};
+
+template<typename T>
+class SeparatedSyntaxList : public SyntaxListBase {
+public:
+    using size_type = span<TokenOrSyntax>::size_type;
+
+    class const_iterator : public iterator_facade<const_iterator, std::random_access_iterator_tag,
+                                                  const T*, size_type> {
+    public:
+        const_iterator(const SeparatedSyntaxList& list, size_type index) :
+            list(list), index(index) {}
+
+        bool operator==(const const_iterator& other) const {
+            return &list == &other.list && index == other.index;
+        }
+
+        bool operator<(const const_iterator& other) const { return index < other.index; }
+
+        const T* operator*() const { return list[index]; }
+
+        size_type operator-(const const_iterator& other) const { return index - other.index; }
+
+        const_iterator& operator+=(int32_t n) { index += n; return *this; }
+        const_iterator& operator-=(int32_t n) { index -= n; return *this; }
+
+    private:
+        const SeparatedSyntaxList& list;
+        size_type index;
+    };
+
+    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>()) {}
+    SeparatedSyntaxList(span<TokenOrSyntax> elements);
+
+    bool empty() const { return elements.empty(); }
+    span<TokenOrSyntax>::size_type size() const { return (elements.size() + 1) / 2; }
+
+    const T* operator[](size_type index) const {
+        index <<= 1;
+        ASSERT(!elements[index].isToken);
+        return &elements[index].node->template as<T>();
+    }
+
+    const_iterator begin() const { return const_iterator(*this, 0); }
+    const_iterator end() const { return const_iterator(*this, size()); }
+
+private:
+    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+
+    span<TokenOrSyntax> elements;
+};
+
 enum class SyntaxKind : uint16_t {
     Unknown,
     List,
@@ -476,220 +683,18 @@ enum class SyntaxKind : uint16_t {
     CompilationUnit
 };
 
-enum class TokenKind : uint16_t;
+template<typename T>
+SyntaxList<T>::SyntaxList(span<T*> elements) :
+    SyntaxListBase(SyntaxKind::List, (uint32_t)elements.size()),
+    span<T*>(elements) {}
 
-SyntaxKind getUnaryPrefixExpression(TokenKind kind);
-SyntaxKind getUnaryPostfixExpression(TokenKind kind);
-SyntaxKind getLiteralExpression(TokenKind kind);
-SyntaxKind getBinaryExpression(TokenKind kind);
-SyntaxKind getKeywordNameExpression(TokenKind kind);
-SyntaxKind getIntegerType(TokenKind kind);
-SyntaxKind getKeywordType(TokenKind kind);
-SyntaxKind getProceduralBlockKind(TokenKind kind);
-SyntaxKind getModuleDeclarationKind(TokenKind kind);
-SyntaxKind getModuleHeaderKind(TokenKind kind);
-TokenKind getModuleEndKind(TokenKind kind);
-int getPrecedence(SyntaxKind kind);
-bool isRightAssociative(SyntaxKind kind);
-bool isPossibleDataType(TokenKind kind);
-bool isPossibleExpression(TokenKind kind);
-bool isPossibleStatement(TokenKind kind);
-bool isNetType(TokenKind kind);
-bool isPortDirection(TokenKind kind);
-bool isPossibleArgument(TokenKind kind);
-bool isComma(TokenKind kind);
-bool isSemicolon(TokenKind kind);
-bool isCloseBrace(TokenKind kind);
-bool isIdentifierOrComma(TokenKind kind);
-bool isPossibleExpressionOrComma(TokenKind kind);
-bool isPossibleExpressionOrCommaOrDefault(TokenKind kind);
-bool isPossibleExpressionOrTripleAnd(TokenKind kind);
-bool isPossibleOpenRangeElement(TokenKind kind);
-bool isPossiblePattern(TokenKind kind);
-bool isPossibleDelayOrEventControl(TokenKind kind);
-bool isEndKeyword(TokenKind kind);
-bool isDeclarationModifier(TokenKind kind);
-bool isMemberQualifier(TokenKind kind);
-bool isEndOfParenList(TokenKind kind);
-bool isEndOfBracedList(TokenKind kind);
-bool isEndOfBracketedList(TokenKind kind);
-bool isEndOfCaseItem(TokenKind kind);
-bool isEndOfConditionalPredicate(TokenKind kind);
-bool isEndOfAttribute(TokenKind kind);
-bool isEndOfParameterList(TokenKind kind);
-bool isEndOfTransSet(TokenKind kind);
-bool isNotInType(TokenKind kind);
-bool isNotInPortReference(TokenKind kind);
-bool isNotInConcatenationExpr(TokenKind kind);
-bool isNotInParameterList(TokenKind kind);
-bool isPossiblePropertyPortItem(TokenKind kind);
-bool isPossibleAnsiPort(TokenKind kind);
-bool isPossibleNonAnsiPort(TokenKind kind);
-bool isPossibleModportPort(TokenKind kind);
-bool isPossibleFunctionPort(TokenKind kind);
-bool isPossibleParameter(TokenKind kind);
-bool isPossiblePortConnection(TokenKind kind);
-bool isPossibleVectorDigit(TokenKind kind);
-bool isPossibleLetPortItem(TokenKind kind);
-bool isPossibleTransSet(TokenKind kind);
-bool isBeforeOrSemicolon(TokenKind kind);
-bool isStatement(SyntaxKind kind);
-bool isExpression(SyntaxKind kind);
-
-// discriminated union of Token and SyntaxNode
-struct TokenOrSyntax {
-    union {
-        Token token;
-        const SyntaxNode* node;
-    };
-    bool isToken;
-
-    TokenOrSyntax(Token token) : token(token), isToken(true) {}
-    TokenOrSyntax(const SyntaxNode* node) : node(node), isToken(false) {}
-    TokenOrSyntax(nullptr_t) : token(), isToken(true) {}
-};
-
-/// Base class for all syntax nodes.
-class SyntaxNode {
-public:
-    /// The kind of syntax node.
-    SyntaxKind kind;
-
-    /// Print the node and all of its children to a string.
-    std::string toString() const;
-
-    /// Get the first leaf token in this subtree.
-    Token getFirstToken() const;
-
-    /// Get the last leaf token in this subtree.
-    Token getLastToken() const;
-
-    /// Get the source range of the node.
-    SourceRange sourceRange() const;
-
-    /// Gets the child syntax node at the specified index. If the child at
-    /// the given index is not a node (probably a token) then this returns null.
-    const SyntaxNode* childNode(uint32_t index) const;
-    Token childToken(uint32_t index) const;
-
-    uint32_t getChildCount() const; // Note: implemented in AllSyntax.cpp
-
-    template<typename T>
-    T& as() {
-        ASSERT(T::isKind(kind));
-        return *static_cast<T*>(this);
-    }
-
-    template<typename T>
-    const T& as() const {
-        ASSERT(T::isKind(kind));
-        return *static_cast<const T*>(this);
-    }
-
-    template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args);
-
-    template<typename TVisitor, typename... Args>
-    decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
-
-    static bool isKind(SyntaxKind) { return true; }
-
-protected:
-    explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
-
-private:
-    TokenOrSyntax getChild(uint32_t index) const;
-};
-
-class SyntaxListBase : public SyntaxNode {
-public:
-    uint32_t getChildCount() const { return childCount; }
-    virtual TokenOrSyntax getChild(uint32_t index) const = 0;
-
-protected:
-    SyntaxListBase(uint32_t childCount) :
-        SyntaxNode(SyntaxKind::List),
-        childCount(childCount) {}
-
-    uint32_t childCount;
-};
+inline TokenList::TokenList(span<Token> elements) :
+    SyntaxListBase(SyntaxKind::List, (uint32_t)elements.size()),
+    span<Token>(elements) {}
 
 template<typename T>
-class SyntaxList : public SyntaxListBase, public span<T*> {
-public:
-    SyntaxList(nullptr_t) : SyntaxList(span<T*>()) {}
-
-    SyntaxList(span<T*> elements) :
-        SyntaxListBase((uint32_t)elements.size()),
-        span<T*>(elements) {}
-
-private:
-    TokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
-};
-
-class TokenList : public SyntaxListBase, public span<Token> {
-public:
-    TokenList(nullptr_t) : TokenList(span<Token>()) {}
-
-    TokenList(span<Token> elements) :
-        SyntaxListBase((uint32_t)elements.size()),
-        span<Token>(elements) {}
-
-private:
-    TokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
-};
-
-template<typename T>
-class SeparatedSyntaxList : public SyntaxListBase {
-public:
-    using size_type = span<TokenOrSyntax>::size_type;
-
-    class const_iterator : public iterator_facade<const_iterator, std::random_access_iterator_tag,
-                                                  const T*, size_type> {
-    public:
-        const_iterator(const SeparatedSyntaxList& list, size_type index) :
-            list(list), index(index) {}
-
-        bool operator==(const const_iterator& other) const {
-            return &list == &other.list && index == other.index;
-        }
-
-        bool operator<(const const_iterator& other) const { return index < other.index; }
-
-        const T* operator*() const { return list[index]; }
-
-        size_type operator-(const const_iterator& other) const { return index - other.index; }
-
-        const_iterator& operator+=(int32_t n) { index += n; return *this; }
-        const_iterator& operator-=(int32_t n) { index -= n; return *this; }
-
-    private:
-        const SeparatedSyntaxList& list;
-        size_type index;
-    };
-
-    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>()) {}
-
-    SeparatedSyntaxList(span<TokenOrSyntax> elements) :
-        SyntaxListBase((uint32_t)elements.size()),
-        elements(elements) {}
-
-    bool empty() const { return elements.empty(); }
-    span<TokenOrSyntax>::size_type size() const { return (elements.size() + 1) / 2; }
-
-    const T* operator[](size_type index) const {
-        index <<= 1;
-        ASSERT(!elements[index].isToken);
-        return &elements[index].node->template as<T>();
-    }
-
-    const_iterator begin() const { return const_iterator(*this, 0); }
-    const_iterator end() const { return const_iterator(*this, size()); }
-
-private:
-    TokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
-
-    span<TokenOrSyntax> elements;
-};
+SeparatedSyntaxList<T>::SeparatedSyntaxList(span<TokenOrSyntax> elements) :
+    SyntaxListBase(SyntaxKind::List, (uint32_t)elements.size()),
+    elements(elements) {}
 
 }
