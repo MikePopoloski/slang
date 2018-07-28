@@ -81,16 +81,17 @@ bool isStatement(SyntaxKind kind);
 bool isExpression(SyntaxKind kind);
 
 // discriminated union of Token and SyntaxNode
-struct TokenOrSyntax {
-    union {
-        Token token;
-        const SyntaxNode* node;
-    };
-    bool isToken;
+struct TokenOrSyntax : public std::variant<Token, const SyntaxNode*> {
+    using Base = std::variant<Token, const SyntaxNode*>;
+    TokenOrSyntax(Token token) : Base(token) {}
+    TokenOrSyntax(const SyntaxNode* node) : Base(node) {}
+    TokenOrSyntax(nullptr_t) : Base(Token()) {}
 
-    TokenOrSyntax(Token token) : token(token), isToken(true) {}
-    TokenOrSyntax(const SyntaxNode* node) : node(node), isToken(false) {}
-    TokenOrSyntax(nullptr_t) : token(), isToken(true) {}
+    bool isToken() const { return index() == 0; }
+    bool isNode() const { return index() == 1; }
+
+    Token token() const { return std::get<0>(*this); }
+    const SyntaxNode* node() const { return std::get<1>(*this); }
 };
 
 /// Base class for all syntax nodes.
@@ -215,8 +216,7 @@ public:
 
     const T* operator[](size_type index) const {
         index <<= 1;
-        ASSERT(!elements[index].isToken);
-        return &elements[index].node->template as<T>();
+        return &elements[index].node()->template as<T>();
     }
 
     const_iterator begin() const { return const_iterator(*this, 0); }

@@ -36,12 +36,12 @@ Token SyntaxNode::getFirstToken() const {
     uint32_t childCount = getChildCount();
     for (uint32_t i = 0; i < childCount; i++) {
         auto child = getChild(i);
-        if (child.isToken) {
-            if (child.token)
-                return child.token;
+        if (child.isToken()) {
+            if (child.token())
+                return child.token();
         }
-        else if (child.node) {
-            auto result = child.node->getFirstToken();
+        else if (child.node()) {
+            auto result = child.node()->getFirstToken();
             if (result)
                 return result;
         }
@@ -53,12 +53,12 @@ Token SyntaxNode::getLastToken() const {
     uint32_t childCount = getChildCount();
     for (int i = int(childCount - 1); i >= 0; i--) {
         auto child = getChild(uint32_t(i));
-        if (child.isToken) {
-            if (child.token)
-                return child.token;
+        if (child.isToken()) {
+            if (child.token())
+                return child.token();
         }
-        else if (child.node) {
-            auto result = child.node->getLastToken();
+        else if (child.node()) {
+            auto result = child.node()->getLastToken();
             if (result)
                 return result;
         }
@@ -79,16 +79,16 @@ TokenOrSyntax SyntaxNode::getChild(uint32_t index) const {
 
 const SyntaxNode* SyntaxNode::childNode(uint32_t index) const {
     auto child = getChild(index);
-    if (child.isToken)
+    if (child.isToken())
         return nullptr;
-    return child.node;
+    return child.node();
 }
 
 Token SyntaxNode::childToken(uint32_t index) const {
     auto child = getChild(index);
-    if (!child.isToken)
+    if (!child.isToken())
         return Token();
-    return child.token;
+    return child.token();
 }
 
 bool SyntaxListBase::isKind(SyntaxKind kind) {
