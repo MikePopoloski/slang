@@ -456,6 +456,11 @@ void ActionBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+ActionBlockSyntax* ActionBlockSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ActionBlockSyntax));
+    return new (mem) ActionBlockSyntax(*this);
+}
+
 bool AnsiPortListSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::AnsiPortList;
 }
@@ -481,10 +486,15 @@ ConstTokenOrSyntax AnsiPortListSyntax::getChild(uint32_t index) const {
 void AnsiPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&ports, child.node(), sizeof(SeparatedSyntaxList<MemberSyntax>)); return;
+        case 1: new (&ports) = child.node()->as<SeparatedSyntaxList<MemberSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+AnsiPortListSyntax* AnsiPortListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(AnsiPortListSyntax));
+    return new (mem) AnsiPortListSyntax(*this);
 }
 
 bool ArgumentListSyntax::isKind(SyntaxKind kind) {
@@ -512,10 +522,15 @@ ConstTokenOrSyntax ArgumentListSyntax::getChild(uint32_t index) const {
 void ArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&parameters, child.node(), sizeof(SeparatedSyntaxList<ArgumentSyntax>)); return;
+        case 1: new (&parameters) = child.node()->as<SeparatedSyntaxList<ArgumentSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ArgumentListSyntax* ArgumentListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ArgumentListSyntax));
+    return new (mem) ArgumentListSyntax(*this);
 }
 
 bool ArgumentSyntax::isKind(SyntaxKind kind) {
@@ -554,10 +569,15 @@ ConstTokenOrSyntax AssertionItemPortListSyntax::getChild(uint32_t index) const {
 void AssertionItemPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&ports, child.node(), sizeof(SeparatedSyntaxList<AssertionItemPortSyntax>)); return;
+        case 1: new (&ports) = child.node()->as<SeparatedSyntaxList<AssertionItemPortSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+AssertionItemPortListSyntax* AssertionItemPortListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(AssertionItemPortListSyntax));
+    return new (mem) AssertionItemPortListSyntax(*this);
 }
 
 bool AssertionItemPortSyntax::isKind(SyntaxKind kind) {
@@ -588,13 +608,18 @@ ConstTokenOrSyntax AssertionItemPortSyntax::getChild(uint32_t index) const {
 
 void AssertionItemPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: local = child.token(); return;
         case 2: direction = child.token(); return;
-        case 3: memcpy(&type, child.node(), sizeof(DataTypeSyntax)); return;
-        case 4: memcpy(&declarator, child.node(), sizeof(VariableDeclaratorSyntax)); return;
+        case 3: new (&type) = child.node()->as<DataTypeSyntax>(); return;
+        case 4: new (&declarator) = child.node()->as<VariableDeclaratorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+AssertionItemPortSyntax* AssertionItemPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(AssertionItemPortSyntax));
+    return new (mem) AssertionItemPortSyntax(*this);
 }
 
 bool AssignmentPatternExpressionSyntax::isKind(SyntaxKind kind) {
@@ -620,9 +645,14 @@ ConstTokenOrSyntax AssignmentPatternExpressionSyntax::getChild(uint32_t index) c
 void AssignmentPatternExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: type = &child.node()->as<DataTypeSyntax>(); return;
-        case 1: memcpy(&pattern, child.node(), sizeof(AssignmentPatternSyntax)); return;
+        case 1: new (&pattern) = child.node()->as<AssignmentPatternSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+AssignmentPatternExpressionSyntax* AssignmentPatternExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(AssignmentPatternExpressionSyntax));
+    return new (mem) AssignmentPatternExpressionSyntax(*this);
 }
 
 bool AssignmentPatternItemSyntax::isKind(SyntaxKind kind) {
@@ -649,11 +679,16 @@ ConstTokenOrSyntax AssignmentPatternItemSyntax::getChild(uint32_t index) const {
 
 void AssignmentPatternItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&key, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&key) = child.node()->as<ExpressionSyntax>(); return;
         case 1: colon = child.token(); return;
-        case 2: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+AssignmentPatternItemSyntax* AssignmentPatternItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(AssignmentPatternItemSyntax));
+    return new (mem) AssignmentPatternItemSyntax(*this);
 }
 
 bool AssignmentPatternSyntax::isKind(SyntaxKind kind) {
@@ -692,10 +727,15 @@ ConstTokenOrSyntax AttributeInstanceSyntax::getChild(uint32_t index) const {
 void AttributeInstanceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&specs, child.node(), sizeof(SeparatedSyntaxList<AttributeSpecSyntax>)); return;
+        case 1: new (&specs) = child.node()->as<SeparatedSyntaxList<AttributeSpecSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+AttributeInstanceSyntax* AttributeInstanceSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(AttributeInstanceSyntax));
+    return new (mem) AttributeInstanceSyntax(*this);
 }
 
 bool AttributeSpecSyntax::isKind(SyntaxKind kind) {
@@ -726,6 +766,11 @@ void AttributeSpecSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+AttributeSpecSyntax* AttributeSpecSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(AttributeSpecSyntax));
+    return new (mem) AttributeSpecSyntax(*this);
+}
+
 bool BadExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::BadExpression;
 }
@@ -746,9 +791,14 @@ ConstTokenOrSyntax BadExpressionSyntax::getChild(uint32_t index) const {
 
 void BadExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+BadExpressionSyntax* BadExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(BadExpressionSyntax));
+    return new (mem) BadExpressionSyntax(*this);
 }
 
 bool BeginKeywordsDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -782,6 +832,11 @@ void BeginKeywordsDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child)
     }
 }
 
+BeginKeywordsDirectiveSyntax* BeginKeywordsDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(BeginKeywordsDirectiveSyntax));
+    return new (mem) BeginKeywordsDirectiveSyntax(*this);
+}
+
 bool BinaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::BinaryBlockEventExpression;
 }
@@ -806,11 +861,16 @@ ConstTokenOrSyntax BinaryBlockEventExpressionSyntax::getChild(uint32_t index) co
 
 void BinaryBlockEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(BlockEventExpressionSyntax)); return;
+        case 0: new (&left) = child.node()->as<BlockEventExpressionSyntax>(); return;
         case 1: orKeyword = child.token(); return;
-        case 2: memcpy(&right, child.node(), sizeof(BlockEventExpressionSyntax)); return;
+        case 2: new (&right) = child.node()->as<BlockEventExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+BinaryBlockEventExpressionSyntax* BinaryBlockEventExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(BinaryBlockEventExpressionSyntax));
+    return new (mem) BinaryBlockEventExpressionSyntax(*this);
 }
 
 bool BinaryEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -837,11 +897,16 @@ ConstTokenOrSyntax BinaryEventExpressionSyntax::getChild(uint32_t index) const {
 
 void BinaryEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(EventExpressionSyntax)); return;
+        case 0: new (&left) = child.node()->as<EventExpressionSyntax>(); return;
         case 1: operatorToken = child.token(); return;
-        case 2: memcpy(&right, child.node(), sizeof(EventExpressionSyntax)); return;
+        case 2: new (&right) = child.node()->as<EventExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+BinaryEventExpressionSyntax* BinaryEventExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(BinaryEventExpressionSyntax));
+    return new (mem) BinaryEventExpressionSyntax(*this);
 }
 
 bool BinaryExpressionSyntax::isKind(SyntaxKind kind) {
@@ -932,12 +997,17 @@ ConstTokenOrSyntax BinaryExpressionSyntax::getChild(uint32_t index) const {
 
 void BinaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
         case 1: operatorToken = child.token(); return;
-        case 2: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 3: memcpy(&right, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 3: new (&right) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+BinaryExpressionSyntax* BinaryExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(BinaryExpressionSyntax));
+    return new (mem) BinaryExpressionSyntax(*this);
 }
 
 bool BitSelectSyntax::isKind(SyntaxKind kind) {
@@ -960,9 +1030,14 @@ ConstTokenOrSyntax BitSelectSyntax::getChild(uint32_t index) const {
 
 void BitSelectSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+BitSelectSyntax* BitSelectSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(BitSelectSyntax));
+    return new (mem) BitSelectSyntax(*this);
 }
 
 bool BlockCoverageEventSyntax::isKind(SyntaxKind kind) {
@@ -993,10 +1068,15 @@ void BlockCoverageEventSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: atat = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: memcpy(&expr, child.node(), sizeof(BlockEventExpressionSyntax)); return;
+        case 2: new (&expr) = child.node()->as<BlockEventExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+BlockCoverageEventSyntax* BlockCoverageEventSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(BlockCoverageEventSyntax));
+    return new (mem) BlockCoverageEventSyntax(*this);
 }
 
 bool BlockEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -1047,15 +1127,20 @@ ConstTokenOrSyntax BlockStatementSyntax::getChild(uint32_t index) const {
 
 void BlockStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: begin = child.token(); return;
         case 3: blockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
-        case 4: memcpy(&items, child.node(), sizeof(SyntaxList<SyntaxNode>)); return;
+        case 4: new (&items) = child.node()->as<SyntaxList<SyntaxNode>>(); return;
         case 5: end = child.token(); return;
         case 6: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+BlockStatementSyntax* BlockStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(BlockStatementSyntax));
+    return new (mem) BlockStatementSyntax(*this);
 }
 
 bool CaseGenerateSyntax::isKind(SyntaxKind kind) {
@@ -1090,15 +1175,20 @@ ConstTokenOrSyntax CaseGenerateSyntax::getChild(uint32_t index) const {
 
 void CaseGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: openParen = child.token(); return;
-        case 3: memcpy(&condition, child.node(), sizeof(ExpressionSyntax)); return;
+        case 3: new (&condition) = child.node()->as<ExpressionSyntax>(); return;
         case 4: closeParen = child.token(); return;
-        case 5: memcpy(&items, child.node(), sizeof(SyntaxList<CaseItemSyntax>)); return;
+        case 5: new (&items) = child.node()->as<SyntaxList<CaseItemSyntax>>(); return;
         case 6: endCase = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+CaseGenerateSyntax* CaseGenerateSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(CaseGenerateSyntax));
+    return new (mem) CaseGenerateSyntax(*this);
 }
 
 bool CaseItemSyntax::isKind(SyntaxKind kind) {
@@ -1150,18 +1240,23 @@ ConstTokenOrSyntax CaseStatementSyntax::getChild(uint32_t index) const {
 
 void CaseStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: uniqueOrPriority = child.token(); return;
         case 3: caseKeyword = child.token(); return;
         case 4: openParen = child.token(); return;
-        case 5: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 5: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 6: closeParen = child.token(); return;
         case 7: matchesOrInside = child.token(); return;
-        case 8: memcpy(&items, child.node(), sizeof(SyntaxList<CaseItemSyntax>)); return;
+        case 8: new (&items) = child.node()->as<SyntaxList<CaseItemSyntax>>(); return;
         case 9: endcase = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+CaseStatementSyntax* CaseStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(CaseStatementSyntax));
+    return new (mem) CaseStatementSyntax(*this);
 }
 
 bool CastExpressionSyntax::isKind(SyntaxKind kind) {
@@ -1188,11 +1283,16 @@ ConstTokenOrSyntax CastExpressionSyntax::getChild(uint32_t index) const {
 
 void CastExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
         case 1: apostrophe = child.token(); return;
-        case 2: memcpy(&right, child.node(), sizeof(ParenthesizedExpressionSyntax)); return;
+        case 2: new (&right) = child.node()->as<ParenthesizedExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+CastExpressionSyntax* CastExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(CastExpressionSyntax));
+    return new (mem) CastExpressionSyntax(*this);
 }
 
 bool ChargeStrengthSyntax::isKind(SyntaxKind kind) {
@@ -1224,6 +1324,11 @@ void ChargeStrengthSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ChargeStrengthSyntax* ChargeStrengthSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ChargeStrengthSyntax));
+    return new (mem) ChargeStrengthSyntax(*this);
 }
 
 bool ClassDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -1268,7 +1373,7 @@ ConstTokenOrSyntax ClassDeclarationSyntax::getChild(uint32_t index) const {
 
 void ClassDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: virtualOrInterface = child.token(); return;
         case 2: classKeyword = child.token(); return;
         case 3: lifetime = child.token(); return;
@@ -1277,11 +1382,16 @@ void ClassDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 6: extendsClause = &child.node()->as<ExtendsClauseSyntax>(); return;
         case 7: implementsClause = &child.node()->as<ImplementsClauseSyntax>(); return;
         case 8: semi = child.token(); return;
-        case 9: memcpy(&items, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
+        case 9: new (&items) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 10: endClass = child.token(); return;
         case 11: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ClassDeclarationSyntax* ClassDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClassDeclarationSyntax));
+    return new (mem) ClassDeclarationSyntax(*this);
 }
 
 bool ClassMethodDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -1308,11 +1418,16 @@ ConstTokenOrSyntax ClassMethodDeclarationSyntax::getChild(uint32_t index) const 
 
 void ClassMethodDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&qualifiers, child.node(), sizeof(TokenList)); return;
-        case 2: memcpy(&declaration, child.node(), sizeof(FunctionDeclarationSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
+        case 2: new (&declaration) = child.node()->as<FunctionDeclarationSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ClassMethodDeclarationSyntax* ClassMethodDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClassMethodDeclarationSyntax));
+    return new (mem) ClassMethodDeclarationSyntax(*this);
 }
 
 bool ClassMethodPrototypeSyntax::isKind(SyntaxKind kind) {
@@ -1341,12 +1456,17 @@ ConstTokenOrSyntax ClassMethodPrototypeSyntax::getChild(uint32_t index) const {
 
 void ClassMethodPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&qualifiers, child.node(), sizeof(TokenList)); return;
-        case 2: memcpy(&prototype, child.node(), sizeof(FunctionPrototypeSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
+        case 2: new (&prototype) = child.node()->as<FunctionPrototypeSyntax>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ClassMethodPrototypeSyntax* ClassMethodPrototypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClassMethodPrototypeSyntax));
+    return new (mem) ClassMethodPrototypeSyntax(*this);
 }
 
 bool ClassNameSyntax::isKind(SyntaxKind kind) {
@@ -1372,9 +1492,14 @@ ConstTokenOrSyntax ClassNameSyntax::getChild(uint32_t index) const {
 void ClassNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: identifier = child.token(); return;
-        case 1: memcpy(&parameters, child.node(), sizeof(ParameterValueAssignmentSyntax)); return;
+        case 1: new (&parameters) = child.node()->as<ParameterValueAssignmentSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ClassNameSyntax* ClassNameSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClassNameSyntax));
+    return new (mem) ClassNameSyntax(*this);
 }
 
 bool ClassPropertyDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -1401,11 +1526,16 @@ ConstTokenOrSyntax ClassPropertyDeclarationSyntax::getChild(uint32_t index) cons
 
 void ClassPropertyDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&qualifiers, child.node(), sizeof(TokenList)); return;
-        case 2: memcpy(&declaration, child.node(), sizeof(MemberSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
+        case 2: new (&declaration) = child.node()->as<MemberSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ClassPropertyDeclarationSyntax* ClassPropertyDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClassPropertyDeclarationSyntax));
+    return new (mem) ClassPropertyDeclarationSyntax(*this);
 }
 
 bool ClassScopeSyntax::isKind(SyntaxKind kind) {
@@ -1430,10 +1560,15 @@ ConstTokenOrSyntax ClassScopeSyntax::getChild(uint32_t index) const {
 
 void ClassScopeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(NameSyntax)); return;
+        case 0: new (&left) = child.node()->as<NameSyntax>(); return;
         case 1: separator = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ClassScopeSyntax* ClassScopeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClassScopeSyntax));
+    return new (mem) ClassScopeSyntax(*this);
 }
 
 bool ClockingDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -1476,7 +1611,7 @@ ConstTokenOrSyntax ClockingDeclarationSyntax::getChild(uint32_t index) const {
 
 void ClockingDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: globalOrDefault = child.token(); return;
         case 2: clocking = child.token(); return;
         case 3: blockName = child.token(); return;
@@ -1484,11 +1619,16 @@ void ClockingDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 5: event = &child.node()->as<ParenthesizedEventExpressionSyntax>(); return;
         case 6: eventIdentifier = child.token(); return;
         case 7: semi = child.token(); return;
-        case 8: memcpy(&items, child.node(), sizeof(SyntaxList<ClockingItemSyntax>)); return;
+        case 8: new (&items) = child.node()->as<SyntaxList<ClockingItemSyntax>>(); return;
         case 9: endClocking = child.token(); return;
         case 10: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ClockingDeclarationSyntax* ClockingDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClockingDeclarationSyntax));
+    return new (mem) ClockingDeclarationSyntax(*this);
 }
 
 bool ClockingDirectionSyntax::isKind(SyntaxKind kind) {
@@ -1528,6 +1668,11 @@ void ClockingDirectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+ClockingDirectionSyntax* ClockingDirectionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClockingDirectionSyntax));
+    return new (mem) ClockingDirectionSyntax(*this);
+}
+
 bool ClockingItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ClockingItem;
 }
@@ -1558,11 +1703,16 @@ void ClockingItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: defaultKeyword = child.token(); return;
         case 1: direction = &child.node()->as<ClockingDirectionSyntax>(); return;
-        case 2: memcpy(&assignments, child.node(), sizeof(SeparatedSyntaxList<AttributeSpecSyntax>)); return;
+        case 2: new (&assignments) = child.node()->as<SeparatedSyntaxList<AttributeSpecSyntax>>(); return;
         case 3: semi = child.token(); return;
         case 4: declaration = &child.node()->as<MemberSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ClockingItemSyntax* ClockingItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClockingItemSyntax));
+    return new (mem) ClockingItemSyntax(*this);
 }
 
 bool ClockingSkewSyntax::isKind(SyntaxKind kind) {
@@ -1596,6 +1746,11 @@ void ClockingSkewSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+ClockingSkewSyntax* ClockingSkewSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ClockingSkewSyntax));
+    return new (mem) ClockingSkewSyntax(*this);
+}
+
 bool ColonExpressionClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ColonExpressionClause;
 }
@@ -1619,9 +1774,14 @@ ConstTokenOrSyntax ColonExpressionClauseSyntax::getChild(uint32_t index) const {
 void ColonExpressionClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: colon = child.token(); return;
-        case 1: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ColonExpressionClauseSyntax* ColonExpressionClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ColonExpressionClauseSyntax));
+    return new (mem) ColonExpressionClauseSyntax(*this);
 }
 
 bool CompilationUnitSyntax::isKind(SyntaxKind kind) {
@@ -1646,10 +1806,15 @@ ConstTokenOrSyntax CompilationUnitSyntax::getChild(uint32_t index) const {
 
 void CompilationUnitSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&members, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
+        case 0: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 1: endOfFile = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+CompilationUnitSyntax* CompilationUnitSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(CompilationUnitSyntax));
+    return new (mem) CompilationUnitSyntax(*this);
 }
 
 bool ConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
@@ -1677,10 +1842,15 @@ ConstTokenOrSyntax ConcatenationExpressionSyntax::getChild(uint32_t index) const
 void ConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: memcpy(&expressions, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 1: new (&expressions) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConcatenationExpressionSyntax* ConcatenationExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConcatenationExpressionSyntax));
+    return new (mem) ConcatenationExpressionSyntax(*this);
 }
 
 bool ConcurrentAssertionMemberSyntax::isKind(SyntaxKind kind) {
@@ -1705,10 +1875,15 @@ ConstTokenOrSyntax ConcurrentAssertionMemberSyntax::getChild(uint32_t index) con
 
 void ConcurrentAssertionMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&statement, child.node(), sizeof(ConcurrentAssertionStatementSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&statement) = child.node()->as<ConcurrentAssertionStatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConcurrentAssertionMemberSyntax* ConcurrentAssertionMemberSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConcurrentAssertionMemberSyntax));
+    return new (mem) ConcurrentAssertionMemberSyntax(*this);
 }
 
 bool ConcurrentAssertionStatementSyntax::isKind(SyntaxKind kind) {
@@ -1755,16 +1930,21 @@ ConstTokenOrSyntax ConcurrentAssertionStatementSyntax::getChild(uint32_t index) 
 
 void ConcurrentAssertionStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
         case 3: propertyOrSequence = child.token(); return;
         case 4: openParen = child.token(); return;
-        case 5: memcpy(&propertySpec, child.node(), sizeof(PropertySpecSyntax)); return;
+        case 5: new (&propertySpec) = child.node()->as<PropertySpecSyntax>(); return;
         case 6: closeParen = child.token(); return;
-        case 7: memcpy(&action, child.node(), sizeof(ActionBlockSyntax)); return;
+        case 7: new (&action) = child.node()->as<ActionBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConcurrentAssertionStatementSyntax* ConcurrentAssertionStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConcurrentAssertionStatementSyntax));
+    return new (mem) ConcurrentAssertionStatementSyntax(*this);
 }
 
 bool ConditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -1803,9 +1983,14 @@ void ConditionalBranchDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax ch
         case 0: directive = child.token(); return;
         case 1: name = child.token(); return;
         case 2: endOfDirective = child.token(); return;
-        case 3: memcpy(&disabledTokens, child.node(), sizeof(TokenList)); return;
+        case 3: new (&disabledTokens) = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConditionalBranchDirectiveSyntax* ConditionalBranchDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalBranchDirectiveSyntax));
+    return new (mem) ConditionalBranchDirectiveSyntax(*this);
 }
 
 bool ConditionalConstraintSyntax::isKind(SyntaxKind kind) {
@@ -1840,12 +2025,17 @@ void ConditionalConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) 
     switch (index) {
         case 0: ifKeyword = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: memcpy(&condition, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&condition) = child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
-        case 4: memcpy(&constraints, child.node(), sizeof(ConstraintItemSyntax)); return;
+        case 4: new (&constraints) = child.node()->as<ConstraintItemSyntax>(); return;
         case 5: elseClause = &child.node()->as<ElseConstraintClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConditionalConstraintSyntax* ConditionalConstraintSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalConstraintSyntax));
+    return new (mem) ConditionalConstraintSyntax(*this);
 }
 
 bool ConditionalExpressionSyntax::isKind(SyntaxKind kind) {
@@ -1878,14 +2068,19 @@ ConstTokenOrSyntax ConditionalExpressionSyntax::getChild(uint32_t index) const {
 
 void ConditionalExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&predicate, child.node(), sizeof(ConditionalPredicateSyntax)); return;
+        case 0: new (&predicate) = child.node()->as<ConditionalPredicateSyntax>(); return;
         case 1: question = child.token(); return;
-        case 2: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 3: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 3: new (&left) = child.node()->as<ExpressionSyntax>(); return;
         case 4: colon = child.token(); return;
-        case 5: memcpy(&right, child.node(), sizeof(ExpressionSyntax)); return;
+        case 5: new (&right) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConditionalExpressionSyntax* ConditionalExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalExpressionSyntax));
+    return new (mem) ConditionalExpressionSyntax(*this);
 }
 
 bool ConditionalPatternSyntax::isKind(SyntaxKind kind) {
@@ -1910,10 +2105,15 @@ ConstTokenOrSyntax ConditionalPatternSyntax::getChild(uint32_t index) const {
 
 void ConditionalPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 1: matchesClause = &child.node()->as<MatchesClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConditionalPatternSyntax* ConditionalPatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalPatternSyntax));
+    return new (mem) ConditionalPatternSyntax(*this);
 }
 
 bool ConditionalPredicateSyntax::isKind(SyntaxKind kind) {
@@ -1936,9 +2136,14 @@ ConstTokenOrSyntax ConditionalPredicateSyntax::getChild(uint32_t index) const {
 
 void ConditionalPredicateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&conditions, child.node(), sizeof(SeparatedSyntaxList<ConditionalPatternSyntax>)); return;
+        case 0: new (&conditions) = child.node()->as<SeparatedSyntaxList<ConditionalPatternSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConditionalPredicateSyntax* ConditionalPredicateSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalPredicateSyntax));
+    return new (mem) ConditionalPredicateSyntax(*this);
 }
 
 bool ConditionalStatementSyntax::isKind(SyntaxKind kind) {
@@ -1977,17 +2182,22 @@ ConstTokenOrSyntax ConditionalStatementSyntax::getChild(uint32_t index) const {
 
 void ConditionalStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: uniqueOrPriority = child.token(); return;
         case 3: ifKeyword = child.token(); return;
         case 4: openParen = child.token(); return;
-        case 5: memcpy(&predicate, child.node(), sizeof(ConditionalPredicateSyntax)); return;
+        case 5: new (&predicate) = child.node()->as<ConditionalPredicateSyntax>(); return;
         case 6: closeParen = child.token(); return;
-        case 7: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 7: new (&statement) = child.node()->as<StatementSyntax>(); return;
         case 8: elseClause = &child.node()->as<ElseClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConditionalStatementSyntax* ConditionalStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalStatementSyntax));
+    return new (mem) ConditionalStatementSyntax(*this);
 }
 
 bool ConstraintBlockSyntax::isKind(SyntaxKind kind) {
@@ -2015,10 +2225,15 @@ ConstTokenOrSyntax ConstraintBlockSyntax::getChild(uint32_t index) const {
 void ConstraintBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: memcpy(&items, child.node(), sizeof(SyntaxList<ConstraintItemSyntax>)); return;
+        case 1: new (&items) = child.node()->as<SyntaxList<ConstraintItemSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConstraintBlockSyntax* ConstraintBlockSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConstraintBlockSyntax));
+    return new (mem) ConstraintBlockSyntax(*this);
 }
 
 bool ConstraintDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -2049,13 +2264,18 @@ ConstTokenOrSyntax ConstraintDeclarationSyntax::getChild(uint32_t index) const {
 
 void ConstraintDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&qualifiers, child.node(), sizeof(TokenList)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
         case 2: keyword = child.token(); return;
         case 3: name = child.token(); return;
-        case 4: memcpy(&block, child.node(), sizeof(ConstraintBlockSyntax)); return;
+        case 4: new (&block) = child.node()->as<ConstraintBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConstraintDeclarationSyntax* ConstraintDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConstraintDeclarationSyntax));
+    return new (mem) ConstraintDeclarationSyntax(*this);
 }
 
 bool ConstraintItemSyntax::isKind(SyntaxKind kind) {
@@ -2102,13 +2322,18 @@ ConstTokenOrSyntax ConstraintPrototypeSyntax::getChild(uint32_t index) const {
 
 void ConstraintPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&qualifiers, child.node(), sizeof(TokenList)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
         case 2: keyword = child.token(); return;
         case 3: name = child.token(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ConstraintPrototypeSyntax* ConstraintPrototypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ConstraintPrototypeSyntax));
+    return new (mem) ConstraintPrototypeSyntax(*this);
 }
 
 bool ContinuousAssignSyntax::isKind(SyntaxKind kind) {
@@ -2137,12 +2362,17 @@ ConstTokenOrSyntax ContinuousAssignSyntax::getChild(uint32_t index) const {
 
 void ContinuousAssignSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: assign = child.token(); return;
-        case 2: memcpy(&assignments, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 2: new (&assignments) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ContinuousAssignSyntax* ContinuousAssignSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ContinuousAssignSyntax));
+    return new (mem) ContinuousAssignSyntax(*this);
 }
 
 bool CoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
@@ -2193,17 +2423,22 @@ ConstTokenOrSyntax CoverageBinsSyntax::getChild(uint32_t index) const {
 
 void CoverageBinsSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: wildcard = child.token(); return;
         case 2: keyword = child.token(); return;
         case 3: name = child.token(); return;
         case 4: selector = &child.node()->as<ElementSelectSyntax>(); return;
         case 5: equals = child.token(); return;
-        case 6: memcpy(&initializer, child.node(), sizeof(CoverageBinInitializerSyntax)); return;
+        case 6: new (&initializer) = child.node()->as<CoverageBinInitializerSyntax>(); return;
         case 7: iff = &child.node()->as<IffClauseSyntax>(); return;
         case 8: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+CoverageBinsSyntax* CoverageBinsSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(CoverageBinsSyntax));
+    return new (mem) CoverageBinsSyntax(*this);
 }
 
 bool CoverageOptionSyntax::isKind(SyntaxKind kind) {
@@ -2238,15 +2473,20 @@ ConstTokenOrSyntax CoverageOptionSyntax::getChild(uint32_t index) const {
 
 void CoverageOptionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: option = child.token(); return;
         case 2: dot = child.token(); return;
         case 3: name = child.token(); return;
         case 4: equals = child.token(); return;
-        case 5: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 5: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 6: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+CoverageOptionSyntax* CoverageOptionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(CoverageOptionSyntax));
+    return new (mem) CoverageOptionSyntax(*this);
 }
 
 bool CovergroupDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -2285,17 +2525,22 @@ ConstTokenOrSyntax CovergroupDeclarationSyntax::getChild(uint32_t index) const {
 
 void CovergroupDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: covergroup = child.token(); return;
         case 2: name = child.token(); return;
         case 3: portList = &child.node()->as<AnsiPortListSyntax>(); return;
         case 4: event = &child.node()->as<SyntaxNode>(); return;
         case 5: semi = child.token(); return;
-        case 6: memcpy(&members, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
+        case 6: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 7: endgroup = child.token(); return;
         case 8: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+CovergroupDeclarationSyntax* CovergroupDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(CovergroupDeclarationSyntax));
+    return new (mem) CovergroupDeclarationSyntax(*this);
 }
 
 bool CoverpointSyntax::isKind(SyntaxKind kind) {
@@ -2334,17 +2579,22 @@ ConstTokenOrSyntax CoverpointSyntax::getChild(uint32_t index) const {
 
 void CoverpointSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: type = &child.node()->as<DataTypeSyntax>(); return;
         case 2: label = &child.node()->as<NamedLabelSyntax>(); return;
         case 3: coverpoint = child.token(); return;
-        case 4: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 4: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 5: openBrace = child.token(); return;
-        case 6: memcpy(&members, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
+        case 6: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 7: closeBrace = child.token(); return;
         case 8: emptySemi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+CoverpointSyntax* CoverpointSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(CoverpointSyntax));
+    return new (mem) CoverpointSyntax(*this);
 }
 
 bool DPIImportExportSyntax::isKind(SyntaxKind kind) {
@@ -2381,16 +2631,21 @@ ConstTokenOrSyntax DPIImportExportSyntax::getChild(uint32_t index) const {
 
 void DPIImportExportSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: stringLiteral = child.token(); return;
         case 3: property = child.token(); return;
         case 4: name = child.token(); return;
         case 5: equals = child.token(); return;
-        case 6: memcpy(&method, child.node(), sizeof(FunctionPrototypeSyntax)); return;
+        case 6: new (&method) = child.node()->as<FunctionPrototypeSyntax>(); return;
         case 7: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DPIImportExportSyntax* DPIImportExportSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DPIImportExportSyntax));
+    return new (mem) DPIImportExportSyntax(*this);
 }
 
 bool DataDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -2421,13 +2676,18 @@ ConstTokenOrSyntax DataDeclarationSyntax::getChild(uint32_t index) const {
 
 void DataDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&modifiers, child.node(), sizeof(TokenList)); return;
-        case 2: memcpy(&type, child.node(), sizeof(DataTypeSyntax)); return;
-        case 3: memcpy(&declarators, child.node(), sizeof(SeparatedSyntaxList<VariableDeclaratorSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&modifiers) = child.node()->as<TokenList>(); return;
+        case 2: new (&type) = child.node()->as<DataTypeSyntax>(); return;
+        case 3: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DataDeclarationSyntax* DataDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DataDeclarationSyntax));
+    return new (mem) DataDeclarationSyntax(*this);
 }
 
 bool DataTypeSyntax::isKind(SyntaxKind kind) {
@@ -2488,10 +2748,15 @@ ConstTokenOrSyntax DefParamAssignmentSyntax::getChild(uint32_t index) const {
 
 void DefParamAssignmentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&name, child.node(), sizeof(NameSyntax)); return;
+        case 0: new (&name) = child.node()->as<NameSyntax>(); return;
         case 1: setter = &child.node()->as<EqualsValueClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DefParamAssignmentSyntax* DefParamAssignmentSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DefParamAssignmentSyntax));
+    return new (mem) DefParamAssignmentSyntax(*this);
 }
 
 bool DefParamSyntax::isKind(SyntaxKind kind) {
@@ -2520,12 +2785,17 @@ ConstTokenOrSyntax DefParamSyntax::getChild(uint32_t index) const {
 
 void DefParamSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: defparam = child.token(); return;
-        case 2: memcpy(&assignments, child.node(), sizeof(SeparatedSyntaxList<DefParamAssignmentSyntax>)); return;
+        case 2: new (&assignments) = child.node()->as<SeparatedSyntaxList<DefParamAssignmentSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DefParamSyntax* DefParamSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DefParamSyntax));
+    return new (mem) DefParamSyntax(*this);
 }
 
 bool DefaultCaseItemSyntax::isKind(SyntaxKind kind) {
@@ -2554,9 +2824,14 @@ void DefaultCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: defaultKeyword = child.token(); return;
         case 1: colon = child.token(); return;
-        case 2: memcpy(&clause, child.node(), sizeof(SyntaxNode)); return;
+        case 2: new (&clause) = child.node()->as<SyntaxNode>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DefaultCaseItemSyntax* DefaultCaseItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DefaultCaseItemSyntax));
+    return new (mem) DefaultCaseItemSyntax(*this);
 }
 
 bool DefaultCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
@@ -2585,6 +2860,11 @@ void DefaultCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax
         case 1: sequenceKeyword = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DefaultCoverageBinInitializerSyntax* DefaultCoverageBinInitializerSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DefaultCoverageBinInitializerSyntax));
+    return new (mem) DefaultCoverageBinInitializerSyntax(*this);
 }
 
 bool DefaultNetTypeDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -2618,6 +2898,11 @@ void DefaultNetTypeDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child
     }
 }
 
+DefaultNetTypeDirectiveSyntax* DefaultNetTypeDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DefaultNetTypeDirectiveSyntax));
+    return new (mem) DefaultNetTypeDirectiveSyntax(*this);
+}
+
 bool DeferredAssertionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DeferredAssertion;
 }
@@ -2647,6 +2932,11 @@ void DeferredAssertionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 2: finalKeyword = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DeferredAssertionSyntax* DeferredAssertionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DeferredAssertionSyntax));
+    return new (mem) DeferredAssertionSyntax(*this);
 }
 
 bool DefineDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -2680,10 +2970,15 @@ void DefineDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: directive = child.token(); return;
         case 1: name = child.token(); return;
         case 2: formalArguments = &child.node()->as<MacroFormalArgumentListSyntax>(); return;
-        case 3: memcpy(&body, child.node(), sizeof(TokenList)); return;
+        case 3: new (&body) = child.node()->as<TokenList>(); return;
         case 4: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DefineDirectiveSyntax* DefineDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DefineDirectiveSyntax));
+    return new (mem) DefineDirectiveSyntax(*this);
 }
 
 bool DelaySyntax::isKind(SyntaxKind kind) {
@@ -2715,9 +3010,14 @@ ConstTokenOrSyntax DelaySyntax::getChild(uint32_t index) const {
 void DelaySyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: hash = child.token(); return;
-        case 1: memcpy(&delayValue, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&delayValue) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DelaySyntax* DelaySyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DelaySyntax));
+    return new (mem) DelaySyntax(*this);
 }
 
 bool DimensionSpecifierSyntax::isKind(SyntaxKind kind) {
@@ -2781,6 +3081,11 @@ void DirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+DirectiveSyntax* DirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DirectiveSyntax));
+    return new (mem) DirectiveSyntax(*this);
+}
+
 bool DisableConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::DisableConstraint;
 }
@@ -2809,10 +3114,15 @@ void DisableConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: disable = child.token(); return;
         case 1: soft = child.token(); return;
-        case 2: memcpy(&name, child.node(), sizeof(NameSyntax)); return;
+        case 2: new (&name) = child.node()->as<NameSyntax>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DisableConstraintSyntax* DisableConstraintSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DisableConstraintSyntax));
+    return new (mem) DisableConstraintSyntax(*this);
 }
 
 bool DisableForkStatementSyntax::isKind(SyntaxKind kind) {
@@ -2843,13 +3153,18 @@ ConstTokenOrSyntax DisableForkStatementSyntax::getChild(uint32_t index) const {
 
 void DisableForkStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: disable = child.token(); return;
         case 3: fork = child.token(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DisableForkStatementSyntax* DisableForkStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DisableForkStatementSyntax));
+    return new (mem) DisableForkStatementSyntax(*this);
 }
 
 bool DisableIffSyntax::isKind(SyntaxKind kind) {
@@ -2883,10 +3198,15 @@ void DisableIffSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: disable = child.token(); return;
         case 1: iff = child.token(); return;
         case 2: openParen = child.token(); return;
-        case 3: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 3: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 4: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DisableIffSyntax* DisableIffSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DisableIffSyntax));
+    return new (mem) DisableIffSyntax(*this);
 }
 
 bool DisableStatementSyntax::isKind(SyntaxKind kind) {
@@ -2917,13 +3237,18 @@ ConstTokenOrSyntax DisableStatementSyntax::getChild(uint32_t index) const {
 
 void DisableStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: disable = child.token(); return;
-        case 3: memcpy(&name, child.node(), sizeof(NameSyntax)); return;
+        case 3: new (&name) = child.node()->as<NameSyntax>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DisableStatementSyntax* DisableStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DisableStatementSyntax));
+    return new (mem) DisableStatementSyntax(*this);
 }
 
 bool DistConstraintListSyntax::isKind(SyntaxKind kind) {
@@ -2954,10 +3279,15 @@ void DistConstraintListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: dist = child.token(); return;
         case 1: openBrace = child.token(); return;
-        case 2: memcpy(&items, child.node(), sizeof(SeparatedSyntaxList<DistItemSyntax>)); return;
+        case 2: new (&items) = child.node()->as<SeparatedSyntaxList<DistItemSyntax>>(); return;
         case 3: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DistConstraintListSyntax* DistConstraintListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DistConstraintListSyntax));
+    return new (mem) DistConstraintListSyntax(*this);
 }
 
 bool DistItemSyntax::isKind(SyntaxKind kind) {
@@ -2982,10 +3312,15 @@ ConstTokenOrSyntax DistItemSyntax::getChild(uint32_t index) const {
 
 void DistItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&range, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&range) = child.node()->as<ExpressionSyntax>(); return;
         case 1: weight = &child.node()->as<DistWeightSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DistItemSyntax* DistItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DistItemSyntax));
+    return new (mem) DistItemSyntax(*this);
 }
 
 bool DistWeightSyntax::isKind(SyntaxKind kind) {
@@ -3011,9 +3346,14 @@ ConstTokenOrSyntax DistWeightSyntax::getChild(uint32_t index) const {
 void DistWeightSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: op = child.token(); return;
-        case 1: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DistWeightSyntax* DistWeightSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DistWeightSyntax));
+    return new (mem) DistWeightSyntax(*this);
 }
 
 bool DividerClauseSyntax::isKind(SyntaxKind kind) {
@@ -3042,6 +3382,11 @@ void DividerClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 1: value = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DividerClauseSyntax* DividerClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DividerClauseSyntax));
+    return new (mem) DividerClauseSyntax(*this);
 }
 
 bool DoWhileStatementSyntax::isKind(SyntaxKind kind) {
@@ -3080,17 +3425,22 @@ ConstTokenOrSyntax DoWhileStatementSyntax::getChild(uint32_t index) const {
 
 void DoWhileStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: doKeyword = child.token(); return;
-        case 3: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 3: new (&statement) = child.node()->as<StatementSyntax>(); return;
         case 4: whileKeyword = child.token(); return;
         case 5: openParen = child.token(); return;
-        case 6: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 6: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 7: closeParen = child.token(); return;
         case 8: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DoWhileStatementSyntax* DoWhileStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DoWhileStatementSyntax));
+    return new (mem) DoWhileStatementSyntax(*this);
 }
 
 bool DotMemberClauseSyntax::isKind(SyntaxKind kind) {
@@ -3119,6 +3469,11 @@ void DotMemberClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 1: member = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+DotMemberClauseSyntax* DotMemberClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DotMemberClauseSyntax));
+    return new (mem) DotMemberClauseSyntax(*this);
 }
 
 bool DriveStrengthSyntax::isKind(SyntaxKind kind) {
@@ -3158,6 +3513,11 @@ void DriveStrengthSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+DriveStrengthSyntax* DriveStrengthSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(DriveStrengthSyntax));
+    return new (mem) DriveStrengthSyntax(*this);
+}
+
 bool ElementSelectExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ElementSelectExpression;
 }
@@ -3180,10 +3540,15 @@ ConstTokenOrSyntax ElementSelectExpressionSyntax::getChild(uint32_t index) const
 
 void ElementSelectExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
-        case 1: memcpy(&select, child.node(), sizeof(ElementSelectSyntax)); return;
+        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: new (&select) = child.node()->as<ElementSelectSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ElementSelectExpressionSyntax* ElementSelectExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ElementSelectExpressionSyntax));
+    return new (mem) ElementSelectExpressionSyntax(*this);
 }
 
 bool ElementSelectSyntax::isKind(SyntaxKind kind) {
@@ -3217,6 +3582,11 @@ void ElementSelectSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+ElementSelectSyntax* ElementSelectSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ElementSelectSyntax));
+    return new (mem) ElementSelectSyntax(*this);
+}
+
 bool ElseClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ElseClause;
 }
@@ -3240,9 +3610,14 @@ ConstTokenOrSyntax ElseClauseSyntax::getChild(uint32_t index) const {
 void ElseClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: elseKeyword = child.token(); return;
-        case 1: memcpy(&clause, child.node(), sizeof(SyntaxNode)); return;
+        case 1: new (&clause) = child.node()->as<SyntaxNode>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ElseClauseSyntax* ElseClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ElseClauseSyntax));
+    return new (mem) ElseClauseSyntax(*this);
 }
 
 bool ElseConstraintClauseSyntax::isKind(SyntaxKind kind) {
@@ -3268,9 +3643,14 @@ ConstTokenOrSyntax ElseConstraintClauseSyntax::getChild(uint32_t index) const {
 void ElseConstraintClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: elseKeyword = child.token(); return;
-        case 1: memcpy(&constraints, child.node(), sizeof(ConstraintItemSyntax)); return;
+        case 1: new (&constraints) = child.node()->as<ConstraintItemSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ElseConstraintClauseSyntax* ElseConstraintClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ElseConstraintClauseSyntax));
+    return new (mem) ElseConstraintClauseSyntax(*this);
 }
 
 bool EmptyArgumentSyntax::isKind(SyntaxKind kind) {
@@ -3292,6 +3672,11 @@ void EmptyArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     (void)child;
 }
 
+EmptyArgumentSyntax* EmptyArgumentSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyArgumentSyntax));
+    return new (mem) EmptyArgumentSyntax(*this);
+}
+
 bool EmptyIdentifierNameSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EmptyIdentifierName;
 }
@@ -3309,6 +3694,11 @@ ConstTokenOrSyntax EmptyIdentifierNameSyntax::getChild(uint32_t index) const {
 void EmptyIdentifierNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     (void)index;
     (void)child;
+}
+
+EmptyIdentifierNameSyntax* EmptyIdentifierNameSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyIdentifierNameSyntax));
+    return new (mem) EmptyIdentifierNameSyntax(*this);
 }
 
 bool EmptyMemberSyntax::isKind(SyntaxKind kind) {
@@ -3335,11 +3725,16 @@ ConstTokenOrSyntax EmptyMemberSyntax::getChild(uint32_t index) const {
 
 void EmptyMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&qualifiers, child.node(), sizeof(TokenList)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&qualifiers) = child.node()->as<TokenList>(); return;
         case 2: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+EmptyMemberSyntax* EmptyMemberSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyMemberSyntax));
+    return new (mem) EmptyMemberSyntax(*this);
 }
 
 bool EmptyQueueExpressionSyntax::isKind(SyntaxKind kind) {
@@ -3370,6 +3765,11 @@ void EmptyQueueExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+EmptyQueueExpressionSyntax* EmptyQueueExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyQueueExpressionSyntax));
+    return new (mem) EmptyQueueExpressionSyntax(*this);
+}
+
 bool EmptyStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::EmptyStatement;
 }
@@ -3394,11 +3794,16 @@ ConstTokenOrSyntax EmptyStatementSyntax::getChild(uint32_t index) const {
 
 void EmptyStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: semicolon = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+EmptyStatementSyntax* EmptyStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyStatementSyntax));
+    return new (mem) EmptyStatementSyntax(*this);
 }
 
 bool EnumTypeSyntax::isKind(SyntaxKind kind) {
@@ -3434,11 +3839,16 @@ void EnumTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: keyword = child.token(); return;
         case 1: baseType = &child.node()->as<DataTypeSyntax>(); return;
         case 2: openBrace = child.token(); return;
-        case 3: memcpy(&members, child.node(), sizeof(SeparatedSyntaxList<VariableDeclaratorSyntax>)); return;
+        case 3: new (&members) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 4: closeBrace = child.token(); return;
-        case 5: memcpy(&dimensions, child.node(), sizeof(SyntaxList<VariableDimensionSyntax>)); return;
+        case 5: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+EnumTypeSyntax* EnumTypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EnumTypeSyntax));
+    return new (mem) EnumTypeSyntax(*this);
 }
 
 bool EqualsValueClauseSyntax::isKind(SyntaxKind kind) {
@@ -3464,9 +3874,14 @@ ConstTokenOrSyntax EqualsValueClauseSyntax::getChild(uint32_t index) const {
 void EqualsValueClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: equals = child.token(); return;
-        case 1: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+EqualsValueClauseSyntax* EqualsValueClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EqualsValueClauseSyntax));
+    return new (mem) EqualsValueClauseSyntax(*this);
 }
 
 bool EventControlSyntax::isKind(SyntaxKind kind) {
@@ -3492,9 +3907,14 @@ ConstTokenOrSyntax EventControlSyntax::getChild(uint32_t index) const {
 void EventControlSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: at = child.token(); return;
-        case 1: memcpy(&eventName, child.node(), sizeof(NameSyntax)); return;
+        case 1: new (&eventName) = child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+EventControlSyntax* EventControlSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EventControlSyntax));
+    return new (mem) EventControlSyntax(*this);
 }
 
 bool EventControlWithExpressionSyntax::isKind(SyntaxKind kind) {
@@ -3520,9 +3940,14 @@ ConstTokenOrSyntax EventControlWithExpressionSyntax::getChild(uint32_t index) co
 void EventControlWithExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: at = child.token(); return;
-        case 1: memcpy(&expr, child.node(), sizeof(EventExpressionSyntax)); return;
+        case 1: new (&expr) = child.node()->as<EventExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+EventControlWithExpressionSyntax* EventControlWithExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EventControlWithExpressionSyntax));
+    return new (mem) EventControlWithExpressionSyntax(*this);
 }
 
 bool EventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -3570,13 +3995,18 @@ ConstTokenOrSyntax EventTriggerStatementSyntax::getChild(uint32_t index) const {
 
 void EventTriggerStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: trigger = child.token(); return;
         case 3: timing = &child.node()->as<TimingControlSyntax>(); return;
-        case 4: memcpy(&name, child.node(), sizeof(NameSyntax)); return;
+        case 4: new (&name) = child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+EventTriggerStatementSyntax* EventTriggerStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(EventTriggerStatementSyntax));
+    return new (mem) EventTriggerStatementSyntax(*this);
 }
 
 bool ExplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -3611,7 +4041,7 @@ ConstTokenOrSyntax ExplicitAnsiPortSyntax::getChild(uint32_t index) const {
 
 void ExplicitAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: direction = child.token(); return;
         case 2: dot = child.token(); return;
         case 3: name = child.token(); return;
@@ -3620,6 +4050,11 @@ void ExplicitAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 6: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ExplicitAnsiPortSyntax* ExplicitAnsiPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExplicitAnsiPortSyntax));
+    return new (mem) ExplicitAnsiPortSyntax(*this);
 }
 
 bool ExplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -3659,6 +4094,11 @@ void ExplicitNonAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+ExplicitNonAnsiPortSyntax* ExplicitNonAnsiPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExplicitNonAnsiPortSyntax));
+    return new (mem) ExplicitNonAnsiPortSyntax(*this);
+}
+
 bool ExpressionConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ExpressionConstraint;
 }
@@ -3684,10 +4124,15 @@ ConstTokenOrSyntax ExpressionConstraintSyntax::getChild(uint32_t index) const {
 void ExpressionConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: soft = child.token(); return;
-        case 1: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 2: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ExpressionConstraintSyntax* ExpressionConstraintSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionConstraintSyntax));
+    return new (mem) ExpressionConstraintSyntax(*this);
 }
 
 bool ExpressionCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
@@ -3712,10 +4157,15 @@ ConstTokenOrSyntax ExpressionCoverageBinInitializerSyntax::getChild(uint32_t ind
 
 void ExpressionCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 1: withClause = &child.node()->as<WithClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ExpressionCoverageBinInitializerSyntax* ExpressionCoverageBinInitializerSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionCoverageBinInitializerSyntax));
+    return new (mem) ExpressionCoverageBinInitializerSyntax(*this);
 }
 
 bool ExpressionOrDistSyntax::isKind(SyntaxKind kind) {
@@ -3740,10 +4190,15 @@ ConstTokenOrSyntax ExpressionOrDistSyntax::getChild(uint32_t index) const {
 
 void ExpressionOrDistSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
-        case 1: memcpy(&distribution, child.node(), sizeof(DistConstraintListSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: new (&distribution) = child.node()->as<DistConstraintListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ExpressionOrDistSyntax* ExpressionOrDistSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionOrDistSyntax));
+    return new (mem) ExpressionOrDistSyntax(*this);
 }
 
 bool ExpressionPatternSyntax::isKind(SyntaxKind kind) {
@@ -3766,9 +4221,14 @@ ConstTokenOrSyntax ExpressionPatternSyntax::getChild(uint32_t index) const {
 
 void ExpressionPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ExpressionPatternSyntax* ExpressionPatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionPatternSyntax));
+    return new (mem) ExpressionPatternSyntax(*this);
 }
 
 bool ExpressionStatementSyntax::isKind(SyntaxKind kind) {
@@ -3797,12 +4257,17 @@ ConstTokenOrSyntax ExpressionStatementSyntax::getChild(uint32_t index) const {
 
 void ExpressionStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 2: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ExpressionStatementSyntax* ExpressionStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionStatementSyntax));
+    return new (mem) ExpressionStatementSyntax(*this);
 }
 
 bool ExpressionSyntax::isKind(SyntaxKind kind) {
@@ -4003,10 +4468,15 @@ ConstTokenOrSyntax ExtendsClauseSyntax::getChild(uint32_t index) const {
 void ExtendsClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
-        case 1: memcpy(&baseName, child.node(), sizeof(NameSyntax)); return;
+        case 1: new (&baseName) = child.node()->as<NameSyntax>(); return;
         case 2: arguments = &child.node()->as<ArgumentListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ExtendsClauseSyntax* ExtendsClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExtendsClauseSyntax));
+    return new (mem) ExtendsClauseSyntax(*this);
 }
 
 bool ExternModuleSyntax::isKind(SyntaxKind kind) {
@@ -4032,9 +4502,14 @@ ConstTokenOrSyntax ExternModuleSyntax::getChild(uint32_t index) const {
 void ExternModuleSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: externKeyword = child.token(); return;
-        case 1: memcpy(&header, child.node(), sizeof(ModuleHeaderSyntax)); return;
+        case 1: new (&header) = child.node()->as<ModuleHeaderSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ExternModuleSyntax* ExternModuleSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ExternModuleSyntax));
+    return new (mem) ExternModuleSyntax(*this);
 }
 
 bool ForLoopStatementSyntax::isKind(SyntaxKind kind) {
@@ -4077,19 +4552,24 @@ ConstTokenOrSyntax ForLoopStatementSyntax::getChild(uint32_t index) const {
 
 void ForLoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: forKeyword = child.token(); return;
         case 3: openParen = child.token(); return;
-        case 4: memcpy(&initializers, child.node(), sizeof(SeparatedSyntaxList<SyntaxNode>)); return;
+        case 4: new (&initializers) = child.node()->as<SeparatedSyntaxList<SyntaxNode>>(); return;
         case 5: semi1 = child.token(); return;
-        case 6: memcpy(&stopExpr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 6: new (&stopExpr) = child.node()->as<ExpressionSyntax>(); return;
         case 7: semi2 = child.token(); return;
-        case 8: memcpy(&steps, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 8: new (&steps) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 9: closeParen = child.token(); return;
-        case 10: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 10: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ForLoopStatementSyntax* ForLoopStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ForLoopStatementSyntax));
+    return new (mem) ForLoopStatementSyntax(*this);
 }
 
 bool ForVariableDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4117,10 +4597,15 @@ ConstTokenOrSyntax ForVariableDeclarationSyntax::getChild(uint32_t index) const 
 void ForVariableDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: varKeyword = child.token(); return;
-        case 1: memcpy(&type, child.node(), sizeof(DataTypeSyntax)); return;
-        case 2: memcpy(&declarator, child.node(), sizeof(VariableDeclaratorSyntax)); return;
+        case 1: new (&type) = child.node()->as<DataTypeSyntax>(); return;
+        case 2: new (&declarator) = child.node()->as<VariableDeclaratorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ForVariableDeclarationSyntax* ForVariableDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ForVariableDeclarationSyntax));
+    return new (mem) ForVariableDeclarationSyntax(*this);
 }
 
 bool ForeachLoopListSyntax::isKind(SyntaxKind kind) {
@@ -4154,13 +4639,18 @@ ConstTokenOrSyntax ForeachLoopListSyntax::getChild(uint32_t index) const {
 void ForeachLoopListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&arrayName, child.node(), sizeof(NameSyntax)); return;
+        case 1: new (&arrayName) = child.node()->as<NameSyntax>(); return;
         case 2: openBracket = child.token(); return;
-        case 3: memcpy(&loopVariables, child.node(), sizeof(SeparatedSyntaxList<NameSyntax>)); return;
+        case 3: new (&loopVariables) = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
         case 4: closeBracket = child.token(); return;
         case 5: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ForeachLoopListSyntax* ForeachLoopListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ForeachLoopListSyntax));
+    return new (mem) ForeachLoopListSyntax(*this);
 }
 
 bool ForeachLoopStatementSyntax::isKind(SyntaxKind kind) {
@@ -4191,13 +4681,18 @@ ConstTokenOrSyntax ForeachLoopStatementSyntax::getChild(uint32_t index) const {
 
 void ForeachLoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
-        case 3: memcpy(&loopList, child.node(), sizeof(ForeachLoopListSyntax)); return;
-        case 4: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 3: new (&loopList) = child.node()->as<ForeachLoopListSyntax>(); return;
+        case 4: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ForeachLoopStatementSyntax* ForeachLoopStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ForeachLoopStatementSyntax));
+    return new (mem) ForeachLoopStatementSyntax(*this);
 }
 
 bool ForeverStatementSyntax::isKind(SyntaxKind kind) {
@@ -4226,12 +4721,17 @@ ConstTokenOrSyntax ForeverStatementSyntax::getChild(uint32_t index) const {
 
 void ForeverStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: foreverKeyword = child.token(); return;
-        case 3: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 3: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ForeverStatementSyntax* ForeverStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ForeverStatementSyntax));
+    return new (mem) ForeverStatementSyntax(*this);
 }
 
 bool ForwardInterfaceClassTypedefDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4264,7 +4764,7 @@ ConstTokenOrSyntax ForwardInterfaceClassTypedefDeclarationSyntax::getChild(uint3
 
 void ForwardInterfaceClassTypedefDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: typedefKeyword = child.token(); return;
         case 2: interfaceKeyword = child.token(); return;
         case 3: classKeyword = child.token(); return;
@@ -4272,6 +4772,11 @@ void ForwardInterfaceClassTypedefDeclarationSyntax::setChild(uint32_t index, Tok
         case 5: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ForwardInterfaceClassTypedefDeclarationSyntax* ForwardInterfaceClassTypedefDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ForwardInterfaceClassTypedefDeclarationSyntax));
+    return new (mem) ForwardInterfaceClassTypedefDeclarationSyntax(*this);
 }
 
 bool ForwardTypedefDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4302,13 +4807,18 @@ ConstTokenOrSyntax ForwardTypedefDeclarationSyntax::getChild(uint32_t index) con
 
 void ForwardTypedefDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: typedefKeyword = child.token(); return;
         case 2: keyword = child.token(); return;
         case 3: name = child.token(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ForwardTypedefDeclarationSyntax* ForwardTypedefDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ForwardTypedefDeclarationSyntax));
+    return new (mem) ForwardTypedefDeclarationSyntax(*this);
 }
 
 bool FunctionDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4347,14 +4857,19 @@ ConstTokenOrSyntax FunctionDeclarationSyntax::getChild(uint32_t index) const {
 
 void FunctionDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&prototype, child.node(), sizeof(FunctionPrototypeSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&prototype) = child.node()->as<FunctionPrototypeSyntax>(); return;
         case 2: semi = child.token(); return;
-        case 3: memcpy(&items, child.node(), sizeof(SyntaxList<SyntaxNode>)); return;
+        case 3: new (&items) = child.node()->as<SyntaxList<SyntaxNode>>(); return;
         case 4: end = child.token(); return;
         case 5: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+FunctionDeclarationSyntax* FunctionDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(FunctionDeclarationSyntax));
+    return new (mem) FunctionDeclarationSyntax(*this);
 }
 
 bool FunctionPortListSyntax::isKind(SyntaxKind kind) {
@@ -4382,10 +4897,15 @@ ConstTokenOrSyntax FunctionPortListSyntax::getChild(uint32_t index) const {
 void FunctionPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&ports, child.node(), sizeof(SeparatedSyntaxList<FunctionPortSyntax>)); return;
+        case 1: new (&ports) = child.node()->as<SeparatedSyntaxList<FunctionPortSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+FunctionPortListSyntax* FunctionPortListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(FunctionPortListSyntax));
+    return new (mem) FunctionPortListSyntax(*this);
 }
 
 bool FunctionPortSyntax::isKind(SyntaxKind kind) {
@@ -4418,14 +4938,19 @@ ConstTokenOrSyntax FunctionPortSyntax::getChild(uint32_t index) const {
 
 void FunctionPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: constKeyword = child.token(); return;
         case 2: direction = child.token(); return;
         case 3: varKeyword = child.token(); return;
         case 4: dataType = &child.node()->as<DataTypeSyntax>(); return;
-        case 5: memcpy(&declarator, child.node(), sizeof(VariableDeclaratorSyntax)); return;
+        case 5: new (&declarator) = child.node()->as<VariableDeclaratorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+FunctionPortSyntax* FunctionPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(FunctionPortSyntax));
+    return new (mem) FunctionPortSyntax(*this);
 }
 
 bool FunctionPrototypeSyntax::isKind(SyntaxKind kind) {
@@ -4459,10 +4984,15 @@ void FunctionPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: keyword = child.token(); return;
         case 1: lifetime = child.token(); return;
         case 2: returnType = &child.node()->as<DataTypeSyntax>(); return;
-        case 3: memcpy(&name, child.node(), sizeof(NameSyntax)); return;
+        case 3: new (&name) = child.node()->as<NameSyntax>(); return;
         case 4: portList = &child.node()->as<FunctionPortListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+FunctionPrototypeSyntax* FunctionPrototypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(FunctionPrototypeSyntax));
+    return new (mem) FunctionPrototypeSyntax(*this);
 }
 
 bool GenerateBlockSyntax::isKind(SyntaxKind kind) {
@@ -4497,15 +5027,20 @@ ConstTokenOrSyntax GenerateBlockSyntax::getChild(uint32_t index) const {
 
 void GenerateBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: label = &child.node()->as<NamedLabelSyntax>(); return;
         case 2: begin = child.token(); return;
         case 3: beginName = &child.node()->as<NamedBlockClauseSyntax>(); return;
-        case 4: memcpy(&members, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
+        case 4: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 5: end = child.token(); return;
         case 6: endName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+GenerateBlockSyntax* GenerateBlockSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(GenerateBlockSyntax));
+    return new (mem) GenerateBlockSyntax(*this);
 }
 
 bool GenerateRegionSyntax::isKind(SyntaxKind kind) {
@@ -4534,12 +5069,17 @@ ConstTokenOrSyntax GenerateRegionSyntax::getChild(uint32_t index) const {
 
 void GenerateRegionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: memcpy(&members, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
+        case 2: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 3: endgenerate = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+GenerateRegionSyntax* GenerateRegionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(GenerateRegionSyntax));
+    return new (mem) GenerateRegionSyntax(*this);
 }
 
 bool GenvarDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4568,12 +5108,17 @@ ConstTokenOrSyntax GenvarDeclarationSyntax::getChild(uint32_t index) const {
 
 void GenvarDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: memcpy(&identifiers, child.node(), sizeof(SeparatedSyntaxList<IdentifierNameSyntax>)); return;
+        case 2: new (&identifiers) = child.node()->as<SeparatedSyntaxList<IdentifierNameSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+GenvarDeclarationSyntax* GenvarDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(GenvarDeclarationSyntax));
+    return new (mem) GenvarDeclarationSyntax(*this);
 }
 
 bool HierarchicalInstanceSyntax::isKind(SyntaxKind kind) {
@@ -4605,12 +5150,17 @@ ConstTokenOrSyntax HierarchicalInstanceSyntax::getChild(uint32_t index) const {
 void HierarchicalInstanceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: name = child.token(); return;
-        case 1: memcpy(&dimensions, child.node(), sizeof(SyntaxList<VariableDimensionSyntax>)); return;
+        case 1: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         case 2: openParen = child.token(); return;
-        case 3: memcpy(&connections, child.node(), sizeof(SeparatedSyntaxList<PortConnectionSyntax>)); return;
+        case 3: new (&connections) = child.node()->as<SeparatedSyntaxList<PortConnectionSyntax>>(); return;
         case 4: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+HierarchicalInstanceSyntax* HierarchicalInstanceSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(HierarchicalInstanceSyntax));
+    return new (mem) HierarchicalInstanceSyntax(*this);
 }
 
 bool HierarchyInstantiationSyntax::isKind(SyntaxKind kind) {
@@ -4641,13 +5191,18 @@ ConstTokenOrSyntax HierarchyInstantiationSyntax::getChild(uint32_t index) const 
 
 void HierarchyInstantiationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: type = child.token(); return;
         case 2: parameters = &child.node()->as<ParameterValueAssignmentSyntax>(); return;
-        case 3: memcpy(&instances, child.node(), sizeof(SeparatedSyntaxList<HierarchicalInstanceSyntax>)); return;
+        case 3: new (&instances) = child.node()->as<SeparatedSyntaxList<HierarchicalInstanceSyntax>>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+HierarchyInstantiationSyntax* HierarchyInstantiationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(HierarchyInstantiationSyntax));
+    return new (mem) HierarchyInstantiationSyntax(*this);
 }
 
 bool IdentifierListSyntax::isKind(SyntaxKind kind) {
@@ -4675,10 +5230,15 @@ ConstTokenOrSyntax IdentifierListSyntax::getChild(uint32_t index) const {
 void IdentifierListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&identifiers, child.node(), sizeof(SeparatedSyntaxList<IdentifierNameSyntax>)); return;
+        case 1: new (&identifiers) = child.node()->as<SeparatedSyntaxList<IdentifierNameSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+IdentifierListSyntax* IdentifierListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(IdentifierListSyntax));
+    return new (mem) IdentifierListSyntax(*this);
 }
 
 bool IdentifierNameSyntax::isKind(SyntaxKind kind) {
@@ -4706,6 +5266,11 @@ void IdentifierNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+IdentifierNameSyntax* IdentifierNameSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(IdentifierNameSyntax));
+    return new (mem) IdentifierNameSyntax(*this);
+}
+
 bool IdentifierSelectNameSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::IdentifierSelectName;
 }
@@ -4729,9 +5294,14 @@ ConstTokenOrSyntax IdentifierSelectNameSyntax::getChild(uint32_t index) const {
 void IdentifierSelectNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: identifier = child.token(); return;
-        case 1: memcpy(&selectors, child.node(), sizeof(SyntaxList<ElementSelectSyntax>)); return;
+        case 1: new (&selectors) = child.node()->as<SyntaxList<ElementSelectSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+IdentifierSelectNameSyntax* IdentifierSelectNameSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(IdentifierSelectNameSyntax));
+    return new (mem) IdentifierSelectNameSyntax(*this);
 }
 
 bool IfGenerateSyntax::isKind(SyntaxKind kind) {
@@ -4766,15 +5336,20 @@ ConstTokenOrSyntax IfGenerateSyntax::getChild(uint32_t index) const {
 
 void IfGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: openParen = child.token(); return;
-        case 3: memcpy(&condition, child.node(), sizeof(ExpressionSyntax)); return;
+        case 3: new (&condition) = child.node()->as<ExpressionSyntax>(); return;
         case 4: closeParen = child.token(); return;
-        case 5: memcpy(&block, child.node(), sizeof(MemberSyntax)); return;
+        case 5: new (&block) = child.node()->as<MemberSyntax>(); return;
         case 6: elseClause = &child.node()->as<ElseClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+IfGenerateSyntax* IfGenerateSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(IfGenerateSyntax));
+    return new (mem) IfGenerateSyntax(*this);
 }
 
 bool IffClauseSyntax::isKind(SyntaxKind kind) {
@@ -4805,10 +5380,15 @@ void IffClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: iff = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+IffClauseSyntax* IffClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(IffClauseSyntax));
+    return new (mem) IffClauseSyntax(*this);
 }
 
 bool ImmediateAssertionMemberSyntax::isKind(SyntaxKind kind) {
@@ -4833,10 +5413,15 @@ ConstTokenOrSyntax ImmediateAssertionMemberSyntax::getChild(uint32_t index) cons
 
 void ImmediateAssertionMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&statement, child.node(), sizeof(ImmediateAssertionStatementSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&statement) = child.node()->as<ImmediateAssertionStatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ImmediateAssertionMemberSyntax* ImmediateAssertionMemberSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ImmediateAssertionMemberSyntax));
+    return new (mem) ImmediateAssertionMemberSyntax(*this);
 }
 
 bool ImmediateAssertionStatementSyntax::isKind(SyntaxKind kind) {
@@ -4876,14 +5461,19 @@ ConstTokenOrSyntax ImmediateAssertionStatementSyntax::getChild(uint32_t index) c
 
 void ImmediateAssertionStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
         case 3: delay = &child.node()->as<DeferredAssertionSyntax>(); return;
-        case 4: memcpy(&expr, child.node(), sizeof(ParenthesizedExpressionSyntax)); return;
-        case 5: memcpy(&action, child.node(), sizeof(ActionBlockSyntax)); return;
+        case 4: new (&expr) = child.node()->as<ParenthesizedExpressionSyntax>(); return;
+        case 5: new (&action) = child.node()->as<ActionBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ImmediateAssertionStatementSyntax* ImmediateAssertionStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ImmediateAssertionStatementSyntax));
+    return new (mem) ImmediateAssertionStatementSyntax(*this);
 }
 
 bool ImplementsClauseSyntax::isKind(SyntaxKind kind) {
@@ -4909,9 +5499,14 @@ ConstTokenOrSyntax ImplementsClauseSyntax::getChild(uint32_t index) const {
 void ImplementsClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
-        case 1: memcpy(&interfaces, child.node(), sizeof(SeparatedSyntaxList<NameSyntax>)); return;
+        case 1: new (&interfaces) = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ImplementsClauseSyntax* ImplementsClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ImplementsClauseSyntax));
+    return new (mem) ImplementsClauseSyntax(*this);
 }
 
 bool ImplicationConstraintSyntax::isKind(SyntaxKind kind) {
@@ -4938,11 +5533,16 @@ ConstTokenOrSyntax ImplicationConstraintSyntax::getChild(uint32_t index) const {
 
 void ImplicationConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
         case 1: arrow = child.token(); return;
-        case 2: memcpy(&constraints, child.node(), sizeof(ConstraintItemSyntax)); return;
+        case 2: new (&constraints) = child.node()->as<ConstraintItemSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ImplicationConstraintSyntax* ImplicationConstraintSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicationConstraintSyntax));
+    return new (mem) ImplicationConstraintSyntax(*this);
 }
 
 bool ImplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -4969,11 +5569,16 @@ ConstTokenOrSyntax ImplicitAnsiPortSyntax::getChild(uint32_t index) const {
 
 void ImplicitAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&header, child.node(), sizeof(PortHeaderSyntax)); return;
-        case 2: memcpy(&declarator, child.node(), sizeof(VariableDeclaratorSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&header) = child.node()->as<PortHeaderSyntax>(); return;
+        case 2: new (&declarator) = child.node()->as<VariableDeclaratorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ImplicitAnsiPortSyntax* ImplicitAnsiPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicitAnsiPortSyntax));
+    return new (mem) ImplicitAnsiPortSyntax(*this);
 }
 
 bool ImplicitEventControlSyntax::isKind(SyntaxKind kind) {
@@ -5001,6 +5606,11 @@ void ImplicitEventControlSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+ImplicitEventControlSyntax* ImplicitEventControlSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicitEventControlSyntax));
+    return new (mem) ImplicitEventControlSyntax(*this);
+}
+
 bool ImplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ImplicitNonAnsiPort;
 }
@@ -5021,9 +5631,14 @@ ConstTokenOrSyntax ImplicitNonAnsiPortSyntax::getChild(uint32_t index) const {
 
 void ImplicitNonAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ImplicitNonAnsiPortSyntax* ImplicitNonAnsiPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicitNonAnsiPortSyntax));
+    return new (mem) ImplicitNonAnsiPortSyntax(*this);
 }
 
 bool ImplicitTypeSyntax::isKind(SyntaxKind kind) {
@@ -5049,9 +5664,14 @@ ConstTokenOrSyntax ImplicitTypeSyntax::getChild(uint32_t index) const {
 void ImplicitTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: signing = child.token(); return;
-        case 1: memcpy(&dimensions, child.node(), sizeof(SyntaxList<VariableDimensionSyntax>)); return;
+        case 1: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ImplicitTypeSyntax* ImplicitTypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicitTypeSyntax));
+    return new (mem) ImplicitTypeSyntax(*this);
 }
 
 bool IncludeDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -5085,6 +5705,11 @@ void IncludeDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+IncludeDirectiveSyntax* IncludeDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(IncludeDirectiveSyntax));
+    return new (mem) IncludeDirectiveSyntax(*this);
+}
+
 bool InsideExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::InsideExpression;
 }
@@ -5109,11 +5734,16 @@ ConstTokenOrSyntax InsideExpressionSyntax::getChild(uint32_t index) const {
 
 void InsideExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 1: inside = child.token(); return;
-        case 2: memcpy(&ranges, child.node(), sizeof(OpenRangeListSyntax)); return;
+        case 2: new (&ranges) = child.node()->as<OpenRangeListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+InsideExpressionSyntax* InsideExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(InsideExpressionSyntax));
+    return new (mem) InsideExpressionSyntax(*this);
 }
 
 bool IntegerTypeSyntax::isKind(SyntaxKind kind) {
@@ -5155,9 +5785,14 @@ void IntegerTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
         case 1: signing = child.token(); return;
-        case 2: memcpy(&dimensions, child.node(), sizeof(SyntaxList<VariableDimensionSyntax>)); return;
+        case 2: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+IntegerTypeSyntax* IntegerTypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(IntegerTypeSyntax));
+    return new (mem) IntegerTypeSyntax(*this);
 }
 
 bool IntegerVectorExpressionSyntax::isKind(SyntaxKind kind) {
@@ -5191,6 +5826,11 @@ void IntegerVectorExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child
     }
 }
 
+IntegerVectorExpressionSyntax* IntegerVectorExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(IntegerVectorExpressionSyntax));
+    return new (mem) IntegerVectorExpressionSyntax(*this);
+}
+
 bool InterconnectPortHeaderSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::InterconnectPortHeader;
 }
@@ -5222,6 +5862,11 @@ void InterconnectPortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child)
     }
 }
 
+InterconnectPortHeaderSyntax* InterconnectPortHeaderSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(InterconnectPortHeaderSyntax));
+    return new (mem) InterconnectPortHeaderSyntax(*this);
+}
+
 bool InterfacePortHeaderSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::InterfacePortHeader;
 }
@@ -5250,6 +5895,11 @@ void InterfacePortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+InterfacePortHeaderSyntax* InterfacePortHeaderSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(InterfacePortHeaderSyntax));
+    return new (mem) InterfacePortHeaderSyntax(*this);
+}
+
 bool InvocationExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::InvocationExpression;
 }
@@ -5274,11 +5924,16 @@ ConstTokenOrSyntax InvocationExpressionSyntax::getChild(uint32_t index) const {
 
 void InvocationExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: arguments = &child.node()->as<ArgumentListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+InvocationExpressionSyntax* InvocationExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(InvocationExpressionSyntax));
+    return new (mem) InvocationExpressionSyntax(*this);
 }
 
 bool JumpStatementSyntax::isKind(SyntaxKind kind) {
@@ -5307,12 +5962,17 @@ ConstTokenOrSyntax JumpStatementSyntax::getChild(uint32_t index) const {
 
 void JumpStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: breakOrContinue = child.token(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+JumpStatementSyntax* JumpStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(JumpStatementSyntax));
+    return new (mem) JumpStatementSyntax(*this);
 }
 
 bool KeywordNameSyntax::isKind(SyntaxKind kind) {
@@ -5355,6 +6015,11 @@ void KeywordNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+KeywordNameSyntax* KeywordNameSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(KeywordNameSyntax));
+    return new (mem) KeywordNameSyntax(*this);
+}
+
 bool KeywordTypeSyntax::isKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::CHandleType:
@@ -5395,6 +6060,11 @@ void KeywordTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+KeywordTypeSyntax* KeywordTypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(KeywordTypeSyntax));
+    return new (mem) KeywordTypeSyntax(*this);
+}
+
 bool LetDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::LetDeclaration;
 }
@@ -5425,14 +6095,19 @@ ConstTokenOrSyntax LetDeclarationSyntax::getChild(uint32_t index) const {
 
 void LetDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: let = child.token(); return;
         case 2: identifier = child.token(); return;
         case 3: portList = &child.node()->as<AssertionItemPortListSyntax>(); return;
-        case 4: memcpy(&initializer, child.node(), sizeof(EqualsValueClauseSyntax)); return;
+        case 4: new (&initializer) = child.node()->as<EqualsValueClauseSyntax>(); return;
         case 5: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+LetDeclarationSyntax* LetDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(LetDeclarationSyntax));
+    return new (mem) LetDeclarationSyntax(*this);
 }
 
 bool LineDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -5470,6 +6145,11 @@ void LineDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 4: endOfDirective = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+LineDirectiveSyntax* LineDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(LineDirectiveSyntax));
+    return new (mem) LineDirectiveSyntax(*this);
 }
 
 bool LiteralExpressionSyntax::isKind(SyntaxKind kind) {
@@ -5510,6 +6190,11 @@ void LiteralExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+LiteralExpressionSyntax* LiteralExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(LiteralExpressionSyntax));
+    return new (mem) LiteralExpressionSyntax(*this);
+}
+
 bool LoopConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::LoopConstraint;
 }
@@ -5535,10 +6220,15 @@ ConstTokenOrSyntax LoopConstraintSyntax::getChild(uint32_t index) const {
 void LoopConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: foreachKeyword = child.token(); return;
-        case 1: memcpy(&loopList, child.node(), sizeof(ForeachLoopListSyntax)); return;
-        case 2: memcpy(&constraints, child.node(), sizeof(ConstraintItemSyntax)); return;
+        case 1: new (&loopList) = child.node()->as<ForeachLoopListSyntax>(); return;
+        case 2: new (&constraints) = child.node()->as<ConstraintItemSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+LoopConstraintSyntax* LoopConstraintSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(LoopConstraintSyntax));
+    return new (mem) LoopConstraintSyntax(*this);
 }
 
 bool LoopGenerateSyntax::isKind(SyntaxKind kind) {
@@ -5585,21 +6275,26 @@ ConstTokenOrSyntax LoopGenerateSyntax::getChild(uint32_t index) const {
 
 void LoopGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: openParen = child.token(); return;
         case 3: genvar = child.token(); return;
         case 4: identifier = child.token(); return;
         case 5: equals = child.token(); return;
-        case 6: memcpy(&initialExpr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 6: new (&initialExpr) = child.node()->as<ExpressionSyntax>(); return;
         case 7: semi1 = child.token(); return;
-        case 8: memcpy(&stopExpr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 8: new (&stopExpr) = child.node()->as<ExpressionSyntax>(); return;
         case 9: semi2 = child.token(); return;
-        case 10: memcpy(&iterationExpr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 10: new (&iterationExpr) = child.node()->as<ExpressionSyntax>(); return;
         case 11: closeParen = child.token(); return;
-        case 12: memcpy(&block, child.node(), sizeof(MemberSyntax)); return;
+        case 12: new (&block) = child.node()->as<MemberSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+LoopGenerateSyntax* LoopGenerateSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(LoopGenerateSyntax));
+    return new (mem) LoopGenerateSyntax(*this);
 }
 
 bool LoopStatementSyntax::isKind(SyntaxKind kind) {
@@ -5634,15 +6329,20 @@ ConstTokenOrSyntax LoopStatementSyntax::getChild(uint32_t index) const {
 
 void LoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: repeatOrWhile = child.token(); return;
         case 3: openParen = child.token(); return;
-        case 4: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 4: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 5: closeParen = child.token(); return;
-        case 6: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 6: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+LoopStatementSyntax* LoopStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(LoopStatementSyntax));
+    return new (mem) LoopStatementSyntax(*this);
 }
 
 bool MacroActualArgumentListSyntax::isKind(SyntaxKind kind) {
@@ -5670,10 +6370,15 @@ ConstTokenOrSyntax MacroActualArgumentListSyntax::getChild(uint32_t index) const
 void MacroActualArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&args, child.node(), sizeof(SeparatedSyntaxList<MacroActualArgumentSyntax>)); return;
+        case 1: new (&args) = child.node()->as<SeparatedSyntaxList<MacroActualArgumentSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MacroActualArgumentListSyntax* MacroActualArgumentListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MacroActualArgumentListSyntax));
+    return new (mem) MacroActualArgumentListSyntax(*this);
 }
 
 bool MacroActualArgumentSyntax::isKind(SyntaxKind kind) {
@@ -5696,9 +6401,14 @@ ConstTokenOrSyntax MacroActualArgumentSyntax::getChild(uint32_t index) const {
 
 void MacroActualArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&tokens, child.node(), sizeof(TokenList)); return;
+        case 0: new (&tokens) = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MacroActualArgumentSyntax* MacroActualArgumentSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MacroActualArgumentSyntax));
+    return new (mem) MacroActualArgumentSyntax(*this);
 }
 
 bool MacroArgumentDefaultSyntax::isKind(SyntaxKind kind) {
@@ -5724,9 +6434,14 @@ ConstTokenOrSyntax MacroArgumentDefaultSyntax::getChild(uint32_t index) const {
 void MacroArgumentDefaultSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: equals = child.token(); return;
-        case 1: memcpy(&tokens, child.node(), sizeof(TokenList)); return;
+        case 1: new (&tokens) = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MacroArgumentDefaultSyntax* MacroArgumentDefaultSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MacroArgumentDefaultSyntax));
+    return new (mem) MacroArgumentDefaultSyntax(*this);
 }
 
 bool MacroFormalArgumentListSyntax::isKind(SyntaxKind kind) {
@@ -5754,10 +6469,15 @@ ConstTokenOrSyntax MacroFormalArgumentListSyntax::getChild(uint32_t index) const
 void MacroFormalArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&args, child.node(), sizeof(SeparatedSyntaxList<MacroFormalArgumentSyntax>)); return;
+        case 1: new (&args) = child.node()->as<SeparatedSyntaxList<MacroFormalArgumentSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MacroFormalArgumentListSyntax* MacroFormalArgumentListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MacroFormalArgumentListSyntax));
+    return new (mem) MacroFormalArgumentListSyntax(*this);
 }
 
 bool MacroFormalArgumentSyntax::isKind(SyntaxKind kind) {
@@ -5788,6 +6508,11 @@ void MacroFormalArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+MacroFormalArgumentSyntax* MacroFormalArgumentSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MacroFormalArgumentSyntax));
+    return new (mem) MacroFormalArgumentSyntax(*this);
+}
+
 bool MacroUsageSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MacroUsage;
 }
@@ -5816,6 +6541,11 @@ void MacroUsageSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+MacroUsageSyntax* MacroUsageSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MacroUsageSyntax));
+    return new (mem) MacroUsageSyntax(*this);
+}
+
 bool MatchesClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::MatchesClause;
 }
@@ -5839,9 +6569,14 @@ ConstTokenOrSyntax MatchesClauseSyntax::getChild(uint32_t index) const {
 void MatchesClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: matchesKeyword = child.token(); return;
-        case 1: memcpy(&pattern, child.node(), sizeof(PatternSyntax)); return;
+        case 1: new (&pattern) = child.node()->as<PatternSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MatchesClauseSyntax* MatchesClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MatchesClauseSyntax));
+    return new (mem) MatchesClauseSyntax(*this);
 }
 
 bool MemberAccessExpressionSyntax::isKind(SyntaxKind kind) {
@@ -5868,11 +6603,16 @@ ConstTokenOrSyntax MemberAccessExpressionSyntax::getChild(uint32_t index) const 
 
 void MemberAccessExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
         case 1: dot = child.token(); return;
         case 2: name = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MemberAccessExpressionSyntax* MemberAccessExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MemberAccessExpressionSyntax));
+    return new (mem) MemberAccessExpressionSyntax(*this);
 }
 
 bool MemberSyntax::isKind(SyntaxKind kind) {
@@ -5953,9 +6693,14 @@ ConstTokenOrSyntax MemberSyntax::getChild(uint32_t index) const {
 
 void MemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MemberSyntax* MemberSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MemberSyntax));
+    return new (mem) MemberSyntax(*this);
 }
 
 bool MinTypMaxExpressionSyntax::isKind(SyntaxKind kind) {
@@ -5986,13 +6731,18 @@ ConstTokenOrSyntax MinTypMaxExpressionSyntax::getChild(uint32_t index) const {
 
 void MinTypMaxExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&min, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&min) = child.node()->as<ExpressionSyntax>(); return;
         case 1: colon1 = child.token(); return;
-        case 2: memcpy(&typ, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&typ) = child.node()->as<ExpressionSyntax>(); return;
         case 3: colon2 = child.token(); return;
-        case 4: memcpy(&max, child.node(), sizeof(ExpressionSyntax)); return;
+        case 4: new (&max) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MinTypMaxExpressionSyntax* MinTypMaxExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MinTypMaxExpressionSyntax));
+    return new (mem) MinTypMaxExpressionSyntax(*this);
 }
 
 bool ModportClockingPortSyntax::isKind(SyntaxKind kind) {
@@ -6019,11 +6769,16 @@ ConstTokenOrSyntax ModportClockingPortSyntax::getChild(uint32_t index) const {
 
 void ModportClockingPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: clocking = child.token(); return;
         case 2: name = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModportClockingPortSyntax* ModportClockingPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModportClockingPortSyntax));
+    return new (mem) ModportClockingPortSyntax(*this);
 }
 
 bool ModportDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -6052,12 +6807,17 @@ ConstTokenOrSyntax ModportDeclarationSyntax::getChild(uint32_t index) const {
 
 void ModportDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: memcpy(&items, child.node(), sizeof(SeparatedSyntaxList<ModportItemSyntax>)); return;
+        case 2: new (&items) = child.node()->as<SeparatedSyntaxList<ModportItemSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModportDeclarationSyntax* ModportDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModportDeclarationSyntax));
+    return new (mem) ModportDeclarationSyntax(*this);
 }
 
 bool ModportExplicitPortSyntax::isKind(SyntaxKind kind) {
@@ -6097,6 +6857,11 @@ void ModportExplicitPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+ModportExplicitPortSyntax* ModportExplicitPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModportExplicitPortSyntax));
+    return new (mem) ModportExplicitPortSyntax(*this);
+}
+
 bool ModportItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ModportItem;
 }
@@ -6120,9 +6885,14 @@ ConstTokenOrSyntax ModportItemSyntax::getChild(uint32_t index) const {
 void ModportItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: name = child.token(); return;
-        case 1: memcpy(&ports, child.node(), sizeof(AnsiPortListSyntax)); return;
+        case 1: new (&ports) = child.node()->as<AnsiPortListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModportItemSyntax* ModportItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModportItemSyntax));
+    return new (mem) ModportItemSyntax(*this);
 }
 
 bool ModportNamedPortSyntax::isKind(SyntaxKind kind) {
@@ -6148,6 +6918,11 @@ void ModportNamedPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: name = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModportNamedPortSyntax* ModportNamedPortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModportNamedPortSyntax));
+    return new (mem) ModportNamedPortSyntax(*this);
 }
 
 bool ModportPortSyntax::isKind(SyntaxKind kind) {
@@ -6185,11 +6960,16 @@ ConstTokenOrSyntax ModportSimplePortListSyntax::getChild(uint32_t index) const {
 
 void ModportSimplePortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: direction = child.token(); return;
-        case 2: memcpy(&ports, child.node(), sizeof(SeparatedSyntaxList<ModportPortSyntax>)); return;
+        case 2: new (&ports) = child.node()->as<SeparatedSyntaxList<ModportPortSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModportSimplePortListSyntax* ModportSimplePortListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModportSimplePortListSyntax));
+    return new (mem) ModportSimplePortListSyntax(*this);
 }
 
 bool ModportSubroutinePortListSyntax::isKind(SyntaxKind kind) {
@@ -6216,11 +6996,16 @@ ConstTokenOrSyntax ModportSubroutinePortListSyntax::getChild(uint32_t index) con
 
 void ModportSubroutinePortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: importExport = child.token(); return;
-        case 2: memcpy(&ports, child.node(), sizeof(SeparatedSyntaxList<ModportPortSyntax>)); return;
+        case 2: new (&ports) = child.node()->as<SeparatedSyntaxList<ModportPortSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModportSubroutinePortListSyntax* ModportSubroutinePortListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModportSubroutinePortListSyntax));
+    return new (mem) ModportSubroutinePortListSyntax(*this);
 }
 
 bool ModportSubroutinePortSyntax::isKind(SyntaxKind kind) {
@@ -6243,9 +7028,14 @@ ConstTokenOrSyntax ModportSubroutinePortSyntax::getChild(uint32_t index) const {
 
 void ModportSubroutinePortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&prototype, child.node(), sizeof(FunctionPrototypeSyntax)); return;
+        case 0: new (&prototype) = child.node()->as<FunctionPrototypeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModportSubroutinePortSyntax* ModportSubroutinePortSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModportSubroutinePortSyntax));
+    return new (mem) ModportSubroutinePortSyntax(*this);
 }
 
 bool ModuleDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -6284,13 +7074,18 @@ ConstTokenOrSyntax ModuleDeclarationSyntax::getChild(uint32_t index) const {
 
 void ModuleDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&header, child.node(), sizeof(ModuleHeaderSyntax)); return;
-        case 2: memcpy(&members, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&header) = child.node()->as<ModuleHeaderSyntax>(); return;
+        case 2: new (&members) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
         case 3: endmodule = child.token(); return;
         case 4: blockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModuleDeclarationSyntax* ModuleDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModuleDeclarationSyntax));
+    return new (mem) ModuleDeclarationSyntax(*this);
 }
 
 bool ModuleHeaderSyntax::isKind(SyntaxKind kind) {
@@ -6336,12 +7131,17 @@ void ModuleHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: moduleKeyword = child.token(); return;
         case 1: lifetime = child.token(); return;
         case 2: name = child.token(); return;
-        case 3: memcpy(&imports, child.node(), sizeof(SyntaxList<PackageImportDeclarationSyntax>)); return;
+        case 3: new (&imports) = child.node()->as<SyntaxList<PackageImportDeclarationSyntax>>(); return;
         case 4: parameters = &child.node()->as<ParameterPortListSyntax>(); return;
         case 5: ports = &child.node()->as<PortListSyntax>(); return;
         case 6: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ModuleHeaderSyntax* ModuleHeaderSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ModuleHeaderSyntax));
+    return new (mem) ModuleHeaderSyntax(*this);
 }
 
 bool MultipleConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
@@ -6371,11 +7171,16 @@ ConstTokenOrSyntax MultipleConcatenationExpressionSyntax::getChild(uint32_t inde
 void MultipleConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: memcpy(&expression, child.node(), sizeof(ExpressionSyntax)); return;
-        case 2: memcpy(&concatenation, child.node(), sizeof(ConcatenationExpressionSyntax)); return;
+        case 1: new (&expression) = child.node()->as<ExpressionSyntax>(); return;
+        case 2: new (&concatenation) = child.node()->as<ConcatenationExpressionSyntax>(); return;
         case 3: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+MultipleConcatenationExpressionSyntax* MultipleConcatenationExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(MultipleConcatenationExpressionSyntax));
+    return new (mem) MultipleConcatenationExpressionSyntax(*this);
 }
 
 bool NameSyntax::isKind(SyntaxKind kind) {
@@ -6440,6 +7245,11 @@ void NamedArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+NamedArgumentSyntax* NamedArgumentSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NamedArgumentSyntax));
+    return new (mem) NamedArgumentSyntax(*this);
+}
+
 bool NamedBlockClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NamedBlockClause;
 }
@@ -6468,6 +7278,11 @@ void NamedBlockClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+NamedBlockClauseSyntax* NamedBlockClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NamedBlockClauseSyntax));
+    return new (mem) NamedBlockClauseSyntax(*this);
+}
+
 bool NamedLabelSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NamedLabel;
 }
@@ -6494,6 +7309,11 @@ void NamedLabelSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 1: colon = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NamedLabelSyntax* NamedLabelSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NamedLabelSyntax));
+    return new (mem) NamedLabelSyntax(*this);
 }
 
 bool NamedPortConnectionSyntax::isKind(SyntaxKind kind) {
@@ -6526,7 +7346,7 @@ ConstTokenOrSyntax NamedPortConnectionSyntax::getChild(uint32_t index) const {
 
 void NamedPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: dot = child.token(); return;
         case 2: name = child.token(); return;
         case 3: openParen = child.token(); return;
@@ -6534,6 +7354,11 @@ void NamedPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 5: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NamedPortConnectionSyntax* NamedPortConnectionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NamedPortConnectionSyntax));
+    return new (mem) NamedPortConnectionSyntax(*this);
 }
 
 bool NamedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
@@ -6562,9 +7387,14 @@ void NamedStructurePatternMemberSyntax::setChild(uint32_t index, TokenOrSyntax c
     switch (index) {
         case 0: name = child.token(); return;
         case 1: colon = child.token(); return;
-        case 2: memcpy(&pattern, child.node(), sizeof(PatternSyntax)); return;
+        case 2: new (&pattern) = child.node()->as<PatternSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NamedStructurePatternMemberSyntax* NamedStructurePatternMemberSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NamedStructurePatternMemberSyntax));
+    return new (mem) NamedStructurePatternMemberSyntax(*this);
 }
 
 bool NamedTypeSyntax::isKind(SyntaxKind kind) {
@@ -6587,9 +7417,14 @@ ConstTokenOrSyntax NamedTypeSyntax::getChild(uint32_t index) const {
 
 void NamedTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&name, child.node(), sizeof(NameSyntax)); return;
+        case 0: new (&name) = child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NamedTypeSyntax* NamedTypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NamedTypeSyntax));
+    return new (mem) NamedTypeSyntax(*this);
 }
 
 bool NetDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -6624,15 +7459,20 @@ ConstTokenOrSyntax NetDeclarationSyntax::getChild(uint32_t index) const {
 
 void NetDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: netType = child.token(); return;
         case 2: strength = &child.node()->as<NetStrengthSyntax>(); return;
         case 3: expansionHint = child.token(); return;
-        case 4: memcpy(&type, child.node(), sizeof(DataTypeSyntax)); return;
-        case 5: memcpy(&declarators, child.node(), sizeof(SeparatedSyntaxList<VariableDeclaratorSyntax>)); return;
+        case 4: new (&type) = child.node()->as<DataTypeSyntax>(); return;
+        case 5: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 6: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NetDeclarationSyntax* NetDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NetDeclarationSyntax));
+    return new (mem) NetDeclarationSyntax(*this);
 }
 
 bool NetPortHeaderSyntax::isKind(SyntaxKind kind) {
@@ -6661,9 +7501,14 @@ void NetPortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: direction = child.token(); return;
         case 1: netType = child.token(); return;
-        case 2: memcpy(&dataType, child.node(), sizeof(DataTypeSyntax)); return;
+        case 2: new (&dataType) = child.node()->as<DataTypeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NetPortHeaderSyntax* NetPortHeaderSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NetPortHeaderSyntax));
+    return new (mem) NetPortHeaderSyntax(*this);
 }
 
 bool NetStrengthSyntax::isKind(SyntaxKind kind) {
@@ -6706,11 +7551,16 @@ void NewArrayExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: newKeyword = child.token(); return;
         case 1: openBracket = child.token(); return;
-        case 2: memcpy(&sizeExpr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&sizeExpr) = child.node()->as<ExpressionSyntax>(); return;
         case 3: closeBracket = child.token(); return;
         case 4: initializer = &child.node()->as<ParenthesizedExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NewArrayExpressionSyntax* NewArrayExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NewArrayExpressionSyntax));
+    return new (mem) NewArrayExpressionSyntax(*this);
 }
 
 bool NewClassExpressionSyntax::isKind(SyntaxKind kind) {
@@ -6744,6 +7594,11 @@ void NewClassExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+NewClassExpressionSyntax* NewClassExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NewClassExpressionSyntax));
+    return new (mem) NewClassExpressionSyntax(*this);
+}
+
 bool NewExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::NewExpression;
 }
@@ -6767,9 +7622,14 @@ ConstTokenOrSyntax NewExpressionSyntax::getChild(uint32_t index) const {
 void NewExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: newKeyword = child.token(); return;
-        case 1: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NewExpressionSyntax* NewExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NewExpressionSyntax));
+    return new (mem) NewExpressionSyntax(*this);
 }
 
 bool NonAnsiPortListSyntax::isKind(SyntaxKind kind) {
@@ -6797,10 +7657,15 @@ ConstTokenOrSyntax NonAnsiPortListSyntax::getChild(uint32_t index) const {
 void NonAnsiPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&ports, child.node(), sizeof(SeparatedSyntaxList<NonAnsiPortSyntax>)); return;
+        case 1: new (&ports) = child.node()->as<SeparatedSyntaxList<NonAnsiPortSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+NonAnsiPortListSyntax* NonAnsiPortListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(NonAnsiPortListSyntax));
+    return new (mem) NonAnsiPortListSyntax(*this);
 }
 
 bool NonAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -6838,10 +7703,15 @@ ConstTokenOrSyntax OpenRangeListSyntax::getChild(uint32_t index) const {
 void OpenRangeListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: memcpy(&valueRanges, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 1: new (&valueRanges) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+OpenRangeListSyntax* OpenRangeListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(OpenRangeListSyntax));
+    return new (mem) OpenRangeListSyntax(*this);
 }
 
 bool OrderedArgumentSyntax::isKind(SyntaxKind kind) {
@@ -6864,9 +7734,14 @@ ConstTokenOrSyntax OrderedArgumentSyntax::getChild(uint32_t index) const {
 
 void OrderedArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+OrderedArgumentSyntax* OrderedArgumentSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(OrderedArgumentSyntax));
+    return new (mem) OrderedArgumentSyntax(*this);
 }
 
 bool OrderedPortConnectionSyntax::isKind(SyntaxKind kind) {
@@ -6891,10 +7766,15 @@ ConstTokenOrSyntax OrderedPortConnectionSyntax::getChild(uint32_t index) const {
 
 void OrderedPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+OrderedPortConnectionSyntax* OrderedPortConnectionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(OrderedPortConnectionSyntax));
+    return new (mem) OrderedPortConnectionSyntax(*this);
 }
 
 bool OrderedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
@@ -6917,9 +7797,14 @@ ConstTokenOrSyntax OrderedStructurePatternMemberSyntax::getChild(uint32_t index)
 
 void OrderedStructurePatternMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&pattern, child.node(), sizeof(PatternSyntax)); return;
+        case 0: new (&pattern) = child.node()->as<PatternSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+OrderedStructurePatternMemberSyntax* OrderedStructurePatternMemberSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(OrderedStructurePatternMemberSyntax));
+    return new (mem) OrderedStructurePatternMemberSyntax(*this);
 }
 
 bool PackageImportDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -6948,12 +7833,17 @@ ConstTokenOrSyntax PackageImportDeclarationSyntax::getChild(uint32_t index) cons
 
 void PackageImportDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: memcpy(&items, child.node(), sizeof(SeparatedSyntaxList<PackageImportItemSyntax>)); return;
+        case 2: new (&items) = child.node()->as<SeparatedSyntaxList<PackageImportItemSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PackageImportDeclarationSyntax* PackageImportDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PackageImportDeclarationSyntax));
+    return new (mem) PackageImportDeclarationSyntax(*this);
 }
 
 bool PackageImportItemSyntax::isKind(SyntaxKind kind) {
@@ -6987,6 +7877,11 @@ void PackageImportItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+PackageImportItemSyntax* PackageImportItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PackageImportItemSyntax));
+    return new (mem) PackageImportItemSyntax(*this);
+}
+
 bool ParameterDeclarationStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParameterDeclarationStatement;
 }
@@ -7011,11 +7906,16 @@ ConstTokenOrSyntax ParameterDeclarationStatementSyntax::getChild(uint32_t index)
 
 void ParameterDeclarationStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&parameter, child.node(), sizeof(ParameterDeclarationSyntax)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&parameter) = child.node()->as<ParameterDeclarationSyntax>(); return;
         case 2: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ParameterDeclarationStatementSyntax* ParameterDeclarationStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ParameterDeclarationStatementSyntax));
+    return new (mem) ParameterDeclarationStatementSyntax(*this);
 }
 
 bool ParameterDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -7043,10 +7943,15 @@ ConstTokenOrSyntax ParameterDeclarationSyntax::getChild(uint32_t index) const {
 void ParameterDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
-        case 1: memcpy(&type, child.node(), sizeof(DataTypeSyntax)); return;
-        case 2: memcpy(&declarators, child.node(), sizeof(SeparatedSyntaxList<VariableDeclaratorSyntax>)); return;
+        case 1: new (&type) = child.node()->as<DataTypeSyntax>(); return;
+        case 2: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ParameterDeclarationSyntax* ParameterDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ParameterDeclarationSyntax));
+    return new (mem) ParameterDeclarationSyntax(*this);
 }
 
 bool ParameterPortListSyntax::isKind(SyntaxKind kind) {
@@ -7077,10 +7982,15 @@ void ParameterPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: hash = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: memcpy(&declarations, child.node(), sizeof(SeparatedSyntaxList<ParameterDeclarationSyntax>)); return;
+        case 2: new (&declarations) = child.node()->as<SeparatedSyntaxList<ParameterDeclarationSyntax>>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ParameterPortListSyntax* ParameterPortListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ParameterPortListSyntax));
+    return new (mem) ParameterPortListSyntax(*this);
 }
 
 bool ParameterValueAssignmentSyntax::isKind(SyntaxKind kind) {
@@ -7106,9 +8016,14 @@ ConstTokenOrSyntax ParameterValueAssignmentSyntax::getChild(uint32_t index) cons
 void ParameterValueAssignmentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: hash = child.token(); return;
-        case 1: memcpy(&parameters, child.node(), sizeof(ArgumentListSyntax)); return;
+        case 1: new (&parameters) = child.node()->as<ArgumentListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ParameterValueAssignmentSyntax* ParameterValueAssignmentSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ParameterValueAssignmentSyntax));
+    return new (mem) ParameterValueAssignmentSyntax(*this);
 }
 
 bool ParenImplicitEventControlSyntax::isKind(SyntaxKind kind) {
@@ -7139,6 +8054,11 @@ void ParenImplicitEventControlSyntax::setChild(uint32_t index, TokenOrSyntax chi
     }
 }
 
+ParenImplicitEventControlSyntax* ParenImplicitEventControlSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ParenImplicitEventControlSyntax));
+    return new (mem) ParenImplicitEventControlSyntax(*this);
+}
+
 bool ParenthesizedEventExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::ParenthesizedEventExpression;
 }
@@ -7164,10 +8084,15 @@ ConstTokenOrSyntax ParenthesizedEventExpressionSyntax::getChild(uint32_t index) 
 void ParenthesizedEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&expr, child.node(), sizeof(EventExpressionSyntax)); return;
+        case 1: new (&expr) = child.node()->as<EventExpressionSyntax>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ParenthesizedEventExpressionSyntax* ParenthesizedEventExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ParenthesizedEventExpressionSyntax));
+    return new (mem) ParenthesizedEventExpressionSyntax(*this);
 }
 
 bool ParenthesizedExpressionSyntax::isKind(SyntaxKind kind) {
@@ -7195,10 +8120,15 @@ ConstTokenOrSyntax ParenthesizedExpressionSyntax::getChild(uint32_t index) const
 void ParenthesizedExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&expression, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&expression) = child.node()->as<ExpressionSyntax>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ParenthesizedExpressionSyntax* ParenthesizedExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ParenthesizedExpressionSyntax));
+    return new (mem) ParenthesizedExpressionSyntax(*this);
 }
 
 bool PatternCaseItemSyntax::isKind(SyntaxKind kind) {
@@ -7229,13 +8159,18 @@ ConstTokenOrSyntax PatternCaseItemSyntax::getChild(uint32_t index) const {
 
 void PatternCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&pattern, child.node(), sizeof(PatternSyntax)); return;
+        case 0: new (&pattern) = child.node()->as<PatternSyntax>(); return;
         case 1: tripleAnd = child.token(); return;
         case 2: expr = &child.node()->as<ExpressionSyntax>(); return;
         case 3: colon = child.token(); return;
-        case 4: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 4: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PatternCaseItemSyntax* PatternCaseItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PatternCaseItemSyntax));
+    return new (mem) PatternCaseItemSyntax(*this);
 }
 
 bool PatternSyntax::isKind(SyntaxKind kind) {
@@ -7278,9 +8213,14 @@ ConstTokenOrSyntax PortConnectionSyntax::getChild(uint32_t index) const {
 
 void PortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PortConnectionSyntax* PortConnectionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PortConnectionSyntax));
+    return new (mem) PortConnectionSyntax(*this);
 }
 
 bool PortDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -7309,12 +8249,17 @@ ConstTokenOrSyntax PortDeclarationSyntax::getChild(uint32_t index) const {
 
 void PortDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 1: memcpy(&header, child.node(), sizeof(PortHeaderSyntax)); return;
-        case 2: memcpy(&declarators, child.node(), sizeof(SeparatedSyntaxList<VariableDeclaratorSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 1: new (&header) = child.node()->as<PortHeaderSyntax>(); return;
+        case 2: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 3: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PortDeclarationSyntax* PortDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PortDeclarationSyntax));
+    return new (mem) PortDeclarationSyntax(*this);
 }
 
 bool PortHeaderSyntax::isKind(SyntaxKind kind) {
@@ -7370,11 +8315,16 @@ ConstTokenOrSyntax PostfixUnaryExpressionSyntax::getChild(uint32_t index) const 
 
 void PostfixUnaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&operand, child.node(), sizeof(ExpressionSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&operand) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: operatorToken = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PostfixUnaryExpressionSyntax* PostfixUnaryExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PostfixUnaryExpressionSyntax));
+    return new (mem) PostfixUnaryExpressionSyntax(*this);
 }
 
 bool PrefixUnaryExpressionSyntax::isKind(SyntaxKind kind) {
@@ -7431,10 +8381,15 @@ ConstTokenOrSyntax PrefixUnaryExpressionSyntax::getChild(uint32_t index) const {
 void PrefixUnaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: operatorToken = child.token(); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 2: memcpy(&operand, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 2: new (&operand) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PrefixUnaryExpressionSyntax* PrefixUnaryExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PrefixUnaryExpressionSyntax));
+    return new (mem) PrefixUnaryExpressionSyntax(*this);
 }
 
 bool PrimaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -7460,9 +8415,14 @@ ConstTokenOrSyntax PrimaryBlockEventExpressionSyntax::getChild(uint32_t index) c
 void PrimaryBlockEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: keyword = child.token(); return;
-        case 1: memcpy(&name, child.node(), sizeof(NameSyntax)); return;
+        case 1: new (&name) = child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PrimaryBlockEventExpressionSyntax* PrimaryBlockEventExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PrimaryBlockEventExpressionSyntax));
+    return new (mem) PrimaryBlockEventExpressionSyntax(*this);
 }
 
 bool PrimaryExpressionSyntax::isKind(SyntaxKind kind) {
@@ -7527,15 +8487,20 @@ ConstTokenOrSyntax ProceduralAssignStatementSyntax::getChild(uint32_t index) con
 
 void ProceduralAssignStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
-        case 3: memcpy(&lvalue, child.node(), sizeof(ExpressionSyntax)); return;
+        case 3: new (&lvalue) = child.node()->as<ExpressionSyntax>(); return;
         case 4: equals = child.token(); return;
-        case 5: memcpy(&value, child.node(), sizeof(ExpressionSyntax)); return;
+        case 5: new (&value) = child.node()->as<ExpressionSyntax>(); return;
         case 6: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ProceduralAssignStatementSyntax* ProceduralAssignStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ProceduralAssignStatementSyntax));
+    return new (mem) ProceduralAssignStatementSyntax(*this);
 }
 
 bool ProceduralBlockSyntax::isKind(SyntaxKind kind) {
@@ -7572,11 +8537,16 @@ ConstTokenOrSyntax ProceduralBlockSyntax::getChild(uint32_t index) const {
 
 void ProceduralBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
-        case 2: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 2: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ProceduralBlockSyntax* ProceduralBlockSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ProceduralBlockSyntax));
+    return new (mem) ProceduralBlockSyntax(*this);
 }
 
 bool ProceduralDeassignStatementSyntax::isKind(SyntaxKind kind) {
@@ -7613,13 +8583,18 @@ ConstTokenOrSyntax ProceduralDeassignStatementSyntax::getChild(uint32_t index) c
 
 void ProceduralDeassignStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: keyword = child.token(); return;
-        case 3: memcpy(&variable, child.node(), sizeof(ExpressionSyntax)); return;
+        case 3: new (&variable) = child.node()->as<ExpressionSyntax>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ProceduralDeassignStatementSyntax* ProceduralDeassignStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ProceduralDeassignStatementSyntax));
+    return new (mem) ProceduralDeassignStatementSyntax(*this);
 }
 
 bool PropertyDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -7660,18 +8635,23 @@ ConstTokenOrSyntax PropertyDeclarationSyntax::getChild(uint32_t index) const {
 
 void PropertyDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: name = child.token(); return;
         case 3: portList = &child.node()->as<AssertionItemPortListSyntax>(); return;
         case 4: semi = child.token(); return;
-        case 5: memcpy(&assertionVariables, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
-        case 6: memcpy(&propertySpec, child.node(), sizeof(PropertySpecSyntax)); return;
+        case 5: new (&assertionVariables) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 6: new (&propertySpec) = child.node()->as<PropertySpecSyntax>(); return;
         case 7: optionalSemi = child.token(); return;
         case 8: end = child.token(); return;
         case 9: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PropertyDeclarationSyntax* PropertyDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PropertyDeclarationSyntax));
+    return new (mem) PropertyDeclarationSyntax(*this);
 }
 
 bool PropertySpecSyntax::isKind(SyntaxKind kind) {
@@ -7700,9 +8680,14 @@ void PropertySpecSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: clocking = &child.node()->as<TimingControlSyntax>(); return;
         case 1: disable = &child.node()->as<DisableIffSyntax>(); return;
-        case 2: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+PropertySpecSyntax* PropertySpecSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(PropertySpecSyntax));
+    return new (mem) PropertySpecSyntax(*this);
 }
 
 bool QueueDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
@@ -7733,6 +8718,11 @@ void QueueDimensionSpecifierSyntax::setChild(uint32_t index, TokenOrSyntax child
     }
 }
 
+QueueDimensionSpecifierSyntax* QueueDimensionSpecifierSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(QueueDimensionSpecifierSyntax));
+    return new (mem) QueueDimensionSpecifierSyntax(*this);
+}
+
 bool RandCaseItemSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::RandCaseItem;
 }
@@ -7757,11 +8747,16 @@ ConstTokenOrSyntax RandCaseItemSyntax::getChild(uint32_t index) const {
 
 void RandCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 1: colon = child.token(); return;
-        case 2: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 2: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+RandCaseItemSyntax* RandCaseItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(RandCaseItemSyntax));
+    return new (mem) RandCaseItemSyntax(*this);
 }
 
 bool RandCaseStatementSyntax::isKind(SyntaxKind kind) {
@@ -7792,13 +8787,18 @@ ConstTokenOrSyntax RandCaseStatementSyntax::getChild(uint32_t index) const {
 
 void RandCaseStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: randCase = child.token(); return;
-        case 3: memcpy(&items, child.node(), sizeof(SyntaxList<RandCaseItemSyntax>)); return;
+        case 3: new (&items) = child.node()->as<SyntaxList<RandCaseItemSyntax>>(); return;
         case 4: endCase = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+RandCaseStatementSyntax* RandCaseStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(RandCaseStatementSyntax));
+    return new (mem) RandCaseStatementSyntax(*this);
 }
 
 bool RandomizeMethodWithClauseSyntax::isKind(SyntaxKind kind) {
@@ -7827,9 +8827,14 @@ void RandomizeMethodWithClauseSyntax::setChild(uint32_t index, TokenOrSyntax chi
     switch (index) {
         case 0: with = child.token(); return;
         case 1: names = &child.node()->as<IdentifierListSyntax>(); return;
-        case 2: memcpy(&constraints, child.node(), sizeof(ConstraintBlockSyntax)); return;
+        case 2: new (&constraints) = child.node()->as<ConstraintBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+RandomizeMethodWithClauseSyntax* RandomizeMethodWithClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(RandomizeMethodWithClauseSyntax));
+    return new (mem) RandomizeMethodWithClauseSyntax(*this);
 }
 
 bool RangeCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
@@ -7854,10 +8859,15 @@ ConstTokenOrSyntax RangeCoverageBinInitializerSyntax::getChild(uint32_t index) c
 
 void RangeCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&ranges, child.node(), sizeof(OpenRangeListSyntax)); return;
+        case 0: new (&ranges) = child.node()->as<OpenRangeListSyntax>(); return;
         case 1: withClause = &child.node()->as<WithClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+RangeCoverageBinInitializerSyntax* RangeCoverageBinInitializerSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(RangeCoverageBinInitializerSyntax));
+    return new (mem) RangeCoverageBinInitializerSyntax(*this);
 }
 
 bool RangeDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
@@ -7880,9 +8890,14 @@ ConstTokenOrSyntax RangeDimensionSpecifierSyntax::getChild(uint32_t index) const
 
 void RangeDimensionSpecifierSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&selector, child.node(), sizeof(SelectorSyntax)); return;
+        case 0: new (&selector) = child.node()->as<SelectorSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+RangeDimensionSpecifierSyntax* RangeDimensionSpecifierSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(RangeDimensionSpecifierSyntax));
+    return new (mem) RangeDimensionSpecifierSyntax(*this);
 }
 
 bool RangeSelectSyntax::isKind(SyntaxKind kind) {
@@ -7916,11 +8931,16 @@ ConstTokenOrSyntax RangeSelectSyntax::getChild(uint32_t index) const {
 
 void RangeSelectSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
         case 1: range = child.token(); return;
-        case 2: memcpy(&right, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&right) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+RangeSelectSyntax* RangeSelectSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(RangeSelectSyntax));
+    return new (mem) RangeSelectSyntax(*this);
 }
 
 bool RepeatedEventControlSyntax::isKind(SyntaxKind kind) {
@@ -7953,11 +8973,16 @@ void RepeatedEventControlSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: repeat = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         case 4: eventControl = &child.node()->as<TimingControlSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+RepeatedEventControlSyntax* RepeatedEventControlSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(RepeatedEventControlSyntax));
+    return new (mem) RepeatedEventControlSyntax(*this);
 }
 
 bool ReplicatedAssignmentPatternSyntax::isKind(SyntaxKind kind) {
@@ -7991,13 +9016,18 @@ ConstTokenOrSyntax ReplicatedAssignmentPatternSyntax::getChild(uint32_t index) c
 void ReplicatedAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: memcpy(&countExpr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&countExpr) = child.node()->as<ExpressionSyntax>(); return;
         case 2: innerOpenBrace = child.token(); return;
-        case 3: memcpy(&items, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 3: new (&items) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 4: innerCloseBrace = child.token(); return;
         case 5: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ReplicatedAssignmentPatternSyntax* ReplicatedAssignmentPatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ReplicatedAssignmentPatternSyntax));
+    return new (mem) ReplicatedAssignmentPatternSyntax(*this);
 }
 
 bool ReturnStatementSyntax::isKind(SyntaxKind kind) {
@@ -8028,13 +9058,18 @@ ConstTokenOrSyntax ReturnStatementSyntax::getChild(uint32_t index) const {
 
 void ReturnStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: returnKeyword = child.token(); return;
         case 3: returnValue = &child.node()->as<ExpressionSyntax>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ReturnStatementSyntax* ReturnStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ReturnStatementSyntax));
+    return new (mem) ReturnStatementSyntax(*this);
 }
 
 bool ScopedNameSyntax::isKind(SyntaxKind kind) {
@@ -8061,11 +9096,16 @@ ConstTokenOrSyntax ScopedNameSyntax::getChild(uint32_t index) const {
 
 void ScopedNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(NameSyntax)); return;
+        case 0: new (&left) = child.node()->as<NameSyntax>(); return;
         case 1: separator = child.token(); return;
-        case 2: memcpy(&right, child.node(), sizeof(NameSyntax)); return;
+        case 2: new (&right) = child.node()->as<NameSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+ScopedNameSyntax* ScopedNameSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ScopedNameSyntax));
+    return new (mem) ScopedNameSyntax(*this);
 }
 
 bool SelectorSyntax::isKind(SyntaxKind kind) {
@@ -8118,18 +9158,23 @@ ConstTokenOrSyntax SequenceDeclarationSyntax::getChild(uint32_t index) const {
 
 void SequenceDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: name = child.token(); return;
         case 3: portList = &child.node()->as<AssertionItemPortListSyntax>(); return;
         case 4: semi = child.token(); return;
-        case 5: memcpy(&assertionVariables, child.node(), sizeof(SyntaxList<MemberSyntax>)); return;
-        case 6: memcpy(&seqExpr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 5: new (&assertionVariables) = child.node()->as<SyntaxList<MemberSyntax>>(); return;
+        case 6: new (&seqExpr) = child.node()->as<ExpressionSyntax>(); return;
         case 7: optionalSemi = child.token(); return;
         case 8: end = child.token(); return;
         case 9: endBlockName = &child.node()->as<NamedBlockClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+SequenceDeclarationSyntax* SequenceDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(SequenceDeclarationSyntax));
+    return new (mem) SequenceDeclarationSyntax(*this);
 }
 
 bool ShortcutCycleDelayRangeSyntax::isKind(SyntaxKind kind) {
@@ -8166,6 +9211,11 @@ void ShortcutCycleDelayRangeSyntax::setChild(uint32_t index, TokenOrSyntax child
     }
 }
 
+ShortcutCycleDelayRangeSyntax* ShortcutCycleDelayRangeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(ShortcutCycleDelayRangeSyntax));
+    return new (mem) ShortcutCycleDelayRangeSyntax(*this);
+}
+
 bool SignalEventExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::SignalEventExpression;
 }
@@ -8189,9 +9239,14 @@ ConstTokenOrSyntax SignalEventExpressionSyntax::getChild(uint32_t index) const {
 void SignalEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: edge = child.token(); return;
-        case 1: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+SignalEventExpressionSyntax* SignalEventExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(SignalEventExpressionSyntax));
+    return new (mem) SignalEventExpressionSyntax(*this);
 }
 
 bool SignedCastExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8220,9 +9275,14 @@ void SignedCastExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: signing = child.token(); return;
         case 1: apostrophe = child.token(); return;
-        case 2: memcpy(&inner, child.node(), sizeof(ParenthesizedExpressionSyntax)); return;
+        case 2: new (&inner) = child.node()->as<ParenthesizedExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+SignedCastExpressionSyntax* SignedCastExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(SignedCastExpressionSyntax));
+    return new (mem) SignedCastExpressionSyntax(*this);
 }
 
 bool SimpleAssignmentPatternSyntax::isKind(SyntaxKind kind) {
@@ -8250,10 +9310,15 @@ ConstTokenOrSyntax SimpleAssignmentPatternSyntax::getChild(uint32_t index) const
 void SimpleAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: memcpy(&items, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 1: new (&items) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+SimpleAssignmentPatternSyntax* SimpleAssignmentPatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(SimpleAssignmentPatternSyntax));
+    return new (mem) SimpleAssignmentPatternSyntax(*this);
 }
 
 bool SimpleDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -8296,6 +9361,11 @@ void SimpleDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+SimpleDirectiveSyntax* SimpleDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(SimpleDirectiveSyntax));
+    return new (mem) SimpleDirectiveSyntax(*this);
+}
+
 bool SolveBeforeConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::SolveBeforeConstraint;
 }
@@ -8325,12 +9395,17 @@ ConstTokenOrSyntax SolveBeforeConstraintSyntax::getChild(uint32_t index) const {
 void SolveBeforeConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: solve = child.token(); return;
-        case 1: memcpy(&beforeExpr, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 1: new (&beforeExpr) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 2: before = child.token(); return;
-        case 3: memcpy(&afterExpr, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 3: new (&afterExpr) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+SolveBeforeConstraintSyntax* SolveBeforeConstraintSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(SolveBeforeConstraintSyntax));
+    return new (mem) SolveBeforeConstraintSyntax(*this);
 }
 
 bool StandardCaseItemSyntax::isKind(SyntaxKind kind) {
@@ -8357,11 +9432,16 @@ ConstTokenOrSyntax StandardCaseItemSyntax::getChild(uint32_t index) const {
 
 void StandardCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expressions, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 0: new (&expressions) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 1: colon = child.token(); return;
-        case 2: memcpy(&clause, child.node(), sizeof(SyntaxNode)); return;
+        case 2: new (&clause) = child.node()->as<SyntaxNode>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StandardCaseItemSyntax* StandardCaseItemSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StandardCaseItemSyntax));
+    return new (mem) StandardCaseItemSyntax(*this);
 }
 
 bool StatementSyntax::isKind(SyntaxKind kind) {
@@ -8426,9 +9506,14 @@ ConstTokenOrSyntax StatementSyntax::getChild(uint32_t index) const {
 void StatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StatementSyntax* StatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StatementSyntax));
+    return new (mem) StatementSyntax(*this);
 }
 
 bool StreamExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8453,10 +9538,15 @@ ConstTokenOrSyntax StreamExpressionSyntax::getChild(uint32_t index) const {
 
 void StreamExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&expression, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&expression) = child.node()->as<ExpressionSyntax>(); return;
         case 1: withRange = &child.node()->as<StreamExpressionWithRange>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StreamExpressionSyntax* StreamExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StreamExpressionSyntax));
+    return new (mem) StreamExpressionSyntax(*this);
 }
 
 bool StreamExpressionWithRange::isKind(SyntaxKind kind) {
@@ -8482,9 +9572,14 @@ ConstTokenOrSyntax StreamExpressionWithRange::getChild(uint32_t index) const {
 void StreamExpressionWithRange::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: withKeyword = child.token(); return;
-        case 1: memcpy(&range, child.node(), sizeof(ElementSelectSyntax)); return;
+        case 1: new (&range) = child.node()->as<ElementSelectSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StreamExpressionWithRange* StreamExpressionWithRange::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StreamExpressionWithRange));
+    return new (mem) StreamExpressionWithRange(*this);
 }
 
 bool StreamingConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8523,11 +9618,16 @@ void StreamingConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSyn
         case 1: operatorToken = child.token(); return;
         case 2: sliceSize = &child.node()->as<ExpressionSyntax>(); return;
         case 3: innerOpenBrace = child.token(); return;
-        case 4: memcpy(&expressions, child.node(), sizeof(SeparatedSyntaxList<StreamExpressionSyntax>)); return;
+        case 4: new (&expressions) = child.node()->as<SeparatedSyntaxList<StreamExpressionSyntax>>(); return;
         case 5: innerCloseBrace = child.token(); return;
         case 6: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StreamingConcatenationExpressionSyntax* StreamingConcatenationExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StreamingConcatenationExpressionSyntax));
+    return new (mem) StreamingConcatenationExpressionSyntax(*this);
 }
 
 bool StructUnionMemberSyntax::isKind(SyntaxKind kind) {
@@ -8558,13 +9658,18 @@ ConstTokenOrSyntax StructUnionMemberSyntax::getChild(uint32_t index) const {
 
 void StructUnionMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: randomQualifier = child.token(); return;
-        case 2: memcpy(&type, child.node(), sizeof(DataTypeSyntax)); return;
-        case 3: memcpy(&declarators, child.node(), sizeof(SeparatedSyntaxList<VariableDeclaratorSyntax>)); return;
+        case 2: new (&type) = child.node()->as<DataTypeSyntax>(); return;
+        case 3: new (&declarators) = child.node()->as<SeparatedSyntaxList<VariableDeclaratorSyntax>>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StructUnionMemberSyntax* StructUnionMemberSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StructUnionMemberSyntax));
+    return new (mem) StructUnionMemberSyntax(*this);
 }
 
 bool StructUnionTypeSyntax::isKind(SyntaxKind kind) {
@@ -8612,11 +9717,16 @@ void StructUnionTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 2: packed = child.token(); return;
         case 3: signing = child.token(); return;
         case 4: openBrace = child.token(); return;
-        case 5: memcpy(&members, child.node(), sizeof(SyntaxList<StructUnionMemberSyntax>)); return;
+        case 5: new (&members) = child.node()->as<SyntaxList<StructUnionMemberSyntax>>(); return;
         case 6: closeBrace = child.token(); return;
-        case 7: memcpy(&dimensions, child.node(), sizeof(SyntaxList<VariableDimensionSyntax>)); return;
+        case 7: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StructUnionTypeSyntax* StructUnionTypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StructUnionTypeSyntax));
+    return new (mem) StructUnionTypeSyntax(*this);
 }
 
 bool StructurePatternMemberSyntax::isKind(SyntaxKind kind) {
@@ -8654,10 +9764,15 @@ ConstTokenOrSyntax StructurePatternSyntax::getChild(uint32_t index) const {
 void StructurePatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: memcpy(&members, child.node(), sizeof(SeparatedSyntaxList<StructurePatternMemberSyntax>)); return;
+        case 1: new (&members) = child.node()->as<SeparatedSyntaxList<StructurePatternMemberSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StructurePatternSyntax* StructurePatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StructurePatternSyntax));
+    return new (mem) StructurePatternSyntax(*this);
 }
 
 bool StructuredAssignmentPatternSyntax::isKind(SyntaxKind kind) {
@@ -8685,10 +9800,15 @@ ConstTokenOrSyntax StructuredAssignmentPatternSyntax::getChild(uint32_t index) c
 void StructuredAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openBrace = child.token(); return;
-        case 1: memcpy(&items, child.node(), sizeof(SeparatedSyntaxList<AssignmentPatternItemSyntax>)); return;
+        case 1: new (&items) = child.node()->as<SeparatedSyntaxList<AssignmentPatternItemSyntax>>(); return;
         case 2: closeBrace = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+StructuredAssignmentPatternSyntax* StructuredAssignmentPatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(StructuredAssignmentPatternSyntax));
+    return new (mem) StructuredAssignmentPatternSyntax(*this);
 }
 
 bool TaggedPatternSyntax::isKind(SyntaxKind kind) {
@@ -8722,6 +9842,11 @@ void TaggedPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+TaggedPatternSyntax* TaggedPatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TaggedPatternSyntax));
+    return new (mem) TaggedPatternSyntax(*this);
+}
+
 bool TaggedUnionExpressionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TaggedUnionExpression;
 }
@@ -8753,6 +9878,11 @@ void TaggedUnionExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) 
     }
 }
 
+TaggedUnionExpressionSyntax* TaggedUnionExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TaggedUnionExpressionSyntax));
+    return new (mem) TaggedUnionExpressionSyntax(*this);
+}
+
 bool TimeUnitsDeclarationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TimeUnitsDeclaration;
 }
@@ -8781,13 +9911,18 @@ ConstTokenOrSyntax TimeUnitsDeclarationSyntax::getChild(uint32_t index) const {
 
 void TimeUnitsDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: keyword = child.token(); return;
         case 2: time = child.token(); return;
         case 3: divider = &child.node()->as<DividerClauseSyntax>(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TimeUnitsDeclarationSyntax* TimeUnitsDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TimeUnitsDeclarationSyntax));
+    return new (mem) TimeUnitsDeclarationSyntax(*this);
 }
 
 bool TimescaleDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -8833,6 +9968,11 @@ void TimescaleDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+TimescaleDirectiveSyntax* TimescaleDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TimescaleDirectiveSyntax));
+    return new (mem) TimescaleDirectiveSyntax(*this);
+}
+
 bool TimingControlExpressionConcatenationSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TimingControlExpressionConcatenation;
 }
@@ -8857,11 +9997,16 @@ ConstTokenOrSyntax TimingControlExpressionConcatenationSyntax::getChild(uint32_t
 
 void TimingControlExpressionConcatenationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&left, child.node(), sizeof(ExpressionSyntax)); return;
-        case 1: memcpy(&timing, child.node(), sizeof(TimingControlSyntax)); return;
-        case 2: memcpy(&right, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&left) = child.node()->as<ExpressionSyntax>(); return;
+        case 1: new (&timing) = child.node()->as<TimingControlSyntax>(); return;
+        case 2: new (&right) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TimingControlExpressionConcatenationSyntax* TimingControlExpressionConcatenationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TimingControlExpressionConcatenationSyntax));
+    return new (mem) TimingControlExpressionConcatenationSyntax(*this);
 }
 
 bool TimingControlExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8886,10 +10031,15 @@ ConstTokenOrSyntax TimingControlExpressionSyntax::getChild(uint32_t index) const
 
 void TimingControlExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&timing, child.node(), sizeof(TimingControlSyntax)); return;
-        case 1: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 0: new (&timing) = child.node()->as<TimingControlSyntax>(); return;
+        case 1: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TimingControlExpressionSyntax* TimingControlExpressionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TimingControlExpressionSyntax));
+    return new (mem) TimingControlExpressionSyntax(*this);
 }
 
 bool TimingControlStatementSyntax::isKind(SyntaxKind kind) {
@@ -8918,12 +10068,17 @@ ConstTokenOrSyntax TimingControlStatementSyntax::getChild(uint32_t index) const 
 
 void TimingControlStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
-        case 2: memcpy(&timingControl, child.node(), sizeof(TimingControlSyntax)); return;
-        case 3: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
+        case 2: new (&timingControl) = child.node()->as<TimingControlSyntax>(); return;
+        case 3: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TimingControlStatementSyntax* TimingControlStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TimingControlStatementSyntax));
+    return new (mem) TimingControlStatementSyntax(*this);
 }
 
 bool TimingControlSyntax::isKind(SyntaxKind kind) {
@@ -8964,10 +10119,15 @@ ConstTokenOrSyntax TransListCoverageBinInitializerSyntax::getChild(uint32_t inde
 
 void TransListCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&sets, child.node(), sizeof(SeparatedSyntaxList<TransSetSyntax>)); return;
+        case 0: new (&sets) = child.node()->as<SeparatedSyntaxList<TransSetSyntax>>(); return;
         case 1: withClause = &child.node()->as<WithClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TransListCoverageBinInitializerSyntax* TransListCoverageBinInitializerSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TransListCoverageBinInitializerSyntax));
+    return new (mem) TransListCoverageBinInitializerSyntax(*this);
 }
 
 bool TransRangeSyntax::isKind(SyntaxKind kind) {
@@ -8992,10 +10152,15 @@ ConstTokenOrSyntax TransRangeSyntax::getChild(uint32_t index) const {
 
 void TransRangeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&items, child.node(), sizeof(SeparatedSyntaxList<ExpressionSyntax>)); return;
+        case 0: new (&items) = child.node()->as<SeparatedSyntaxList<ExpressionSyntax>>(); return;
         case 1: repeat = &child.node()->as<TransRepeatRangeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TransRangeSyntax* TransRangeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TransRangeSyntax));
+    return new (mem) TransRangeSyntax(*this);
 }
 
 bool TransRepeatRangeSyntax::isKind(SyntaxKind kind) {
@@ -9032,6 +10197,11 @@ void TransRepeatRangeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+TransRepeatRangeSyntax* TransRepeatRangeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TransRepeatRangeSyntax));
+    return new (mem) TransRepeatRangeSyntax(*this);
+}
+
 bool TransSetSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::TransSet;
 }
@@ -9057,10 +10227,15 @@ ConstTokenOrSyntax TransSetSyntax::getChild(uint32_t index) const {
 void TransSetSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: openParen = child.token(); return;
-        case 1: memcpy(&ranges, child.node(), sizeof(SeparatedSyntaxList<TransRangeSyntax>)); return;
+        case 1: new (&ranges) = child.node()->as<SeparatedSyntaxList<TransRangeSyntax>>(); return;
         case 2: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TransSetSyntax* TransSetSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TransSetSyntax));
+    return new (mem) TransSetSyntax(*this);
 }
 
 bool TypeReferenceSyntax::isKind(SyntaxKind kind) {
@@ -9091,10 +10266,15 @@ void TypeReferenceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: typeKeyword = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TypeReferenceSyntax* TypeReferenceSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TypeReferenceSyntax));
+    return new (mem) TypeReferenceSyntax(*this);
 }
 
 bool TypedefDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -9127,14 +10307,19 @@ ConstTokenOrSyntax TypedefDeclarationSyntax::getChild(uint32_t index) const {
 
 void TypedefDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: typedefKeyword = child.token(); return;
-        case 2: memcpy(&type, child.node(), sizeof(DataTypeSyntax)); return;
+        case 2: new (&type) = child.node()->as<DataTypeSyntax>(); return;
         case 3: name = child.token(); return;
-        case 4: memcpy(&dimensions, child.node(), sizeof(SyntaxList<VariableDimensionSyntax>)); return;
+        case 4: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         case 5: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+TypedefDeclarationSyntax* TypedefDeclarationSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(TypedefDeclarationSyntax));
+    return new (mem) TypedefDeclarationSyntax(*this);
 }
 
 bool UnconditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -9169,9 +10354,14 @@ void UnconditionalBranchDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax 
     switch (index) {
         case 0: directive = child.token(); return;
         case 1: endOfDirective = child.token(); return;
-        case 2: memcpy(&disabledTokens, child.node(), sizeof(TokenList)); return;
+        case 2: new (&disabledTokens) = child.node()->as<TokenList>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+UnconditionalBranchDirectiveSyntax* UnconditionalBranchDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(UnconditionalBranchDirectiveSyntax));
+    return new (mem) UnconditionalBranchDirectiveSyntax(*this);
 }
 
 bool UndefDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -9205,6 +10395,11 @@ void UndefDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+UndefDirectiveSyntax* UndefDirectiveSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(UndefDirectiveSyntax));
+    return new (mem) UndefDirectiveSyntax(*this);
+}
+
 bool UniquenessConstraintSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::UniquenessConstraint;
 }
@@ -9230,10 +10425,15 @@ ConstTokenOrSyntax UniquenessConstraintSyntax::getChild(uint32_t index) const {
 void UniquenessConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: unique = child.token(); return;
-        case 1: memcpy(&ranges, child.node(), sizeof(OpenRangeListSyntax)); return;
+        case 1: new (&ranges) = child.node()->as<OpenRangeListSyntax>(); return;
         case 2: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+UniquenessConstraintSyntax* UniquenessConstraintSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(UniquenessConstraintSyntax));
+    return new (mem) UniquenessConstraintSyntax(*this);
 }
 
 bool VarDataTypeSyntax::isKind(SyntaxKind kind) {
@@ -9259,9 +10459,14 @@ ConstTokenOrSyntax VarDataTypeSyntax::getChild(uint32_t index) const {
 void VarDataTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: var = child.token(); return;
-        case 1: memcpy(&type, child.node(), sizeof(DataTypeSyntax)); return;
+        case 1: new (&type) = child.node()->as<DataTypeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+VarDataTypeSyntax* VarDataTypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(VarDataTypeSyntax));
+    return new (mem) VarDataTypeSyntax(*this);
 }
 
 bool VariableDeclaratorSyntax::isKind(SyntaxKind kind) {
@@ -9289,10 +10494,15 @@ ConstTokenOrSyntax VariableDeclaratorSyntax::getChild(uint32_t index) const {
 void VariableDeclaratorSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: name = child.token(); return;
-        case 1: memcpy(&dimensions, child.node(), sizeof(SyntaxList<VariableDimensionSyntax>)); return;
+        case 1: new (&dimensions) = child.node()->as<SyntaxList<VariableDimensionSyntax>>(); return;
         case 2: initializer = &child.node()->as<EqualsValueClauseSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+VariableDeclaratorSyntax* VariableDeclaratorSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(VariableDeclaratorSyntax));
+    return new (mem) VariableDeclaratorSyntax(*this);
 }
 
 bool VariableDimensionSyntax::isKind(SyntaxKind kind) {
@@ -9326,6 +10536,11 @@ void VariableDimensionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+VariableDimensionSyntax* VariableDimensionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(VariableDimensionSyntax));
+    return new (mem) VariableDimensionSyntax(*this);
+}
+
 bool VariablePatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::VariablePattern;
 }
@@ -9354,6 +10569,11 @@ void VariablePatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+VariablePatternSyntax* VariablePatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(VariablePatternSyntax));
+    return new (mem) VariablePatternSyntax(*this);
+}
+
 bool VariablePortHeaderSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::VariablePortHeader;
 }
@@ -9380,9 +10600,14 @@ void VariablePortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: direction = child.token(); return;
         case 1: varKeyword = child.token(); return;
-        case 2: memcpy(&dataType, child.node(), sizeof(DataTypeSyntax)); return;
+        case 2: new (&dataType) = child.node()->as<DataTypeSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+VariablePortHeaderSyntax* VariablePortHeaderSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(VariablePortHeaderSyntax));
+    return new (mem) VariablePortHeaderSyntax(*this);
 }
 
 bool VirtualInterfaceTypeSyntax::isKind(SyntaxKind kind) {
@@ -9422,6 +10647,11 @@ void VirtualInterfaceTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+VirtualInterfaceTypeSyntax* VirtualInterfaceTypeSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(VirtualInterfaceTypeSyntax));
+    return new (mem) VirtualInterfaceTypeSyntax(*this);
+}
+
 bool WaitForkStatementSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WaitForkStatement;
 }
@@ -9450,13 +10680,18 @@ ConstTokenOrSyntax WaitForkStatementSyntax::getChild(uint32_t index) const {
 
 void WaitForkStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: wait = child.token(); return;
         case 3: fork = child.token(); return;
         case 4: semi = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+WaitForkStatementSyntax* WaitForkStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WaitForkStatementSyntax));
+    return new (mem) WaitForkStatementSyntax(*this);
 }
 
 bool WaitOrderStatementSyntax::isKind(SyntaxKind kind) {
@@ -9491,15 +10726,20 @@ ConstTokenOrSyntax WaitOrderStatementSyntax::getChild(uint32_t index) const {
 
 void WaitOrderStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: wait_order = child.token(); return;
         case 3: openParen = child.token(); return;
-        case 4: memcpy(&names, child.node(), sizeof(SeparatedSyntaxList<NameSyntax>)); return;
+        case 4: new (&names) = child.node()->as<SeparatedSyntaxList<NameSyntax>>(); return;
         case 5: closeParen = child.token(); return;
-        case 6: memcpy(&action, child.node(), sizeof(ActionBlockSyntax)); return;
+        case 6: new (&action) = child.node()->as<ActionBlockSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+WaitOrderStatementSyntax* WaitOrderStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WaitOrderStatementSyntax));
+    return new (mem) WaitOrderStatementSyntax(*this);
 }
 
 bool WaitStatementSyntax::isKind(SyntaxKind kind) {
@@ -9534,15 +10774,20 @@ ConstTokenOrSyntax WaitStatementSyntax::getChild(uint32_t index) const {
 
 void WaitStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&label, child.node(), sizeof(NamedLabelSyntax)); return;
-        case 1: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: label = &child.node()->as<NamedLabelSyntax>(); return;
+        case 1: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 2: wait = child.token(); return;
         case 3: openParen = child.token(); return;
-        case 4: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 4: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 5: closeParen = child.token(); return;
-        case 6: memcpy(&statement, child.node(), sizeof(StatementSyntax)); return;
+        case 6: new (&statement) = child.node()->as<StatementSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+WaitStatementSyntax* WaitStatementSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WaitStatementSyntax));
+    return new (mem) WaitStatementSyntax(*this);
 }
 
 bool WildcardDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
@@ -9570,6 +10815,11 @@ void WildcardDimensionSpecifierSyntax::setChild(uint32_t index, TokenOrSyntax ch
     }
 }
 
+WildcardDimensionSpecifierSyntax* WildcardDimensionSpecifierSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WildcardDimensionSpecifierSyntax));
+    return new (mem) WildcardDimensionSpecifierSyntax(*this);
+}
+
 bool WildcardPatternSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WildcardPattern;
 }
@@ -9595,6 +10845,11 @@ void WildcardPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+WildcardPatternSyntax* WildcardPatternSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WildcardPatternSyntax));
+    return new (mem) WildcardPatternSyntax(*this);
+}
+
 bool WildcardPortConnectionSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WildcardPortConnection;
 }
@@ -9617,10 +10872,15 @@ ConstTokenOrSyntax WildcardPortConnectionSyntax::getChild(uint32_t index) const 
 
 void WildcardPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
-        case 0: memcpy(&attributes, child.node(), sizeof(SyntaxList<AttributeInstanceSyntax>)); return;
+        case 0: new (&attributes) = child.node()->as<SyntaxList<AttributeInstanceSyntax>>(); return;
         case 1: dotStar = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+WildcardPortConnectionSyntax* WildcardPortConnectionSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WildcardPortConnectionSyntax));
+    return new (mem) WildcardPortConnectionSyntax(*this);
 }
 
 bool WildcardPortListSyntax::isKind(SyntaxKind kind) {
@@ -9654,6 +10914,11 @@ void WildcardPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     }
 }
 
+WildcardPortListSyntax* WildcardPortListSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WildcardPortListSyntax));
+    return new (mem) WildcardPortListSyntax(*this);
+}
+
 bool WithClauseSyntax::isKind(SyntaxKind kind) {
     return kind == SyntaxKind::WithClause;
 }
@@ -9682,10 +10947,15 @@ void WithClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
     switch (index) {
         case 0: with = child.token(); return;
         case 1: openParen = child.token(); return;
-        case 2: memcpy(&expr, child.node(), sizeof(ExpressionSyntax)); return;
+        case 2: new (&expr) = child.node()->as<ExpressionSyntax>(); return;
         case 3: closeParen = child.token(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+WithClauseSyntax* WithClauseSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WithClauseSyntax));
+    return new (mem) WithClauseSyntax(*this);
 }
 
 bool WithFunctionSampleSyntax::isKind(SyntaxKind kind) {
@@ -9717,9 +10987,14 @@ void WithFunctionSampleSyntax::setChild(uint32_t index, TokenOrSyntax child) {
         case 0: with = child.token(); return;
         case 1: function = child.token(); return;
         case 2: sample = child.token(); return;
-        case 3: memcpy(&portList, child.node(), sizeof(AnsiPortListSyntax)); return;
+        case 3: new (&portList) = child.node()->as<AnsiPortListSyntax>(); return;
         default: THROW_UNREACHABLE;
     }
+}
+
+WithFunctionSampleSyntax* WithFunctionSampleSyntax::clone(BumpAllocator& alloc) const {
+    auto mem = alloc.allocate(sizeof(*this), alignof(WithFunctionSampleSyntax));
+    return new (mem) WithFunctionSampleSyntax(*this);
 }
 
 ActionBlockSyntax& SyntaxFactory::actionBlock(StatementSyntax* statement, ElseClauseSyntax* elseClause) {

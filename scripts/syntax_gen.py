@@ -188,7 +188,7 @@ namespace slang {
 					elif m[1] in v.optionalMembers:
 						cppf.write('{} = &child.node()->as<{}>(); return;\n'.format(m[1], m[0]))
 					else:
-						cppf.write('memcpy(&{}, child.node(), sizeof({})); return;\n'.format(m[1], m[0]))
+						cppf.write('{} = child.node()->as<{}>(); return;\n'.format(m[1], m[0]))
 
 				cppf.write('        default: THROW_UNREACHABLE;\n')
 				cppf.write('    }\n')
@@ -196,6 +196,11 @@ namespace slang {
 				cppf.write('    (void)index;\n')
 				cppf.write('    (void)child;\n')
 
+			cppf.write('}\n\n')
+
+			cppf.write('{0}* {0}::clone(BumpAllocator& alloc) const {{\n'.format(k))
+			cppf.write('    auto mem = alloc.allocate(sizeof(*this), alignof({}));\n'.format(k))
+			cppf.write('    return new (mem) {}(*this);\n'.format(k))
 			cppf.write('}\n\n')
 
 	# Write out syntax factory methods
@@ -284,6 +289,7 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 	if base != 'SyntaxNode':
 		processed_members.extend(alltypes[base].processedMembers)
 		pointerMembers = pointerMembers.union(alltypes[base].pointerMembers)
+		optionalMembers = optionalMembers.union(alltypes[base].optionalMembers)
 		baseInitializers = ', '.join([x[1] for x in alltypes[base].members])
 		if baseInitializers:
 			baseInitializers = ', ' + baseInitializers
@@ -357,7 +363,8 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 
 		outf.write('    TokenOrSyntax getChild(uint32_t index);\n')
 		outf.write('    ConstTokenOrSyntax getChild(uint32_t index) const;\n')
-		outf.write('    void setChild(uint32_t index, TokenOrSyntax child);\n')
+		outf.write('    void setChild(uint32_t index, TokenOrSyntax child);\n\n')
+		outf.write('    {}* clone(BumpAllocator& alloc) const;\n'.format(name))
 
 	outf.write('};\n\n')
 

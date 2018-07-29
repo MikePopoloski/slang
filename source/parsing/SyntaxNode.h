@@ -163,6 +163,9 @@ class SyntaxListBase : public SyntaxNode {
 public:
     uint32_t getChildCount() const { return childCount; }
     virtual ConstTokenOrSyntax getChild(uint32_t index) const = 0;
+    virtual void setChild(uint32_t index, TokenOrSyntax child) = 0;
+
+    virtual SyntaxListBase* clone(BumpAllocator& alloc) const = 0;
 
     static bool isKind(SyntaxKind kind);
 
@@ -181,6 +184,15 @@ public:
 
 private:
     ConstTokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
+    void setChild(uint32_t index, TokenOrSyntax child) override final {
+        (*this)[index] = &child.node()->as<T>();
+    }
+
+    SyntaxListBase* clone(BumpAllocator& alloc) const override final {
+        auto result = (SyntaxList<T>*)alloc.allocate(sizeof(*this), alignof(SyntaxList<T>));
+        memcpy(result, this, sizeof(*this));
+        return result;
+    }
 };
 
 class TokenList : public SyntaxListBase, public span<Token> {
@@ -190,6 +202,13 @@ public:
 
 private:
     ConstTokenOrSyntax getChild(uint32_t index) const override final { return (*this)[index]; }
+    void setChild(uint32_t index, TokenOrSyntax child) override final { (*this)[index] = child.token(); }
+
+    SyntaxListBase* clone(BumpAllocator& alloc) const override final {
+        auto result = (TokenList*)alloc.allocate(sizeof(*this), alignof(TokenList));
+        memcpy(result, this, sizeof(*this));
+        return result;
+    }
 };
 
 template<typename T>
@@ -237,6 +256,13 @@ public:
 
 private:
     ConstTokenOrSyntax getChild(uint32_t index) const override final { return elements[index]; }
+    void setChild(uint32_t index, TokenOrSyntax child) override final { elements[index] = child; }
+
+    SyntaxListBase* clone(BumpAllocator& alloc) const override final {
+        auto result = (SeparatedSyntaxList<T>*)alloc.allocate(sizeof(*this), alignof(SeparatedSyntaxList<T>));
+        memcpy(result, this, sizeof(*this));
+        return result;
+    }
 
     span<TokenOrSyntax> elements;
 };

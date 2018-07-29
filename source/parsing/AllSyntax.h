@@ -48,6 +48,8 @@ struct EqualsValueClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EqualsValueClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct AttributeSpecSyntax : public SyntaxNode {
@@ -63,6 +65,8 @@ struct AttributeSpecSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    AttributeSpecSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct AttributeInstanceSyntax : public SyntaxNode {
@@ -79,6 +83,8 @@ struct AttributeInstanceSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    AttributeInstanceSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NamedLabelSyntax : public SyntaxNode {
@@ -94,6 +100,8 @@ struct NamedLabelSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NamedLabelSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StatementSyntax : public SyntaxNode {
@@ -109,6 +117,8 @@ struct StatementSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MemberSyntax : public SyntaxNode {
@@ -123,6 +133,8 @@ struct MemberSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MemberSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- ARGUMENTS -----
@@ -147,6 +159,8 @@ struct EmptyArgumentSyntax : public ArgumentSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EmptyArgumentSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct OrderedArgumentSyntax : public ArgumentSyntax {
@@ -161,6 +175,8 @@ struct OrderedArgumentSyntax : public ArgumentSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    OrderedArgumentSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NamedArgumentSyntax : public ArgumentSyntax {
@@ -179,6 +195,8 @@ struct NamedArgumentSyntax : public ArgumentSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NamedArgumentSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ArgumentListSyntax : public SyntaxNode {
@@ -195,6 +213,8 @@ struct ArgumentListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ArgumentListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ParameterValueAssignmentSyntax : public SyntaxNode {
@@ -210,6 +230,8 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ParameterValueAssignmentSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- PATTERNS -----
@@ -236,6 +258,8 @@ struct VariablePatternSyntax : public PatternSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    VariablePatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct WildcardPatternSyntax : public PatternSyntax {
@@ -250,6 +274,8 @@ struct WildcardPatternSyntax : public PatternSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WildcardPatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExpressionPatternSyntax : public PatternSyntax {
@@ -264,6 +290,8 @@ struct ExpressionPatternSyntax : public PatternSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExpressionPatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TaggedPatternSyntax : public PatternSyntax {
@@ -280,6 +308,8 @@ struct TaggedPatternSyntax : public PatternSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TaggedPatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StructurePatternMemberSyntax : public SyntaxNode {
@@ -303,6 +333,8 @@ struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    OrderedStructurePatternMemberSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
@@ -319,6 +351,8 @@ struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NamedStructurePatternMemberSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StructurePatternSyntax : public PatternSyntax {
@@ -335,6 +369,8 @@ struct StructurePatternSyntax : public PatternSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StructurePatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MatchesClauseSyntax : public SyntaxNode {
@@ -350,6 +386,8 @@ struct MatchesClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MatchesClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConditionalPatternSyntax : public SyntaxNode {
@@ -365,6 +403,8 @@ struct ConditionalPatternSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConditionalPatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConditionalPredicateSyntax : public SyntaxNode {
@@ -379,6 +419,8 @@ struct ConditionalPredicateSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConditionalPredicateSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct AssignmentPatternSyntax : public SyntaxNode {
@@ -404,6 +446,8 @@ struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    SimpleAssignmentPatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct AssignmentPatternItemSyntax : public SyntaxNode {
@@ -420,6 +464,8 @@ struct AssignmentPatternItemSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    AssignmentPatternItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
@@ -436,6 +482,8 @@ struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StructuredAssignmentPatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
@@ -455,6 +503,8 @@ struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ReplicatedAssignmentPatternSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- EXPRESSIONS -----
@@ -471,6 +521,8 @@ struct BadExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    BadExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PrimaryExpressionSyntax : public ExpressionSyntax {
@@ -496,6 +548,8 @@ struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PrefixUnaryExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
@@ -512,6 +566,8 @@ struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PostfixUnaryExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct BinaryExpressionSyntax : public ExpressionSyntax {
@@ -529,6 +585,8 @@ struct BinaryExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    BinaryExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
@@ -547,6 +605,8 @@ struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MinTypMaxExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
@@ -563,6 +623,8 @@ struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TaggedUnionExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct OpenRangeListSyntax : public SyntaxNode {
@@ -579,6 +641,8 @@ struct OpenRangeListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    OpenRangeListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct InsideExpressionSyntax : public ExpressionSyntax {
@@ -595,6 +659,8 @@ struct InsideExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    InsideExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConditionalExpressionSyntax : public ExpressionSyntax {
@@ -614,6 +680,8 @@ struct ConditionalExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConditionalExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
@@ -629,6 +697,8 @@ struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    AssignmentPatternExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- SELECTORS -----
@@ -654,6 +724,8 @@ struct BitSelectSyntax : public SelectorSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    BitSelectSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct RangeSelectSyntax : public SelectorSyntax {
@@ -670,6 +742,8 @@ struct RangeSelectSyntax : public SelectorSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    RangeSelectSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ElementSelectSyntax : public ExpressionSyntax {
@@ -686,6 +760,8 @@ struct ElementSelectSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ElementSelectSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- NAMES -----
@@ -711,6 +787,8 @@ struct IdentifierNameSyntax : public NameSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    IdentifierNameSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct IdentifierSelectNameSyntax : public NameSyntax {
@@ -726,6 +804,8 @@ struct IdentifierSelectNameSyntax : public NameSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    IdentifierSelectNameSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct EmptyIdentifierNameSyntax : public NameSyntax {
@@ -739,6 +819,8 @@ struct EmptyIdentifierNameSyntax : public NameSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EmptyIdentifierNameSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct KeywordNameSyntax : public NameSyntax {
@@ -753,6 +835,8 @@ struct KeywordNameSyntax : public NameSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    KeywordNameSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClassNameSyntax : public NameSyntax {
@@ -768,6 +852,8 @@ struct ClassNameSyntax : public NameSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClassNameSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ScopedNameSyntax : public NameSyntax {
@@ -784,6 +870,8 @@ struct ScopedNameSyntax : public NameSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ScopedNameSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClassScopeSyntax : public NameSyntax {
@@ -799,6 +887,8 @@ struct ClassScopeSyntax : public NameSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClassScopeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- PRIMARY EXPRESSIONS -----
@@ -815,6 +905,8 @@ struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    LiteralExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
@@ -831,6 +923,8 @@ struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    IntegerVectorExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
@@ -846,6 +940,8 @@ struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EmptyQueueExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -862,6 +958,8 @@ struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConcatenationExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -879,6 +977,8 @@ struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MultipleConcatenationExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StreamExpressionWithRange : public SyntaxNode {
@@ -894,6 +994,8 @@ struct StreamExpressionWithRange : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StreamExpressionWithRange* clone(BumpAllocator& alloc) const;
 };
 
 struct StreamExpressionSyntax : public SyntaxNode {
@@ -909,6 +1011,8 @@ struct StreamExpressionSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StreamExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -929,6 +1033,8 @@ struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StreamingConcatenationExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
@@ -945,6 +1051,8 @@ struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ParenthesizedExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NewClassExpressionSyntax : public ExpressionSyntax {
@@ -961,6 +1069,8 @@ struct NewClassExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NewClassExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NewArrayExpressionSyntax : public ExpressionSyntax {
@@ -979,6 +1089,8 @@ struct NewArrayExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NewArrayExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NewExpressionSyntax : public ExpressionSyntax {
@@ -994,6 +1106,8 @@ struct NewExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NewExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- POSTFIX EXPRESSIONS -----
@@ -1011,6 +1125,8 @@ struct ElementSelectExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ElementSelectExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MemberAccessExpressionSyntax : public ExpressionSyntax {
@@ -1027,6 +1143,8 @@ struct MemberAccessExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MemberAccessExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct InvocationExpressionSyntax : public ExpressionSyntax {
@@ -1043,6 +1161,8 @@ struct InvocationExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    InvocationExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CastExpressionSyntax : public ExpressionSyntax {
@@ -1059,6 +1179,8 @@ struct CastExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    CastExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct SignedCastExpressionSyntax : public ExpressionSyntax {
@@ -1075,6 +1197,8 @@ struct SignedCastExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    SignedCastExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- TIMING CONTROL -----
@@ -1101,6 +1225,8 @@ struct DelaySyntax : public TimingControlSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DelaySyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct EventControlSyntax : public TimingControlSyntax {
@@ -1116,6 +1242,8 @@ struct EventControlSyntax : public TimingControlSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EventControlSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct EventExpressionSyntax : public SyntaxNode {
@@ -1140,6 +1268,8 @@ struct SignalEventExpressionSyntax : public EventExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    SignalEventExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
@@ -1156,6 +1286,8 @@ struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    BinaryEventExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
@@ -1172,6 +1304,8 @@ struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ParenthesizedEventExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ImplicitEventControlSyntax : public TimingControlSyntax {
@@ -1186,6 +1320,8 @@ struct ImplicitEventControlSyntax : public TimingControlSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ImplicitEventControlSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
@@ -1201,6 +1337,8 @@ struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ParenImplicitEventControlSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct EventControlWithExpressionSyntax : public TimingControlSyntax {
@@ -1216,6 +1354,8 @@ struct EventControlWithExpressionSyntax : public TimingControlSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EventControlWithExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct RepeatedEventControlSyntax : public TimingControlSyntax {
@@ -1234,6 +1374,8 @@ struct RepeatedEventControlSyntax : public TimingControlSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    RepeatedEventControlSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TimingControlExpressionSyntax : public ExpressionSyntax {
@@ -1249,6 +1391,8 @@ struct TimingControlExpressionSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TimingControlExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
@@ -1265,6 +1409,8 @@ struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TimingControlExpressionConcatenationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
@@ -1282,6 +1428,8 @@ struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ShortcutCycleDelayRangeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- DECLARATIONS -----
@@ -1307,6 +1455,8 @@ struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    RangeDimensionSpecifierSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
@@ -1321,6 +1471,8 @@ struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WildcardDimensionSpecifierSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ColonExpressionClauseSyntax : public SyntaxNode {
@@ -1336,6 +1488,8 @@ struct ColonExpressionClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ColonExpressionClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
@@ -1351,6 +1505,8 @@ struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    QueueDimensionSpecifierSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct VariableDimensionSyntax : public SyntaxNode {
@@ -1367,6 +1523,8 @@ struct VariableDimensionSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    VariableDimensionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct VariableDeclaratorSyntax : public SyntaxNode {
@@ -1383,6 +1541,8 @@ struct VariableDeclaratorSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    VariableDeclaratorSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DataDeclarationSyntax : public MemberSyntax {
@@ -1400,6 +1560,8 @@ struct DataDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DataDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TypedefDeclarationSyntax : public MemberSyntax {
@@ -1418,6 +1580,8 @@ struct TypedefDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TypedefDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
@@ -1435,6 +1599,8 @@ struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ForwardTypedefDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
@@ -1453,6 +1619,8 @@ struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ForwardInterfaceClassTypedefDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NetStrengthSyntax : public SyntaxNode {
@@ -1478,6 +1646,8 @@ struct ChargeStrengthSyntax : public NetStrengthSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ChargeStrengthSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DriveStrengthSyntax : public NetStrengthSyntax {
@@ -1496,6 +1666,8 @@ struct DriveStrengthSyntax : public NetStrengthSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DriveStrengthSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NetDeclarationSyntax : public MemberSyntax {
@@ -1515,6 +1687,8 @@ struct NetDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NetDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PackageImportItemSyntax : public SyntaxNode {
@@ -1531,6 +1705,8 @@ struct PackageImportItemSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PackageImportItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PackageImportDeclarationSyntax : public MemberSyntax {
@@ -1547,6 +1723,8 @@ struct PackageImportDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PackageImportDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ParameterDeclarationSyntax : public SyntaxNode {
@@ -1563,6 +1741,8 @@ struct ParameterDeclarationSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ParameterDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ParameterDeclarationStatementSyntax : public MemberSyntax {
@@ -1578,6 +1758,8 @@ struct ParameterDeclarationStatementSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ParameterDeclarationStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PortHeaderSyntax : public SyntaxNode {
@@ -1603,6 +1785,8 @@ struct PortDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PortDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct GenvarDeclarationSyntax : public MemberSyntax {
@@ -1619,6 +1803,8 @@ struct GenvarDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    GenvarDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- TYPES -----
@@ -1637,6 +1823,8 @@ struct IntegerTypeSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    IntegerTypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct KeywordTypeSyntax : public DataTypeSyntax {
@@ -1651,6 +1839,8 @@ struct KeywordTypeSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    KeywordTypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NamedTypeSyntax : public DataTypeSyntax {
@@ -1665,6 +1855,8 @@ struct NamedTypeSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NamedTypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StructUnionMemberSyntax : public SyntaxNode {
@@ -1683,6 +1875,8 @@ struct StructUnionMemberSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StructUnionMemberSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StructUnionTypeSyntax : public DataTypeSyntax {
@@ -1704,6 +1898,8 @@ struct StructUnionTypeSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StructUnionTypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct EnumTypeSyntax : public DataTypeSyntax {
@@ -1723,6 +1919,8 @@ struct EnumTypeSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EnumTypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TypeReferenceSyntax : public DataTypeSyntax {
@@ -1740,6 +1938,8 @@ struct TypeReferenceSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TypeReferenceSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DotMemberClauseSyntax : public SyntaxNode {
@@ -1755,6 +1955,8 @@ struct DotMemberClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DotMemberClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
@@ -1773,6 +1975,8 @@ struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    VirtualInterfaceTypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ImplicitTypeSyntax : public DataTypeSyntax {
@@ -1788,6 +1992,8 @@ struct ImplicitTypeSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ImplicitTypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct VarDataTypeSyntax : public DataTypeSyntax {
@@ -1803,6 +2009,8 @@ struct VarDataTypeSyntax : public DataTypeSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    VarDataTypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- ASSERTIONS -----
@@ -1821,6 +2029,8 @@ struct DeferredAssertionSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DeferredAssertionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ElseClauseSyntax : public SyntaxNode {
@@ -1836,6 +2046,8 @@ struct ElseClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ElseClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ActionBlockSyntax : public SyntaxNode {
@@ -1851,6 +2063,8 @@ struct ActionBlockSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ActionBlockSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ImmediateAssertionStatementSyntax : public StatementSyntax {
@@ -1868,6 +2082,8 @@ struct ImmediateAssertionStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ImmediateAssertionStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DisableIffSyntax : public SyntaxNode {
@@ -1886,6 +2102,8 @@ struct DisableIffSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DisableIffSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PropertySpecSyntax : public SyntaxNode {
@@ -1902,6 +2120,8 @@ struct PropertySpecSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PropertySpecSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
@@ -1921,6 +2141,8 @@ struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConcurrentAssertionStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
@@ -1935,6 +2157,8 @@ struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConcurrentAssertionMemberSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ImmediateAssertionMemberSyntax : public MemberSyntax {
@@ -1949,6 +2173,8 @@ struct ImmediateAssertionMemberSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ImmediateAssertionMemberSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- STATEMENTS -----
@@ -1965,6 +2191,8 @@ struct EmptyStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EmptyStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConditionalStatementSyntax : public StatementSyntax {
@@ -1985,6 +2213,8 @@ struct ConditionalStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConditionalStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CaseItemSyntax : public SyntaxNode {
@@ -2010,6 +2240,8 @@ struct DefaultCaseItemSyntax : public CaseItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DefaultCaseItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PatternCaseItemSyntax : public CaseItemSyntax {
@@ -2028,6 +2260,8 @@ struct PatternCaseItemSyntax : public CaseItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PatternCaseItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct StandardCaseItemSyntax : public CaseItemSyntax {
@@ -2044,6 +2278,8 @@ struct StandardCaseItemSyntax : public CaseItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    StandardCaseItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CaseStatementSyntax : public StatementSyntax {
@@ -2065,6 +2301,8 @@ struct CaseStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    CaseStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ForeverStatementSyntax : public StatementSyntax {
@@ -2080,6 +2318,8 @@ struct ForeverStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ForeverStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct LoopStatementSyntax : public StatementSyntax {
@@ -2098,6 +2338,8 @@ struct LoopStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    LoopStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DoWhileStatementSyntax : public StatementSyntax {
@@ -2118,6 +2360,8 @@ struct DoWhileStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DoWhileStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ForVariableDeclarationSyntax : public SyntaxNode {
@@ -2134,6 +2378,8 @@ struct ForVariableDeclarationSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ForVariableDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ForLoopStatementSyntax : public StatementSyntax {
@@ -2156,6 +2402,8 @@ struct ForLoopStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ForLoopStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ForeachLoopListSyntax : public SyntaxNode {
@@ -2175,6 +2423,8 @@ struct ForeachLoopListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ForeachLoopListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ForeachLoopStatementSyntax : public StatementSyntax {
@@ -2191,6 +2441,8 @@ struct ForeachLoopStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ForeachLoopStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ReturnStatementSyntax : public StatementSyntax {
@@ -2207,6 +2459,8 @@ struct ReturnStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ReturnStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct JumpStatementSyntax : public StatementSyntax {
@@ -2222,6 +2476,8 @@ struct JumpStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    JumpStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TimingControlStatementSyntax : public StatementSyntax {
@@ -2237,6 +2493,8 @@ struct TimingControlStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TimingControlStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExpressionStatementSyntax : public StatementSyntax {
@@ -2252,6 +2510,8 @@ struct ExpressionStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExpressionStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ProceduralAssignStatementSyntax : public StatementSyntax {
@@ -2270,6 +2530,8 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ProceduralAssignStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ProceduralDeassignStatementSyntax : public StatementSyntax {
@@ -2286,6 +2548,8 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ProceduralDeassignStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DisableStatementSyntax : public StatementSyntax {
@@ -2302,6 +2566,8 @@ struct DisableStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DisableStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DisableForkStatementSyntax : public StatementSyntax {
@@ -2318,6 +2584,8 @@ struct DisableForkStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DisableForkStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NamedBlockClauseSyntax : public SyntaxNode {
@@ -2333,6 +2601,8 @@ struct NamedBlockClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NamedBlockClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct BlockStatementSyntax : public StatementSyntax {
@@ -2351,6 +2621,8 @@ struct BlockStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    BlockStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct WaitStatementSyntax : public StatementSyntax {
@@ -2369,6 +2641,8 @@ struct WaitStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WaitStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct WaitForkStatementSyntax : public StatementSyntax {
@@ -2385,6 +2659,8 @@ struct WaitForkStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WaitForkStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct WaitOrderStatementSyntax : public StatementSyntax {
@@ -2403,6 +2679,8 @@ struct WaitOrderStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WaitOrderStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct RandCaseItemSyntax : public SyntaxNode {
@@ -2419,6 +2697,8 @@ struct RandCaseItemSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    RandCaseItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct RandCaseStatementSyntax : public StatementSyntax {
@@ -2435,6 +2715,8 @@ struct RandCaseStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    RandCaseStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct EventTriggerStatementSyntax : public StatementSyntax {
@@ -2451,6 +2733,8 @@ struct EventTriggerStatementSyntax : public StatementSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EventTriggerStatementSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- MODULES -----
@@ -2485,6 +2769,8 @@ struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ImplicitNonAnsiPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
@@ -2503,6 +2789,8 @@ struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExplicitNonAnsiPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NonAnsiPortListSyntax : public PortListSyntax {
@@ -2519,6 +2807,8 @@ struct NonAnsiPortListSyntax : public PortListSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NonAnsiPortListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
@@ -2534,6 +2824,8 @@ struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    InterfacePortHeaderSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct VariablePortHeaderSyntax : public PortHeaderSyntax {
@@ -2550,6 +2842,8 @@ struct VariablePortHeaderSyntax : public PortHeaderSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    VariablePortHeaderSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
@@ -2566,6 +2860,8 @@ struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    InterconnectPortHeaderSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NetPortHeaderSyntax : public PortHeaderSyntax {
@@ -2582,6 +2878,8 @@ struct NetPortHeaderSyntax : public PortHeaderSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NetPortHeaderSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ImplicitAnsiPortSyntax : public MemberSyntax {
@@ -2597,6 +2895,8 @@ struct ImplicitAnsiPortSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ImplicitAnsiPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExplicitAnsiPortSyntax : public MemberSyntax {
@@ -2616,6 +2916,8 @@ struct ExplicitAnsiPortSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExplicitAnsiPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct AnsiPortListSyntax : public PortListSyntax {
@@ -2632,6 +2934,8 @@ struct AnsiPortListSyntax : public PortListSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    AnsiPortListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct WildcardPortListSyntax : public PortListSyntax {
@@ -2648,6 +2952,8 @@ struct WildcardPortListSyntax : public PortListSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WildcardPortListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ParameterPortListSyntax : public SyntaxNode {
@@ -2665,6 +2971,8 @@ struct ParameterPortListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ParameterPortListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModuleHeaderSyntax : public SyntaxNode {
@@ -2685,6 +2993,8 @@ struct ModuleHeaderSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModuleHeaderSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModuleDeclarationSyntax : public MemberSyntax {
@@ -2702,6 +3012,8 @@ struct ModuleDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModuleDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExternModuleSyntax : public SyntaxNode {
@@ -2717,6 +3029,8 @@ struct ExternModuleSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExternModuleSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- MEMBERS -----
@@ -2734,6 +3048,8 @@ struct EmptyMemberSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    EmptyMemberSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ProceduralBlockSyntax : public MemberSyntax {
@@ -2749,6 +3065,8 @@ struct ProceduralBlockSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ProceduralBlockSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct GenerateRegionSyntax : public MemberSyntax {
@@ -2765,6 +3083,8 @@ struct GenerateRegionSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    GenerateRegionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct LoopGenerateSyntax : public MemberSyntax {
@@ -2790,6 +3110,8 @@ struct LoopGenerateSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    LoopGenerateSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct IfGenerateSyntax : public MemberSyntax {
@@ -2809,6 +3131,8 @@ struct IfGenerateSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    IfGenerateSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CaseGenerateSyntax : public MemberSyntax {
@@ -2828,6 +3152,8 @@ struct CaseGenerateSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    CaseGenerateSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct GenerateBlockSyntax : public MemberSyntax {
@@ -2847,6 +3173,8 @@ struct GenerateBlockSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    GenerateBlockSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DividerClauseSyntax : public SyntaxNode {
@@ -2862,6 +3190,8 @@ struct DividerClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DividerClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TimeUnitsDeclarationSyntax : public MemberSyntax {
@@ -2879,6 +3209,8 @@ struct TimeUnitsDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TimeUnitsDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PortConnectionSyntax : public SyntaxNode {
@@ -2893,6 +3225,8 @@ struct PortConnectionSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PortConnectionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
@@ -2907,6 +3241,8 @@ struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    OrderedPortConnectionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct NamedPortConnectionSyntax : public PortConnectionSyntax {
@@ -2925,6 +3261,8 @@ struct NamedPortConnectionSyntax : public PortConnectionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    NamedPortConnectionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
@@ -2939,6 +3277,8 @@ struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WildcardPortConnectionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct HierarchicalInstanceSyntax : public SyntaxNode {
@@ -2957,6 +3297,8 @@ struct HierarchicalInstanceSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    HierarchicalInstanceSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct HierarchyInstantiationSyntax : public MemberSyntax {
@@ -2974,6 +3316,8 @@ struct HierarchyInstantiationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    HierarchyInstantiationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct FunctionPortSyntax : public SyntaxNode {
@@ -2993,6 +3337,8 @@ struct FunctionPortSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    FunctionPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct FunctionPortListSyntax : public SyntaxNode {
@@ -3009,6 +3355,8 @@ struct FunctionPortListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    FunctionPortListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct FunctionPrototypeSyntax : public SyntaxNode {
@@ -3027,6 +3375,8 @@ struct FunctionPrototypeSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    FunctionPrototypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct FunctionDeclarationSyntax : public MemberSyntax {
@@ -3045,6 +3395,8 @@ struct FunctionDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    FunctionDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct AssertionItemPortSyntax : public SyntaxNode {
@@ -3063,6 +3415,8 @@ struct AssertionItemPortSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    AssertionItemPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct AssertionItemPortListSyntax : public SyntaxNode {
@@ -3079,6 +3433,8 @@ struct AssertionItemPortListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    AssertionItemPortListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct LetDeclarationSyntax : public MemberSyntax {
@@ -3097,6 +3453,8 @@ struct LetDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    LetDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PropertyDeclarationSyntax : public MemberSyntax {
@@ -3119,6 +3477,8 @@ struct PropertyDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PropertyDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct SequenceDeclarationSyntax : public MemberSyntax {
@@ -3141,6 +3501,8 @@ struct SequenceDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    SequenceDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExtendsClauseSyntax : public SyntaxNode {
@@ -3157,6 +3519,8 @@ struct ExtendsClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExtendsClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ImplementsClauseSyntax : public SyntaxNode {
@@ -3172,6 +3536,8 @@ struct ImplementsClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ImplementsClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClassDeclarationSyntax : public MemberSyntax {
@@ -3196,6 +3562,8 @@ struct ClassDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClassDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClassPropertyDeclarationSyntax : public MemberSyntax {
@@ -3211,6 +3579,8 @@ struct ClassPropertyDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClassPropertyDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClassMethodDeclarationSyntax : public MemberSyntax {
@@ -3226,6 +3596,8 @@ struct ClassMethodDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClassMethodDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClassMethodPrototypeSyntax : public MemberSyntax {
@@ -3242,6 +3614,8 @@ struct ClassMethodPrototypeSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClassMethodPrototypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ContinuousAssignSyntax : public MemberSyntax {
@@ -3258,6 +3632,8 @@ struct ContinuousAssignSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ContinuousAssignSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DefParamAssignmentSyntax : public SyntaxNode {
@@ -3273,6 +3649,8 @@ struct DefParamAssignmentSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DefParamAssignmentSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DefParamSyntax : public MemberSyntax {
@@ -3289,6 +3667,8 @@ struct DefParamSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DefParamSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModportClockingPortSyntax : public MemberSyntax {
@@ -3304,6 +3684,8 @@ struct ModportClockingPortSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModportClockingPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModportPortSyntax : public SyntaxNode {
@@ -3327,6 +3709,8 @@ struct ModportNamedPortSyntax : public ModportPortSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModportNamedPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModportExplicitPortSyntax : public ModportPortSyntax {
@@ -3345,6 +3729,8 @@ struct ModportExplicitPortSyntax : public ModportPortSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModportExplicitPortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModportSimplePortListSyntax : public MemberSyntax {
@@ -3360,6 +3746,8 @@ struct ModportSimplePortListSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModportSimplePortListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModportSubroutinePortSyntax : public ModportPortSyntax {
@@ -3374,6 +3762,8 @@ struct ModportSubroutinePortSyntax : public ModportPortSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModportSubroutinePortSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModportSubroutinePortListSyntax : public MemberSyntax {
@@ -3389,6 +3779,8 @@ struct ModportSubroutinePortListSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModportSubroutinePortListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModportItemSyntax : public SyntaxNode {
@@ -3404,6 +3796,8 @@ struct ModportItemSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModportItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ModportDeclarationSyntax : public MemberSyntax {
@@ -3420,6 +3814,8 @@ struct ModportDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ModportDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClockingSkewSyntax : public SyntaxNode {
@@ -3436,6 +3832,8 @@ struct ClockingSkewSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClockingSkewSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClockingDirectionSyntax : public SyntaxNode {
@@ -3454,6 +3852,8 @@ struct ClockingDirectionSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClockingDirectionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClockingItemSyntax : public SyntaxNode {
@@ -3472,6 +3872,8 @@ struct ClockingItemSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClockingItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ClockingDeclarationSyntax : public MemberSyntax {
@@ -3495,6 +3897,8 @@ struct ClockingDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ClockingDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DPIImportExportSyntax : public MemberSyntax {
@@ -3515,6 +3919,8 @@ struct DPIImportExportSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DPIImportExportSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- CONSTRAINTS -----
@@ -3541,6 +3947,8 @@ struct DistWeightSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DistWeightSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DistItemSyntax : public SyntaxNode {
@@ -3556,6 +3964,8 @@ struct DistItemSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DistItemSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DistConstraintListSyntax : public SyntaxNode {
@@ -3573,6 +3983,8 @@ struct DistConstraintListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DistConstraintListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExpressionOrDistSyntax : public ExpressionSyntax {
@@ -3588,6 +4000,8 @@ struct ExpressionOrDistSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExpressionOrDistSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
@@ -3604,6 +4018,8 @@ struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExpressionConstraintSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
@@ -3620,6 +4036,8 @@ struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    UniquenessConstraintSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
@@ -3636,6 +4054,8 @@ struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ImplicationConstraintSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ElseConstraintClauseSyntax : public SyntaxNode {
@@ -3651,6 +4071,8 @@ struct ElseConstraintClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ElseConstraintClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
@@ -3670,6 +4092,8 @@ struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConditionalConstraintSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct LoopConstraintSyntax : public ConstraintItemSyntax {
@@ -3686,6 +4110,8 @@ struct LoopConstraintSyntax : public ConstraintItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    LoopConstraintSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DisableConstraintSyntax : public ConstraintItemSyntax {
@@ -3703,6 +4129,8 @@ struct DisableConstraintSyntax : public ConstraintItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DisableConstraintSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
@@ -3721,6 +4149,8 @@ struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    SolveBeforeConstraintSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConstraintBlockSyntax : public ConstraintItemSyntax {
@@ -3737,6 +4167,8 @@ struct ConstraintBlockSyntax : public ConstraintItemSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConstraintBlockSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConstraintPrototypeSyntax : public MemberSyntax {
@@ -3754,6 +4186,8 @@ struct ConstraintPrototypeSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConstraintPrototypeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConstraintDeclarationSyntax : public MemberSyntax {
@@ -3771,6 +4205,8 @@ struct ConstraintDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConstraintDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct WithClauseSyntax : public ExpressionSyntax {
@@ -3788,6 +4224,8 @@ struct WithClauseSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WithClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct IdentifierListSyntax : public SyntaxNode {
@@ -3804,6 +4242,8 @@ struct IdentifierListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    IdentifierListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
@@ -3820,6 +4260,8 @@ struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    RandomizeMethodWithClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- COVER GROUPS -----
@@ -3839,6 +4281,8 @@ struct WithFunctionSampleSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    WithFunctionSampleSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct BlockEventExpressionSyntax : public SyntaxNode {
@@ -3864,6 +4308,8 @@ struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    BinaryBlockEventExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
@@ -3879,6 +4325,8 @@ struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    PrimaryBlockEventExpressionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct BlockCoverageEventSyntax : public SyntaxNode {
@@ -3896,6 +4344,8 @@ struct BlockCoverageEventSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    BlockCoverageEventSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CovergroupDeclarationSyntax : public MemberSyntax {
@@ -3917,6 +4367,8 @@ struct CovergroupDeclarationSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    CovergroupDeclarationSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CoverageOptionSyntax : public MemberSyntax {
@@ -3936,6 +4388,8 @@ struct CoverageOptionSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    CoverageOptionSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CoverpointSyntax : public MemberSyntax {
@@ -3957,6 +4411,8 @@ struct CoverpointSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    CoverpointSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CoverageBinInitializerSyntax : public SyntaxNode {
@@ -3981,6 +4437,8 @@ struct DefaultCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DefaultCoverageBinInitializerSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -3996,6 +4454,8 @@ struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyn
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ExpressionCoverageBinInitializerSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -4011,6 +4471,8 @@ struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    RangeCoverageBinInitializerSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TransRepeatRangeSyntax : public SyntaxNode {
@@ -4028,6 +4490,8 @@ struct TransRepeatRangeSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TransRepeatRangeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TransRangeSyntax : public SyntaxNode {
@@ -4043,6 +4507,8 @@ struct TransRangeSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TransRangeSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TransSetSyntax : public SyntaxNode {
@@ -4059,6 +4525,8 @@ struct TransSetSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TransSetSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -4074,6 +4542,8 @@ struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSynt
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TransListCoverageBinInitializerSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct IffClauseSyntax : public SyntaxNode {
@@ -4091,6 +4561,8 @@ struct IffClauseSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    IffClauseSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct CoverageBinsSyntax : public MemberSyntax {
@@ -4112,6 +4584,8 @@ struct CoverageBinsSyntax : public MemberSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    CoverageBinsSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- TOP LEVEL -----
@@ -4129,6 +4603,8 @@ struct CompilationUnitSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    CompilationUnitSyntax* clone(BumpAllocator& alloc) const;
 };
 
 // ----- DIRECTIVES -----
@@ -4145,6 +4621,8 @@ struct DirectiveSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct SimpleDirectiveSyntax : public DirectiveSyntax {
@@ -4159,6 +4637,8 @@ struct SimpleDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    SimpleDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct IncludeDirectiveSyntax : public DirectiveSyntax {
@@ -4174,6 +4654,8 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    IncludeDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
@@ -4190,6 +4672,8 @@ struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    ConditionalBranchDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
@@ -4205,6 +4689,8 @@ struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    UnconditionalBranchDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MacroArgumentDefaultSyntax : public SyntaxNode {
@@ -4220,6 +4706,8 @@ struct MacroArgumentDefaultSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MacroArgumentDefaultSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MacroFormalArgumentSyntax : public SyntaxNode {
@@ -4235,6 +4723,8 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MacroFormalArgumentSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MacroFormalArgumentListSyntax : public SyntaxNode {
@@ -4251,6 +4741,8 @@ struct MacroFormalArgumentListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MacroFormalArgumentListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DefineDirectiveSyntax : public DirectiveSyntax {
@@ -4268,6 +4760,8 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DefineDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MacroActualArgumentSyntax : public SyntaxNode {
@@ -4282,6 +4776,8 @@ struct MacroActualArgumentSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MacroActualArgumentSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MacroActualArgumentListSyntax : public SyntaxNode {
@@ -4298,6 +4794,8 @@ struct MacroActualArgumentListSyntax : public SyntaxNode {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MacroActualArgumentListSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct MacroUsageSyntax : public DirectiveSyntax {
@@ -4312,6 +4810,8 @@ struct MacroUsageSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    MacroUsageSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct TimescaleDirectiveSyntax : public DirectiveSyntax {
@@ -4331,6 +4831,8 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    TimescaleDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
@@ -4346,6 +4848,8 @@ struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    DefaultNetTypeDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct LineDirectiveSyntax : public DirectiveSyntax {
@@ -4363,6 +4867,8 @@ struct LineDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    LineDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct UndefDirectiveSyntax : public DirectiveSyntax {
@@ -4378,6 +4884,8 @@ struct UndefDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    UndefDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
@@ -4393,6 +4901,8 @@ struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
     void setChild(uint32_t index, TokenOrSyntax child);
+
+    BeginKeywordsDirectiveSyntax* clone(BumpAllocator& alloc) const;
 };
 
 class SyntaxFactory {
