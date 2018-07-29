@@ -189,9 +189,7 @@ private:
     }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const override final {
-        auto result = (SyntaxList<T>*)alloc.allocate(sizeof(*this), alignof(SyntaxList<T>));
-        memcpy(result, this, sizeof(*this));
-        return result;
+        return alloc.emplace<SyntaxList<T>>(*this);
     }
 };
 
@@ -205,9 +203,7 @@ private:
     void setChild(uint32_t index, TokenOrSyntax child) override final { (*this)[index] = child.token(); }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const override final {
-        auto result = (TokenList*)alloc.allocate(sizeof(*this), alignof(TokenList));
-        memcpy(result, this, sizeof(*this));
-        return result;
+        return alloc.emplace<TokenList>(*this);
     }
 };
 
@@ -259,9 +255,7 @@ private:
     void setChild(uint32_t index, TokenOrSyntax child) override final { elements[index] = child; }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const override final {
-        auto result = (SeparatedSyntaxList<T>*)alloc.allocate(sizeof(*this), alignof(SeparatedSyntaxList<T>));
-        memcpy(result, this, sizeof(*this));
-        return result;
+        return alloc.emplace<SeparatedSyntaxList<T>>(*this);
     }
 
     span<TokenOrSyntax> elements;

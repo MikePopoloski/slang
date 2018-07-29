@@ -201,8 +201,7 @@ namespace slang {
 			cppf.write('}\n\n')
 
 			cppf.write('{0}* {0}::clone(BumpAllocator& alloc) const {{\n'.format(k))
-			cppf.write('    auto mem = alloc.allocate(sizeof(*this), alignof({}));\n'.format(k))
-			cppf.write('    return new (mem) {}(*this);\n'.format(k))
+			cppf.write('    return alloc.emplace<{}>(*this);\n'.format(k))
 			cppf.write('}\n\n')
 
 	# Write out syntax factory methods

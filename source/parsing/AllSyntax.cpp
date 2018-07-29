@@ -457,8 +457,7 @@ void ActionBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ActionBlockSyntax* ActionBlockSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ActionBlockSyntax));
-    return new (mem) ActionBlockSyntax(*this);
+    return alloc.emplace<ActionBlockSyntax>(*this);
 }
 
 bool AnsiPortListSyntax::isKind(SyntaxKind kind) {
@@ -493,8 +492,7 @@ void AnsiPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 AnsiPortListSyntax* AnsiPortListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(AnsiPortListSyntax));
-    return new (mem) AnsiPortListSyntax(*this);
+    return alloc.emplace<AnsiPortListSyntax>(*this);
 }
 
 bool ArgumentListSyntax::isKind(SyntaxKind kind) {
@@ -529,8 +527,7 @@ void ArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ArgumentListSyntax* ArgumentListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ArgumentListSyntax));
-    return new (mem) ArgumentListSyntax(*this);
+    return alloc.emplace<ArgumentListSyntax>(*this);
 }
 
 bool ArgumentSyntax::isKind(SyntaxKind kind) {
@@ -576,8 +573,7 @@ void AssertionItemPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 AssertionItemPortListSyntax* AssertionItemPortListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(AssertionItemPortListSyntax));
-    return new (mem) AssertionItemPortListSyntax(*this);
+    return alloc.emplace<AssertionItemPortListSyntax>(*this);
 }
 
 bool AssertionItemPortSyntax::isKind(SyntaxKind kind) {
@@ -618,8 +614,7 @@ void AssertionItemPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 AssertionItemPortSyntax* AssertionItemPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(AssertionItemPortSyntax));
-    return new (mem) AssertionItemPortSyntax(*this);
+    return alloc.emplace<AssertionItemPortSyntax>(*this);
 }
 
 bool AssignmentPatternExpressionSyntax::isKind(SyntaxKind kind) {
@@ -651,8 +646,7 @@ void AssignmentPatternExpressionSyntax::setChild(uint32_t index, TokenOrSyntax c
 }
 
 AssignmentPatternExpressionSyntax* AssignmentPatternExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(AssignmentPatternExpressionSyntax));
-    return new (mem) AssignmentPatternExpressionSyntax(*this);
+    return alloc.emplace<AssignmentPatternExpressionSyntax>(*this);
 }
 
 bool AssignmentPatternItemSyntax::isKind(SyntaxKind kind) {
@@ -687,8 +681,7 @@ void AssignmentPatternItemSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 AssignmentPatternItemSyntax* AssignmentPatternItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(AssignmentPatternItemSyntax));
-    return new (mem) AssignmentPatternItemSyntax(*this);
+    return alloc.emplace<AssignmentPatternItemSyntax>(*this);
 }
 
 bool AssignmentPatternSyntax::isKind(SyntaxKind kind) {
@@ -734,8 +727,7 @@ void AttributeInstanceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 AttributeInstanceSyntax* AttributeInstanceSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(AttributeInstanceSyntax));
-    return new (mem) AttributeInstanceSyntax(*this);
+    return alloc.emplace<AttributeInstanceSyntax>(*this);
 }
 
 bool AttributeSpecSyntax::isKind(SyntaxKind kind) {
@@ -767,8 +759,7 @@ void AttributeSpecSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 AttributeSpecSyntax* AttributeSpecSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(AttributeSpecSyntax));
-    return new (mem) AttributeSpecSyntax(*this);
+    return alloc.emplace<AttributeSpecSyntax>(*this);
 }
 
 bool BadExpressionSyntax::isKind(SyntaxKind kind) {
@@ -797,8 +788,7 @@ void BadExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 BadExpressionSyntax* BadExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(BadExpressionSyntax));
-    return new (mem) BadExpressionSyntax(*this);
+    return alloc.emplace<BadExpressionSyntax>(*this);
 }
 
 bool BeginKeywordsDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -833,8 +823,7 @@ void BeginKeywordsDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 BeginKeywordsDirectiveSyntax* BeginKeywordsDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(BeginKeywordsDirectiveSyntax));
-    return new (mem) BeginKeywordsDirectiveSyntax(*this);
+    return alloc.emplace<BeginKeywordsDirectiveSyntax>(*this);
 }
 
 bool BinaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -869,8 +858,7 @@ void BinaryBlockEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax ch
 }
 
 BinaryBlockEventExpressionSyntax* BinaryBlockEventExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(BinaryBlockEventExpressionSyntax));
-    return new (mem) BinaryBlockEventExpressionSyntax(*this);
+    return alloc.emplace<BinaryBlockEventExpressionSyntax>(*this);
 }
 
 bool BinaryEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -905,8 +893,7 @@ void BinaryEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 BinaryEventExpressionSyntax* BinaryEventExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(BinaryEventExpressionSyntax));
-    return new (mem) BinaryEventExpressionSyntax(*this);
+    return alloc.emplace<BinaryEventExpressionSyntax>(*this);
 }
 
 bool BinaryExpressionSyntax::isKind(SyntaxKind kind) {
@@ -1006,8 +993,7 @@ void BinaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 BinaryExpressionSyntax* BinaryExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(BinaryExpressionSyntax));
-    return new (mem) BinaryExpressionSyntax(*this);
+    return alloc.emplace<BinaryExpressionSyntax>(*this);
 }
 
 bool BitSelectSyntax::isKind(SyntaxKind kind) {
@@ -1036,8 +1022,7 @@ void BitSelectSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 BitSelectSyntax* BitSelectSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(BitSelectSyntax));
-    return new (mem) BitSelectSyntax(*this);
+    return alloc.emplace<BitSelectSyntax>(*this);
 }
 
 bool BlockCoverageEventSyntax::isKind(SyntaxKind kind) {
@@ -1075,8 +1060,7 @@ void BlockCoverageEventSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 BlockCoverageEventSyntax* BlockCoverageEventSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(BlockCoverageEventSyntax));
-    return new (mem) BlockCoverageEventSyntax(*this);
+    return alloc.emplace<BlockCoverageEventSyntax>(*this);
 }
 
 bool BlockEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -1139,8 +1123,7 @@ void BlockStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 BlockStatementSyntax* BlockStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(BlockStatementSyntax));
-    return new (mem) BlockStatementSyntax(*this);
+    return alloc.emplace<BlockStatementSyntax>(*this);
 }
 
 bool CaseGenerateSyntax::isKind(SyntaxKind kind) {
@@ -1187,8 +1170,7 @@ void CaseGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 CaseGenerateSyntax* CaseGenerateSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(CaseGenerateSyntax));
-    return new (mem) CaseGenerateSyntax(*this);
+    return alloc.emplace<CaseGenerateSyntax>(*this);
 }
 
 bool CaseItemSyntax::isKind(SyntaxKind kind) {
@@ -1255,8 +1237,7 @@ void CaseStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 CaseStatementSyntax* CaseStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(CaseStatementSyntax));
-    return new (mem) CaseStatementSyntax(*this);
+    return alloc.emplace<CaseStatementSyntax>(*this);
 }
 
 bool CastExpressionSyntax::isKind(SyntaxKind kind) {
@@ -1291,8 +1272,7 @@ void CastExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 CastExpressionSyntax* CastExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(CastExpressionSyntax));
-    return new (mem) CastExpressionSyntax(*this);
+    return alloc.emplace<CastExpressionSyntax>(*this);
 }
 
 bool ChargeStrengthSyntax::isKind(SyntaxKind kind) {
@@ -1327,8 +1307,7 @@ void ChargeStrengthSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ChargeStrengthSyntax* ChargeStrengthSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ChargeStrengthSyntax));
-    return new (mem) ChargeStrengthSyntax(*this);
+    return alloc.emplace<ChargeStrengthSyntax>(*this);
 }
 
 bool ClassDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -1390,8 +1369,7 @@ void ClassDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ClassDeclarationSyntax* ClassDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClassDeclarationSyntax));
-    return new (mem) ClassDeclarationSyntax(*this);
+    return alloc.emplace<ClassDeclarationSyntax>(*this);
 }
 
 bool ClassMethodDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -1426,8 +1404,7 @@ void ClassMethodDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 ClassMethodDeclarationSyntax* ClassMethodDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClassMethodDeclarationSyntax));
-    return new (mem) ClassMethodDeclarationSyntax(*this);
+    return alloc.emplace<ClassMethodDeclarationSyntax>(*this);
 }
 
 bool ClassMethodPrototypeSyntax::isKind(SyntaxKind kind) {
@@ -1465,8 +1442,7 @@ void ClassMethodPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ClassMethodPrototypeSyntax* ClassMethodPrototypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClassMethodPrototypeSyntax));
-    return new (mem) ClassMethodPrototypeSyntax(*this);
+    return alloc.emplace<ClassMethodPrototypeSyntax>(*this);
 }
 
 bool ClassNameSyntax::isKind(SyntaxKind kind) {
@@ -1498,8 +1474,7 @@ void ClassNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ClassNameSyntax* ClassNameSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClassNameSyntax));
-    return new (mem) ClassNameSyntax(*this);
+    return alloc.emplace<ClassNameSyntax>(*this);
 }
 
 bool ClassPropertyDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -1534,8 +1509,7 @@ void ClassPropertyDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax chil
 }
 
 ClassPropertyDeclarationSyntax* ClassPropertyDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClassPropertyDeclarationSyntax));
-    return new (mem) ClassPropertyDeclarationSyntax(*this);
+    return alloc.emplace<ClassPropertyDeclarationSyntax>(*this);
 }
 
 bool ClassScopeSyntax::isKind(SyntaxKind kind) {
@@ -1567,8 +1541,7 @@ void ClassScopeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ClassScopeSyntax* ClassScopeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClassScopeSyntax));
-    return new (mem) ClassScopeSyntax(*this);
+    return alloc.emplace<ClassScopeSyntax>(*this);
 }
 
 bool ClockingDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -1627,8 +1600,7 @@ void ClockingDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ClockingDeclarationSyntax* ClockingDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClockingDeclarationSyntax));
-    return new (mem) ClockingDeclarationSyntax(*this);
+    return alloc.emplace<ClockingDeclarationSyntax>(*this);
 }
 
 bool ClockingDirectionSyntax::isKind(SyntaxKind kind) {
@@ -1669,8 +1641,7 @@ void ClockingDirectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ClockingDirectionSyntax* ClockingDirectionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClockingDirectionSyntax));
-    return new (mem) ClockingDirectionSyntax(*this);
+    return alloc.emplace<ClockingDirectionSyntax>(*this);
 }
 
 bool ClockingItemSyntax::isKind(SyntaxKind kind) {
@@ -1711,8 +1682,7 @@ void ClockingItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ClockingItemSyntax* ClockingItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClockingItemSyntax));
-    return new (mem) ClockingItemSyntax(*this);
+    return alloc.emplace<ClockingItemSyntax>(*this);
 }
 
 bool ClockingSkewSyntax::isKind(SyntaxKind kind) {
@@ -1747,8 +1717,7 @@ void ClockingSkewSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ClockingSkewSyntax* ClockingSkewSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ClockingSkewSyntax));
-    return new (mem) ClockingSkewSyntax(*this);
+    return alloc.emplace<ClockingSkewSyntax>(*this);
 }
 
 bool ColonExpressionClauseSyntax::isKind(SyntaxKind kind) {
@@ -1780,8 +1749,7 @@ void ColonExpressionClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 ColonExpressionClauseSyntax* ColonExpressionClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ColonExpressionClauseSyntax));
-    return new (mem) ColonExpressionClauseSyntax(*this);
+    return alloc.emplace<ColonExpressionClauseSyntax>(*this);
 }
 
 bool CompilationUnitSyntax::isKind(SyntaxKind kind) {
@@ -1813,8 +1781,7 @@ void CompilationUnitSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 CompilationUnitSyntax* CompilationUnitSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(CompilationUnitSyntax));
-    return new (mem) CompilationUnitSyntax(*this);
+    return alloc.emplace<CompilationUnitSyntax>(*this);
 }
 
 bool ConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
@@ -1849,8 +1816,7 @@ void ConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 ConcatenationExpressionSyntax* ConcatenationExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConcatenationExpressionSyntax));
-    return new (mem) ConcatenationExpressionSyntax(*this);
+    return alloc.emplace<ConcatenationExpressionSyntax>(*this);
 }
 
 bool ConcurrentAssertionMemberSyntax::isKind(SyntaxKind kind) {
@@ -1882,8 +1848,7 @@ void ConcurrentAssertionMemberSyntax::setChild(uint32_t index, TokenOrSyntax chi
 }
 
 ConcurrentAssertionMemberSyntax* ConcurrentAssertionMemberSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConcurrentAssertionMemberSyntax));
-    return new (mem) ConcurrentAssertionMemberSyntax(*this);
+    return alloc.emplace<ConcurrentAssertionMemberSyntax>(*this);
 }
 
 bool ConcurrentAssertionStatementSyntax::isKind(SyntaxKind kind) {
@@ -1943,8 +1908,7 @@ void ConcurrentAssertionStatementSyntax::setChild(uint32_t index, TokenOrSyntax 
 }
 
 ConcurrentAssertionStatementSyntax* ConcurrentAssertionStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConcurrentAssertionStatementSyntax));
-    return new (mem) ConcurrentAssertionStatementSyntax(*this);
+    return alloc.emplace<ConcurrentAssertionStatementSyntax>(*this);
 }
 
 bool ConditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -1989,8 +1953,7 @@ void ConditionalBranchDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax ch
 }
 
 ConditionalBranchDirectiveSyntax* ConditionalBranchDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalBranchDirectiveSyntax));
-    return new (mem) ConditionalBranchDirectiveSyntax(*this);
+    return alloc.emplace<ConditionalBranchDirectiveSyntax>(*this);
 }
 
 bool ConditionalConstraintSyntax::isKind(SyntaxKind kind) {
@@ -2034,8 +1997,7 @@ void ConditionalConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 ConditionalConstraintSyntax* ConditionalConstraintSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalConstraintSyntax));
-    return new (mem) ConditionalConstraintSyntax(*this);
+    return alloc.emplace<ConditionalConstraintSyntax>(*this);
 }
 
 bool ConditionalExpressionSyntax::isKind(SyntaxKind kind) {
@@ -2079,8 +2041,7 @@ void ConditionalExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 ConditionalExpressionSyntax* ConditionalExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalExpressionSyntax));
-    return new (mem) ConditionalExpressionSyntax(*this);
+    return alloc.emplace<ConditionalExpressionSyntax>(*this);
 }
 
 bool ConditionalPatternSyntax::isKind(SyntaxKind kind) {
@@ -2112,8 +2073,7 @@ void ConditionalPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ConditionalPatternSyntax* ConditionalPatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalPatternSyntax));
-    return new (mem) ConditionalPatternSyntax(*this);
+    return alloc.emplace<ConditionalPatternSyntax>(*this);
 }
 
 bool ConditionalPredicateSyntax::isKind(SyntaxKind kind) {
@@ -2142,8 +2102,7 @@ void ConditionalPredicateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ConditionalPredicateSyntax* ConditionalPredicateSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalPredicateSyntax));
-    return new (mem) ConditionalPredicateSyntax(*this);
+    return alloc.emplace<ConditionalPredicateSyntax>(*this);
 }
 
 bool ConditionalStatementSyntax::isKind(SyntaxKind kind) {
@@ -2196,8 +2155,7 @@ void ConditionalStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ConditionalStatementSyntax* ConditionalStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConditionalStatementSyntax));
-    return new (mem) ConditionalStatementSyntax(*this);
+    return alloc.emplace<ConditionalStatementSyntax>(*this);
 }
 
 bool ConstraintBlockSyntax::isKind(SyntaxKind kind) {
@@ -2232,8 +2190,7 @@ void ConstraintBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ConstraintBlockSyntax* ConstraintBlockSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConstraintBlockSyntax));
-    return new (mem) ConstraintBlockSyntax(*this);
+    return alloc.emplace<ConstraintBlockSyntax>(*this);
 }
 
 bool ConstraintDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -2274,8 +2231,7 @@ void ConstraintDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 ConstraintDeclarationSyntax* ConstraintDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConstraintDeclarationSyntax));
-    return new (mem) ConstraintDeclarationSyntax(*this);
+    return alloc.emplace<ConstraintDeclarationSyntax>(*this);
 }
 
 bool ConstraintItemSyntax::isKind(SyntaxKind kind) {
@@ -2332,8 +2288,7 @@ void ConstraintPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ConstraintPrototypeSyntax* ConstraintPrototypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ConstraintPrototypeSyntax));
-    return new (mem) ConstraintPrototypeSyntax(*this);
+    return alloc.emplace<ConstraintPrototypeSyntax>(*this);
 }
 
 bool ContinuousAssignSyntax::isKind(SyntaxKind kind) {
@@ -2371,8 +2326,7 @@ void ContinuousAssignSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ContinuousAssignSyntax* ContinuousAssignSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ContinuousAssignSyntax));
-    return new (mem) ContinuousAssignSyntax(*this);
+    return alloc.emplace<ContinuousAssignSyntax>(*this);
 }
 
 bool CoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
@@ -2437,8 +2391,7 @@ void CoverageBinsSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 CoverageBinsSyntax* CoverageBinsSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(CoverageBinsSyntax));
-    return new (mem) CoverageBinsSyntax(*this);
+    return alloc.emplace<CoverageBinsSyntax>(*this);
 }
 
 bool CoverageOptionSyntax::isKind(SyntaxKind kind) {
@@ -2485,8 +2438,7 @@ void CoverageOptionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 CoverageOptionSyntax* CoverageOptionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(CoverageOptionSyntax));
-    return new (mem) CoverageOptionSyntax(*this);
+    return alloc.emplace<CoverageOptionSyntax>(*this);
 }
 
 bool CovergroupDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -2539,8 +2491,7 @@ void CovergroupDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 CovergroupDeclarationSyntax* CovergroupDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(CovergroupDeclarationSyntax));
-    return new (mem) CovergroupDeclarationSyntax(*this);
+    return alloc.emplace<CovergroupDeclarationSyntax>(*this);
 }
 
 bool CoverpointSyntax::isKind(SyntaxKind kind) {
@@ -2593,8 +2544,7 @@ void CoverpointSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 CoverpointSyntax* CoverpointSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(CoverpointSyntax));
-    return new (mem) CoverpointSyntax(*this);
+    return alloc.emplace<CoverpointSyntax>(*this);
 }
 
 bool DPIImportExportSyntax::isKind(SyntaxKind kind) {
@@ -2644,8 +2594,7 @@ void DPIImportExportSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DPIImportExportSyntax* DPIImportExportSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DPIImportExportSyntax));
-    return new (mem) DPIImportExportSyntax(*this);
+    return alloc.emplace<DPIImportExportSyntax>(*this);
 }
 
 bool DataDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -2686,8 +2635,7 @@ void DataDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DataDeclarationSyntax* DataDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DataDeclarationSyntax));
-    return new (mem) DataDeclarationSyntax(*this);
+    return alloc.emplace<DataDeclarationSyntax>(*this);
 }
 
 bool DataTypeSyntax::isKind(SyntaxKind kind) {
@@ -2755,8 +2703,7 @@ void DefParamAssignmentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DefParamAssignmentSyntax* DefParamAssignmentSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DefParamAssignmentSyntax));
-    return new (mem) DefParamAssignmentSyntax(*this);
+    return alloc.emplace<DefParamAssignmentSyntax>(*this);
 }
 
 bool DefParamSyntax::isKind(SyntaxKind kind) {
@@ -2794,8 +2741,7 @@ void DefParamSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DefParamSyntax* DefParamSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DefParamSyntax));
-    return new (mem) DefParamSyntax(*this);
+    return alloc.emplace<DefParamSyntax>(*this);
 }
 
 bool DefaultCaseItemSyntax::isKind(SyntaxKind kind) {
@@ -2830,8 +2776,7 @@ void DefaultCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DefaultCaseItemSyntax* DefaultCaseItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DefaultCaseItemSyntax));
-    return new (mem) DefaultCaseItemSyntax(*this);
+    return alloc.emplace<DefaultCaseItemSyntax>(*this);
 }
 
 bool DefaultCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
@@ -2863,8 +2808,7 @@ void DefaultCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax
 }
 
 DefaultCoverageBinInitializerSyntax* DefaultCoverageBinInitializerSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DefaultCoverageBinInitializerSyntax));
-    return new (mem) DefaultCoverageBinInitializerSyntax(*this);
+    return alloc.emplace<DefaultCoverageBinInitializerSyntax>(*this);
 }
 
 bool DefaultNetTypeDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -2899,8 +2843,7 @@ void DefaultNetTypeDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 DefaultNetTypeDirectiveSyntax* DefaultNetTypeDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DefaultNetTypeDirectiveSyntax));
-    return new (mem) DefaultNetTypeDirectiveSyntax(*this);
+    return alloc.emplace<DefaultNetTypeDirectiveSyntax>(*this);
 }
 
 bool DeferredAssertionSyntax::isKind(SyntaxKind kind) {
@@ -2935,8 +2878,7 @@ void DeferredAssertionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DeferredAssertionSyntax* DeferredAssertionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DeferredAssertionSyntax));
-    return new (mem) DeferredAssertionSyntax(*this);
+    return alloc.emplace<DeferredAssertionSyntax>(*this);
 }
 
 bool DefineDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -2977,8 +2919,7 @@ void DefineDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DefineDirectiveSyntax* DefineDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DefineDirectiveSyntax));
-    return new (mem) DefineDirectiveSyntax(*this);
+    return alloc.emplace<DefineDirectiveSyntax>(*this);
 }
 
 bool DelaySyntax::isKind(SyntaxKind kind) {
@@ -3016,8 +2957,7 @@ void DelaySyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DelaySyntax* DelaySyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DelaySyntax));
-    return new (mem) DelaySyntax(*this);
+    return alloc.emplace<DelaySyntax>(*this);
 }
 
 bool DimensionSpecifierSyntax::isKind(SyntaxKind kind) {
@@ -3082,8 +3022,7 @@ void DirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DirectiveSyntax* DirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DirectiveSyntax));
-    return new (mem) DirectiveSyntax(*this);
+    return alloc.emplace<DirectiveSyntax>(*this);
 }
 
 bool DisableConstraintSyntax::isKind(SyntaxKind kind) {
@@ -3121,8 +3060,7 @@ void DisableConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DisableConstraintSyntax* DisableConstraintSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DisableConstraintSyntax));
-    return new (mem) DisableConstraintSyntax(*this);
+    return alloc.emplace<DisableConstraintSyntax>(*this);
 }
 
 bool DisableForkStatementSyntax::isKind(SyntaxKind kind) {
@@ -3163,8 +3101,7 @@ void DisableForkStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DisableForkStatementSyntax* DisableForkStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DisableForkStatementSyntax));
-    return new (mem) DisableForkStatementSyntax(*this);
+    return alloc.emplace<DisableForkStatementSyntax>(*this);
 }
 
 bool DisableIffSyntax::isKind(SyntaxKind kind) {
@@ -3205,8 +3142,7 @@ void DisableIffSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DisableIffSyntax* DisableIffSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DisableIffSyntax));
-    return new (mem) DisableIffSyntax(*this);
+    return alloc.emplace<DisableIffSyntax>(*this);
 }
 
 bool DisableStatementSyntax::isKind(SyntaxKind kind) {
@@ -3247,8 +3183,7 @@ void DisableStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DisableStatementSyntax* DisableStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DisableStatementSyntax));
-    return new (mem) DisableStatementSyntax(*this);
+    return alloc.emplace<DisableStatementSyntax>(*this);
 }
 
 bool DistConstraintListSyntax::isKind(SyntaxKind kind) {
@@ -3286,8 +3221,7 @@ void DistConstraintListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DistConstraintListSyntax* DistConstraintListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DistConstraintListSyntax));
-    return new (mem) DistConstraintListSyntax(*this);
+    return alloc.emplace<DistConstraintListSyntax>(*this);
 }
 
 bool DistItemSyntax::isKind(SyntaxKind kind) {
@@ -3319,8 +3253,7 @@ void DistItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DistItemSyntax* DistItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DistItemSyntax));
-    return new (mem) DistItemSyntax(*this);
+    return alloc.emplace<DistItemSyntax>(*this);
 }
 
 bool DistWeightSyntax::isKind(SyntaxKind kind) {
@@ -3352,8 +3285,7 @@ void DistWeightSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DistWeightSyntax* DistWeightSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DistWeightSyntax));
-    return new (mem) DistWeightSyntax(*this);
+    return alloc.emplace<DistWeightSyntax>(*this);
 }
 
 bool DividerClauseSyntax::isKind(SyntaxKind kind) {
@@ -3385,8 +3317,7 @@ void DividerClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DividerClauseSyntax* DividerClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DividerClauseSyntax));
-    return new (mem) DividerClauseSyntax(*this);
+    return alloc.emplace<DividerClauseSyntax>(*this);
 }
 
 bool DoWhileStatementSyntax::isKind(SyntaxKind kind) {
@@ -3439,8 +3370,7 @@ void DoWhileStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DoWhileStatementSyntax* DoWhileStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DoWhileStatementSyntax));
-    return new (mem) DoWhileStatementSyntax(*this);
+    return alloc.emplace<DoWhileStatementSyntax>(*this);
 }
 
 bool DotMemberClauseSyntax::isKind(SyntaxKind kind) {
@@ -3472,8 +3402,7 @@ void DotMemberClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DotMemberClauseSyntax* DotMemberClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DotMemberClauseSyntax));
-    return new (mem) DotMemberClauseSyntax(*this);
+    return alloc.emplace<DotMemberClauseSyntax>(*this);
 }
 
 bool DriveStrengthSyntax::isKind(SyntaxKind kind) {
@@ -3514,8 +3443,7 @@ void DriveStrengthSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 DriveStrengthSyntax* DriveStrengthSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(DriveStrengthSyntax));
-    return new (mem) DriveStrengthSyntax(*this);
+    return alloc.emplace<DriveStrengthSyntax>(*this);
 }
 
 bool ElementSelectExpressionSyntax::isKind(SyntaxKind kind) {
@@ -3547,8 +3475,7 @@ void ElementSelectExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 ElementSelectExpressionSyntax* ElementSelectExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ElementSelectExpressionSyntax));
-    return new (mem) ElementSelectExpressionSyntax(*this);
+    return alloc.emplace<ElementSelectExpressionSyntax>(*this);
 }
 
 bool ElementSelectSyntax::isKind(SyntaxKind kind) {
@@ -3583,8 +3510,7 @@ void ElementSelectSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ElementSelectSyntax* ElementSelectSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ElementSelectSyntax));
-    return new (mem) ElementSelectSyntax(*this);
+    return alloc.emplace<ElementSelectSyntax>(*this);
 }
 
 bool ElseClauseSyntax::isKind(SyntaxKind kind) {
@@ -3616,8 +3542,7 @@ void ElseClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ElseClauseSyntax* ElseClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ElseClauseSyntax));
-    return new (mem) ElseClauseSyntax(*this);
+    return alloc.emplace<ElseClauseSyntax>(*this);
 }
 
 bool ElseConstraintClauseSyntax::isKind(SyntaxKind kind) {
@@ -3649,8 +3574,7 @@ void ElseConstraintClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ElseConstraintClauseSyntax* ElseConstraintClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ElseConstraintClauseSyntax));
-    return new (mem) ElseConstraintClauseSyntax(*this);
+    return alloc.emplace<ElseConstraintClauseSyntax>(*this);
 }
 
 bool EmptyArgumentSyntax::isKind(SyntaxKind kind) {
@@ -3673,8 +3597,7 @@ void EmptyArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 EmptyArgumentSyntax* EmptyArgumentSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyArgumentSyntax));
-    return new (mem) EmptyArgumentSyntax(*this);
+    return alloc.emplace<EmptyArgumentSyntax>(*this);
 }
 
 bool EmptyIdentifierNameSyntax::isKind(SyntaxKind kind) {
@@ -3697,8 +3620,7 @@ void EmptyIdentifierNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 EmptyIdentifierNameSyntax* EmptyIdentifierNameSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyIdentifierNameSyntax));
-    return new (mem) EmptyIdentifierNameSyntax(*this);
+    return alloc.emplace<EmptyIdentifierNameSyntax>(*this);
 }
 
 bool EmptyMemberSyntax::isKind(SyntaxKind kind) {
@@ -3733,8 +3655,7 @@ void EmptyMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 EmptyMemberSyntax* EmptyMemberSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyMemberSyntax));
-    return new (mem) EmptyMemberSyntax(*this);
+    return alloc.emplace<EmptyMemberSyntax>(*this);
 }
 
 bool EmptyQueueExpressionSyntax::isKind(SyntaxKind kind) {
@@ -3766,8 +3687,7 @@ void EmptyQueueExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 EmptyQueueExpressionSyntax* EmptyQueueExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyQueueExpressionSyntax));
-    return new (mem) EmptyQueueExpressionSyntax(*this);
+    return alloc.emplace<EmptyQueueExpressionSyntax>(*this);
 }
 
 bool EmptyStatementSyntax::isKind(SyntaxKind kind) {
@@ -3802,8 +3722,7 @@ void EmptyStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 EmptyStatementSyntax* EmptyStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EmptyStatementSyntax));
-    return new (mem) EmptyStatementSyntax(*this);
+    return alloc.emplace<EmptyStatementSyntax>(*this);
 }
 
 bool EnumTypeSyntax::isKind(SyntaxKind kind) {
@@ -3847,8 +3766,7 @@ void EnumTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 EnumTypeSyntax* EnumTypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EnumTypeSyntax));
-    return new (mem) EnumTypeSyntax(*this);
+    return alloc.emplace<EnumTypeSyntax>(*this);
 }
 
 bool EqualsValueClauseSyntax::isKind(SyntaxKind kind) {
@@ -3880,8 +3798,7 @@ void EqualsValueClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 EqualsValueClauseSyntax* EqualsValueClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EqualsValueClauseSyntax));
-    return new (mem) EqualsValueClauseSyntax(*this);
+    return alloc.emplace<EqualsValueClauseSyntax>(*this);
 }
 
 bool EventControlSyntax::isKind(SyntaxKind kind) {
@@ -3913,8 +3830,7 @@ void EventControlSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 EventControlSyntax* EventControlSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EventControlSyntax));
-    return new (mem) EventControlSyntax(*this);
+    return alloc.emplace<EventControlSyntax>(*this);
 }
 
 bool EventControlWithExpressionSyntax::isKind(SyntaxKind kind) {
@@ -3946,8 +3862,7 @@ void EventControlWithExpressionSyntax::setChild(uint32_t index, TokenOrSyntax ch
 }
 
 EventControlWithExpressionSyntax* EventControlWithExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EventControlWithExpressionSyntax));
-    return new (mem) EventControlWithExpressionSyntax(*this);
+    return alloc.emplace<EventControlWithExpressionSyntax>(*this);
 }
 
 bool EventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -4005,8 +3920,7 @@ void EventTriggerStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 EventTriggerStatementSyntax* EventTriggerStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(EventTriggerStatementSyntax));
-    return new (mem) EventTriggerStatementSyntax(*this);
+    return alloc.emplace<EventTriggerStatementSyntax>(*this);
 }
 
 bool ExplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -4053,8 +3967,7 @@ void ExplicitAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ExplicitAnsiPortSyntax* ExplicitAnsiPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExplicitAnsiPortSyntax));
-    return new (mem) ExplicitAnsiPortSyntax(*this);
+    return alloc.emplace<ExplicitAnsiPortSyntax>(*this);
 }
 
 bool ExplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -4095,8 +4008,7 @@ void ExplicitNonAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ExplicitNonAnsiPortSyntax* ExplicitNonAnsiPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExplicitNonAnsiPortSyntax));
-    return new (mem) ExplicitNonAnsiPortSyntax(*this);
+    return alloc.emplace<ExplicitNonAnsiPortSyntax>(*this);
 }
 
 bool ExpressionConstraintSyntax::isKind(SyntaxKind kind) {
@@ -4131,8 +4043,7 @@ void ExpressionConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ExpressionConstraintSyntax* ExpressionConstraintSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionConstraintSyntax));
-    return new (mem) ExpressionConstraintSyntax(*this);
+    return alloc.emplace<ExpressionConstraintSyntax>(*this);
 }
 
 bool ExpressionCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
@@ -4164,8 +4075,7 @@ void ExpressionCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyn
 }
 
 ExpressionCoverageBinInitializerSyntax* ExpressionCoverageBinInitializerSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionCoverageBinInitializerSyntax));
-    return new (mem) ExpressionCoverageBinInitializerSyntax(*this);
+    return alloc.emplace<ExpressionCoverageBinInitializerSyntax>(*this);
 }
 
 bool ExpressionOrDistSyntax::isKind(SyntaxKind kind) {
@@ -4197,8 +4107,7 @@ void ExpressionOrDistSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ExpressionOrDistSyntax* ExpressionOrDistSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionOrDistSyntax));
-    return new (mem) ExpressionOrDistSyntax(*this);
+    return alloc.emplace<ExpressionOrDistSyntax>(*this);
 }
 
 bool ExpressionPatternSyntax::isKind(SyntaxKind kind) {
@@ -4227,8 +4136,7 @@ void ExpressionPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ExpressionPatternSyntax* ExpressionPatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionPatternSyntax));
-    return new (mem) ExpressionPatternSyntax(*this);
+    return alloc.emplace<ExpressionPatternSyntax>(*this);
 }
 
 bool ExpressionStatementSyntax::isKind(SyntaxKind kind) {
@@ -4266,8 +4174,7 @@ void ExpressionStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ExpressionStatementSyntax* ExpressionStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExpressionStatementSyntax));
-    return new (mem) ExpressionStatementSyntax(*this);
+    return alloc.emplace<ExpressionStatementSyntax>(*this);
 }
 
 bool ExpressionSyntax::isKind(SyntaxKind kind) {
@@ -4475,8 +4382,7 @@ void ExtendsClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ExtendsClauseSyntax* ExtendsClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExtendsClauseSyntax));
-    return new (mem) ExtendsClauseSyntax(*this);
+    return alloc.emplace<ExtendsClauseSyntax>(*this);
 }
 
 bool ExternModuleSyntax::isKind(SyntaxKind kind) {
@@ -4508,8 +4414,7 @@ void ExternModuleSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ExternModuleSyntax* ExternModuleSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ExternModuleSyntax));
-    return new (mem) ExternModuleSyntax(*this);
+    return alloc.emplace<ExternModuleSyntax>(*this);
 }
 
 bool ForLoopStatementSyntax::isKind(SyntaxKind kind) {
@@ -4568,8 +4473,7 @@ void ForLoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ForLoopStatementSyntax* ForLoopStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ForLoopStatementSyntax));
-    return new (mem) ForLoopStatementSyntax(*this);
+    return alloc.emplace<ForLoopStatementSyntax>(*this);
 }
 
 bool ForVariableDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4604,8 +4508,7 @@ void ForVariableDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 ForVariableDeclarationSyntax* ForVariableDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ForVariableDeclarationSyntax));
-    return new (mem) ForVariableDeclarationSyntax(*this);
+    return alloc.emplace<ForVariableDeclarationSyntax>(*this);
 }
 
 bool ForeachLoopListSyntax::isKind(SyntaxKind kind) {
@@ -4649,8 +4552,7 @@ void ForeachLoopListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ForeachLoopListSyntax* ForeachLoopListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ForeachLoopListSyntax));
-    return new (mem) ForeachLoopListSyntax(*this);
+    return alloc.emplace<ForeachLoopListSyntax>(*this);
 }
 
 bool ForeachLoopStatementSyntax::isKind(SyntaxKind kind) {
@@ -4691,8 +4593,7 @@ void ForeachLoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ForeachLoopStatementSyntax* ForeachLoopStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ForeachLoopStatementSyntax));
-    return new (mem) ForeachLoopStatementSyntax(*this);
+    return alloc.emplace<ForeachLoopStatementSyntax>(*this);
 }
 
 bool ForeverStatementSyntax::isKind(SyntaxKind kind) {
@@ -4730,8 +4631,7 @@ void ForeverStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ForeverStatementSyntax* ForeverStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ForeverStatementSyntax));
-    return new (mem) ForeverStatementSyntax(*this);
+    return alloc.emplace<ForeverStatementSyntax>(*this);
 }
 
 bool ForwardInterfaceClassTypedefDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4775,8 +4675,7 @@ void ForwardInterfaceClassTypedefDeclarationSyntax::setChild(uint32_t index, Tok
 }
 
 ForwardInterfaceClassTypedefDeclarationSyntax* ForwardInterfaceClassTypedefDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ForwardInterfaceClassTypedefDeclarationSyntax));
-    return new (mem) ForwardInterfaceClassTypedefDeclarationSyntax(*this);
+    return alloc.emplace<ForwardInterfaceClassTypedefDeclarationSyntax>(*this);
 }
 
 bool ForwardTypedefDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4817,8 +4716,7 @@ void ForwardTypedefDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax chi
 }
 
 ForwardTypedefDeclarationSyntax* ForwardTypedefDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ForwardTypedefDeclarationSyntax));
-    return new (mem) ForwardTypedefDeclarationSyntax(*this);
+    return alloc.emplace<ForwardTypedefDeclarationSyntax>(*this);
 }
 
 bool FunctionDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -4868,8 +4766,7 @@ void FunctionDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 FunctionDeclarationSyntax* FunctionDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(FunctionDeclarationSyntax));
-    return new (mem) FunctionDeclarationSyntax(*this);
+    return alloc.emplace<FunctionDeclarationSyntax>(*this);
 }
 
 bool FunctionPortListSyntax::isKind(SyntaxKind kind) {
@@ -4904,8 +4801,7 @@ void FunctionPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 FunctionPortListSyntax* FunctionPortListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(FunctionPortListSyntax));
-    return new (mem) FunctionPortListSyntax(*this);
+    return alloc.emplace<FunctionPortListSyntax>(*this);
 }
 
 bool FunctionPortSyntax::isKind(SyntaxKind kind) {
@@ -4949,8 +4845,7 @@ void FunctionPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 FunctionPortSyntax* FunctionPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(FunctionPortSyntax));
-    return new (mem) FunctionPortSyntax(*this);
+    return alloc.emplace<FunctionPortSyntax>(*this);
 }
 
 bool FunctionPrototypeSyntax::isKind(SyntaxKind kind) {
@@ -4991,8 +4886,7 @@ void FunctionPrototypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 FunctionPrototypeSyntax* FunctionPrototypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(FunctionPrototypeSyntax));
-    return new (mem) FunctionPrototypeSyntax(*this);
+    return alloc.emplace<FunctionPrototypeSyntax>(*this);
 }
 
 bool GenerateBlockSyntax::isKind(SyntaxKind kind) {
@@ -5039,8 +4933,7 @@ void GenerateBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 GenerateBlockSyntax* GenerateBlockSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(GenerateBlockSyntax));
-    return new (mem) GenerateBlockSyntax(*this);
+    return alloc.emplace<GenerateBlockSyntax>(*this);
 }
 
 bool GenerateRegionSyntax::isKind(SyntaxKind kind) {
@@ -5078,8 +4971,7 @@ void GenerateRegionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 GenerateRegionSyntax* GenerateRegionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(GenerateRegionSyntax));
-    return new (mem) GenerateRegionSyntax(*this);
+    return alloc.emplace<GenerateRegionSyntax>(*this);
 }
 
 bool GenvarDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -5117,8 +5009,7 @@ void GenvarDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 GenvarDeclarationSyntax* GenvarDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(GenvarDeclarationSyntax));
-    return new (mem) GenvarDeclarationSyntax(*this);
+    return alloc.emplace<GenvarDeclarationSyntax>(*this);
 }
 
 bool HierarchicalInstanceSyntax::isKind(SyntaxKind kind) {
@@ -5159,8 +5050,7 @@ void HierarchicalInstanceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 HierarchicalInstanceSyntax* HierarchicalInstanceSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(HierarchicalInstanceSyntax));
-    return new (mem) HierarchicalInstanceSyntax(*this);
+    return alloc.emplace<HierarchicalInstanceSyntax>(*this);
 }
 
 bool HierarchyInstantiationSyntax::isKind(SyntaxKind kind) {
@@ -5201,8 +5091,7 @@ void HierarchyInstantiationSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 HierarchyInstantiationSyntax* HierarchyInstantiationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(HierarchyInstantiationSyntax));
-    return new (mem) HierarchyInstantiationSyntax(*this);
+    return alloc.emplace<HierarchyInstantiationSyntax>(*this);
 }
 
 bool IdentifierListSyntax::isKind(SyntaxKind kind) {
@@ -5237,8 +5126,7 @@ void IdentifierListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 IdentifierListSyntax* IdentifierListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(IdentifierListSyntax));
-    return new (mem) IdentifierListSyntax(*this);
+    return alloc.emplace<IdentifierListSyntax>(*this);
 }
 
 bool IdentifierNameSyntax::isKind(SyntaxKind kind) {
@@ -5267,8 +5155,7 @@ void IdentifierNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 IdentifierNameSyntax* IdentifierNameSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(IdentifierNameSyntax));
-    return new (mem) IdentifierNameSyntax(*this);
+    return alloc.emplace<IdentifierNameSyntax>(*this);
 }
 
 bool IdentifierSelectNameSyntax::isKind(SyntaxKind kind) {
@@ -5300,8 +5187,7 @@ void IdentifierSelectNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 IdentifierSelectNameSyntax* IdentifierSelectNameSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(IdentifierSelectNameSyntax));
-    return new (mem) IdentifierSelectNameSyntax(*this);
+    return alloc.emplace<IdentifierSelectNameSyntax>(*this);
 }
 
 bool IfGenerateSyntax::isKind(SyntaxKind kind) {
@@ -5348,8 +5234,7 @@ void IfGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 IfGenerateSyntax* IfGenerateSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(IfGenerateSyntax));
-    return new (mem) IfGenerateSyntax(*this);
+    return alloc.emplace<IfGenerateSyntax>(*this);
 }
 
 bool IffClauseSyntax::isKind(SyntaxKind kind) {
@@ -5387,8 +5272,7 @@ void IffClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 IffClauseSyntax* IffClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(IffClauseSyntax));
-    return new (mem) IffClauseSyntax(*this);
+    return alloc.emplace<IffClauseSyntax>(*this);
 }
 
 bool ImmediateAssertionMemberSyntax::isKind(SyntaxKind kind) {
@@ -5420,8 +5304,7 @@ void ImmediateAssertionMemberSyntax::setChild(uint32_t index, TokenOrSyntax chil
 }
 
 ImmediateAssertionMemberSyntax* ImmediateAssertionMemberSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ImmediateAssertionMemberSyntax));
-    return new (mem) ImmediateAssertionMemberSyntax(*this);
+    return alloc.emplace<ImmediateAssertionMemberSyntax>(*this);
 }
 
 bool ImmediateAssertionStatementSyntax::isKind(SyntaxKind kind) {
@@ -5472,8 +5355,7 @@ void ImmediateAssertionStatementSyntax::setChild(uint32_t index, TokenOrSyntax c
 }
 
 ImmediateAssertionStatementSyntax* ImmediateAssertionStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ImmediateAssertionStatementSyntax));
-    return new (mem) ImmediateAssertionStatementSyntax(*this);
+    return alloc.emplace<ImmediateAssertionStatementSyntax>(*this);
 }
 
 bool ImplementsClauseSyntax::isKind(SyntaxKind kind) {
@@ -5505,8 +5387,7 @@ void ImplementsClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ImplementsClauseSyntax* ImplementsClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ImplementsClauseSyntax));
-    return new (mem) ImplementsClauseSyntax(*this);
+    return alloc.emplace<ImplementsClauseSyntax>(*this);
 }
 
 bool ImplicationConstraintSyntax::isKind(SyntaxKind kind) {
@@ -5541,8 +5422,7 @@ void ImplicationConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 ImplicationConstraintSyntax* ImplicationConstraintSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicationConstraintSyntax));
-    return new (mem) ImplicationConstraintSyntax(*this);
+    return alloc.emplace<ImplicationConstraintSyntax>(*this);
 }
 
 bool ImplicitAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -5577,8 +5457,7 @@ void ImplicitAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ImplicitAnsiPortSyntax* ImplicitAnsiPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicitAnsiPortSyntax));
-    return new (mem) ImplicitAnsiPortSyntax(*this);
+    return alloc.emplace<ImplicitAnsiPortSyntax>(*this);
 }
 
 bool ImplicitEventControlSyntax::isKind(SyntaxKind kind) {
@@ -5607,8 +5486,7 @@ void ImplicitEventControlSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ImplicitEventControlSyntax* ImplicitEventControlSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicitEventControlSyntax));
-    return new (mem) ImplicitEventControlSyntax(*this);
+    return alloc.emplace<ImplicitEventControlSyntax>(*this);
 }
 
 bool ImplicitNonAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -5637,8 +5515,7 @@ void ImplicitNonAnsiPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ImplicitNonAnsiPortSyntax* ImplicitNonAnsiPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicitNonAnsiPortSyntax));
-    return new (mem) ImplicitNonAnsiPortSyntax(*this);
+    return alloc.emplace<ImplicitNonAnsiPortSyntax>(*this);
 }
 
 bool ImplicitTypeSyntax::isKind(SyntaxKind kind) {
@@ -5670,8 +5547,7 @@ void ImplicitTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ImplicitTypeSyntax* ImplicitTypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ImplicitTypeSyntax));
-    return new (mem) ImplicitTypeSyntax(*this);
+    return alloc.emplace<ImplicitTypeSyntax>(*this);
 }
 
 bool IncludeDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -5706,8 +5582,7 @@ void IncludeDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 IncludeDirectiveSyntax* IncludeDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(IncludeDirectiveSyntax));
-    return new (mem) IncludeDirectiveSyntax(*this);
+    return alloc.emplace<IncludeDirectiveSyntax>(*this);
 }
 
 bool InsideExpressionSyntax::isKind(SyntaxKind kind) {
@@ -5742,8 +5617,7 @@ void InsideExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 InsideExpressionSyntax* InsideExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(InsideExpressionSyntax));
-    return new (mem) InsideExpressionSyntax(*this);
+    return alloc.emplace<InsideExpressionSyntax>(*this);
 }
 
 bool IntegerTypeSyntax::isKind(SyntaxKind kind) {
@@ -5791,8 +5665,7 @@ void IntegerTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 IntegerTypeSyntax* IntegerTypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(IntegerTypeSyntax));
-    return new (mem) IntegerTypeSyntax(*this);
+    return alloc.emplace<IntegerTypeSyntax>(*this);
 }
 
 bool IntegerVectorExpressionSyntax::isKind(SyntaxKind kind) {
@@ -5827,8 +5700,7 @@ void IntegerVectorExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 IntegerVectorExpressionSyntax* IntegerVectorExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(IntegerVectorExpressionSyntax));
-    return new (mem) IntegerVectorExpressionSyntax(*this);
+    return alloc.emplace<IntegerVectorExpressionSyntax>(*this);
 }
 
 bool InterconnectPortHeaderSyntax::isKind(SyntaxKind kind) {
@@ -5863,8 +5735,7 @@ void InterconnectPortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 InterconnectPortHeaderSyntax* InterconnectPortHeaderSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(InterconnectPortHeaderSyntax));
-    return new (mem) InterconnectPortHeaderSyntax(*this);
+    return alloc.emplace<InterconnectPortHeaderSyntax>(*this);
 }
 
 bool InterfacePortHeaderSyntax::isKind(SyntaxKind kind) {
@@ -5896,8 +5767,7 @@ void InterfacePortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 InterfacePortHeaderSyntax* InterfacePortHeaderSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(InterfacePortHeaderSyntax));
-    return new (mem) InterfacePortHeaderSyntax(*this);
+    return alloc.emplace<InterfacePortHeaderSyntax>(*this);
 }
 
 bool InvocationExpressionSyntax::isKind(SyntaxKind kind) {
@@ -5932,8 +5802,7 @@ void InvocationExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 InvocationExpressionSyntax* InvocationExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(InvocationExpressionSyntax));
-    return new (mem) InvocationExpressionSyntax(*this);
+    return alloc.emplace<InvocationExpressionSyntax>(*this);
 }
 
 bool JumpStatementSyntax::isKind(SyntaxKind kind) {
@@ -5971,8 +5840,7 @@ void JumpStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 JumpStatementSyntax* JumpStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(JumpStatementSyntax));
-    return new (mem) JumpStatementSyntax(*this);
+    return alloc.emplace<JumpStatementSyntax>(*this);
 }
 
 bool KeywordNameSyntax::isKind(SyntaxKind kind) {
@@ -6016,8 +5884,7 @@ void KeywordNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 KeywordNameSyntax* KeywordNameSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(KeywordNameSyntax));
-    return new (mem) KeywordNameSyntax(*this);
+    return alloc.emplace<KeywordNameSyntax>(*this);
 }
 
 bool KeywordTypeSyntax::isKind(SyntaxKind kind) {
@@ -6061,8 +5928,7 @@ void KeywordTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 KeywordTypeSyntax* KeywordTypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(KeywordTypeSyntax));
-    return new (mem) KeywordTypeSyntax(*this);
+    return alloc.emplace<KeywordTypeSyntax>(*this);
 }
 
 bool LetDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -6106,8 +5972,7 @@ void LetDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 LetDeclarationSyntax* LetDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(LetDeclarationSyntax));
-    return new (mem) LetDeclarationSyntax(*this);
+    return alloc.emplace<LetDeclarationSyntax>(*this);
 }
 
 bool LineDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -6148,8 +6013,7 @@ void LineDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 LineDirectiveSyntax* LineDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(LineDirectiveSyntax));
-    return new (mem) LineDirectiveSyntax(*this);
+    return alloc.emplace<LineDirectiveSyntax>(*this);
 }
 
 bool LiteralExpressionSyntax::isKind(SyntaxKind kind) {
@@ -6191,8 +6055,7 @@ void LiteralExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 LiteralExpressionSyntax* LiteralExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(LiteralExpressionSyntax));
-    return new (mem) LiteralExpressionSyntax(*this);
+    return alloc.emplace<LiteralExpressionSyntax>(*this);
 }
 
 bool LoopConstraintSyntax::isKind(SyntaxKind kind) {
@@ -6227,8 +6090,7 @@ void LoopConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 LoopConstraintSyntax* LoopConstraintSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(LoopConstraintSyntax));
-    return new (mem) LoopConstraintSyntax(*this);
+    return alloc.emplace<LoopConstraintSyntax>(*this);
 }
 
 bool LoopGenerateSyntax::isKind(SyntaxKind kind) {
@@ -6293,8 +6155,7 @@ void LoopGenerateSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 LoopGenerateSyntax* LoopGenerateSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(LoopGenerateSyntax));
-    return new (mem) LoopGenerateSyntax(*this);
+    return alloc.emplace<LoopGenerateSyntax>(*this);
 }
 
 bool LoopStatementSyntax::isKind(SyntaxKind kind) {
@@ -6341,8 +6202,7 @@ void LoopStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 LoopStatementSyntax* LoopStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(LoopStatementSyntax));
-    return new (mem) LoopStatementSyntax(*this);
+    return alloc.emplace<LoopStatementSyntax>(*this);
 }
 
 bool MacroActualArgumentListSyntax::isKind(SyntaxKind kind) {
@@ -6377,8 +6237,7 @@ void MacroActualArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 MacroActualArgumentListSyntax* MacroActualArgumentListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MacroActualArgumentListSyntax));
-    return new (mem) MacroActualArgumentListSyntax(*this);
+    return alloc.emplace<MacroActualArgumentListSyntax>(*this);
 }
 
 bool MacroActualArgumentSyntax::isKind(SyntaxKind kind) {
@@ -6407,8 +6266,7 @@ void MacroActualArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 MacroActualArgumentSyntax* MacroActualArgumentSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MacroActualArgumentSyntax));
-    return new (mem) MacroActualArgumentSyntax(*this);
+    return alloc.emplace<MacroActualArgumentSyntax>(*this);
 }
 
 bool MacroArgumentDefaultSyntax::isKind(SyntaxKind kind) {
@@ -6440,8 +6298,7 @@ void MacroArgumentDefaultSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 MacroArgumentDefaultSyntax* MacroArgumentDefaultSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MacroArgumentDefaultSyntax));
-    return new (mem) MacroArgumentDefaultSyntax(*this);
+    return alloc.emplace<MacroArgumentDefaultSyntax>(*this);
 }
 
 bool MacroFormalArgumentListSyntax::isKind(SyntaxKind kind) {
@@ -6476,8 +6333,7 @@ void MacroFormalArgumentListSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 MacroFormalArgumentListSyntax* MacroFormalArgumentListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MacroFormalArgumentListSyntax));
-    return new (mem) MacroFormalArgumentListSyntax(*this);
+    return alloc.emplace<MacroFormalArgumentListSyntax>(*this);
 }
 
 bool MacroFormalArgumentSyntax::isKind(SyntaxKind kind) {
@@ -6509,8 +6365,7 @@ void MacroFormalArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 MacroFormalArgumentSyntax* MacroFormalArgumentSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MacroFormalArgumentSyntax));
-    return new (mem) MacroFormalArgumentSyntax(*this);
+    return alloc.emplace<MacroFormalArgumentSyntax>(*this);
 }
 
 bool MacroUsageSyntax::isKind(SyntaxKind kind) {
@@ -6542,8 +6397,7 @@ void MacroUsageSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 MacroUsageSyntax* MacroUsageSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MacroUsageSyntax));
-    return new (mem) MacroUsageSyntax(*this);
+    return alloc.emplace<MacroUsageSyntax>(*this);
 }
 
 bool MatchesClauseSyntax::isKind(SyntaxKind kind) {
@@ -6575,8 +6429,7 @@ void MatchesClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 MatchesClauseSyntax* MatchesClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MatchesClauseSyntax));
-    return new (mem) MatchesClauseSyntax(*this);
+    return alloc.emplace<MatchesClauseSyntax>(*this);
 }
 
 bool MemberAccessExpressionSyntax::isKind(SyntaxKind kind) {
@@ -6611,8 +6464,7 @@ void MemberAccessExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 MemberAccessExpressionSyntax* MemberAccessExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MemberAccessExpressionSyntax));
-    return new (mem) MemberAccessExpressionSyntax(*this);
+    return alloc.emplace<MemberAccessExpressionSyntax>(*this);
 }
 
 bool MemberSyntax::isKind(SyntaxKind kind) {
@@ -6699,8 +6551,7 @@ void MemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 MemberSyntax* MemberSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MemberSyntax));
-    return new (mem) MemberSyntax(*this);
+    return alloc.emplace<MemberSyntax>(*this);
 }
 
 bool MinTypMaxExpressionSyntax::isKind(SyntaxKind kind) {
@@ -6741,8 +6592,7 @@ void MinTypMaxExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 MinTypMaxExpressionSyntax* MinTypMaxExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MinTypMaxExpressionSyntax));
-    return new (mem) MinTypMaxExpressionSyntax(*this);
+    return alloc.emplace<MinTypMaxExpressionSyntax>(*this);
 }
 
 bool ModportClockingPortSyntax::isKind(SyntaxKind kind) {
@@ -6777,8 +6627,7 @@ void ModportClockingPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ModportClockingPortSyntax* ModportClockingPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModportClockingPortSyntax));
-    return new (mem) ModportClockingPortSyntax(*this);
+    return alloc.emplace<ModportClockingPortSyntax>(*this);
 }
 
 bool ModportDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -6816,8 +6665,7 @@ void ModportDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ModportDeclarationSyntax* ModportDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModportDeclarationSyntax));
-    return new (mem) ModportDeclarationSyntax(*this);
+    return alloc.emplace<ModportDeclarationSyntax>(*this);
 }
 
 bool ModportExplicitPortSyntax::isKind(SyntaxKind kind) {
@@ -6858,8 +6706,7 @@ void ModportExplicitPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ModportExplicitPortSyntax* ModportExplicitPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModportExplicitPortSyntax));
-    return new (mem) ModportExplicitPortSyntax(*this);
+    return alloc.emplace<ModportExplicitPortSyntax>(*this);
 }
 
 bool ModportItemSyntax::isKind(SyntaxKind kind) {
@@ -6891,8 +6738,7 @@ void ModportItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ModportItemSyntax* ModportItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModportItemSyntax));
-    return new (mem) ModportItemSyntax(*this);
+    return alloc.emplace<ModportItemSyntax>(*this);
 }
 
 bool ModportNamedPortSyntax::isKind(SyntaxKind kind) {
@@ -6921,8 +6767,7 @@ void ModportNamedPortSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ModportNamedPortSyntax* ModportNamedPortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModportNamedPortSyntax));
-    return new (mem) ModportNamedPortSyntax(*this);
+    return alloc.emplace<ModportNamedPortSyntax>(*this);
 }
 
 bool ModportPortSyntax::isKind(SyntaxKind kind) {
@@ -6968,8 +6813,7 @@ void ModportSimplePortListSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 ModportSimplePortListSyntax* ModportSimplePortListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModportSimplePortListSyntax));
-    return new (mem) ModportSimplePortListSyntax(*this);
+    return alloc.emplace<ModportSimplePortListSyntax>(*this);
 }
 
 bool ModportSubroutinePortListSyntax::isKind(SyntaxKind kind) {
@@ -7004,8 +6848,7 @@ void ModportSubroutinePortListSyntax::setChild(uint32_t index, TokenOrSyntax chi
 }
 
 ModportSubroutinePortListSyntax* ModportSubroutinePortListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModportSubroutinePortListSyntax));
-    return new (mem) ModportSubroutinePortListSyntax(*this);
+    return alloc.emplace<ModportSubroutinePortListSyntax>(*this);
 }
 
 bool ModportSubroutinePortSyntax::isKind(SyntaxKind kind) {
@@ -7034,8 +6877,7 @@ void ModportSubroutinePortSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 ModportSubroutinePortSyntax* ModportSubroutinePortSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModportSubroutinePortSyntax));
-    return new (mem) ModportSubroutinePortSyntax(*this);
+    return alloc.emplace<ModportSubroutinePortSyntax>(*this);
 }
 
 bool ModuleDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -7084,8 +6926,7 @@ void ModuleDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ModuleDeclarationSyntax* ModuleDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModuleDeclarationSyntax));
-    return new (mem) ModuleDeclarationSyntax(*this);
+    return alloc.emplace<ModuleDeclarationSyntax>(*this);
 }
 
 bool ModuleHeaderSyntax::isKind(SyntaxKind kind) {
@@ -7140,8 +6981,7 @@ void ModuleHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ModuleHeaderSyntax* ModuleHeaderSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ModuleHeaderSyntax));
-    return new (mem) ModuleHeaderSyntax(*this);
+    return alloc.emplace<ModuleHeaderSyntax>(*this);
 }
 
 bool MultipleConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
@@ -7179,8 +7019,7 @@ void MultipleConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSynt
 }
 
 MultipleConcatenationExpressionSyntax* MultipleConcatenationExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(MultipleConcatenationExpressionSyntax));
-    return new (mem) MultipleConcatenationExpressionSyntax(*this);
+    return alloc.emplace<MultipleConcatenationExpressionSyntax>(*this);
 }
 
 bool NameSyntax::isKind(SyntaxKind kind) {
@@ -7246,8 +7085,7 @@ void NamedArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NamedArgumentSyntax* NamedArgumentSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NamedArgumentSyntax));
-    return new (mem) NamedArgumentSyntax(*this);
+    return alloc.emplace<NamedArgumentSyntax>(*this);
 }
 
 bool NamedBlockClauseSyntax::isKind(SyntaxKind kind) {
@@ -7279,8 +7117,7 @@ void NamedBlockClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NamedBlockClauseSyntax* NamedBlockClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NamedBlockClauseSyntax));
-    return new (mem) NamedBlockClauseSyntax(*this);
+    return alloc.emplace<NamedBlockClauseSyntax>(*this);
 }
 
 bool NamedLabelSyntax::isKind(SyntaxKind kind) {
@@ -7312,8 +7149,7 @@ void NamedLabelSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NamedLabelSyntax* NamedLabelSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NamedLabelSyntax));
-    return new (mem) NamedLabelSyntax(*this);
+    return alloc.emplace<NamedLabelSyntax>(*this);
 }
 
 bool NamedPortConnectionSyntax::isKind(SyntaxKind kind) {
@@ -7357,8 +7193,7 @@ void NamedPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NamedPortConnectionSyntax* NamedPortConnectionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NamedPortConnectionSyntax));
-    return new (mem) NamedPortConnectionSyntax(*this);
+    return alloc.emplace<NamedPortConnectionSyntax>(*this);
 }
 
 bool NamedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
@@ -7393,8 +7228,7 @@ void NamedStructurePatternMemberSyntax::setChild(uint32_t index, TokenOrSyntax c
 }
 
 NamedStructurePatternMemberSyntax* NamedStructurePatternMemberSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NamedStructurePatternMemberSyntax));
-    return new (mem) NamedStructurePatternMemberSyntax(*this);
+    return alloc.emplace<NamedStructurePatternMemberSyntax>(*this);
 }
 
 bool NamedTypeSyntax::isKind(SyntaxKind kind) {
@@ -7423,8 +7257,7 @@ void NamedTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NamedTypeSyntax* NamedTypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NamedTypeSyntax));
-    return new (mem) NamedTypeSyntax(*this);
+    return alloc.emplace<NamedTypeSyntax>(*this);
 }
 
 bool NetDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -7471,8 +7304,7 @@ void NetDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NetDeclarationSyntax* NetDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NetDeclarationSyntax));
-    return new (mem) NetDeclarationSyntax(*this);
+    return alloc.emplace<NetDeclarationSyntax>(*this);
 }
 
 bool NetPortHeaderSyntax::isKind(SyntaxKind kind) {
@@ -7507,8 +7339,7 @@ void NetPortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NetPortHeaderSyntax* NetPortHeaderSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NetPortHeaderSyntax));
-    return new (mem) NetPortHeaderSyntax(*this);
+    return alloc.emplace<NetPortHeaderSyntax>(*this);
 }
 
 bool NetStrengthSyntax::isKind(SyntaxKind kind) {
@@ -7559,8 +7390,7 @@ void NewArrayExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NewArrayExpressionSyntax* NewArrayExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NewArrayExpressionSyntax));
-    return new (mem) NewArrayExpressionSyntax(*this);
+    return alloc.emplace<NewArrayExpressionSyntax>(*this);
 }
 
 bool NewClassExpressionSyntax::isKind(SyntaxKind kind) {
@@ -7595,8 +7425,7 @@ void NewClassExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NewClassExpressionSyntax* NewClassExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NewClassExpressionSyntax));
-    return new (mem) NewClassExpressionSyntax(*this);
+    return alloc.emplace<NewClassExpressionSyntax>(*this);
 }
 
 bool NewExpressionSyntax::isKind(SyntaxKind kind) {
@@ -7628,8 +7457,7 @@ void NewExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NewExpressionSyntax* NewExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NewExpressionSyntax));
-    return new (mem) NewExpressionSyntax(*this);
+    return alloc.emplace<NewExpressionSyntax>(*this);
 }
 
 bool NonAnsiPortListSyntax::isKind(SyntaxKind kind) {
@@ -7664,8 +7492,7 @@ void NonAnsiPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 NonAnsiPortListSyntax* NonAnsiPortListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(NonAnsiPortListSyntax));
-    return new (mem) NonAnsiPortListSyntax(*this);
+    return alloc.emplace<NonAnsiPortListSyntax>(*this);
 }
 
 bool NonAnsiPortSyntax::isKind(SyntaxKind kind) {
@@ -7710,8 +7537,7 @@ void OpenRangeListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 OpenRangeListSyntax* OpenRangeListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(OpenRangeListSyntax));
-    return new (mem) OpenRangeListSyntax(*this);
+    return alloc.emplace<OpenRangeListSyntax>(*this);
 }
 
 bool OrderedArgumentSyntax::isKind(SyntaxKind kind) {
@@ -7740,8 +7566,7 @@ void OrderedArgumentSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 OrderedArgumentSyntax* OrderedArgumentSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(OrderedArgumentSyntax));
-    return new (mem) OrderedArgumentSyntax(*this);
+    return alloc.emplace<OrderedArgumentSyntax>(*this);
 }
 
 bool OrderedPortConnectionSyntax::isKind(SyntaxKind kind) {
@@ -7773,8 +7598,7 @@ void OrderedPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 OrderedPortConnectionSyntax* OrderedPortConnectionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(OrderedPortConnectionSyntax));
-    return new (mem) OrderedPortConnectionSyntax(*this);
+    return alloc.emplace<OrderedPortConnectionSyntax>(*this);
 }
 
 bool OrderedStructurePatternMemberSyntax::isKind(SyntaxKind kind) {
@@ -7803,8 +7627,7 @@ void OrderedStructurePatternMemberSyntax::setChild(uint32_t index, TokenOrSyntax
 }
 
 OrderedStructurePatternMemberSyntax* OrderedStructurePatternMemberSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(OrderedStructurePatternMemberSyntax));
-    return new (mem) OrderedStructurePatternMemberSyntax(*this);
+    return alloc.emplace<OrderedStructurePatternMemberSyntax>(*this);
 }
 
 bool PackageImportDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -7842,8 +7665,7 @@ void PackageImportDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax chil
 }
 
 PackageImportDeclarationSyntax* PackageImportDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PackageImportDeclarationSyntax));
-    return new (mem) PackageImportDeclarationSyntax(*this);
+    return alloc.emplace<PackageImportDeclarationSyntax>(*this);
 }
 
 bool PackageImportItemSyntax::isKind(SyntaxKind kind) {
@@ -7878,8 +7700,7 @@ void PackageImportItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 PackageImportItemSyntax* PackageImportItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PackageImportItemSyntax));
-    return new (mem) PackageImportItemSyntax(*this);
+    return alloc.emplace<PackageImportItemSyntax>(*this);
 }
 
 bool ParameterDeclarationStatementSyntax::isKind(SyntaxKind kind) {
@@ -7914,8 +7735,7 @@ void ParameterDeclarationStatementSyntax::setChild(uint32_t index, TokenOrSyntax
 }
 
 ParameterDeclarationStatementSyntax* ParameterDeclarationStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ParameterDeclarationStatementSyntax));
-    return new (mem) ParameterDeclarationStatementSyntax(*this);
+    return alloc.emplace<ParameterDeclarationStatementSyntax>(*this);
 }
 
 bool ParameterDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -7950,8 +7770,7 @@ void ParameterDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ParameterDeclarationSyntax* ParameterDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ParameterDeclarationSyntax));
-    return new (mem) ParameterDeclarationSyntax(*this);
+    return alloc.emplace<ParameterDeclarationSyntax>(*this);
 }
 
 bool ParameterPortListSyntax::isKind(SyntaxKind kind) {
@@ -7989,8 +7808,7 @@ void ParameterPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ParameterPortListSyntax* ParameterPortListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ParameterPortListSyntax));
-    return new (mem) ParameterPortListSyntax(*this);
+    return alloc.emplace<ParameterPortListSyntax>(*this);
 }
 
 bool ParameterValueAssignmentSyntax::isKind(SyntaxKind kind) {
@@ -8022,8 +7840,7 @@ void ParameterValueAssignmentSyntax::setChild(uint32_t index, TokenOrSyntax chil
 }
 
 ParameterValueAssignmentSyntax* ParameterValueAssignmentSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ParameterValueAssignmentSyntax));
-    return new (mem) ParameterValueAssignmentSyntax(*this);
+    return alloc.emplace<ParameterValueAssignmentSyntax>(*this);
 }
 
 bool ParenImplicitEventControlSyntax::isKind(SyntaxKind kind) {
@@ -8055,8 +7872,7 @@ void ParenImplicitEventControlSyntax::setChild(uint32_t index, TokenOrSyntax chi
 }
 
 ParenImplicitEventControlSyntax* ParenImplicitEventControlSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ParenImplicitEventControlSyntax));
-    return new (mem) ParenImplicitEventControlSyntax(*this);
+    return alloc.emplace<ParenImplicitEventControlSyntax>(*this);
 }
 
 bool ParenthesizedEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8091,8 +7907,7 @@ void ParenthesizedEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax 
 }
 
 ParenthesizedEventExpressionSyntax* ParenthesizedEventExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ParenthesizedEventExpressionSyntax));
-    return new (mem) ParenthesizedEventExpressionSyntax(*this);
+    return alloc.emplace<ParenthesizedEventExpressionSyntax>(*this);
 }
 
 bool ParenthesizedExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8127,8 +7942,7 @@ void ParenthesizedExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 ParenthesizedExpressionSyntax* ParenthesizedExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ParenthesizedExpressionSyntax));
-    return new (mem) ParenthesizedExpressionSyntax(*this);
+    return alloc.emplace<ParenthesizedExpressionSyntax>(*this);
 }
 
 bool PatternCaseItemSyntax::isKind(SyntaxKind kind) {
@@ -8169,8 +7983,7 @@ void PatternCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 PatternCaseItemSyntax* PatternCaseItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PatternCaseItemSyntax));
-    return new (mem) PatternCaseItemSyntax(*this);
+    return alloc.emplace<PatternCaseItemSyntax>(*this);
 }
 
 bool PatternSyntax::isKind(SyntaxKind kind) {
@@ -8219,8 +8032,7 @@ void PortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 PortConnectionSyntax* PortConnectionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PortConnectionSyntax));
-    return new (mem) PortConnectionSyntax(*this);
+    return alloc.emplace<PortConnectionSyntax>(*this);
 }
 
 bool PortDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -8258,8 +8070,7 @@ void PortDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 PortDeclarationSyntax* PortDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PortDeclarationSyntax));
-    return new (mem) PortDeclarationSyntax(*this);
+    return alloc.emplace<PortDeclarationSyntax>(*this);
 }
 
 bool PortHeaderSyntax::isKind(SyntaxKind kind) {
@@ -8323,8 +8134,7 @@ void PostfixUnaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 PostfixUnaryExpressionSyntax* PostfixUnaryExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PostfixUnaryExpressionSyntax));
-    return new (mem) PostfixUnaryExpressionSyntax(*this);
+    return alloc.emplace<PostfixUnaryExpressionSyntax>(*this);
 }
 
 bool PrefixUnaryExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8388,8 +8198,7 @@ void PrefixUnaryExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 PrefixUnaryExpressionSyntax* PrefixUnaryExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PrefixUnaryExpressionSyntax));
-    return new (mem) PrefixUnaryExpressionSyntax(*this);
+    return alloc.emplace<PrefixUnaryExpressionSyntax>(*this);
 }
 
 bool PrimaryBlockEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8421,8 +8230,7 @@ void PrimaryBlockEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax c
 }
 
 PrimaryBlockEventExpressionSyntax* PrimaryBlockEventExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PrimaryBlockEventExpressionSyntax));
-    return new (mem) PrimaryBlockEventExpressionSyntax(*this);
+    return alloc.emplace<PrimaryBlockEventExpressionSyntax>(*this);
 }
 
 bool PrimaryExpressionSyntax::isKind(SyntaxKind kind) {
@@ -8499,8 +8307,7 @@ void ProceduralAssignStatementSyntax::setChild(uint32_t index, TokenOrSyntax chi
 }
 
 ProceduralAssignStatementSyntax* ProceduralAssignStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ProceduralAssignStatementSyntax));
-    return new (mem) ProceduralAssignStatementSyntax(*this);
+    return alloc.emplace<ProceduralAssignStatementSyntax>(*this);
 }
 
 bool ProceduralBlockSyntax::isKind(SyntaxKind kind) {
@@ -8545,8 +8352,7 @@ void ProceduralBlockSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ProceduralBlockSyntax* ProceduralBlockSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ProceduralBlockSyntax));
-    return new (mem) ProceduralBlockSyntax(*this);
+    return alloc.emplace<ProceduralBlockSyntax>(*this);
 }
 
 bool ProceduralDeassignStatementSyntax::isKind(SyntaxKind kind) {
@@ -8593,8 +8399,7 @@ void ProceduralDeassignStatementSyntax::setChild(uint32_t index, TokenOrSyntax c
 }
 
 ProceduralDeassignStatementSyntax* ProceduralDeassignStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ProceduralDeassignStatementSyntax));
-    return new (mem) ProceduralDeassignStatementSyntax(*this);
+    return alloc.emplace<ProceduralDeassignStatementSyntax>(*this);
 }
 
 bool PropertyDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -8650,8 +8455,7 @@ void PropertyDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 PropertyDeclarationSyntax* PropertyDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PropertyDeclarationSyntax));
-    return new (mem) PropertyDeclarationSyntax(*this);
+    return alloc.emplace<PropertyDeclarationSyntax>(*this);
 }
 
 bool PropertySpecSyntax::isKind(SyntaxKind kind) {
@@ -8686,8 +8490,7 @@ void PropertySpecSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 PropertySpecSyntax* PropertySpecSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(PropertySpecSyntax));
-    return new (mem) PropertySpecSyntax(*this);
+    return alloc.emplace<PropertySpecSyntax>(*this);
 }
 
 bool QueueDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
@@ -8719,8 +8522,7 @@ void QueueDimensionSpecifierSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 QueueDimensionSpecifierSyntax* QueueDimensionSpecifierSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(QueueDimensionSpecifierSyntax));
-    return new (mem) QueueDimensionSpecifierSyntax(*this);
+    return alloc.emplace<QueueDimensionSpecifierSyntax>(*this);
 }
 
 bool RandCaseItemSyntax::isKind(SyntaxKind kind) {
@@ -8755,8 +8557,7 @@ void RandCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 RandCaseItemSyntax* RandCaseItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(RandCaseItemSyntax));
-    return new (mem) RandCaseItemSyntax(*this);
+    return alloc.emplace<RandCaseItemSyntax>(*this);
 }
 
 bool RandCaseStatementSyntax::isKind(SyntaxKind kind) {
@@ -8797,8 +8598,7 @@ void RandCaseStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 RandCaseStatementSyntax* RandCaseStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(RandCaseStatementSyntax));
-    return new (mem) RandCaseStatementSyntax(*this);
+    return alloc.emplace<RandCaseStatementSyntax>(*this);
 }
 
 bool RandomizeMethodWithClauseSyntax::isKind(SyntaxKind kind) {
@@ -8833,8 +8633,7 @@ void RandomizeMethodWithClauseSyntax::setChild(uint32_t index, TokenOrSyntax chi
 }
 
 RandomizeMethodWithClauseSyntax* RandomizeMethodWithClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(RandomizeMethodWithClauseSyntax));
-    return new (mem) RandomizeMethodWithClauseSyntax(*this);
+    return alloc.emplace<RandomizeMethodWithClauseSyntax>(*this);
 }
 
 bool RangeCoverageBinInitializerSyntax::isKind(SyntaxKind kind) {
@@ -8866,8 +8665,7 @@ void RangeCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSyntax c
 }
 
 RangeCoverageBinInitializerSyntax* RangeCoverageBinInitializerSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(RangeCoverageBinInitializerSyntax));
-    return new (mem) RangeCoverageBinInitializerSyntax(*this);
+    return alloc.emplace<RangeCoverageBinInitializerSyntax>(*this);
 }
 
 bool RangeDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
@@ -8896,8 +8694,7 @@ void RangeDimensionSpecifierSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 RangeDimensionSpecifierSyntax* RangeDimensionSpecifierSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(RangeDimensionSpecifierSyntax));
-    return new (mem) RangeDimensionSpecifierSyntax(*this);
+    return alloc.emplace<RangeDimensionSpecifierSyntax>(*this);
 }
 
 bool RangeSelectSyntax::isKind(SyntaxKind kind) {
@@ -8939,8 +8736,7 @@ void RangeSelectSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 RangeSelectSyntax* RangeSelectSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(RangeSelectSyntax));
-    return new (mem) RangeSelectSyntax(*this);
+    return alloc.emplace<RangeSelectSyntax>(*this);
 }
 
 bool RepeatedEventControlSyntax::isKind(SyntaxKind kind) {
@@ -8981,8 +8777,7 @@ void RepeatedEventControlSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 RepeatedEventControlSyntax* RepeatedEventControlSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(RepeatedEventControlSyntax));
-    return new (mem) RepeatedEventControlSyntax(*this);
+    return alloc.emplace<RepeatedEventControlSyntax>(*this);
 }
 
 bool ReplicatedAssignmentPatternSyntax::isKind(SyntaxKind kind) {
@@ -9026,8 +8821,7 @@ void ReplicatedAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax c
 }
 
 ReplicatedAssignmentPatternSyntax* ReplicatedAssignmentPatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ReplicatedAssignmentPatternSyntax));
-    return new (mem) ReplicatedAssignmentPatternSyntax(*this);
+    return alloc.emplace<ReplicatedAssignmentPatternSyntax>(*this);
 }
 
 bool ReturnStatementSyntax::isKind(SyntaxKind kind) {
@@ -9068,8 +8862,7 @@ void ReturnStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ReturnStatementSyntax* ReturnStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ReturnStatementSyntax));
-    return new (mem) ReturnStatementSyntax(*this);
+    return alloc.emplace<ReturnStatementSyntax>(*this);
 }
 
 bool ScopedNameSyntax::isKind(SyntaxKind kind) {
@@ -9104,8 +8897,7 @@ void ScopedNameSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 ScopedNameSyntax* ScopedNameSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ScopedNameSyntax));
-    return new (mem) ScopedNameSyntax(*this);
+    return alloc.emplace<ScopedNameSyntax>(*this);
 }
 
 bool SelectorSyntax::isKind(SyntaxKind kind) {
@@ -9173,8 +8965,7 @@ void SequenceDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 SequenceDeclarationSyntax* SequenceDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(SequenceDeclarationSyntax));
-    return new (mem) SequenceDeclarationSyntax(*this);
+    return alloc.emplace<SequenceDeclarationSyntax>(*this);
 }
 
 bool ShortcutCycleDelayRangeSyntax::isKind(SyntaxKind kind) {
@@ -9212,8 +9003,7 @@ void ShortcutCycleDelayRangeSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 ShortcutCycleDelayRangeSyntax* ShortcutCycleDelayRangeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(ShortcutCycleDelayRangeSyntax));
-    return new (mem) ShortcutCycleDelayRangeSyntax(*this);
+    return alloc.emplace<ShortcutCycleDelayRangeSyntax>(*this);
 }
 
 bool SignalEventExpressionSyntax::isKind(SyntaxKind kind) {
@@ -9245,8 +9035,7 @@ void SignalEventExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 SignalEventExpressionSyntax* SignalEventExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(SignalEventExpressionSyntax));
-    return new (mem) SignalEventExpressionSyntax(*this);
+    return alloc.emplace<SignalEventExpressionSyntax>(*this);
 }
 
 bool SignedCastExpressionSyntax::isKind(SyntaxKind kind) {
@@ -9281,8 +9070,7 @@ void SignedCastExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 SignedCastExpressionSyntax* SignedCastExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(SignedCastExpressionSyntax));
-    return new (mem) SignedCastExpressionSyntax(*this);
+    return alloc.emplace<SignedCastExpressionSyntax>(*this);
 }
 
 bool SimpleAssignmentPatternSyntax::isKind(SyntaxKind kind) {
@@ -9317,8 +9105,7 @@ void SimpleAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 SimpleAssignmentPatternSyntax* SimpleAssignmentPatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(SimpleAssignmentPatternSyntax));
-    return new (mem) SimpleAssignmentPatternSyntax(*this);
+    return alloc.emplace<SimpleAssignmentPatternSyntax>(*this);
 }
 
 bool SimpleDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -9362,8 +9149,7 @@ void SimpleDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 SimpleDirectiveSyntax* SimpleDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(SimpleDirectiveSyntax));
-    return new (mem) SimpleDirectiveSyntax(*this);
+    return alloc.emplace<SimpleDirectiveSyntax>(*this);
 }
 
 bool SolveBeforeConstraintSyntax::isKind(SyntaxKind kind) {
@@ -9404,8 +9190,7 @@ void SolveBeforeConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 SolveBeforeConstraintSyntax* SolveBeforeConstraintSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(SolveBeforeConstraintSyntax));
-    return new (mem) SolveBeforeConstraintSyntax(*this);
+    return alloc.emplace<SolveBeforeConstraintSyntax>(*this);
 }
 
 bool StandardCaseItemSyntax::isKind(SyntaxKind kind) {
@@ -9440,8 +9225,7 @@ void StandardCaseItemSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 StandardCaseItemSyntax* StandardCaseItemSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StandardCaseItemSyntax));
-    return new (mem) StandardCaseItemSyntax(*this);
+    return alloc.emplace<StandardCaseItemSyntax>(*this);
 }
 
 bool StatementSyntax::isKind(SyntaxKind kind) {
@@ -9512,8 +9296,7 @@ void StatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 StatementSyntax* StatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StatementSyntax));
-    return new (mem) StatementSyntax(*this);
+    return alloc.emplace<StatementSyntax>(*this);
 }
 
 bool StreamExpressionSyntax::isKind(SyntaxKind kind) {
@@ -9545,8 +9328,7 @@ void StreamExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 StreamExpressionSyntax* StreamExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StreamExpressionSyntax));
-    return new (mem) StreamExpressionSyntax(*this);
+    return alloc.emplace<StreamExpressionSyntax>(*this);
 }
 
 bool StreamExpressionWithRange::isKind(SyntaxKind kind) {
@@ -9578,8 +9360,7 @@ void StreamExpressionWithRange::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 StreamExpressionWithRange* StreamExpressionWithRange::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StreamExpressionWithRange));
-    return new (mem) StreamExpressionWithRange(*this);
+    return alloc.emplace<StreamExpressionWithRange>(*this);
 }
 
 bool StreamingConcatenationExpressionSyntax::isKind(SyntaxKind kind) {
@@ -9626,8 +9407,7 @@ void StreamingConcatenationExpressionSyntax::setChild(uint32_t index, TokenOrSyn
 }
 
 StreamingConcatenationExpressionSyntax* StreamingConcatenationExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StreamingConcatenationExpressionSyntax));
-    return new (mem) StreamingConcatenationExpressionSyntax(*this);
+    return alloc.emplace<StreamingConcatenationExpressionSyntax>(*this);
 }
 
 bool StructUnionMemberSyntax::isKind(SyntaxKind kind) {
@@ -9668,8 +9448,7 @@ void StructUnionMemberSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 StructUnionMemberSyntax* StructUnionMemberSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StructUnionMemberSyntax));
-    return new (mem) StructUnionMemberSyntax(*this);
+    return alloc.emplace<StructUnionMemberSyntax>(*this);
 }
 
 bool StructUnionTypeSyntax::isKind(SyntaxKind kind) {
@@ -9725,8 +9504,7 @@ void StructUnionTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 StructUnionTypeSyntax* StructUnionTypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StructUnionTypeSyntax));
-    return new (mem) StructUnionTypeSyntax(*this);
+    return alloc.emplace<StructUnionTypeSyntax>(*this);
 }
 
 bool StructurePatternMemberSyntax::isKind(SyntaxKind kind) {
@@ -9771,8 +9549,7 @@ void StructurePatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 StructurePatternSyntax* StructurePatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StructurePatternSyntax));
-    return new (mem) StructurePatternSyntax(*this);
+    return alloc.emplace<StructurePatternSyntax>(*this);
 }
 
 bool StructuredAssignmentPatternSyntax::isKind(SyntaxKind kind) {
@@ -9807,8 +9584,7 @@ void StructuredAssignmentPatternSyntax::setChild(uint32_t index, TokenOrSyntax c
 }
 
 StructuredAssignmentPatternSyntax* StructuredAssignmentPatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(StructuredAssignmentPatternSyntax));
-    return new (mem) StructuredAssignmentPatternSyntax(*this);
+    return alloc.emplace<StructuredAssignmentPatternSyntax>(*this);
 }
 
 bool TaggedPatternSyntax::isKind(SyntaxKind kind) {
@@ -9843,8 +9619,7 @@ void TaggedPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 TaggedPatternSyntax* TaggedPatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TaggedPatternSyntax));
-    return new (mem) TaggedPatternSyntax(*this);
+    return alloc.emplace<TaggedPatternSyntax>(*this);
 }
 
 bool TaggedUnionExpressionSyntax::isKind(SyntaxKind kind) {
@@ -9879,8 +9654,7 @@ void TaggedUnionExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child) 
 }
 
 TaggedUnionExpressionSyntax* TaggedUnionExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TaggedUnionExpressionSyntax));
-    return new (mem) TaggedUnionExpressionSyntax(*this);
+    return alloc.emplace<TaggedUnionExpressionSyntax>(*this);
 }
 
 bool TimeUnitsDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -9921,8 +9695,7 @@ void TimeUnitsDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 TimeUnitsDeclarationSyntax* TimeUnitsDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TimeUnitsDeclarationSyntax));
-    return new (mem) TimeUnitsDeclarationSyntax(*this);
+    return alloc.emplace<TimeUnitsDeclarationSyntax>(*this);
 }
 
 bool TimescaleDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -9969,8 +9742,7 @@ void TimescaleDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 TimescaleDirectiveSyntax* TimescaleDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TimescaleDirectiveSyntax));
-    return new (mem) TimescaleDirectiveSyntax(*this);
+    return alloc.emplace<TimescaleDirectiveSyntax>(*this);
 }
 
 bool TimingControlExpressionConcatenationSyntax::isKind(SyntaxKind kind) {
@@ -10005,8 +9777,7 @@ void TimingControlExpressionConcatenationSyntax::setChild(uint32_t index, TokenO
 }
 
 TimingControlExpressionConcatenationSyntax* TimingControlExpressionConcatenationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TimingControlExpressionConcatenationSyntax));
-    return new (mem) TimingControlExpressionConcatenationSyntax(*this);
+    return alloc.emplace<TimingControlExpressionConcatenationSyntax>(*this);
 }
 
 bool TimingControlExpressionSyntax::isKind(SyntaxKind kind) {
@@ -10038,8 +9809,7 @@ void TimingControlExpressionSyntax::setChild(uint32_t index, TokenOrSyntax child
 }
 
 TimingControlExpressionSyntax* TimingControlExpressionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TimingControlExpressionSyntax));
-    return new (mem) TimingControlExpressionSyntax(*this);
+    return alloc.emplace<TimingControlExpressionSyntax>(*this);
 }
 
 bool TimingControlStatementSyntax::isKind(SyntaxKind kind) {
@@ -10077,8 +9847,7 @@ void TimingControlStatementSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 TimingControlStatementSyntax* TimingControlStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TimingControlStatementSyntax));
-    return new (mem) TimingControlStatementSyntax(*this);
+    return alloc.emplace<TimingControlStatementSyntax>(*this);
 }
 
 bool TimingControlSyntax::isKind(SyntaxKind kind) {
@@ -10126,8 +9895,7 @@ void TransListCoverageBinInitializerSyntax::setChild(uint32_t index, TokenOrSynt
 }
 
 TransListCoverageBinInitializerSyntax* TransListCoverageBinInitializerSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TransListCoverageBinInitializerSyntax));
-    return new (mem) TransListCoverageBinInitializerSyntax(*this);
+    return alloc.emplace<TransListCoverageBinInitializerSyntax>(*this);
 }
 
 bool TransRangeSyntax::isKind(SyntaxKind kind) {
@@ -10159,8 +9927,7 @@ void TransRangeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 TransRangeSyntax* TransRangeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TransRangeSyntax));
-    return new (mem) TransRangeSyntax(*this);
+    return alloc.emplace<TransRangeSyntax>(*this);
 }
 
 bool TransRepeatRangeSyntax::isKind(SyntaxKind kind) {
@@ -10198,8 +9965,7 @@ void TransRepeatRangeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 TransRepeatRangeSyntax* TransRepeatRangeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TransRepeatRangeSyntax));
-    return new (mem) TransRepeatRangeSyntax(*this);
+    return alloc.emplace<TransRepeatRangeSyntax>(*this);
 }
 
 bool TransSetSyntax::isKind(SyntaxKind kind) {
@@ -10234,8 +10000,7 @@ void TransSetSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 TransSetSyntax* TransSetSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TransSetSyntax));
-    return new (mem) TransSetSyntax(*this);
+    return alloc.emplace<TransSetSyntax>(*this);
 }
 
 bool TypeReferenceSyntax::isKind(SyntaxKind kind) {
@@ -10273,8 +10038,7 @@ void TypeReferenceSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 TypeReferenceSyntax* TypeReferenceSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TypeReferenceSyntax));
-    return new (mem) TypeReferenceSyntax(*this);
+    return alloc.emplace<TypeReferenceSyntax>(*this);
 }
 
 bool TypedefDeclarationSyntax::isKind(SyntaxKind kind) {
@@ -10318,8 +10082,7 @@ void TypedefDeclarationSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 TypedefDeclarationSyntax* TypedefDeclarationSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(TypedefDeclarationSyntax));
-    return new (mem) TypedefDeclarationSyntax(*this);
+    return alloc.emplace<TypedefDeclarationSyntax>(*this);
 }
 
 bool UnconditionalBranchDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -10360,8 +10123,7 @@ void UnconditionalBranchDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax 
 }
 
 UnconditionalBranchDirectiveSyntax* UnconditionalBranchDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(UnconditionalBranchDirectiveSyntax));
-    return new (mem) UnconditionalBranchDirectiveSyntax(*this);
+    return alloc.emplace<UnconditionalBranchDirectiveSyntax>(*this);
 }
 
 bool UndefDirectiveSyntax::isKind(SyntaxKind kind) {
@@ -10396,8 +10158,7 @@ void UndefDirectiveSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 UndefDirectiveSyntax* UndefDirectiveSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(UndefDirectiveSyntax));
-    return new (mem) UndefDirectiveSyntax(*this);
+    return alloc.emplace<UndefDirectiveSyntax>(*this);
 }
 
 bool UniquenessConstraintSyntax::isKind(SyntaxKind kind) {
@@ -10432,8 +10193,7 @@ void UniquenessConstraintSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 UniquenessConstraintSyntax* UniquenessConstraintSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(UniquenessConstraintSyntax));
-    return new (mem) UniquenessConstraintSyntax(*this);
+    return alloc.emplace<UniquenessConstraintSyntax>(*this);
 }
 
 bool VarDataTypeSyntax::isKind(SyntaxKind kind) {
@@ -10465,8 +10225,7 @@ void VarDataTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 VarDataTypeSyntax* VarDataTypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(VarDataTypeSyntax));
-    return new (mem) VarDataTypeSyntax(*this);
+    return alloc.emplace<VarDataTypeSyntax>(*this);
 }
 
 bool VariableDeclaratorSyntax::isKind(SyntaxKind kind) {
@@ -10501,8 +10260,7 @@ void VariableDeclaratorSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 VariableDeclaratorSyntax* VariableDeclaratorSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(VariableDeclaratorSyntax));
-    return new (mem) VariableDeclaratorSyntax(*this);
+    return alloc.emplace<VariableDeclaratorSyntax>(*this);
 }
 
 bool VariableDimensionSyntax::isKind(SyntaxKind kind) {
@@ -10537,8 +10295,7 @@ void VariableDimensionSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 VariableDimensionSyntax* VariableDimensionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(VariableDimensionSyntax));
-    return new (mem) VariableDimensionSyntax(*this);
+    return alloc.emplace<VariableDimensionSyntax>(*this);
 }
 
 bool VariablePatternSyntax::isKind(SyntaxKind kind) {
@@ -10570,8 +10327,7 @@ void VariablePatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 VariablePatternSyntax* VariablePatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(VariablePatternSyntax));
-    return new (mem) VariablePatternSyntax(*this);
+    return alloc.emplace<VariablePatternSyntax>(*this);
 }
 
 bool VariablePortHeaderSyntax::isKind(SyntaxKind kind) {
@@ -10606,8 +10362,7 @@ void VariablePortHeaderSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 VariablePortHeaderSyntax* VariablePortHeaderSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(VariablePortHeaderSyntax));
-    return new (mem) VariablePortHeaderSyntax(*this);
+    return alloc.emplace<VariablePortHeaderSyntax>(*this);
 }
 
 bool VirtualInterfaceTypeSyntax::isKind(SyntaxKind kind) {
@@ -10648,8 +10403,7 @@ void VirtualInterfaceTypeSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 VirtualInterfaceTypeSyntax* VirtualInterfaceTypeSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(VirtualInterfaceTypeSyntax));
-    return new (mem) VirtualInterfaceTypeSyntax(*this);
+    return alloc.emplace<VirtualInterfaceTypeSyntax>(*this);
 }
 
 bool WaitForkStatementSyntax::isKind(SyntaxKind kind) {
@@ -10690,8 +10444,7 @@ void WaitForkStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 WaitForkStatementSyntax* WaitForkStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WaitForkStatementSyntax));
-    return new (mem) WaitForkStatementSyntax(*this);
+    return alloc.emplace<WaitForkStatementSyntax>(*this);
 }
 
 bool WaitOrderStatementSyntax::isKind(SyntaxKind kind) {
@@ -10738,8 +10491,7 @@ void WaitOrderStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 WaitOrderStatementSyntax* WaitOrderStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WaitOrderStatementSyntax));
-    return new (mem) WaitOrderStatementSyntax(*this);
+    return alloc.emplace<WaitOrderStatementSyntax>(*this);
 }
 
 bool WaitStatementSyntax::isKind(SyntaxKind kind) {
@@ -10786,8 +10538,7 @@ void WaitStatementSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 WaitStatementSyntax* WaitStatementSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WaitStatementSyntax));
-    return new (mem) WaitStatementSyntax(*this);
+    return alloc.emplace<WaitStatementSyntax>(*this);
 }
 
 bool WildcardDimensionSpecifierSyntax::isKind(SyntaxKind kind) {
@@ -10816,8 +10567,7 @@ void WildcardDimensionSpecifierSyntax::setChild(uint32_t index, TokenOrSyntax ch
 }
 
 WildcardDimensionSpecifierSyntax* WildcardDimensionSpecifierSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WildcardDimensionSpecifierSyntax));
-    return new (mem) WildcardDimensionSpecifierSyntax(*this);
+    return alloc.emplace<WildcardDimensionSpecifierSyntax>(*this);
 }
 
 bool WildcardPatternSyntax::isKind(SyntaxKind kind) {
@@ -10846,8 +10596,7 @@ void WildcardPatternSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 WildcardPatternSyntax* WildcardPatternSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WildcardPatternSyntax));
-    return new (mem) WildcardPatternSyntax(*this);
+    return alloc.emplace<WildcardPatternSyntax>(*this);
 }
 
 bool WildcardPortConnectionSyntax::isKind(SyntaxKind kind) {
@@ -10879,8 +10628,7 @@ void WildcardPortConnectionSyntax::setChild(uint32_t index, TokenOrSyntax child)
 }
 
 WildcardPortConnectionSyntax* WildcardPortConnectionSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WildcardPortConnectionSyntax));
-    return new (mem) WildcardPortConnectionSyntax(*this);
+    return alloc.emplace<WildcardPortConnectionSyntax>(*this);
 }
 
 bool WildcardPortListSyntax::isKind(SyntaxKind kind) {
@@ -10915,8 +10663,7 @@ void WildcardPortListSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 WildcardPortListSyntax* WildcardPortListSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WildcardPortListSyntax));
-    return new (mem) WildcardPortListSyntax(*this);
+    return alloc.emplace<WildcardPortListSyntax>(*this);
 }
 
 bool WithClauseSyntax::isKind(SyntaxKind kind) {
@@ -10954,8 +10701,7 @@ void WithClauseSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 WithClauseSyntax* WithClauseSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WithClauseSyntax));
-    return new (mem) WithClauseSyntax(*this);
+    return alloc.emplace<WithClauseSyntax>(*this);
 }
 
 bool WithFunctionSampleSyntax::isKind(SyntaxKind kind) {
@@ -10993,8 +10739,7 @@ void WithFunctionSampleSyntax::setChild(uint32_t index, TokenOrSyntax child) {
 }
 
 WithFunctionSampleSyntax* WithFunctionSampleSyntax::clone(BumpAllocator& alloc) const {
-    auto mem = alloc.allocate(sizeof(*this), alignof(WithFunctionSampleSyntax));
-    return new (mem) WithFunctionSampleSyntax(*this);
+    return alloc.emplace<WithFunctionSampleSyntax>(*this);
 }
 
 ActionBlockSyntax& SyntaxFactory::actionBlock(StatementSyntax* statement, ElseClauseSyntax* elseClause) {
