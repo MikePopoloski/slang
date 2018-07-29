@@ -157,7 +157,7 @@ inline const ModuleInstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax
 
     REQUIRE(root.topInstances.size() > 0);
     if (!syntax->diagnostics().empty())
-        WARN(syntax->reportDiagnostics());
+        WARN(report(syntax->diagnostics()));
 
     return *root.topInstances[0];
 }

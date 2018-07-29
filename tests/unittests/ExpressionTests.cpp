@@ -12,7 +12,7 @@ SVInt testParameter(const std::string& text, uint32_t index = 0) {
 
     const auto& module = *compilation.getRoot().topInstances[0];
     if (!tree->diagnostics().empty())
-        WARN(tree->reportDiagnostics());
+        WARN(report(tree->diagnostics()));
 
     const ParameterSymbol& param = module.memberAt<ParameterSymbol>(index);
     return param.getValue().integer();

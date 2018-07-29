@@ -64,12 +64,6 @@ public:
     /// Gets any diagnostics generated while parsing.
     Diagnostics& diagnostics() { return diagnosticsBuffer; }
 
-    /// Helper function to get the set of diagnostics as a human-friendly string.
-    std::string reportDiagnostics() {
-        diagnosticsBuffer.sort(sourceMan);
-        return DiagnosticWriter(sourceMan).report(diagnosticsBuffer);
-    }
-
     /// Gets the allocator containing the memory for the parse tree.
     BumpAllocator& allocator() { return alloc; }
 
