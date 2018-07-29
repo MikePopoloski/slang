@@ -28,6 +28,7 @@ add_library(slang STATIC
 	parsing/ParserBase.cpp
 	parsing/SyntaxFacts.cpp
 	parsing/SyntaxNode.cpp
+	parsing/SyntaxVisitor.cpp
 
 	symbols/HierarchySymbols.cpp
 	symbols/Lazy.cpp

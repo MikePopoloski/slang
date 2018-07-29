@@ -6,7 +6,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <vector>
+
 #include "AllSyntax.h"
+#include "SyntaxTree.h"
 
 namespace slang {
 
@@ -22,7 +25,7 @@ class SyntaxVisitor {
 public:
     template<typename T>
     void visit(const T& t) {
-        if constexpr (has_handle_v<TDerived, void, T>)
+        if constexpr (has_handle_v<TDerived, void, T&>)
             DERIVED->handle(t);
         else
             DERIVED->visitDefault(t);
@@ -41,44 +44,73 @@ public:
         }
     }
 
+    void visitInvalid(const SyntaxNode&) {}
+
 private:
     // This is to make things compile if the derived class doesn't provide an implementation.
     void visitToken(Token) {}
 };
 
+namespace detail {
+
+struct SyntaxChange {
+    const SyntaxNode* first = nullptr;
+    const SyntaxNode* second = nullptr;
+
+    enum Kind {
+        Remove,
+        Replace,
+        InsertBefore,
+        InsertAfter
+    } kind;
+
+    SyntaxChange(Kind kind, const SyntaxNode* first, const SyntaxNode* second) :
+        first(first), second(second), kind(kind) {}
+};
+
+std::shared_ptr<SyntaxTree> transformTree(const std::shared_ptr<SyntaxTree>& tree,
+                                          span<const SyntaxChange> changes);
+
+}
+
 template<typename TDerived>
-class SyntaxRewriter {
-    HAS_METHOD_TRAIT(handle);
-
+class SyntaxRewriter : public SyntaxVisitor<TDerived> {
 public:
-    explicit SyntaxRewriter(BumpAllocator& alloc) : factory(alloc) {}
+    std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
+        changes.clear();
+        tree->root().visit(*this);
 
-    template<typename T>
-    void visit(T& t) {
-        if constexpr (has_handle_v<TDerived, T*, T>) {
-            T* result = DERIVED->handle(t);
-            if (result != &t) {
+        if (changes.empty())
+            return tree;
 
-            }
-        }
-        else {
-            DERIVED->visitDefault(t);
-        }
-    }
-
-    void visitDefault(SyntaxNode& node) {
-        for (uint32_t i = 0; i < node.getChildCount(); i++) {
-            auto child = node.childNode(i);
-            if (child)
-                child->visit(*DERIVED);
-        }
+        return transformTree(tree, changes);
     }
 
 protected:
-    void insertBefore(SyntaxNode& newNode, Token separator = Token());
-    void insertAfter(SyntaxNode& newNode, Token separator = Token());
+    SyntaxNode& parse(string_view text) {
+        tempTrees.emplace_back(SyntaxTree::fromText(text));
+        return tempTrees.back()->root();
+    }
 
-    SyntaxFactory factory;
+    void remove(const SyntaxNode& oldNode) {
+        changes.emplace_back(detail::SyntaxChange::Remove, &oldNode, nullptr);
+    }
+
+    void replace(const SyntaxNode& oldNode, const SyntaxNode& newNode) {
+        changes.emplace_back(detail::SyntaxChange::Replace, &oldNode, &newNode);
+    }
+
+    void insertBefore(const SyntaxNode& oldNode, const SyntaxNode& newNode) {
+        changes.emplace_back(detail::SyntaxChange::InsertBefore, &oldNode, &newNode);
+    }
+
+    void insertAfter(const SyntaxNode& oldNode, const SyntaxNode& newNode) {
+        changes.emplace_back(detail::SyntaxChange::InsertAfter, &oldNode, &newNode);
+    }
+
+private:
+    std::vector<detail::SyntaxChange> changes;
+    std::vector<std::shared_ptr<SyntaxTree>> tempTrees;
 };
 
 #undef DERIVED

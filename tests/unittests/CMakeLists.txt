@@ -11,6 +11,7 @@ add_executable(unittests
 	MemberTests.cpp
 	NumericTests.cpp
 	PreprocessorTests.cpp
+	RewriterTests.cpp
 	StatementParsingTests.cpp
 	SymbolLookupTests.cpp
 	TypeTests.cpp
