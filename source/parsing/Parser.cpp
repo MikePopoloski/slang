@@ -18,9 +18,8 @@ Parser::Parser(Preprocessor& preprocessor, const Bag&) :
 }
 
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
-    Token eof;
-    auto members = parseMemberList<MemberSyntax>(TokenKind::EndOfFile, eof, [this]() { return parseMember(); });
-    return factory.compilationUnit(members, eof);
+    auto members = parseMemberList<MemberSyntax>(TokenKind::EndOfFile, eofToken, [this]() { return parseMember(); });
+    return factory.compilationUnit(members, eofToken);
 }
 
 SyntaxNode& Parser::parseGuess() {
@@ -58,6 +57,20 @@ SyntaxNode& Parser::parseGuess() {
     }
 
     return statement;
+}
+
+bool Parser::isDone() {
+    return getLastConsumed().kind == TokenKind::EndOfFile || peek(TokenKind::EndOfFile);
+}
+
+Token Parser::getEOFToken() {
+    if (eofToken.kind == TokenKind::EndOfFile)
+        return eofToken;
+
+    if (peek(TokenKind::EndOfFile))
+        return consume();
+
+    return Token();
 }
 
 ModuleDeclarationSyntax& Parser::parseModule() {

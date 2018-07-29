@@ -35,6 +35,8 @@ protected:
     Token expect(TokenKind kind);
     void skipToken(std::optional<DiagCode> diagCode);
 
+    Token getLastConsumed() const;
+
     /// Helper class that maintains a sliding window of tokens, with lookahead.
     class Window {
     public:

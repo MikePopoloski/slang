@@ -27,7 +27,10 @@ class SyntaxTree {
 public:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                std::shared_ptr<SyntaxTree> parent = nullptr) :
-        rootNode(root), sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {}
+        rootNode(root), sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
+        if (parentTree)
+            eof = parentTree->eof;
+    }
 
     SyntaxTree(SyntaxTree&& other) = default;
     SyntaxTree& operator=(SyntaxTree&&) = default;
@@ -75,6 +78,11 @@ public:
     SyntaxNode& root() { return *rootNode; }
     const SyntaxNode& root() const { return *rootNode; }
 
+    /// Gets the EndOfFile token marking the end of the input source text.
+    /// This is useful if, for example, the tree doesn't represent a whole
+    /// compilation unit and you still want to see the trailing trivia.
+    Token getEOFToken() const { return eof; }
+
     /// The options used to construct the syntax tree.
     const Bag& options() const { return options_; }
 
@@ -96,10 +104,10 @@ public:
 private:
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager,
                BumpAllocator&& alloc, Diagnostics&& diagnostics,
-               const Bag& options) :
+               const Bag& options, Token eof) :
         rootNode(root), sourceMan(sourceManager),
         alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)),
-        options_(options) {}
+        options_(options), eof(eof) {}
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager, SourceBuffer source,
                                               const Bag& options, bool guess) {
@@ -110,13 +118,20 @@ private:
 
         Parser parser(preprocessor, options);
 
+        SyntaxNode* root;
+        if (!guess)
+            root = &parser.parseCompilationUnit();
+        else {
+            root = &parser.parseGuess();
+            if (!parser.isDone()) {
+                throw std::logic_error("Source passed to SyntaxTree::fromText represents "
+                                       "more than one logical node.");
+            }
+        }
+
         return std::shared_ptr<SyntaxTree>(new SyntaxTree(
-            guess ? &parser.parseGuess() : &parser.parseCompilationUnit(),
-            sourceManager,
-            std::move(alloc),
-            std::move(diagnostics),
-            options
-        ));
+            root, sourceManager, std::move(alloc),
+            std::move(diagnostics), options, parser.getEOFToken()));
     }
 
     SyntaxNode* rootNode;
@@ -125,6 +140,7 @@ private:
     Diagnostics diagnosticsBuffer;
     Bag options_;
     std::shared_ptr<SyntaxTree> parentTree;
+    Token eof;
 };
 
 }

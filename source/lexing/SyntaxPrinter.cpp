@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 #include "SyntaxPrinter.h"
 
+#include "parsing/SyntaxTree.h"
 #include "text/SourceManager.h"
 
 namespace slang {
@@ -84,6 +85,13 @@ SyntaxPrinter& SyntaxPrinter::print(const SyntaxNode& node) {
         else if (auto token = node.childToken(i); token)
             print(token);
     }
+    return *this;
+}
+
+SyntaxPrinter& SyntaxPrinter::print(const SyntaxTree& tree) {
+    print(tree.root());
+    if (tree.root().kind != SyntaxKind::CompilationUnit && tree.getEOFToken())
+        print(tree.getEOFToken());
     return *this;
 }
 

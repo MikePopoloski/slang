@@ -12,6 +12,8 @@
 
 namespace slang {
 
+class SyntaxTree;
+
 /// Provides support for printing tokens, trivia, or whole syntax trees
 /// back to source code.
 class SyntaxPrinter {
@@ -19,6 +21,7 @@ public:
     SyntaxPrinter& print(Trivia trivia);
     SyntaxPrinter& print(Token token);
     SyntaxPrinter& print(const SyntaxNode& node);
+    SyntaxPrinter& print(const SyntaxTree& tree);
 
     SyntaxPrinter& setIncludeTrivia(bool include) { includeTrivia = include; return *this; }
     SyntaxPrinter& setIncludeMissing(bool include) { includeMissing = include; return *this; }

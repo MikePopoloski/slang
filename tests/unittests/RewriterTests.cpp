@@ -34,12 +34,12 @@ endmodule
         .setIncludeSkipped(true)
         .setIncludeTrivia(true)
         .excludePreprocessed(tree->sourceManager())
-        .print(tree->root())
+        .print(*tree)
         .str();
 
-    // TODO: trailing newline should not be stripped
     CHECK(output == R"(
 module M;
     typedef enum int { FOO = 1, BAR = 2, BAZ = 3 } test_t;
-endmodule)");
+endmodule
+)");
 }

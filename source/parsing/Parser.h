@@ -45,6 +45,12 @@ public:
     /// but for snippets of code this can be convenient.
     SyntaxNode& parseGuess();
 
+    /// Check whether the parser has consumed the entire input stream.
+    bool isDone();
+
+    /// Gets the EndOfFile token, if one has been consumed. Otherwise returns an empty token.
+    Token getEOFToken();
+
 private:
     ExpressionSyntax& parseMinTypMaxExpression();
     ExpressionSyntax& parsePrimaryExpression();
@@ -233,6 +239,7 @@ private:
     // Scratch space for building up integer vector literals.
     VectorBuilder vectorBuilder;
     size_t depth = 0;
+    Token eofToken;
 };
 
 template<bool(*IsEnd)(TokenKind)>
