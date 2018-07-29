@@ -43,13 +43,11 @@ struct EqualsValueClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::EqualsValueClause), equals(equals), expr(expr)
     {}
 
-    EqualsValueClauseSyntax(const EqualsValueClauseSyntax&) = delete;
-    EqualsValueClauseSyntax& operator=(const EqualsValueClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct AttributeSpecSyntax : public SyntaxNode {
@@ -60,13 +58,11 @@ struct AttributeSpecSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::AttributeSpec), name(name), value(value)
     {}
 
-    AttributeSpecSyntax(const AttributeSpecSyntax&) = delete;
-    AttributeSpecSyntax& operator=(const AttributeSpecSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct AttributeInstanceSyntax : public SyntaxNode {
@@ -78,13 +74,11 @@ struct AttributeInstanceSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::AttributeInstance), openParen(openParen), specs(specs), closeParen(closeParen)
     {}
 
-    AttributeInstanceSyntax(const AttributeInstanceSyntax&) = delete;
-    AttributeInstanceSyntax& operator=(const AttributeInstanceSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NamedLabelSyntax : public SyntaxNode {
@@ -95,13 +89,11 @@ struct NamedLabelSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::NamedLabel), name(name), colon(colon)
     {}
 
-    NamedLabelSyntax(const NamedLabelSyntax&) = delete;
-    NamedLabelSyntax& operator=(const NamedLabelSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StatementSyntax : public SyntaxNode {
@@ -112,13 +104,11 @@ struct StatementSyntax : public SyntaxNode {
         SyntaxNode(kind), label(label), attributes(attributes)
     {}
 
-    StatementSyntax(const StatementSyntax&) = delete;
-    StatementSyntax& operator=(const StatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MemberSyntax : public SyntaxNode {
@@ -128,13 +118,11 @@ struct MemberSyntax : public SyntaxNode {
         SyntaxNode(kind), attributes(attributes)
     {}
 
-    MemberSyntax(const MemberSyntax&) = delete;
-    MemberSyntax& operator=(const MemberSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- ARGUMENTS -----
@@ -154,13 +142,11 @@ struct EmptyArgumentSyntax : public ArgumentSyntax {
         ArgumentSyntax(SyntaxKind::EmptyArgument)
     {}
 
-    EmptyArgumentSyntax(const EmptyArgumentSyntax&) = delete;
-    EmptyArgumentSyntax& operator=(const EmptyArgumentSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct OrderedArgumentSyntax : public ArgumentSyntax {
@@ -170,13 +156,11 @@ struct OrderedArgumentSyntax : public ArgumentSyntax {
         ArgumentSyntax(SyntaxKind::OrderedArgument), expr(expr)
     {}
 
-    OrderedArgumentSyntax(const OrderedArgumentSyntax&) = delete;
-    OrderedArgumentSyntax& operator=(const OrderedArgumentSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NamedArgumentSyntax : public ArgumentSyntax {
@@ -190,13 +174,11 @@ struct NamedArgumentSyntax : public ArgumentSyntax {
         ArgumentSyntax(SyntaxKind::NamedArgument), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    NamedArgumentSyntax(const NamedArgumentSyntax&) = delete;
-    NamedArgumentSyntax& operator=(const NamedArgumentSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ArgumentListSyntax : public SyntaxNode {
@@ -208,13 +190,11 @@ struct ArgumentListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ArgumentList), openParen(openParen), parameters(parameters), closeParen(closeParen)
     {}
 
-    ArgumentListSyntax(const ArgumentListSyntax&) = delete;
-    ArgumentListSyntax& operator=(const ArgumentListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ParameterValueAssignmentSyntax : public SyntaxNode {
@@ -225,13 +205,11 @@ struct ParameterValueAssignmentSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ParameterValueAssignment), hash(hash), parameters(parameters)
     {}
 
-    ParameterValueAssignmentSyntax(const ParameterValueAssignmentSyntax&) = delete;
-    ParameterValueAssignmentSyntax& operator=(const ParameterValueAssignmentSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- PATTERNS -----
@@ -253,13 +231,11 @@ struct VariablePatternSyntax : public PatternSyntax {
         PatternSyntax(SyntaxKind::VariablePattern), dot(dot), variableName(variableName)
     {}
 
-    VariablePatternSyntax(const VariablePatternSyntax&) = delete;
-    VariablePatternSyntax& operator=(const VariablePatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct WildcardPatternSyntax : public PatternSyntax {
@@ -269,13 +245,11 @@ struct WildcardPatternSyntax : public PatternSyntax {
         PatternSyntax(SyntaxKind::WildcardPattern), dotStar(dotStar)
     {}
 
-    WildcardPatternSyntax(const WildcardPatternSyntax&) = delete;
-    WildcardPatternSyntax& operator=(const WildcardPatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExpressionPatternSyntax : public PatternSyntax {
@@ -285,13 +259,11 @@ struct ExpressionPatternSyntax : public PatternSyntax {
         PatternSyntax(SyntaxKind::ExpressionPattern), expr(expr)
     {}
 
-    ExpressionPatternSyntax(const ExpressionPatternSyntax&) = delete;
-    ExpressionPatternSyntax& operator=(const ExpressionPatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TaggedPatternSyntax : public PatternSyntax {
@@ -303,13 +275,11 @@ struct TaggedPatternSyntax : public PatternSyntax {
         PatternSyntax(SyntaxKind::TaggedPattern), tagged(tagged), memberName(memberName), pattern(pattern)
     {}
 
-    TaggedPatternSyntax(const TaggedPatternSyntax&) = delete;
-    TaggedPatternSyntax& operator=(const TaggedPatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StructurePatternMemberSyntax : public SyntaxNode {
@@ -328,13 +298,11 @@ struct OrderedStructurePatternMemberSyntax : public StructurePatternMemberSyntax
         StructurePatternMemberSyntax(SyntaxKind::OrderedStructurePatternMember), pattern(pattern)
     {}
 
-    OrderedStructurePatternMemberSyntax(const OrderedStructurePatternMemberSyntax&) = delete;
-    OrderedStructurePatternMemberSyntax& operator=(const OrderedStructurePatternMemberSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
@@ -346,13 +314,11 @@ struct NamedStructurePatternMemberSyntax : public StructurePatternMemberSyntax {
         StructurePatternMemberSyntax(SyntaxKind::NamedStructurePatternMember), name(name), colon(colon), pattern(pattern)
     {}
 
-    NamedStructurePatternMemberSyntax(const NamedStructurePatternMemberSyntax&) = delete;
-    NamedStructurePatternMemberSyntax& operator=(const NamedStructurePatternMemberSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StructurePatternSyntax : public PatternSyntax {
@@ -364,13 +330,11 @@ struct StructurePatternSyntax : public PatternSyntax {
         PatternSyntax(SyntaxKind::StructurePattern), openBrace(openBrace), members(members), closeBrace(closeBrace)
     {}
 
-    StructurePatternSyntax(const StructurePatternSyntax&) = delete;
-    StructurePatternSyntax& operator=(const StructurePatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MatchesClauseSyntax : public SyntaxNode {
@@ -381,13 +345,11 @@ struct MatchesClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::MatchesClause), matchesKeyword(matchesKeyword), pattern(pattern)
     {}
 
-    MatchesClauseSyntax(const MatchesClauseSyntax&) = delete;
-    MatchesClauseSyntax& operator=(const MatchesClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConditionalPatternSyntax : public SyntaxNode {
@@ -398,13 +360,11 @@ struct ConditionalPatternSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ConditionalPattern), expr(expr), matchesClause(matchesClause)
     {}
 
-    ConditionalPatternSyntax(const ConditionalPatternSyntax&) = delete;
-    ConditionalPatternSyntax& operator=(const ConditionalPatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConditionalPredicateSyntax : public SyntaxNode {
@@ -414,13 +374,11 @@ struct ConditionalPredicateSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ConditionalPredicate), conditions(conditions)
     {}
 
-    ConditionalPredicateSyntax(const ConditionalPredicateSyntax&) = delete;
-    ConditionalPredicateSyntax& operator=(const ConditionalPredicateSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct AssignmentPatternSyntax : public SyntaxNode {
@@ -441,13 +399,11 @@ struct SimpleAssignmentPatternSyntax : public AssignmentPatternSyntax {
         AssignmentPatternSyntax(SyntaxKind::SimpleAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
     {}
 
-    SimpleAssignmentPatternSyntax(const SimpleAssignmentPatternSyntax&) = delete;
-    SimpleAssignmentPatternSyntax& operator=(const SimpleAssignmentPatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct AssignmentPatternItemSyntax : public SyntaxNode {
@@ -459,13 +415,11 @@ struct AssignmentPatternItemSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::AssignmentPatternItem), key(key), colon(colon), expr(expr)
     {}
 
-    AssignmentPatternItemSyntax(const AssignmentPatternItemSyntax&) = delete;
-    AssignmentPatternItemSyntax& operator=(const AssignmentPatternItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
@@ -477,13 +431,11 @@ struct StructuredAssignmentPatternSyntax : public AssignmentPatternSyntax {
         AssignmentPatternSyntax(SyntaxKind::StructuredAssignmentPattern), openBrace(openBrace), items(items), closeBrace(closeBrace)
     {}
 
-    StructuredAssignmentPatternSyntax(const StructuredAssignmentPatternSyntax&) = delete;
-    StructuredAssignmentPatternSyntax& operator=(const StructuredAssignmentPatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
@@ -498,13 +450,11 @@ struct ReplicatedAssignmentPatternSyntax : public AssignmentPatternSyntax {
         AssignmentPatternSyntax(SyntaxKind::ReplicatedAssignmentPattern), openBrace(openBrace), countExpr(countExpr), innerOpenBrace(innerOpenBrace), items(items), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
     {}
 
-    ReplicatedAssignmentPatternSyntax(const ReplicatedAssignmentPatternSyntax&) = delete;
-    ReplicatedAssignmentPatternSyntax& operator=(const ReplicatedAssignmentPatternSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- EXPRESSIONS -----
@@ -516,13 +466,11 @@ struct BadExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::BadExpression), expr(expr)
     {}
 
-    BadExpressionSyntax(const BadExpressionSyntax&) = delete;
-    BadExpressionSyntax& operator=(const BadExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PrimaryExpressionSyntax : public ExpressionSyntax {
@@ -543,13 +491,11 @@ struct PrefixUnaryExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(kind), operatorToken(operatorToken), attributes(attributes), operand(operand)
     {}
 
-    PrefixUnaryExpressionSyntax(const PrefixUnaryExpressionSyntax&) = delete;
-    PrefixUnaryExpressionSyntax& operator=(const PrefixUnaryExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
@@ -561,13 +507,11 @@ struct PostfixUnaryExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(kind), operand(operand), attributes(attributes), operatorToken(operatorToken)
     {}
 
-    PostfixUnaryExpressionSyntax(const PostfixUnaryExpressionSyntax&) = delete;
-    PostfixUnaryExpressionSyntax& operator=(const PostfixUnaryExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct BinaryExpressionSyntax : public ExpressionSyntax {
@@ -580,13 +524,11 @@ struct BinaryExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(kind), left(left), operatorToken(operatorToken), attributes(attributes), right(right)
     {}
 
-    BinaryExpressionSyntax(const BinaryExpressionSyntax&) = delete;
-    BinaryExpressionSyntax& operator=(const BinaryExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
@@ -600,13 +542,11 @@ struct MinTypMaxExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::MinTypMaxExpression), min(min), colon1(colon1), typ(typ), colon2(colon2), max(max)
     {}
 
-    MinTypMaxExpressionSyntax(const MinTypMaxExpressionSyntax&) = delete;
-    MinTypMaxExpressionSyntax& operator=(const MinTypMaxExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
@@ -618,13 +558,11 @@ struct TaggedUnionExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::TaggedUnionExpression), tagged(tagged), member(member), expr(expr)
     {}
 
-    TaggedUnionExpressionSyntax(const TaggedUnionExpressionSyntax&) = delete;
-    TaggedUnionExpressionSyntax& operator=(const TaggedUnionExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct OpenRangeListSyntax : public SyntaxNode {
@@ -636,13 +574,11 @@ struct OpenRangeListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::OpenRangeList), openBrace(openBrace), valueRanges(valueRanges), closeBrace(closeBrace)
     {}
 
-    OpenRangeListSyntax(const OpenRangeListSyntax&) = delete;
-    OpenRangeListSyntax& operator=(const OpenRangeListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct InsideExpressionSyntax : public ExpressionSyntax {
@@ -654,13 +590,11 @@ struct InsideExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::InsideExpression), expr(expr), inside(inside), ranges(ranges)
     {}
 
-    InsideExpressionSyntax(const InsideExpressionSyntax&) = delete;
-    InsideExpressionSyntax& operator=(const InsideExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConditionalExpressionSyntax : public ExpressionSyntax {
@@ -675,13 +609,11 @@ struct ConditionalExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::ConditionalExpression), predicate(predicate), question(question), attributes(attributes), left(left), colon(colon), right(right)
     {}
 
-    ConditionalExpressionSyntax(const ConditionalExpressionSyntax&) = delete;
-    ConditionalExpressionSyntax& operator=(const ConditionalExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
@@ -692,13 +624,11 @@ struct AssignmentPatternExpressionSyntax : public PrimaryExpressionSyntax {
         PrimaryExpressionSyntax(SyntaxKind::AssignmentPatternExpression), type(type), pattern(pattern)
     {}
 
-    AssignmentPatternExpressionSyntax(const AssignmentPatternExpressionSyntax&) = delete;
-    AssignmentPatternExpressionSyntax& operator=(const AssignmentPatternExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- SELECTORS -----
@@ -719,13 +649,11 @@ struct BitSelectSyntax : public SelectorSyntax {
         SelectorSyntax(SyntaxKind::BitSelect), expr(expr)
     {}
 
-    BitSelectSyntax(const BitSelectSyntax&) = delete;
-    BitSelectSyntax& operator=(const BitSelectSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct RangeSelectSyntax : public SelectorSyntax {
@@ -737,13 +665,11 @@ struct RangeSelectSyntax : public SelectorSyntax {
         SelectorSyntax(kind), left(left), range(range), right(right)
     {}
 
-    RangeSelectSyntax(const RangeSelectSyntax&) = delete;
-    RangeSelectSyntax& operator=(const RangeSelectSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ElementSelectSyntax : public ExpressionSyntax {
@@ -755,13 +681,11 @@ struct ElementSelectSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::ElementSelect), openBracket(openBracket), selector(selector), closeBracket(closeBracket)
     {}
 
-    ElementSelectSyntax(const ElementSelectSyntax&) = delete;
-    ElementSelectSyntax& operator=(const ElementSelectSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- NAMES -----
@@ -782,13 +706,11 @@ struct IdentifierNameSyntax : public NameSyntax {
         NameSyntax(SyntaxKind::IdentifierName), identifier(identifier)
     {}
 
-    IdentifierNameSyntax(const IdentifierNameSyntax&) = delete;
-    IdentifierNameSyntax& operator=(const IdentifierNameSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct IdentifierSelectNameSyntax : public NameSyntax {
@@ -799,13 +721,11 @@ struct IdentifierSelectNameSyntax : public NameSyntax {
         NameSyntax(SyntaxKind::IdentifierSelectName), identifier(identifier), selectors(selectors)
     {}
 
-    IdentifierSelectNameSyntax(const IdentifierSelectNameSyntax&) = delete;
-    IdentifierSelectNameSyntax& operator=(const IdentifierSelectNameSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct EmptyIdentifierNameSyntax : public NameSyntax {
@@ -814,13 +734,11 @@ struct EmptyIdentifierNameSyntax : public NameSyntax {
         NameSyntax(SyntaxKind::EmptyIdentifierName)
     {}
 
-    EmptyIdentifierNameSyntax(const EmptyIdentifierNameSyntax&) = delete;
-    EmptyIdentifierNameSyntax& operator=(const EmptyIdentifierNameSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct KeywordNameSyntax : public NameSyntax {
@@ -830,13 +748,11 @@ struct KeywordNameSyntax : public NameSyntax {
         NameSyntax(kind), keyword(keyword)
     {}
 
-    KeywordNameSyntax(const KeywordNameSyntax&) = delete;
-    KeywordNameSyntax& operator=(const KeywordNameSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClassNameSyntax : public NameSyntax {
@@ -847,13 +763,11 @@ struct ClassNameSyntax : public NameSyntax {
         NameSyntax(SyntaxKind::ClassName), identifier(identifier), parameters(parameters)
     {}
 
-    ClassNameSyntax(const ClassNameSyntax&) = delete;
-    ClassNameSyntax& operator=(const ClassNameSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ScopedNameSyntax : public NameSyntax {
@@ -865,13 +779,11 @@ struct ScopedNameSyntax : public NameSyntax {
         NameSyntax(SyntaxKind::ScopedName), left(left), separator(separator), right(right)
     {}
 
-    ScopedNameSyntax(const ScopedNameSyntax&) = delete;
-    ScopedNameSyntax& operator=(const ScopedNameSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClassScopeSyntax : public NameSyntax {
@@ -882,13 +794,11 @@ struct ClassScopeSyntax : public NameSyntax {
         NameSyntax(SyntaxKind::ClassScope), left(left), separator(separator)
     {}
 
-    ClassScopeSyntax(const ClassScopeSyntax&) = delete;
-    ClassScopeSyntax& operator=(const ClassScopeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- PRIMARY EXPRESSIONS -----
@@ -900,13 +810,11 @@ struct LiteralExpressionSyntax : public PrimaryExpressionSyntax {
         PrimaryExpressionSyntax(kind), literal(literal)
     {}
 
-    LiteralExpressionSyntax(const LiteralExpressionSyntax&) = delete;
-    LiteralExpressionSyntax& operator=(const LiteralExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
@@ -918,13 +826,11 @@ struct IntegerVectorExpressionSyntax : public PrimaryExpressionSyntax {
         PrimaryExpressionSyntax(SyntaxKind::IntegerVectorExpression), size(size), base(base), value(value)
     {}
 
-    IntegerVectorExpressionSyntax(const IntegerVectorExpressionSyntax&) = delete;
-    IntegerVectorExpressionSyntax& operator=(const IntegerVectorExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
@@ -935,13 +841,11 @@ struct EmptyQueueExpressionSyntax : public PrimaryExpressionSyntax {
         PrimaryExpressionSyntax(SyntaxKind::EmptyQueueExpression), openBrace(openBrace), closeBrace(closeBrace)
     {}
 
-    EmptyQueueExpressionSyntax(const EmptyQueueExpressionSyntax&) = delete;
-    EmptyQueueExpressionSyntax& operator=(const EmptyQueueExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -953,13 +857,11 @@ struct ConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
         PrimaryExpressionSyntax(SyntaxKind::ConcatenationExpression), openBrace(openBrace), expressions(expressions), closeBrace(closeBrace)
     {}
 
-    ConcatenationExpressionSyntax(const ConcatenationExpressionSyntax&) = delete;
-    ConcatenationExpressionSyntax& operator=(const ConcatenationExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -972,13 +874,11 @@ struct MultipleConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
         PrimaryExpressionSyntax(SyntaxKind::MultipleConcatenationExpression), openBrace(openBrace), expression(expression), concatenation(concatenation), closeBrace(closeBrace)
     {}
 
-    MultipleConcatenationExpressionSyntax(const MultipleConcatenationExpressionSyntax&) = delete;
-    MultipleConcatenationExpressionSyntax& operator=(const MultipleConcatenationExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StreamExpressionWithRange : public SyntaxNode {
@@ -989,13 +889,11 @@ struct StreamExpressionWithRange : public SyntaxNode {
         SyntaxNode(SyntaxKind::StreamExpressionWithRange), withKeyword(withKeyword), range(range)
     {}
 
-    StreamExpressionWithRange(const StreamExpressionWithRange&) = delete;
-    StreamExpressionWithRange& operator=(const StreamExpressionWithRange&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StreamExpressionSyntax : public SyntaxNode {
@@ -1006,13 +904,11 @@ struct StreamExpressionSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::StreamExpression), expression(expression), withRange(withRange)
     {}
 
-    StreamExpressionSyntax(const StreamExpressionSyntax&) = delete;
-    StreamExpressionSyntax& operator=(const StreamExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
@@ -1028,13 +924,11 @@ struct StreamingConcatenationExpressionSyntax : public PrimaryExpressionSyntax {
         PrimaryExpressionSyntax(SyntaxKind::StreamingConcatenationExpression), openBrace(openBrace), operatorToken(operatorToken), sliceSize(sliceSize), innerOpenBrace(innerOpenBrace), expressions(expressions), innerCloseBrace(innerCloseBrace), closeBrace(closeBrace)
     {}
 
-    StreamingConcatenationExpressionSyntax(const StreamingConcatenationExpressionSyntax&) = delete;
-    StreamingConcatenationExpressionSyntax& operator=(const StreamingConcatenationExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
@@ -1046,13 +940,11 @@ struct ParenthesizedExpressionSyntax : public PrimaryExpressionSyntax {
         PrimaryExpressionSyntax(SyntaxKind::ParenthesizedExpression), openParen(openParen), expression(expression), closeParen(closeParen)
     {}
 
-    ParenthesizedExpressionSyntax(const ParenthesizedExpressionSyntax&) = delete;
-    ParenthesizedExpressionSyntax& operator=(const ParenthesizedExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NewClassExpressionSyntax : public ExpressionSyntax {
@@ -1064,13 +956,11 @@ struct NewClassExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::NewClassExpression), classScope(classScope), newKeyword(newKeyword), arguments(arguments)
     {}
 
-    NewClassExpressionSyntax(const NewClassExpressionSyntax&) = delete;
-    NewClassExpressionSyntax& operator=(const NewClassExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NewArrayExpressionSyntax : public ExpressionSyntax {
@@ -1084,13 +974,11 @@ struct NewArrayExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::NewArrayExpression), newKeyword(newKeyword), openBracket(openBracket), sizeExpr(sizeExpr), closeBracket(closeBracket), initializer(initializer)
     {}
 
-    NewArrayExpressionSyntax(const NewArrayExpressionSyntax&) = delete;
-    NewArrayExpressionSyntax& operator=(const NewArrayExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NewExpressionSyntax : public ExpressionSyntax {
@@ -1101,13 +989,11 @@ struct NewExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::NewExpression), newKeyword(newKeyword), expr(expr)
     {}
 
-    NewExpressionSyntax(const NewExpressionSyntax&) = delete;
-    NewExpressionSyntax& operator=(const NewExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- POSTFIX EXPRESSIONS -----
@@ -1120,13 +1006,11 @@ struct ElementSelectExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::ElementSelectExpression), left(left), select(select)
     {}
 
-    ElementSelectExpressionSyntax(const ElementSelectExpressionSyntax&) = delete;
-    ElementSelectExpressionSyntax& operator=(const ElementSelectExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MemberAccessExpressionSyntax : public ExpressionSyntax {
@@ -1138,13 +1022,11 @@ struct MemberAccessExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::MemberAccessExpression), left(left), dot(dot), name(name)
     {}
 
-    MemberAccessExpressionSyntax(const MemberAccessExpressionSyntax&) = delete;
-    MemberAccessExpressionSyntax& operator=(const MemberAccessExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct InvocationExpressionSyntax : public ExpressionSyntax {
@@ -1156,13 +1038,11 @@ struct InvocationExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::InvocationExpression), left(left), attributes(attributes), arguments(arguments)
     {}
 
-    InvocationExpressionSyntax(const InvocationExpressionSyntax&) = delete;
-    InvocationExpressionSyntax& operator=(const InvocationExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CastExpressionSyntax : public ExpressionSyntax {
@@ -1174,13 +1054,11 @@ struct CastExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::CastExpression), left(left), apostrophe(apostrophe), right(right)
     {}
 
-    CastExpressionSyntax(const CastExpressionSyntax&) = delete;
-    CastExpressionSyntax& operator=(const CastExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct SignedCastExpressionSyntax : public ExpressionSyntax {
@@ -1192,13 +1070,11 @@ struct SignedCastExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::SignedCastExpression), signing(signing), apostrophe(apostrophe), inner(inner)
     {}
 
-    SignedCastExpressionSyntax(const SignedCastExpressionSyntax&) = delete;
-    SignedCastExpressionSyntax& operator=(const SignedCastExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- TIMING CONTROL -----
@@ -1220,13 +1096,11 @@ struct DelaySyntax : public TimingControlSyntax {
         TimingControlSyntax(kind), hash(hash), delayValue(delayValue)
     {}
 
-    DelaySyntax(const DelaySyntax&) = delete;
-    DelaySyntax& operator=(const DelaySyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct EventControlSyntax : public TimingControlSyntax {
@@ -1237,13 +1111,11 @@ struct EventControlSyntax : public TimingControlSyntax {
         TimingControlSyntax(SyntaxKind::EventControl), at(at), eventName(eventName)
     {}
 
-    EventControlSyntax(const EventControlSyntax&) = delete;
-    EventControlSyntax& operator=(const EventControlSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct EventExpressionSyntax : public SyntaxNode {
@@ -1263,13 +1135,11 @@ struct SignalEventExpressionSyntax : public EventExpressionSyntax {
         EventExpressionSyntax(SyntaxKind::SignalEventExpression), edge(edge), expr(expr)
     {}
 
-    SignalEventExpressionSyntax(const SignalEventExpressionSyntax&) = delete;
-    SignalEventExpressionSyntax& operator=(const SignalEventExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
@@ -1281,13 +1151,11 @@ struct BinaryEventExpressionSyntax : public EventExpressionSyntax {
         EventExpressionSyntax(SyntaxKind::BinaryEventExpression), left(left), operatorToken(operatorToken), right(right)
     {}
 
-    BinaryEventExpressionSyntax(const BinaryEventExpressionSyntax&) = delete;
-    BinaryEventExpressionSyntax& operator=(const BinaryEventExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
@@ -1299,13 +1167,11 @@ struct ParenthesizedEventExpressionSyntax : public EventExpressionSyntax {
         EventExpressionSyntax(SyntaxKind::ParenthesizedEventExpression), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    ParenthesizedEventExpressionSyntax(const ParenthesizedEventExpressionSyntax&) = delete;
-    ParenthesizedEventExpressionSyntax& operator=(const ParenthesizedEventExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ImplicitEventControlSyntax : public TimingControlSyntax {
@@ -1315,13 +1181,11 @@ struct ImplicitEventControlSyntax : public TimingControlSyntax {
         TimingControlSyntax(SyntaxKind::ImplicitEventControl), atStar(atStar)
     {}
 
-    ImplicitEventControlSyntax(const ImplicitEventControlSyntax&) = delete;
-    ImplicitEventControlSyntax& operator=(const ImplicitEventControlSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
@@ -1332,13 +1196,11 @@ struct ParenImplicitEventControlSyntax : public TimingControlSyntax {
         TimingControlSyntax(SyntaxKind::ParenImplicitEventControl), at(at), openParenStarCloseParen(openParenStarCloseParen)
     {}
 
-    ParenImplicitEventControlSyntax(const ParenImplicitEventControlSyntax&) = delete;
-    ParenImplicitEventControlSyntax& operator=(const ParenImplicitEventControlSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct EventControlWithExpressionSyntax : public TimingControlSyntax {
@@ -1349,13 +1211,11 @@ struct EventControlWithExpressionSyntax : public TimingControlSyntax {
         TimingControlSyntax(SyntaxKind::EventControlWithExpression), at(at), expr(expr)
     {}
 
-    EventControlWithExpressionSyntax(const EventControlWithExpressionSyntax&) = delete;
-    EventControlWithExpressionSyntax& operator=(const EventControlWithExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct RepeatedEventControlSyntax : public TimingControlSyntax {
@@ -1369,13 +1229,11 @@ struct RepeatedEventControlSyntax : public TimingControlSyntax {
         TimingControlSyntax(SyntaxKind::RepeatedEventControl), repeat(repeat), openParen(openParen), expr(expr), closeParen(closeParen), eventControl(eventControl)
     {}
 
-    RepeatedEventControlSyntax(const RepeatedEventControlSyntax&) = delete;
-    RepeatedEventControlSyntax& operator=(const RepeatedEventControlSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TimingControlExpressionSyntax : public ExpressionSyntax {
@@ -1386,13 +1244,11 @@ struct TimingControlExpressionSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::TimingControlExpression), timing(timing), expr(expr)
     {}
 
-    TimingControlExpressionSyntax(const TimingControlExpressionSyntax&) = delete;
-    TimingControlExpressionSyntax& operator=(const TimingControlExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
@@ -1404,13 +1260,11 @@ struct TimingControlExpressionConcatenationSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::TimingControlExpressionConcatenation), left(left), timing(timing), right(right)
     {}
 
-    TimingControlExpressionConcatenationSyntax(const TimingControlExpressionConcatenationSyntax&) = delete;
-    TimingControlExpressionConcatenationSyntax& operator=(const TimingControlExpressionConcatenationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
@@ -1423,13 +1277,11 @@ struct ShortcutCycleDelayRangeSyntax : public TimingControlSyntax {
         TimingControlSyntax(SyntaxKind::ShortcutCycleDelayRange), doubleHash(doubleHash), openBracket(openBracket), op(op), closeBracket(closeBracket)
     {}
 
-    ShortcutCycleDelayRangeSyntax(const ShortcutCycleDelayRangeSyntax&) = delete;
-    ShortcutCycleDelayRangeSyntax& operator=(const ShortcutCycleDelayRangeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- DECLARATIONS -----
@@ -1450,13 +1302,11 @@ struct RangeDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
         DimensionSpecifierSyntax(SyntaxKind::RangeDimensionSpecifier), selector(selector)
     {}
 
-    RangeDimensionSpecifierSyntax(const RangeDimensionSpecifierSyntax&) = delete;
-    RangeDimensionSpecifierSyntax& operator=(const RangeDimensionSpecifierSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
@@ -1466,13 +1316,11 @@ struct WildcardDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
         DimensionSpecifierSyntax(SyntaxKind::WildcardDimensionSpecifier), star(star)
     {}
 
-    WildcardDimensionSpecifierSyntax(const WildcardDimensionSpecifierSyntax&) = delete;
-    WildcardDimensionSpecifierSyntax& operator=(const WildcardDimensionSpecifierSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ColonExpressionClauseSyntax : public SyntaxNode {
@@ -1483,13 +1331,11 @@ struct ColonExpressionClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ColonExpressionClause), colon(colon), expr(expr)
     {}
 
-    ColonExpressionClauseSyntax(const ColonExpressionClauseSyntax&) = delete;
-    ColonExpressionClauseSyntax& operator=(const ColonExpressionClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
@@ -1500,13 +1346,11 @@ struct QueueDimensionSpecifierSyntax : public DimensionSpecifierSyntax {
         DimensionSpecifierSyntax(SyntaxKind::QueueDimensionSpecifier), dollar(dollar), maxSizeClause(maxSizeClause)
     {}
 
-    QueueDimensionSpecifierSyntax(const QueueDimensionSpecifierSyntax&) = delete;
-    QueueDimensionSpecifierSyntax& operator=(const QueueDimensionSpecifierSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct VariableDimensionSyntax : public SyntaxNode {
@@ -1518,13 +1362,11 @@ struct VariableDimensionSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::VariableDimension), openBracket(openBracket), specifier(specifier), closeBracket(closeBracket)
     {}
 
-    VariableDimensionSyntax(const VariableDimensionSyntax&) = delete;
-    VariableDimensionSyntax& operator=(const VariableDimensionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct VariableDeclaratorSyntax : public SyntaxNode {
@@ -1536,13 +1378,11 @@ struct VariableDeclaratorSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::VariableDeclarator), name(name), dimensions(dimensions), initializer(initializer)
     {}
 
-    VariableDeclaratorSyntax(const VariableDeclaratorSyntax&) = delete;
-    VariableDeclaratorSyntax& operator=(const VariableDeclaratorSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DataDeclarationSyntax : public MemberSyntax {
@@ -1555,13 +1395,11 @@ struct DataDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::DataDeclaration, attributes), modifiers(modifiers), type(type), declarators(declarators), semi(semi)
     {}
 
-    DataDeclarationSyntax(const DataDeclarationSyntax&) = delete;
-    DataDeclarationSyntax& operator=(const DataDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TypedefDeclarationSyntax : public MemberSyntax {
@@ -1575,13 +1413,11 @@ struct TypedefDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::TypedefDeclaration, attributes), typedefKeyword(typedefKeyword), type(type), name(name), dimensions(dimensions), semi(semi)
     {}
 
-    TypedefDeclarationSyntax(const TypedefDeclarationSyntax&) = delete;
-    TypedefDeclarationSyntax& operator=(const TypedefDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
@@ -1594,13 +1430,11 @@ struct ForwardTypedefDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ForwardTypedefDeclaration, attributes), typedefKeyword(typedefKeyword), keyword(keyword), name(name), semi(semi)
     {}
 
-    ForwardTypedefDeclarationSyntax(const ForwardTypedefDeclarationSyntax&) = delete;
-    ForwardTypedefDeclarationSyntax& operator=(const ForwardTypedefDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
@@ -1614,13 +1448,11 @@ struct ForwardInterfaceClassTypedefDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ForwardInterfaceClassTypedefDeclaration, attributes), typedefKeyword(typedefKeyword), interfaceKeyword(interfaceKeyword), classKeyword(classKeyword), name(name), semi(semi)
     {}
 
-    ForwardInterfaceClassTypedefDeclarationSyntax(const ForwardInterfaceClassTypedefDeclarationSyntax&) = delete;
-    ForwardInterfaceClassTypedefDeclarationSyntax& operator=(const ForwardInterfaceClassTypedefDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NetStrengthSyntax : public SyntaxNode {
@@ -1641,13 +1473,11 @@ struct ChargeStrengthSyntax : public NetStrengthSyntax {
         NetStrengthSyntax(SyntaxKind::ChargeStrength), openParen(openParen), strength(strength), closeParen(closeParen)
     {}
 
-    ChargeStrengthSyntax(const ChargeStrengthSyntax&) = delete;
-    ChargeStrengthSyntax& operator=(const ChargeStrengthSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DriveStrengthSyntax : public NetStrengthSyntax {
@@ -1661,13 +1491,11 @@ struct DriveStrengthSyntax : public NetStrengthSyntax {
         NetStrengthSyntax(SyntaxKind::DriveStrength), openParen(openParen), strength0(strength0), comma(comma), strength1(strength1), closeParen(closeParen)
     {}
 
-    DriveStrengthSyntax(const DriveStrengthSyntax&) = delete;
-    DriveStrengthSyntax& operator=(const DriveStrengthSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NetDeclarationSyntax : public MemberSyntax {
@@ -1682,13 +1510,11 @@ struct NetDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::NetDeclaration, attributes), netType(netType), strength(strength), expansionHint(expansionHint), type(type), declarators(declarators), semi(semi)
     {}
 
-    NetDeclarationSyntax(const NetDeclarationSyntax&) = delete;
-    NetDeclarationSyntax& operator=(const NetDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PackageImportItemSyntax : public SyntaxNode {
@@ -1700,13 +1526,11 @@ struct PackageImportItemSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::PackageImportItem), package(package), doubleColon(doubleColon), item(item)
     {}
 
-    PackageImportItemSyntax(const PackageImportItemSyntax&) = delete;
-    PackageImportItemSyntax& operator=(const PackageImportItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PackageImportDeclarationSyntax : public MemberSyntax {
@@ -1718,13 +1542,11 @@ struct PackageImportDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::PackageImportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
     {}
 
-    PackageImportDeclarationSyntax(const PackageImportDeclarationSyntax&) = delete;
-    PackageImportDeclarationSyntax& operator=(const PackageImportDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ParameterDeclarationSyntax : public SyntaxNode {
@@ -1736,13 +1558,11 @@ struct ParameterDeclarationSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ParameterDeclaration), keyword(keyword), type(type), declarators(declarators)
     {}
 
-    ParameterDeclarationSyntax(const ParameterDeclarationSyntax&) = delete;
-    ParameterDeclarationSyntax& operator=(const ParameterDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ParameterDeclarationStatementSyntax : public MemberSyntax {
@@ -1753,13 +1573,11 @@ struct ParameterDeclarationStatementSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ParameterDeclarationStatement, attributes), parameter(parameter), semi(semi)
     {}
 
-    ParameterDeclarationStatementSyntax(const ParameterDeclarationStatementSyntax&) = delete;
-    ParameterDeclarationStatementSyntax& operator=(const ParameterDeclarationStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PortHeaderSyntax : public SyntaxNode {
@@ -1780,13 +1598,11 @@ struct PortDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::PortDeclaration, attributes), header(header), declarators(declarators), semi(semi)
     {}
 
-    PortDeclarationSyntax(const PortDeclarationSyntax&) = delete;
-    PortDeclarationSyntax& operator=(const PortDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct GenvarDeclarationSyntax : public MemberSyntax {
@@ -1798,13 +1614,11 @@ struct GenvarDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::GenvarDeclaration, attributes), keyword(keyword), identifiers(identifiers), semi(semi)
     {}
 
-    GenvarDeclarationSyntax(const GenvarDeclarationSyntax&) = delete;
-    GenvarDeclarationSyntax& operator=(const GenvarDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- TYPES -----
@@ -1818,13 +1632,11 @@ struct IntegerTypeSyntax : public DataTypeSyntax {
         DataTypeSyntax(kind), keyword(keyword), signing(signing), dimensions(dimensions)
     {}
 
-    IntegerTypeSyntax(const IntegerTypeSyntax&) = delete;
-    IntegerTypeSyntax& operator=(const IntegerTypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct KeywordTypeSyntax : public DataTypeSyntax {
@@ -1834,13 +1646,11 @@ struct KeywordTypeSyntax : public DataTypeSyntax {
         DataTypeSyntax(kind), keyword(keyword)
     {}
 
-    KeywordTypeSyntax(const KeywordTypeSyntax&) = delete;
-    KeywordTypeSyntax& operator=(const KeywordTypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NamedTypeSyntax : public DataTypeSyntax {
@@ -1850,13 +1660,11 @@ struct NamedTypeSyntax : public DataTypeSyntax {
         DataTypeSyntax(SyntaxKind::NamedType), name(name)
     {}
 
-    NamedTypeSyntax(const NamedTypeSyntax&) = delete;
-    NamedTypeSyntax& operator=(const NamedTypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StructUnionMemberSyntax : public SyntaxNode {
@@ -1870,13 +1678,11 @@ struct StructUnionMemberSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::StructUnionMember), attributes(attributes), randomQualifier(randomQualifier), type(type), declarators(declarators), semi(semi)
     {}
 
-    StructUnionMemberSyntax(const StructUnionMemberSyntax&) = delete;
-    StructUnionMemberSyntax& operator=(const StructUnionMemberSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StructUnionTypeSyntax : public DataTypeSyntax {
@@ -1893,13 +1699,11 @@ struct StructUnionTypeSyntax : public DataTypeSyntax {
         DataTypeSyntax(kind), keyword(keyword), tagged(tagged), packed(packed), signing(signing), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
     {}
 
-    StructUnionTypeSyntax(const StructUnionTypeSyntax&) = delete;
-    StructUnionTypeSyntax& operator=(const StructUnionTypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct EnumTypeSyntax : public DataTypeSyntax {
@@ -1914,13 +1718,11 @@ struct EnumTypeSyntax : public DataTypeSyntax {
         DataTypeSyntax(SyntaxKind::EnumType), keyword(keyword), baseType(baseType), openBrace(openBrace), members(members), closeBrace(closeBrace), dimensions(dimensions)
     {}
 
-    EnumTypeSyntax(const EnumTypeSyntax&) = delete;
-    EnumTypeSyntax& operator=(const EnumTypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TypeReferenceSyntax : public DataTypeSyntax {
@@ -1933,13 +1735,11 @@ struct TypeReferenceSyntax : public DataTypeSyntax {
         DataTypeSyntax(SyntaxKind::TypeReference), typeKeyword(typeKeyword), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    TypeReferenceSyntax(const TypeReferenceSyntax&) = delete;
-    TypeReferenceSyntax& operator=(const TypeReferenceSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DotMemberClauseSyntax : public SyntaxNode {
@@ -1950,13 +1750,11 @@ struct DotMemberClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::DotMemberClause), dot(dot), member(member)
     {}
 
-    DotMemberClauseSyntax(const DotMemberClauseSyntax&) = delete;
-    DotMemberClauseSyntax& operator=(const DotMemberClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
@@ -1970,13 +1768,11 @@ struct VirtualInterfaceTypeSyntax : public DataTypeSyntax {
         DataTypeSyntax(SyntaxKind::VirtualInterfaceType), virtualKeyword(virtualKeyword), interfaceKeyword(interfaceKeyword), name(name), parameters(parameters), modport(modport)
     {}
 
-    VirtualInterfaceTypeSyntax(const VirtualInterfaceTypeSyntax&) = delete;
-    VirtualInterfaceTypeSyntax& operator=(const VirtualInterfaceTypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ImplicitTypeSyntax : public DataTypeSyntax {
@@ -1987,13 +1783,11 @@ struct ImplicitTypeSyntax : public DataTypeSyntax {
         DataTypeSyntax(SyntaxKind::ImplicitType), signing(signing), dimensions(dimensions)
     {}
 
-    ImplicitTypeSyntax(const ImplicitTypeSyntax&) = delete;
-    ImplicitTypeSyntax& operator=(const ImplicitTypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct VarDataTypeSyntax : public DataTypeSyntax {
@@ -2004,13 +1798,11 @@ struct VarDataTypeSyntax : public DataTypeSyntax {
         DataTypeSyntax(SyntaxKind::VarDataType), var(var), type(type)
     {}
 
-    VarDataTypeSyntax(const VarDataTypeSyntax&) = delete;
-    VarDataTypeSyntax& operator=(const VarDataTypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- ASSERTIONS -----
@@ -2024,13 +1816,11 @@ struct DeferredAssertionSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::DeferredAssertion), hash(hash), zero(zero), finalKeyword(finalKeyword)
     {}
 
-    DeferredAssertionSyntax(const DeferredAssertionSyntax&) = delete;
-    DeferredAssertionSyntax& operator=(const DeferredAssertionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ElseClauseSyntax : public SyntaxNode {
@@ -2041,13 +1831,11 @@ struct ElseClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ElseClause), elseKeyword(elseKeyword), clause(clause)
     {}
 
-    ElseClauseSyntax(const ElseClauseSyntax&) = delete;
-    ElseClauseSyntax& operator=(const ElseClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ActionBlockSyntax : public SyntaxNode {
@@ -2058,13 +1846,11 @@ struct ActionBlockSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ActionBlock), statement(statement), elseClause(elseClause)
     {}
 
-    ActionBlockSyntax(const ActionBlockSyntax&) = delete;
-    ActionBlockSyntax& operator=(const ActionBlockSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ImmediateAssertionStatementSyntax : public StatementSyntax {
@@ -2077,13 +1863,11 @@ struct ImmediateAssertionStatementSyntax : public StatementSyntax {
         StatementSyntax(kind, label, attributes), keyword(keyword), delay(delay), expr(expr), action(action)
     {}
 
-    ImmediateAssertionStatementSyntax(const ImmediateAssertionStatementSyntax&) = delete;
-    ImmediateAssertionStatementSyntax& operator=(const ImmediateAssertionStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DisableIffSyntax : public SyntaxNode {
@@ -2097,13 +1881,11 @@ struct DisableIffSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::DisableIff), disable(disable), iff(iff), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    DisableIffSyntax(const DisableIffSyntax&) = delete;
-    DisableIffSyntax& operator=(const DisableIffSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PropertySpecSyntax : public SyntaxNode {
@@ -2115,13 +1897,11 @@ struct PropertySpecSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::PropertySpec), clocking(clocking), disable(disable), expr(expr)
     {}
 
-    PropertySpecSyntax(const PropertySpecSyntax&) = delete;
-    PropertySpecSyntax& operator=(const PropertySpecSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
@@ -2136,13 +1916,11 @@ struct ConcurrentAssertionStatementSyntax : public StatementSyntax {
         StatementSyntax(kind, label, attributes), keyword(keyword), propertyOrSequence(propertyOrSequence), openParen(openParen), propertySpec(propertySpec), closeParen(closeParen), action(action)
     {}
 
-    ConcurrentAssertionStatementSyntax(const ConcurrentAssertionStatementSyntax&) = delete;
-    ConcurrentAssertionStatementSyntax& operator=(const ConcurrentAssertionStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
@@ -2152,13 +1930,11 @@ struct ConcurrentAssertionMemberSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ConcurrentAssertionMember, attributes), statement(statement)
     {}
 
-    ConcurrentAssertionMemberSyntax(const ConcurrentAssertionMemberSyntax&) = delete;
-    ConcurrentAssertionMemberSyntax& operator=(const ConcurrentAssertionMemberSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ImmediateAssertionMemberSyntax : public MemberSyntax {
@@ -2168,13 +1944,11 @@ struct ImmediateAssertionMemberSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ImmediateAssertionMember, attributes), statement(statement)
     {}
 
-    ImmediateAssertionMemberSyntax(const ImmediateAssertionMemberSyntax&) = delete;
-    ImmediateAssertionMemberSyntax& operator=(const ImmediateAssertionMemberSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- STATEMENTS -----
@@ -2186,13 +1960,11 @@ struct EmptyStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::EmptyStatement, label, attributes), semicolon(semicolon)
     {}
 
-    EmptyStatementSyntax(const EmptyStatementSyntax&) = delete;
-    EmptyStatementSyntax& operator=(const EmptyStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConditionalStatementSyntax : public StatementSyntax {
@@ -2208,13 +1980,11 @@ struct ConditionalStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::ConditionalStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), ifKeyword(ifKeyword), openParen(openParen), predicate(predicate), closeParen(closeParen), statement(statement), elseClause(elseClause)
     {}
 
-    ConditionalStatementSyntax(const ConditionalStatementSyntax&) = delete;
-    ConditionalStatementSyntax& operator=(const ConditionalStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CaseItemSyntax : public SyntaxNode {
@@ -2235,13 +2005,11 @@ struct DefaultCaseItemSyntax : public CaseItemSyntax {
         CaseItemSyntax(SyntaxKind::DefaultCaseItem), defaultKeyword(defaultKeyword), colon(colon), clause(clause)
     {}
 
-    DefaultCaseItemSyntax(const DefaultCaseItemSyntax&) = delete;
-    DefaultCaseItemSyntax& operator=(const DefaultCaseItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PatternCaseItemSyntax : public CaseItemSyntax {
@@ -2255,13 +2023,11 @@ struct PatternCaseItemSyntax : public CaseItemSyntax {
         CaseItemSyntax(SyntaxKind::PatternCaseItem), pattern(pattern), tripleAnd(tripleAnd), expr(expr), colon(colon), statement(statement)
     {}
 
-    PatternCaseItemSyntax(const PatternCaseItemSyntax&) = delete;
-    PatternCaseItemSyntax& operator=(const PatternCaseItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct StandardCaseItemSyntax : public CaseItemSyntax {
@@ -2273,13 +2039,11 @@ struct StandardCaseItemSyntax : public CaseItemSyntax {
         CaseItemSyntax(SyntaxKind::StandardCaseItem), expressions(expressions), colon(colon), clause(clause)
     {}
 
-    StandardCaseItemSyntax(const StandardCaseItemSyntax&) = delete;
-    StandardCaseItemSyntax& operator=(const StandardCaseItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CaseStatementSyntax : public StatementSyntax {
@@ -2296,13 +2060,11 @@ struct CaseStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::CaseStatement, label, attributes), uniqueOrPriority(uniqueOrPriority), caseKeyword(caseKeyword), openParen(openParen), expr(expr), closeParen(closeParen), matchesOrInside(matchesOrInside), items(items), endcase(endcase)
     {}
 
-    CaseStatementSyntax(const CaseStatementSyntax&) = delete;
-    CaseStatementSyntax& operator=(const CaseStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ForeverStatementSyntax : public StatementSyntax {
@@ -2313,13 +2075,11 @@ struct ForeverStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::ForeverStatement, label, attributes), foreverKeyword(foreverKeyword), statement(statement)
     {}
 
-    ForeverStatementSyntax(const ForeverStatementSyntax&) = delete;
-    ForeverStatementSyntax& operator=(const ForeverStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct LoopStatementSyntax : public StatementSyntax {
@@ -2333,13 +2093,11 @@ struct LoopStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::LoopStatement, label, attributes), repeatOrWhile(repeatOrWhile), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
     {}
 
-    LoopStatementSyntax(const LoopStatementSyntax&) = delete;
-    LoopStatementSyntax& operator=(const LoopStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DoWhileStatementSyntax : public StatementSyntax {
@@ -2355,13 +2113,11 @@ struct DoWhileStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::DoWhileStatement, label, attributes), doKeyword(doKeyword), statement(statement), whileKeyword(whileKeyword), openParen(openParen), expr(expr), closeParen(closeParen), semi(semi)
     {}
 
-    DoWhileStatementSyntax(const DoWhileStatementSyntax&) = delete;
-    DoWhileStatementSyntax& operator=(const DoWhileStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ForVariableDeclarationSyntax : public SyntaxNode {
@@ -2373,13 +2129,11 @@ struct ForVariableDeclarationSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ForVariableDeclaration), varKeyword(varKeyword), type(type), declarator(declarator)
     {}
 
-    ForVariableDeclarationSyntax(const ForVariableDeclarationSyntax&) = delete;
-    ForVariableDeclarationSyntax& operator=(const ForVariableDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ForLoopStatementSyntax : public StatementSyntax {
@@ -2397,13 +2151,11 @@ struct ForLoopStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::ForLoopStatement, label, attributes), forKeyword(forKeyword), openParen(openParen), initializers(initializers), semi1(semi1), stopExpr(stopExpr), semi2(semi2), steps(steps), closeParen(closeParen), statement(statement)
     {}
 
-    ForLoopStatementSyntax(const ForLoopStatementSyntax&) = delete;
-    ForLoopStatementSyntax& operator=(const ForLoopStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ForeachLoopListSyntax : public SyntaxNode {
@@ -2418,13 +2170,11 @@ struct ForeachLoopListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ForeachLoopList), openParen(openParen), arrayName(arrayName), openBracket(openBracket), loopVariables(loopVariables), closeBracket(closeBracket), closeParen(closeParen)
     {}
 
-    ForeachLoopListSyntax(const ForeachLoopListSyntax&) = delete;
-    ForeachLoopListSyntax& operator=(const ForeachLoopListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ForeachLoopStatementSyntax : public StatementSyntax {
@@ -2436,13 +2186,11 @@ struct ForeachLoopStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::ForeachLoopStatement, label, attributes), keyword(keyword), loopList(loopList), statement(statement)
     {}
 
-    ForeachLoopStatementSyntax(const ForeachLoopStatementSyntax&) = delete;
-    ForeachLoopStatementSyntax& operator=(const ForeachLoopStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ReturnStatementSyntax : public StatementSyntax {
@@ -2454,13 +2202,11 @@ struct ReturnStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::ReturnStatement, label, attributes), returnKeyword(returnKeyword), returnValue(returnValue), semi(semi)
     {}
 
-    ReturnStatementSyntax(const ReturnStatementSyntax&) = delete;
-    ReturnStatementSyntax& operator=(const ReturnStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct JumpStatementSyntax : public StatementSyntax {
@@ -2471,13 +2217,11 @@ struct JumpStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::JumpStatement, label, attributes), breakOrContinue(breakOrContinue), semi(semi)
     {}
 
-    JumpStatementSyntax(const JumpStatementSyntax&) = delete;
-    JumpStatementSyntax& operator=(const JumpStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TimingControlStatementSyntax : public StatementSyntax {
@@ -2488,13 +2232,11 @@ struct TimingControlStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::TimingControlStatement, label, attributes), timingControl(timingControl), statement(statement)
     {}
 
-    TimingControlStatementSyntax(const TimingControlStatementSyntax&) = delete;
-    TimingControlStatementSyntax& operator=(const TimingControlStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExpressionStatementSyntax : public StatementSyntax {
@@ -2505,13 +2247,11 @@ struct ExpressionStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::ExpressionStatement, label, attributes), expr(expr), semi(semi)
     {}
 
-    ExpressionStatementSyntax(const ExpressionStatementSyntax&) = delete;
-    ExpressionStatementSyntax& operator=(const ExpressionStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ProceduralAssignStatementSyntax : public StatementSyntax {
@@ -2525,13 +2265,11 @@ struct ProceduralAssignStatementSyntax : public StatementSyntax {
         StatementSyntax(kind, label, attributes), keyword(keyword), lvalue(lvalue), equals(equals), value(value), semi(semi)
     {}
 
-    ProceduralAssignStatementSyntax(const ProceduralAssignStatementSyntax&) = delete;
-    ProceduralAssignStatementSyntax& operator=(const ProceduralAssignStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ProceduralDeassignStatementSyntax : public StatementSyntax {
@@ -2543,13 +2281,11 @@ struct ProceduralDeassignStatementSyntax : public StatementSyntax {
         StatementSyntax(kind, label, attributes), keyword(keyword), variable(variable), semi(semi)
     {}
 
-    ProceduralDeassignStatementSyntax(const ProceduralDeassignStatementSyntax&) = delete;
-    ProceduralDeassignStatementSyntax& operator=(const ProceduralDeassignStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DisableStatementSyntax : public StatementSyntax {
@@ -2561,13 +2297,11 @@ struct DisableStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::DisableStatement, label, attributes), disable(disable), name(name), semi(semi)
     {}
 
-    DisableStatementSyntax(const DisableStatementSyntax&) = delete;
-    DisableStatementSyntax& operator=(const DisableStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DisableForkStatementSyntax : public StatementSyntax {
@@ -2579,13 +2313,11 @@ struct DisableForkStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::DisableForkStatement, label, attributes), disable(disable), fork(fork), semi(semi)
     {}
 
-    DisableForkStatementSyntax(const DisableForkStatementSyntax&) = delete;
-    DisableForkStatementSyntax& operator=(const DisableForkStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NamedBlockClauseSyntax : public SyntaxNode {
@@ -2596,13 +2328,11 @@ struct NamedBlockClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::NamedBlockClause), colon(colon), name(name)
     {}
 
-    NamedBlockClauseSyntax(const NamedBlockClauseSyntax&) = delete;
-    NamedBlockClauseSyntax& operator=(const NamedBlockClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct BlockStatementSyntax : public StatementSyntax {
@@ -2616,13 +2346,11 @@ struct BlockStatementSyntax : public StatementSyntax {
         StatementSyntax(kind, label, attributes), begin(begin), blockName(blockName), items(items), end(end), endBlockName(endBlockName)
     {}
 
-    BlockStatementSyntax(const BlockStatementSyntax&) = delete;
-    BlockStatementSyntax& operator=(const BlockStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct WaitStatementSyntax : public StatementSyntax {
@@ -2636,13 +2364,11 @@ struct WaitStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::WaitStatement, label, attributes), wait(wait), openParen(openParen), expr(expr), closeParen(closeParen), statement(statement)
     {}
 
-    WaitStatementSyntax(const WaitStatementSyntax&) = delete;
-    WaitStatementSyntax& operator=(const WaitStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct WaitForkStatementSyntax : public StatementSyntax {
@@ -2654,13 +2380,11 @@ struct WaitForkStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::WaitForkStatement, label, attributes), wait(wait), fork(fork), semi(semi)
     {}
 
-    WaitForkStatementSyntax(const WaitForkStatementSyntax&) = delete;
-    WaitForkStatementSyntax& operator=(const WaitForkStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct WaitOrderStatementSyntax : public StatementSyntax {
@@ -2674,13 +2398,11 @@ struct WaitOrderStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::WaitOrderStatement, label, attributes), wait_order(wait_order), openParen(openParen), names(names), closeParen(closeParen), action(action)
     {}
 
-    WaitOrderStatementSyntax(const WaitOrderStatementSyntax&) = delete;
-    WaitOrderStatementSyntax& operator=(const WaitOrderStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct RandCaseItemSyntax : public SyntaxNode {
@@ -2692,13 +2414,11 @@ struct RandCaseItemSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::RandCaseItem), expr(expr), colon(colon), statement(statement)
     {}
 
-    RandCaseItemSyntax(const RandCaseItemSyntax&) = delete;
-    RandCaseItemSyntax& operator=(const RandCaseItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct RandCaseStatementSyntax : public StatementSyntax {
@@ -2710,13 +2430,11 @@ struct RandCaseStatementSyntax : public StatementSyntax {
         StatementSyntax(SyntaxKind::RandCaseStatement, label, attributes), randCase(randCase), items(items), endCase(endCase)
     {}
 
-    RandCaseStatementSyntax(const RandCaseStatementSyntax&) = delete;
-    RandCaseStatementSyntax& operator=(const RandCaseStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct EventTriggerStatementSyntax : public StatementSyntax {
@@ -2728,13 +2446,11 @@ struct EventTriggerStatementSyntax : public StatementSyntax {
         StatementSyntax(kind, label, attributes), trigger(trigger), timing(timing), name(name)
     {}
 
-    EventTriggerStatementSyntax(const EventTriggerStatementSyntax&) = delete;
-    EventTriggerStatementSyntax& operator=(const EventTriggerStatementSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- MODULES -----
@@ -2764,13 +2480,11 @@ struct ImplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
         NonAnsiPortSyntax(SyntaxKind::ImplicitNonAnsiPort), expr(expr)
     {}
 
-    ImplicitNonAnsiPortSyntax(const ImplicitNonAnsiPortSyntax&) = delete;
-    ImplicitNonAnsiPortSyntax& operator=(const ImplicitNonAnsiPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
@@ -2784,13 +2498,11 @@ struct ExplicitNonAnsiPortSyntax : public NonAnsiPortSyntax {
         NonAnsiPortSyntax(SyntaxKind::ExplicitNonAnsiPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    ExplicitNonAnsiPortSyntax(const ExplicitNonAnsiPortSyntax&) = delete;
-    ExplicitNonAnsiPortSyntax& operator=(const ExplicitNonAnsiPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NonAnsiPortListSyntax : public PortListSyntax {
@@ -2802,13 +2514,11 @@ struct NonAnsiPortListSyntax : public PortListSyntax {
         PortListSyntax(SyntaxKind::NonAnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
     {}
 
-    NonAnsiPortListSyntax(const NonAnsiPortListSyntax&) = delete;
-    NonAnsiPortListSyntax& operator=(const NonAnsiPortListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
@@ -2819,13 +2529,11 @@ struct InterfacePortHeaderSyntax : public PortHeaderSyntax {
         PortHeaderSyntax(SyntaxKind::InterfacePortHeader), nameOrKeyword(nameOrKeyword), modport(modport)
     {}
 
-    InterfacePortHeaderSyntax(const InterfacePortHeaderSyntax&) = delete;
-    InterfacePortHeaderSyntax& operator=(const InterfacePortHeaderSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct VariablePortHeaderSyntax : public PortHeaderSyntax {
@@ -2837,13 +2545,11 @@ struct VariablePortHeaderSyntax : public PortHeaderSyntax {
         PortHeaderSyntax(SyntaxKind::VariablePortHeader), direction(direction), varKeyword(varKeyword), dataType(dataType)
     {}
 
-    VariablePortHeaderSyntax(const VariablePortHeaderSyntax&) = delete;
-    VariablePortHeaderSyntax& operator=(const VariablePortHeaderSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
@@ -2855,13 +2561,11 @@ struct InterconnectPortHeaderSyntax : public PortHeaderSyntax {
         PortHeaderSyntax(SyntaxKind::InterconnectPortHeader), direction(direction), interconnect(interconnect), type(type)
     {}
 
-    InterconnectPortHeaderSyntax(const InterconnectPortHeaderSyntax&) = delete;
-    InterconnectPortHeaderSyntax& operator=(const InterconnectPortHeaderSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NetPortHeaderSyntax : public PortHeaderSyntax {
@@ -2873,13 +2577,11 @@ struct NetPortHeaderSyntax : public PortHeaderSyntax {
         PortHeaderSyntax(SyntaxKind::NetPortHeader), direction(direction), netType(netType), dataType(dataType)
     {}
 
-    NetPortHeaderSyntax(const NetPortHeaderSyntax&) = delete;
-    NetPortHeaderSyntax& operator=(const NetPortHeaderSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ImplicitAnsiPortSyntax : public MemberSyntax {
@@ -2890,13 +2592,11 @@ struct ImplicitAnsiPortSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ImplicitAnsiPort, attributes), header(header), declarator(declarator)
     {}
 
-    ImplicitAnsiPortSyntax(const ImplicitAnsiPortSyntax&) = delete;
-    ImplicitAnsiPortSyntax& operator=(const ImplicitAnsiPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExplicitAnsiPortSyntax : public MemberSyntax {
@@ -2911,13 +2611,11 @@ struct ExplicitAnsiPortSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ExplicitAnsiPort, attributes), direction(direction), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    ExplicitAnsiPortSyntax(const ExplicitAnsiPortSyntax&) = delete;
-    ExplicitAnsiPortSyntax& operator=(const ExplicitAnsiPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct AnsiPortListSyntax : public PortListSyntax {
@@ -2929,13 +2627,11 @@ struct AnsiPortListSyntax : public PortListSyntax {
         PortListSyntax(SyntaxKind::AnsiPortList), openParen(openParen), ports(ports), closeParen(closeParen)
     {}
 
-    AnsiPortListSyntax(const AnsiPortListSyntax&) = delete;
-    AnsiPortListSyntax& operator=(const AnsiPortListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct WildcardPortListSyntax : public PortListSyntax {
@@ -2947,13 +2643,11 @@ struct WildcardPortListSyntax : public PortListSyntax {
         PortListSyntax(SyntaxKind::WildcardPortList), openParen(openParen), dotStar(dotStar), closeParen(closeParen)
     {}
 
-    WildcardPortListSyntax(const WildcardPortListSyntax&) = delete;
-    WildcardPortListSyntax& operator=(const WildcardPortListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ParameterPortListSyntax : public SyntaxNode {
@@ -2966,13 +2660,11 @@ struct ParameterPortListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ParameterPortList), hash(hash), openParen(openParen), declarations(declarations), closeParen(closeParen)
     {}
 
-    ParameterPortListSyntax(const ParameterPortListSyntax&) = delete;
-    ParameterPortListSyntax& operator=(const ParameterPortListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModuleHeaderSyntax : public SyntaxNode {
@@ -2988,13 +2680,11 @@ struct ModuleHeaderSyntax : public SyntaxNode {
         SyntaxNode(kind), moduleKeyword(moduleKeyword), lifetime(lifetime), name(name), imports(imports), parameters(parameters), ports(ports), semi(semi)
     {}
 
-    ModuleHeaderSyntax(const ModuleHeaderSyntax&) = delete;
-    ModuleHeaderSyntax& operator=(const ModuleHeaderSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModuleDeclarationSyntax : public MemberSyntax {
@@ -3007,13 +2697,11 @@ struct ModuleDeclarationSyntax : public MemberSyntax {
         MemberSyntax(kind, attributes), header(header), members(members), endmodule(endmodule), blockName(blockName)
     {}
 
-    ModuleDeclarationSyntax(const ModuleDeclarationSyntax&) = delete;
-    ModuleDeclarationSyntax& operator=(const ModuleDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExternModuleSyntax : public SyntaxNode {
@@ -3024,13 +2712,11 @@ struct ExternModuleSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ExternModule), externKeyword(externKeyword), header(header)
     {}
 
-    ExternModuleSyntax(const ExternModuleSyntax&) = delete;
-    ExternModuleSyntax& operator=(const ExternModuleSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- MEMBERS -----
@@ -3043,13 +2729,11 @@ struct EmptyMemberSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::EmptyMember, attributes), qualifiers(qualifiers), semi(semi)
     {}
 
-    EmptyMemberSyntax(const EmptyMemberSyntax&) = delete;
-    EmptyMemberSyntax& operator=(const EmptyMemberSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ProceduralBlockSyntax : public MemberSyntax {
@@ -3060,13 +2744,11 @@ struct ProceduralBlockSyntax : public MemberSyntax {
         MemberSyntax(kind, attributes), keyword(keyword), statement(statement)
     {}
 
-    ProceduralBlockSyntax(const ProceduralBlockSyntax&) = delete;
-    ProceduralBlockSyntax& operator=(const ProceduralBlockSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct GenerateRegionSyntax : public MemberSyntax {
@@ -3078,13 +2760,11 @@ struct GenerateRegionSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::GenerateRegion, attributes), keyword(keyword), members(members), endgenerate(endgenerate)
     {}
 
-    GenerateRegionSyntax(const GenerateRegionSyntax&) = delete;
-    GenerateRegionSyntax& operator=(const GenerateRegionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct LoopGenerateSyntax : public MemberSyntax {
@@ -3105,13 +2785,11 @@ struct LoopGenerateSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::LoopGenerate, attributes), keyword(keyword), openParen(openParen), genvar(genvar), identifier(identifier), equals(equals), initialExpr(initialExpr), semi1(semi1), stopExpr(stopExpr), semi2(semi2), iterationExpr(iterationExpr), closeParen(closeParen), block(block)
     {}
 
-    LoopGenerateSyntax(const LoopGenerateSyntax&) = delete;
-    LoopGenerateSyntax& operator=(const LoopGenerateSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct IfGenerateSyntax : public MemberSyntax {
@@ -3126,13 +2804,11 @@ struct IfGenerateSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::IfGenerate, attributes), keyword(keyword), openParen(openParen), condition(condition), closeParen(closeParen), block(block), elseClause(elseClause)
     {}
 
-    IfGenerateSyntax(const IfGenerateSyntax&) = delete;
-    IfGenerateSyntax& operator=(const IfGenerateSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CaseGenerateSyntax : public MemberSyntax {
@@ -3147,13 +2823,11 @@ struct CaseGenerateSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::CaseGenerate, attributes), keyword(keyword), openParen(openParen), condition(condition), closeParen(closeParen), items(items), endCase(endCase)
     {}
 
-    CaseGenerateSyntax(const CaseGenerateSyntax&) = delete;
-    CaseGenerateSyntax& operator=(const CaseGenerateSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct GenerateBlockSyntax : public MemberSyntax {
@@ -3168,13 +2842,11 @@ struct GenerateBlockSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::GenerateBlock, attributes), label(label), begin(begin), beginName(beginName), members(members), end(end), endName(endName)
     {}
 
-    GenerateBlockSyntax(const GenerateBlockSyntax&) = delete;
-    GenerateBlockSyntax& operator=(const GenerateBlockSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DividerClauseSyntax : public SyntaxNode {
@@ -3185,13 +2857,11 @@ struct DividerClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::DividerClause), divide(divide), value(value)
     {}
 
-    DividerClauseSyntax(const DividerClauseSyntax&) = delete;
-    DividerClauseSyntax& operator=(const DividerClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TimeUnitsDeclarationSyntax : public MemberSyntax {
@@ -3204,13 +2874,11 @@ struct TimeUnitsDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::TimeUnitsDeclaration, attributes), keyword(keyword), time(time), divider(divider), semi(semi)
     {}
 
-    TimeUnitsDeclarationSyntax(const TimeUnitsDeclarationSyntax&) = delete;
-    TimeUnitsDeclarationSyntax& operator=(const TimeUnitsDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PortConnectionSyntax : public SyntaxNode {
@@ -3220,13 +2888,11 @@ struct PortConnectionSyntax : public SyntaxNode {
         SyntaxNode(kind), attributes(attributes)
     {}
 
-    PortConnectionSyntax(const PortConnectionSyntax&) = delete;
-    PortConnectionSyntax& operator=(const PortConnectionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
@@ -3236,13 +2902,11 @@ struct OrderedPortConnectionSyntax : public PortConnectionSyntax {
         PortConnectionSyntax(SyntaxKind::OrderedPortConnection, attributes), expr(expr)
     {}
 
-    OrderedPortConnectionSyntax(const OrderedPortConnectionSyntax&) = delete;
-    OrderedPortConnectionSyntax& operator=(const OrderedPortConnectionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct NamedPortConnectionSyntax : public PortConnectionSyntax {
@@ -3256,13 +2920,11 @@ struct NamedPortConnectionSyntax : public PortConnectionSyntax {
         PortConnectionSyntax(SyntaxKind::NamedPortConnection, attributes), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    NamedPortConnectionSyntax(const NamedPortConnectionSyntax&) = delete;
-    NamedPortConnectionSyntax& operator=(const NamedPortConnectionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
@@ -3272,13 +2934,11 @@ struct WildcardPortConnectionSyntax : public PortConnectionSyntax {
         PortConnectionSyntax(SyntaxKind::WildcardPortConnection, attributes), dotStar(dotStar)
     {}
 
-    WildcardPortConnectionSyntax(const WildcardPortConnectionSyntax&) = delete;
-    WildcardPortConnectionSyntax& operator=(const WildcardPortConnectionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct HierarchicalInstanceSyntax : public SyntaxNode {
@@ -3292,13 +2952,11 @@ struct HierarchicalInstanceSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::HierarchicalInstance), name(name), dimensions(dimensions), openParen(openParen), connections(connections), closeParen(closeParen)
     {}
 
-    HierarchicalInstanceSyntax(const HierarchicalInstanceSyntax&) = delete;
-    HierarchicalInstanceSyntax& operator=(const HierarchicalInstanceSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct HierarchyInstantiationSyntax : public MemberSyntax {
@@ -3311,13 +2969,11 @@ struct HierarchyInstantiationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::HierarchyInstantiation, attributes), type(type), parameters(parameters), instances(instances), semi(semi)
     {}
 
-    HierarchyInstantiationSyntax(const HierarchyInstantiationSyntax&) = delete;
-    HierarchyInstantiationSyntax& operator=(const HierarchyInstantiationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct FunctionPortSyntax : public SyntaxNode {
@@ -3332,13 +2988,11 @@ struct FunctionPortSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::FunctionPort), attributes(attributes), constKeyword(constKeyword), direction(direction), varKeyword(varKeyword), dataType(dataType), declarator(declarator)
     {}
 
-    FunctionPortSyntax(const FunctionPortSyntax&) = delete;
-    FunctionPortSyntax& operator=(const FunctionPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct FunctionPortListSyntax : public SyntaxNode {
@@ -3350,13 +3004,11 @@ struct FunctionPortListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::FunctionPortList), openParen(openParen), ports(ports), closeParen(closeParen)
     {}
 
-    FunctionPortListSyntax(const FunctionPortListSyntax&) = delete;
-    FunctionPortListSyntax& operator=(const FunctionPortListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct FunctionPrototypeSyntax : public SyntaxNode {
@@ -3370,13 +3022,11 @@ struct FunctionPrototypeSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::FunctionPrototype), keyword(keyword), lifetime(lifetime), returnType(returnType), name(name), portList(portList)
     {}
 
-    FunctionPrototypeSyntax(const FunctionPrototypeSyntax&) = delete;
-    FunctionPrototypeSyntax& operator=(const FunctionPrototypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct FunctionDeclarationSyntax : public MemberSyntax {
@@ -3390,13 +3040,11 @@ struct FunctionDeclarationSyntax : public MemberSyntax {
         MemberSyntax(kind, attributes), prototype(prototype), semi(semi), items(items), end(end), endBlockName(endBlockName)
     {}
 
-    FunctionDeclarationSyntax(const FunctionDeclarationSyntax&) = delete;
-    FunctionDeclarationSyntax& operator=(const FunctionDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct AssertionItemPortSyntax : public SyntaxNode {
@@ -3410,13 +3058,11 @@ struct AssertionItemPortSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::AssertionItemPort), attributes(attributes), local(local), direction(direction), type(type), declarator(declarator)
     {}
 
-    AssertionItemPortSyntax(const AssertionItemPortSyntax&) = delete;
-    AssertionItemPortSyntax& operator=(const AssertionItemPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct AssertionItemPortListSyntax : public SyntaxNode {
@@ -3428,13 +3074,11 @@ struct AssertionItemPortListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::AssertionItemPortList), openParen(openParen), ports(ports), closeParen(closeParen)
     {}
 
-    AssertionItemPortListSyntax(const AssertionItemPortListSyntax&) = delete;
-    AssertionItemPortListSyntax& operator=(const AssertionItemPortListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct LetDeclarationSyntax : public MemberSyntax {
@@ -3448,13 +3092,11 @@ struct LetDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::LetDeclaration, attributes), let(let), identifier(identifier), portList(portList), initializer(initializer), semi(semi)
     {}
 
-    LetDeclarationSyntax(const LetDeclarationSyntax&) = delete;
-    LetDeclarationSyntax& operator=(const LetDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PropertyDeclarationSyntax : public MemberSyntax {
@@ -3472,13 +3114,11 @@ struct PropertyDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::PropertyDeclaration, attributes), keyword(keyword), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), propertySpec(propertySpec), optionalSemi(optionalSemi), end(end), endBlockName(endBlockName)
     {}
 
-    PropertyDeclarationSyntax(const PropertyDeclarationSyntax&) = delete;
-    PropertyDeclarationSyntax& operator=(const PropertyDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct SequenceDeclarationSyntax : public MemberSyntax {
@@ -3496,13 +3136,11 @@ struct SequenceDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::SequenceDeclaration, attributes), keyword(keyword), name(name), portList(portList), semi(semi), assertionVariables(assertionVariables), seqExpr(seqExpr), optionalSemi(optionalSemi), end(end), endBlockName(endBlockName)
     {}
 
-    SequenceDeclarationSyntax(const SequenceDeclarationSyntax&) = delete;
-    SequenceDeclarationSyntax& operator=(const SequenceDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExtendsClauseSyntax : public SyntaxNode {
@@ -3514,13 +3152,11 @@ struct ExtendsClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ExtendsClause), keyword(keyword), baseName(baseName), arguments(arguments)
     {}
 
-    ExtendsClauseSyntax(const ExtendsClauseSyntax&) = delete;
-    ExtendsClauseSyntax& operator=(const ExtendsClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ImplementsClauseSyntax : public SyntaxNode {
@@ -3531,13 +3167,11 @@ struct ImplementsClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ImplementsClause), keyword(keyword), interfaces(interfaces)
     {}
 
-    ImplementsClauseSyntax(const ImplementsClauseSyntax&) = delete;
-    ImplementsClauseSyntax& operator=(const ImplementsClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClassDeclarationSyntax : public MemberSyntax {
@@ -3557,13 +3191,11 @@ struct ClassDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ClassDeclaration, attributes), virtualOrInterface(virtualOrInterface), classKeyword(classKeyword), lifetime(lifetime), name(name), parameters(parameters), extendsClause(extendsClause), implementsClause(implementsClause), semi(semi), items(items), endClass(endClass), endBlockName(endBlockName)
     {}
 
-    ClassDeclarationSyntax(const ClassDeclarationSyntax&) = delete;
-    ClassDeclarationSyntax& operator=(const ClassDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClassPropertyDeclarationSyntax : public MemberSyntax {
@@ -3574,13 +3206,11 @@ struct ClassPropertyDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ClassPropertyDeclaration, attributes), qualifiers(qualifiers), declaration(declaration)
     {}
 
-    ClassPropertyDeclarationSyntax(const ClassPropertyDeclarationSyntax&) = delete;
-    ClassPropertyDeclarationSyntax& operator=(const ClassPropertyDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClassMethodDeclarationSyntax : public MemberSyntax {
@@ -3591,13 +3221,11 @@ struct ClassMethodDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ClassMethodDeclaration, attributes), qualifiers(qualifiers), declaration(declaration)
     {}
 
-    ClassMethodDeclarationSyntax(const ClassMethodDeclarationSyntax&) = delete;
-    ClassMethodDeclarationSyntax& operator=(const ClassMethodDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClassMethodPrototypeSyntax : public MemberSyntax {
@@ -3609,13 +3237,11 @@ struct ClassMethodPrototypeSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ClassMethodPrototype, attributes), qualifiers(qualifiers), prototype(prototype), semi(semi)
     {}
 
-    ClassMethodPrototypeSyntax(const ClassMethodPrototypeSyntax&) = delete;
-    ClassMethodPrototypeSyntax& operator=(const ClassMethodPrototypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ContinuousAssignSyntax : public MemberSyntax {
@@ -3627,13 +3253,11 @@ struct ContinuousAssignSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ContinuousAssign, attributes), assign(assign), assignments(assignments), semi(semi)
     {}
 
-    ContinuousAssignSyntax(const ContinuousAssignSyntax&) = delete;
-    ContinuousAssignSyntax& operator=(const ContinuousAssignSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DefParamAssignmentSyntax : public SyntaxNode {
@@ -3644,13 +3268,11 @@ struct DefParamAssignmentSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::DefParamAssignment), name(name), setter(setter)
     {}
 
-    DefParamAssignmentSyntax(const DefParamAssignmentSyntax&) = delete;
-    DefParamAssignmentSyntax& operator=(const DefParamAssignmentSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DefParamSyntax : public MemberSyntax {
@@ -3662,13 +3284,11 @@ struct DefParamSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::DefParam, attributes), defparam(defparam), assignments(assignments), semi(semi)
     {}
 
-    DefParamSyntax(const DefParamSyntax&) = delete;
-    DefParamSyntax& operator=(const DefParamSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModportClockingPortSyntax : public MemberSyntax {
@@ -3679,13 +3299,11 @@ struct ModportClockingPortSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ModportClockingPort, attributes), clocking(clocking), name(name)
     {}
 
-    ModportClockingPortSyntax(const ModportClockingPortSyntax&) = delete;
-    ModportClockingPortSyntax& operator=(const ModportClockingPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModportPortSyntax : public SyntaxNode {
@@ -3704,13 +3322,11 @@ struct ModportNamedPortSyntax : public ModportPortSyntax {
         ModportPortSyntax(SyntaxKind::ModportNamedPort), name(name)
     {}
 
-    ModportNamedPortSyntax(const ModportNamedPortSyntax&) = delete;
-    ModportNamedPortSyntax& operator=(const ModportNamedPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModportExplicitPortSyntax : public ModportPortSyntax {
@@ -3724,13 +3340,11 @@ struct ModportExplicitPortSyntax : public ModportPortSyntax {
         ModportPortSyntax(SyntaxKind::ModportExplicitPort), dot(dot), name(name), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    ModportExplicitPortSyntax(const ModportExplicitPortSyntax&) = delete;
-    ModportExplicitPortSyntax& operator=(const ModportExplicitPortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModportSimplePortListSyntax : public MemberSyntax {
@@ -3741,13 +3355,11 @@ struct ModportSimplePortListSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ModportSimplePortList, attributes), direction(direction), ports(ports)
     {}
 
-    ModportSimplePortListSyntax(const ModportSimplePortListSyntax&) = delete;
-    ModportSimplePortListSyntax& operator=(const ModportSimplePortListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModportSubroutinePortSyntax : public ModportPortSyntax {
@@ -3757,13 +3369,11 @@ struct ModportSubroutinePortSyntax : public ModportPortSyntax {
         ModportPortSyntax(SyntaxKind::ModportSubroutinePort), prototype(prototype)
     {}
 
-    ModportSubroutinePortSyntax(const ModportSubroutinePortSyntax&) = delete;
-    ModportSubroutinePortSyntax& operator=(const ModportSubroutinePortSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModportSubroutinePortListSyntax : public MemberSyntax {
@@ -3774,13 +3384,11 @@ struct ModportSubroutinePortListSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ModportSubroutinePortList, attributes), importExport(importExport), ports(ports)
     {}
 
-    ModportSubroutinePortListSyntax(const ModportSubroutinePortListSyntax&) = delete;
-    ModportSubroutinePortListSyntax& operator=(const ModportSubroutinePortListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModportItemSyntax : public SyntaxNode {
@@ -3791,13 +3399,11 @@ struct ModportItemSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ModportItem), name(name), ports(ports)
     {}
 
-    ModportItemSyntax(const ModportItemSyntax&) = delete;
-    ModportItemSyntax& operator=(const ModportItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ModportDeclarationSyntax : public MemberSyntax {
@@ -3809,13 +3415,11 @@ struct ModportDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ModportDeclaration, attributes), keyword(keyword), items(items), semi(semi)
     {}
 
-    ModportDeclarationSyntax(const ModportDeclarationSyntax&) = delete;
-    ModportDeclarationSyntax& operator=(const ModportDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClockingSkewSyntax : public SyntaxNode {
@@ -3827,13 +3431,11 @@ struct ClockingSkewSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ClockingSkew), edge(edge), hash(hash), value(value)
     {}
 
-    ClockingSkewSyntax(const ClockingSkewSyntax&) = delete;
-    ClockingSkewSyntax& operator=(const ClockingSkewSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClockingDirectionSyntax : public SyntaxNode {
@@ -3847,13 +3449,11 @@ struct ClockingDirectionSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ClockingDirection), input(input), inputSkew(inputSkew), output(output), ouputSkew(ouputSkew), inout(inout)
     {}
 
-    ClockingDirectionSyntax(const ClockingDirectionSyntax&) = delete;
-    ClockingDirectionSyntax& operator=(const ClockingDirectionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClockingItemSyntax : public SyntaxNode {
@@ -3867,13 +3467,11 @@ struct ClockingItemSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ClockingItem), defaultKeyword(defaultKeyword), direction(direction), assignments(assignments), semi(semi), declaration(declaration)
     {}
 
-    ClockingItemSyntax(const ClockingItemSyntax&) = delete;
-    ClockingItemSyntax& operator=(const ClockingItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ClockingDeclarationSyntax : public MemberSyntax {
@@ -3892,13 +3490,11 @@ struct ClockingDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ClockingDeclaration, attributes), globalOrDefault(globalOrDefault), clocking(clocking), blockName(blockName), at(at), event(event), eventIdentifier(eventIdentifier), semi(semi), items(items), endClocking(endClocking), endBlockName(endBlockName)
     {}
 
-    ClockingDeclarationSyntax(const ClockingDeclarationSyntax&) = delete;
-    ClockingDeclarationSyntax& operator=(const ClockingDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DPIImportExportSyntax : public MemberSyntax {
@@ -3914,13 +3510,11 @@ struct DPIImportExportSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::DPIImportExport, attributes), keyword(keyword), stringLiteral(stringLiteral), property(property), name(name), equals(equals), method(method), semi(semi)
     {}
 
-    DPIImportExportSyntax(const DPIImportExportSyntax&) = delete;
-    DPIImportExportSyntax& operator=(const DPIImportExportSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- CONSTRAINTS -----
@@ -3942,13 +3536,11 @@ struct DistWeightSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::DistWeight), op(op), expr(expr)
     {}
 
-    DistWeightSyntax(const DistWeightSyntax&) = delete;
-    DistWeightSyntax& operator=(const DistWeightSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DistItemSyntax : public SyntaxNode {
@@ -3959,13 +3551,11 @@ struct DistItemSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::DistItem), range(range), weight(weight)
     {}
 
-    DistItemSyntax(const DistItemSyntax&) = delete;
-    DistItemSyntax& operator=(const DistItemSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DistConstraintListSyntax : public SyntaxNode {
@@ -3978,13 +3568,11 @@ struct DistConstraintListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::DistConstraintList), dist(dist), openBrace(openBrace), items(items), closeBrace(closeBrace)
     {}
 
-    DistConstraintListSyntax(const DistConstraintListSyntax&) = delete;
-    DistConstraintListSyntax& operator=(const DistConstraintListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExpressionOrDistSyntax : public ExpressionSyntax {
@@ -3995,13 +3583,11 @@ struct ExpressionOrDistSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::ExpressionOrDist), expr(expr), distribution(distribution)
     {}
 
-    ExpressionOrDistSyntax(const ExpressionOrDistSyntax&) = delete;
-    ExpressionOrDistSyntax& operator=(const ExpressionOrDistSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
@@ -4013,13 +3599,11 @@ struct ExpressionConstraintSyntax : public ConstraintItemSyntax {
         ConstraintItemSyntax(SyntaxKind::ExpressionConstraint), soft(soft), expr(expr), semi(semi)
     {}
 
-    ExpressionConstraintSyntax(const ExpressionConstraintSyntax&) = delete;
-    ExpressionConstraintSyntax& operator=(const ExpressionConstraintSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
@@ -4031,13 +3615,11 @@ struct UniquenessConstraintSyntax : public ConstraintItemSyntax {
         ConstraintItemSyntax(SyntaxKind::UniquenessConstraint), unique(unique), ranges(ranges), semi(semi)
     {}
 
-    UniquenessConstraintSyntax(const UniquenessConstraintSyntax&) = delete;
-    UniquenessConstraintSyntax& operator=(const UniquenessConstraintSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
@@ -4049,13 +3631,11 @@ struct ImplicationConstraintSyntax : public ConstraintItemSyntax {
         ConstraintItemSyntax(SyntaxKind::ImplicationConstraint), left(left), arrow(arrow), constraints(constraints)
     {}
 
-    ImplicationConstraintSyntax(const ImplicationConstraintSyntax&) = delete;
-    ImplicationConstraintSyntax& operator=(const ImplicationConstraintSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ElseConstraintClauseSyntax : public SyntaxNode {
@@ -4066,13 +3646,11 @@ struct ElseConstraintClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::ElseConstraintClause), elseKeyword(elseKeyword), constraints(constraints)
     {}
 
-    ElseConstraintClauseSyntax(const ElseConstraintClauseSyntax&) = delete;
-    ElseConstraintClauseSyntax& operator=(const ElseConstraintClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
@@ -4087,13 +3665,11 @@ struct ConditionalConstraintSyntax : public ConstraintItemSyntax {
         ConstraintItemSyntax(SyntaxKind::ConditionalConstraint), ifKeyword(ifKeyword), openParen(openParen), condition(condition), closeParen(closeParen), constraints(constraints), elseClause(elseClause)
     {}
 
-    ConditionalConstraintSyntax(const ConditionalConstraintSyntax&) = delete;
-    ConditionalConstraintSyntax& operator=(const ConditionalConstraintSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct LoopConstraintSyntax : public ConstraintItemSyntax {
@@ -4105,13 +3681,11 @@ struct LoopConstraintSyntax : public ConstraintItemSyntax {
         ConstraintItemSyntax(SyntaxKind::LoopConstraint), foreachKeyword(foreachKeyword), loopList(loopList), constraints(constraints)
     {}
 
-    LoopConstraintSyntax(const LoopConstraintSyntax&) = delete;
-    LoopConstraintSyntax& operator=(const LoopConstraintSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DisableConstraintSyntax : public ConstraintItemSyntax {
@@ -4124,13 +3698,11 @@ struct DisableConstraintSyntax : public ConstraintItemSyntax {
         ConstraintItemSyntax(SyntaxKind::DisableConstraint), disable(disable), soft(soft), name(name), semi(semi)
     {}
 
-    DisableConstraintSyntax(const DisableConstraintSyntax&) = delete;
-    DisableConstraintSyntax& operator=(const DisableConstraintSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
@@ -4144,13 +3716,11 @@ struct SolveBeforeConstraintSyntax : public ConstraintItemSyntax {
         ConstraintItemSyntax(SyntaxKind::SolveBeforeConstraint), solve(solve), beforeExpr(beforeExpr), before(before), afterExpr(afterExpr), semi(semi)
     {}
 
-    SolveBeforeConstraintSyntax(const SolveBeforeConstraintSyntax&) = delete;
-    SolveBeforeConstraintSyntax& operator=(const SolveBeforeConstraintSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConstraintBlockSyntax : public ConstraintItemSyntax {
@@ -4162,13 +3732,11 @@ struct ConstraintBlockSyntax : public ConstraintItemSyntax {
         ConstraintItemSyntax(SyntaxKind::ConstraintBlock), openBrace(openBrace), items(items), closeBrace(closeBrace)
     {}
 
-    ConstraintBlockSyntax(const ConstraintBlockSyntax&) = delete;
-    ConstraintBlockSyntax& operator=(const ConstraintBlockSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConstraintPrototypeSyntax : public MemberSyntax {
@@ -4181,13 +3749,11 @@ struct ConstraintPrototypeSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ConstraintPrototype, attributes), qualifiers(qualifiers), keyword(keyword), name(name), semi(semi)
     {}
 
-    ConstraintPrototypeSyntax(const ConstraintPrototypeSyntax&) = delete;
-    ConstraintPrototypeSyntax& operator=(const ConstraintPrototypeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConstraintDeclarationSyntax : public MemberSyntax {
@@ -4200,13 +3766,11 @@ struct ConstraintDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::ConstraintDeclaration, attributes), qualifiers(qualifiers), keyword(keyword), name(name), block(block)
     {}
 
-    ConstraintDeclarationSyntax(const ConstraintDeclarationSyntax&) = delete;
-    ConstraintDeclarationSyntax& operator=(const ConstraintDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct WithClauseSyntax : public ExpressionSyntax {
@@ -4219,13 +3783,11 @@ struct WithClauseSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::WithClause), with(with), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    WithClauseSyntax(const WithClauseSyntax&) = delete;
-    WithClauseSyntax& operator=(const WithClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct IdentifierListSyntax : public SyntaxNode {
@@ -4237,13 +3799,11 @@ struct IdentifierListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::IdentifierList), openParen(openParen), identifiers(identifiers), closeParen(closeParen)
     {}
 
-    IdentifierListSyntax(const IdentifierListSyntax&) = delete;
-    IdentifierListSyntax& operator=(const IdentifierListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
@@ -4255,13 +3815,11 @@ struct RandomizeMethodWithClauseSyntax : public ExpressionSyntax {
         ExpressionSyntax(SyntaxKind::RandomizeMethodWithClause), with(with), names(names), constraints(constraints)
     {}
 
-    RandomizeMethodWithClauseSyntax(const RandomizeMethodWithClauseSyntax&) = delete;
-    RandomizeMethodWithClauseSyntax& operator=(const RandomizeMethodWithClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- COVER GROUPS -----
@@ -4276,13 +3834,11 @@ struct WithFunctionSampleSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::WithFunctionSample), with(with), function(function), sample(sample), portList(portList)
     {}
 
-    WithFunctionSampleSyntax(const WithFunctionSampleSyntax&) = delete;
-    WithFunctionSampleSyntax& operator=(const WithFunctionSampleSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct BlockEventExpressionSyntax : public SyntaxNode {
@@ -4303,13 +3859,11 @@ struct BinaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
         BlockEventExpressionSyntax(SyntaxKind::BinaryBlockEventExpression), left(left), orKeyword(orKeyword), right(right)
     {}
 
-    BinaryBlockEventExpressionSyntax(const BinaryBlockEventExpressionSyntax&) = delete;
-    BinaryBlockEventExpressionSyntax& operator=(const BinaryBlockEventExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
@@ -4320,13 +3874,11 @@ struct PrimaryBlockEventExpressionSyntax : public BlockEventExpressionSyntax {
         BlockEventExpressionSyntax(SyntaxKind::PrimaryBlockEventExpression), keyword(keyword), name(name)
     {}
 
-    PrimaryBlockEventExpressionSyntax(const PrimaryBlockEventExpressionSyntax&) = delete;
-    PrimaryBlockEventExpressionSyntax& operator=(const PrimaryBlockEventExpressionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct BlockCoverageEventSyntax : public SyntaxNode {
@@ -4339,13 +3891,11 @@ struct BlockCoverageEventSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::BlockCoverageEvent), atat(atat), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    BlockCoverageEventSyntax(const BlockCoverageEventSyntax&) = delete;
-    BlockCoverageEventSyntax& operator=(const BlockCoverageEventSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CovergroupDeclarationSyntax : public MemberSyntax {
@@ -4362,13 +3912,11 @@ struct CovergroupDeclarationSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::CovergroupDeclaration, attributes), covergroup(covergroup), name(name), portList(portList), event(event), semi(semi), members(members), endgroup(endgroup), endBlockName(endBlockName)
     {}
 
-    CovergroupDeclarationSyntax(const CovergroupDeclarationSyntax&) = delete;
-    CovergroupDeclarationSyntax& operator=(const CovergroupDeclarationSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CoverageOptionSyntax : public MemberSyntax {
@@ -4383,13 +3931,11 @@ struct CoverageOptionSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::CoverageOption, attributes), option(option), dot(dot), name(name), equals(equals), expr(expr), semi(semi)
     {}
 
-    CoverageOptionSyntax(const CoverageOptionSyntax&) = delete;
-    CoverageOptionSyntax& operator=(const CoverageOptionSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CoverpointSyntax : public MemberSyntax {
@@ -4406,13 +3952,11 @@ struct CoverpointSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::Coverpoint, attributes), type(type), label(label), coverpoint(coverpoint), expr(expr), openBrace(openBrace), members(members), closeBrace(closeBrace), emptySemi(emptySemi)
     {}
 
-    CoverpointSyntax(const CoverpointSyntax&) = delete;
-    CoverpointSyntax& operator=(const CoverpointSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CoverageBinInitializerSyntax : public SyntaxNode {
@@ -4432,13 +3976,11 @@ struct DefaultCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax
         CoverageBinInitializerSyntax(SyntaxKind::DefaultCoverageBinInitializer), defaultKeyword(defaultKeyword), sequenceKeyword(sequenceKeyword)
     {}
 
-    DefaultCoverageBinInitializerSyntax(const DefaultCoverageBinInitializerSyntax&) = delete;
-    DefaultCoverageBinInitializerSyntax& operator=(const DefaultCoverageBinInitializerSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -4449,13 +3991,11 @@ struct ExpressionCoverageBinInitializerSyntax : public CoverageBinInitializerSyn
         CoverageBinInitializerSyntax(SyntaxKind::ExpressionCoverageBinInitializer), expr(expr), withClause(withClause)
     {}
 
-    ExpressionCoverageBinInitializerSyntax(const ExpressionCoverageBinInitializerSyntax&) = delete;
-    ExpressionCoverageBinInitializerSyntax& operator=(const ExpressionCoverageBinInitializerSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -4466,13 +4006,11 @@ struct RangeCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
         CoverageBinInitializerSyntax(SyntaxKind::RangeCoverageBinInitializer), ranges(ranges), withClause(withClause)
     {}
 
-    RangeCoverageBinInitializerSyntax(const RangeCoverageBinInitializerSyntax&) = delete;
-    RangeCoverageBinInitializerSyntax& operator=(const RangeCoverageBinInitializerSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TransRepeatRangeSyntax : public SyntaxNode {
@@ -4485,13 +4023,11 @@ struct TransRepeatRangeSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::TransRepeatRange), openBracket(openBracket), specifier(specifier), selector(selector), closeBracket(closeBracket)
     {}
 
-    TransRepeatRangeSyntax(const TransRepeatRangeSyntax&) = delete;
-    TransRepeatRangeSyntax& operator=(const TransRepeatRangeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TransRangeSyntax : public SyntaxNode {
@@ -4502,13 +4038,11 @@ struct TransRangeSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::TransRange), items(items), repeat(repeat)
     {}
 
-    TransRangeSyntax(const TransRangeSyntax&) = delete;
-    TransRangeSyntax& operator=(const TransRangeSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TransSetSyntax : public SyntaxNode {
@@ -4520,13 +4054,11 @@ struct TransSetSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::TransSet), openParen(openParen), ranges(ranges), closeParen(closeParen)
     {}
 
-    TransSetSyntax(const TransSetSyntax&) = delete;
-    TransSetSyntax& operator=(const TransSetSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSyntax {
@@ -4537,13 +4069,11 @@ struct TransListCoverageBinInitializerSyntax : public CoverageBinInitializerSynt
         CoverageBinInitializerSyntax(SyntaxKind::TransListCoverageBinInitializer), sets(sets), withClause(withClause)
     {}
 
-    TransListCoverageBinInitializerSyntax(const TransListCoverageBinInitializerSyntax&) = delete;
-    TransListCoverageBinInitializerSyntax& operator=(const TransListCoverageBinInitializerSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct IffClauseSyntax : public SyntaxNode {
@@ -4556,13 +4086,11 @@ struct IffClauseSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::IffClause), iff(iff), openParen(openParen), expr(expr), closeParen(closeParen)
     {}
 
-    IffClauseSyntax(const IffClauseSyntax&) = delete;
-    IffClauseSyntax& operator=(const IffClauseSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct CoverageBinsSyntax : public MemberSyntax {
@@ -4579,13 +4107,11 @@ struct CoverageBinsSyntax : public MemberSyntax {
         MemberSyntax(SyntaxKind::CoverageBins, attributes), wildcard(wildcard), keyword(keyword), name(name), selector(selector), equals(equals), initializer(initializer), iff(iff), semi(semi)
     {}
 
-    CoverageBinsSyntax(const CoverageBinsSyntax&) = delete;
-    CoverageBinsSyntax& operator=(const CoverageBinsSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- TOP LEVEL -----
@@ -4598,13 +4124,11 @@ struct CompilationUnitSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::CompilationUnit), members(members), endOfFile(endOfFile)
     {}
 
-    CompilationUnitSyntax(const CompilationUnitSyntax&) = delete;
-    CompilationUnitSyntax& operator=(const CompilationUnitSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 // ----- DIRECTIVES -----
@@ -4616,13 +4140,11 @@ struct DirectiveSyntax : public SyntaxNode {
         SyntaxNode(kind), directive(directive)
     {}
 
-    DirectiveSyntax(const DirectiveSyntax&) = delete;
-    DirectiveSyntax& operator=(const DirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct SimpleDirectiveSyntax : public DirectiveSyntax {
@@ -4632,13 +4154,11 @@ struct SimpleDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(kind, directive), endOfDirective(endOfDirective)
     {}
 
-    SimpleDirectiveSyntax(const SimpleDirectiveSyntax&) = delete;
-    SimpleDirectiveSyntax& operator=(const SimpleDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct IncludeDirectiveSyntax : public DirectiveSyntax {
@@ -4649,13 +4169,11 @@ struct IncludeDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(SyntaxKind::IncludeDirective, directive), fileName(fileName), endOfDirective(endOfDirective)
     {}
 
-    IncludeDirectiveSyntax(const IncludeDirectiveSyntax&) = delete;
-    IncludeDirectiveSyntax& operator=(const IncludeDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
@@ -4667,13 +4185,11 @@ struct ConditionalBranchDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(kind, directive), name(name), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
     {}
 
-    ConditionalBranchDirectiveSyntax(const ConditionalBranchDirectiveSyntax&) = delete;
-    ConditionalBranchDirectiveSyntax& operator=(const ConditionalBranchDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
@@ -4684,13 +4200,11 @@ struct UnconditionalBranchDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(kind, directive), endOfDirective(endOfDirective), disabledTokens(disabledTokens)
     {}
 
-    UnconditionalBranchDirectiveSyntax(const UnconditionalBranchDirectiveSyntax&) = delete;
-    UnconditionalBranchDirectiveSyntax& operator=(const UnconditionalBranchDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MacroArgumentDefaultSyntax : public SyntaxNode {
@@ -4701,13 +4215,11 @@ struct MacroArgumentDefaultSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::MacroArgumentDefault), equals(equals), tokens(tokens)
     {}
 
-    MacroArgumentDefaultSyntax(const MacroArgumentDefaultSyntax&) = delete;
-    MacroArgumentDefaultSyntax& operator=(const MacroArgumentDefaultSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MacroFormalArgumentSyntax : public SyntaxNode {
@@ -4718,13 +4230,11 @@ struct MacroFormalArgumentSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::MacroFormalArgument), name(name), defaultValue(defaultValue)
     {}
 
-    MacroFormalArgumentSyntax(const MacroFormalArgumentSyntax&) = delete;
-    MacroFormalArgumentSyntax& operator=(const MacroFormalArgumentSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MacroFormalArgumentListSyntax : public SyntaxNode {
@@ -4736,13 +4246,11 @@ struct MacroFormalArgumentListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::MacroFormalArgumentList), openParen(openParen), args(args), closeParen(closeParen)
     {}
 
-    MacroFormalArgumentListSyntax(const MacroFormalArgumentListSyntax&) = delete;
-    MacroFormalArgumentListSyntax& operator=(const MacroFormalArgumentListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DefineDirectiveSyntax : public DirectiveSyntax {
@@ -4755,13 +4263,11 @@ struct DefineDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(SyntaxKind::DefineDirective, directive), name(name), formalArguments(formalArguments), body(body), endOfDirective(endOfDirective)
     {}
 
-    DefineDirectiveSyntax(const DefineDirectiveSyntax&) = delete;
-    DefineDirectiveSyntax& operator=(const DefineDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MacroActualArgumentSyntax : public SyntaxNode {
@@ -4771,13 +4277,11 @@ struct MacroActualArgumentSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::MacroActualArgument), tokens(tokens)
     {}
 
-    MacroActualArgumentSyntax(const MacroActualArgumentSyntax&) = delete;
-    MacroActualArgumentSyntax& operator=(const MacroActualArgumentSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MacroActualArgumentListSyntax : public SyntaxNode {
@@ -4789,13 +4293,11 @@ struct MacroActualArgumentListSyntax : public SyntaxNode {
         SyntaxNode(SyntaxKind::MacroActualArgumentList), openParen(openParen), args(args), closeParen(closeParen)
     {}
 
-    MacroActualArgumentListSyntax(const MacroActualArgumentListSyntax&) = delete;
-    MacroActualArgumentListSyntax& operator=(const MacroActualArgumentListSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct MacroUsageSyntax : public DirectiveSyntax {
@@ -4805,13 +4307,11 @@ struct MacroUsageSyntax : public DirectiveSyntax {
         DirectiveSyntax(SyntaxKind::MacroUsage, directive), args(args)
     {}
 
-    MacroUsageSyntax(const MacroUsageSyntax&) = delete;
-    MacroUsageSyntax& operator=(const MacroUsageSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct TimescaleDirectiveSyntax : public DirectiveSyntax {
@@ -4826,13 +4326,11 @@ struct TimescaleDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(SyntaxKind::TimescaleDirective, directive), timeUnit(timeUnit), timeUnitUnit(timeUnitUnit), slash(slash), timePrecision(timePrecision), timePrecisionUnit(timePrecisionUnit), endOfDirective(endOfDirective)
     {}
 
-    TimescaleDirectiveSyntax(const TimescaleDirectiveSyntax&) = delete;
-    TimescaleDirectiveSyntax& operator=(const TimescaleDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
@@ -4843,13 +4341,11 @@ struct DefaultNetTypeDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(SyntaxKind::DefaultNetTypeDirective, directive), netType(netType), endOfDirective(endOfDirective)
     {}
 
-    DefaultNetTypeDirectiveSyntax(const DefaultNetTypeDirectiveSyntax&) = delete;
-    DefaultNetTypeDirectiveSyntax& operator=(const DefaultNetTypeDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct LineDirectiveSyntax : public DirectiveSyntax {
@@ -4862,13 +4358,11 @@ struct LineDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(SyntaxKind::LineDirective, directive), lineNumber(lineNumber), fileName(fileName), level(level), endOfDirective(endOfDirective)
     {}
 
-    LineDirectiveSyntax(const LineDirectiveSyntax&) = delete;
-    LineDirectiveSyntax& operator=(const LineDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct UndefDirectiveSyntax : public DirectiveSyntax {
@@ -4879,13 +4373,11 @@ struct UndefDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(SyntaxKind::UndefDirective, directive), name(name), endOfDirective(endOfDirective)
     {}
 
-    UndefDirectiveSyntax(const UndefDirectiveSyntax&) = delete;
-    UndefDirectiveSyntax& operator=(const UndefDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
@@ -4896,13 +4388,11 @@ struct BeginKeywordsDirectiveSyntax : public DirectiveSyntax {
         DirectiveSyntax(SyntaxKind::BeginKeywordsDirective, directive), versionSpecifier(versionSpecifier), endOfDirective(endOfDirective)
     {}
 
-    BeginKeywordsDirectiveSyntax(const BeginKeywordsDirectiveSyntax&) = delete;
-    BeginKeywordsDirectiveSyntax& operator=(const BeginKeywordsDirectiveSyntax&) = delete;
-
     static bool isKind(SyntaxKind kind);
 
     TokenOrSyntax getChild(uint32_t index);
     ConstTokenOrSyntax getChild(uint32_t index) const;
+    void setChild(uint32_t index, TokenOrSyntax child);
 };
 
 class SyntaxFactory {

@@ -4,11 +4,12 @@
 import os
 
 class TypeInfo:
-	def __init__(self, processedMembers, members, pointerMembers, final,
-				 constructorArgs, base, combinedMembers):
+	def __init__(self, processedMembers, members, pointerMembers, optionalMembers,
+				 final, constructorArgs, base, combinedMembers):
 		self.processedMembers = processedMembers
 		self.members = members
 		self.pointerMembers = pointerMembers
+		self.optionalMembers = optionalMembers
 		self.final = final
 		self.constructorArgs = constructorArgs
 		self.base = base
@@ -61,7 +62,7 @@ namespace slang {
 	alltypes = {}
 	kindmap = {}
 
-	alltypes['SyntaxNode'] = TypeInfo(None, None, None, '', None, None, [])
+	alltypes['SyntaxNode'] = TypeInfo(None, None, None, None, '', None, None, [])
 
 	for line in [x.strip('\n') for x in inf]:
 		if line.startswith('//'):
@@ -173,6 +174,30 @@ namespace slang {
 
 				cppf.write('}\n\n')
 
+			cppf.write('void {}::setChild(uint32_t index, TokenOrSyntax child) {{\n'.format(k))
+			if len(v.combinedMembers) > 0:
+				cppf.write('    switch (index) {\n')
+
+				index = 0
+				for m in v.combinedMembers:
+					cppf.write('        case {}: '.format(index))
+					index += 1
+
+					if m[0] == 'token':
+						cppf.write('{} = child.token(); return;\n'.format(m[1]))
+					elif m[1] in v.optionalMembers:
+						cppf.write('{} = &child.node()->as<{}>(); return;\n'.format(m[1], m[0]))
+					else:
+						cppf.write('memcpy(&{}, child.node(), sizeof({})); return;\n'.format(m[1], m[0]))
+
+				cppf.write('        default: THROW_UNREACHABLE;\n')
+				cppf.write('    }\n')
+			else:
+				cppf.write('    (void)index;\n')
+				cppf.write('    (void)child;\n')
+
+			cppf.write('}\n\n')
+
 	# Write out syntax factory methods
 	outf.write('class SyntaxFactory {\n')
 	outf.write('public:\n')
@@ -268,13 +293,13 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		if m[0] == 'token':
 			typename = 'Token'
 		elif m[0] == 'tokenlist':
-			typename = 'TokenList'
+			m[0] = typename = 'TokenList'
 			pointerMembers.add(m[1])
 		elif m[0].startswith('list<'):
-			typename = 'SyntaxList<' + m[0][5:]
+			m[0] = typename = 'SyntaxList<' + m[0][5:]
 			pointerMembers.add(m[1])
 		elif m[0].startswith('separated_list<'):
-			typename = 'SeparatedSyntaxList<' + m[0][15:]
+			m[0] = typename = 'SeparatedSyntaxList<' + m[0][15:]
 			pointerMembers.add(m[1])
 		else:
 			optional = False
@@ -317,8 +342,8 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 		final = ''
 
 	constructorArgs = '{}{}'.format(kindArg, ', '.join(processed_members))
-	alltypes[name] = TypeInfo(processed_members, members, pointerMembers, final,
-							  constructorArgs, base, combined)
+	alltypes[name] = TypeInfo(processed_members, members, pointerMembers, optionalMembers,
+							  final, constructorArgs, base, combined)
 
 	outf.write('\n')
 	outf.write('    {}({}) :\n'.format(name, constructorArgs))
@@ -328,13 +353,11 @@ def generate(outf, name, tags, members, alltypes, kindmap):
 	if len(members) == 0 and final == '':
 		outf.write('    static bool isKind(SyntaxKind kind);\n')
 	else:
-		outf.write('    {}(const {}&) = delete;\n'.format(name, name))
-		outf.write('    {}& operator=(const {}&) = delete;\n\n'.format(name, name))
-
 		outf.write('    static bool isKind(SyntaxKind kind);\n\n')
 
 		outf.write('    TokenOrSyntax getChild(uint32_t index);\n')
 		outf.write('    ConstTokenOrSyntax getChild(uint32_t index) const;\n')
+		outf.write('    void setChild(uint32_t index, TokenOrSyntax child);\n')
 
 	outf.write('};\n\n')
 
