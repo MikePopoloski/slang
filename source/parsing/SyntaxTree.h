@@ -25,15 +25,12 @@ namespace slang {
 /// live for as long as you need to access its syntax nodes.
 class SyntaxTree {
 public:
-    SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc) :
-        rootNode(root), sourceMan(sourceManager), alloc(std::move(alloc)) {}
+    SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
+               std::shared_ptr<SyntaxTree> parent = nullptr) :
+        rootNode(root), sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {}
 
     SyntaxTree(SyntaxTree&& other) = default;
     SyntaxTree& operator=(SyntaxTree&&) = default;
-
-    // not copyable
-    SyntaxTree(const SyntaxTree&) = delete;
-    SyntaxTree& operator=(const SyntaxTree&) = delete;
 
     /// Creates a syntax tree from a full compilation unit.
     static std::shared_ptr<SyntaxTree> fromFile(string_view path) {
@@ -87,6 +84,12 @@ public:
     /// The options used to construct the syntax tree.
     const Bag& options() const { return options_; }
 
+    /// Gets the parent syntax tree, if there is one. Otherwise returns nullptr.
+    /// Most syntax trees don't have a parent; this is for cases where a given tree is
+    /// derived from another and relies on the parent tree's memory remaining valid for
+    /// the lifetime of the child tree.
+    const SyntaxTree* getParentTree() const { return parentTree.get(); }
+
     /// This is a shared default source manager for cases where the user doesn't
     /// care about managing the lifetime of loaded source. Note that all of
     /// the source loaded by this thing will live in memory for the lifetime of
@@ -127,6 +130,7 @@ private:
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;
+    std::shared_ptr<SyntaxTree> parentTree;
 };
 
 }
